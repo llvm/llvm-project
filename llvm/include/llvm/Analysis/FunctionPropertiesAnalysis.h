@@ -185,12 +185,15 @@ public:
 };
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
-struct FunctionPropertiesStatisticsPass
-    : PassInfoMixin<FunctionPropertiesStatisticsPass> {
+class FunctionPropertiesStatisticsPass
+    : public PassInfoMixin<FunctionPropertiesStatisticsPass> {
+  bool IsPreOptimizations;
+
+public:
   explicit FunctionPropertiesStatisticsPass(bool IsPreOptimizations = false)
       : IsPreOptimizations(IsPreOptimizations) {}
+
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  bool IsPreOptimizations;
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A
