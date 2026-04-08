@@ -13,9 +13,9 @@ from lldbsuite.test import lldbutil
 class FrameProviderPassThroughPrefixTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    # The frame list IDs used by 'bt --provider' are internal sequential IDs:
+    # The frame list IDs used by 'bt --provider' match the descriptor IDs
+    # returned by RegisterScriptedFrameProvider:
     # 0 = base unwinder, 1 = first provider, 2 = second provider, etc.
-    # These are NOT the descriptor IDs returned by RegisterScriptedFrameProvider.
     UNWINDER_FRAME_LIST_ID = 0
     FIRST_PROVIDER_FRAME_LIST_ID = 1
     SECOND_PROVIDER_FRAME_LIST_ID = 2
