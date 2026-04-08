@@ -700,6 +700,33 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
   ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded);
 
+  // Queue ABI metadata for the module-level cir.record_layouts attribute.
+  if (ty->getName()) {
+    mlir::MLIRContext *mlirCtx = ty->getContext();
+    auto apk = cir::ArgPassingKind::CannotPassInRegs;
+    switch (rd->getArgPassingRestrictions()) {
+    case RecordArgPassingKind::CanPassInRegs:
+      apk = cir::ArgPassingKind::CanPassInRegs;
+      break;
+    case RecordArgPassingKind::CannotPassInRegs:
+      apk = cir::ArgPassingKind::CannotPassInRegs;
+      break;
+    case RecordArgPassingKind::CanNeverPassInRegs:
+      apk = cir::ArgPassingKind::CanNeverPassInRegs;
+      break;
+    }
+
+    bool hasTrivialDestructor = true;
+    if (auto *cxxRD = dyn_cast<CXXRecordDecl>(rd))
+      hasTrivialDestructor = cxxRD->hasTrivialDestructor();
+    const auto &astLayout = astContext.getASTRecordLayout(rd);
+    uint64_t recordAlignInBytes = astLayout.getAlignment().getQuantity();
+
+    cgm.addRecordLayout(ty->getName(), cir::RecordLayoutAttr::get(
+                                           mlirCtx, apk, hasTrivialDestructor,
+                                           recordAlignInBytes));
+  }
+
   auto rl = std::make_unique<CIRGenRecordLayout>(
       ty ? *ty : cir::RecordType{}, baseTy ? baseTy : cir::RecordType{},
       (bool)lowering.zeroInitializable, (bool)lowering.zeroInitializableAsBase);
