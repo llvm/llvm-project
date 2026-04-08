@@ -7000,6 +7000,12 @@ SDValue DAGTypeLegalizer::convertMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
 
     // Vector shuffle: try inferring the best fitting width from operands.
     if (Opcode == ISD::VECTOR_SHUFFLE) {
+      // Bail out when the number of elements is different, we can't
+      // simply reuse shuffle mask in this case.
+      if (V.getValueType().getVectorNumElements() !=
+          ToVT.getVectorNumElements())
+        return SDValue();
+
       auto *Shuf = cast<ShuffleVectorSDNode>(V);
       SDValue Op0 = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
       if (!Op0)
