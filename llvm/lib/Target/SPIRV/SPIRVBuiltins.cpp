@@ -1217,7 +1217,8 @@ getBuiltinCallArguments(const SPIRV::IncomingCall *Call, uint32_t BuiltinNumber,
   for (Register Argument : Call->Arguments) {
     Register VecArg = Argument;
     SPIRVTypeInst ArgumentType = GR->getSPIRVTypeForVReg(Argument);
-    if (ArgumentType != Call->ReturnType) {
+    if (GR->getScalarOrVectorComponentCount(ArgumentType) == 1 &&
+        ArgumentType != Call->ReturnType) {
       SPIRVTypeInst VecType = GR->getOrCreateSPIRVVectorType(
           ArgumentType, ResultElementCount, MIRBuilder, /*EmitIR=*/true);
       VecArg = createVirtualRegister(VecType, GR, MIRBuilder);
