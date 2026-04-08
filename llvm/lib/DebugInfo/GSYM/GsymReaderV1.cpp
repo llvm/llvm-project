@@ -23,9 +23,6 @@ GsymReaderV1::GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer,
                            llvm::endianness Endian)
     : GsymReader(std::move(Buffer), Endian) {}
 
-GsymReaderV1::GsymReaderV1(GsymReaderV1 &&RHS) = default;
-GsymReaderV1::~GsymReaderV1() = default;
-
 llvm::Error GsymReaderV1::parseHeaderAndGlobalDataDirectory() {
   const StringRef Buf = MemBuffer->getBuffer();
   BinaryStreamReader FileData(Buf, llvm::endianness::native);
@@ -97,14 +94,8 @@ llvm::Error GsymReaderV1::parseHeaderAndGlobalDataDirectory() {
   return Error::success();
 }
 
-const Header &GsymReaderV1::getHeader() const {
-  assert(Hdr);
-  return *Hdr;
-}
-
 void GsymReaderV1::dump(raw_ostream &OS) {
-  const auto &Header = getHeader();
-  OS << Header << "\n";
+  OS << *Hdr << "\n";
   OS << "Address Table:\n";
   OS << "INDEX  OFFSET";
 

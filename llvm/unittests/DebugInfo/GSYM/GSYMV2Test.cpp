@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
@@ -520,14 +519,9 @@ TEST(GSYMV2Test, TestReaderV2ParseHandCrafted) {
   ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
   auto &GR = *GROrErr;
 
-  const HeaderV2 &Hdr =
-      static_cast<GsymReaderV2 *>(GR.get())->getHeader();
-  EXPECT_EQ(Hdr.Magic, GSYM_MAGIC);
-  EXPECT_EQ(Hdr.Version, HeaderV2::getVersion());
-  EXPECT_EQ(Hdr.BaseAddress, 0x1000u);
-  EXPECT_EQ(Hdr.NumAddresses, 1u);
-  EXPECT_EQ(Hdr.AddrOffSize, 1u);
+  EXPECT_EQ(GR->getBaseAddress(), 0x1000u);
   EXPECT_EQ(GR->getNumAddresses(), 1u);
+  EXPECT_EQ(GR->getAddressOffsetSize(), 1u);
 
   // Verify address lookup.
   auto Addr = GR->getAddress(0);

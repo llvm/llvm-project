@@ -28,17 +28,13 @@ protected:
   llvm::Error parseHeaderAndGlobalDataDirectory() override;
 
 public:
-  LLVM_ABI GsymReaderV1(GsymReaderV1 &&RHS);
-  LLVM_ABI ~GsymReaderV1() override;
-
-  LLVM_ABI const Header &getHeader() const;
+  GsymReaderV1(GsymReaderV1 &&RHS) = default;
+  ~GsymReaderV1() override = default;
 
   // Header accessors
-  uint64_t getBaseAddress() const override { return getHeader().BaseAddress; }
-  uint64_t getNumAddresses() const override { return getHeader().NumAddresses; }
-  uint8_t getAddressOffsetSize() const override {
-    return getHeader().AddrOffSize;
-  }
+  uint64_t getBaseAddress() const override { return Hdr->BaseAddress; }
+  uint64_t getNumAddresses() const override { return Hdr->NumAddresses; }
+  uint8_t getAddressOffsetSize() const override { return Hdr->AddrOffSize; }
   uint8_t getAddressInfoOffsetSize() const override { return 4; }
   uint8_t getStringOffsetSize() const override { return 4; }
 

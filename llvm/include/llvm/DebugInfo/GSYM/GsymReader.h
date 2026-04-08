@@ -414,8 +414,8 @@ protected:
   /// GsymReader.
   /// \returns An expected GsymReader that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  static llvm::Expected<std::unique_ptr<GsymReader>>
-  create(std::unique_ptr<MemoryBuffer> MemBuffer);
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  create(std::unique_ptr<MemoryBuffer> &MemBuffer);
 
   /// Given an address, find the address index.
   ///

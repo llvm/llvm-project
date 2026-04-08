@@ -66,17 +66,17 @@ GsymReader::openFile(StringRef Filename) {
   auto Err = BuffOrErr.getError();
   if (Err)
     return llvm::errorCodeToError(Err);
-  return create(std::move(*BuffOrErr));
+  return create(BuffOrErr.get());
 }
 
 llvm::Expected<std::unique_ptr<GsymReader>>
 GsymReader::copyBuffer(StringRef Bytes) {
   auto MemBuffer = MemoryBuffer::getMemBufferCopy(Bytes, "GSYM bytes");
-  return create(std::move(MemBuffer));
+  return create(MemBuffer);
 }
 
 llvm::Expected<std::unique_ptr<GsymReader>>
-GsymReader::create(std::unique_ptr<MemoryBuffer> MemBuffer) {
+GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
   if (!MemBuffer)
     return createStringError(std::errc::invalid_argument,
                              "invalid memory buffer");
