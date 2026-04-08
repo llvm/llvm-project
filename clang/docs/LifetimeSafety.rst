@@ -179,20 +179,23 @@ with ``[[clang::lifetimebound]]`` annotated parameters:
 
   #include <string>
 
-  struct S {
-    S(const std::string &s [[clang::lifetimebound]]);
+  struct StringView {
+    StringView();
+    StringView(const std::string &s [[clang::lifetimebound]]);
   };
 
-  S getS(const std::string &s [[clang::lifetimebound]]);
+  StringView getStringView(const std::string &s [[clang::lifetimebound]]);
 
   void test() {
-    S a(std::string("temp")); // warning: object whose reference is captured does not live long enough
-                              // note: destroyed here
-    (void)a;                  // note: later used here
-
-    S b = getS(std::string("temp")); // warning: object whose reference is captured does not live long enough
-                                     // note: destroyed here
-    (void)b;                         // note: later used here
+    StringView a, b;
+    {
+      std::string s = "temp";
+      StringView tmp(s);    // warning: object whose reference is captured does not live long enough
+      a = tmp;
+      b = getStringView(s); // warning: object whose reference is captured does not live long enough
+    }                       // note: destroyed here
+    (void)a;                // note: later used here
+    (void)b;                // note: later used here
   }
 
 For more details, see `lifetimebound <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound>`_.
