@@ -38,7 +38,7 @@ private:
   void diagOnSingleLock(const VarDecl *LockGuard,
                         const ast_matchers::MatchFinder::MatchResult &Result);
   void diagOnMultipleLocks(
-      const llvm::SmallVector<llvm::SmallVector<const VarDecl *>> &LockGroups,
+      const SmallVector<SmallVector<const VarDecl *>> &LockGroups,
       const ast_matchers::MatchFinder::MatchResult &Result);
   void diagOnSourceInfo(const TypeSourceInfo *LockGuardSourceInfo,
                         const ast_matchers::MatchFinder::MatchResult &Result);

@@ -113,7 +113,7 @@ struct GpuAllReduceRewriter {
       Value index = create<arith::IndexCastOp>(indexType, subgroupId);
       create<memref::StoreOp>(subgroupReduce, buffer, index);
     });
-    create<gpu::BarrierOp>();
+    create<gpu::BarrierOp>(buffer);
 
     // Compute number of active subgroups.
     Value biasedBlockSize =
@@ -135,7 +135,7 @@ struct GpuAllReduceRewriter {
     });
 
     // Synchronize workgroup and load result from workgroup memory.
-    create<gpu::BarrierOp>();
+    create<gpu::BarrierOp>(buffer);
     Value result = create<memref::LoadOp>(valueType, buffer, zero);
 
     rewriter.replaceOp(reduceOp, result);

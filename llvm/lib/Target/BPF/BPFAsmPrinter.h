@@ -39,6 +39,7 @@ public:
 private:
   BTFDebug *BTF;
   TargetMachine &TM;
+  bool SawTrapCall = false;
 
   const BPFTargetMachine &getBTM() const;
 };

@@ -49,7 +49,7 @@ end subroutine reshape_test_nopad
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_test_nopadEsh"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_test_nopadEsource"} : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
 ! CHECK:           %[[VAL_13:.*]] = hlfir.reshape %[[VAL_11]]#0 %[[VAL_10]]#0 order %[[VAL_7]]#0 : (!fir.box<!fir.array<?x?x?xi32>>, !fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>) -> !hlfir.expr<?x?xi32>
-  
+
 subroutine test_reshape_optional1(pad, order, source, shape)
   real, pointer :: pad(:, :)
   integer, pointer :: order(:)

@@ -66,6 +66,11 @@ extern cl::opt<bool> EnableMaskedGatherScatters;
 
 extern cl::opt<unsigned> MVEMaxSupportedInterleaveFactor;
 
+static cl::opt<int> ArmForceUnrollThreshold(
+    "arm-force-unroll-threshold", cl::init(12), cl::Hidden,
+    cl::desc(
+        "Threshold for forced unrolling of small loops in Arm architecture"));
+
 /// Convert a vector load intrinsic into a simple llvm load instruction.
 /// This is beneficial when the underlying object being addressed comes
 /// from a constant, since we get constant-folding for free.
@@ -102,6 +107,55 @@ bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
   // the callers'.
   bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeaturesAllowed) ==
                      (CalleeBits & InlineFeaturesAllowed);
+
+  LLVM_DEBUG({
+    if (!MatchExact || !MatchSubset) {
+      dbgs() << "=== Inline compatibility debug ===\n";
+      dbgs() << "Caller: " << Caller->getName() << "\n";
+      dbgs() << "Callee: " << Callee->getName() << "\n";
+
+      // Bit diffs
+      FeatureBitset MissingInCaller = CalleeBits & ~CallerBits; // callee-only
+      FeatureBitset ExtraInCaller = CallerBits & ~CalleeBits;   // caller-only
+
+      // Counts
+      dbgs() << "Only-in-caller bit count: " << ExtraInCaller.count() << "\n";
+      dbgs() << "Only-in-callee bit count: " << MissingInCaller.count() << "\n";
+
+      dbgs() << "Only-in-caller feature indices [";
+      {
+        bool First = true;
+        for (size_t I = 0, E = ExtraInCaller.size(); I < E; ++I) {
+          if (ExtraInCaller.test(I)) {
+            if (!First)
+              dbgs() << ", ";
+            dbgs() << I;
+            First = false;
+          }
+        }
+      }
+      dbgs() << "]\n";
+
+      dbgs() << "Only-in-callee feature indices [";
+      {
+        bool First = true;
+        for (size_t I = 0, E = MissingInCaller.size(); I < E; ++I) {
+          if (MissingInCaller.test(I)) {
+            if (!First)
+              dbgs() << ", ";
+            dbgs() << I;
+            First = false;
+          }
+        }
+      }
+      dbgs() << "]\n";
+
+      // Indices map to features as found in
+      // llvm-project/(your_build)/lib/Target/ARM/ARMGenSubtargetInfo.inc
+      dbgs() << "MatchExact=" << (MatchExact ? "true" : "false")
+             << " MatchSubset=" << (MatchSubset ? "true" : "false") << "\n";
+    }
+  });
   return MatchExact && MatchSubset;
 }
 
@@ -486,7 +540,7 @@ InstructionCost ARMTTIImpl::getCFInstrCost(unsigned Opcode,
                                            const Instruction *I) const {
   if (CostKind == TTI::TCK_RecipThroughput &&
       (ST->hasNEON() || ST->hasMVEIntegerOps())) {
-    // FIXME: The vectorizer is highly sensistive to the cost of these
+    // FIXME: The vectorizer is highly sensitive to the cost of these
     // instructions, which suggests that it may be using the costs incorrectly.
     // But, for now, just make them free to avoid performance regressions for
     // vector targets.
@@ -899,10 +953,9 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseCost * BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                               TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
-                                               const Value *Op1) const {
+InstructionCost ARMTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *ValTy, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -921,7 +974,8 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     if (ValTy->isVectorTy() &&
         ValTy->getScalarSizeInBits() <= 32)
       return std::max<InstructionCost>(
-          BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1),
+          BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                    VIC),
           2U);
   }
 
@@ -935,7 +989,8 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return LT.first * (ValTy->getScalarType()->isIntegerTy() ? 4 : 1);
   }
 
-  return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);
+  return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                   VIC);
 }
 
 InstructionCost ARMTTIImpl::getCmpSelInstrCost(
@@ -1125,7 +1180,8 @@ bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
 }
 
 bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                                   unsigned /*AddressSpace*/) const {
+                                   unsigned /*AddressSpace*/,
+                                   TTI::MaskKind /*MaskKind*/) const {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1216,7 +1272,8 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   std::vector<EVT> MemOps;
   LLVMContext &C = F->getContext();
   if (getTLI()->findOptimalMemOpLowering(C, MemOps, Limit, MOp, DstAddrSpace,
-                                         SrcAddrSpace, F->getAttributes()))
+                                         SrcAddrSpace, F->getAttributes(),
+                                         nullptr))
     return MemOps.size() * Factor;
 
   // If we can't find an optimal memop lowering, return the default cost
@@ -1631,20 +1688,36 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                                  unsigned AddressSpace,
+ARMTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+  switch (MICA.getID()) {
+  case Intrinsic::masked_scatter:
+  case Intrinsic::masked_gather:
+    return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
+ARMTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
+  unsigned IID = MICA.getID();
+  Type *Src = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  unsigned AddressSpace = MICA.getAddressSpace();
   if (ST->hasMVEIntegerOps()) {
-    if (Opcode == Instruction::Load &&
+    if (IID == Intrinsic::masked_load &&
         isLegalMaskedLoad(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
-    if (Opcode == Instruction::Store &&
+    if (IID == Intrinsic::masked_store &&
         isLegalMaskedStore(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
   }
   if (!isa<FixedVectorType>(Src))
-    return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                        CostKind);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
   // Scalar cost, which is currently very high due to the efficiency of the
   // generated code.
   return cast<FixedVectorType>(Src)->getNumElements() * 8;
@@ -1691,13 +1764,19 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
                                            UseMaskForCond, UseMaskForGaps);
 }
 
-InstructionCost ARMTTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
+InstructionCost
+ARMTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                   TTI::TargetCostKind CostKind) const {
+
+  Type *DataTy = MICA.getDataType();
+  const Value *Ptr = MICA.getPointer();
+  bool VariableMask = MICA.getVariableMask();
+  Align Alignment = MICA.getAlignment();
+  const Instruction *I = MICA.getInst();
+
   using namespace PatternMatch;
   if (!ST->hasMVEIntegerOps() || !EnableMaskedGatherScatters)
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   assert(DataTy->isVectorTy() && "Can't do gather/scatters on scalar!");
   auto *VTy = cast<FixedVectorType>(DataTy);
@@ -2093,7 +2172,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     bool IsSigned = Opc == Intrinsic::fptosi_sat;
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
     EVT MTy = TLI->getValueType(DL, ICA.getReturnType());
-    // Check for the legal types, with the corect subtarget features.
+    // Check for the legal types, with the correct subtarget features.
     if ((ST->hasVFP2Base() && LT.second == MVT::f32 && MTy == MVT::i32) ||
         (ST->hasFP64() && LT.second == MVT::f64 && MTy == MVT::i32) ||
         (ST->hasFullFP16() && LT.second == MVT::f16 && MTy == MVT::i32))
@@ -2405,7 +2484,7 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
   // so is not tail predicated as per the condition above. In order to get the
   // same performance we treat min and max the same as an icmp for tailpred
   // purposes for the moment (we often rely on non-tailpred and higher VF's to
-  // pick more optimial instructions like VQDMULH. They need to be recognized
+  // pick more optimal instructions like VQDMULH. They need to be recognized
   // directly by the vectorizer).
   if (auto *II = dyn_cast<IntrinsicInst>(&I))
     if ((II->getIntrinsicID() == Intrinsic::smin ||
@@ -2448,7 +2527,8 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
 //
 static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                  const DataLayout &DL,
-                                 const LoopAccessInfo *LAI) {
+                                 const LoopAccessInfo *LAI,
+                                 const DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "Tail-predication: checking allowed instructions\n");
 
   // If there are live-out values, it is probably a reduction. We can predicate
@@ -2482,8 +2562,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   int ICmpCount = 0;
 
   for (BasicBlock *BB : L->blocks()) {
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
-      if (isa<PHINode>(&I))
+    for (Instruction &I : *BB) {
+      if (isa<PHINode>(I) || isa<PseudoProbeInst>(I))
         continue;
       if (!canTailPredicateInstruction(I, ICmpCount)) {
         LLVM_DEBUG(dbgs() << "Instruction not allowed: "; I.dump());
@@ -2498,7 +2578,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
       if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
         Value *Ptr = getLoadStorePointerOperand(&I);
         Type *AccessTy = getLoadStoreType(&I);
-        int64_t NextStride = getPtrStride(PSE, AccessTy, Ptr, L).value_or(0);
+        int64_t NextStride =
+            getPtrStride(PSE, AccessTy, Ptr, L, DT).value_or(0);
         if (NextStride == 1) {
           // TODO: for now only allow consecutive strides of 1. We could support
           // other strides as long as it is uniform, but let's keep it simple
@@ -2585,11 +2666,11 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
     return false;
   }
 
-  return canTailPredicateLoop(L, LI, *SE, DL, LVL->getLAI());
+  return canTailPredicateLoop(L, LI, *SE, DL, LVL->getLAI(),
+                              *LVL->getDominatorTree());
 }
 
-TailFoldingStyle
-ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
+TailFoldingStyle ARMTTIImpl::getPreferredTailFoldingStyle() const {
   if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
     return TailFoldingStyle::DataWithoutLaneMask;
 
@@ -2696,7 +2777,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // innermost loop is often detrimental to performance. In these cases the loop
   // remainder gets unrolled into a series of compare-and-jump blocks, which in
   // deeply nested loops get executed multiple times, negating the benefits of
-  // LOB. This is particularly noticable when the loop trip count of the
+  // LOB. This is particularly noticeable when the loop trip count of the
   // innermost loop varies within the outer loop, such as in the case of
   // triangular matrix decompositions. In these cases we will prefer to not
   // unroll the innermost loop, with the intention for it to be executed as a
@@ -2704,7 +2785,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   bool Runtime = true;
   if (ST->hasLOB()) {
     if (SE.hasLoopInvariantBackedgeTakenCount(L)) {
-      const auto *BETC = SE.getBackedgeTakenCount(L);
+      const SCEV *BETC = SE.getBackedgeTakenCount(L);
       auto *Outer = L->getOutermostLoop();
       if ((L != Outer && Outer != L->getParentLoop()) ||
           (L != Outer && BETC && !SE.isLoopInvariant(BETC, Outer))) {
@@ -2725,7 +2806,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
-  if (Cost < 12)
+  if (Cost < ArmForceUnrollThreshold)
     UP.Force = true;
 }
 
@@ -2769,6 +2850,13 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     return 0;
   }
   return InstructionCost::getInvalid();
+}
+
+bool ARMTTIImpl::shouldConsiderVectorizationRegPressure() const {
+  // MVE only has 8 vector registers, so we should consider register pressure to
+  // avoid vectorizing when the cost of spills exceeds the gains from
+  // vectorization.
+  return ST->hasMVEIntegerOps();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {

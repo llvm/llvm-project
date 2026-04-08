@@ -32,6 +32,7 @@ static_library("JITLink") {
     "ELF_loongarch.cpp",
     "ELF_ppc64.cpp",
     "ELF_riscv.cpp",
+    "ELF_systemz.cpp",
     "ELF_x86.cpp",
     "ELF_x86_64.cpp",
     "JITLink.cpp",
@@ -49,6 +50,7 @@ static_library("JITLink") {
     "loongarch.cpp",
     "ppc64.cpp",
     "riscv.cpp",
+    "systemz.cpp",
     "x86.cpp",
     "x86_64.cpp",
   ]

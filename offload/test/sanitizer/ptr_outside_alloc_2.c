@@ -7,6 +7,7 @@
 // UNSUPPORTED: nvidiagpu
 //
 // REQUIRES: gpu
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 

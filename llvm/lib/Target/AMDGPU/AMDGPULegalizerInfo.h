@@ -56,6 +56,8 @@ public:
   bool legalizeFPTOI(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B, bool Signed) const;
   bool legalizeMinNumMaxNum(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeExtract(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeInsert(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 MachineIRBuilder &B) const;
   bool legalizeInsertVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -91,8 +93,15 @@ public:
   bool legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
                           bool IsLog10, unsigned Flags) const;
   bool legalizeFExp2(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFExpUnsafeImpl(MachineIRBuilder &B, Register Dst, Register Src,
+                              unsigned Flags, bool IsExp10) const;
   bool legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
                           unsigned Flags) const;
+  bool legalizeFExp10Unsafe(MachineIRBuilder &B, Register Dst, Register Src,
+                            unsigned Flags) const;
+
+  bool legalizeFEXPF64(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -110,6 +119,8 @@ public:
                          MachineIRBuilder &B) const;
   bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
+  bool legalizeCTLS(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B) const;
 
   void buildLoadInputValue(Register DstReg, MachineIRBuilder &B,
                            const ArgDescriptor *Arg,
@@ -132,6 +143,7 @@ public:
       MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
       unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
   Register getKernargParameterPtr(MachineIRBuilder &B, int64_t Offset) const;
   bool legalizeKernargMemParameter(MachineInstr &MI, MachineIRBuilder &B,
                                    uint64_t Offset,

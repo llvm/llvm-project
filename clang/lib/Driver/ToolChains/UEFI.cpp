@@ -11,8 +11,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -74,6 +74,13 @@ void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_g_Group, options::OPT__SLASH_Z7))
     CmdArgs.push_back("/debug");
+
+  // Pass on /Brepro if it was passed to the compiler.
+  // Note that /Brepro maps to -mno-incremental-linker-compatible.
+  if (!Args.hasFlag(options::OPT_mincremental_linker_compatible,
+                    options::OPT_mno_incremental_linker_compatible,
+                    /*Default=*/true))
+    CmdArgs.push_back("/Brepro");
 
   Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
 

@@ -565,16 +565,8 @@ protected:
     }
 
     size_t item_count = m_format_options.GetCountValue().GetCurrentValue();
-
-    // TODO For non-8-bit byte addressable architectures this needs to be
-    // revisited to fully support all lldb's range of formatting options.
-    // Furthermore code memory reads (for those architectures) will not be
-    // correctly formatted even w/o formatting options.
     size_t item_byte_size =
-        target->GetArchitecture().GetDataByteSize() > 1
-            ? target->GetArchitecture().GetDataByteSize()
-            : m_format_options.GetByteSizeValue().GetCurrentValue();
-
+        m_format_options.GetByteSizeValue().GetCurrentValue();
     const size_t num_per_line =
         m_memory_options.m_num_per_line.GetCurrentValue();
 
@@ -663,7 +655,7 @@ protected:
         return;
       }
 
-      Address address(addr, nullptr);
+      Address address(addr);
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
@@ -711,8 +703,8 @@ protected:
         std::string buffer;
         buffer.resize(item_byte_size + 1, 0);
         Status error;
-        size_t read = target->ReadCStringFromMemory(data_addr, &buffer[0],
-                                                    item_byte_size + 1, error);
+        size_t read = target->ReadCStringFromMemory(
+            Address(data_addr), &buffer[0], item_byte_size + 1, error);
         if (error.Fail()) {
           result.AppendErrorWithFormat(
               "failed to read memory from 0x%" PRIx64 ".\n", addr);
@@ -834,8 +826,7 @@ protected:
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
     DataExtractor data(data_sp, target->GetArchitecture().GetByteOrder(),
-                       target->GetArchitecture().GetAddressByteSize(),
-                       target->GetArchitecture().GetDataByteSize());
+                       target->GetArchitecture().GetAddressByteSize());
 
     Format format = m_format_options.GetFormat();
     if (((format == eFormatChar) || (format == eFormatCharPrintable)) &&
@@ -860,10 +851,10 @@ protected:
     }
 
     assert(output_stream_p);
-    size_t bytes_dumped = DumpDataExtractor(
-        data, output_stream_p, 0, format, item_byte_size, item_count,
-        num_per_line / target->GetArchitecture().GetDataByteSize(), addr, 0, 0,
-        exe_scope, m_memory_tag_options.GetShowTags().GetCurrentValue());
+    size_t bytes_dumped =
+        DumpDataExtractor(data, output_stream_p, 0, format, item_byte_size,
+                          item_count, num_per_line, addr, 0, 0, exe_scope,
+                          m_memory_tag_options.GetShowTags().GetCurrentValue());
     m_next_addr = addr + bytes_dumped;
     output_stream_p->EOL();
   }
@@ -1119,8 +1110,8 @@ protected:
           result.AppendMessage("no more matches within the range.\n");
         break;
       }
-      result.AppendMessageWithFormat("data found at location: 0x%" PRIx64 "\n",
-                                     found_location);
+      result.AppendMessageWithFormatv("data found at location: {0:x}",
+                                      found_location);
 
       DataBufferHeap dumpbuffer(32, 0);
       process->ReadMemory(
@@ -1288,10 +1279,7 @@ protected:
       return;
     }
 
-    StreamString buffer(
-        Stream::eBinary,
-        process->GetTarget().GetArchitecture().GetAddressByteSize(),
-        process->GetTarget().GetArchitecture().GetByteOrder());
+    StreamString buffer(Stream::eBinary, process->GetByteOrder());
 
     OptionValueUInt64 &byte_size_value = m_format_options.GetByteSizeValue();
     size_t item_byte_size = byte_size_value.GetCurrentValue();
@@ -1345,7 +1333,7 @@ protected:
       return;
     } else if (item_byte_size == 0) {
       if (m_format_options.GetFormat() == eFormatPointer)
-        item_byte_size = buffer.GetAddressByteSize();
+        item_byte_size = process->GetAddressByteSize();
       else
         item_byte_size = 1;
     }
@@ -1576,7 +1564,7 @@ protected:
     }
 
     Status error;
-    lldb::addr_t addr = OptionArgParser::ToAddress(
+    lldb::addr_t addr = OptionArgParser::ToRawAddress(
         &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
@@ -1651,12 +1639,18 @@ public:
   };
 
   CommandObjectMemoryRegion(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "memory region",
-                            "Get information on the memory region containing "
-                            "an address in the current target process.",
-                            "memory region <address-expression> (or --all)",
-                            eCommandRequiresProcess | eCommandTryTargetAPILock |
-                                eCommandProcessMustBeLaunched) {
+      : CommandObjectParsed(
+            interpreter, "memory region",
+            "Get information on the memory region containing "
+            "an address in the current target process.\n"
+            "If this command is given an <address-expression> once "
+            "and then repeated without options, it will try to print "
+            "the memory region that follows the previously printed "
+            "region. The command can be repeated until the end of "
+            "the address range is reached.",
+            "memory region <address-expression> (or --all)",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched) {
     // Address in option set 1.
     m_arguments.push_back(CommandArgumentEntry{CommandArgumentData(
         eArgTypeAddressOrExpression, eArgRepeatPlain, LLDB_OPT_SET_1)});
@@ -1691,19 +1685,19 @@ protected:
         range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
         range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
         name, section_name ? " " : "", section_name);
-    MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
-    if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool memory_tagged = range_info.GetMemoryTagged();
+    if (memory_tagged == eLazyBoolYes)
       result.AppendMessage("memory tagging: enabled");
-    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
-    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
     if (dirty_page_list) {
       const size_t page_count = dirty_page_list->size();
-      result.AppendMessageWithFormat(
-          "Modified memory (dirty) page list provided, %zu entries.\n",
+      result.AppendMessageWithFormatv(
+          "Modified memory (dirty) page list provided, {0} entries.",
           page_count);
       if (page_count > 0) {
         bool print_comma = false;
@@ -1715,7 +1709,7 @@ protected:
             print_comma = true;
           result.AppendMessageWithFormat("0x%" PRIx64, (*dirty_page_list)[i]);
         }
-        result.AppendMessageWithFormat(".\n");
+        result.AppendMessage(".");
       }
     }
   }
@@ -1735,7 +1729,25 @@ protected:
     const size_t argc = command.GetArgumentCount();
     const lldb::ABISP &abi = process_sp->GetABI();
 
-    if (argc == 1) {
+    if (argc == 0) {
+      if (!m_memory_region_options.m_all) {
+        if ( // When we're repeating the command, the previous end
+             // address is used for load_addr. If that was 0xF...F then
+             // we must have reached the end of memory.
+            (load_addr == LLDB_INVALID_ADDRESS) ||
+            // If the target has non-address bits (tags, limited virtual
+            // address size, etc.), the end of mappable memory will be
+            // lower than that. So if we find any non-address bit set,
+            // we must be at the end of the mappable range.
+            (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
+          result.AppendErrorWithFormat(
+              "No next region address set: one address expression argument or "
+              "\"--all\" option required:\nUsage: %s\n",
+              m_cmd_syntax.c_str());
+          return;
+        }
+      }
+    } else if (argc == 1) {
       if (m_memory_region_options.m_all) {
         result.AppendError(
             "The \"--all\" option cannot be used when an address "
@@ -1751,17 +1763,8 @@ protected:
                                      command[0].c_str(), error.AsCString());
         return;
       }
-    } else if (argc > 1 ||
-               // When we're repeating the command, the previous end address is
-               // used for load_addr. If that was 0xF...F then we must have
-               // reached the end of memory.
-               (argc == 0 && !m_memory_region_options.m_all &&
-                load_addr == LLDB_INVALID_ADDRESS) ||
-               // If the target has non-address bits (tags, limited virtual
-               // address size, etc.), the end of mappable memory will be lower
-               // than that. So if we find any non-address bit set, we must be
-               // at the end of the mappable range.
-               (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
+    } else {
+      // argc > 1
       result.AppendErrorWithFormat(
           "'%s' takes one argument or \"--all\" option:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());

@@ -46,6 +46,8 @@ public:
   /// Create an empty list.
   SectionList() = default;
 
+  SectionList(const SectionList &lhs);
+
   SectionList &operator=(const SectionList &rhs);
 
   size_t AddSection(const lldb::SectionSP &section_sp);
@@ -96,6 +98,17 @@ public:
   /// information.
   uint64_t GetDebugInfoSize() const;
 
+  // Callback to decide which of two matching sections should be used in the
+  // merged output.
+  using MergeCallback =
+      std::function<lldb::SectionSP(lldb::SectionSP, lldb::SectionSP)>;
+
+  // Function that merges two different sections into a new output list. All
+  // unique sections will be checked for conflict and resolved using the
+  // supplied merging callback.
+  static SectionList Merge(SectionList &lhs, SectionList &rhs,
+                           MergeCallback filter);
+
 protected:
   collection m_sections;
 };
@@ -133,8 +146,7 @@ public:
           lldb::user_id_t sect_id, ConstString name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
-          lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
-          uint32_t target_byte_size = 1);
+          lldb::offset_t file_size, uint32_t log2align, uint32_t flags);
 
   // Create a section that is a child of parent_section_sp
   Section(const lldb::SectionSP &parent_section_sp, // NULL for top level
@@ -144,8 +156,7 @@ public:
           lldb::user_id_t sect_id, ConstString name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
-          lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
-          uint32_t target_byte_size = 1);
+          lldb::offset_t file_size, uint32_t log2align, uint32_t flags);
 
   ~Section();
 
@@ -259,9 +270,6 @@ public:
 
   void SetLog2Align(uint32_t align) { m_log2align = align; }
 
-  // Get the number of host bytes required to hold a target byte
-  uint32_t GetTargetByteSize() const { return m_target_byte_size; }
-
   bool IsRelocated() const { return m_relocated; }
 
   void SetIsRelocated(bool b) { m_relocated = b; }
@@ -272,6 +280,9 @@ public:
   /// fast and simple only sections that contains only debug information should
   /// return true.
   bool ContainsOnlyDebugInfo() const;
+
+  /// Returns true if this is a global offset table section.
+  bool IsGOTSection() const;
 
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should
@@ -295,15 +306,12 @@ protected:
       // children contains an address. This allows for gaps between the
       // children that are contained in the address range for this section, but
       // do not produce hits unless the children contain the address.
-      m_encrypted : 1,         // Set to true if the contents are encrypted
-      m_thread_specific : 1,   // This section is thread specific
-      m_readable : 1,          // If this section has read permissions
-      m_writable : 1,          // If this section has write permissions
-      m_executable : 1,        // If this section has executable permissions
-      m_relocated : 1;         // If this section has had relocations applied
-  uint32_t m_target_byte_size; // Some architectures have non-8-bit byte size.
-                               // This is specified as
-                               // as a multiple number of a host bytes
+      m_encrypted : 1,       // Set to true if the contents are encrypted
+      m_thread_specific : 1, // This section is thread specific
+      m_readable : 1,        // If this section has read permissions
+      m_writable : 1,        // If this section has write permissions
+      m_executable : 1,      // If this section has executable permissions
+      m_relocated : 1;       // If this section has had relocations applied
 private:
   Section(const Section &) = delete;
   const Section &operator=(const Section &) = delete;

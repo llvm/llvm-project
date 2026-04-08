@@ -5339,6 +5339,19 @@ struct AAPotentialConstantValues
     return nullptr;
   }
 
+  /// Return the minimum trailing zeros of potential constants
+  unsigned getAssumedMinTrailingZeros() const {
+    if (!isValidState() || getAssumedSet().empty())
+      return 0;
+    unsigned TrailingZeros = getAssumedSet().begin()->getBitWidth() + 1;
+    for (const APInt &It : getAssumedSet()) {
+      if (It.countTrailingZeros() < TrailingZeros)
+        TrailingZeros = It.countTrailingZeros();
+    }
+    if (TrailingZeros > getAssumedSet().begin()->getBitWidth())
+      return 0;
+    return TrailingZeros;
+  }
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAPotentialConstantValues"; }
 
@@ -5456,15 +5469,7 @@ struct AANoFPClass
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    Type *Ty = IRP.getAssociatedType();
-    do {
-      if (Ty->isFPOrFPVectorTy())
-        return IRAttribute::isValidIRPositionForInit(A, IRP);
-      if (!Ty->isArrayTy())
-        break;
-      Ty = Ty->getArrayElementType();
-    } while (true);
-    return false;
+    return AttributeFuncs::isNoFPClassCompatibleType(IRP.getAssociatedType());
   }
 
   /// Return the underlying assumed nofpclass.
@@ -6580,7 +6585,7 @@ struct AAIndirectCallInfo
 };
 
 /// An abstract Attribute for specializing "dynamic" components of
-/// "denormal-fp-math" and "denormal-fp-math-f32" to a known denormal mode.
+/// denormal_fpenv to a known denormal mode.
 struct AADenormalFPMath
     : public StateWrapper<DenormalFPMathState, AbstractAttribute> {
   using Base = StateWrapper<DenormalFPMathState, AbstractAttribute>;
@@ -6612,7 +6617,11 @@ enum AttributorRunOption {
   NONE = 0,
   MODULE = 1 << 0,
   CGSCC = 1 << 1,
-  ALL = MODULE | CGSCC
+  MODULE_LIGHT = 1 << 2,
+  CGSCC_LIGHT = 1 << 3,
+
+  FULL = MODULE | CGSCC,
+  LIGHT = MODULE_LIGHT | CGSCC_LIGHT
 };
 
 namespace AA {

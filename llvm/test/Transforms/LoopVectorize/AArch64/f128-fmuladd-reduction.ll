@@ -13,6 +13,10 @@ define double @fp128_fmuladd_reduction(ptr %start0, ptr %start1, ptr %end0, ptr 
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 16
+; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START0]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[START1]], i64 [[TMP7]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -21,16 +25,16 @@ define double @fp128_fmuladd_reduction(ptr %start0, ptr %start1, ptr %end0, ptr 
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[START0]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[START1]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr fp128, ptr [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr fp128, ptr [[TMP1]], i32 4
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr fp128, ptr [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr fp128, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr fp128, ptr [[TMP1]], i64 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr fp128, ptr [[TMP1]], i64 6
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x fp128>, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x fp128>, ptr [[TMP24]], align 16
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x fp128>, ptr [[TMP4]], align 16
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x fp128>, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[TMP3]], i32 4
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr double, ptr [[TMP3]], i32 6
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[TMP3]], i64 4
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr double, ptr [[TMP3]], i64 6
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x double>, ptr [[TMP28]], align 16
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x double>, ptr [[TMP35]], align 16
@@ -54,10 +58,6 @@ define double @fp128_fmuladd_reduction(ptr %start0, ptr %start1, ptr %end0, ptr 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 16
-; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START0]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 8
-; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[START1]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:

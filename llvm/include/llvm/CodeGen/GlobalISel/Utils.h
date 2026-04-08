@@ -132,12 +132,10 @@ LLVM_ABI Register constrainOperandRegClass(
 /// generic) virtual register operands to the instruction's register class.
 /// This could involve inserting COPYs before (for uses) or after (for defs).
 /// This requires the number of operands to match the instruction description.
-/// \returns whether operand regclass constraining succeeded.
-///
 // FIXME: Not all instructions have the same number of operands. We should
 // probably expose a constrain helper per operand and let the target selector
 // constrain individual registers, like fast-isel.
-LLVM_ABI bool constrainSelectedInstRegOperands(MachineInstr &I,
+LLVM_ABI void constrainSelectedInstRegOperands(MachineInstr &I,
                                                const TargetInstrInfo &TII,
                                                const TargetRegisterInfo &TRI,
                                                const RegisterBankInfo &RBI);
@@ -155,12 +153,10 @@ LLVM_ABI bool isTriviallyDead(const MachineInstr &MI,
 /// Report an ISel error as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.  Set the FailedISel MachineFunction property.
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  const char *PassName, StringRef Msg,
                                  const MachineInstr &MI);
@@ -168,7 +164,6 @@ LLVM_ABI void reportGISelFailure(MachineFunction &MF,
 /// Report an ISel warning as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.
 LLVM_ABI void reportGISelWarning(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 

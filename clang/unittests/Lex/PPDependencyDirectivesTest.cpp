@@ -69,6 +69,33 @@ public:
   }
 };
 
+class EmbedCollector : public PPCallbacks {
+public:
+  Preprocessor &PP;
+  SmallVectorImpl<StringRef> &EmbeddedFiles;
+
+  EmbedCollector(Preprocessor &PP, SmallVectorImpl<StringRef> &EmbeddedFiles)
+      : PP(PP), EmbeddedFiles(EmbeddedFiles) {}
+
+  void EmbedDirective(SourceLocation, StringRef, bool,
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &) override {
+    assert(File && "expected to only be called when the file is found");
+    StringRef Filename =
+        llvm::sys::path::remove_leading_dotslash(File->getName());
+    EmbeddedFiles.push_back(Filename);
+  }
+
+  void HasEmbed(SourceLocation, StringRef, bool,
+                OptionalFileEntryRef File) override {
+    if (!File)
+      return;
+    StringRef Filename =
+        llvm::sys::path::remove_leading_dotslash(File->getName());
+    EmbeddedFiles.push_back(Filename);
+  }
+};
+
 TEST_F(PPDependencyDirectivesTest, MacroGuard) {
   // "head1.h" has a macro guard and should only be included once.
   // "head2.h" and "head3.h" have tokens following the macro check, they should
@@ -153,6 +180,56 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
       "main.c", "./head1.h", "./head2.h", "./head2.h", "./head3.h", "./head3.h",
   };
   EXPECT_EQ(IncludedFilesSlash, ExpectedIncludes);
+}
+
+TEST_F(PPDependencyDirectivesTest, Embed) {
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->setCurrentWorkingDirectory("/source");
+  VFS->addFile("/source/inputs/jk.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("jk"));
+  VFS->addFile("/source/inputs/single_byte.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("a"));
+  VFS->addFile("/source/inputs/single_byte1.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("b"));
+  VFS->addFile(
+      "/source/inc/head.h", 0,
+      llvm::MemoryBuffer::getMemBuffer("#embed \"inputs/single_byte.txt\"\n"
+                                       "extern int foo;\n"));
+  VFS->addFile(
+      "main.c", 0,
+      llvm::MemoryBuffer::getMemBuffer("#include \"inc/head.h\"\n"
+                                       "#if __has_embed(\"inputs/jk.txt\")\n"
+                                       "const char arr[] =\n"
+                                       "#embed \"inputs/single_byte1.txt\"\n"
+                                       ";\n"
+                                       "#endif\n"));
+  FileMgr.setVirtualFileSystem(VFS);
+
+  OptionalFileEntryRef FE;
+  ASSERT_THAT_ERROR(FileMgr.getFileRef("main.c").moveInto(FE),
+                    llvm::Succeeded());
+  SourceMgr.setMainFileID(
+      SourceMgr.createFileID(*FE, SourceLocation(), SrcMgr::C_User));
+  PreprocessorOptions PPOpts;
+  HeaderSearchOptions HSOpts;
+  TrivialModuleLoader ModLoader;
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr,
+                  /*OwnsHeaderSearch =*/false);
+  PP.Initialize(*Target);
+
+  SmallVector<StringRef> EmbeddedFiles;
+  PP.addPPCallbacks(std::make_unique<EmbedCollector>(PP, EmbeddedFiles));
+  PP.EnterMainSourceFile();
+  PP.LexTokensUntilEOF();
+
+  SmallVector<StringRef> ExpectedEmbeds{
+      "inputs/single_byte.txt",
+      "inputs/jk.txt",
+      "inputs/single_byte1.txt",
+  };
+  EXPECT_EQ(EmbeddedFiles, ExpectedEmbeds);
 }
 
 } // anonymous namespace

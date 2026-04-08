@@ -41,7 +41,7 @@ define void @dynamicIndex(ptr %addr, ptr %addr2, i32 %index) {
 ; CHECK-NEXT:    mov sp, r4
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    adds r0, r2, r2
-; CHECK-NEXT:    and r2, r0, #3
+; CHECK-NEXT:    and r2, r0, #2
 ; CHECK-NEXT:    adds r0, #1
 ; CHECK-NEXT:    mov r12, sp
 ; CHECK-NEXT:    and r0, r0, #3

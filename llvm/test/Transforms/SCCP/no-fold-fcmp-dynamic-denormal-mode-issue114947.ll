@@ -116,4 +116,4 @@ define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalable_vec
   ret <vscale x 2 x i1> %cmp
 }
 
-attributes #0 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #0 = { denormal_fpenv(ieee|dynamic) }

@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -131,9 +132,9 @@ public:
     return false;
   }
 
-  virtual bool isSourceOfDivergence(const Value *V) const { return false; }
-
-  virtual bool isAlwaysUniform(const Value *V) const { return false; }
+  virtual ValueUniformity getValueUniformity(const Value *V) const {
+    return ValueUniformity::Default;
+  }
 
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
     return false;
@@ -151,6 +152,52 @@ public:
   }
 
   virtual bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
+
+  virtual std::pair<KnownBits, KnownBits>
+  computeKnownBitsAddrSpaceCast(unsigned ToAS, const Value &PtrOp) const {
+    const Type *PtrTy = PtrOp.getType();
+    assert(PtrTy->isPtrOrPtrVectorTy() &&
+           "expected pointer or pointer vector type");
+    unsigned FromAS = PtrTy->getPointerAddressSpace();
+
+    if (DL.isNonIntegralAddressSpace(FromAS))
+      return std::pair(KnownBits(DL.getPointerSizeInBits(FromAS)),
+                       KnownBits(DL.getPointerSizeInBits(ToAS)));
+
+    KnownBits FromPtrBits;
+    if (const AddrSpaceCastInst *CastI = dyn_cast<AddrSpaceCastInst>(&PtrOp)) {
+      std::pair<KnownBits, KnownBits> KB = computeKnownBitsAddrSpaceCast(
+          CastI->getDestAddressSpace(), *CastI->getPointerOperand());
+      FromPtrBits = KB.second;
+    } else {
+      FromPtrBits = computeKnownBits(&PtrOp, DL, nullptr);
+    }
+
+    KnownBits ToPtrBits =
+        computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
+
+    return {FromPtrBits, ToPtrBits};
+  }
+
+  virtual KnownBits
+  computeKnownBitsAddrSpaceCast(unsigned FromAS, unsigned ToAS,
+                                const KnownBits &FromPtrBits) const {
+    unsigned ToASBitSize = DL.getPointerSizeInBits(ToAS);
+
+    if (DL.isNonIntegralAddressSpace(FromAS))
+      return KnownBits(ToASBitSize);
+
+    // By default, we assume that all valid "larger" (e.g. 64-bit) to "smaller"
+    // (e.g. 32-bit) casts work by chopping off the high bits.
+    // By default, we do not assume that null results in null again.
+    return FromPtrBits.anyextOrTrunc(ToASBitSize);
+  }
+
+  virtual APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                                 unsigned DstAS) const {
+    return {DL.getPointerSizeInBits(SrcAS), 0};
+  }
+
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS == 0;
@@ -231,8 +278,7 @@ public:
     return false;
   }
 
-  virtual TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
+  virtual TailFoldingStyle getPreferredTailFoldingStyle() const {
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
@@ -297,7 +343,7 @@ public:
 
   virtual bool canMacroFuseCmp() const { return false; }
 
-  virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+  virtual bool canSaveCmp(Loop *L, CondBrInst **BI, ScalarEvolution *SE,
                           LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                           TargetLibraryInfo *LibInfo) const {
     return false;
@@ -309,12 +355,14 @@ public:
   }
 
   virtual bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                                  unsigned AddressSpace) const {
+                                  unsigned AddressSpace,
+                                  TTI::MaskKind MaskKind) const {
     return false;
   }
 
   virtual bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                 unsigned AddressSpace) const {
+                                 unsigned AddressSpace,
+                                 TTI::MaskKind MaskKind) const {
     return false;
   }
 
@@ -431,6 +479,8 @@ public:
 
   virtual bool useColdCCForColdCall(Function &F) const { return false; }
 
+  virtual bool useFastCCForInternalCall(Function &F) const { return true; }
+
   virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
     return false;
   }
@@ -454,13 +504,16 @@ public:
   virtual InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
       TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const {
+      ArrayRef<Value *> VL = {},
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
+    // Default implementation returns 0.
+    // BasicTTIImpl provides the actual implementation.
     return 0;
   }
 
-  virtual InstructionCost
-  getOperandsScalarizationOverhead(ArrayRef<Type *> Tys,
-                                   TTI::TargetCostKind CostKind) const {
+  virtual InstructionCost getOperandsScalarizationOverhead(
+      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 0;
   }
 
@@ -579,9 +632,21 @@ public:
     }
   }
 
+  virtual InstructionCost
+  getRegisterClassSpillCost(unsigned ClassID,
+                            TTI::TargetCostKind CostKind) const {
+    return TTI::TCC_Basic;
+  }
+
+  virtual InstructionCost
+  getRegisterClassReloadCost(unsigned ClassID,
+                             TTI::TargetCostKind CostKind) const {
+    return TTI::TCC_Basic;
+  }
+
   virtual TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    return TypeSize::getFixed(32);
+    return TypeSize::get(32, K == TargetTransformInfo::RGK_ScalableVector);
   }
 
   virtual unsigned getMinVectorRegisterBitWidth() const { return 128; }
@@ -590,7 +655,6 @@ public:
   virtual std::optional<unsigned> getVScaleForTuning() const {
     return std::nullopt;
   }
-  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
 
   virtual bool
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
@@ -604,7 +668,8 @@ public:
   virtual unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     return 0;
   }
-  virtual unsigned getStoreMinimumVF(unsigned VF, Type *, Type *) const {
+  virtual unsigned getStoreMinimumVF(unsigned VF, Type *, Type *, Align,
+                                     unsigned) const {
     return VF;
   }
 
@@ -655,7 +720,7 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const {
+      TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
     return InstructionCost::getInvalid();
   }
 
@@ -784,10 +849,10 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                             TTI::TargetCostKind CostKind,
-                                             unsigned Index, const Value *Op0,
-                                             const Value *Op1) const {
+  virtual InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      const Value *Op0, const Value *Op1,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
 
@@ -798,13 +863,15 @@ public:
   virtual InstructionCost getVectorInstrCost(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
       Value *Scalar,
-      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
 
-  virtual InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
-                                             TTI::TargetCostKind CostKind,
-                                             unsigned Index) const {
+  virtual InstructionCost getVectorInstrCost(
+      const Instruction &I, Type *Val, TTI::TargetCostKind CostKind,
+      unsigned Index,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
 
@@ -839,35 +906,6 @@ public:
                   unsigned AddressSpace, TTI::TargetCostKind CostKind,
                   TTI::OperandValueInfo OpInfo, const Instruction *I) const {
     return 1;
-  }
-
-  virtual InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
-                        TTI::TargetCostKind CostKind) const {
-    return 1;
-  }
-
-  virtual InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const {
-    return 1;
-  }
-
-  virtual InstructionCost getExpandCompressMemoryOpCost(
-      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) const {
-    return 1;
-  }
-
-  virtual InstructionCost
-  getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const {
-    return InstructionCost::getInvalid();
   }
 
   virtual InstructionCost getInterleavedMemoryOpCost(
@@ -922,8 +960,29 @@ public:
     case Intrinsic::ssa_copy:
       // These intrinsics don't actually represent code after lowering.
       return 0;
+    case Intrinsic::bswap:
+      if (!ICA.getReturnType()->isVectorTy() &&
+          !isPowerOf2_64(DL.getTypeSizeInBits(ICA.getReturnType())))
+        return InstructionCost::getInvalid();
     }
     return 1;
+  }
+
+  virtual InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const {
+    switch (MICA.getID()) {
+    case Intrinsic::masked_scatter:
+    case Intrinsic::masked_gather:
+    case Intrinsic::masked_load:
+    case Intrinsic::masked_store:
+    case Intrinsic::vp_scatter:
+    case Intrinsic::vp_gather:
+    case Intrinsic::masked_compressstore:
+    case Intrinsic::masked_expandload:
+      return 1;
+    }
+    return InstructionCost::getInvalid();
   }
 
   virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
@@ -1026,6 +1085,13 @@ public:
     return DefaultCallPenalty;
   }
 
+  virtual bool
+  shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
+                                       const Attribute &Attr) const {
+    // Copy attributes by default
+    return true;
+  }
+
   virtual bool areTypesABICompatible(const Function *Caller,
                                      const Function *Callee,
                                      ArrayRef<Type *> Types) const {
@@ -1095,7 +1161,11 @@ public:
 
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
-  virtual bool preferEpilogueVectorization() const { return true; }
+  virtual bool preferEpilogueVectorization(ElementCount Iters) const {
+    // We consider epilogue vectorization unprofitable for targets that
+    // don't consider interleaving beneficial (eg. MVE).
+    return getMaxInterleaveFactor(Iters) > 1;
+  }
 
   virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
 
@@ -1138,6 +1208,10 @@ public:
     return APInt::getZero(32);
   }
 
+  virtual APInt getPriorityMask(const Function &F) const {
+    return APInt::getZero(32);
+  }
+
   virtual bool isMultiversionedFunction(const Function &F) const {
     return false;
   }
@@ -1154,6 +1228,11 @@ public:
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
+
+  virtual bool isUniform(const Instruction *I,
+                         const SmallBitVector &UniformArgs) const {
+    llvm_unreachable("target must implement isUniform for Custom uniformity");
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
@@ -1394,7 +1473,8 @@ public:
       IntrinsicCostAttributes CostAttrs(Intrinsic->getIntrinsicID(), *CB);
       return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
     }
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Ret:
     case Instruction::PHI:
     case Instruction::Switch:
@@ -1536,7 +1616,8 @@ public:
       if (auto *CI = dyn_cast<ConstantInt>(Operands[2]))
         if (CI->getValue().getActiveBits() <= 32)
           Idx = CI->getZExtValue();
-      return TargetTTI->getVectorInstrCost(*IE, Ty, CostKind, Idx);
+      return TargetTTI->getVectorInstrCost(*IE, Ty, CostKind, Idx,
+                                           TTI::getVectorInstrContextHint(IE));
     }
     case Instruction::ShuffleVector: {
       auto *Shuffle = dyn_cast<ShuffleVectorInst>(U);

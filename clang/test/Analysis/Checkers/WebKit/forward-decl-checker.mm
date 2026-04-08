@@ -44,6 +44,7 @@ void opaque_call_arg(Obj* obj, Obj&& otherObj, const RefPtr<Obj>& safeObj, WeakP
   receive_obj_ref(*obj);
   receive_obj_ptr(&*obj);
   receive_obj_rref(std::move(otherObj));
+  receive_obj_rref(WTF::move(otherObj));
   receive_obj_ref(*safeObj.get());
   receive_obj_ptr(weakObj.get());
   // expected-warning@-1{{Call argument for parameter 'p' uses a forward declared type 'Obj *'}}
@@ -59,6 +60,7 @@ void rval(Obj&& arg) {
   auto &&obj = provide_obj_rval();
   // expected-warning@-1{{Local variable 'obj' uses a forward declared type 'Obj &&'}}
   receive_obj_rval(std::move(arg));
+  receive_obj_rval(WTF::move(arg));
 }
 
 ObjCObj *provide_objcobj();
@@ -67,6 +69,10 @@ ObjCObj *objc_ptr() {
   receive_objcobj(provide_objcobj());
   auto *objcobj = provide_objcobj();
   return objcobj;
+}
+
+void obj_ptr_null_callee(ObjCObj* (*cb)()) {
+  receive_objcobj(cb());
 }
 
 struct WrapperObj {
@@ -84,6 +90,7 @@ void construct_ptr(Obj&& arg) {
   WrapperObj wrapper2(provide_obj_ref());
   // expected-warning@-1{{Call argument for parameter 'obj' uses a forward declared type 'Obj &'}}
   WrapperObj wrapper3(std::move(arg));
+  WrapperObj wrapper4(WTF::move(arg));
 }
 
 JSStringRef provide_opaque_ptr();

@@ -301,6 +301,70 @@ void test_StaticInlineMember() {
   StaticInlineMember::x();
 }
 
+template <typename L>
+auto pr63271foo(L l_) {
+  return [l = l_](decltype(l)) -> void {};
+}
+
+// CHECK-LABEL: define{{.*}} @_Z10pr63271usev
+// CHECK: call void @_ZZ10pr63271fooIiEDaT_ENKUliE_clEi
+void pr63271use() {
+  pr63271foo(0)(0);
+}
+
+template <typename T>
+struct pr139089_vlambda {
+  pr139089_vlambda() {
+    [&m = m_args](decltype(m) args) { (void)args; }(m_args);
+  }
+  int m_args = 0;
+};
+
+// CHECK-LABEL: define{{.*}} @_Z11pr139089usev
+// CHECK: call void @_ZN16pr139089_vlambdaIiEC1Ev
+void pr139089use() {
+  (void)pr139089_vlambda<int>{};
+}
+
+
+template <class RET> struct pr86240_context {
+  using Ptr = pr86240_context<RET> *;
+};
+
+template <typename Callable>
+void pr86240_schedule_coro(Callable &&coro_function) {
+  [coro_function{coro_function}](
+      typename pr86240_context<decltype(coro_function())>::Ptr ctx) -> int {
+    return ctx != nullptr;
+  }(nullptr);
+}
+
+// CHECK-LABEL: define{{.*}} @_Z10pr86240usev
+// CHECK: call noundef i32 @"_ZZ21pr86240_schedule_coroIZ10pr86240usevE3$_0EvOT_ENKUlP15pr86240_contextIiEE_clES5_"
+void pr86240use() {
+  pr86240_schedule_coro([] { return 0; });
+}
+
+template <typename T>
+auto nonLocalVarTemplate = [x = T{}](decltype(x) y) { return y; };
+
+// CHECK-LABEL: define{{.*}} @_Z22nonLocalVarTemplateUsev
+// CHECK: call noundef i32 @_ZNK19nonLocalVarTemplateIiEMUliE_clEi
+int nonLocalVarTemplateUse() {
+  return nonLocalVarTemplate<int>(2);
+}
+
+template <typename T>
+struct nonLocalStaticInlineMember {
+  static inline auto l = [x = T{}](decltype(x) y) { return y; };
+};
+
+// CHECK-LABEL: define{{.*}} @_Z29nonLocalStaticInlineMemberUsev
+// CHECK: call noundef i32 @_ZNK26nonLocalStaticInlineMemberIiE1lMUliE_clEi
+int nonLocalStaticInlineMemberUse() {
+  return nonLocalStaticInlineMember<int>::l(2);
+}
+
 // Check linkage of the various lambdas.
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZ11inline_funciENKUlvE_clEv
 // CHECK: ret i32 1
@@ -330,6 +394,8 @@ void test_StaticInlineMember() {
 // CHECK: ret i32 3
 
 // CHECK-LABEL: define linkonce_odr void @_Z1fIZZNK23TestNestedInstantiationclEvENKUlvE_clEvEUlvE_EvT_
+
+// CHECK-LABEL: define linkonce_odr void @_ZZN16pr139089_vlambdaIiEC1EvENKUlRiE_clES1_
 
 
 namespace PR12808 {

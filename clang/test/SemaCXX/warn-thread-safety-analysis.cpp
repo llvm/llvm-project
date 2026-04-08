@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -1526,6 +1526,16 @@ class Foo {
     f2(); // expected-warning {{cannot call function 'f2' while mutex 'mu1' is held}} \
       // expected-warning {{cannot call function 'f2' while mutex 'mu2' is held}}
   }
+
+  // Holding only mu1 (but not mu2) is insufficient to access x.
+  void f3() EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    x = 5; // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // Holding only mu2 (but not mu1) is insufficient to access x.
+  void f4() EXCLUSIVE_LOCKS_REQUIRED(mu2) {
+    x = 5; // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}}
+  }
 };
 
 Foo *foo;
@@ -1536,6 +1546,50 @@ void func()
              // expected-warning {{calling function 'f1' requires holding mutex 'foo->mu1' exclusively}}
 }
 } // end namespace thread_annot_lock_42
+
+namespace guarded_by_multi {
+// Test multi-arg GUARDED_BY: any one capability suffices for read; all are
+// required for write.
+class Foo {
+  Mutex mu1, mu2;
+  int x GUARDED_BY(mu1, mu2);
+  int *p PT_GUARDED_BY(mu1, mu2);
+
+  // All locks held exclusively: read and write both OK.
+  void f1() EXCLUSIVE_LOCKS_REQUIRED(mu1, mu2) {
+    x = 1;
+    *p = 1;
+  }
+
+  // Only mu1 held exclusively: read OK, write warns about mu2.
+  void f2() EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    int y = x;
+    int z = *p;
+    x = 1;  // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1; // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // One lock held shared: read OK, write warns about both.
+  void f3() SHARED_LOCKS_REQUIRED(mu1) {
+    int y = x;
+    int z = *p;
+    x = 1;  // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}} \
+            // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1; // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu1' exclusively}} \
+            // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // No locks held: read and write both warn.
+  void f4() {
+    int y = x;  // expected-warning {{reading variable 'x' requires holding at least one of 'mu1', 'mu2'}}
+    int z = *p; // expected-warning {{reading the value pointed to by 'p' requires holding at least one of 'mu1', 'mu2'}}
+    x = 1;      // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}} \
+                // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1;     // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu1' exclusively}} \
+                // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+};
+} // end namespace guarded_by_multi
 
 namespace thread_annot_lock_46 {
 // Test the support for annotations on virtual functions.
@@ -1847,7 +1901,52 @@ struct TestScopedLockable {
     a = b + 1;
     b = a + 1;
   }
+
+#if __cplusplus >= 202002L
+  void rangeForLoopInitializer() {
+    for (MutexLock lock{&mu1}; int& x : (int[]){1, 2, 3}) {
+      a = 42;
+    }
+  }
+#endif
 };
+
+namespace test_function_param_lock_unlock {
+class A {
+ public:
+  A() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_.Lock(); }
+  ~A() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(A a) { return 0; }
+
+// Unlock in dtor without lock in ctor.
+// FIXME: We cannot detect that we are releasing a lock that was never held!
+class B {
+ public:
+  B() {}
+  B(int) {}
+  ~B() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(B b) { return 0; }
+
+class SCOPED_LOCKABLE MutexWrapper {
+public:
+  MutexWrapper(Mutex *mu) : mu_(mu) {}
+  ~MutexWrapper() UNLOCK_FUNCTION(mu_) { mu_->Unlock(); }
+  void Lock() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_->Lock(); }
+
+  Mutex *mu_;
+};
+// FIXME: This is a false-positive as the lock is released by the dtor.
+void do_something(MutexWrapper mw) {
+  mw.Lock(); // expected-note {{mutex acquired here}}
+}            // expected-warning {{mutex 'mw.mu_' is still held at the end of function}}
+
+} // namespace test_function_param_lock_unlock
 
 } // end namespace test_scoped_lockable
 
@@ -2487,6 +2586,10 @@ public:
   Foo& getFoo()              { return *f; }
   Foo& getFoo2(int c)        { return *f; }
   Foo& getFoo3(int c, int d) { return *f; }
+  Foo& getFoo4(bool)         { return *f; }
+  Foo& getFoo5(char)         { return *f; }
+  Foo& getFoo6(char16_t)     { return *f; }
+  Foo& getFoo7(const char*)  { return *f; }
 
   Foo& getFooey() { return *f; }
 };
@@ -2517,6 +2620,22 @@ void test() {
   bar.getFoo3(a, b).mu_.Lock();
   bar.getFoo3(a, b).a = 0;
   bar.getFoo3(a, b).mu_.Unlock();
+
+  bar.getFoo4(true).mu_.Lock();
+  bar.getFoo4(true).a = 0;
+  bar.getFoo4(true).mu_.Unlock();
+
+  bar.getFoo5('a').mu_.Lock();
+  bar.getFoo5('a').a = 0;
+  bar.getFoo5('a').mu_.Unlock();
+
+  bar.getFoo6(u'\u1234').mu_.Lock();
+  bar.getFoo6(u'\u1234').a = 0;
+  bar.getFoo6(u'\u1234').mu_.Unlock();
+
+  bar.getFoo7("foo").mu_.Lock();
+  bar.getFoo7("foo").a = 0;
+  bar.getFoo7("foo").mu_.Unlock();
 
   getBarFoo(bar, a).mu_.Lock();
   getBarFoo(bar, a).a = 0;
@@ -2559,11 +2678,41 @@ void test2() {
     // expected-note {{found near match 'bar.getFoo2(a).mu_'}}
   bar.getFoo2(a).mu_.Unlock();
 
+  bar.getFoo2(0).mu_.Lock();
+  bar.getFoo2(1).a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo2(1).mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo2(0).mu_'}}
+  bar.getFoo2(0).mu_.Unlock();
+
   bar.getFoo3(a, b).mu_.Lock();
   bar.getFoo3(a, c).a = 0;  // \
     // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo3(a, c).mu_' exclusively}} \
     // expected-note {{found near match 'bar.getFoo3(a, b).mu_'}}
   bar.getFoo3(a, b).mu_.Unlock();
+
+  bar.getFoo4(true).mu_.Lock();
+  bar.getFoo4(false).a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo4(false).mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo4(true).mu_'}}
+  bar.getFoo4(true).mu_.Unlock();
+
+  bar.getFoo5('x').mu_.Lock();
+  bar.getFoo5('y').a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo5(U'y').mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo5(U'x').mu_'}}
+  bar.getFoo5('x').mu_.Unlock();
+
+  bar.getFoo6(u'\u1234').mu_.Lock();
+  bar.getFoo6(u'\u4321').a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo6(U'\u4321').mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo6(U'\u1234').mu_'}}
+  bar.getFoo6(u'\u1234').mu_.Unlock();
+
+  bar.getFoo7("foo").mu_.Lock();
+  bar.getFoo7("bar").a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo7("bar").mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo7("foo").mu_'}}
+  bar.getFoo7("foo").mu_.Unlock();
 
   getBarFoo(bar, a).mu_.Lock();
   getBarFoo(bar, b).a = 0;  // \
@@ -7288,6 +7437,15 @@ void testBasicPointerAlias(Foo *f) {
   ptr->mu.Unlock();       // unlock through alias
 }
 
+void testCastPointerAlias(Foo *f) {
+  // Cast to void* from unsigned long to test non-pointer cast indirection.
+  void *priv = (void *)(__UINTPTR_TYPE__)(&f->mu);
+  f->mu.Lock();
+  f->data = 42;
+  auto *mu = (Mutex *)priv;
+  mu->Unlock();
+}
+
 void testBasicPointerAliasNoInit(Foo *f) {
   Foo *ptr;
 
@@ -7380,6 +7538,41 @@ void testPointerAliasEscapeAndReset(Foo *f) {
   ptr->mu.Unlock();
 }
 
+// A function that may do anything to the objects referred to by the inputs.
+void escapeAliasMultiple(void *, void *, void *);
+void testPointerAliasEscapeMultiple(Foo *F) {
+  Foo *L;
+  F->mu.Lock(); // expected-note{{mutex acquired here}}
+  Foo *Fp = F;
+  escapeAliasMultiple(&L, &L, &Fp);
+  Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
+} // expected-warning{{mutex 'F->mu' is still held at the end of function}}
+
+void unlockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
+void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
+  Foo* L;
+  L = F;
+  L->mu.Lock();
+  // Release the lock held by 'L' before clearing its definition.
+  unlockFooWithEscapablePointer(&L);
+}
+
+void testEscapeInvalidationHappensRightAfterTheCtorCall(Foo* F) {
+  Foo* L = F;
+  MutexLock ScopeLock(&L->mu);
+
+  struct {
+    int DataMember GUARDED_BY(F->mu);
+  } Data;
+
+  Data.DataMember = 0;
+}
+
+void testCleanUpFunctionWithLocalVarUpdated(Foo* F) {
+  F->mu.Lock();
+  Foo * __attribute__((unused, cleanup(unlockFooWithEscapablePointer))) L = F;
+}
+
 void testPointerAliasTryLock1() {
   Foo *ptr = returnsFoo();
   if (ptr->mu.TryLock()) {
@@ -7444,6 +7637,27 @@ void testReassignment() {
   ptr->mu.Unlock();
 }
 
+// Alias reassignment through pointer-to-pointer (nor ptr-to-ptr-to-ptr...) does
+// not invalidate aliases for now.
+//
+// While this may result in either false positives or negatives, there's rarely
+// a good reason not to just do direct assignment within the same scope. For the
+// time being, we retain this as a deliberate "escape hatch": specifically, this
+// may be used to help the alias analysis to "see through" complex helper macros
+// that e.g. read a value (such as a pointer) via inline assembly or other
+// opaque helpers.
+void testReassignmentPointerToAlias(Foo *f) {
+  Mutex *mu = &f->mu;
+  // Escape hatch.
+  Mutex **mu_p = &mu;
+  Mutex *actual_mu = [&] { /* ... */ return mu; }();
+  *mu_p = actual_mu;
+
+  mu->Lock();
+  f->data = 42;
+  mu->Unlock();
+}
+
 // Nested field access through pointer
 struct Container {
   Foo foo;
@@ -7459,6 +7673,19 @@ void testNestedAccess(Container *c) {
 void testNestedAcquire(Container *c) EXCLUSIVE_LOCK_FUNCTION(&c->foo.mu) {
   Foo *buf = &c->foo;
   buf->mu.Lock();
+}
+
+void testArrayOfContainers() {
+  Container array[10];
+
+  Foo *ptr1 = &array[0].foo;
+  Foo *ptr2 = &array[1].foo;
+  ptr1->mu.Lock();
+  ptr2->mu.Lock();
+  array[0].foo.data = 0;
+  array[1].foo.data = 1;
+  ptr2->mu.Unlock();
+  ptr1->mu.Unlock();
 }
 
 struct ContainerOfPtr {
@@ -7622,3 +7849,39 @@ void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
   ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 } // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
 }  // namespace CapabilityAliases
+
+namespace WideStringLiteral {
+
+class Foo {
+ public:
+  Mutex mu;
+  Mutex* getMu(const wchar_t* s) { return &mu; }
+  Mutex* getMu2(const char16_t* s) { return &mu; }
+  Mutex* getMu3(const char32_t* s) { return &mu; }
+
+  int a GUARDED_BY(getMu(L"abc"));
+  int b GUARDED_BY(getMu2(u"abc"));
+  int c GUARDED_BY(getMu3(U"abc"));
+};
+
+Foo g_foo;
+
+void test() {
+  g_foo.getMu(L"abc")->Lock();
+  g_foo.a = 0;
+  g_foo.getMu(L"abc")->Unlock();
+}
+
+void test2() {
+  g_foo.getMu2(u"abc")->Lock();
+  g_foo.b = 0;
+  g_foo.getMu2(u"abc")->Unlock();
+}
+
+void test3() {
+  g_foo.getMu3(U"abc")->Lock();
+  g_foo.c = 0;
+  g_foo.getMu3(U"abc")->Unlock();
+}
+
+} // namespace WideStringLiteral

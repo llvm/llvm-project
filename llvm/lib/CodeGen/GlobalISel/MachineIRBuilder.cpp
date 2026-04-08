@@ -38,8 +38,10 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
 //------------------------------------------------------------------------------
 
 MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
-  return BuildMI(getMF(), {getDL(), getPCSections(), getMMRAMetadata()},
-                 getTII().get(Opcode));
+  return BuildMI(
+      getMF(),
+      {getDL(), getPCSections(), getMMRAMetadata(), getDeactivationSymbol()},
+      getTII().get(Opcode));
 }
 
 MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
@@ -109,8 +111,10 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
-    else
+    else if (CI->getBitWidth() == 1)
       MIB.addImm(CI->getZExtValue());
+    else
+      MIB.addImm(CI->getSExtValue());
   } else if (auto *CFP = dyn_cast<ConstantFP>(NumericConstant)) {
     MIB.addFPImm(CFP);
   } else if (isa<ConstantPointerNull>(NumericConstant)) {
@@ -359,7 +363,9 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     int64_t Val) {
   auto IntN = IntegerType::get(getMF().getFunction().getContext(),
                                Res.getLLTTy(*getMRI()).getScalarSizeInBits());
-  ConstantInt *CI = ConstantInt::get(IntN, Val, true);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  ConstantInt *CI = ConstantInt::getSigned(IntN, Val, /*implicitTrunc=*/true);
   return buildConstant(Res, *CI);
 }
 
@@ -581,7 +587,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
            Op.getLLTTy(*getMRI()).getSizeInBits())
     Opcode = TargetOpcode::G_TRUNC;
   else
-    assert(Res.getLLTTy(*getMRI()) == Op.getLLTTy(*getMRI()));
+    assert(Res.getLLTTy(*getMRI()).getSizeInBits() ==
+           Op.getLLTTy(*getMRI()).getSizeInBits());
 
   return buildInstr(Opcode, Res, Op);
 }
@@ -780,7 +787,7 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
   assert(Src.getLLTTy(*getMRI()) == DstTy.getElementType() &&
          "Expected Src to match Dst elt ty");
   auto UndefVec = buildUndef(DstTy);
-  auto Zero = buildConstant(LLT::scalar(64), 0);
+  auto Zero = buildConstant(LLT::integer(64), 0);
   auto InsElt = buildInsertVectorElement(DstTy, UndefVec, Src, Zero);
   SmallVector<int, 16> ZeroMask(DstTy.getNumElements());
   return buildShuffleVector(DstTy, InsElt, UndefVec, ZeroMask);

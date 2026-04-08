@@ -84,8 +84,10 @@
 
 using namespace llvm;
 
-static void SignalHandler(int Sig, siginfo_t *Info, void *);
+static void SignalHandler(int Sig, siginfo_t *Info, void *Context);
+static void SignalHandlerTerminate(int Sig, siginfo_t *Info, void *Context);
 static void InfoSignalHandler(int Sig); // defined below.
+static void InfoSignalHandlerTerminate(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
@@ -292,7 +294,8 @@ static void CreateSigAltStack() {
 static void CreateSigAltStack() {}
 #endif
 
-static void RegisterHandlers() { // Not signal-safe.
+static void RegisterHandlers(
+    bool NeedsPOSIXUtilitySignalHandling = false) { // Not signal-safe.
   // The mutex prevents other threads from registering handlers while we're
   // doing it. We also have to protect the handlers and their count because
   // a signal handler could fire while we're registering handlers.
@@ -317,18 +320,34 @@ static void RegisterHandlers() { // Not signal-safe.
 
     switch (Kind) {
     case SignalKind::IsKill:
-      NewHandler.sa_sigaction = SignalHandler;
+      if (NeedsPOSIXUtilitySignalHandling)
+        // If POSIX signal-handling semantics are followed, the signal handler
+        // resignal itself to terminate after handling the signal.
+        NewHandler.sa_sigaction = SignalHandlerTerminate;
+      else
+        NewHandler.sa_sigaction = SignalHandler;
       NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
-      NewHandler.sa_handler = InfoSignalHandler;
+      if (NeedsPOSIXUtilitySignalHandling)
+        // If POSIX signal-handling semantics are followed, the signal handler
+        // resignal itself to terminate after handling the signal.
+        NewHandler.sa_handler = InfoSignalHandlerTerminate;
+      else
+        NewHandler.sa_handler = InfoSignalHandler;
       NewHandler.sa_flags = SA_ONSTACK;
       break;
     }
     sigemptyset(&NewHandler.sa_mask);
 
-    // Install the new handler, save the old one in RegisteredSignalInfo.
-    sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    if (NeedsPOSIXUtilitySignalHandling) {
+      // Don't install the new handler if the signal disposition is SIG_IGN.
+      struct sigaction act;
+      if (sigaction(Signal, NULL, &act) == 0 && act.sa_handler != SIG_IGN)
+        sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    } else {
+      sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    }
     RegisteredSignalInfo[Index].SigNo = Signal;
     ++NumRegisteredSignals;
   };
@@ -358,6 +377,9 @@ static void RemoveFilesToRemove() {
 }
 
 void sys::CleanupOnSignal(uintptr_t Context) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   int Sig = (int)Context;
 
   if (llvm::is_contained(InfoSigs, Sig)) {
@@ -374,7 +396,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 // The signal handler that runs.
-static void SignalHandler(int Sig, siginfo_t *Info, void *) {
+static void SignalHandler(int Sig, siginfo_t *Info, void *Context) {
   // Restore the signal behavior to default, so that the program actually
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
@@ -434,13 +456,36 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
 #endif
 }
 
+static void SignalHandlerTerminate(int Sig, siginfo_t *Info, void *Context) {
+  SignalHandler(Sig, Info, Context);
+
+  // Resignal if it is a kill signal so that the exit code contains the
+  // terminating signal number.
+  if (llvm::is_contained(KillSigs, Sig))
+    raise(Sig); // Execute the default handler.
+}
+
 static void InfoSignalHandler(int Sig) {
   SaveAndRestore SaveErrnoDuringASignalHandler(errno);
   if (SignalHandlerFunctionType CurrentInfoFunction = InfoSignalFunction)
     CurrentInfoFunction();
 }
 
-void llvm::sys::RunInterruptHandlers() { RemoveFilesToRemove(); }
+static void InfoSignalHandlerTerminate(int Sig) {
+  InfoSignalHandler(Sig);
+
+  if (Sig == SIGUSR1) {
+    sys::unregisterHandlers();
+    raise(Sig);
+  }
+}
+
+void sys::RunInterruptHandlers() {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
+  RemoveFilesToRemove();
+}
 
 void llvm::sys::SetInterruptFunction(void (*IF)()) {
   InterruptFunction.exchange(IF);
@@ -480,10 +525,11 @@ void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {
 /// Add a function to be called when a signal is delivered to the process. The
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
-void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
-                                 void *Cookie) { // Signal-safe.
+void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr, void *Cookie,
+                                 bool NeedsPOSIXUtilitySignalHandling) {
+  // Signal-safe.
   insertSignalHandler(FnPtr, Cookie);
-  RegisterHandlers();
+  RegisterHandlers(NeedsPOSIXUtilitySignalHandling);
 }
 
 #if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) &&                            \

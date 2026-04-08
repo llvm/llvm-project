@@ -17,6 +17,10 @@ def: Flag<["-"], "v">,
   Alias<version>,
   HelpText<"Alias for --version">;
 
+def check_python : F<"check-python">,
+                   HelpText<"Prints the path to the resolved Python DLL. "
+                            "(Windows only).">;
+
 def wait_for_debugger: F<"wait-for-debugger">,
   HelpText<"Pause the program at startup.">;
 def: Flag<["-"], "g">,
@@ -50,7 +54,8 @@ def debugger_pid: S<"debugger-pid">,
 def stdio: S<"stdio">,
   MetaVarName<"<stdin:stdout:stderr:...>">,
   HelpText<"An array of file paths for redirecting the program's standard IO "
-    "streams. A colon-separated list of entries. Empty value means no "
+    "streams. On Windows, a semicolon-separated list of entries, a "
+    "colon-separated list on other platforms. Empty value means no "
     "redirection.">;
 
 def repl_mode
@@ -82,3 +87,11 @@ def connection_timeout: S<"connection-timeout">,
     "timeout is reached, the server will be closed and the process will exit. "
     "Not specifying this argument or specifying non-positive values will "
     "cause the server to wait for new connections indefinitely.">;
+
+def client
+    : S<"client">,
+      MetaVarName<"<client>">,
+      HelpText<
+          "Use lldb-dap as a launcher for a curated number of DAP client.">;
+
+def REM : R<["--"], "">;

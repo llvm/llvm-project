@@ -16,7 +16,10 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/HLSLResource.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
@@ -48,6 +51,19 @@ static FunctionDecl *lookupBuiltinFunction(Sema &S, StringRef Name) {
   assert(R.isSingleResult() &&
          "Since this is a builtin it should always resolve!");
   return cast<FunctionDecl>(R.getFoundDecl());
+}
+
+static QualType lookupBuiltinType(Sema &S, StringRef Name, DeclContext *DC) {
+  IdentifierInfo &II =
+      S.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
+  LookupResult Result(S, &II, SourceLocation(), Sema::LookupTagName);
+  S.LookupQualifiedName(Result, DC);
+  assert(!Result.empty() && "Builtin type not found");
+  QualType Ty =
+      S.getASTContext().getTypeDeclType(Result.getAsSingle<TypeDecl>());
+  S.RequireCompleteType(SourceLocation(), Ty,
+                        diag::err_tentative_def_incomplete_type);
+  return Ty;
 }
 
 CXXConstructorDecl *lookupCopyConstructor(QualType ResTy) {
@@ -153,6 +169,8 @@ private:
   StorageClass SC;
   llvm::SmallVector<Param> Params;
   llvm::SmallVector<Stmt *> StmtsList;
+  TemplateParameterList *TemplateParams = nullptr;
+  llvm::SmallVector<NamedDecl *> TemplateParamDecls;
 
   // Argument placeholders, inspired by std::placeholder. These are the indices
   // of arguments to forward to `callBuiltin` and other method builder methods.
@@ -170,12 +188,15 @@ private:
     _5,
     Handle = 128,
     CounterHandle,
+    This,
     LastStmt
   };
 
   Expr *convertPlaceholder(PlaceHolder PH);
   Expr *convertPlaceholder(LocalVar &Var);
   Expr *convertPlaceholder(Expr *E) { return E; }
+  // Converts a QualType to an Expr that carries type information to builtins.
+  Expr *convertPlaceholder(QualType Ty);
 
 public:
   friend BuiltinTypeDeclBuilder;
@@ -199,18 +220,30 @@ public:
   BuiltinTypeMethodBuilder &addParam(StringRef Name, QualType Ty,
                                      HLSLParamModifierAttr::Spelling Modifier =
                                          HLSLParamModifierAttr::Keyword_in);
+  QualType addTemplateTypeParam(StringRef Name);
   BuiltinTypeMethodBuilder &declareLocalVar(LocalVar &Var);
   template <typename... Ts>
   BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName,
-                                        QualType ReturnType, Ts... ArgSpecs);
+                                        QualType ReturnType, Ts &&...ArgSpecs);
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
+  template <typename V, typename S>
+  BuiltinTypeMethodBuilder &concat(V Vec, S Scalar, QualType ResultTy);
+
   template <typename T>
   BuiltinTypeMethodBuilder &accessHandleFieldOnResource(T ResourceRecord);
-  template <typename ResourceT, typename ValueT>
-  BuiltinTypeMethodBuilder &setHandleFieldOnResource(ResourceT ResourceRecord,
+  template <typename T>
+  BuiltinTypeMethodBuilder &accessFieldOnResource(T ResourceRecord,
+                                                  FieldDecl *Field);
+  template <typename ValueT>
+  BuiltinTypeMethodBuilder &setHandleFieldOnResource(LocalVar &ResourceRecord,
                                                      ValueT HandleValue);
+  template <typename ResourceT, typename ValueT>
+  BuiltinTypeMethodBuilder &setFieldOnResource(ResourceT ResourceRecord,
+                                               ValueT HandleValue,
+                                               FieldDecl *HandleField);
+  void setMipsHandleField(LocalVar &ResourceRecord);
   template <typename T>
   BuiltinTypeMethodBuilder &
   accessCounterHandleFieldOnResource(T ResourceRecord);
@@ -219,7 +252,8 @@ public:
   setCounterHandleFieldOnResource(ResourceT ResourceRecord, ValueT HandleValue);
   template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
   BuiltinTypeMethodBuilder &returnThis();
-  BuiltinTypeDeclBuilder &finalize();
+  BuiltinTypeDeclBuilder &
+  finalize(AccessSpecifier Access = AccessSpecifier::AS_public);
   Expr *getResourceHandleExpr();
   Expr *getResourceCounterHandleExpr();
 
@@ -232,11 +266,6 @@ private:
     if (!Method)
       createDecl();
   }
-
-  template <typename ResourceT, typename ValueT>
-  BuiltinTypeMethodBuilder &setFieldOnResource(ResourceT ResourceRecord,
-                                               ValueT HandleValue,
-                                               FieldDecl *HandleField);
 };
 
 TemplateParameterListBuilder::~TemplateParameterListBuilder() {
@@ -393,6 +422,12 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
     return getResourceHandleExpr();
   if (PH == PlaceHolder::CounterHandle)
     return getResourceCounterHandleExpr();
+  if (PH == PlaceHolder::This) {
+    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+    return CXXThisExpr::Create(AST, SourceLocation(),
+                               Method->getFunctionObjectParameterType(),
+                               /*IsImplicit=*/true);
+  }
 
   if (PH == PlaceHolder::LastStmt) {
     assert(!StmtsList.empty() && "no statements in the list");
@@ -401,12 +436,16 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
     return cast<ValueStmt>(LastStmt)->getExprStmt();
   }
 
+  // All other placeholders are parameters (_N), and can be loaded as an
+  // LValue. It needs to be an LValue if the result expression will be used as
+  // the actual parameter for an out parameter. The dimension builtins are an
+  // example where this happens.
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   ParmVarDecl *ParamDecl = Method->getParamDecl(static_cast<unsigned>(PH));
   return DeclRefExpr::Create(
       AST, NestedNameSpecifierLoc(), SourceLocation(), ParamDecl, false,
       DeclarationNameInfo(ParamDecl->getDeclName(), SourceLocation()),
-      ParamDecl->getType().getNonReferenceType(), VK_PRValue);
+      ParamDecl->getType().getNonReferenceType(), VK_LValue);
 }
 
 Expr *BuiltinTypeMethodBuilder::convertPlaceholder(LocalVar &Var) {
@@ -416,6 +455,15 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(LocalVar &Var) {
       VD->getASTContext(), NestedNameSpecifierLoc(), SourceLocation(), VD,
       false, DeclarationNameInfo(VD->getDeclName(), SourceLocation()),
       VD->getType(), VK_LValue);
+}
+
+Expr *BuiltinTypeMethodBuilder::convertPlaceholder(QualType Ty) {
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  QualType PtrTy = AST.getPointerType(Ty);
+  // Creates a value-initialized null pointer of type Ty*.
+  return new (AST) CXXScalarValueInitExpr(
+      PtrTy, AST.getTrivialTypeSourceInfo(PtrTy, SourceLocation()),
+      SourceLocation());
 }
 
 BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
@@ -448,6 +496,22 @@ BuiltinTypeMethodBuilder::addParam(StringRef Name, QualType Ty,
       Name, tok::TokenKind::identifier);
   Params.emplace_back(II, Ty, Modifier);
   return *this;
+}
+QualType BuiltinTypeMethodBuilder::addTemplateTypeParam(StringRef Name) {
+  assert(Method == nullptr &&
+         "Cannot add template param, method already created");
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  unsigned Position = static_cast<unsigned>(TemplateParamDecls.size());
+  auto *Decl = TemplateTypeParmDecl::Create(
+      AST, DeclBuilder.Record, SourceLocation(), SourceLocation(),
+      /* TemplateDepth */ 0, Position,
+      &AST.Idents.get(Name, tok::TokenKind::identifier),
+      /* Typename */ true,
+      /* ParameterPack */ false,
+      /* HasTypeConstraint*/ false);
+  TemplateParamDecls.push_back(Decl);
+
+  return QualType(Decl->getTypeForDecl(), 0);
 }
 
 void BuiltinTypeMethodBuilder::createDecl() {
@@ -488,12 +552,12 @@ void BuiltinTypeMethodBuilder::createDecl() {
   if (IsCtor)
     Method = CXXConstructorDecl::Create(
         AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo,
-        ExplicitSpecifier(), false, true, false,
+        ExplicitSpecifier(), false, /*IsInline=*/true, false,
         ConstexprSpecKind::Unspecified);
   else
     Method = CXXMethodDecl::Create(
         AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo, SC,
-        false, false, ConstexprSpecKind::Unspecified, SourceLocation());
+        false, true, ConstexprSpecKind::Unspecified, SourceLocation());
 
   // Create params & set them to the method/constructor and function prototype.
   SmallVector<ParmVarDecl *> ParmDecls;
@@ -503,8 +567,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
   for (int I = 0, E = Params.size(); I != E; I++) {
     Param &MP = Params[I];
     ParmVarDecl *Parm = ParmVarDecl::Create(
-        AST, Method->getDeclContext(), SourceLocation(), SourceLocation(),
-        &MP.NameII, MP.Ty,
+        AST, Method, SourceLocation(), SourceLocation(), &MP.NameII, MP.Ty,
         AST.getTrivialTypeSourceInfo(MP.Ty, SourceLocation()), SC_None,
         nullptr);
     if (MP.Modifier != HLSLParamModifierAttr::Keyword_in) {
@@ -560,6 +623,45 @@ BuiltinTypeMethodBuilder::declareLocalVar(LocalVar &Var) {
   return *this;
 }
 
+template <typename V, typename S>
+BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::concat(V Vec, S Scalar,
+                                                           QualType ResultTy) {
+  assert(ResultTy->isVectorType() && "The result type must be a vector type.");
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  Expr *VecExpr = convertPlaceholder(Vec);
+  auto *VecTy = VecExpr->getType()->castAs<VectorType>();
+  Expr *ScalarExpr = convertPlaceholder(Scalar);
+
+  // Save the vector to a local variable to avoid evaluating the placeholder
+  // multiple times or sharing the AST node.
+  LocalVar VecVar("vec_tmp", VecTy->desugar());
+  declareLocalVar(VecVar);
+  assign(VecVar, VecExpr);
+
+  QualType EltTy = VecTy->getElementType();
+  unsigned NumElts = VecTy->getNumElements();
+
+  SmallVector<Expr *, 4> Elts;
+  for (unsigned I = 0; I < NumElts; ++I) {
+    Elts.push_back(new (AST) ArraySubscriptExpr(
+        convertPlaceholder(VecVar), DeclBuilder.getConstantIntExpr(I), EltTy,
+        VK_PRValue, OK_Ordinary, SourceLocation()));
+  }
+  Elts.push_back(ScalarExpr);
+
+  auto *InitList =
+      new (AST) InitListExpr(AST, SourceLocation(), Elts, SourceLocation());
+  InitList->setType(ResultTy);
+
+  ExprResult Cast = DeclBuilder.SemaRef.BuildCStyleCastExpr(
+      SourceLocation(), AST.getTrivialTypeSourceInfo(ResultTy),
+      SourceLocation(), InitList);
+  assert(!Cast.isInvalid() && "Cast cannot fail!");
+  StmtsList.push_back(Cast.get());
+
+  return *this;
+}
+
 BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   CXXThisExpr *ThisExpr = CXXThisExpr::Create(
@@ -572,7 +674,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
 template <typename... Ts>
 BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
-                                      QualType ReturnType, Ts... ArgSpecs) {
+                                      QualType ReturnType, Ts &&...ArgSpecs) {
   ensureCompleteDecl();
 
   std::array<Expr *, sizeof...(ArgSpecs)> Args{
@@ -584,16 +686,22 @@ BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
       AST, NestedNameSpecifierLoc(), SourceLocation(), FD, false,
       FD->getNameInfo(), AST.BuiltinFnTy, VK_PRValue);
 
-  auto *ImpCast = ImplicitCastExpr::Create(
-      AST, AST.getPointerType(FD->getType()), CK_BuiltinFnToFnPtr, DRE, nullptr,
-      VK_PRValue, FPOptionsOverride());
+  ExprResult Call = DeclBuilder.SemaRef.BuildCallExpr(
+      /*Scope=*/nullptr, DRE, SourceLocation(),
+      MultiExprArg(Args.data(), Args.size()), SourceLocation());
+  assert(!Call.isInvalid() && "Call to builtin cannot fail!");
+  Expr *E = Call.get();
 
-  if (ReturnType.isNull())
-    ReturnType = FD->getReturnType();
+  if (!ReturnType.isNull() &&
+      !AST.hasSameUnqualifiedType(ReturnType, E->getType())) {
+    ExprResult CastResult = DeclBuilder.SemaRef.BuildCStyleCastExpr(
+        SourceLocation(), AST.getTrivialTypeSourceInfo(ReturnType),
+        SourceLocation(), E);
+    assert(!CastResult.isInvalid() && "Cast cannot fail!");
+    E = CastResult.get();
+  }
 
-  Expr *Call = CallExpr::Create(AST, ImpCast, Args, ReturnType, VK_PRValue,
-                                SourceLocation(), FPOptionsOverride());
-  StmtsList.push_back(Call);
+  StmtsList.push_back(E);
   return *this;
 }
 
@@ -615,7 +723,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
   Expr *Deref =
       UnaryOperator::Create(DeclBuilder.SemaRef.getASTContext(), PtrExpr,
                             UO_Deref, PtrExpr->getType()->getPointeeType(),
-                            VK_PRValue, OK_Ordinary, SourceLocation(),
+                            VK_LValue, OK_Ordinary, SourceLocation(),
                             /*CanOverflow=*/false, FPOptionsOverride());
   StmtsList.push_back(Deref);
   return *this;
@@ -627,9 +735,22 @@ BuiltinTypeMethodBuilder::accessHandleFieldOnResource(T ResourceRecord) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
+  auto *ResourceTypeDecl = ResourceExpr->getType()->getAsCXXRecordDecl();
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
+  FieldDecl *HandleField = nullptr;
+
+  if (ResourceTypeDecl == DeclBuilder.Record)
+    HandleField = DeclBuilder.getResourceHandleField();
+  else {
+    IdentifierInfo &II = AST.Idents.get("__handle");
+    for (auto *Decl : ResourceTypeDecl->lookup(&II)) {
+      if ((HandleField = dyn_cast<FieldDecl>(Decl)))
+        break;
+    }
+    assert(HandleField && "Resource handle field not found");
+  }
+
   MemberExpr *HandleExpr = MemberExpr::CreateImplicit(
       AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
       OK_Ordinary);
@@ -637,12 +758,67 @@ BuiltinTypeMethodBuilder::accessHandleFieldOnResource(T ResourceRecord) {
   return *this;
 }
 
-template <typename ResourceT, typename ValueT>
+template <typename T>
 BuiltinTypeMethodBuilder &
-BuiltinTypeMethodBuilder::setHandleFieldOnResource(ResourceT ResourceRecord,
+BuiltinTypeMethodBuilder::accessFieldOnResource(T ResourceRecord,
+                                                FieldDecl *Field) {
+  ensureCompleteDecl();
+  Expr *Base = convertPlaceholder(ResourceRecord);
+
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  auto *Member =
+      MemberExpr::CreateImplicit(AST, Base, /*IsArrow=*/false, Field,
+                                 Field->getType(), VK_LValue, OK_Ordinary);
+  StmtsList.push_back(Member);
+  return *this;
+}
+
+void BuiltinTypeMethodBuilder::setMipsHandleField(LocalVar &ResourceRecord) {
+  FieldDecl *MipsField = DeclBuilder.Fields.lookup("mips");
+  if (!MipsField)
+    return;
+
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  QualType MipsTy = MipsField->getType();
+  const auto *RT = MipsTy->castAs<RecordType>();
+  CXXRecordDecl *MipsRecord = cast<CXXRecordDecl>(RT->getDecl());
+
+  // The mips record should have a single field that is the handle.
+  assert(MipsRecord->field_begin() != MipsRecord->field_end() &&
+         "mips_type must have at least one field");
+  assert(std::next(MipsRecord->field_begin()) == MipsRecord->field_end() &&
+         "mips_type must have exactly one field");
+  FieldDecl *MipsHandleField = *MipsRecord->field_begin();
+
+  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
+  Expr *ResExpr = convertPlaceholder(ResourceRecord);
+  MemberExpr *HandleMemberExpr = MemberExpr::CreateImplicit(
+      AST, ResExpr, false, HandleField, HandleField->getType(), VK_LValue,
+      OK_Ordinary);
+
+  MemberExpr *MipsMemberExpr =
+      MemberExpr::CreateImplicit(AST, ResExpr, false, MipsField,
+                                 MipsField->getType(), VK_LValue, OK_Ordinary);
+  MemberExpr *MipsHandleMemberExpr = MemberExpr::CreateImplicit(
+      AST, MipsMemberExpr, false, MipsHandleField, MipsHandleField->getType(),
+      VK_LValue, OK_Ordinary);
+
+  Stmt *AssignStmt = BinaryOperator::Create(
+      AST, MipsHandleMemberExpr, HandleMemberExpr, BO_Assign,
+      MipsHandleMemberExpr->getType(), ExprValueKind::VK_LValue,
+      ExprObjectKind::OK_Ordinary, SourceLocation(), FPOptionsOverride());
+
+  StmtsList.push_back(AssignStmt);
+}
+
+template <typename ValueT>
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::setHandleFieldOnResource(LocalVar &ResourceRecord,
                                                    ValueT HandleValue) {
-  return setFieldOnResource(ResourceRecord, HandleValue,
-                            DeclBuilder.getResourceHandleField());
+  setFieldOnResource(ResourceRecord, HandleValue,
+                     DeclBuilder.getResourceHandleField());
+  setMipsHandleField(ResourceRecord);
+  return *this;
 }
 
 template <typename ResourceT, typename ValueT>
@@ -659,6 +835,10 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::setFieldOnResource(
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
+  assert(ResourceExpr->getType()->getAsCXXRecordDecl() ==
+             HandleField->getParent() &&
+         "Getting the field from the wrong resource type.");
+
   Expr *HandleValueExpr = convertPlaceholder(HandleValue);
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
@@ -679,6 +859,8 @@ BuiltinTypeMethodBuilder::accessCounterHandleFieldOnResource(T ResourceRecord) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
+  assert(ResourceExpr->getType()->getAsCXXRecordDecl() == DeclBuilder.Record &&
+         "Getting the field from the wrong resource type.");
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   FieldDecl *HandleField = DeclBuilder.getResourceCounterHandleField();
@@ -717,7 +899,8 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
   return *this;
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeMethodBuilder::finalize(AccessSpecifier Access) {
   assert(!DeclBuilder.Record->isCompleteDefinition() &&
          "record is already complete");
 
@@ -744,10 +927,27 @@ BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
     Method->setBody(CompoundStmt::Create(AST, StmtsList, FPOptionsOverride(),
                                          SourceLocation(), SourceLocation()));
     Method->setLexicalDeclContext(DeclBuilder.Record);
-    Method->setAccess(AS_public);
+    Method->setAccess(Access);
+    Method->setImplicitlyInline();
     Method->addAttr(AlwaysInlineAttr::CreateImplicit(
         AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
-    DeclBuilder.Record->addDecl(Method);
+    Method->addAttr(ConvergentAttr::CreateImplicit(AST));
+    if (!TemplateParamDecls.empty()) {
+      TemplateParams = TemplateParameterList::Create(
+          AST, SourceLocation(), SourceLocation(), TemplateParamDecls,
+          SourceLocation(), nullptr);
+
+      auto *FuncTemplate = FunctionTemplateDecl::Create(AST, DeclBuilder.Record,
+                                                        SourceLocation(), Name,
+                                                        TemplateParams, Method);
+      FuncTemplate->setAccess(AS_public);
+      FuncTemplate->setLexicalDeclContext(DeclBuilder.Record);
+      FuncTemplate->setImplicit(true);
+      Method->setDescribedFunctionTemplate(FuncTemplate);
+      DeclBuilder.Record->addDecl(FuncTemplate);
+    } else {
+      DeclBuilder.Record->addDecl(Method);
+    }
   }
   return DeclBuilder;
 }
@@ -832,32 +1032,83 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
                                          bool RawBuffer, bool HasCounter,
                                          AccessSpecifier Access) {
-  addHandleMember(RC, IsROV, RawBuffer, Access);
+  QualType ElementTy = getHandleElementType();
+  addHandleMember(RC, ResourceDimension::Unknown, IsROV, RawBuffer, ElementTy,
+                  Access);
   if (HasCounter)
-    addCounterHandleMember(RC, IsROV, RawBuffer, Access);
+    addCounterHandleMember(RC, IsROV, RawBuffer, ElementTy, Access);
   return *this;
 }
 
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addTextureHandle(ResourceClass RC, bool IsROV,
+                                         ResourceDimension RD,
+                                         AccessSpecifier Access) {
+  addHandleMember(RC, RD, IsROV, /*RawBuffer=*/false, getHandleElementType(),
+                  Access);
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSamplerHandle() {
+  addHandleMember(ResourceClass::Sampler, ResourceDimension::Unknown,
+                  /*IsROV=*/false, /*RawBuffer=*/false, getHandleElementType());
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addFriend(CXXRecordDecl *Friend) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType FriendTy = AST.getCanonicalTagType(Friend);
+  TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(FriendTy);
+  FriendDecl *FD =
+      FriendDecl::Create(AST, Record, SourceLocation(), TSI, SourceLocation());
+  FD->setAccess(AS_public);
+  Record->addDecl(FD);
+  return *this;
+}
+
+CXXRecordDecl *BuiltinTypeDeclBuilder::addPrivateNestedRecord(StringRef Name) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
+  CXXRecordDecl *NestedRecord =
+      CXXRecordDecl::Create(AST, TagDecl::TagKind::Struct, Record,
+                            SourceLocation(), SourceLocation(), &II);
+  NestedRecord->setImplicit(true);
+  NestedRecord->setAccess(AccessSpecifier::AS_private);
+  NestedRecord->setLexicalDeclContext(Record);
+  Record->addDecl(NestedRecord);
+  return NestedRecord;
+}
+
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
-    ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
-  return addResourceMember("__handle", RC, IsROV, RawBuffer,
-                           /*IsCounter=*/false, Access);
+    ResourceClass RC, ResourceDimension RD, bool IsROV, bool RawBuffer,
+    QualType ElementTy, AccessSpecifier Access) {
+  return addResourceMember("__handle", RC, RD, IsROV, RawBuffer,
+                           /*IsCounter=*/false, ElementTy, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
-    ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
-  return addResourceMember("__counter_handle", RC, IsROV, RawBuffer,
-                           /*IsCounter=*/true, Access);
+    ResourceClass RC, bool IsROV, bool RawBuffer, QualType ElementTy,
+    AccessSpecifier Access) {
+  return addResourceMember("__counter_handle", RC, ResourceDimension::Unknown,
+                           IsROV, RawBuffer,
+                           /*IsCounter=*/true, ElementTy, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
-    StringRef MemberName, ResourceClass RC, bool IsROV, bool RawBuffer,
-    bool IsCounter, AccessSpecifier Access) {
+    StringRef MemberName, ResourceClass RC, ResourceDimension RD, bool IsROV,
+    bool RawBuffer, bool IsCounter, QualType ElementTy,
+    AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &Ctx = SemaRef.getASTContext();
+
+  assert(!ElementTy.isNull() &&
+         "The caller should always pass in the type for the handle.");
   TypeSourceInfo *ElementTypeInfo =
-      Ctx.getTrivialTypeSourceInfo(getHandleElementType(), SourceLocation());
+      Ctx.getTrivialTypeSourceInfo(ElementTy, SourceLocation());
 
   // add handle member with resource type attributes
   QualType AttributedResTy = QualType();
@@ -865,7 +1116,10 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
       HLSLResourceClassAttr::CreateImplicit(Ctx, RC),
       IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
       RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
-      ElementTypeInfo
+      RD != ResourceDimension::Unknown
+          ? HLSLResourceDimensionAttr::CreateImplicit(Ctx, RD)
+          : nullptr,
+      ElementTypeInfo && RC != ResourceClass::Sampler
           ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
           : nullptr};
   if (IsCounter)
@@ -879,7 +1133,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
 
 // Adds default constructor to the resource class:
 // Resource::Resource()
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addDefaultHandleConstructor(AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -889,7 +1144,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
       .callBuiltin("__builtin_hlsl_resource_uninitializedhandle", HandleType,
                    PH::Handle)
       .assign(PH::Handle, PH::LastStmt)
-      .finalize();
+      .finalize(Access);
 }
 
 BuiltinTypeDeclBuilder &
@@ -1000,6 +1255,7 @@ BuiltinTypeDeclBuilder::addCreateFromBindingWithImplicitCounter() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
   QualType HandleType = getResourceHandleField()->getType();
+  QualType CounterHandleType = getResourceCounterHandleField()->getType();
   QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
   BuiltinTypeMethodBuilder::LocalVar TmpVar("tmp", RecordType);
 
@@ -1019,7 +1275,7 @@ BuiltinTypeDeclBuilder::addCreateFromBindingWithImplicitCounter() {
       .setHandleFieldOnResource(TmpVar, PH::LastStmt)
       .accessHandleFieldOnResource(TmpVar)
       .callBuiltin("__builtin_hlsl_resource_counterhandlefromimplicitbinding",
-                   HandleType, PH::LastStmt, PH::_5, PH::_1)
+                   CounterHandleType, PH::LastStmt, PH::_5, PH::_1)
       .setCounterHandleFieldOnResource(TmpVar, PH::LastStmt)
       .returnValue(TmpVar)
       .finalize();
@@ -1048,6 +1304,7 @@ BuiltinTypeDeclBuilder::addCreateFromImplicitBindingWithImplicitCounter() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
   QualType HandleType = getResourceHandleField()->getType();
+  QualType CounterHandleType = getResourceCounterHandleField()->getType();
   QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
   BuiltinTypeMethodBuilder::LocalVar TmpVar("tmp", RecordType);
 
@@ -1068,13 +1325,14 @@ BuiltinTypeDeclBuilder::addCreateFromImplicitBindingWithImplicitCounter() {
       .setHandleFieldOnResource(TmpVar, PH::LastStmt)
       .accessHandleFieldOnResource(TmpVar)
       .callBuiltin("__builtin_hlsl_resource_counterhandlefromimplicitbinding",
-                   HandleType, PH::LastStmt, PH::_5, PH::_1)
+                   CounterHandleType, PH::LastStmt, PH::_5, PH::_1)
       .setCounterHandleFieldOnResource(TmpVar, PH::LastStmt)
       .returnValue(TmpVar)
       .finalize();
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addCopyConstructor(AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = SemaRef.getASTContext();
@@ -1086,18 +1344,18 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
 
   BuiltinTypeMethodBuilder MMB(*this, /*Name=*/"", AST.VoidTy,
                                /*IsConst=*/false, /*IsCtor=*/true);
-  MMB.addParam("other", ConstRecordRefType)
-      .accessHandleFieldOnResource(PH::_0)
-      .assign(PH::Handle, PH::LastStmt);
+  MMB.addParam("other", ConstRecordRefType);
 
-  if (getResourceCounterHandleField())
-    MMB.accessCounterHandleFieldOnResource(PH::_0).assign(PH::CounterHandle,
-                                                          PH::LastStmt);
+  for (auto *Field : Record->fields()) {
+    MMB.accessFieldOnResource(PH::_0, Field)
+        .setFieldOnResource(PH::This, PH::LastStmt, Field);
+  }
 
-  return MMB.finalize();
+  return MMB.finalize(Access);
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addCopyAssignmentOperator(AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = SemaRef.getASTContext();
@@ -1109,25 +1367,36 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   DeclarationName Name = AST.DeclarationNames.getCXXOperatorName(OO_Equal);
   BuiltinTypeMethodBuilder MMB(*this, Name, RecordRefType);
-  MMB.addParam("other", ConstRecordRefType)
-      .accessHandleFieldOnResource(PH::_0)
-      .assign(PH::Handle, PH::LastStmt);
+  MMB.addParam("other", ConstRecordRefType);
 
-  if (getResourceCounterHandleField())
-    MMB.accessCounterHandleFieldOnResource(PH::_0).assign(PH::CounterHandle,
-                                                          PH::LastStmt);
+  for (auto *Field : Record->fields()) {
+    MMB.accessFieldOnResource(PH::_0, Field)
+        .setFieldOnResource(PH::This, PH::LastStmt, Field);
+  }
 
-  return MMB.returnThis().finalize();
+  return MMB.returnThis().finalize(Access);
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
+
+  uint32_t VecSize = 1;
+  if (Dim != ResourceDimension::Unknown)
+    VecSize = getResourceDimensions(Dim);
+
+  QualType IndexTy = VecSize > 1
+                         ? AST.getExtVectorType(AST.UnsignedIntTy, VecSize)
+                         : AST.UnsignedIntTy;
+
   DeclarationName Subscript =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
-  addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
+  addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true, IndexTy);
   if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
-    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true,
+                            IndexTy);
 
   return *this;
 }
@@ -1139,7 +1408,681 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
-  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
+                          AST.UnsignedIntTy);
+  addLoadWithStatusFunction(Load, /*IsConst=*/false);
+
+  return *this;
+}
+
+CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
+                                                        QualType ReturnType) {
+  ASTContext &AST = Record->getASTContext();
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType IntTy = AST.IntTy;
+  QualType IndexTy = VecSize > 1 ? AST.getExtVectorType(IntTy, VecSize) : IntTy;
+  QualType CoordLevelTy = AST.getExtVectorType(IntTy, VecSize + 1);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // Define the mips_slice_type which is returned by mips_type::operator[].
+  // It holds the resource handle and the mip level. It has an operator[]
+  // that takes the coordinate and performs the actual resource load.
+  CXXRecordDecl *MipsSliceRecord = addPrivateNestedRecord("mips_slice_type");
+  BuiltinTypeDeclBuilder MipsSliceBuilder(SemaRef, MipsSliceRecord);
+  MipsSliceBuilder.addFriend(Record)
+      .addHandleMember(getResourceAttrs().ResourceClass, Dim,
+                       getResourceAttrs().IsROV, false, ReturnType,
+                       AccessSpecifier::AS_public)
+      .addMemberVariable("__level", IntTy, {}, AccessSpecifier::AS_public)
+      .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
+      .addCopyConstructor(AccessSpecifier::AS_protected)
+      .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
+
+  FieldDecl *LevelField = MipsSliceBuilder.Fields["__level"];
+  assert(LevelField && "Could not find the level field.");
+
+  DeclarationName SubscriptName =
+      AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
+
+  // operator[](intN coord) on mips_slice_type
+  BuiltinTypeMethodBuilder(MipsSliceBuilder, SubscriptName, ReturnType,
+                           /*IsConst=*/true)
+      .addParam("Coord", IndexTy)
+      .accessFieldOnResource(PH::This, LevelField)
+      .concat(PH::_0, PH::LastStmt, CoordLevelTy)
+      .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
+                   PH::LastStmt)
+      .finalize();
+
+  MipsSliceBuilder.completeDefinition();
+  return MipsSliceRecord;
+}
+
+CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
+                                                   QualType ReturnType) {
+  ASTContext &AST = Record->getASTContext();
+  QualType IntTy = AST.IntTy;
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // First, define the mips_slice_type that will be returned by our operator[].
+  CXXRecordDecl *MipsSliceRecord = addMipsSliceType(Dim, ReturnType);
+
+  // Define the mips_type, which provides the syntax `Resource.mips[level]`.
+  // It only holds the handle, and its operator[] returns a mips_slice_type
+  // initialized with the handle and the requested mip level.
+  CXXRecordDecl *MipsRecord = addPrivateNestedRecord("mips_type");
+  BuiltinTypeDeclBuilder MipsBuilder(SemaRef, MipsRecord);
+  MipsBuilder.addFriend(Record)
+      .addHandleMember(getResourceAttrs().ResourceClass, Dim,
+                       getResourceAttrs().IsROV, false, ReturnType,
+                       AccessSpecifier::AS_public)
+      .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
+      .addCopyConstructor(AccessSpecifier::AS_protected)
+      .addCopyAssignmentOperator(AccessSpecifier::AS_protected);
+
+  QualType MipsSliceTy = AST.getCanonicalTagType(MipsSliceRecord);
+
+  DeclarationName SubscriptName =
+      AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
+
+  // Locate the fields in the slice type so we can initialize them.
+  auto FieldIt = MipsSliceRecord->field_begin();
+  FieldDecl *MipsSliceHandleField = *FieldIt;
+  FieldDecl *LevelField = *++FieldIt;
+  assert(MipsSliceHandleField->getName() == "__handle" &&
+         LevelField->getName() == "__level" &&
+         "Could not find fields on mips_slice_type");
+
+  // operator[](int level) on mips_type
+  BuiltinTypeMethodBuilder::LocalVar MipsSliceVar("slice", MipsSliceTy);
+  BuiltinTypeMethodBuilder(MipsBuilder, SubscriptName, MipsSliceTy,
+                           /*IsConst=*/true)
+      .addParam("Level", IntTy)
+      .declareLocalVar(MipsSliceVar)
+      .accessHandleFieldOnResource(PH::This)
+      .setFieldOnResource(MipsSliceVar, PH::LastStmt, MipsSliceHandleField)
+      .setFieldOnResource(MipsSliceVar, PH::_0, LevelField)
+      .returnValue(MipsSliceVar)
+      .finalize();
+
+  MipsBuilder.completeDefinition();
+  return MipsRecord;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addMipsMember(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = getHandleElementType();
+
+  CXXRecordDecl *MipsRecord = addMipsType(Dim, ReturnType);
+
+  // Add the mips field to the texture
+  QualType MipsTy = AST.getCanonicalTagType(MipsRecord);
+  addMemberVariable("mips", MipsTy, {}, AccessSpecifier::AS_public);
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType IntTy = AST.IntTy;
+  QualType OffsetTy = AST.getExtVectorType(IntTy, VecSize);
+  QualType LocationTy = AST.getExtVectorType(IntTy, VecSize + 1);
+  QualType ReturnType = getHandleElementType();
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T Load(int3 location)
+  BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+      .addParam("Location", LocationTy)
+      .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
+                   PH::_0)
+      .finalize();
+
+  // T Load(int3 location, int2 offset)
+  return BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+      .addParam("Location", LocationTy)
+      .addParam("Offset", OffsetTy)
+      .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
+                   PH::_0, PH::_1)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  ASTContext &AST = SemaRef.getASTContext();
+
+  auto AddLoads = [&](StringRef MethodName, QualType ReturnType) {
+    IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
+    DeclarationName Load(&II);
+
+    addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
+                            AST.UnsignedIntTy, ReturnType);
+    addLoadWithStatusFunction(Load, /*IsConst=*/false, ReturnType);
+  };
+
+  AddLoads("Load", AST.UnsignedIntTy);
+  AddLoads("Load2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
+  AddLoads("Load3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
+  AddLoads("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
+  AddLoads("Load", AST.DependentTy); // Templated version
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  ASTContext &AST = SemaRef.getASTContext();
+
+  auto AddStore = [&](StringRef MethodName, QualType ValueType) {
+    IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
+    DeclarationName Store(&II);
+
+    addStoreFunction(Store, /*IsConst=*/false, ValueType);
+  };
+
+  AddStore("Store", AST.UnsignedIntTy);
+  AddStore("Store2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
+  AddStore("Store3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
+  AddStore("Store4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
+  AddStore("Store", AST.DependentTy); // Templated version
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = getHandleElementType();
+  QualType SamplerStateType =
+      lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
+  QualType IntTy = AST.IntTy;
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T Sample(SamplerState s, float2 location)
+  BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
+                   PH::LastStmt, PH::_1)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T Sample(SamplerState s, float2 location, int2 offset)
+  BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("Offset", Int2Ty)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
+                   PH::LastStmt, PH::_1, PH::_2)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T Sample(SamplerState s, float2 location, int2 offset, float clamp)
+  return BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("Offset", Int2Ty)
+      .addParam("Clamp", FloatTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
+                   PH::LastStmt, PH::_1, PH::_2, PH::_3)
+      .returnValue(PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = getHandleElementType();
+  QualType SamplerStateType =
+      lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
+  QualType IntTy = AST.IntTy;
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T SampleBias(SamplerState s, float2 location, float bias)
+  BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("Bias", FloatTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T SampleBias(SamplerState s, float2 location, float bias, int2 offset)
+  BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("Bias", FloatTy)
+      .addParam("Offset", Int2Ty)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T SampleBias(SamplerState s, float2 location, float bias, int2 offset,
+  // float clamp)
+  return BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("Bias", FloatTy)
+      .addParam("Offset", Int2Ty)
+      .addParam("Clamp", FloatTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
+      .returnValue(PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = getHandleElementType();
+  QualType SamplerStateType =
+      lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
+  QualType IntTy = AST.IntTy;
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy)
+  BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("DDX", Float2Ty)
+      .addParam("DDY", Float2Ty)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy,
+  // int2 offset)
+  BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("DDX", Float2Ty)
+      .addParam("DDY", Float2Ty)
+      .addParam("Offset", Int2Ty)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy,
+  // int2 offset, float clamp)
+  return BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("DDX", Float2Ty)
+      .addParam("DDY", Float2Ty)
+      .addParam("Offset", Int2Ty)
+      .addParam("Clamp", FloatTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4,
+                   PH::_5)
+      .returnValue(PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = getHandleElementType();
+  QualType SamplerStateType =
+      lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
+  QualType IntTy = AST.IntTy;
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T SampleLevel(SamplerState s, float2 location, float lod)
+  BuiltinTypeMethodBuilder(*this, "SampleLevel", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("LOD", FloatTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_level", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T SampleLevel(SamplerState s, float2 location, float lod, int2 offset)
+  return BuiltinTypeMethodBuilder(*this, "SampleLevel", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("LOD", FloatTy)
+      .addParam("Offset", Int2Ty)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_level", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+      .returnValue(PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = AST.FloatTy;
+  QualType SamplerComparisonStateType = lookupBuiltinType(
+      SemaRef, "SamplerComparisonState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
+  QualType IntTy = AST.IntTy;
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value)
+  BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
+      .addParam("Sampler", SamplerComparisonStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("CompareValue", FloatTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType, PH::Handle,
+                   PH::LastStmt, PH::_1, PH::_2)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value,
+  // int2 offset)
+  BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
+      .addParam("Sampler", SamplerComparisonStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("CompareValue", FloatTy)
+      .addParam("Offset", Int2Ty)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType, PH::Handle,
+                   PH::LastStmt, PH::_1, PH::_2, PH::_3)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value,
+  // int2 offset, float clamp)
+  return BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
+      .addParam("Sampler", SamplerComparisonStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("CompareValue", FloatTy)
+      .addParam("Offset", Int2Ty)
+      .addParam("Clamp", FloatTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType, PH::Handle,
+                   PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
+      .returnValue(PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = AST.FloatTy;
+  QualType SamplerComparisonStateType = lookupBuiltinType(
+      SemaRef, "SamplerComparisonState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
+  QualType IntTy = AST.IntTy;
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
+  // compare_value)
+  BuiltinTypeMethodBuilder(*this, "SampleCmpLevelZero", ReturnType)
+      .addParam("Sampler", SamplerComparisonStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("CompareValue", FloatTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_cmp_level_zero", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2)
+      .returnValue(PH::LastStmt)
+      .finalize();
+
+  // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
+  // compare_value, int2 offset)
+  return BuiltinTypeMethodBuilder(*this, "SampleCmpLevelZero", ReturnType)
+      .addParam("Sampler", SamplerComparisonStateType)
+      .addParam("Location", Float2Ty)
+      .addParam("CompareValue", FloatTy)
+      .addParam("Offset", Int2Ty)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_sample_cmp_level_zero", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+      .returnValue(PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addGetDimensionsMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType UIntTy = AST.UnsignedIntTy;
+
+  assert(Dim != ResourceDimension::Unknown);
+
+  QualType FloatTy = AST.FloatTy;
+  // Add overloads for uint and float.
+  QualType Params[] = {UIntTy, FloatTy};
+
+  for (QualType OutTy : Params) {
+    if (Dim == ResourceDimension::Dim2D) {
+      StringRef XYName = "__builtin_hlsl_resource_getdimensions_xy";
+      StringRef LevelsXYName =
+          "__builtin_hlsl_resource_getdimensions_levels_xy";
+
+      if (OutTy == FloatTy) {
+        XYName = "__builtin_hlsl_resource_getdimensions_xy_float";
+        LevelsXYName = "__builtin_hlsl_resource_getdimensions_levels_xy_float";
+      }
+
+      // void GetDimensions(out [uint|float] width, out [uint|float] height)
+      BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
+          .addParam("width", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("height", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .callBuiltin(XYName, QualType(), PH::Handle, PH::_0, PH::_1)
+          .finalize();
+
+      // void GetDimensions(uint mipLevel, out [uint|float] width, out
+      // [uint|float] height, out [uint|float] numberOfLevels)
+      BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
+          .addParam("mipLevel", UIntTy)
+          .addParam("width", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("height", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .addParam("numberOfLevels", OutTy, HLSLParamModifierAttr::Keyword_out)
+          .callBuiltin(LevelsXYName, QualType(), PH::Handle, PH::_0, PH::_1,
+                       PH::_2, PH::_3)
+          .finalize();
+    }
+  }
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addCalculateLodMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = AST.FloatTy;
+  QualType SamplerStateType =
+      lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType LocationTy = AST.getExtVectorType(FloatTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // float CalculateLevelOfDetail(SamplerState s, float2 location)
+  BuiltinTypeMethodBuilder(*this, "CalculateLevelOfDetail", ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", LocationTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_calculate_lod", ReturnType,
+                   PH::Handle, PH::LastStmt, PH::_1)
+      .finalize();
+
+  // float CalculateLevelOfDetailUnclamped(SamplerState s, float2 location)
+  return BuiltinTypeMethodBuilder(*this, "CalculateLevelOfDetailUnclamped",
+                                  ReturnType)
+      .addParam("Sampler", SamplerStateType)
+      .addParam("Location", LocationTy)
+      .accessHandleFieldOnResource(PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_calculate_lod_unclamped",
+                   ReturnType, PH::Handle, PH::LastStmt, PH::_1)
+      .finalize();
+}
+
+QualType BuiltinTypeDeclBuilder::getGatherReturnType() {
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType T = getHandleElementType();
+  if (T.isNull())
+    return QualType();
+
+  if (const auto *VT = T->getAs<VectorType>())
+    T = VT->getElementType();
+  else if (const auto *DT = T->getAs<DependentSizedExtVectorType>())
+    T = DT->getElementType();
+
+  return AST.getExtVectorType(T, 4);
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = getGatherReturnType();
+
+  QualType SamplerStateType =
+      lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType LocationTy = AST.FloatTy;
+  QualType Float2Ty = AST.getExtVectorType(LocationTy, VecSize);
+  QualType IntTy = AST.IntTy;
+  QualType OffsetTy = AST.getExtVectorType(IntTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // Overloads for Gather, GatherRed, GatherGreen, GatherBlue, GatherAlpha
+  struct GatherVariant {
+    const char *Name;
+    int Component;
+  };
+  GatherVariant Variants[] = {{"Gather", 0},
+                              {"GatherRed", 0},
+                              {"GatherGreen", 1},
+                              {"GatherBlue", 2},
+                              {"GatherAlpha", 3}};
+
+  for (const auto &V : Variants) {
+    // ret GatherVariant(SamplerState s, float2 location)
+    BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", Float2Ty)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_gather", ReturnType, PH::Handle,
+                     PH::LastStmt, PH::_1,
+                     getConstantUnsignedIntExpr(V.Component))
+        .finalize();
+
+    // ret GatherVariant(SamplerState s, float2 location, int2 offset)
+    BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", Float2Ty)
+        .addParam("Offset", OffsetTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_gather", ReturnType, PH::Handle,
+                     PH::LastStmt, PH::_1,
+                     getConstantUnsignedIntExpr(V.Component), PH::_2)
+        .finalize();
+  }
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  QualType ReturnType = AST.getExtVectorType(AST.FloatTy, 4);
+
+  QualType SamplerComparisonStateType = lookupBuiltinType(
+      SemaRef, "SamplerComparisonState", Record->getDeclContext());
+  uint32_t VecSize = getResourceDimensions(Dim);
+  QualType FloatTy = AST.FloatTy;
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
+  QualType IntTy = AST.IntTy;
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // Overloads for GatherCmp, GatherCmpRed, GatherCmpGreen, GatherCmpBlue,
+  // GatherCmpAlpha
+  struct GatherVariant {
+    const char *Name;
+    int Component;
+  };
+  GatherVariant Variants[] = {{"GatherCmp", 0},
+                              {"GatherCmpRed", 0},
+                              {"GatherCmpGreen", 1},
+                              {"GatherCmpBlue", 2},
+                              {"GatherCmpAlpha", 3}};
+
+  for (const auto &V : Variants) {
+    // ret GatherCmpVariant(SamplerComparisonState s, float2 location, float
+    // compare_value)
+    BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
+        .addParam("Sampler", SamplerComparisonStateType)
+        .addParam("Location", Float2Ty)
+        .addParam("CompareValue", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_gather_cmp", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2,
+                     getConstantUnsignedIntExpr(V.Component))
+        .finalize();
+
+    // ret GatherCmpVariant(SamplerComparisonState s, float2 location, float
+    // compare_value, int2 offset)
+    BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
+        .addParam("Sampler", SamplerComparisonStateType)
+        .addParam("Location", Float2Ty)
+        .addParam("CompareValue", FloatTy)
+        .addParam("Offset", Int2Ty)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_gather_cmp", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2,
+                     getConstantUnsignedIntExpr(V.Component), PH::_3)
+        .finalize();
+  }
 
   return *this;
 }
@@ -1172,6 +2115,13 @@ QualType BuiltinTypeDeclBuilder::getFirstTemplateTypeParam() {
 QualType BuiltinTypeDeclBuilder::getHandleElementType() {
   if (Template)
     return getFirstTemplateTypeParam();
+
+  if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
+    const auto &Args = Spec->getTemplateArgs();
+    if (Args.size() > 0 && Args[0].getKind() == TemplateArgument::Type)
+      return Args[0].getAsType();
+  }
+
   // TODO: Should we default to VoidTy? Using `i8` is arguably ambiguous.
   return SemaRef.getASTContext().Char8Ty;
 }
@@ -1198,9 +2148,23 @@ Expr *BuiltinTypeDeclBuilder::getConstantIntExpr(int value) {
       SourceLocation());
 }
 
+Expr *BuiltinTypeDeclBuilder::getConstantUnsignedIntExpr(unsigned value) {
+  ASTContext &AST = SemaRef.getASTContext();
+  return IntegerLiteral::Create(
+      AST, llvm::APInt(AST.getTypeSize(AST.UnsignedIntTy), value),
+      AST.UnsignedIntTy, SourceLocation());
+}
+
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
                                                 ConceptDecl *CD = nullptr) {
+  return addSimpleTemplateParams(Names, {}, CD);
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
+                                                ArrayRef<QualType> DefaultTypes,
+                                                ConceptDecl *CD) {
   if (Record->isCompleteDefinition()) {
     assert(Template && "existing record it not a template");
     assert(Template->getTemplateParameters()->size() == Names.size() &&
@@ -1208,38 +2172,80 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
     return *this;
   }
 
+  assert((DefaultTypes.empty() || DefaultTypes.size() == Names.size()) &&
+         "template default argument count mismatch");
+
   TemplateParameterListBuilder Builder = TemplateParameterListBuilder(*this);
-  for (StringRef Name : Names)
-    Builder.addTypeParameter(Name);
+  for (unsigned i = 0; i < Names.size(); ++i) {
+    QualType DefaultTy = DefaultTypes.empty() ? QualType() : DefaultTypes[i];
+    Builder.addTypeParameter(Names[i], DefaultTy);
+  }
   return Builder.finalizeTemplateArgs(CD);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-  return BuiltinTypeMethodBuilder(*this, "IncrementCounter",
-                                  SemaRef.getASTContext().UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
+  QualType UnsignedIntTy = SemaRef.getASTContext().UnsignedIntTy;
+  return BuiltinTypeMethodBuilder(*this, "IncrementCounter", UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_buffer_update_counter", UnsignedIntTy,
                    PH::CounterHandle, getConstantIntExpr(1))
       .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-  return BuiltinTypeMethodBuilder(*this, "DecrementCounter",
-                                  SemaRef.getASTContext().UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
+  QualType UnsignedIntTy = SemaRef.getASTContext().UnsignedIntTy;
+  return BuiltinTypeMethodBuilder(*this, "DecrementCounter", UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_buffer_update_counter", UnsignedIntTy,
                    PH::CounterHandle, getConstantIntExpr(-1))
       .finalize();
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
-                                                bool IsConst, bool IsRef) {
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
+    DeclarationName &Name, bool IsConst, QualType ReturnTy) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  bool NeedsTypedBuiltin = !ReturnTy.isNull();
 
-  QualType ElemTy = getHandleElementType();
+  // The empty QualType is a placeholder. The actual return type is set below.
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConst);
+
+  if (!NeedsTypedBuiltin)
+    ReturnTy = getHandleElementType();
+  if (ReturnTy == AST.DependentTy)
+    ReturnTy = MMB.addTemplateTypeParam("element_type");
+  MMB.ReturnTy = ReturnTy;
+
+  MMB.addParam("Index", AST.UnsignedIntTy)
+      .addParam("Status", AST.UnsignedIntTy,
+                HLSLParamModifierAttr::Keyword_out);
+
+  if (NeedsTypedBuiltin)
+    MMB.callBuiltin("__builtin_hlsl_resource_load_with_status_typed", ReturnTy,
+                    PH::Handle, PH::_0, PH::_1, ReturnTy);
+  else
+    MMB.callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnTy,
+                    PH::Handle, PH::_0, PH::_1);
+
+  return MMB.finalize();
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
+    DeclarationName &Name, bool IsConst, bool IsRef, QualType IndexTy,
+    QualType ElemTy) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  bool NeedsTypedBuiltin = !ElemTy.isNull();
+
+  // The empty QualType is a placeholder. The actual return type is set below.
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConst);
+
+  if (!NeedsTypedBuiltin)
+    ElemTy = getHandleElementType();
+  if (ElemTy == AST.DependentTy)
+    ElemTy = MMB.addTemplateTypeParam("element_type");
   QualType AddrSpaceElemTy =
       AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
@@ -1255,12 +2261,41 @@ BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
     if (IsConst)
       ReturnTy.addConst();
   }
+  MMB.ReturnTy = ReturnTy;
 
-  return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
-      .addParam("Index", AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
-                   PH::_0)
+  MMB.addParam("Index", IndexTy);
+
+  if (NeedsTypedBuiltin)
+    MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                    PH::Handle, PH::_0, ElemTy);
+  else
+    MMB.callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
+                    PH::_0);
+
+  return MMB.dereference(PH::LastStmt).finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
+                                         QualType ValueTy) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  BuiltinTypeMethodBuilder MMB(*this, Name, AST.VoidTy, IsConst);
+
+  if (ValueTy == AST.DependentTy)
+    ValueTy = MMB.addTemplateTypeParam("element_type");
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ValueTy, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
+
+  return MMB.addParam("Index", AST.UnsignedIntTy)
+      .addParam("Value", ValueTy)
+      .callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                   PH::Handle, PH::_0, ValueTy)
       .dereference(PH::LastStmt)
+      .assign(PH::LastStmt, PH::_1)
       .finalize();
 }
 

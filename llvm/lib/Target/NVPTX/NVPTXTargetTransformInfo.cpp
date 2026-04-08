@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXTargetTransformInfo.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -207,12 +207,8 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fma_rn_bf16:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_bf16:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_bf16x2:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_d:
       return {Intrinsic::maxnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
@@ -407,7 +403,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
 // Returns true/false when we know the answer, nullopt otherwise.
 static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
-      AS == NVPTXAS::ADDRESS_SPACE_PARAM)
+      AS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
     return std::nullopt; // Got to check at run-time.
   switch (IID) {
   case Intrinsic::nvvm_isspacep_global:
@@ -583,13 +579,52 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     IRBuilder<> Builder(II);
     const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
     if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST ||
-        NewAS == NVPTXAS::ADDRESS_SPACE_PARAM)
+        NewAS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
       return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
                                           NewV);
     return nullptr;
   }
   }
   return nullptr;
+}
+
+bool NVPTXTTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
+                                      unsigned AddrSpace,
+                                      TTI::MaskKind MaskKind) const {
+  if (MaskKind != TTI::MaskKind::ConstantMask)
+    return false;
+
+  //  We currently only support this feature for 256-bit vectors, so the
+  //  alignment must be at least 32
+  if (Alignment < 32)
+    return false;
+
+  if (!ST->has256BitVectorLoadStore(AddrSpace))
+    return false;
+
+  auto *VTy = dyn_cast<FixedVectorType>(DataTy);
+  if (!VTy)
+    return false;
+
+  auto *ElemTy = VTy->getScalarType();
+  return (ElemTy->getScalarSizeInBits() == 32 && VTy->getNumElements() == 8) ||
+         (ElemTy->getScalarSizeInBits() == 64 && VTy->getNumElements() == 4);
+}
+
+bool NVPTXTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
+                                     unsigned /*AddrSpace*/,
+                                     TTI::MaskKind MaskKind) const {
+  if (MaskKind != TTI::MaskKind::ConstantMask)
+    return false;
+
+  if (Alignment < DL.getTypeStoreSize(DataTy))
+    return false;
+
+  // We do not support sub-byte element type masked loads.
+  auto *VTy = dyn_cast<FixedVectorType>(DataTy);
+  if (!VTy)
+    return false;
+  return VTy->getElementType()->getScalarSizeInBits() >= 8;
 }
 
 unsigned NVPTXTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
@@ -634,4 +669,11 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidy", MaxNTID[1]});
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
+}
+
+ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
+  if (isSourceOfDivergence(V))
+    return ValueUniformity::NeverUniform;
+
+  return ValueUniformity::Default;
 }

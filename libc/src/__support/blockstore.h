@@ -13,6 +13,7 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 

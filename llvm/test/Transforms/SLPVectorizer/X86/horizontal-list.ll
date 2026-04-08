@@ -16,10 +16,10 @@ define float @baz() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @arr, align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr @arr1, align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[CONV]], 2.000000e+00
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP4]], 2.000000e+00
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[TMP6]], [[CONV]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[OP_RDX1]], [[CONV]]
 ; CHECK-NEXT:    store float [[OP_RDX]], ptr @res, align 4
 ; CHECK-NEXT:    ret float [[OP_RDX]]
 ;
@@ -31,10 +31,10 @@ define float @baz() {
 ; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @arr, align 16
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr @arr1, align 16
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP1]]
-; THRESHOLD-NEXT:    [[TMP8:%.*]] = fmul fast float [[CONV]], 2.000000e+00
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; THRESHOLD-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP4]], 2.000000e+00
-; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP8]], [[TMP9]]
+; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = fadd fast float [[TMP9]], [[CONV]]
+; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[OP_RDX1]], [[CONV]]
 ; THRESHOLD-NEXT:    store float [[OP_RDX]], ptr @res, align 4
 ; THRESHOLD-NEXT:    ret float [[OP_RDX]]
 ;
@@ -914,16 +914,14 @@ define float @extra_args_no_fast(ptr %x, float %a, float %b) {
 ; THRESHOLD-LABEL: @extra_args_no_fast(
 ; THRESHOLD-NEXT:    [[ADDC:%.*]] = fadd fast float [[B:%.*]], 3.000000e+00
 ; THRESHOLD-NEXT:    [[ADD:%.*]] = fadd fast float [[A:%.*]], [[ADDC]]
-; THRESHOLD-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i64 1
-; THRESHOLD-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; THRESHOLD-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; THRESHOLD-NEXT:    [[T0:%.*]] = load float, ptr [[X]], align 4
-; THRESHOLD-NEXT:    [[T1:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
-; THRESHOLD-NEXT:    [[T2:%.*]] = load float, ptr [[ARRAYIDX3_1]], align 4
-; THRESHOLD-NEXT:    [[T3:%.*]] = load float, ptr [[ARRAYIDX3_2]], align 4
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
+; THRESHOLD-NEXT:    [[T0:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
 ; THRESHOLD-NEXT:    [[ADD1:%.*]] = fadd fast float [[T0]], [[ADD]]
+; THRESHOLD-NEXT:    [[T1:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
 ; THRESHOLD-NEXT:    [[ADD4:%.*]] = fadd fast float [[T1]], [[ADD1]]
+; THRESHOLD-NEXT:    [[T2:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
 ; THRESHOLD-NEXT:    [[ADD4_1:%.*]] = fadd float [[T2]], [[ADD4]]
+; THRESHOLD-NEXT:    [[T3:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
 ; THRESHOLD-NEXT:    [[ADD4_2:%.*]] = fadd fast float [[T3]], [[ADD4_1]]
 ; THRESHOLD-NEXT:    [[ADD5:%.*]] = fadd fast float [[ADD4_2]], [[A]]
 ; THRESHOLD-NEXT:    ret float [[ADD5]]

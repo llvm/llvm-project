@@ -49,8 +49,7 @@ enum OperandConstraint {
 /// private, all access should go through the MCOperandInfo accessors.
 /// See the accessors for a description of what these are.
 enum OperandFlags {
-  LookupPtrRegClass = 0,
-  LookupRegClassByHwMode,
+  LookupRegClassByHwMode = 0,
   Predicate,
   OptionalDef,
   BranchTarget
@@ -90,9 +89,6 @@ public:
   /// operand is a register. If LookupRegClassByHwMode is set, then this is an
   /// index into a table in TargetInstrInfo or MCInstrInfo which contains the
   /// real register class ID.
-  ///
-  /// If isLookupPtrRegClass is set, then this is an index that is passed to
-  /// TargetRegisterInfo::getPointerRegClass(x) to get a dynamic register class.
   int16_t RegClass;
 
   /// These are flags from the MCOI::OperandFlags enum.
@@ -103,13 +99,6 @@ public:
 
   /// Operand constraints (see OperandConstraint enum).
   uint16_t Constraints;
-
-  /// Set if this operand is a pointer value and it requires a callback
-  /// to look up its register class.
-  // TODO: Deprecated in favor of isLookupRegClassByHwMode
-  bool isLookupPtrRegClass() const {
-    return Flags & (1 << MCOI::LookupPtrRegClass);
-  }
 
   /// Set if this operand is a value that requires the current hwmode to look up
   /// its register class.
@@ -214,17 +203,17 @@ public:
   // the <Target>Insts table because they rely on knowing their own address to
   // find other information elsewhere in the same table.
 
-  unsigned short Opcode;         // The opcode number
-  unsigned short NumOperands;    // Num of args (may be more if variable_ops)
-  unsigned char NumDefs;         // Num of args that are definitions
-  unsigned char Size;            // Number of bytes in encoding.
-  unsigned short SchedClass;     // enum identifying instr sched class
-  unsigned char NumImplicitUses; // Num of regs implicitly used
-  unsigned char NumImplicitDefs; // Num of regs implicitly defined
-  unsigned short OpInfoOffset;   // Offset to info about operands
-  unsigned int ImplicitOffset;   // Offset to start of implicit op list
-  uint64_t Flags;                // Flags identifying machine instr class
-  uint64_t TSFlags;              // Target Specific Flag values
+  uint32_t Opcode;         // The opcode number.
+  uint16_t NumOperands;    // Num of args (may be more if variable_ops)
+  uint8_t NumDefs;         // Num of args that are definitions
+  uint8_t Size;            // Number of bytes in encoding.
+  uint16_t SchedClass;     // enum identifying instr sched class
+  uint8_t NumImplicitUses; // Num of regs implicitly used
+  uint8_t NumImplicitDefs; // Num of regs implicitly defined
+  uint16_t OpInfoOffset;   // Offset to info about operands
+  uint16_t ImplicitOffset; // Offset to start of implicit op list
+  uint64_t Flags;          // Flags identifying machine instr class
+  uint64_t TSFlags;        // Target Specific Flag values
 
   /// Returns the value of the specified operand constraint if
   /// it is present. Returns -1 if it is not present.

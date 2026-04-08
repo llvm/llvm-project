@@ -45,7 +45,7 @@ define void @test_sdiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP13]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP13]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -102,6 +102,366 @@ exit:
   ret void
 }
 
+define void @test_sdiv_divisor_invariant_nonconst(ptr noalias %a, i64 %b, ptr noalias %c) {
+; IF-EVL-LABEL: define void @test_sdiv_divisor_invariant_nonconst(
+; IF-EVL-SAME: ptr noalias [[A:%.*]], i64 [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
+; IF-EVL-NEXT:    br label %[[VECTOR_PH:.*]]
+; IF-EVL:       [[VECTOR_PH]]:
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IF-EVL:       [[VECTOR_BODY]]:
+; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP1]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; IF-EVL-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> splat (i64 1), i32 [[TMP0]])
+; IF-EVL-NEXT:    [[TMP3:%.*]] = sdiv <vscale x 2 x i64> [[VP_OP_LOAD]], [[TMP2]]
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP3]], ptr align 8 [[TMP4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; IF-EVL-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP0]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP5]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL:       [[MIDDLE_BLOCK]]:
+; IF-EVL-NEXT:    br label %[[EXIT:.*]]
+; IF-EVL:       [[EXIT]]:
+; IF-EVL-NEXT:    ret void
+;
+; NO-VP-LABEL: define void @test_sdiv_divisor_invariant_nonconst(
+; NO-VP-SAME: ptr noalias [[A:%.*]], i64 [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
+; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NO-VP:       [[VECTOR_PH]]:
+; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B]], i64 0
+; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
+; NO-VP:       [[VECTOR_BODY]]:
+; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP4]], align 8
+; NO-VP-NEXT:    [[TMP5:%.*]] = sdiv <vscale x 2 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
+; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP5]], ptr [[TMP6]], align 8
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; NO-VP-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; NO-VP:       [[MIDDLE_BLOCK]]:
+; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP:       [[SCALAR_PH]]:
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; NO-VP-NEXT:    br label %[[LOOP:.*]]
+; NO-VP:       [[LOOP]]:
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[A_GEP:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP8:%.*]] = load i64, ptr [[A_GEP]], align 8
+; NO-VP-NEXT:    [[TMP9:%.*]] = sdiv i64 [[TMP8]], [[B]]
+; NO-VP-NEXT:    [[C_GEP:%.*]] = getelementptr i64, ptr [[C]], i64 [[IV]]
+; NO-VP-NEXT:    store i64 [[TMP9]], ptr [[C_GEP]], align 8
+; NO-VP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; NO-VP-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; NO-VP:       [[EXIT]]:
+; NO-VP-NEXT:    ret void
+;
+loop.preheader:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
+  %a.gep = getelementptr i64, ptr %a, i64 %iv
+  %0 = load i64, ptr %a.gep
+  %2 = sdiv i64 %0, %b
+  %c.gep = getelementptr i64, ptr %c, i64 %iv
+  store i64 %2, ptr %c.gep
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_sdiv_both_invariant_nonconst(ptr noalias %a, i64 %b, i64 %b2, ptr noalias %c) {
+; IF-EVL-LABEL: define void @test_sdiv_both_invariant_nonconst(
+; IF-EVL-SAME: ptr noalias [[A:%.*]], i64 [[B:%.*]], i64 [[B2:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
+; IF-EVL-NEXT:    br label %[[VECTOR_PH:.*]]
+; IF-EVL:       [[VECTOR_PH]]:
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B2]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IF-EVL:       [[VECTOR_BODY]]:
+; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[A]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
+; IF-EVL-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[BROADCAST_SPLAT2]], <vscale x 2 x i64> splat (i64 1), i32 [[TMP1]])
+; IF-EVL-NEXT:    [[TMP8:%.*]] = sdiv <vscale x 2 x i64> [[BROADCAST_SPLAT]], [[TMP7]]
+; IF-EVL-NEXT:    [[TMP3:%.*]] = add <vscale x 2 x i64> [[VP_OP_LOAD]], [[TMP8]]
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP3]], ptr align 8 [[TMP4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
+; IF-EVL-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP5]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL:       [[MIDDLE_BLOCK]]:
+; IF-EVL-NEXT:    br label %[[EXIT:.*]]
+; IF-EVL:       [[EXIT]]:
+; IF-EVL-NEXT:    ret void
+;
+; NO-VP-LABEL: define void @test_sdiv_both_invariant_nonconst(
+; NO-VP-SAME: ptr noalias [[A:%.*]], i64 [[B:%.*]], i64 [[B2:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
+; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NO-VP:       [[VECTOR_PH]]:
+; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; NO-VP-NEXT:    [[TMP4:%.*]] = sdiv i64 [[B]], [[B2]]
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP4]], i64 0
+; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
+; NO-VP:       [[VECTOR_BODY]]:
+; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
+; NO-VP-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; NO-VP-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
+; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], align 8
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; NO-VP-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; NO-VP:       [[MIDDLE_BLOCK]]:
+; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP:       [[SCALAR_PH]]:
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; NO-VP-NEXT:    br label %[[LOOP:.*]]
+; NO-VP:       [[LOOP]]:
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[A_GEP:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP9:%.*]] = load i64, ptr [[A_GEP]], align 8
+; NO-VP-NEXT:    [[TMP10:%.*]] = sdiv i64 [[B]], [[B2]]
+; NO-VP-NEXT:    [[TMP11:%.*]] = add i64 [[TMP9]], [[TMP10]]
+; NO-VP-NEXT:    [[C_GEP:%.*]] = getelementptr i64, ptr [[C]], i64 [[IV]]
+; NO-VP-NEXT:    store i64 [[TMP11]], ptr [[C_GEP]], align 8
+; NO-VP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; NO-VP-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; NO-VP:       [[EXIT]]:
+; NO-VP-NEXT:    ret void
+;
+loop.preheader:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
+  %a.gep = getelementptr i64, ptr %a, i64 %iv
+  %0 = load i64, ptr %a.gep
+  %2 = sdiv i64 %b, %b2
+  %3 = add i64 %0, %2
+  %c.gep = getelementptr i64, ptr %c, i64 %iv
+  store i64 %3, ptr %c.gep
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_sdiv_divisor_invariant_minusone(ptr noalias %a, ptr noalias %c) {
+; IF-EVL-LABEL: define void @test_sdiv_divisor_invariant_minusone(
+; IF-EVL-SAME: ptr noalias [[A:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
+; IF-EVL-NEXT:    br label %[[VECTOR_PH:.*]]
+; IF-EVL:       [[VECTOR_PH]]:
+; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IF-EVL:       [[VECTOR_BODY]]:
+; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP1]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; IF-EVL-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> splat (i64 -1), <vscale x 2 x i64> splat (i64 1), i32 [[TMP0]])
+; IF-EVL-NEXT:    [[TMP3:%.*]] = sdiv <vscale x 2 x i64> [[VP_OP_LOAD]], [[TMP2]]
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP3]], ptr align 8 [[TMP4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; IF-EVL-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP0]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP5]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL:       [[MIDDLE_BLOCK]]:
+; IF-EVL-NEXT:    br label %[[EXIT:.*]]
+; IF-EVL:       [[EXIT]]:
+; IF-EVL-NEXT:    ret void
+;
+; NO-VP-LABEL: define void @test_sdiv_divisor_invariant_minusone(
+; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
+; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NO-VP:       [[VECTOR_PH]]:
+; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
+; NO-VP:       [[VECTOR_BODY]]:
+; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP4]], align 8
+; NO-VP-NEXT:    [[TMP5:%.*]] = sdiv <vscale x 2 x i64> [[WIDE_LOAD]], splat (i64 -1)
+; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
+; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP5]], ptr [[TMP6]], align 8
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; NO-VP-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; NO-VP:       [[MIDDLE_BLOCK]]:
+; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP:       [[SCALAR_PH]]:
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; NO-VP-NEXT:    br label %[[LOOP:.*]]
+; NO-VP:       [[LOOP]]:
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[A_GEP:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP8:%.*]] = load i64, ptr [[A_GEP]], align 8
+; NO-VP-NEXT:    [[TMP9:%.*]] = sdiv i64 [[TMP8]], -1
+; NO-VP-NEXT:    [[C_GEP:%.*]] = getelementptr i64, ptr [[C]], i64 [[IV]]
+; NO-VP-NEXT:    store i64 [[TMP9]], ptr [[C_GEP]], align 8
+; NO-VP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; NO-VP-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; NO-VP:       [[EXIT]]:
+; NO-VP-NEXT:    ret void
+;
+loop.preheader:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
+  %a.gep = getelementptr i64, ptr %a, i64 %iv
+  %0 = load i64, ptr %a.gep
+  %2 = sdiv i64 %0, -1
+  %c.gep = getelementptr i64, ptr %c, i64 %iv
+  store i64 %2, ptr %c.gep
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_sdiv_divisor_invariant_safeimm(ptr noalias %a, ptr noalias %c) {
+; IF-EVL-LABEL: define void @test_sdiv_divisor_invariant_safeimm(
+; IF-EVL-SAME: ptr noalias [[A:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
+; IF-EVL-NEXT:    br label %[[VECTOR_PH:.*]]
+; IF-EVL:       [[VECTOR_PH]]:
+; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IF-EVL:       [[VECTOR_BODY]]:
+; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP1]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; IF-EVL-NEXT:    [[TMP2:%.*]] = sdiv <vscale x 2 x i64> [[VP_OP_LOAD]], splat (i64 3)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[C]], i64 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP2]], ptr align 8 [[TMP3]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; IF-EVL-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP0]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP4]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP4]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL:       [[MIDDLE_BLOCK]]:
+; IF-EVL-NEXT:    br label %[[EXIT:.*]]
+; IF-EVL:       [[EXIT]]:
+; IF-EVL-NEXT:    ret void
+;
+; NO-VP-LABEL: define void @test_sdiv_divisor_invariant_safeimm(
+; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
+; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NO-VP:       [[VECTOR_PH]]:
+; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
+; NO-VP:       [[VECTOR_BODY]]:
+; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP4]], align 8
+; NO-VP-NEXT:    [[TMP5:%.*]] = sdiv <vscale x 2 x i64> [[WIDE_LOAD]], splat (i64 3)
+; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
+; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP5]], ptr [[TMP6]], align 8
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; NO-VP-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; NO-VP:       [[MIDDLE_BLOCK]]:
+; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; NO-VP:       [[SCALAR_PH]]:
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; NO-VP-NEXT:    br label %[[LOOP:.*]]
+; NO-VP:       [[LOOP]]:
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[A_GEP:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP8:%.*]] = load i64, ptr [[A_GEP]], align 8
+; NO-VP-NEXT:    [[TMP9:%.*]] = sdiv i64 [[TMP8]], 3
+; NO-VP-NEXT:    [[C_GEP:%.*]] = getelementptr i64, ptr [[C]], i64 [[IV]]
+; NO-VP-NEXT:    store i64 [[TMP9]], ptr [[C_GEP]], align 8
+; NO-VP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; NO-VP-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; NO-VP:       [[EXIT]]:
+; NO-VP-NEXT:    ret void
+;
+loop.preheader:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
+  %a.gep = getelementptr i64, ptr %a, i64 %iv
+  %0 = load i64, ptr %a.gep
+  %2 = sdiv i64 %0, 3
+  %c.gep = getelementptr i64, ptr %c, i64 %iv
+  store i64 %2, ptr %c.gep
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
 
 define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-LABEL: define void @test_udiv(
@@ -126,7 +486,7 @@ define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP14]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP14]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[EXIT]]:
@@ -141,7 +501,7 @@ define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP13]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP13]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -156,7 +516,7 @@ define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], align 8
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -174,7 +534,7 @@ define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    store i64 [[TMP2]], ptr [[C_GEP]], align 8
 ; NO-VP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; NO-VP-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -221,7 +581,7 @@ define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP14]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP14]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[EXIT]]:
@@ -236,7 +596,7 @@ define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP13]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP13]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -251,7 +611,7 @@ define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], align 8
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -269,7 +629,7 @@ define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    store i64 [[TMP2]], ptr [[C_GEP]], align 8
 ; NO-VP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; NO-VP-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -316,7 +676,7 @@ define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP14]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP14]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[EXIT]]:
@@ -331,7 +691,7 @@ define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP13]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP13]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -346,7 +706,7 @@ define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], align 8
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -364,7 +724,7 @@ define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-NEXT:    store i64 [[TMP2]], ptr [[C_GEP]], align 8
 ; NO-VP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; NO-VP-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
 ; NO-VP:       [[EXIT]]:
 ; NO-VP-NEXT:    ret void
 ;
@@ -394,6 +754,10 @@ exit:
 ; IF-EVL: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
 ;.
 ; NO-VP: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; NO-VP: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -405,4 +769,12 @@ exit:
 ; NO-VP: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ; NO-VP: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; NO-VP: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
+; NO-VP: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
+; NO-VP: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META1]]}
+; NO-VP: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META1]]}
+; NO-VP: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]]}
+; NO-VP: [[LOOP17]] = distinct !{[[LOOP17]], [[META2]], [[META1]]}
 ;.

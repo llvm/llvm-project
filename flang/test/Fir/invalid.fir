@@ -1483,3 +1483,59 @@ func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<i8>, %arg1: !fir.ref<!
   %decl = fir.declare %arg0 storage (%arg1[2]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<1xi8>>) -> !fir.ref<i8>
   return
 }
+
+// -----
+
+func.func @bad_declare_value(%arg0: !fir.ref<i32>) {
+  // expected-error@+1 {{'fir.declare_value' op value must be a simple scalar (integer, real, complex, or logical)}}
+  fir.declare_value %arg0 {uniq_name = "test"} : !fir.ref<i32>
+  return
+}
+
+// -----
+
+func.func @bitcast_pointer_input(%arg0: !fir.ref<i32>) -> i32 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.ref<i32>) -> i32
+  return %0 : i32
+}
+
+// -----
+
+func.func @bitcast_pointer_output(%arg0: i32) -> !fir.ref<i32> {
+  // expected-error@+1 {{'fir.bitcast' op output type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (i32) -> !fir.ref<i32>
+  return %0 : !fir.ref<i32>
+}
+
+// -----
+
+func.func @bitcast_complex(%arg0: complex<f32>) -> i64 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (complex<f32>) -> i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @bitcast_char_not_singleton(%arg0: !fir.char<1,2>) -> i16 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.char<1,2>) -> i16
+  return %0 : i16
+}
+
+// -----
+
+func.func @bitcast_box(%arg0: !fir.box<!fir.type<t{i:i32}>>) -> i64 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.box<!fir.type<t{i:i32}>>) -> i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @bitcast_size_mismatch(%arg0: i32) -> f64 {
+  // expected-error@+1 {{'fir.bitcast' op bit size mismatch: input has 32 bits but output has 64 bits}}
+  %0 = fir.bitcast %arg0 : (i32) -> f64
+  return %0 : f64
+}

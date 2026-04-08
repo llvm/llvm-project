@@ -17,13 +17,17 @@
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
 
+#ifdef OFFLOAD_HAS_FLANG_RT
+#include "flang/Runtime/io-api.h"
+#endif
+
 using namespace llvm;
 using namespace omp;
 using namespace target;
 
 template <uint32_t NumLanes>
-rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
-                                 rpc::Server::Port &Port) {
+rpc::RPCStatus handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
+                                    rpc::Server::Port &Port) {
 
   switch (Port.get_opcode()) {
   case LIBC_MALLOC: {
@@ -70,9 +74,9 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
   return rpc::RPC_SUCCESS;
 }
 
-static rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
-                                        rpc::Server::Port &Port,
-                                        uint32_t NumLanes) {
+static rpc::RPCStatus handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
+                                           rpc::Server::Port &Port,
+                                           uint32_t NumLanes) {
   if (NumLanes == 1)
     return handleOffloadOpcodes<1>(Device, Port);
   else if (NumLanes == 32)
@@ -83,24 +87,39 @@ static rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     return rpc::RPC_ERROR;
 }
 
-static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
-  uint64_t NumPorts =
+static rpc::RPCStatus
+runServer(plugin::GenericDeviceTy &Device, void *Buffer,
+          llvm::SmallSetVector<RPCServerTy::RPCServerCallbackTy, 0> &Callbacks,
+          bool &ClientInUse) {
+  const uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   rpc::Server Server(NumPorts, Buffer);
 
-  auto Port = Server.try_open(Device.getWarpSize());
+  auto Port = Server.try_open(Device.getRPCNumLanes());
   if (!Port)
     return rpc::RPC_SUCCESS;
+  ClientInUse = true;
 
-  rpc::Status Status =
-      handleOffloadOpcodes(Device, *Port, Device.getWarpSize());
+  rpc::RPCStatus Status = rpc::RPC_UNHANDLED_OPCODE;
+  const uint32_t NumLanes = Device.getRPCNumLanes();
 
-  // Let the `libc` library handle any other unhandled opcodes.
+  for (RPCServerTy::RPCServerCallbackTy Callback : Callbacks) {
+    Status = static_cast<rpc::RPCStatus>(Callback(&*Port, NumLanes));
+    if (Status != rpc::RPC_UNHANDLED_OPCODE)
+      break;
+  }
+
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
-    Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port,
-                                                         Device.getWarpSize());
+    Status = handleOffloadOpcodes(Device, *Port, NumLanes);
 
-  Port->close();
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = rpc::handle_libc_opcodes(*Port, NumLanes);
+
+#ifdef OFFLOAD_HAS_FLANG_RT
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = static_cast<rpc::RPCStatus>(
+        Fortran::runtime::io::IONAME(HandleRPCOpcodes)(&*Port, NumLanes));
+#endif
 
   return Status;
 }
@@ -117,12 +136,15 @@ void RPCServerTy::ServerThread::shutDown() {
     std::lock_guard<decltype(Mutex)> Lock(Mutex);
     CV.notify_all();
   }
+  if (WakeFunction)
+    WakeFunction();
   if (Worker.joinable())
     Worker.join();
 }
 
 void RPCServerTy::ServerThread::run() {
   std::unique_lock<decltype(Mutex)> Lock(Mutex);
+
   for (;;) {
     CV.wait(Lock, [&]() {
       return NumUsers.load(std::memory_order_acquire) > 0 ||
@@ -133,15 +155,22 @@ void RPCServerTy::ServerThread::run() {
       return;
 
     Lock.unlock();
+    bool ClientInUse = false;
     while (NumUsers.load(std::memory_order_relaxed) > 0 &&
            Running.load(std::memory_order_relaxed)) {
+
+      if (!ClientInUse)
+        SleepFunction();
+
+      ClientInUse = false;
       std::lock_guard<decltype(Mutex)> Lock(BufferMutex);
       for (const auto &[Buffer, Device] : llvm::zip_equal(Buffers, Devices)) {
         if (!Buffer || !Device)
           continue;
 
         // If running the server failed, print a message but keep running.
-        if (runServer(*Device, Buffer) != rpc::RPC_SUCCESS)
+        if (runServer(*Device, Buffer, Callbacks, ClientInUse) !=
+            rpc::RPC_SUCCESS)
           FAILURE_MESSAGE("Unhandled or invalid RPC opcode!");
       }
     }
@@ -154,16 +183,17 @@ RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
       Devices(std::make_unique<plugin::GenericDeviceTy *[]>(
           Plugin.getNumDevices())),
       Thread(new ServerThread(Buffers.get(), Devices.get(),
-                              Plugin.getNumDevices(), BufferMutex)) {}
+                              Plugin.getNumDevices(), BufferMutex, Callbacks)) {
+}
 
 llvm::Error RPCServerTy::startThread() {
   Thread->startThread();
   return Error::success();
 }
 
-llvm::Error RPCServerTy::shutDown() {
+llvm::Error RPCServerTy::shutDown(plugin::GenericPluginTy &Plugin) {
   Thread->shutDown();
-  return Error::success();
+  return Plugin.deinitRPCDoorbell();
 }
 
 llvm::Expected<bool>
@@ -179,7 +209,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   auto RPCBufferOrErr = Device.allocate(
-      rpc::Server::allocation_size(Device.getWarpSize(), NumPorts), nullptr,
+      rpc::Server::allocation_size(Device.getRPCNumLanes(), NumPorts), nullptr,
       TARGET_ALLOC_HOST);
   if (!RPCBufferOrErr)
     return RPCBufferOrErr.takeError();
@@ -189,6 +219,17 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
     return plugin::Plugin::error(
         error::ErrorCode::UNKNOWN,
         "failed to initialize RPC server for device %d", Device.getDeviceId());
+
+  // The doorbell is used by AMDGPU targets to let the server thread be
+  // descheduled. It is optional and will be ignored if the fields are null.
+  rpc::Doorbell Doorbell{};
+  if (auto Err = Device.Plugin.initRPCDoorbell(Doorbell.value, Doorbell.mailbox,
+                                               Doorbell.event_id))
+    return Err;
+
+  auto *DoorbellPtr = reinterpret_cast<rpc::Doorbell *>(
+      static_cast<uint8_t *>(RPCBuffer) + rpc::Server::doorbell_offset());
+  std::memcpy(DoorbellPtr, &Doorbell, sizeof(rpc::Doorbell));
 
   // Get the address of the RPC client from the device.
   plugin::GlobalTy ClientGlobal("__llvm_rpc_client", sizeof(rpc::Client));
@@ -214,4 +255,16 @@ Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;
   return Error::success();
+}
+
+void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  Callbacks.insert(FnPtr);
+}
+
+void RPCServerTy::setSleepFunction(std::function<void()> Sleep,
+                                   std::function<void()> Wake) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  Thread->SleepFunction = std::move(Sleep);
+  Thread->WakeFunction = std::move(Wake);
 }

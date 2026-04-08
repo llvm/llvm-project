@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -92,6 +93,9 @@ public:
     /// of this would be CHERI capabilities where the validity bit is stored
     /// separately from the pointer address+bounds information.
     bool HasExternalState;
+    // Symbolic name of the address space.
+    std::string AddrSpaceName;
+
     LLVM_ABI bool operator==(const PointerSpec &Other) const;
   };
 
@@ -104,6 +108,7 @@ public:
 
 private:
   bool BigEndian = false;
+  bool VectorsAreElementAligned = false;
 
   unsigned AllocaAddrSpace = 0;
   unsigned ProgramAddrSpace = 0;
@@ -158,7 +163,8 @@ private:
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      bool HasUnstableRepr, bool HasExternalState);
+                      bool HasUnstableRepr, bool HasExternalState,
+                      StringRef AddrSpaceName);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   LLVM_ABI Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -173,11 +179,13 @@ private:
   Error parseAggregateSpec(StringRef Spec);
 
   /// Attempts to parse pointer specification ('p').
-  Error parsePointerSpec(StringRef Spec);
+  Error parsePointerSpec(StringRef Spec,
+                         SmallDenseSet<StringRef, 8> &AddrSpaceNames);
 
   /// Attempts to parse a single specification.
   Error parseSpecification(StringRef Spec,
-                           SmallVectorImpl<unsigned> &NonIntegralAddressSpaces);
+                           SmallVectorImpl<unsigned> &NonIntegralAddressSpaces,
+                           SmallDenseSet<StringRef, 8> &AddrSpaceNames);
 
   /// Attempts to parse a data layout string.
   Error parseLayoutString(StringRef LayoutString);
@@ -206,6 +214,9 @@ public:
   /// Layout endianness...
   bool isLittleEndian() const { return !BigEndian; }
   bool isBigEndian() const { return BigEndian; }
+
+  /// Whether vectors are element aligned, rather than naturally aligned.
+  bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
 
   /// Returns the string representation of the DataLayout.
   ///
@@ -292,7 +303,7 @@ public:
     llvm_unreachable("invalid mangling mode");
   }
 
-  StringRef getPrivateGlobalPrefix() const {
+  StringRef getInternalSymbolPrefix() const {
     switch (ManglingMode) {
     case MM_None:
       return "";
@@ -324,8 +335,12 @@ public:
     return false;
   }
 
-  /// Layout pointer alignment
+  /// Layout pointer alignment.
   LLVM_ABI Align getPointerABIAlignment(unsigned AS) const;
+
+  LLVM_ABI StringRef getAddressSpaceName(unsigned AS) const;
+
+  LLVM_ABI std::optional<unsigned> getNamedAddressSpace(StringRef Name) const;
 
   /// Return target's alignment for stack-based pointers
   /// FIXME: The defaults need to be removed once all of
@@ -626,6 +641,11 @@ public:
   /// This is always at least as good as the ABI alignment.
   LLVM_ABI Align getPrefTypeAlign(Type *Ty) const;
 
+  /// Returns a byte type with the same size of a pointer in the given address
+  /// space.
+  LLVM_ABI ByteType *getBytePtrType(LLVMContext &C,
+                                    unsigned AddressSpace = 0) const;
+
   /// Returns an integer type with size at least as big as that of a
   /// pointer in the given address space.
   LLVM_ABI IntegerType *getIntPtrType(LLVMContext &C,
@@ -634,6 +654,10 @@ public:
   /// Returns an integer (vector of integer) type with size at least as
   /// big as that of a pointer of the given pointer (vector of pointer) type.
   LLVM_ABI Type *getIntPtrType(Type *) const;
+
+  /// Returns a byte (vector of byte) type with the same size of a pointer of
+  /// the given pointer (vector of pointer) type.
+  LLVM_ABI Type *getBytePtrType(Type *) const;
 
   /// Returns the smallest integer type with size at least as big as
   /// Width bits.
@@ -773,6 +797,8 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::StructTyID:
     // Get the layout annotation... which is lazily created on demand.
     return getStructLayout(cast<StructType>(Ty))->getSizeInBits();
+  case Type::ByteTyID:
+    return TypeSize::getFixed(Ty->getByteBitWidth());
   case Type::IntegerTyID:
     return TypeSize::getFixed(Ty->getIntegerBitWidth());
   case Type::HalfTyID:

@@ -12,6 +12,7 @@
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <memory>
 #include <vector>
@@ -91,8 +92,10 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
       LibStdcppTupleSyntheticFrontEndCreator(nullptr, tuple_sp));
 
   ValueObjectSP ptr_obj = tuple_frontend->GetChildAtIndex(0);
-  if (ptr_obj)
-    m_ptr_obj = ptr_obj->Clone(ConstString("pointer")).get();
+  if (!ptr_obj)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_ptr_obj = ptr_obj->Clone(ConstString("pointer")).get();
 
   // Add a 'deleter' child if there was a non-empty deleter type specified.
   //
@@ -143,8 +146,7 @@ LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(

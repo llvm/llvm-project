@@ -730,7 +730,7 @@ struct KernelInfoState : AbstractState {
 
   /// State to indicate if we can track parallel level of the associated
   /// function. We will give up tracking if we encounter unknown caller or the
-  /// caller is __kmpc_parallel_51.
+  /// caller is __kmpc_parallel_60.
   BooleanStateWithSetVector<uint8_t> ParallelLevels;
 
   /// Flag that indicates if the kernel has nested Parallelism
@@ -862,9 +862,6 @@ struct OffloadArray {
   /// fails.
   /// This MUST be used immediately after the construction of the object.
   bool initialize(AllocaInst &Array, Instruction &Before) {
-    if (!Array.getAllocatedType()->isArrayTy())
-      return false;
-
     if (!getValues(Array, Before))
       return false;
 
@@ -882,8 +879,13 @@ private:
   /// \p Array, leaving StoredValues with the values stored before the
   /// instruction \p Before is reached.
   bool getValues(AllocaInst &Array, Instruction &Before) {
-    // Initialize container.
-    const uint64_t NumValues = Array.getAllocatedType()->getArrayNumElements();
+    // Initialize containers.
+    const DataLayout &DL = Array.getDataLayout();
+    std::optional<TypeSize> ArraySize = Array.getAllocationSize(DL);
+    if (!ArraySize || !ArraySize->isFixed())
+      return false;
+    const unsigned int PointerSize = DL.getPointerSize();
+    const uint64_t NumValues = ArraySize->getFixedValue() / PointerSize;
     StoredValues.assign(NumValues, nullptr);
     LastAccesses.assign(NumValues, nullptr);
 
@@ -892,9 +894,6 @@ private:
     BasicBlock *BB = Array.getParent();
     if (BB != Before.getParent())
       return false;
-
-    const DataLayout &DL = Array.getDataLayout();
-    const unsigned int PointerSize = DL.getPointerSize();
 
     for (Instruction &I : *BB) {
       if (&I == &Before)
@@ -909,8 +908,11 @@ private:
           GetPointerBaseWithConstantOffset(S->getPointerOperand(), Offset, DL);
       if (Dst == &Array) {
         int64_t Idx = Offset / PointerSize;
-        StoredValues[Idx] = getUnderlyingObject(S->getValueOperand());
-        LastAccesses[Idx] = S;
+        // Ignore updates that must be UB (probably in dead code at runtime)
+        if ((uint64_t)Idx < NumValues) {
+          StoredValues[Idx] = getUnderlyingObject(S->getValueOperand());
+          LastAccesses[Idx] = S;
+        }
       }
     }
 
@@ -1184,7 +1186,7 @@ private:
       cantFail(
           OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
 
-      BranchInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
+      UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
       LLVM_DEBUG(dbgs() << TAG << "After sequential inlining " << *OuterFn
                         << "\n");
@@ -1258,7 +1260,7 @@ private:
           cantFail(OMPInfoCache.OMPBuilder.createParallel(
               Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
               OMP_PROC_BIND_default, /* IsCancellable */ false));
-      BranchInst::Create(AfterBB, AfterIP.getBlock());
+      UncondBrInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
@@ -2117,8 +2119,8 @@ Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
         return getUniqueKernelFor(*CB);
 
       OMPInformationCache::RuntimeFunctionInfo &KernelParallelRFI =
-          OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_51];
-      // Allow the use in __kmpc_parallel_51 calls.
+          OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_60];
+      // Allow the use in __kmpc_parallel_60 calls.
       if (OpenMPOpt::getCallIfRegularCall(*U.getUser(), &KernelParallelRFI))
         return getUniqueKernelFor(*CB);
       return nullptr;
@@ -2145,7 +2147,7 @@ Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
 
 bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
   OMPInformationCache::RuntimeFunctionInfo &KernelParallelRFI =
-      OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_51];
+      OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_60];
 
   bool Changed = false;
   if (!KernelParallelRFI)
@@ -2157,7 +2159,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
 
   for (Function *F : SCC) {
 
-    // Check if the function is a use in a __kmpc_parallel_51 call at
+    // Check if the function is a use in a __kmpc_parallel_60 call at
     // all.
     bool UnknownUse = false;
     bool KernelParallelUse = false;
@@ -2189,7 +2191,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
       UnknownUse = true;
     });
 
-    // Do not emit a remark if we haven't seen a __kmpc_parallel_51
+    // Do not emit a remark if we haven't seen a __kmpc_parallel_60
     // use.
     if (!KernelParallelUse)
       continue;
@@ -2208,7 +2210,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
       continue;
     }
 
-    // Even if we have __kmpc_parallel_51 calls, we (for now) give
+    // Even if we have __kmpc_parallel_60 calls, we (for now) give
     // up if the function is not called from a unique kernel.
     Kernel K = getUniqueKernelFor(*F);
     if (!K) {
@@ -2917,9 +2919,9 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
 
   // Check if the edge into the successor block contains a condition that only
   // lets the main thread execute it.
-  static bool isInitialThreadOnlyEdge(Attributor &A, BranchInst *Edge,
+  static bool isInitialThreadOnlyEdge(Attributor &A, CondBrInst *Edge,
                                       BasicBlock &SuccessorBB) {
-    if (!Edge || !Edge->isConditional())
+    if (!Edge)
       return false;
     if (Edge->getSuccessor(0) != &SuccessorBB)
       return false;
@@ -3126,7 +3128,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         if (LivenessAA && LivenessAA->isEdgeDead(PredBB, &BB))
           continue;
         bool InitialEdgeOnly = isInitialThreadOnlyEdge(
-            A, dyn_cast<BranchInst>(PredBB->getTerminator()), BB);
+            A, dyn_cast<CondBrInst>(PredBB->getTerminator()), BB);
         mergeInPredecessor(A, ED, BEDMap[PredBB], InitialEdgeOnly);
       }
     }
@@ -4058,7 +4060,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           OMPInfoCache.OMPBuilder.getOrCreateSrcLocStr(Loc, SrcLocStrSize);
       Value *Ident =
           OMPInfoCache.OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-      BranchInst::Create(RegionCheckTidBB, ParentBB)->setDebugLoc(DL);
+      UncondBrInst::Create(RegionCheckTidBB, ParentBB)->setDebugLoc(DL);
 
       // Add check for Tid in RegionCheckTidBB
       RegionCheckTidBB->getTerminator()->eraseFromParent();
@@ -4218,7 +4220,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
                          ConstantInt::get(ThreadIdInBlock->getType(), 0),
                          "thread.is_main", InitBB);
     IsMainThread->setDebugLoc(DLoc);
-    BranchInst::Create(ReturnBB, UserCodeBB, IsMainThread, InitBB);
+    CondBrInst::Create(IsMainThread, ReturnBB, UserCodeBB, InitBB);
   }
 
   bool changeToSPMDMode(Attributor &A, ChangeStatus &Changed) {
@@ -4457,10 +4459,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     Instruction *IsWorker =
         ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_NE, KernelInitCB,
-                         ConstantInt::get(KernelInitCB->getType(), -1),
+                         ConstantInt::getAllOnesValue(KernelInitCB->getType()),
                          "thread.is_worker", InitBB);
     IsWorker->setDebugLoc(DLoc);
-    BranchInst::Create(IsWorkerCheckBB, UserCodeEntryBB, IsWorker, InitBB);
+    CondBrInst::Create(IsWorker, IsWorkerCheckBB, UserCodeEntryBB, InitBB);
 
     Module &M = *Kernel->getParent();
     FunctionCallee BlockHwSizeFn =
@@ -4484,8 +4486,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
         ICmpInst::ICmp, llvm::CmpInst::ICMP_SLT, KernelInitCB, BlockSize,
         "thread.is_main_or_worker", IsWorkerCheckBB);
     IsMainOrWorker->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineBeginBB, StateMachineFinishedBB,
-                       IsMainOrWorker, IsWorkerCheckBB);
+    CondBrInst::Create(IsMainOrWorker, StateMachineBeginBB,
+                       StateMachineFinishedBB, IsWorkerCheckBB);
 
     // Create local storage for the work function pointer.
     const DataLayout &DL = M.getDataLayout();
@@ -4540,13 +4542,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
                          Constant::getNullValue(VoidPtrTy), "worker.is_done",
                          StateMachineBeginBB);
     IsDone->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineFinishedBB, StateMachineIsActiveCheckBB,
-                       IsDone, StateMachineBeginBB)
+    CondBrInst::Create(IsDone, StateMachineFinishedBB,
+                       StateMachineIsActiveCheckBB, StateMachineBeginBB)
         ->setDebugLoc(DLoc);
 
-    BranchInst::Create(StateMachineIfCascadeCurrentBB,
-                       StateMachineDoneBarrierBB, IsActiveWorker,
-                       StateMachineIsActiveCheckBB)
+    CondBrInst::Create(IsActiveWorker, StateMachineIfCascadeCurrentBB,
+                       StateMachineDoneBarrierBB, StateMachineIsActiveCheckBB)
         ->setDebugLoc(DLoc);
 
     Value *ZeroArg =
@@ -4566,7 +4567,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           StateMachineEndParallelBB);
       CallInst::Create(ParallelRegion, {ZeroArg, GTid}, "", PRExecuteBB)
           ->setDebugLoc(DLoc);
-      BranchInst::Create(StateMachineEndParallelBB, PRExecuteBB)
+      UncondBrInst::Create(StateMachineEndParallelBB, PRExecuteBB)
           ->setDebugLoc(DLoc);
 
       BasicBlock *PRNextBB =
@@ -4588,7 +4589,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         IsPR = ConstantInt::getTrue(Ctx);
       }
 
-      BranchInst::Create(PRExecuteBB, PRNextBB, IsPR,
+      CondBrInst::Create(IsPR, PRExecuteBB, PRNextBB,
                          StateMachineIfCascadeCurrentBB)
           ->setDebugLoc(DLoc);
       StateMachineIfCascadeCurrentBB = PRNextBB;
@@ -4604,8 +4605,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
                        StateMachineIfCascadeCurrentBB)
           ->setDebugLoc(DLoc);
     }
-    BranchInst::Create(StateMachineEndParallelBB,
-                       StateMachineIfCascadeCurrentBB)
+    UncondBrInst::Create(StateMachineEndParallelBB,
+                         StateMachineIfCascadeCurrentBB)
         ->setDebugLoc(DLoc);
 
     FunctionCallee EndParallelFn =
@@ -4615,12 +4616,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
         CallInst::Create(EndParallelFn, {}, "", StateMachineEndParallelBB);
     OMPInfoCache.setCallingConvention(EndParallelFn, EndParallel);
     EndParallel->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineDoneBarrierBB, StateMachineEndParallelBB)
+    UncondBrInst::Create(StateMachineDoneBarrierBB, StateMachineEndParallelBB)
         ->setDebugLoc(DLoc);
 
     CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineDoneBarrierBB)
         ->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineBeginBB, StateMachineDoneBarrierBB)
+    UncondBrInst::Create(StateMachineBeginBB, StateMachineDoneBarrierBB)
         ->setDebugLoc(DLoc);
 
     return true;
@@ -4821,8 +4822,8 @@ private:
   /// Update info regarding parallel levels.
   void updateParallelLevels(Attributor &A) {
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
-    OMPInformationCache::RuntimeFunctionInfo &Parallel51RFI =
-        OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_51];
+    OMPInformationCache::RuntimeFunctionInfo &Parallel60RFI =
+        OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_60];
 
     auto PredCallSite = [&](AbstractCallSite ACS) {
       Function *Caller = ACS.getInstruction()->getFunction();
@@ -4832,12 +4833,12 @@ private:
       auto *CAA =
           A.getOrCreateAAFor<AAKernelInfo>(IRPosition::function(*Caller));
       if (CAA && CAA->ParallelLevels.isValidState()) {
-        // Any function that is called by `__kmpc_parallel_51` will not be
+        // Any function that is called by `__kmpc_parallel_60` will not be
         // folded as the parallel level in the function is updated. In order to
         // get it right, all the analysis would depend on the implentation. That
         // said, if in the future any change to the implementation, the analysis
         // could be wrong. As a consequence, we are just conservative here.
-        if (Caller == Parallel51RFI.Declaration) {
+        if (Caller == Parallel60RFI.Declaration) {
           ParallelLevels.indicatePessimisticFixpoint();
           return true;
         }
@@ -5006,8 +5007,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_target_deinit:
         KernelDeinitCB = &CB;
         break;
-      case OMPRTL___kmpc_parallel_51:
-        if (!handleParallel51(A, CB))
+      case OMPRTL___kmpc_parallel_60:
+        if (!handleParallel60(A, CB))
           indicatePessimisticFixpoint();
         return;
       case OMPRTL___kmpc_omp_task:
@@ -5075,8 +5076,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         return indicatePessimisticFixpoint();
 
       CallBase &CB = cast<CallBase>(getAssociatedValue());
-      if (It->getSecond() == OMPRTL___kmpc_parallel_51) {
-        if (!handleParallel51(A, CB))
+      if (It->getSecond() == OMPRTL___kmpc_parallel_60) {
+        if (!handleParallel60(A, CB))
           return indicatePessimisticFixpoint();
         return StateBefore == getState() ? ChangeStatus::UNCHANGED
                                          : ChangeStatus::CHANGED;
@@ -5136,9 +5137,9 @@ struct AAKernelInfoCallSite : AAKernelInfo {
                                      : ChangeStatus::CHANGED;
   }
 
-  /// Deal with a __kmpc_parallel_51 call (\p CB). Returns true if the call was
+  /// Deal with a __kmpc_parallel_60 call (\p CB). Returns true if the call was
   /// handled, if a problem occurred, false is returned.
-  bool handleParallel51(Attributor &A, CallBase &CB) {
+  bool handleParallel60(Attributor &A, CallBase &CB) {
     const unsigned int NonWrapperFunctionArgNo = 5;
     const unsigned int WrapperFunctionArgNo = 6;
     auto ParallelRegionOpArgNo = SPMDCompatibilityTracker.isAssumed()

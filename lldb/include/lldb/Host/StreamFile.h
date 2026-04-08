@@ -24,7 +24,7 @@ namespace lldb_private {
 
 class StreamFile : public Stream {
 public:
-  StreamFile(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
+  StreamFile(uint32_t flags, lldb::ByteOrder byte_order);
 
   StreamFile(int fd, bool transfer_ownership);
 
@@ -81,7 +81,8 @@ public:
   LockableStreamFile(StreamFile &stream_file, Mutex &mutex)
       : m_file_sp(stream_file.GetFileSP()), m_mutex(mutex) {}
   LockableStreamFile(FILE *fh, bool transfer_ownership, Mutex &mutex)
-      : m_file_sp(std::make_shared<NativeFile>(fh, transfer_ownership)),
+      : m_file_sp(std::make_shared<NativeFile>(fh, File::eOpenOptionWriteOnly,
+                                               transfer_ownership)),
         m_mutex(mutex) {}
   LockableStreamFile(std::shared_ptr<File> file_sp, Mutex &mutex)
       : m_file_sp(file_sp), m_mutex(mutex) {}
@@ -91,7 +92,10 @@ public:
   /// Unsafe accessors to get the underlying File without a lock. Exists for
   /// legacy reasons.
   /// @{
-  File &GetUnlockedFile() { return *m_file_sp; }
+  File &GetUnlockedFile() {
+    assert(m_file_sp && "GetUnlockedFile requires a valid FileSP");
+    return *m_file_sp;
+  }
   std::shared_ptr<File> GetUnlockedFileSP() { return m_file_sp; }
   /// @}
 

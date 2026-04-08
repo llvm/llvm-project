@@ -51,13 +51,14 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
       expr(anyOf(integerLiteral(), floatLiteral(), characterLiteral(),
                  cxxBoolLiteral(), stringLiteral(), cxxNullPtrLiteralExpr()));
   Finder->addMatcher(
-      parenExpr(
-          subExpr(anyOf(parenExpr(), ConstantExpr,
-                        declRefExpr(to(namedDecl(unless(
-                            matchers::matchesAnyListedName(AllowedDecls))))))),
-          unless(anyOf(isInMacro(),
-                       // sizeof(...) is common used.
-                       hasParent(unaryExprOrTypeTraitExpr()))))
+      parenExpr(subExpr(anyOf(
+                    parenExpr(), ConstantExpr,
+                    declRefExpr(to(namedDecl(unless(
+                        matchers::matchesAnyListedRegexName(AllowedDecls))))),
+                    memberExpr(), callExpr())),
+                unless(anyOf(isInMacro(),
+                             // sizeof(...) is common used.
+                             hasParent(unaryExprOrTypeTraitExpr()))))
           .bind("dup"),
       this);
 }

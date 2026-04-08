@@ -14,6 +14,7 @@
 // template <class Alloc>
 //   flat_multiset(const key_compare& comp, const Alloc& a);
 
+#include <cassert>
 #include <deque>
 #include <flat_set>
 #include <functional>

@@ -41,7 +41,8 @@ STRING_EXTENSION_OUTSIDE(SBThread)
         def get_thread_frames(self):
             '''An accessor function that returns a list() that contains all frames in a lldb.SBThread object.'''
             frames = []
-            for frame in self:
+            frame_list = self.GetFrames()
+            for frame in frame_list:
                 frames.append(frame)
             return frames
 

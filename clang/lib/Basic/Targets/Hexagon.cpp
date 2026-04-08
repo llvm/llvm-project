@@ -102,6 +102,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__HVXDBL__");
   }
 
+  if (HasHVXIeeeFp)
+    Builder.defineMacro("__HVX_IEEE_FP__");
+
   if (hasFeature("audio")) {
     Builder.defineMacro("__HEXAGON_AUDIO__");
   }
@@ -148,6 +151,8 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       UseLongCalls = true;
     else if (F == "-long-calls")
       UseLongCalls = false;
+    else if (F == "+hvx-ieee-fp")
+      HasHVXIeeeFp = true;
     else if (F == "+audio")
       HasAudio = true;
   }
@@ -155,8 +160,13 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     HasFastHalfType = true;
     HasFloat16 = true;
   }
+  if (CPU.compare("hexagonv81") >= 0)
+    HasBFloat16 = true;
+
   return true;
 }
+
+bool HexagonTargetInfo::hasBFloat16Type() const { return HasBFloat16; }
 
 const char *const HexagonTargetInfo::GCCRegNames[] = {
     // Scalar registers:
@@ -237,6 +247,7 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
       .Case("hvx", HasHVX)
       .Case("hvx-length64b", HasHVX64B)
       .Case("hvx-length128b", HasHVX128B)
+      .Case("hvx-ieee-fp", HasHVXIeeeFp)
       .Case("long-calls", UseLongCalls)
       .Case("audio", HasAudio)
       .Default(false);

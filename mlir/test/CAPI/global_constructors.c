@@ -12,6 +12,7 @@
  */
 /* REQUIRES: host-supports-jit
  */
+// XFAIL: system-aix
 
 #include "mlir-c/Conversion.h"
 #include "mlir-c/ExecutionEngine.h"
@@ -79,7 +80,7 @@ void testGlobalCtorJitCallback(void) {
   // Create execution engine with initialization disabled
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
       module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
-      /*enableObjectDump=*/false);
+      /*enableObjectDump=*/false, /*enablePIC=*/false);
 
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Execution engine creation failed");

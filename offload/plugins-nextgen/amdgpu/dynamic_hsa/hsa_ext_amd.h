@@ -72,6 +72,7 @@ typedef enum hsa_amd_agent_info_s {
   HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU = 0xA00A,
   HSA_AMD_AGENT_INFO_NUM_SIMDS_PER_CU = 0xA00B,
   HSA_AMD_AGENT_INFO_COOPERATIVE_QUEUES = 0xA010,
+  HSA_AMD_AGENT_INFO_UUID = 0xA011,
   HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY = 0xA016,
 } hsa_amd_agent_info_t;
 
@@ -167,6 +168,18 @@ hsa_status_t hsa_amd_pointer_info(const void* ptr,
                                           void* (*alloc)(size_t),
                                           uint32_t* num_agents_accessible,
                                           hsa_agent_t** accessible);
+
+typedef struct hsa_amd_profiling_dispatch_time_s {
+  uint64_t start;
+  uint64_t end;
+} hsa_amd_profiling_dispatch_time_t;
+
+hsa_status_t
+hsa_amd_profiling_get_dispatch_time(hsa_agent_t agent, hsa_signal_t signal,
+                                    hsa_amd_profiling_dispatch_time_t *time);
+
+hsa_status_t hsa_amd_profiling_set_profiler_enabled(hsa_queue_t *queue,
+                                                    int enable);
 
 #ifdef __cplusplus
 }

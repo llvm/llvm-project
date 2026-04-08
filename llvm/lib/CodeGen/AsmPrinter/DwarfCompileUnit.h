@@ -89,6 +89,11 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
+  /// Cache of artificial DIEs created for DW_OP_LLVM_implicit_pointer
+  /// lowering, keyed by (pointee type, constant value). Enables reuse when
+  /// multiple pointer variables reference the same constant.
+  DenseMap<std::pair<const DIType *, int64_t>, DIE *> ImplicitPointerDIEs;
+
   /// DWO ID for correlating skeleton and split units.
   uint64_t DWOId = 0;
 
@@ -123,6 +128,14 @@ class DwarfCompileUnit final : public DwarfUnit {
                                           DIE &VariableDie);
 
   ///@}
+
+  /// Lower DW_OP_LLVM_implicit_pointer by creating an artificial variable DIE
+  /// for the dereferenced value and emitting DW_OP_implicit_pointer (DWARF 5)
+  /// or DW_OP_GNU_implicit_pointer (DWARF 4) for the pointer's location.
+  ///
+  /// \returns true if the implicit pointer was handled successfully.
+  bool emitImplicitPointerLocation(const Loc::Single &Single,
+                                   const DbgVariable &DV, DIE &VariableDie);
 
   bool isDwoUnit() const override;
 
@@ -159,6 +172,12 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// Create new DIE for abstract subprogram.
   DIE &createAbstractSubprogramDIE(const DISubprogram *SP, DIE *ContextDIE,
                                    DwarfCompileUnit *ContextCU);
+
+  /// Add a location exprloc to \p DIE with attribute \p Attribute at
+  /// for \p Location modified by raw DIExpression \p Expr.
+  void addLocationWithExpr(DIE &Die, dwarf::Attribute Attribute,
+                           const MachineLocation &Location,
+                           ArrayRef<uint64_t> Expr);
 
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
@@ -251,14 +270,9 @@ public:
   /// DIE to represent this concrete inlined copy of the function.
   DIE *constructInlinedScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
-  /// Construct new DW_TAG_lexical_block for this scope and
-  /// attach DW_AT_low_pc/DW_AT_high_pc labels.
-  DIE *constructLexicalScopeDIE(LexicalScope *Scope);
-
-  /// Get a DIE for the given DILexicalBlock.
-  /// Note that this function assumes that the DIE has been already created
-  /// and it's an error, if it hasn't.
-  DIE *getLexicalBlockDIE(const DILexicalBlock *LB);
+  /// Get if available or create a new DW_TAG_lexical_block for the given
+  /// LexicalScope and attach DW_AT_low_pc/DW_AT_high_pc labels.
+  DIE *getOrCreateLexicalBlockDIE(LexicalScope *Scope, DIE &ParentDIE);
 
   /// Construct a DIE for the given DbgVariable.
   DIE *constructVariableDIE(DbgVariable &DV, bool Abstract = false);
@@ -276,6 +290,11 @@ public:
   /// Construct a DIE for a given scope.
   /// This instance of 'getOrCreateContextDIE()' can handle DILocalScope.
   DIE *getOrCreateContextDIE(const DIScope *Ty) override;
+
+  /// Get DW_TAG_lexical_block for the given DILexicalBlock if available,
+  /// or the most close parent DIE, if no correspoding DW_TAG_lexical_block
+  /// exists.
+  DIE *getLocalContextDIE(const DILexicalBlock *LB);
 
   DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, const Function *F,
                                 bool Minimal = false) override;
@@ -309,12 +328,14 @@ public:
   /// \p IsTail specifies whether the call is a tail call.
   /// \p PCAddr points to the PC value after the call instruction.
   /// \p CallAddr points to the PC value at the call instruction (or is null).
-  /// \p CallReg is a register location for an indirect call. For direct calls
-  /// the \p CallReg is set to 0.
+  /// \p CallTarget a location holding the target address for an indirect call.
+  ///               For direct calls \p CallTarget register is set to 0.
+  /// \p Offset from \p CallTarget register value if the location is indirect.
   DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram *CalleeSP,
                                  const Function *CalleeF, bool IsTail,
                                  const MCSymbol *PCAddr,
-                                 const MCSymbol *CallAddr, unsigned CallReg,
+                                 const MCSymbol *CallAddr,
+                                 MachineLocation CallTarget, int64_t Offset,
                                  DIType *AllocSiteTy);
   /// Construct call site parameter DIEs for the \p CallSiteDIE. The \p Params
   /// were collected by the \ref collectCallSiteParameters.
@@ -385,6 +406,10 @@ public:
   void addAddress(DIE &Die, dwarf::Attribute Attribute,
                   const MachineLocation &Location);
 
+  /// Add a memory location exprloc to \p DIE with attribute \p Attribute
+  /// at \p Location + \p Offset.
+  void addMemoryLocation(DIE &Die, dwarf::Attribute Attribute,
+                         const MachineLocation &Location, int64_t Offset);
   /// Start with the address based on the location provided, and generate the
   /// DWARF information necessary to find the actual variable (navigating the
   /// extra location information encoded in the type) based on the starting
@@ -424,6 +449,10 @@ public:
   void addBaseTypeRef(DIEValueList &Die, int64_t Idx);
 
   MDNodeSetVector &getDeferredLocalDecls() { return DeferredLocalDecls; }
+
+  void addLinkageNamesToDeclarations(const DwarfDebug &DD,
+                                     const DISubprogram &CalleeSP,
+                                     DIE &CalleeDIE);
 };
 
 } // end namespace llvm

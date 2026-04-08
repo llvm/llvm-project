@@ -1,4 +1,4 @@
-// RUN: mlir-opt -verify-roundtrip %s
+// RUN: mlir-opt -verify-roundtrip %s | FileCheck %s
 
 
 // CHECK-LABEL: func @baz
@@ -122,8 +122,68 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {will_return} : () -> ()
   llvm.call @baz() {will_return} : () -> ()
 
-// CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
-  llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write>} : () -> ()
+// CHECK: llvm.call @baz() {noreturn} : () -> ()
+  llvm.call @baz() {noreturn} : () -> ()
+
+// CHECK: llvm.call @baz() {returns_twice} : () -> ()
+  llvm.call @baz() {returns_twice} : () -> ()
+
+// CHECK: llvm.call @baz() {hot} : () -> ()
+  llvm.call @baz() {hot} : () -> ()
+
+// CHECK: llvm.call @baz() {cold} : () -> ()
+  llvm.call @baz() {cold} : () -> ()
+
+// CHECK: llvm.call @baz() {noduplicate} : () -> ()
+  llvm.call @baz() {noduplicate} : () -> ()
+
+// CHECK: llvm.call @baz() {no_caller_saved_registers} : () -> ()
+  llvm.call @baz() {no_caller_saved_registers} : () -> ()
+
+// CHECK: llvm.call @baz() {nocallback} : () -> ()
+  llvm.call @baz() {nocallback} : () -> ()
+
+// CHECK: llvm.call @baz() {modular_format = "format str"} : () -> ()
+  llvm.call @baz() {modular_format = "format str"} : () -> ()
+
+// CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
+  llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltins = []} : () -> ()
+  llvm.call @baz() {nobuiltins = []} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltins = ["asdf", "defg"]} : () -> ()
+  llvm.call @baz() {nobuiltins = ["asdf", "defg"]} : () -> ()
+
+// CHECK: llvm.call @baz() {allocsize = array<i32: 5>} : () -> ()
+  llvm.call @baz() {allocsize = array<i32: 5>} : () -> ()
+
+// CHECK: llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
+  llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
+
+// CHECK: llvm.call @baz() {minsize} : () -> ()
+  llvm.call @baz() {minsize} : () -> ()
+
+// CHECK: llvm.call @baz() {optsize} : () -> ()
+  llvm.call @baz() {optsize} : () -> ()
+
+// CHECK: llvm.call @baz() {builtin} : () -> ()
+  llvm.call @baz() {builtin} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltin} : () -> ()
+  llvm.call @baz() {nobuiltin} : () -> ()
+
+// CHECK: llvm.call @baz() {save_reg_params} : () -> ()
+  llvm.call @baz() {save_reg_params} : () -> ()
+
+// CHECK: llvm.call @baz() {zero_call_used_regs = "all"} : () -> ()
+  llvm.call @baz() {zero_call_used_regs="all"} : () -> ()
+
+// CHECK: llvm.call @baz() {zero_call_used_regs = "thing"} : () -> ()
+  llvm.call @baz() {zero_call_used_regs="thing"} : () -> ()
+
+// CHECK: llvm.call @baz() {default_func_attrs = {justKey, key = "value"}} : () -> ()
+  llvm.call @baz() {default_func_attrs={justKey, key = "value"}} : () -> ()
 
 // Terminator operations and their successors.
 //
@@ -186,8 +246,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 //
 // CHECK: %[[PTR:.*]] = llvm.inttoptr %[[I32]] : i32 to !llvm.ptr
 // CHECK: %{{.*}} = llvm.ptrtoint %[[PTR]] : !llvm.ptr to i32
+// CHECK: %{{.*}} = llvm.ptrtoaddr %[[PTR]] : !llvm.ptr to i64
   %25 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
   %26 = llvm.ptrtoint %25 : !llvm.ptr to i32
+  %a26 = llvm.ptrtoaddr %25 : !llvm.ptr to i64
+  %vp = llvm.mlir.poison : vector<3 x !llvm.ptr>
+  %va26 = llvm.ptrtoaddr %vp : vector<3 x !llvm.ptr> to vector<3 x i64>
 
 // Extended and Quad floating point
 //
@@ -483,6 +547,8 @@ func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
   // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
   %2 = llvm.atomicrmw fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: llvm.atomicrmw fminimumnum %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
+  %3 = llvm.atomicrmw fminimumnum %ptr, %f32 monotonic : !llvm.ptr, f32
   llvm.return
 }
 
@@ -772,6 +838,55 @@ llvm.func @experimental_noalias_scope_with_string_id() {
   llvm.return
 }
 
+// CHECK-LABEL: @experimental_constrained_fadd
+llvm.func @experimental_constrained_fadd(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fadd %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fsub
+llvm.func @experimental_constrained_fsub(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fsub %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fsub %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fmul
+llvm.func @experimental_constrained_fmul(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fmul %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fmul %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fdiv
+llvm.func @experimental_constrained_fdiv(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fdiv %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fdiv %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_frem
+llvm.func @experimental_constrained_frem(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.frem %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.frem %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fma
+llvm.func @experimental_constrained_fma(%a: f32, %b: f32, %c: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fma %a, %b, %c towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fmuladd
+llvm.func @experimental_constrained_fmuladd(%a: f32, %b: f32, %c: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fmuladd %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fmuladd %a, %b, %c towardzero ignore : f32
+  llvm.return
+}
+
 // CHECK-LABEL: @experimental_constrained_fptrunc
 llvm.func @experimental_constrained_fptrunc(%in: f64) {
   // CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} towardzero ignore : f64 to f32
@@ -1053,3 +1168,39 @@ llvm.func @escapedtypename() {
   %1 = llvm.alloca %0 x !llvm.struct<"bucket<string, double, '\\b'>::Iterator", (ptr, i64, i64)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   llvm.return
 }
+
+// Metadata attributes and llvm.named_metadata op.
+
+llvm.func @md_kernel() {
+  llvm.return
+}
+
+// CHECK: llvm.named_metadata "foo.version" [#llvm.md_node<#llvm.md_const<1 : i32>, #llvm.md_const<0 : i32>, #llvm.md_const<0 : i32>>]
+llvm.named_metadata "foo.version" [
+  #llvm.md_node<
+    #llvm.md_const<1 : i32>,
+    #llvm.md_const<0 : i32>,
+    #llvm.md_const<0 : i32>
+  >
+]
+
+// CHECK: llvm.named_metadata "foo.language" [#llvm.md_node<#llvm.md_string<"Bar">, #llvm.md_const<1 : i32>, #llvm.md_const<2 : i32>>]
+llvm.named_metadata "foo.language" [
+  #llvm.md_node<
+    #llvm.md_string<"Bar">,
+    #llvm.md_const<1 : i32>,
+    #llvm.md_const<2 : i32>
+  >
+]
+
+// CHECK: llvm.named_metadata "foo.kernel" [#llvm.md_node<#llvm.md_func<@md_kernel>, #llvm.md_node<>, #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>>]
+llvm.named_metadata "foo.kernel" [
+  #llvm.md_node<
+    #llvm.md_func<@md_kernel>,
+    #llvm.md_node<>,
+    #llvm.md_node<
+      #llvm.md_const<0 : i32>,
+      #llvm.md_string<"foo.buffer">
+    >
+  >
+]
