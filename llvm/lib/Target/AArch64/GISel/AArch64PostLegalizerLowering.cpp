@@ -561,9 +561,9 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DstVec, SrcVec;
   int DstLane, SrcLane;
   std::tie(DstVec, DstLane, SrcVec, SrcLane) = MatchInfo;
-  auto SrcCst = Builder.buildConstant(LLT::buildInteger(64), SrcLane);
+  auto SrcCst = Builder.buildConstant(LLT::integer(64), SrcLane);
   auto Extract = Builder.buildExtractVectorElement(ScalarTy, SrcVec, SrcCst);
-  auto DstCst = Builder.buildConstant(LLT::buildInteger(64), DstLane);
+  auto DstCst = Builder.buildConstant(LLT::integer(64), DstLane);
   Builder.buildInsertVectorElement(Dst, DstVec, Extract, DstCst);
   MI.eraseFromParent();
 }
@@ -1109,7 +1109,7 @@ void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
     Register SrcReg = GBuildVec->getSourceReg(I);
     if (mi_match(SrcReg, MRI, m_GImplicitDef()))
       continue;
-    auto IdxReg = B.buildConstant(LLT::buildInteger(64), I);
+    auto IdxReg = B.buildConstant(LLT::integer(64), I);
     DstReg =
         B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
   }
