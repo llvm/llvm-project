@@ -5,7 +5,7 @@
 define fastcc float @callee(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, float %i) nounwind {
 ; CHECK-LABEL: callee:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.s fa0, fa1
+; CHECK-NEXT:    fmv.x.w a0, fa1
 ; CHECK-NEXT:    ret
   ret float %b
 }
@@ -27,7 +27,6 @@ define float @caller(float %a, float %b, float %c, float %d, float %e, float %f,
 ; CHECK-NEXT:    fmv.w.x fa6, a6
 ; CHECK-NEXT:    fmv.w.x fa7, a7
 ; CHECK-NEXT:    call callee
-; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
