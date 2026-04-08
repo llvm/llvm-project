@@ -129,3 +129,30 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Test to check that createReadOrMaskedRead does not create trivial masks.
+
+// CHECK-LABEL: func @pad_no_op_exact_match
+//       CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<2x4xf32>, vector<2x4xf32>
+//   CHECK-NOT: vector.create_mask
+//   CHECK-NOT: vector.mask
+//       CHECK: vector.transfer_write {{.*}} {in_bounds = [true, true]} : vector<2x4xf32>, tensor<2x4xf32>
+func.func @pad_no_op_exact_match(%arg0: tensor<2x4xf32>) -> tensor<2x4xf32> {
+  %cst = arith.constant 0.0 : f32
+  %0 = tensor.pad %arg0 low[0, 0] high[0, 0] {
+    ^bb0(%i: index, %j: index):
+      tensor.yield %cst : f32
+  } : tensor<2x4xf32> to tensor<2x4xf32>
+  return %0 : tensor<2x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
+}
