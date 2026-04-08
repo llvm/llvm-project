@@ -24,28 +24,164 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
-    : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native),
+GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer,
+                       llvm::endianness Endian)
+    : MemBuffer(std::move(Buffer)), Endian(Endian),
       AddrInfoOffsetsData(StringRef(), true, 0),
       FileEntryData(StringRef(), true, 0) {}
 
-GsymReader::GsymReader(GsymReader &&RHS) = default;
+/// Check magic bytes, determine endianness, and return the GSYM version and endianness.
+/// If magic bytes are invalid, return error.
+static Expected<std::pair<uint16_t, llvm::endianness>>
+checkMagicAndDetectVersionEndian(StringRef Bytes) {
+  if (Bytes.size() < 6)
+    return createStringError(std::errc::invalid_argument,
+                             "data too small to be a GSYM file");
+  const auto HostByteOrder = llvm::endianness::native;
+  const bool IsHostLittleEndian = HostByteOrder == llvm::endianness::little;
+  DataExtractor Data(Bytes, IsHostLittleEndian, 4);
+  uint64_t Offset = 0;
+  uint32_t Magic = Data.getU32(&Offset);
+  llvm::endianness Endian;
+  if (Magic == GSYM_MAGIC) {
+    Endian = HostByteOrder;
+  } else if (Magic == GSYM_CIGAM) {
+    Endian = IsHostLittleEndian ? llvm::endianness::big
+                                : llvm::endianness::little;
+    // Re-create DataExtractor with correct endianness to read version.
+    Data = DataExtractor(Bytes, !IsHostLittleEndian, 4);
+    Offset = 4;
+  } else {
+    return createStringError(std::errc::invalid_argument,
+                             "not a GSYM file (bad magic)");
+  }
+  return std::make_pair(Data.getU16(&Offset), Endian);
+}
 
-llvm::Error GsymReader::parseAddrOffsets(DataExtractor &Data, uint64_t &Offset,
-                                         bool Swap) {
+llvm::Expected<std::unique_ptr<GsymReader>>
+GsymReader::openFile(StringRef Filename) {
+  // Open the input file and return an appropriate error if needed.
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+      MemoryBuffer::getFileOrSTDIN(Filename);
+  auto Err = BuffOrErr.getError();
+  if (Err)
+    return llvm::errorCodeToError(Err);
+  return create(std::move(*BuffOrErr));
+}
+
+llvm::Expected<std::unique_ptr<GsymReader>>
+GsymReader::copyBuffer(StringRef Bytes) {
+  auto MemBuffer = MemoryBuffer::getMemBufferCopy(Bytes, "GSYM bytes");
+  return create(std::move(MemBuffer));
+}
+
+llvm::Expected<std::unique_ptr<GsymReader>>
+GsymReader::create(std::unique_ptr<MemoryBuffer> MemBuffer) {
+  if (!MemBuffer)
+    return createStringError(std::errc::invalid_argument,
+                             "invalid memory buffer");
+  auto VersionEndianOrErr =
+      checkMagicAndDetectVersionEndian(MemBuffer->getBuffer());
+  if (!VersionEndianOrErr)
+    return VersionEndianOrErr.takeError();
+  auto [Version, Endian] = *VersionEndianOrErr;
+  std::unique_ptr<GsymReader> GR;
+  switch (Version) {
+  case Header::getVersion():
+    GR.reset(new GsymReaderV1(std::move(MemBuffer), Endian));
+    break;
+  case HeaderV2::getVersion():
+    GR.reset(new GsymReaderV2(std::move(MemBuffer), Endian));
+    break;
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "unsupported GSYM version %u", Version);
+  }
+  if (auto Err = GR->parse())
+    return std::move(Err);
+  return std::move(GR);
+}
+
+llvm::Error GsymReader::parse() {
+  // Step 1: Parse the version-specific header and populate GlobalDataSections.
+  if (auto Err = parseHeaderAndGlobalDataDirectory())
+    return Err;
+
+  // Step 2: Validate that all required sections are present.
+  for (auto Type :
+       {GlobalInfoType::AddrOffsets, GlobalInfoType::AddrInfoOffsets,
+        GlobalInfoType::StringTable, GlobalInfoType::FileTable,
+        GlobalInfoType::FunctionInfo})
+    if (!GlobalDataSections.count(Type))
+      return createStringError(std::errc::invalid_argument,
+                               "missing required section type %u",
+                               static_cast<uint32_t>(Type));
+
+  // Step 3: Parse each section using the for+switch loop.
+  // Starting from 1, because 0 is EndOfList.
+  for (uint32_t I = 1;
+       I < static_cast<uint32_t>(GlobalInfoType::NumTypes); ++I) {
+    switch (static_cast<GlobalInfoType>(I)) {
+    case GlobalInfoType::AddrOffsets: {
+      auto Bytes = getGlobalData(GlobalInfoType::AddrOffsets);
+      if (!Bytes)
+        return Bytes.takeError();
+      if (auto Err = parseAddrOffsets(*Bytes))
+        return Err;
+      break;
+    }
+    case GlobalInfoType::AddrInfoOffsets: {
+      auto Bytes = getGlobalData(GlobalInfoType::AddrInfoOffsets);
+      if (!Bytes)
+        return Bytes.takeError();
+      if (auto Err = parseAddrInfoOffsets(*Bytes))
+        return Err;
+      break;
+    }
+    case GlobalInfoType::StringTable: {
+      auto Bytes = getGlobalData(GlobalInfoType::StringTable);
+      if (!Bytes)
+        return Bytes.takeError();
+      if (auto Err = parseStringTable(*Bytes))
+        return Err;
+      break;
+    }
+    case GlobalInfoType::FileTable: {
+      auto Bytes = getGlobalData(GlobalInfoType::FileTable);
+      if (!Bytes)
+        return Bytes.takeError();
+      if (auto Err = parseFileTable(*Bytes))
+        return Err;
+      break;
+    }
+    // No parsing needed
+    case GlobalInfoType::FunctionInfo:
+    case GlobalInfoType::UUID:
+      break;
+    }
+  }
+  return Error::success();
+}
+
+llvm::Error GsymReader::parseAddrOffsets(StringRef Bytes) {
   const uint8_t AddrOffSize = getAddressOffsetSize();
   const uint32_t NumAddrs = getNumAddresses();
   const size_t TotalBytes = NumAddrs * AddrOffSize;
-  if (!Swap) {
-    StringRef Bytes = Data.getData();
-    if (Offset + TotalBytes > Bytes.size())
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read address table");
+  if (Bytes.size() < TotalBytes)
+    return createStringError(std::errc::invalid_argument,
+                             "failed to read address table");
+
+  // Parse the non-swap case
+  if (Endian == llvm::endianness::native) {
     AddrOffsets = ArrayRef<uint8_t>(
-        reinterpret_cast<const uint8_t *>(Bytes.data() + Offset), TotalBytes);
-    Offset += TotalBytes;
+        reinterpret_cast<const uint8_t *>(Bytes.data()), TotalBytes);
     return Error::success();
   }
+
+  // Parse the swap case
+  const bool IsLittleEndian = (Endian == llvm::endianness::little);
+  DataExtractor Data(Bytes, IsLittleEndian, 8);
+  uint64_t Offset = 0;
   SwappedAddrOffsets.resize(TotalBytes);
   switch (AddrOffSize) {
   case 1:
@@ -79,83 +215,53 @@ llvm::Error GsymReader::parseAddrOffsets(DataExtractor &Data, uint64_t &Offset,
   return Error::success();
 }
 
-/// Check magic bytes and return the GSYM version from raw bytes.
-/// If magic bytes are invalid, return error.
-static Expected<uint16_t> checkMagicAndDetectVersion(StringRef Bytes) {
-  if (Bytes.size() < 6)
-    return createStringError(std::errc::invalid_argument,
-                             "data too small to be a GSYM file");
-  const bool IsHostLittleEndian =
-      llvm::endianness::native == llvm::endianness::little;
-  DataExtractor Data(Bytes, IsHostLittleEndian, 4);
+llvm::Error GsymReader::parseAddrInfoOffsets(StringRef Bytes) {
+  const bool IsLittleEndian = (Endian == llvm::endianness::little);
+  AddrInfoOffsetsData =
+      DataExtractor(Bytes, IsLittleEndian, getAddressInfoOffsetSize());
+  return Error::success();
+}
+
+llvm::Error GsymReader::parseStringTable(StringRef Bytes) {
+  StrTab.Data = Bytes;
+  return Error::success();
+}
+
+llvm::Error GsymReader::parseFileTable(StringRef Bytes) {
+  const bool IsLittleEndian = (Endian == llvm::endianness::little);
+  const uint8_t StrpSize = getStringOffsetSize();
+  DataExtractor Data(Bytes, IsLittleEndian, getAddressInfoOffsetSize());
   uint64_t Offset = 0;
-  uint32_t Magic = Data.getU32(&Offset);
-  bool NeedSwap;
-  if (Magic == GSYM_MAGIC)
-    NeedSwap = false;
-  else if (Magic == GSYM_CIGAM)
-    NeedSwap = true;
-  else
+  uint32_t NumFiles = Data.getU32(&Offset);
+  uint64_t EntriesSize =
+      static_cast<uint64_t>(NumFiles) * FileEntry::getEncodedSize(StrpSize);
+  if (Bytes.size() < Offset + EntriesSize)
     return createStringError(std::errc::invalid_argument,
-                             "not a GSYM file (bad magic)");
-  if (NeedSwap) {
-    // Re-create DataExtractor with swapped endianness to read version.
-    Data = DataExtractor(Bytes, !IsHostLittleEndian, 4);
-    Offset = 4;
-  }
-  return Data.getU16(&Offset);
+                             "FileTable section too small for %u files",
+                             NumFiles);
+  FileEntryData = DataExtractor(Bytes.substr(Offset, EntriesSize),
+                                IsLittleEndian, Data.getAddressSize());
+  FileEntryData.setStringOffsetSize(StrpSize);
+  return Error::success();
 }
 
-llvm::Expected<std::unique_ptr<GsymReader>>
-GsymReader::openFile(StringRef Path) {
-  auto BufOrErr = MemoryBuffer::getFileOrSTDIN(Path);
-  if (!BufOrErr)
-    return createStringError(BufOrErr.getError(), "failed to open '%s'",
-                             Path.str().c_str());
-  auto VersionOrErr = checkMagicAndDetectVersion((*BufOrErr)->getBuffer());
-  if (!VersionOrErr)
-    return VersionOrErr.takeError();
-  switch (*VersionOrErr) {
-  case Header::getVersion(): {
-    auto R = GsymReaderV1::openFile(Path);
-    if (!R)
-      return R.takeError();
-    return std::make_unique<GsymReaderV1>(std::move(*R));
-  }
-  case HeaderV2::getVersion(): {
-    auto R = GsymReaderV2::openFile(Path);
-    if (!R)
-      return R.takeError();
-    return std::make_unique<GsymReaderV2>(std::move(*R));
-  }
-  default:
+llvm::Expected<StringRef>
+GsymReader::getGlobalData(GlobalInfoType Type) const {
+  auto It = GlobalDataSections.find(Type);
+  if (It == GlobalDataSections.end())
     return createStringError(std::errc::invalid_argument,
-                             "unsupported GSYM version %u", *VersionOrErr);
-  }
-}
-
-llvm::Expected<std::unique_ptr<GsymReader>>
-GsymReader::copyBuffer(StringRef Bytes) {
-  auto VersionOrErr = checkMagicAndDetectVersion(Bytes);
-  if (!VersionOrErr)
-    return VersionOrErr.takeError();
-  switch (*VersionOrErr) {
-  case Header::getVersion(): {
-    auto R = GsymReaderV1::copyBuffer(Bytes);
-    if (!R)
-      return R.takeError();
-    return std::make_unique<GsymReaderV1>(std::move(*R));
-  }
-  case HeaderV2::getVersion(): {
-    auto R = GsymReaderV2::copyBuffer(Bytes);
-    if (!R)
-      return R.takeError();
-    return std::make_unique<GsymReaderV2>(std::move(*R));
-  }
-  default:
-    return createStringError(std::errc::invalid_argument,
-                             "unsupported GSYM version %u", *VersionOrErr);
-  }
+                             "missing required section type %u",
+                             static_cast<uint32_t>(Type));
+  const GlobalData &GD = It->second;
+  StringRef Buf = MemBuffer->getBuffer();
+  if (GD.FileOffset + GD.FileSize > Buf.size())
+    return createStringError(
+        std::errc::invalid_argument,
+        "GlobalData section type %u extends beyond buffer "
+        "(offset=%" PRIu64 ", size=%" PRIu64 ", bufsize=%" PRIu64 ")",
+        static_cast<uint32_t>(Type), GD.FileOffset, GD.FileSize,
+        static_cast<uint64_t>(Buf.size()));
+  return Buf.substr(GD.FileOffset, GD.FileSize);
 }
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
@@ -166,6 +272,14 @@ std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   case 8: return addressForIndex<uint64_t>(Index);
   }
   return std::nullopt;
+}
+
+uint64_t GsymReader::getAddressInfoOffset(size_t Index) const {
+  uint64_t Offset = Index * getAddressInfoOffsetSize();
+  return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetSize()) +
+         // The exitence of FunctionInfo in GlobalDataSections is guaranteed by
+         // step 2 in parse().
+         GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
 }
 
 Expected<uint64_t>
@@ -197,29 +311,6 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
   }
   return createStringError(std::errc::invalid_argument,
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
-}
-
-llvm::Error GsymReader::parseFileTable(DataExtractor &Data, uint64_t &Offset) {
-  const uint8_t StrpSize = getStringOffsetSize();
-  uint32_t NumFiles = Data.getU32(&Offset);
-  uint64_t EntriesSize =
-      static_cast<uint64_t>(NumFiles) * FileEntry::getEncodedSize(StrpSize);
-  StringRef Bytes = Data.getData();
-  if (Bytes.size() < Offset + EntriesSize)
-    return createStringError(std::errc::invalid_argument,
-                             "FileTable section too small for %u files",
-                             NumFiles);
-  const bool IsLittleEndian = Data.isLittleEndian();
-  FileEntryData = DataExtractor(Bytes.substr(Offset, EntriesSize),
-                                IsLittleEndian, Data.getAddressSize());
-  FileEntryData.setStringOffsetSize(StrpSize);
-  Offset += EntriesSize;
-  return Error::success();
-}
-
-uint64_t GsymReader::getAddressInfoOffset(size_t Index) const {
-  uint64_t Offset = Index * getAddressInfoOffsetSize();
-  return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetSize());
 }
 
 llvm::Expected<DataExtractor>

@@ -9,11 +9,8 @@
 #ifndef LLVM_DEBUGINFO_GSYM_GSYMREADERV2_H
 #define LLVM_DEBUGINFO_GSYM_GSYMREADERV2_H
 
-#include "llvm/DebugInfo/GSYM/GlobalData.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
-
-#include <map>
 
 namespace llvm {
 class MemoryBuffer;
@@ -22,23 +19,17 @@ namespace gsym {
 
 /// GsymReaderV2 reads GSYM V2 data from a file or buffer.
 class GsymReaderV2 : public GsymReader {
-  GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer);
-  llvm::Error parse();
-
+  friend class GsymReader;
   const HeaderV2 *Hdr = nullptr;
   std::unique_ptr<HeaderV2> SwappedHdr;
-  /// Parsed GlobalData section descriptors, keyed by type.
-  std::map<GlobalInfoType, GlobalData> GlobalDataSections;
 
-  LLVM_ABI static llvm::Expected<GsymReaderV2>
-  create(std::unique_ptr<MemoryBuffer> &MemBuffer);
+protected:
+  GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer, llvm::endianness Endian);
+  llvm::Error parseHeaderAndGlobalDataDirectory() override;
 
 public:
   LLVM_ABI GsymReaderV2(GsymReaderV2 &&RHS);
   LLVM_ABI ~GsymReaderV2() override;
-
-  LLVM_ABI static llvm::Expected<GsymReaderV2> openFile(StringRef Path);
-  LLVM_ABI static llvm::Expected<GsymReaderV2> copyBuffer(StringRef Bytes);
 
   LLVM_ABI const HeaderV2 &getHeader() const;
 
@@ -50,9 +41,6 @@ public:
   }
   uint8_t getAddressInfoOffsetSize() const override { return 8; }
   uint8_t getStringOffsetSize() const override { return 8; }
-
-  // GlobalData accessors
-  uint64_t getAddressInfoOffset(size_t Index) const override;
 
   using GsymReader::dump;
   LLVM_ABI void dump(raw_ostream &OS) override;

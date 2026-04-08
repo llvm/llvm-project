@@ -45,6 +45,9 @@ enum class GlobalInfoType : uint32_t {
   FunctionInfo = 5u,
   // Optional UUID of the GSYM.
   UUID = 6u,
+  // IMPORTANT: Add new types above this line with incrementing values.
+  // This ensures that for-loops can use NumTypes to iterate over all types.
+  NumTypes
 };
 
 /// GlobalData describes a section of data in a GSYM file by its type, file
@@ -68,13 +71,6 @@ struct GlobalData {
   LLVM_ABI static llvm::Expected<GlobalData> decode(DataExtractor &GsymData,
                                                     uint64_t &Offset);
 
-  /// Get the data for this GlobalData section as a StringRef.
-  ///
-  /// \param GsymData The binary stream to read from.
-  /// \returns The data for this section or an error if the data is not fully
-  /// available.
-  LLVM_ABI llvm::Expected<StringRef>
-  getStringRef(DataExtractor &GsymData) const;
 };
 
 } // namespace gsym

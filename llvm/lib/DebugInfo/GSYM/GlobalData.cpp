@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/Support/DataExtractor.h"
 #include <inttypes.h>
@@ -19,18 +18,6 @@ void GlobalData::encode(FileWriter &O) const {
   O.writeU32(static_cast<uint32_t>(Type));
   O.writeU64(FileOffset);
   O.writeU64(FileSize);
-}
-
-llvm::Expected<StringRef>
-GlobalData::getStringRef(DataExtractor &GsymData) const {
-  if (!GsymData.isValidOffsetForDataOfSize(FileOffset, FileSize))
-    return createStringError(std::errc::invalid_argument,
-                             "GlobalData section type %u data not available "
-                             "(offset=0x16.16%" PRIu64 ", size=0x16.16%" PRIu64
-                             ", bufsize=0x%" PRIu64 ")",
-                             static_cast<uint32_t>(Type), FileOffset, FileSize,
-                             static_cast<uint64_t>(GsymData.getData().size()));
-  return GsymData.getData().substr(FileOffset, FileSize);
 }
 
 llvm::Expected<GlobalData> GlobalData::decode(DataExtractor &GsymData,

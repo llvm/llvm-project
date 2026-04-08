@@ -19,65 +19,27 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymReaderV1::GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer)
-    : GsymReader(std::move(Buffer)) {}
+GsymReaderV1::GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer,
+                           llvm::endianness Endian)
+    : GsymReader(std::move(Buffer), Endian) {}
 
 GsymReaderV1::GsymReaderV1(GsymReaderV1 &&RHS) = default;
 GsymReaderV1::~GsymReaderV1() = default;
 
-llvm::Expected<GsymReaderV1> GsymReaderV1::openFile(StringRef Filename) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
-  auto Err = BuffOrErr.getError();
-  if (Err)
-    return llvm::errorCodeToError(Err);
-  return create(BuffOrErr.get());
-}
-
-llvm::Expected<GsymReaderV1> GsymReaderV1::copyBuffer(StringRef Bytes) {
-  auto MB = MemoryBuffer::getMemBufferCopy(Bytes, "GSYM bytes");
-  return create(MB);
-}
-
-llvm::Expected<GsymReaderV1>
-GsymReaderV1::create(std::unique_ptr<MemoryBuffer> &MB) {
-  if (!MB)
-    return createStringError(std::errc::invalid_argument,
-                             "invalid memory buffer");
-  GsymReaderV1 GR(std::move(MB));
-  if (auto Err = GR.parse())
-    return std::move(Err);
-  return std::move(GR);
-}
-
-llvm::Error GsymReaderV1::parse() {
-  BinaryStreamReader FileData(MemBuffer->getBuffer(), llvm::endianness::native);
-  // Check for the magic bytes. This file format is designed to be mmap'ed
-  // into a process and accessed as read only. This is done for performance
-  // and efficiency for symbolicating and parsing GSYM data.
+llvm::Error GsymReaderV1::parseHeaderAndGlobalDataDirectory() {
+  const StringRef Buf = MemBuffer->getBuffer();
+  BinaryStreamReader FileData(Buf, llvm::endianness::native);
+  // Read the header. This file format is designed to be mmap'ed into a process
+  // and accessed as read only.
   if (FileData.readObject(Hdr))
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GSYM header");
 
-  const auto HostByteOrder = llvm::endianness::native;
-  switch (Hdr->Magic) {
-  case GSYM_MAGIC:
-    Endian = HostByteOrder;
-    break;
-  case GSYM_CIGAM:
-    // This is a GSYM file, but not native endianness.
-    Endian =
-        sys::IsBigEndianHost ? llvm::endianness::little : llvm::endianness::big;
-    SwappedHdr = std::make_unique<Header>();
-    break;
-  default:
-    return createStringError(std::errc::invalid_argument, "not a GSYM file");
-  }
-
-  bool DataIsLittleEndian = HostByteOrder != llvm::endianness::little;
+  const bool IsLittleEndian = (Endian == llvm::endianness::little);
   // Read a correctly byte swapped header if we need to.
-  if (SwappedHdr) {
-    DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
+  if (Endian != llvm::endianness::native) {
+    SwappedHdr = std::make_unique<Header>();
+    DataExtractor Data(Buf, IsLittleEndian, 4);
     if (auto ExpectedHdr = Header::decode(Data))
       *SwappedHdr = ExpectedHdr.get();
     else
@@ -91,41 +53,47 @@ llvm::Error GsymReaderV1::parse() {
   if (Error Err = Hdr->checkForError())
     return Err;
 
-  // Parse AddrOffsets.
-  DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
-  uint64_t Offset = alignTo(sizeof(Header), Hdr->AddrOffSize);
-  if (auto Err = parseAddrOffsets(Data, Offset, SwappedHdr != nullptr))
-    return Err;
+  // Compute section offsets from the fixed V1 layout and populate the
+  // GlobalDataSections map. V1 sections are laid out sequentially:
+  //   [Header] [AddrOffsets] [AddrInfoOffsets] [FileTable] ... [StringTable]
+  const uint64_t NumAddrs = Hdr->NumAddresses;
+  const uint8_t AddrOffSize = Hdr->AddrOffSize;
 
-  // Parse AddrInfoOffsets.
-  {
-    const bool IsLittleEndian = (Endian == llvm::endianness::little);
-    Offset = alignTo(Offset, 4);
-    uint64_t AISize = static_cast<uint64_t>(Hdr->NumAddresses) * 4;
-    StringRef AIData = MemBuffer->getBuffer().substr(Offset, AISize);
-    if (AIData.size() < AISize)
-      return createStringError(std::errc::invalid_argument,
-                               "failed to read address info offsets table");
-    AddrInfoOffsetsData = DataExtractor(AIData, IsLittleEndian, 4);
-    Offset += AISize;
-  }
+  // AddrOffsets
+  uint64_t Offset = alignTo(sizeof(Header), AddrOffSize);
+  uint64_t AddrOffsetsSize = NumAddrs * AddrOffSize;
+  GlobalDataSections[GlobalInfoType::AddrOffsets] = {
+      GlobalInfoType::AddrOffsets, Offset, AddrOffsetsSize};
+  Offset += AddrOffsetsSize;
 
-  // Parse FileTable.
-  {
-    DataExtractor FTData(MemBuffer->getBuffer().substr(Offset),
-                         Endian == llvm::endianness::little, 4);
-    uint64_t FTOffset = 0;
-    if (auto Err = parseFileTable(FTData, FTOffset))
-      return Err;
-    Offset += FTOffset;
-  }
+  // AddrInfoOffsets
+  Offset = alignTo(Offset, 4);
+  uint64_t AddrInfoOffsetsSize = NumAddrs * Header::getAddressInfoOffsetSize();
+  GlobalDataSections[GlobalInfoType::AddrInfoOffsets] = {
+      GlobalInfoType::AddrInfoOffsets, Offset, AddrInfoOffsetsSize};
+  Offset += AddrInfoOffsetsSize;
 
-  // Parse StrTab.
-  StrTab.Data =
-      MemBuffer->getBuffer().substr(Hdr->StrtabOffset, Hdr->StrtabSize);
-  if (StrTab.Data.empty())
-    return createStringError(std::errc::invalid_argument,
-                             "failed to read string table");
+  // FileTable: read NumFiles to compute the size.
+  DataExtractor Data(Buf, IsLittleEndian, 4);
+  uint64_t FTOffset = Offset;
+  uint32_t NumFiles = Data.getU32(&FTOffset);
+  uint64_t FileTableSize =
+      4 + static_cast<uint64_t>(NumFiles) *
+              FileEntry::getEncodedSize(Header::getStringOffsetSize());
+  GlobalDataSections[GlobalInfoType::FileTable] = {
+      GlobalInfoType::FileTable, Offset, FileTableSize};
+
+  // StringTable: offset and size are in the header.
+  GlobalDataSections[GlobalInfoType::StringTable] = {
+      GlobalInfoType::StringTable, Hdr->StrtabOffset, Hdr->StrtabSize};
+
+  // FunctionInfo: V1 uses absolute file offsets in AddrInfoOffsets (not
+  // relative to a FunctionInfo section start). FileOffset is set to 0 so that
+  // GsymReader::getAddressInfoOffset() works automatically. Correspondingly,
+  // FileSize is set to the length of the entire file for range checks.
+  GlobalDataSections[GlobalInfoType::FunctionInfo] = {
+      GlobalInfoType::FunctionInfo, 0, Buf.size()};
+
   return Error::success();
 }
 

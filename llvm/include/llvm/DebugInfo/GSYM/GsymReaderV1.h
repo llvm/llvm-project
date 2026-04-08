@@ -19,21 +19,17 @@ namespace gsym {
 
 /// GsymReaderV1 reads GSYM V1 data from a file or buffer.
 class GsymReaderV1 : public GsymReader {
-  GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer);
-  llvm::Error parse();
-
+  friend class GsymReader;
   const Header *Hdr = nullptr;
   std::unique_ptr<Header> SwappedHdr;
 
-  LLVM_ABI static llvm::Expected<GsymReaderV1>
-  create(std::unique_ptr<MemoryBuffer> &MemBuffer);
+protected:
+  GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer, llvm::endianness Endian);
+  llvm::Error parseHeaderAndGlobalDataDirectory() override;
 
 public:
   LLVM_ABI GsymReaderV1(GsymReaderV1 &&RHS);
   LLVM_ABI ~GsymReaderV1() override;
-
-  LLVM_ABI static llvm::Expected<GsymReaderV1> openFile(StringRef Path);
-  LLVM_ABI static llvm::Expected<GsymReaderV1> copyBuffer(StringRef Bytes);
 
   LLVM_ABI const Header &getHeader() const;
 

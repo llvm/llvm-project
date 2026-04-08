@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
@@ -175,6 +174,8 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
       EXPECT_EQ(GD.FileSize, sizeof(UUID));
       EXPECT_GT(GD.FileOffset, 0u);
       FoundUUID = true;
+      break;
+    case GlobalInfoType::NumTypes:
       break;
     }
     if (FoundEndOfList)
@@ -384,9 +385,9 @@ TEST(GSYMV2Test, TestCreatorV2SectionAlignment) {
   }
 
   // Also verify the round-trip works.
-  auto GR = GsymReaderV2::copyBuffer(Data);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
-  EXPECT_EQ(GR->getNumAddresses(), 3u);
+  auto GROrErr = GsymReader::copyBuffer(Data);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  EXPECT_EQ((*GROrErr)->getNumAddresses(), 3u);
 }
 
 //===----------------------------------------------------------------------===//
@@ -515,10 +516,12 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
 TEST(GSYMV2Test, TestReaderV2ParseHandCrafted) {
   // Build a minimal V2 binary by hand and verify the reader can parse it.
   auto Bytes = buildMinimalV2Binary(0x1000, 0x100);
-  auto GR = GsymReaderV2::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = GsymReader::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
-  const HeaderV2 &Hdr = GR->getHeader();
+  const HeaderV2 &Hdr =
+      static_cast<GsymReaderV2 *>(GR.get())->getHeader();
   EXPECT_EQ(Hdr.Magic, GSYM_MAGIC);
   EXPECT_EQ(Hdr.Version, HeaderV2::getVersion());
   EXPECT_EQ(Hdr.BaseAddress, 0x1000u);
@@ -543,8 +546,9 @@ TEST(GSYMV2Test, TestReaderV2ParseHandCrafted) {
 
 TEST(GSYMV2Test, TestReaderV2GetFunctionInfoHandCrafted) {
   auto Bytes = buildMinimalV2Binary(0x1000, 0x100);
-  auto GR = GsymReaderV2::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = GsymReader::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   // getFunctionInfo should decode the function at 0x1000.
   auto FI = GR->getFunctionInfo(0x1000);
@@ -565,8 +569,9 @@ TEST(GSYMV2Test, TestReaderV2GetFunctionInfoHandCrafted) {
 
 TEST(GSYMV2Test, TestReaderV2LookupHandCrafted) {
   auto Bytes = buildMinimalV2Binary(0x1000, 0x100);
-  auto GR = GsymReaderV2::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = GsymReader::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   // lookup should return a LookupResult.
   auto LR = GR->lookup(0x1000);
@@ -588,14 +593,14 @@ TEST(GSYMV2Test, TestReaderV2InvalidMagic) {
   // Create a buffer with invalid magic.
   char Buf[24] = {};
   Buf[0] = 'X'; // Bad magic.
-  auto GR = GsymReaderV2::copyBuffer(StringRef(Buf, sizeof(Buf)));
+  auto GR = GsymReader::copyBuffer(StringRef(Buf, sizeof(Buf)));
   EXPECT_THAT_EXPECTED(GR, Failed());
 }
 
 TEST(GSYMV2Test, TestReaderV2TooSmall) {
   // Buffer smaller than header.
   char Buf[10] = {};
-  auto GR = GsymReaderV2::copyBuffer(StringRef(Buf, sizeof(Buf)));
+  auto GR = GsymReader::copyBuffer(StringRef(Buf, sizeof(Buf)));
   EXPECT_THAT_EXPECTED(GR, Failed());
 }
 
@@ -629,7 +634,7 @@ TEST(GSYMV2Test, TestReaderV2TruncatedFileTable) {
     if (Type == static_cast<uint32_t>(GlobalInfoType::EndOfList))
       break;
   }
-  auto GR = GsymReaderV2::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
+  auto GR = GsymReader::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
   ASSERT_FALSE(bool(GR));
   std::string ErrMsg;
   handleAllErrors(GR.takeError(),
@@ -644,7 +649,7 @@ TEST(GSYMV2Test, TestReaderV2TruncatedFileTable) {
 
 /// Helper to create, finalize, encode with GsymCreatorV2, then decode with
 /// GsymReaderV2 and return the reader.
-static Expected<GsymReaderV2>
+static Expected<std::unique_ptr<GsymReader>>
 createAndReadV2(GsymCreatorV2 &GC,
                 llvm::endianness ByteOrder = llvm::endianness::native) {
   OutputAggregator Null(nullptr);
@@ -658,7 +663,7 @@ createAndReadV2(GsymCreatorV2 &GC,
   if (auto Err = GC.encode(FW))
     return std::move(Err);
 
-  return GsymReaderV2::copyBuffer(OutStrm.str());
+  return GsymReader::copyBuffer(OutStrm.str());
 }
 
 TEST(GSYMV2Test, TestRoundTripGetFunctionInfoAtIndex) {
@@ -668,8 +673,9 @@ TEST(GSYMV2Test, TestRoundTripGetFunctionInfoAtIndex) {
   GC.addFunctionInfo(FunctionInfo(0x3000, 0x100, Name1));
   GC.addFunctionInfo(FunctionInfo(0x3100, 0x100, Name2));
 
-  auto GR = createAndReadV2(GC);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = createAndReadV2(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   // Access by index.
   auto FI0 = GR->getFunctionInfoAtIndex(0);
@@ -694,8 +700,9 @@ TEST(GSYMV2Test, TestRoundTripAddressTable) {
   GC.addFunctionInfo(FunctionInfo(0x8020, 0x10, N2));
   GC.addFunctionInfo(FunctionInfo(0x8040, 0x10, N3));
 
-  auto GR = createAndReadV2(GC);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = createAndReadV2(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   // Verify addresses via getAddress.
   EXPECT_EQ(GR->getAddress(0), std::optional<uint64_t>(0x8000u));
@@ -712,11 +719,12 @@ TEST(GSYMV2Test, TestRoundTripLargeAddressOffsets) {
   GC.addFunctionInfo(FunctionInfo(0x1000, 0x10, N1));
   GC.addFunctionInfo(FunctionInfo(0x1000 + 0x20000, 0x10, N2));
 
-  auto GR = createAndReadV2(GC);
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = createAndReadV2(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   // V2 only supports power-of-two AddrOffSize (1/2/4/8), so 3 rounds up to 4.
-  EXPECT_EQ(GR->getHeader().AddrOffSize, 4u);
+  EXPECT_EQ(GR->getAddressOffsetSize(), 4u);
   EXPECT_EQ(GR->getNumAddresses(), 2u);
 
   auto FI1 = GR->getFunctionInfo(0x1000);
@@ -743,11 +751,12 @@ TEST(GSYMV2Test, TestRoundTripSwappedSingleFunction) {
   const uint32_t Name = GC.insertString("hello");
   GC.addFunctionInfo(FunctionInfo(0x2000, 0x200, Name));
 
-  auto GR = createAndReadV2(GC, swappedEndianness());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = createAndReadV2(GC, swappedEndianness());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   EXPECT_EQ(GR->getNumAddresses(), 1u);
-  EXPECT_EQ(GR->getHeader().BaseAddress, 0x2000u);
+  EXPECT_EQ(GR->getBaseAddress(), 0x2000u);
 
   auto FI = GR->getFunctionInfo(0x2000);
   ASSERT_THAT_EXPECTED(FI, Succeeded());
@@ -764,8 +773,9 @@ TEST(GSYMV2Test, TestRoundTripSwappedMultipleFunctions) {
   GC.addFunctionInfo(FunctionInfo(0x1100, 0x100, Name2));
   GC.addFunctionInfo(FunctionInfo(0x1200, 0x100, Name3));
 
-  auto GR = createAndReadV2(GC, swappedEndianness());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = createAndReadV2(GC, swappedEndianness());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   EXPECT_EQ(GR->getNumAddresses(), 3u);
 
@@ -789,8 +799,9 @@ TEST(GSYMV2Test, TestRoundTripSwappedLookup) {
   GC.addFunctionInfo(FunctionInfo(0x5000, 0x500, Name1));
   GC.addFunctionInfo(FunctionInfo(0x5500, 0x500, Name2));
 
-  auto GR = createAndReadV2(GC, swappedEndianness());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = createAndReadV2(GC, swappedEndianness());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   auto LR1 = GR->lookup(0x5000);
   ASSERT_THAT_EXPECTED(LR1, Succeeded());
@@ -818,8 +829,9 @@ TEST(GSYMV2Test, TestRoundTripSwappedAddressTable) {
   GC.addFunctionInfo(FunctionInfo(0x8020, 0x10, N2));
   GC.addFunctionInfo(FunctionInfo(0x8040, 0x10, N3));
 
-  auto GR = createAndReadV2(GC, swappedEndianness());
-  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  auto GROrErr = createAndReadV2(GC, swappedEndianness());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  auto &GR = *GROrErr;
 
   EXPECT_EQ(GR->getAddress(0), std::optional<uint64_t>(0x8000u));
   EXPECT_EQ(GR->getAddress(1), std::optional<uint64_t>(0x8020u));
@@ -952,8 +964,9 @@ TEST(GSYMV2Test, TestVersionRoundTripV1ToV2ToV1) {
   ASSERT_GT(OrigV1Bytes.size(), 0u);
 
   // Read original V1.
-  auto OrigReader = GsymReaderV1::copyBuffer(OrigV1Bytes);
-  ASSERT_THAT_EXPECTED(OrigReader, Succeeded());
+  auto OrigReaderOrErr = GsymReader::copyBuffer(OrigV1Bytes);
+  ASSERT_THAT_EXPECTED(OrigReaderOrErr, Succeeded());
+  auto &OrigReader = *OrigReaderOrErr;
 
   // Collect lookup results from original V1.
   std::vector<uint64_t> TestAddrs = {0x1000, 0x1008, 0x1010, 0x1012,
@@ -968,8 +981,9 @@ TEST(GSYMV2Test, TestVersionRoundTripV1ToV2ToV1) {
   SmallString<1024> V2Bytes = encodeCreator(GC2);
   ASSERT_GT(V2Bytes.size(), 0u);
 
-  auto V2Reader = GsymReaderV2::copyBuffer(V2Bytes);
-  ASSERT_THAT_EXPECTED(V2Reader, Succeeded());
+  auto V2ReaderOrErr = GsymReader::copyBuffer(V2Bytes);
+  ASSERT_THAT_EXPECTED(V2ReaderOrErr, Succeeded());
+  auto &V2Reader = *V2ReaderOrErr;
 
   // Verify V2 lookups match original V1.
   auto V2Results = collectLookups(*V2Reader, TestAddrs);
@@ -985,8 +999,9 @@ TEST(GSYMV2Test, TestVersionRoundTripV1ToV2ToV1) {
   SmallString<1024> FinalV1Bytes = encodeCreator(GC3);
   ASSERT_GT(FinalV1Bytes.size(), 0u);
 
-  auto FinalReader = GsymReaderV1::copyBuffer(FinalV1Bytes);
-  ASSERT_THAT_EXPECTED(FinalReader, Succeeded());
+  auto FinalReaderOrErr = GsymReader::copyBuffer(FinalV1Bytes);
+  ASSERT_THAT_EXPECTED(FinalReaderOrErr, Succeeded());
+  auto &FinalReader = *FinalReaderOrErr;
 
   // Verify final V1 lookups match original V1.
   auto FinalResults = collectLookups(*FinalReader, TestAddrs);
@@ -1032,8 +1047,9 @@ TEST(GSYMV2Test, TestVersionRoundTripV2ToV1ToV2) {
   ASSERT_GT(OrigV2Bytes.size(), 0u);
 
   // Read original V2.
-  auto OrigReader = GsymReaderV2::copyBuffer(OrigV2Bytes);
-  ASSERT_THAT_EXPECTED(OrigReader, Succeeded());
+  auto OrigReaderOrErr = GsymReader::copyBuffer(OrigV2Bytes);
+  ASSERT_THAT_EXPECTED(OrigReaderOrErr, Succeeded());
+  auto &OrigReader = *OrigReaderOrErr;
 
   // Collect lookup results from original V2.
   std::vector<uint64_t> TestAddrs = {0x2000, 0x2020, 0x2040, 0x2080,
@@ -1048,8 +1064,9 @@ TEST(GSYMV2Test, TestVersionRoundTripV2ToV1ToV2) {
   SmallString<1024> V1Bytes = encodeCreator(GC2);
   ASSERT_GT(V1Bytes.size(), 0u);
 
-  auto V1Reader = GsymReaderV1::copyBuffer(V1Bytes);
-  ASSERT_THAT_EXPECTED(V1Reader, Succeeded());
+  auto V1ReaderOrErr = GsymReader::copyBuffer(V1Bytes);
+  ASSERT_THAT_EXPECTED(V1ReaderOrErr, Succeeded());
+  auto &V1Reader = *V1ReaderOrErr;
 
   // Verify V1 lookups match original V2.
   auto V1Results = collectLookups(*V1Reader, TestAddrs);
@@ -1065,8 +1082,9 @@ TEST(GSYMV2Test, TestVersionRoundTripV2ToV1ToV2) {
   SmallString<1024> FinalV2Bytes = encodeCreator(GC3);
   ASSERT_GT(FinalV2Bytes.size(), 0u);
 
-  auto FinalReader = GsymReaderV2::copyBuffer(FinalV2Bytes);
-  ASSERT_THAT_EXPECTED(FinalReader, Succeeded());
+  auto FinalReaderOrErr = GsymReader::copyBuffer(FinalV2Bytes);
+  ASSERT_THAT_EXPECTED(FinalReaderOrErr, Succeeded());
+  auto &FinalReader = *FinalReaderOrErr;
 
   // Verify final V2 lookups match original V2.
   auto FinalResults = collectLookups(*FinalReader, TestAddrs);
