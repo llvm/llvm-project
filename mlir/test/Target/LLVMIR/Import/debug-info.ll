@@ -923,9 +923,9 @@ define void @test() !dbg !3 {
 
 ; CU references itself through an imported entity (recId / isRecSelf cycle).
 
-; CHECK-DAG: #[[CU_SELF:.+]] = #llvm.di_compile_unit<recId = distinct[[REC_ID:.+]]<>{{.*}}isRecSelf = true{{.*}}>
+; CHECK-DAG: #[[CU_SELF:.+]] = #llvm.di_compile_unit<recId = [[REC_ID:.+]], isRecSelf = true>
 ; CHECK-DAG: #llvm.di_imported_entity<{{.*}}tag = DW_TAG_imported_declaration{{.*}}scope = #[[CU_SELF]]{{.*}}>
-; CHECK-DAG: #llvm.di_compile_unit<{{.*}}recId = distinct[[REC_ID]]<>{{.*}}id = distinct[{{[0-9]+}}]<>{{.*}}importedEntities{{.*}}>
+; CHECK-DAG: #llvm.di_compile_unit<recId = [[REC_ID]], {{.*}}importedEntities{{.*}}>
 
 @g = external global i32, !dbg !0
 
