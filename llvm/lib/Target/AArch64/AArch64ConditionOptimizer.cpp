@@ -347,7 +347,7 @@ AArch64ConditionOptimizerImpl::getAdjustedCmpInfo(MachineInstr *CmpMI,
     Opc = getComplementOpc(Opc);
   }
 
-  int RelaxedCC = TII->getRelaxedBranchCondition((int)Cmp);
+  int RelaxedCC = TII->getNonStrictBranchCondition((int)Cmp);
   assert(RelaxedCC != -1 && "Expected a strict condition code");
   return {NewImm, Opc, (AArch64CC::CondCode)RelaxedCC};
 }

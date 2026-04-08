@@ -653,7 +653,7 @@ bool AArch64InstrInfo::reverseBranchCondition(
   return false;
 }
 
-int AArch64InstrInfo::getRelaxedBranchCondition(int CC) const {
+int AArch64InstrInfo::getNonStrictBranchCondition(int CC) const {
   switch (static_cast<AArch64CC::CondCode>(CC)) {
   case AArch64CC::GT:
     return AArch64CC::GE;
