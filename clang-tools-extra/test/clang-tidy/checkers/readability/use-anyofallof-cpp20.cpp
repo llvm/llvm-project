@@ -24,7 +24,8 @@ bool good_all_of() {
 std::vector<int> get_dummy_vec();
 
 bool good_any_of_temporary_vector() {
-  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::ranges::any_of()'
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::ranges::any_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:16: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first, or use 'std::ranges' algorithms which handle temporary ranges safely
   for (int i : get_dummy_vec())
     if (i)
       return true;
@@ -32,7 +33,8 @@ bool good_any_of_temporary_vector() {
 }
 
 bool good_all_of_temporary_vector() {
-  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::ranges::all_of()'
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::ranges::all_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:16: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first, or use 'std::ranges' algorithms which handle temporary ranges safely
   for (int i : get_dummy_vec())
     if (i)
       return false;
@@ -41,7 +43,7 @@ bool good_all_of_temporary_vector() {
 
 bool any_of_initializer_list(int a, int b, int c) {
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::ranges::any_of()'
-  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first, or use 'std::ranges' algorithms which handle temporary ranges safely
   for (const auto i : {a, b, c})
     if (i == 0)
       return true;
@@ -50,7 +52,7 @@ bool any_of_initializer_list(int a, int b, int c) {
 
 bool all_of_initializer_list(int a, int b, int c) {
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::ranges::all_of()'
-  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first, or use 'std::ranges' algorithms which handle temporary ranges safely
   for (const auto i : {a, b, c})
     if (i == 0)
       return false;
@@ -59,7 +61,7 @@ bool all_of_initializer_list(int a, int b, int c) {
 
 bool good_any_of_explicit_initializer_list(int a, int b, int c) {
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::ranges::any_of()'
-  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first, or use 'std::ranges' algorithms which handle temporary ranges safely
   for (const auto i : std::initializer_list<int>{a, b, c})
     if (i == 0)
       return true;
@@ -68,7 +70,7 @@ bool good_any_of_explicit_initializer_list(int a, int b, int c) {
 
 bool good_all_of_explicit_initializer_list(int a, int b, int c) {
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::ranges::all_of()'
-  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first, or use 'std::ranges' algorithms which handle temporary ranges safely
   for (const auto i : std::initializer_list<int>{a, b, c})
     if (i == 0)
       return false;

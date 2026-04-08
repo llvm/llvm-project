@@ -37,10 +37,7 @@ AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
 }
 
 AST_MATCHER(Expr, isUnsafeTemporaryRangeInit) {
-  const Expr *E = Node.IgnoreParenCasts();
-  if (Finder->getASTContext().getLangOpts().CPlusPlus20)
-    return isa<CXXStdInitializerListExpr>(E);
-  return E->isPRValue();
+  return Node.IgnoreParenCasts()->isPRValue();
 }
 } // namespace
 
@@ -110,10 +107,17 @@ void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
       << getLangOpts().CPlusPlus20 << IsAnyOf;
 
   if (const auto *Init = Result.Nodes.getNodeAs<Expr>("unsafe_range_init")) {
-    diag(Init->getExprLoc(),
-         "reusing the temporary range directly in the replacement may be "
-         "unsafe; consider materializing it in a local variable first",
-         DiagnosticIDs::Note);
+    if (getLangOpts().CPlusPlus20)
+      diag(Init->getExprLoc(),
+           "reusing the temporary range directly in the replacement may be "
+           "unsafe; consider materializing it in a local variable first, or "
+           "use 'std::ranges' algorithms which handle temporary ranges safely",
+           DiagnosticIDs::Note);
+    else
+      diag(Init->getExprLoc(),
+           "reusing the temporary range directly in the replacement may be "
+           "unsafe; consider materializing it in a local variable first",
+           DiagnosticIDs::Note);
   }
 }
 
