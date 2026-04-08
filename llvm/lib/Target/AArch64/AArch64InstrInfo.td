@@ -11694,9 +11694,9 @@ multiclass PromoteUnaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst>
   def : Pat<(InOp (v8bf16 V128:$Rn)),
             (UZP2v8i16
               (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub))))))),
+                  (v4f32 (ZIP1v8i16 (MOVIv2d_ns (i32 0)), V128:$Rn))))),
               (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv8i16 V128:$Rn))))))>;
+                  (v4f32 (ZIP2v8i16 (MOVIv2d_ns (i32 0)), V128:$Rn))))))>;
 }
 defm : PromoteUnaryv8f16Tov4f32<any_fceil,  	FRINTPv4f32>;
 defm : PromoteUnaryv8f16Tov4f32<any_ffloor, 	FRINTMv4f32>;
@@ -11725,21 +11725,21 @@ multiclass PromoteBinaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst
               (INSERT_SUBREG (IMPLICIT_DEF),
                 (v4bf16 (BFCVTN
                   (v4f32 (OutInst
-                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
+                    (v4f32 (ZIP1v8i16 (MOVIv2d_ns (i32 0)), V128:$Rn)),
+                    (v4f32 (ZIP1v8i16 (MOVIv2d_ns (i32 0)), V128:$Rm)))))),
                 dsub),
-              (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn)),
-                              (v4f32 (SHLLv8i16 V128:$Rm))))))>;
+              (v4f32 (OutInst (v4f32 (ZIP2v8i16 (MOVIv2d_ns (i32 0)), V128:$Rn)),
+                              (v4f32 (ZIP2v8i16 (MOVIv2d_ns (i32 0)), V128:$Rm))))))>;
 
   let Predicates = [HasNoBF16] in
   def : Pat<(InOp (v8bf16 V128:$Rn), (v8bf16 V128:$Rm)),
             (UZP2v8i16
               (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub))))))),
+                  (v4f32 (ZIP1v8i16 (MOVIv2d_ns (i32 0)), V128:$Rn)),
+                  (v4f32 (ZIP1v8i16 (MOVIv2d_ns (i32 0)), V128:$Rm))))),
               (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv8i16 V128:$Rn)),
-                  (v4f32 (SHLLv8i16 V128:$Rm))))))>;
+                  (v4f32 (ZIP2v8i16 (MOVIv2d_ns (i32 0)), V128:$Rn)),
+                  (v4f32 (ZIP2v8i16 (MOVIv2d_ns (i32 0)), V128:$Rm))))))>;
 }
 defm : PromoteBinaryv8f16Tov4f32<any_fadd, FADDv4f32>;
 defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
