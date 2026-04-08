@@ -26,8 +26,6 @@
 namespace clang::ssaf {
 
 class AnalysisDriver;
-class SerializationFormat;
-class TestFixture;
 
 /// Bundles the EntityIdTable (moved from the LUSummary) and the analysis
 /// results produced by one AnalysisDriver::run() call, keyed by AnalysisName.
@@ -36,8 +34,6 @@ class TestFixture;
 /// are self-contained in one object.
 class WPASuite {
   friend class AnalysisDriver;
-  friend class SerializationFormat;
-  friend class TestFixture;
 
   EntityIdTable IdTable;
   std::map<AnalysisName, std::unique_ptr<AnalysisResult>> Data;
