@@ -1250,11 +1250,12 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
       /*Outputs=*/ArrayRef<InputInfo>{});
 }
 
-/// Creates a ClangModuleJobNode and its job for each unique Clang module
-/// in \p ModuleDepGraphsForScannedJobs.
+/// Creates a \c ClangModuleJobNode with associated job for each unique Clang
+/// module in \p ModuleDepGraphsForScannedJobs.
 ///
-/// Only the jobs at indices \p ScannedJobIndices in \p Jobs are expected to be
-/// non-null.
+/// \param ImportingJobs Jobs whose module dependencies were scanned.
+/// \param ModuleDepGraphsForScannedJobs Full Clang module dependency graphs
+/// corresponding to \p ImportingJobs, in order.
 static void createClangModuleJobsAndNodes(
     CompilationGraph &Graph, Compilation &C,
     ArrayRef<std::unique_ptr<Command>> ImportingJobs,
