@@ -38,8 +38,12 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
-  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded()) << SocketPath;
-
+  if (!MaybeServerListener) {
+    std::error_code EC = errorToErrorCode(MaybeServerListener.takeError());
+    if (EC == std::errc::filename_too_long)
+      GTEST_SKIP() << EC.message() << ": " << SocketPath;
+    FAIL() << EC.message();
+  }
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
@@ -77,7 +81,12 @@ TEST(raw_socket_streamTest, READ_WITH_TIMEOUT) {
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
-  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded()) << SocketPath;
+  if (!MaybeServerListener) {
+    std::error_code EC = errorToErrorCode(MaybeServerListener.takeError());
+    if (EC == std::errc::filename_too_long)
+      GTEST_SKIP() << EC.message() << ": " << SocketPath;
+    FAIL() << EC.message();
+  }
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
@@ -107,7 +116,12 @@ TEST(raw_socket_streamTest, ACCEPT_WITH_TIMEOUT) {
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
-  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded()) << SocketPath;
+  if (!MaybeServerListener) {
+    std::error_code EC = errorToErrorCode(MaybeServerListener.takeError());
+    if (EC == std::errc::filename_too_long)
+      GTEST_SKIP() << EC.message() << ": " << SocketPath;
+    FAIL() << EC.message();
+  }
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   Expected<std::unique_ptr<raw_socket_stream>> MaybeServer =
@@ -126,7 +140,12 @@ TEST(raw_socket_streamTest, ACCEPT_WITH_SHUTDOWN) {
 
   Expected<ListeningSocket> MaybeServerListener =
       ListeningSocket::createUnix(SocketPath);
-  ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded()) << SocketPath;
+  if (!MaybeServerListener) {
+    std::error_code EC = errorToErrorCode(MaybeServerListener.takeError());
+    if (EC == std::errc::filename_too_long)
+      GTEST_SKIP() << EC.message() << ": " << SocketPath;
+    FAIL() << EC.message();
+  }
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   // Create a separate thread to close the socket after a delay. Simulates a
