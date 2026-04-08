@@ -24,7 +24,7 @@ static inline bool checkFatBinVersion(const __sycl_tgt_bin_desc &FatbinDesc) {
 
 static inline bool
 checkDeviceImageValidity(const __sycl_tgt_device_image &DeviceImage) {
-  return (DeviceImage.Version == SupportedDeviceBinaryVersion) &&
+  return (DeviceImage.Version == SupportedDevicyBinaryVersion) &&
          (DeviceImage.OffloadKind == llvm::object::OFK_SYCL) &&
          (DeviceImage.ImageFormat == llvm::object::IMG_SPIRV);
 }
@@ -39,7 +39,7 @@ void ProgramManager::addImages(__sycl_tgt_bin_desc *FatbinDesc) {
     return;
 
   std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
-  for (uint16_t I = 0; I < FatbinDesc->NumDeviceBinaries; ++I) {
+  for (int I = 0; I < FatbinDesc->NumDeviceBinaries; ++I) {
     const auto &RawDeviceImage = FatbinDesc->DeviceImages[I];
     if (!checkDeviceImageValidity(RawDeviceImage))
       throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
@@ -82,7 +82,7 @@ void ProgramManager::removeImages(__sycl_tgt_bin_desc *FatbinDesc) {
     return;
 
   std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
-  for (uint16_t I = 0; I < FatbinDesc->NumDeviceBinaries; ++I) {
+  for (int I = 0; I < FatbinDesc->NumDeviceBinaries; ++I) {
     const auto &RawDeviceImage = FatbinDesc->DeviceImages[I];
 
     auto DevImageIt = MDeviceImageWrappers.find(&RawDeviceImage);

@@ -17,7 +17,6 @@
 
 #include <sycl/__impl/async_handler.hpp>
 #include <sycl/__impl/device.hpp>
-#include <sycl/__impl/event.hpp>
 #include <sycl/__impl/property_list.hpp>
 
 #include <sycl/__impl/detail/config.hpp>

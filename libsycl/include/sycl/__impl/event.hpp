@@ -45,6 +45,8 @@ public:
 
   event &operator=(event &&rhs) = default;
 
+  ~event() = default;
+
   friend bool operator==(const event &lhs, const event &rhs) {
     return lhs.impl == rhs.impl;
   }
