@@ -3699,7 +3699,7 @@ public:
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed && Weights.has_value() && Weights->size() >= 2)
+    if (Changed && Weights.has_value())
       setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
   }
 
