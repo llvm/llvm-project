@@ -140,6 +140,8 @@ if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)
 endif()
 
+add_subdirectory(unittests)
+
 add_custom_target(libsycl-toolchain ALL
   DEPENDS libsycl-runtime-libraries
           sycl-ls
