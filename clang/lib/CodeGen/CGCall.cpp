@@ -5072,15 +5072,13 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // the value.  If the argument's type has a destructor, that destructor
   // will run at the end of the full-expression; emit matching lifetime
   // markers.
-  //
-  // FIXME: For types which don't have a destructor, consider using a
-  // narrower lifetime bound.
   if (hasAggregateEvaluationKind(E->getType())) {
     RawAddress ArgSlotAlloca = Address::invalid();
     ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
 
     // Emit a lifetime start/end for this temporary at the end of the full
-    // expression.
+    // expression. Note that we emit new scopes for these arguments in EmitCall,
+    // so cleanups will happen correctly on any error path.
     if (!CGM.getCodeGenOpts().NoLifetimeMarkersForTemporaries &&
         EmitLifetimeStart(ArgSlotAlloca.getPointer()))
       pushFullExprCleanup<CallLifetimeEnd>(CleanupKind::NormalEHLifetimeMarker,

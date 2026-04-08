@@ -19,7 +19,7 @@ struct e {
 // CHECK-NEXT:    [[EXN_SLOT:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[CLEANUP_ISACTIVE:%.*]] = alloca i1, align 1
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @d, align 4, !tbaa [[_ZTS1C_TBAA6:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @d, align 4, !tbaa [[_ZTS1C_TBAA5:![0-9]+]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_BB:.*]]
 // CHECK-NEXT:    ]

@@ -6861,6 +6861,27 @@ LValue CodeGenFunction::EmitStmtExprLValue(const StmtExpr *E) {
                         AlignmentSource::Decl);
 }
 
+// Check if it is safe to tighten the lifetime of temporary aggregates for this
+// call. We can only do this if the call does not involve destructors or
+// Objective-C retainable types, as those push cleanups that must outlive the
+// call.
+static bool isSafeToTightenLifetime(const CallExpr *E) {
+  QualType RetTy = E->getType().getCanonicalType();
+  if (RetTy->isObjCRetainableType())
+    return false;
+
+  for (const auto *Arg : E->arguments()) {
+    if (Arg->getType().isDestructedType())
+      return false;
+
+    QualType Ty = Arg->getType().getNonReferenceType().getCanonicalType();
+    if (Ty->isObjCRetainableType())
+      return false;
+  }
+
+  return true;
+}
+
 RValue CodeGenFunction::EmitCall(QualType CalleeType,
                                  const CGCallee &OrigCallee, const CallExpr *E,
                                  ReturnValueSlot ReturnValue,
@@ -6871,6 +6892,16 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   // function type or a block pointer type.
   assert(CalleeType->isFunctionPointerType() &&
          "Call must have function pointer type!");
+
+  // For calls with trivial aggregate arguments, we want to tighten the
+  // lifetime of those aggregates to end immediately after the call returns,
+  // rather than at the end of the full-expression. We create a nested cleanup
+  // scope to intercept these lifetime markers. However, we only do this if the
+  // call is "safe".
+  std::optional<RunCleanupsScope> Scope;
+  if (!CGM.getCodeGenOpts().NoLifetimeMarkersForTemporaries &&
+      isSafeToTightenLifetime(E))
+    Scope.emplace(*this);
 
   const Decl *TargetDecl =
       OrigCallee.getAbstractInfo().getCalleeDecl().getDecl();

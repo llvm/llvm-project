@@ -11,14 +11,14 @@ struct Trivial {
 // CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA6:![0-9]+]]
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA5:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // EXCEPTIONS-LABEL: define dso_local void @cleanup(
 // EXCEPTIONS-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 // EXCEPTIONS-NEXT:  [[ENTRY:.*:]]
 // EXCEPTIONS-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
-// EXCEPTIONS-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA6:![0-9]+]]
+// EXCEPTIONS-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA5:![0-9]+]]
 // EXCEPTIONS-NEXT:    ret void
 //
 void cleanup(int *p) {}
@@ -35,11 +35,11 @@ struct Trivial gen(void);
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AGG_TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    call void @gen(ptr dead_on_unwind writable sret([[STRUCT_TRIVIAL]]) align 4 [[AGG_TMP]])
 // CHECK-NEXT:    call void @func(ptr noundef byval([[STRUCT_TRIVIAL]]) align 8 [[AGG_TMP]])
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AGG_TMP1]]) #[[ATTR3]]
 // CHECK-NEXT:    call void @gen(ptr dead_on_unwind writable sret([[STRUCT_TRIVIAL]]) align 4 [[AGG_TMP1]])
 // CHECK-NEXT:    call void @func(ptr noundef byval([[STRUCT_TRIVIAL]]) align 8 [[AGG_TMP1]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP1]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    call void @cleanup(ptr noundef [[X]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
@@ -60,6 +60,7 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:    invoke void @func(ptr noundef byval([[STRUCT_TRIVIAL]]) align 8 [[AGG_TMP]])
 // EXCEPTIONS-NEXT:            to label %[[INVOKE_CONT1:.*]] unwind label %[[LPAD]]
 // EXCEPTIONS:       [[INVOKE_CONT1]]:
+// EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AGG_TMP2]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    invoke void @gen(ptr dead_on_unwind writable sret([[STRUCT_TRIVIAL]]) align 4 [[AGG_TMP2]])
 // EXCEPTIONS-NEXT:            to label %[[INVOKE_CONT4:.*]] unwind label %[[LPAD3:.*]]
@@ -68,7 +69,6 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:            to label %[[INVOKE_CONT5:.*]] unwind label %[[LPAD3]]
 // EXCEPTIONS:       [[INVOKE_CONT5]]:
 // EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP2]]) #[[ATTR4]]
-// EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    call void @cleanup(ptr noundef [[X]])
 // EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    ret void
@@ -79,6 +79,7 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:    store ptr [[TMP1]], ptr [[EXN_SLOT]], align 8
 // EXCEPTIONS-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 1
 // EXCEPTIONS-NEXT:    store i32 [[TMP2]], ptr [[EHSELECTOR_SLOT]], align 4
+// EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    br label %[[EHCLEANUP:.*]]
 // EXCEPTIONS:       [[LPAD3]]:
 // EXCEPTIONS-NEXT:    [[TMP3:%.*]] = landingpad { ptr, i32 }
@@ -90,7 +91,6 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP2]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    br label %[[EHCLEANUP]]
 // EXCEPTIONS:       [[EHCLEANUP]]:
-// EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    call void @cleanup(ptr noundef [[X]])
 // EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    br label %[[EH_RESUME:.*]]
@@ -98,8 +98,8 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // EXCEPTIONS-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
 // EXCEPTIONS-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
-// EXCEPTIONS-NEXT:    [[LPAD_VAL8:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
-// EXCEPTIONS-NEXT:    resume { ptr, i32 } [[LPAD_VAL8]]
+// EXCEPTIONS-NEXT:    [[LPAD_VAL7:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
+// EXCEPTIONS-NEXT:    resume { ptr, i32 } [[LPAD_VAL7]]
 //
 void test() {
   int x __attribute__((cleanup(cleanup)));
