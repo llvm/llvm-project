@@ -1324,6 +1324,34 @@ MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
 }
 
 //===----------------------------------------------------------------------===//
+// OpFoldResult API.
+//===----------------------------------------------------------------------===//
+
+MlirOpFoldResult mlirOpFoldResultFromAttribute(MlirAttribute attr) {
+  return wrap(OpFoldResult(unwrap(attr)));
+}
+
+MlirOpFoldResult mlirOpFoldResultFromValue(MlirValue value) {
+  return wrap(OpFoldResult(unwrap(value)));
+}
+
+bool mlirOpFoldResultIsAttribute(MlirOpFoldResult result) {
+  return llvm::isa<Attribute>(unwrap(result));
+}
+
+bool mlirOpFoldResultIsValue(MlirOpFoldResult result) {
+  return llvm::isa<Value>(unwrap(result));
+}
+
+MlirAttribute mlirOpFoldResultGetAttribute(MlirOpFoldResult result) {
+  return wrap(llvm::cast<Attribute>(unwrap(result)));
+}
+
+MlirValue mlirOpFoldResultGetValue(MlirOpFoldResult result) {
+  return wrap(llvm::cast<Value>(unwrap(result)));
+}
+
+//===----------------------------------------------------------------------===//
 // Identifier API.
 //===----------------------------------------------------------------------===//
 

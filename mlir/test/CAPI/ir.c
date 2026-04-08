@@ -2508,6 +2508,46 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
   return 0;
 }
 
+void testOpFoldResult(MlirContext ctx) {
+  fprintf(stderr, "@testOpFoldResult\n");
+  // CHECK-LABEL: @testOpFoldResult
+
+  // Test OpFoldResult from attribute.
+  MlirAttribute attr = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 32), 42);
+  MlirOpFoldResult ofrAttr = mlirOpFoldResultFromAttribute(attr);
+
+  // CHECK: ofrAttr isAttribute: 1
+  fprintf(stderr, "ofrAttr isAttribute: %d\n",
+          mlirOpFoldResultIsAttribute(ofrAttr));
+  // CHECK: ofrAttr isValue: 0
+  fprintf(stderr, "ofrAttr isValue: %d\n", mlirOpFoldResultIsValue(ofrAttr));
+
+  // Round-trip: extract the attribute back.
+  MlirAttribute extracted = mlirOpFoldResultGetAttribute(ofrAttr);
+  // CHECK: attr round-trip: 1
+  fprintf(stderr, "attr round-trip: %d\n", mlirAttributeEqual(attr, extracted));
+
+  // Test OpFoldResult from value (using a block argument).
+  MlirType i32 = mlirIntegerTypeGet(ctx, 32);
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirBlock block = mlirBlockCreate(1, &i32, &loc);
+  MlirValue arg = mlirBlockGetArgument(block, 0);
+  MlirOpFoldResult ofrValue = mlirOpFoldResultFromValue(arg);
+
+  // CHECK: ofrValue isValue: 1
+  fprintf(stderr, "ofrValue isValue: %d\n", mlirOpFoldResultIsValue(ofrValue));
+  // CHECK: ofrValue isAttribute: 0
+  fprintf(stderr, "ofrValue isAttribute: %d\n",
+          mlirOpFoldResultIsAttribute(ofrValue));
+
+  // Round-trip: extract the value back.
+  MlirValue extractedVal = mlirOpFoldResultGetValue(ofrValue);
+  // CHECK: value round-trip: 1
+  fprintf(stderr, "value round-trip: %d\n", mlirValueEqual(arg, extractedVal));
+
+  mlirBlockDestroy(block);
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2556,6 +2596,8 @@ int main(void) {
 
   if (testBlockPredecessorsSuccessors(ctx))
     return 17;
+
+  testOpFoldResult(ctx);
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
