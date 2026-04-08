@@ -5907,26 +5907,6 @@ bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
 
   Register DstReg = MI.getOperand(0).getReg();
   Register PtrReg = MI.getOperand(1).getReg();
-  Register CmpReg = MI.getOperand(2).getReg();
-  Register NewReg = MI.getOperand(3).getReg();
-
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
-  Register CmpReg64 = CmpReg;
-  Register NewReg64 = NewReg;
-  if (!IsLDAT) {
-    CmpReg64 =
-        TRI->getMatchingSuperReg(CmpReg, PPC::sub_32, &PPC::G8RCRegClass);
-    NewReg64 =
-        TRI->getMatchingSuperReg(NewReg, PPC::sub_32, &PPC::G8RCRegClass);
-  }
-  if (CmpReg64 != PPC::X4)
-    BuildMI(MBB, MI, DL, get(PPC::OR8), PPC::X4)
-        .addReg(CmpReg64)
-        .addReg(CmpReg64);
-  if (NewReg64 != PPC::X5)
-    BuildMI(MBB, MI, DL, get(PPC::OR8), PPC::X5)
-        .addReg(NewReg64)
-        .addReg(NewReg64);
 
   Register ScratchReg = PtrReg;
   if (PtrReg == PPC::X3 || PtrReg == PPC::X4 || PtrReg == PPC::X5) {
@@ -5942,7 +5922,9 @@ bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
 
   BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X3)
       .addReg(ScratchReg)
-      .addImm(16);
+      .addImm(16)
+      .addReg(PPC::X4, RegState::Implicit)
+      .addReg(PPC::X5, RegState::Implicit);
 
   if (DstReg != (IsLDAT ? PPC::X3 : PPC::R3)) {
     BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::OR8 : PPC::OR), DstReg)

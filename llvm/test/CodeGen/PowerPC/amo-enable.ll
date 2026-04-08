@@ -117,11 +117,12 @@ define void @test_lwat_csne(ptr noundef %ptr, i32 noundef %value1, i32 noundef %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr r9, r3
 ; CHECK-NEXT:    mr r7, r3
+; CHECK-NEXT:    # kill: def $r4 killed $r4 killed $x4
+; CHECK-NEXT:    # kill: def $r5 killed $r5 killed $x5
 ; CHECK-NEXT:    lwat r3, r9, 16
 ; CHECK-NEXT:    li r4, 44
+; CHECK-NEXT:    li r5, 55
 ; CHECK-NEXT:    mr r8, r3
-; CHECK-NEXT:    li r3, 55
-; CHECK-NEXT:    mr r5, r3
 ; CHECK-NEXT:    stw r8, 0(r6)
 ; CHECK-NEXT:    lwat r3, r7, 16
 ; CHECK-NEXT:    mr r7, r3
@@ -132,11 +133,12 @@ define void @test_lwat_csne(ptr noundef %ptr, i32 noundef %value1, i32 noundef %
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mr r9, r3
 ; CHECK-BE-NEXT:    mr r7, r3
+; CHECK-BE-NEXT:    # kill: def $r4 killed $r4 killed $x4
+; CHECK-BE-NEXT:    # kill: def $r5 killed $r5 killed $x5
 ; CHECK-BE-NEXT:    lwat r3, r9, 16
 ; CHECK-BE-NEXT:    li r4, 44
+; CHECK-BE-NEXT:    li r5, 55
 ; CHECK-BE-NEXT:    mr r8, r3
-; CHECK-BE-NEXT:    li r3, 55
-; CHECK-BE-NEXT:    mr r5, r3
 ; CHECK-BE-NEXT:    stw r8, 0(r6)
 ; CHECK-BE-NEXT:    lwat r3, r7, 16
 ; CHECK-BE-NEXT:    mr r7, r3
@@ -157,9 +159,8 @@ define void @test_ldat_csne(ptr noundef %ptr, i64 noundef %value1, i64 noundef %
 ; CHECK-NEXT:    mr r7, r3
 ; CHECK-NEXT:    ldat r3, r9, 16
 ; CHECK-NEXT:    li r4, 44
+; CHECK-NEXT:    li r5, 55
 ; CHECK-NEXT:    mr r8, r3
-; CHECK-NEXT:    li r3, 55
-; CHECK-NEXT:    mr r5, r3
 ; CHECK-NEXT:    std r8, 0(r6)
 ; CHECK-NEXT:    ldat r3, r7, 16
 ; CHECK-NEXT:    mr r7, r3
@@ -172,9 +173,8 @@ define void @test_ldat_csne(ptr noundef %ptr, i64 noundef %value1, i64 noundef %
 ; CHECK-BE-NEXT:    mr r7, r3
 ; CHECK-BE-NEXT:    ldat r3, r9, 16
 ; CHECK-BE-NEXT:    li r4, 44
+; CHECK-BE-NEXT:    li r5, 55
 ; CHECK-BE-NEXT:    mr r8, r3
-; CHECK-BE-NEXT:    li r3, 55
-; CHECK-BE-NEXT:    mr r5, r3
 ; CHECK-BE-NEXT:    std r8, 0(r6)
 ; CHECK-BE-NEXT:    ldat r3, r7, 16
 ; CHECK-BE-NEXT:    mr r7, r3
