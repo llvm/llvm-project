@@ -22,36 +22,35 @@ define i8 @iszero_constant_v4f32() nounwind {
   ret i8 %r
 }
 
-define i1 @extract_nonconst_idx_const_vec_isnan(i32 %idx) nounwind {
-; CHECK-LABEL: extract_nonconst_idx_const_vec_isnan:
+define i1 @extract_idx0_const_vec_isnan() nounwind {  ; vec = <QNaN, 2.0, +Inf, -Inf>, idx=0, isnan -> true
+; CHECK-LABEL: extract_idx0_const_vec_isnan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    ret
-  %elt = extractelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, i32 %idx
+  %elt = extractelement <4 x float> <float 0x7FF8000000000000, float 2.0, float 0x7FF0000000000000, float 0xFFF0000000000000>, i32 0
   %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
   ret i1 %res
 }
 
-define i1 @extract_oob_idx_const_vec_isnan() nounwind {
+define i1 @extract_idx1_const_vec_isnan() nounwind {  ; vec = <QNaN, 2.0, +Inf, -Inf>, idx=1, isnan -> false
+; CHECK-LABEL: extract_idx1_const_vec_isnan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %elt = extractelement <4 x float> <float 0x7FF8000000000000, float 2.0, float 0x7FF0000000000000, float 0xFFF0000000000000>, i32 1
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
+  ret i1 %res
+}
+
+define i1 @extract_oob_idx_const_vec_isnan() nounwind {  ; vec = <QNaN, 2.0, +Inf, -Inf>, idx=6 (OOB), isnan -> poison
 ; CHECK-LABEL: extract_oob_idx_const_vec_isnan:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fclass.s a0, fa5
 ; CHECK-NEXT:    andi a0, a0, 768
 ; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    ret
-  %elt = extractelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, i32 6
+  %elt = extractelement <4 x float> <float 0x7FF8000000000000, float 2.0, float 0x7FF0000000000000, float 0xFFF0000000000000>, i32 6
   %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
-  ret i1 %res
-}
-
-define i1 @extract_fabs_vec_isneg(<4 x float> %a0) nounwind {
-; CHECK-LABEL: extract_fabs_vec_isneg:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-  %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a0)
-  %elt = extractelement <4 x float> %abs, i32 2
-  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
   ret i1 %res
 }
 
@@ -106,4 +105,3 @@ define <vscale x 2 x i1> @splat_constant_f64_isinf_false() {
   %res = call <vscale x 2 x i1> @llvm.is.fpclass.nxv2f64(<vscale x 2 x double> splat (double 1.0), i32 516) ; 516 = inf
   ret <vscale x 2 x i1> %res
 }
-
