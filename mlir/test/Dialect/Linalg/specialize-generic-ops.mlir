@@ -1239,7 +1239,7 @@ func.func @op_mmt4d(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
-// Matmul transpose A inner and outer:
+// MMT4D transpose A inner and outer:
 //   A is accessed as (k, m, k0, m0) instead of (m, k, m0, k0)
 #map_tA = affine_map<(m, n, k, m0, n0, k0) -> (k, m, k0, m0)>
 func.func @op_mmt4d_transpose_a(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
@@ -1266,7 +1266,7 @@ func.func @op_mmt4d_transpose_a(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
-// Matmul transpose B inner and outer:
+// MMT4D transpose B inner and outer:
 //   B is accessed as (k, n, k0, n0) instead of (n, k, n0, k0)
 #map_tB = affine_map<(m, n, k, m0, n0, k0) -> (k, n, k0, n0)>
 func.func @op_mmt4d_transpose_b(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
@@ -1293,7 +1293,7 @@ func.func @op_mmt4d_transpose_b(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
-// Matmul transpose both A and B inner and outer:
+// MMT4D transpose both A and B inner and outer:
 func.func @op_mmt4d_transpose_a_and_b(
     %A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
     %C: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
@@ -1319,7 +1319,7 @@ func.func @op_mmt4d_transpose_a_and_b(
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
-// Matmul transpose C inner and outer:
+// MMT4D transpose C inner and outer:
 //   C is accessed as (n, m, n0, m0) instead of (m, n, m0, n0)
 #map_tC = affine_map<(m, n, k, m0, n0, k0) -> (n, m, n0, m0)>
 func.func @op_mmt4d_transpose_c(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
@@ -1346,7 +1346,7 @@ func.func @op_mmt4d_transpose_c(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
-// Matmul transpose C inner only:
+// MMT4D transpose C inner only:
 //   C is accessed as (m, n, n0, m0) instead of (m, n, m0, n0)
 #map_tC_inner = affine_map<(m, n, k, m0, n0, k0) -> (m, n, n0, m0)>
 func.func @op_mmt4d_transpose_c_inner(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
