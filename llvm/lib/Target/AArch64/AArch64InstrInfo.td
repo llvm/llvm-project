@@ -4421,6 +4421,7 @@ defm : LoadInsertPatterns<extloadi16, v8i16,  v4i16,  nxv8i16,  i32,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load, v8i16,  v4i16,  nxv8i16,  i16,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load,       v4i32,  v2i32,  nxv4i32,  i32,
