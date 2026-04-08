@@ -170,14 +170,14 @@ CXCursor clang_getSpecializedCursorTemplate(CXCursor C) {
     if (!Template)
       Template = Function->getInstantiatedFromMemberFunction();
   } else if (const VarDecl *Var = dyn_cast<VarDecl>(D)) {
-    if (const VarTemplatePartialSpecializationDecl *PartialSpec
-          = dyn_cast<VarTemplatePartialSpecializationDecl>(Var))
+    if (const VarTemplatePartialSpecializationDecl *PartialSpec =
+            dyn_cast<VarTemplatePartialSpecializationDecl>(Var))
       Template = PartialSpec->getSpecializedTemplate();
-    else if (const VarTemplateSpecializationDecl *VTSpec
-               = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
+    else if (const VarTemplateSpecializationDecl *VTSpec =
+                 dyn_cast<VarTemplateSpecializationDecl>(Var)) {
       llvm::PointerUnion<VarTemplateDecl *,
-                         VarTemplatePartialSpecializationDecl *> Result
-        = VTSpec->getSpecializedTemplateOrPartial();
+                         VarTemplatePartialSpecializationDecl *>
+          Result = VTSpec->getSpecializedTemplateOrPartial();
       if (isa<VarTemplateDecl *>(Result))
         Template = cast<VarTemplateDecl *>(Result);
       else

@@ -927,14 +927,20 @@ int d_noninline;
             template<> void baz<nullptr>();
             template<float F> void bax();
             template<> void bax<3.14f>();
+            int v[5];
+            template<int b[5]> void arr();
+            template<> void arr<v>();
+            void handler(int);
+            template<void f(int)> void func();
+            template<> void func<handler>();
         """
         tu = get_tu(source, lang="cpp", flags=["-std=c++20"])
         foos = get_cursors(tu, "foo")
         self.assertEqual(
-            foos[1].get_constant_template_argument_type(0).kind, TypeKind.INT
+            foos[1].get_constant_template_argument_type(0).kind, TypeKind.INVALID
         )
         self.assertEqual(
-            foos[1].get_constant_template_argument_type(1).kind, TypeKind.INVALID
+            foos[1].get_constant_template_argument_type(1).kind, TypeKind.INT
         )
         bars = get_cursors(tu, "bar")
         self.assertEqual(
@@ -947,6 +953,14 @@ int d_noninline;
         baxs = get_cursors(tu, "bax")
         self.assertEqual(
             baxs[1].get_constant_template_argument_type(0).kind, TypeKind.FLOAT
+        )
+        arrs = get_cursors(tu, "arr")
+        self.assertEqual(
+            arrs[1].get_constant_template_argument_type(0).kind, TypeKind.POINTER
+        )
+        funcs = get_cursors(tu, "func")
+        self.assertEqual(
+            funcs[1].get_constant_template_argument_type(0).kind, TypeKind.POINTER
         )
 
     def test_get_constant_template_argument_type_pack(self):

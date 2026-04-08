@@ -3299,27 +3299,20 @@ CINDEX_LINKAGE CXType clang_Cursor_getTemplateArgumentType(CXCursor C,
  * StructDecl, ClassDecl, ClassTemplatePartialSpecialization, VarDecl, or
  * VarTemplatePartialSpecialization, an invalid type is returned.
  *
- * For example, for the following declaration and specialization:
- *   template <typename T, int N>
+ * The returned type reflects conversion to the parameter type. For example:
+ *   template <typename T, short S>
  *   void foo() {}
  *
  *   template <>
  *   void foo<float, 42>();
  *
- * If called with I = 1, the type "int" will be returned (the type of the
- * constant template argument 42). An invalid type is returned if the argument
- * at the given index is not a constant template argument, or if the index is
- * out of range.
+ * If called with I = 0, an invalid type is returned (T is not a constant
+ * template argument). If called with I = 1, "short" is returned, not "int".
+ * Similarly, a parameter declared as \c int[5] will yield a pointer type
+ * after adjustment.
  *
- * Note that this returns the type of the argument after conversion to the
- * parameter type. For example:
- *   template <short S>
- *   void bar() {}
- *
- *   template <>
- *   void bar<12>();
- *
- * If called with I = 0, "short" will be returned, not "int".
+ * For expanded parameter pack arguments, the type of the pack parameter is
+ * returned for each expanded argument.
  *
  * \param C a cursor representing a template specialization.
  * \param I the zero-based index of the template argument.
