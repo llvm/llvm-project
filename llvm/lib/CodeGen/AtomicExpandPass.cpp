@@ -655,12 +655,15 @@ bool AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   Value *Result = Constant::getNullValue(VecTy);
   const uint64_t LaneSize = DL->getTypeStoreSize(LaneTy).getFixedValue();
   ReplacementIRBuilder Builder(AI, *DL);
+  IntegerType *IdxTy =
+      DL->getIndexType(AI->getContext(), AI->getPointerAddressSpace());
 
   for (unsigned Lane = 0, NumLanes = VecTy->getNumElements(); Lane != NumLanes;
        ++Lane) {
-    Value *Idx = Builder.getInt64(Lane);
+    Value *Idx = ConstantInt::get(IdxTy, Lane);
     Value *LanePtr = Builder.CreateInBoundsGEP(
-        VecTy, AI->getPointerOperand(), {Builder.getInt64(0), Idx}, "lane.ptr");
+        VecTy, AI->getPointerOperand(),
+        {ConstantInt::get(IdxTy, 0), Idx}, "lane.ptr");
     Value *LaneVal =
         Builder.CreateExtractElement(AI->getValOperand(), Idx, "lane.val");
     auto *LaneRMW = Builder.CreateAtomicRMW(
