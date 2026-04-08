@@ -19,14 +19,13 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
 
 namespace mlir {
-#define GEN_PASS_DEF_CSE
+#define GEN_PASS_DEF_CSEPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -140,7 +139,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     if (auto *rewriteListener =
             dyn_cast_if_present<RewriterBase::Listener>(rewriter.getListener()))
       rewriteListener->notifyOperationReplaced(op, existing);
-    // Replace all uses, but do not remote the operation yet. This does not
+    // Replace all uses, but do not remove the operation yet. This does not
     // notify the listener because the original op is not erased.
     rewriter.replaceAllUsesWith(op->getResults(), existing->getResults());
     opsToErase.push_back(op);
@@ -156,7 +155,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
         if (all_of(v.getUses(), wasVisited))
           rewriteListener->notifyOperationReplaced(op, existing);
 
-    // Replace all uses, but do not remote the operation yet. This does not
+    // Replace all uses, but do not remove the operation yet. This does not
     // notify the listener because the original op is not erased.
     rewriter.replaceUsesWithIf(op->getResults(), existing->getResults(),
                                wasVisited);
@@ -178,11 +177,22 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
 bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
                                                  Operation *toOp) {
   assert(fromOp->getBlock() == toOp->getBlock());
-  assert(
-      isa<MemoryEffectOpInterface>(fromOp) &&
-      cast<MemoryEffectOpInterface>(fromOp).hasEffect<MemoryEffects::Read>() &&
-      isa<MemoryEffectOpInterface>(toOp) &&
-      cast<MemoryEffectOpInterface>(toOp).hasEffect<MemoryEffects::Read>());
+  assert(hasEffect<MemoryEffects::Read>(fromOp) &&
+         "expected read effect on fromOp");
+  assert(hasEffect<MemoryEffects::Read>(toOp) &&
+         "expected read effect on toOp");
+
+  // Collect the read effects of fromOp. A write can only block CSE if it
+  // can conflict with one of these reads.
+  SmallVector<MemoryEffects::EffectInstance> readEffects;
+  if (auto memOp = dyn_cast<MemoryEffectOpInterface>(fromOp)) {
+    SmallVector<MemoryEffects::EffectInstance> fromEffects;
+    memOp.getEffects(fromEffects);
+    for (MemoryEffects::EffectInstance &e : fromEffects)
+      if (isa<MemoryEffects::Read>(e.getEffect()))
+        readEffects.push_back(e);
+  }
+
   Operation *nextOp = fromOp->getNextNode();
   auto result =
       memEffectsCache.try_emplace(fromOp, std::make_pair(fromOp, nullptr));
@@ -212,8 +222,26 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
 
     for (const MemoryEffects::EffectInstance &effect : *effects) {
       if (isa<MemoryEffects::Write>(effect.getEffect())) {
-        result.first->second = {nextOp, MemoryEffects::Write::get()};
-        return true;
+        // A write on a resource disjoint from all read resources cannot
+        // conflict with the reads being CSE'd.
+        SideEffects::Resource *writeResource = effect.getResource();
+        bool canConflict =
+            llvm::any_of(readEffects, [&](const auto &readEffect) {
+              SideEffects::Resource *readResource = readEffect.getResource();
+              if (writeResource->isDisjointFrom(readResource))
+                return false;
+              // A pointer-based access to an addressable resource cannot
+              // conflict with a non-addressable resource.
+              if (readEffect.getValue() && !writeResource->isAddressable())
+                return false;
+              if (effect.getValue() && !readResource->isAddressable())
+                return false;
+              return true;
+            });
+        if (canConflict) {
+          result.first->second = {nextOp, MemoryEffects::Write::get()};
+          return true;
+        }
       }
     }
     nextOp = nextOp->getNextNode();
@@ -230,28 +258,28 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
 
-  // If the operation is already trivially dead just add it to the erase list.
+  // If the operation is already trivially dead, erase it immediately.
+  // Retaining dead operations in a region can affect the equivalence check
+  // between two region ops, causing CSE to miss optimization opportunities.
   if (isOpTriviallyDead(op)) {
-    opsToErase.push_back(op);
+    rewriter.eraseOp(op);
     ++numDCE;
     return success();
   }
 
   // Don't simplify operations with regions that have multiple blocks.
   // TODO: We need additional tests to verify that we handle such IR correctly.
-  if (!llvm::all_of(op->getRegions(), [](Region &r) {
-        return r.getBlocks().empty() || llvm::hasSingleElement(r.getBlocks());
-      }))
+  if (!llvm::all_of(op->getRegions(),
+                    [](Region &r) { return r.empty() || r.hasOneBlock(); }))
     return failure();
 
   // Some simple use case of operation with memory side-effect are dealt with
   // here. Operations with no side-effect are done after.
   if (!isMemoryEffectFree(op)) {
-    auto memEffects = dyn_cast<MemoryEffectOpInterface>(op);
     // TODO: Only basic use case for operations with MemoryEffects::Read can be
     // eleminated now. More work needs to be done for more complicated patterns
     // and other side-effects.
-    if (!memEffects || !memEffects.onlyHasEffect<MemoryEffects::Read>())
+    if (!hasSingleEffect<MemoryEffects::Read>(op))
       return failure();
 
     // Look for an existing definition for the operation.
@@ -272,7 +300,6 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   // Look for an existing definition for the operation.
   if (auto *existing = knownValues.lookup(op)) {
     replaceUsesAndDelete(knownValues, op, existing, hasSSADominance);
-    ++numCSE;
     return success();
   }
 
@@ -283,7 +310,7 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
-  for (auto &op : *bb) {
+  for (auto &op : llvm::make_early_inc_range(*bb)) {
     // Most operations don't have regions, so fast path that case.
     if (op.getNumRegions() != 0) {
       // If this operation is isolated above, we can't process nested regions
@@ -372,8 +399,10 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   /// Erase any operations that were marked as dead during simplification.
   for (auto *op : opsToErase)
     rewriter.eraseOp(op);
-  if (changed)
-    *changed = !opsToErase.empty();
+  if (changed) {
+    assert(opsToErase.empty() || numDCE || numCSE);
+    *changed = numDCE || numCSE;
+  }
 
   // Note: CSE does currently not remove ops with regions, so DominanceInfo
   // does not have to be invalidated.
@@ -388,7 +417,7 @@ void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
 
 namespace {
 /// CSE pass.
-struct CSE : public impl::CSEBase<CSE> {
+struct CSE : public impl::CSEPassBase<CSE> {
   void runOnOperation() override;
 };
 } // namespace
@@ -408,9 +437,8 @@ void CSE::runOnOperation() {
   if (!changed)
     return markAllAnalysesPreserved();
 
-  // We currently don't remove region operations, so mark dominance as
-  // preserved.
+  // We only delete redundant operations without moving any operation to a
+  // different block, so the dominance tree structure remains unchanged and
+  // DominanceInfo/PostDominanceInfo can be safely preserved.
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
 }
-
-std::unique_ptr<Pass> mlir::createCSEPass() { return std::make_unique<CSE>(); }

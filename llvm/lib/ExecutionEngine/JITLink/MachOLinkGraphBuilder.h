@@ -21,8 +21,6 @@
 #include "EHFrameSupportImpl.h"
 #include "JITLinkGeneric.h"
 
-#include <list>
-
 namespace llvm {
 namespace jitlink {
 
@@ -234,17 +232,6 @@ private:
 
   DenseMap<uint32_t, NormalizedSymbol *> IndexToSymbol;
   StringMap<SectionParserFunction> CustomSectionParserFunctions;
-};
-
-/// A pass to split up __LD,__compact_unwind sections.
-class CompactUnwindSplitter {
-public:
-  CompactUnwindSplitter(StringRef CompactUnwindSectionName)
-      : CompactUnwindSectionName(CompactUnwindSectionName) {}
-  Error operator()(LinkGraph &G);
-
-private:
-  StringRef CompactUnwindSectionName;
 };
 
 } // end namespace jitlink

@@ -11,7 +11,7 @@ define i32 @bar() {
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    umov.b w8, v0[0]
 ; CHECK-NEXT:    umov.b w9, v0[1]
-; CHECK-NEXT:    mov.s v1[0], w8
+; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    umov.b w8, v0[2]
 ; CHECK-NEXT:    mov.s v1[1], w9
 ; CHECK-NEXT:    umov.b w9, v0[3]

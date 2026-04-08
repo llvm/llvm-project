@@ -10,10 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "XCoreSelectionDAGInfo.h"
 #include "XCoreTargetMachine.h"
+
+#define GET_SDNODE_DESC
+#include "XCoreGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "xcore-selectiondag-info"
+
+XCoreSelectionDAGInfo::XCoreSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(XCoreGenSDNodeInfo) {}
 
 SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
@@ -25,20 +33,27 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
       DAG.MaskedValueIsZero(Size, APInt(SizeBitWidth, 3))) {
     const TargetLowering &TLI = *DAG.getSubtarget().getTargetLowering();
     TargetLowering::ArgListTy Args;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-    Entry.Node = Dst; Args.push_back(Entry);
-    Entry.Node = Src; Args.push_back(Entry);
-    Entry.Node = Size; Args.push_back(Entry);
+    Type *ArgTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+    Args.emplace_back(Dst, ArgTy);
+    Args.emplace_back(Src, ArgTy);
+    Args.emplace_back(Size, ArgTy);
+
+    RTLIB::LibcallImpl MemcpyAlign4Impl =
+        DAG.getLibcalls().getLibcallImpl(RTLIB::MEMCPY_ALIGN_4);
+    if (MemcpyAlign4Impl == RTLIB::Unsupported)
+      return SDValue();
+
+    CallingConv::ID CC =
+        DAG.getLibcalls().getLibcallImplCallingConv(MemcpyAlign4Impl);
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(dl)
         .setChain(Chain)
-        .setLibCallee(TLI.getLibcallCallingConv(RTLIB::MEMCPY),
-                      Type::getVoidTy(*DAG.getContext()),
-                      DAG.getExternalSymbol(
-                          "__memcpy_4", TLI.getPointerTy(DAG.getDataLayout())),
-                      std::move(Args))
+        .setLibCallee(
+            CC, Type::getVoidTy(*DAG.getContext()),
+            DAG.getExternalSymbol(MemcpyAlign4Impl,
+                                  TLI.getPointerTy(DAG.getDataLayout())),
+            std::move(Args))
         .setDiscardResult();
 
     std::pair<SDValue,SDValue> CallResult = TLI.LowerCallTo(CLI);

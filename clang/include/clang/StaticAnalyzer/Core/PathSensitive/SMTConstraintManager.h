@@ -53,7 +53,7 @@ public:
     bool hasComparison;
 
     llvm::SMTExprRef Exp =
-        SMTConv::getExpr(Solver, Ctx, Sym, &RetTy, &hasComparison);
+        SMTConv::getExpr(Solver, Ctx, Sym, RetTy, &hasComparison);
 
     // Create zero comparison for implicit boolean cast, with reversed
     // assumption
@@ -89,7 +89,7 @@ public:
 
     QualType RetTy;
     // The expression may be casted, so we cannot call getZ3DataExpr() directly
-    llvm::SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy);
+    llvm::SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, RetTy);
     llvm::SMTExprRef Exp =
         SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/true);
 
@@ -301,8 +301,10 @@ public:
     llvm_unreachable("Unsupported expression to reason about!");
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dumps SMT formula
   LLVM_DUMP_METHOD void dump() const { Solver->dump(); }
+#endif
 
 protected:
   // Check whether a new model is satisfiable, and update the program state.
@@ -324,8 +326,6 @@ protected:
 
     // Construct the logical AND of all the constraints
     if (I != IE) {
-      std::vector<llvm::SMTExprRef> ASTs;
-
       llvm::SMTExprRef Constraint = I++->second;
       while (I != IE) {
         Constraint = Solver->mkAnd(Constraint, I++->second);

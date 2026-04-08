@@ -8,7 +8,7 @@
 target triple = "x86_64--"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @add_v4i32(ptr %p) #0 {
+define i32 @add_v4i32(ptr %p) {
 ; CHECK-LABEL: @add_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
@@ -46,7 +46,7 @@ for.end:
   ret i32 %r.0
 }
 
-define signext i16 @mul_v8i16(ptr %p) #0 {
+define signext i16 @mul_v8i16(ptr %p) {
 ; CHECK-LABEL: @mul_v8i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 2, !tbaa [[TBAA4:![0-9]+]]
@@ -89,7 +89,7 @@ for.end:
   ret i16 %r.0
 }
 
-define signext i8 @or_v16i8(ptr %p) #0 {
+define signext i8 @or_v16i8(ptr %p) {
 ; CHECK-LABEL: @or_v16i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 1, !tbaa [[TBAA6:![0-9]+]]
@@ -134,7 +134,7 @@ for.end:
   ret i8 %r.0
 }
 
-define i32 @smin_v4i32(ptr %p) #0 {
+define i32 @smin_v4i32(ptr %p) {
 ; CHECK-LABEL: @smin_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0]]
@@ -185,7 +185,7 @@ for.end:
   ret i32 %r.0
 }
 
-define i32 @umax_v4i32(ptr %p) #0 {
+define i32 @umax_v4i32(ptr %p) {
 ; CHECK-LABEL: @umax_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4, !tbaa [[TBAA0]]
@@ -236,7 +236,7 @@ for.end:
   ret i32 %r.0
 }
 
-define float @fadd_v4i32(ptr %p) #0 {
+define float @fadd_v4i32(ptr %p) {
 ; CHECK-LABEL: @fadd_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4, !tbaa [[TBAA7:![0-9]+]]
@@ -275,7 +275,7 @@ for.end:
   ret float %r.0
 }
 
-define float @fmul_v4i32(ptr %p) #0 {
+define float @fmul_v4i32(ptr %p) {
 ; CHECK-LABEL: @fmul_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4, !tbaa [[TBAA7]]
@@ -315,7 +315,7 @@ for.end:
   ret float %r.0
 }
 
-define float @fmin_v4f32(ptr %p) #0 {
+define float @fmin_v4f32(ptr %p) {
 ; CHECK-LABEL: @fmin_v4f32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4, !tbaa [[TBAA7]]
@@ -439,8 +439,6 @@ entry:
   %call13 = call nnan ninf nsz float @max(float %call11, float %vecext12)
   ret float %call13
 }
-
-attributes #0 = { nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+avx,+cx16,+cx8,+fxsr,+mmx,+popcnt,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "unsafe-fp-math"="true" "use-soft-float"="false" }
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"PIC Level", i32 2}

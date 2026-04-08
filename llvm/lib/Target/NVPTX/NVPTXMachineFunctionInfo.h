@@ -47,17 +47,10 @@ public:
     return ImageHandleList.size()-1;
   }
 
-  /// Returns the symbol name at the given index.
-  StringRef getImageHandleSymbol(unsigned Idx) const {
-    assert(ImageHandleList.size() > Idx && "Bad index");
-    return ImageHandleList[Idx];
-  }
-
   /// Check if the symbol has a mapping. Having a mapping means the handle is
   /// replaced with a reference
   bool checkImageHandleSymbol(StringRef Symbol) const {
-    return ImageHandleList.end() !=
-           std::find(ImageHandleList.begin(), ImageHandleList.end(), Symbol);
+    return llvm::is_contained(ImageHandleList, Symbol);
   }
 };
 }

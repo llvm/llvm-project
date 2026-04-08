@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/CSKYInstPrinter.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "MCTargetDesc/CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
@@ -21,7 +21,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -430,7 +430,7 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
         return CSKYInstPrinter::getRegisterName(Reg);
@@ -440,10 +440,10 @@ public:
 
     switch (Kind) {
     case CPOP:
-      OS << *getConstpoolOp();
+      MAI.printExpr(OS, *getConstpoolOp());
       break;
     case Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case KindTy::Register:
       OS << "<register " << RegName(getReg()) << ">";
@@ -848,11 +848,11 @@ bool CSKYAsmParser::processLRW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
     }
   } else {
     const MCExpr *AdjustExpr = nullptr;
-    if (const CSKYMCExpr *CSKYExpr =
-            dyn_cast<CSKYMCExpr>(Inst.getOperand(1).getExpr())) {
-      if (CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSGD ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSIE ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSLDM) {
+    if (const auto *CSKYExpr =
+            dyn_cast<MCSpecifierExpr>(Inst.getOperand(1).getExpr())) {
+      if (CSKYExpr->getSpecifier() == CSKY::S_TLSGD ||
+          CSKYExpr->getSpecifier() == CSKY::S_TLSIE ||
+          CSKYExpr->getSpecifier() == CSKY::S_TLSLDM) {
         MCSymbol *Dot = getContext().createNamedTempSymbol();
         Out.emitLabel(Dot);
         AdjustExpr = MCSymbolRefExpr::create(Dot, getContext());
@@ -1172,25 +1172,25 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
   if (getParser().parseIdentifier(Identifier))
     return Error(getLoc(), "unknown identifier");
 
-  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+  CSKY::Specifier Kind = CSKY::S_None;
   if (Identifier.consume_back("@GOT"))
-    Kind = CSKYMCExpr::VK_CSKY_GOT;
+    Kind = CSKY::S_GOT;
   else if (Identifier.consume_back("@GOTOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_GOTOFF;
+    Kind = CSKY::S_GOTOFF;
   else if (Identifier.consume_back("@PLT"))
-    Kind = CSKYMCExpr::VK_CSKY_PLT;
+    Kind = CSKY::S_PLT;
   else if (Identifier.consume_back("@GOTPC"))
-    Kind = CSKYMCExpr::VK_CSKY_GOTPC;
+    Kind = CSKY::S_GOTPC;
   else if (Identifier.consume_back("@TLSGD32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSGD;
+    Kind = CSKY::S_TLSGD;
   else if (Identifier.consume_back("@GOTTPOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSIE;
+    Kind = CSKY::S_TLSIE;
   else if (Identifier.consume_back("@TPOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLE;
+    Kind = CSKY::S_TLSLE;
   else if (Identifier.consume_back("@TLSLDM32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLDM;
+    Kind = CSKY::S_TLSLDM;
   else if (Identifier.consume_back("@TLSLDO32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLDO;
+    Kind = CSKY::S_TLSLDO;
 
   MCSymbol *Sym = getContext().getInlineAsmLabel(Identifier);
 
@@ -1198,20 +1198,20 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
 
   MCBinaryExpr::Opcode Opcode;
   switch (getLexer().getKind()) {
   default:
-    if (Kind != CSKYMCExpr::VK_CSKY_None)
-      Res = CSKYMCExpr::create(Res, Kind, getContext());
+    if (Kind != CSKY::S_None)
+      Res = MCSpecifierExpr::create(Res, Kind, getContext());
 
     Operands.push_back(CSKYOperand::createImm(Res, S, E));
     return ParseStatus::Success;
@@ -1258,11 +1258,11 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
   if (getParser().parseIdentifier(Identifier))
     return Error(getLoc(), "unknown identifier " + Identifier);
 
-  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+  CSKY::Specifier Kind = CSKY::S_None;
   if (Identifier.consume_back("@GOT"))
-    Kind = CSKYMCExpr::VK_CSKY_GOT_IMM18_BY4;
+    Kind = CSKY::S_GOT_IMM18_BY4;
   else if (Identifier.consume_back("@PLT"))
-    Kind = CSKYMCExpr::VK_CSKY_PLT_IMM18_BY4;
+    Kind = CSKY::S_PLT_IMM18_BY4;
 
   MCSymbol *Sym = getContext().getInlineAsmLabel(Identifier);
 
@@ -1270,14 +1270,14 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else {
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
   }
 
   MCBinaryExpr::Opcode Opcode;
@@ -1288,8 +1288,8 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
 
     getLexer().Lex(); // Eat ']'.
 
-    if (Kind != CSKYMCExpr::VK_CSKY_None)
-      Res = CSKYMCExpr::create(Res, Kind, getContext());
+    if (Kind != CSKY::S_None)
+      Res = MCSpecifierExpr::create(Res, Kind, getContext());
 
     Operands.push_back(CSKYOperand::createConstpoolOp(Res, S, E));
     return ParseStatus::Success;
@@ -1345,14 +1345,14 @@ ParseStatus CSKYAsmParser::parseConstpoolSymbol(OperandVector &Operands) {
     Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
-    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    const MCExpr *V = Sym->getVariableValue();
     if (!isa<MCSymbolRefExpr>(V)) {
       getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
       return Error(getLoc(), "unknown symbol");
     }
     Res = V;
   } else {
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
   }
 
   MCBinaryExpr::Opcode Opcode;

@@ -20,18 +20,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ThreadMemory::ThreadMemory(Process &process, lldb::tid_t tid,
-                           const ValueObjectSP &thread_info_valobj_sp)
-    : Thread(process, tid), m_backing_thread_sp(),
-      m_thread_info_valobj_sp(thread_info_valobj_sp), m_name(), m_queue(),
-      m_register_data_addr(LLDB_INVALID_ADDRESS) {}
+ThreadMemoryProvidingNameAndQueue::ThreadMemoryProvidingNameAndQueue(
+    Process &process, lldb::tid_t tid,
+    const ValueObjectSP &thread_info_valobj_sp)
+    : ThreadMemoryProvidingName(process, tid, LLDB_INVALID_ADDRESS, ""),
+      m_thread_info_valobj_sp(thread_info_valobj_sp), m_queue() {}
 
-ThreadMemory::ThreadMemory(Process &process, lldb::tid_t tid,
-                           llvm::StringRef name, llvm::StringRef queue,
-                           lldb::addr_t register_data_addr)
-    : Thread(process, tid), m_backing_thread_sp(), m_thread_info_valobj_sp(),
-      m_name(std::string(name)), m_queue(std::string(queue)),
-      m_register_data_addr(register_data_addr) {}
+ThreadMemoryProvidingNameAndQueue::ThreadMemoryProvidingNameAndQueue(
+    Process &process, lldb::tid_t tid, llvm::StringRef name,
+    llvm::StringRef queue, lldb::addr_t register_data_addr)
+    : ThreadMemoryProvidingName(process, tid, register_data_addr, name),
+      m_thread_info_valobj_sp(), m_queue(std::string(queue)) {}
 
 ThreadMemory::~ThreadMemory() { DestroyThread(); }
 

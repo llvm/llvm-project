@@ -88,7 +88,7 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
 
   va_list ap_copy;
   // va_copy may not be provided by the C library in C++03 mode.
-#if defined(_LIBCPP_CXX03_LANG) && __has_builtin(__builtin_va_copy)
+#if __has_builtin(__builtin_va_copy)
   __builtin_va_copy(ap_copy, ap);
 #else
   va_copy(ap_copy, ap);

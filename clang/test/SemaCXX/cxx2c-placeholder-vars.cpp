@@ -274,16 +274,16 @@ void f() {
 // CHECK: ClassTemplateSpecializationDecl {{.*}} struct A definition
 // CHECK: CXXConstructorDecl {{.*}} implicit used constexpr A 'void () noexcept'
 // CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
-// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
 // CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
-// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 2
 // CHECK-NEXT: CXXCtorInitializer Field {{.*}} 'a' 'int'
-// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
 // CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
-// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 4
 // CHECK-NEXT: CompoundStmt {{.*}}
 

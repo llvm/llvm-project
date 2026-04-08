@@ -13,19 +13,19 @@
 ; STAT: 2 static-data-splitter - Number of hot jump tables seen
 ; STAT: 2 static-data-splitter - Number of jump tables with unknown hotness
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
-; RUN:     -min-jump-table-entries=2 -unique-section-names=false \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
+; RUN:     -min-jump-table-entries=2 \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NUM,JT
 
 ; Section names will optionally have `.<func>` if -function-sections is enabled.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
-; RUN:     -min-jump-table-entries=2  %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -min-jump-table-entries=2 \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=false \
-; RUN:     -min-jump-table-entries=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections=false -min-jump-table-entries=2 \
+; RUN:      %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 
 ; In function @foo, the 2 switch instructions to jt0.* and jt1.* are placed in
 ; hot-prefixed sections, and the 2 switch instructions to jt2.* and jt3.* are

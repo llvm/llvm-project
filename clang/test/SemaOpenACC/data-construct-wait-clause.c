@@ -10,7 +10,7 @@ void uses() {
 #pragma acc data copyin(arr[0]) wait
   ;
 
-#pragma acc enter data copyin(arr[0]) wait()
+#pragma acc enter data copyin(arr[0]) wait
 
 #pragma acc exit data copyout(arr[0]) wait(getS(), getI())
 

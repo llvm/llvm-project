@@ -106,7 +106,7 @@ func.func @_QPmaxloc3(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK-NEXT:    %[[V1:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFmaxloc3Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 // CHECK-NEXT:    %[[V2:.*]]:2 = hlfir.declare %[[ARG2]] {uniq_name = "_QFmaxloc3Em"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK-NEXT:    %[[V3:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFmaxloc3Es"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-// CHECK-NEXT:    %[[V4:.*]] = fir.embox %[[V2]]#1 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+// CHECK-NEXT:    %[[V4:.*]] = fir.embox %[[V2]]#0 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
 // CHECK-NEXT:    %[[V5:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 // CHECK-NEXT:    %[[V6:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 // CHECK-NEXT:    %[[V7:.*]] = fir.embox %[[V5]](%[[V6]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
@@ -215,7 +215,7 @@ func.func @_QPmaxloc5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"})
 // CHECK-NEXT:    %[[V5:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
 // CHECK-NEXT:    %[[V6:.*]]:2 = hlfir.declare %[[ARG0]](%[[V5]]) {uniq_name = "_QFmaxloc5Es"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
 // CHECK-NEXT:    %[[V7:.*]] = fir.shape %[[C2]], %[[C2]] : (index, index) -> !fir.shape<2>
-// CHECK-NEXT:    %[[V8:.*]] = fir.embox %[[V4]]#1(%[[V7]]) : (!fir.ref<!fir.array<2x2xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<2x2xi32>>
+// CHECK-NEXT:    %[[V8:.*]] = fir.embox %[[V4]]#0(%[[V7]]) : (!fir.ref<!fir.array<2x2xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<2x2xi32>>
 // CHECK-NEXT:    %[[V9:.*]] = fir.convert %[[TRUE]] : (i1) -> !fir.logical<4>
 // CHECK-NEXT:    fir.store %[[V9]] to %[[V1]] : !fir.ref<!fir.logical<4>>
 // CHECK-NEXT:    %[[V10:.*]] = fir.embox %[[V1]] : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>

@@ -1,0 +1,279 @@
+# RUN: llc -mtriple=armv7-none-none-eabihf -mcpu=cortex-r5 -o - %s -run-pass=prologepilog \
+# RUN: | FileCheck --check-prefix=CHECK-R-ARM %s
+# RUN: llc -mtriple=armv7-none-none-eabihf -mcpu=cortex-r4 -o - %s -run-pass=prologepilog \
+# RUN: | FileCheck --check-prefix=CHECK-R-ARM %s
+# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-r5 -o - %s -run-pass=prologepilog \
+# RUN: | FileCheck --check-prefix=CHECK-R-THUMB %s
+# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-r4 -o - %s -run-pass=prologepilog \
+# RUN: | FileCheck --check-prefix=CHECK-R-THUMB %s
+# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-m3 -o - %s -run-pass=prologepilog \
+# RUN: | FileCheck --check-prefix=CHECK-M-THUMB %s
+# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-m4 -o - %s -run-pass=prologepilog \
+# RUN: | FileCheck --check-prefix=CHECK-M-THUMB %s
+# RUN: llc -mtriple=thumbv8-none-none-eabihf -mcpu=cortex-m33 -o - %s -run-pass=prologepilog \
+# RUN: | FileCheck --check-prefix=CHECK-M-THUMB %s
+
+# =============================================================================
+# ============================ cortex-r arm-mode ==============================
+# =============================================================================
+# This IRQ will save 104 bytes:
+#
+# |---------+------+----------|
+# | reg     | size | zone     |
+# |---------+------+----------|
+# | LR      |  4x1 | GPR      |
+# | R12-R10 |  4x3 |          |
+# | R5-R0   |  4x6 |          |
+# |---------+------+----------|
+# | FPEXC   |  4x1 | FPStatus |
+# | FPSCR   |  4x1 |          |
+# |---------+------+----------|
+# | D7-D0   |  8x8 | FPRegs   |
+# |---------+------+----------|
+# |         |  112 |          |
+# |---------+------+----------|
+#
+# ================================= Prologue =================================
+#
+# Frame pointer (r11) will be store at $original_sp - 12, but we can't save the
+# FP until after we save the GPR zone of registers. The GPR zone of registers
+# moves the stack by 40 bytes. So $original_sp = $current_sp + 40. Thus,
+# $current_sp + 40 - 12 = $current_sp + 28. Thus, we see the instruction:
+#
+# $r11 = ADDri $sp, 28
+#
+# We don't have dwarf information for the FPEXC and FPSCR registers, so there's
+# no CFI_INSTRUCTION for those saves. So, we should see an 8 byte disparity in
+# the register offsets. $r0 is -40, and $d7 is -56.
+#
+# (-40) - (-56) = 16.
+# 16 = 8 (bytes from $d7) + 8 (bytes from FPSCR + FPEXC)
+#
+# There's an extra BFC to force the stack to be aligned.
+#
+# $sp = BFC $sp, 4294967288 /* ~0x7 */
+#
+# ================================= Epilogue =================================
+#
+# We use the frame pointer to restore the SP. Since $r11 is currently pointing
+# to the previous $r11's stack position (aka base_of_stack - 12), and we
+# allocated 112 bytes, $sp = $r11 - (112 - 12), or $sp = $r11 - 100, which is
+# why we see this instruction:
+#
+# $sp = SUBri $r11, 100
+
+# CHECK-R-ARM-LABEL: name: irq_fn
+# CHECK-R-ARM-LABEL: bb.0 (%ir-block.0):
+# CHECK-R-ARM:         $sp = frame-setup STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r0, killed $r1, killed $r2, killed $r3, killed $r4, killed $r5, killed $r10, killed $r11, killed $r12, killed $lr
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION def_cfa_offset 40
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $lr, -4
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $ra_auth_code, -8
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $r11, -12
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $r10, -16
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $r5, -20
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $r4, -24
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $r3, -28
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $r2, -32
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $r1, -36
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $r0, -40
+# CHECK-R-ARM-NEXT:    $r11 = frame-setup ADDri killed $sp, 28, 14 /* CC::al */, $noreg, $noreg
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION def_cfa $r11, 12
+# CHECK-R-ARM-NEXT:    $r4 = frame-setup VMRS 14 /* CC::al */, $noreg, implicit $fpscr
+# CHECK-R-ARM-NEXT:    $r5 = frame-setup VMRS_FPEXC 14 /* CC::al */, $noreg, implicit $fpscr
+# CHECK-R-ARM-NEXT:    $sp = frame-setup STMDB_UPD $sp, 14 /* CC::al */, $noreg, $r4, $r5
+# CHECK-R-ARM-NEXT:    $sp = frame-setup VSTMDDB_UPD $sp, 14 /* CC::al */, $noreg, killed $d0, killed $d1, killed $d2, killed $d3, killed $d4, killed $d5, killed $d6, killed $d7
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $d7, -56
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $d6, -64
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $d5, -72
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $d4, -80
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $d3, -88
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $d2, -96
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $d1, -104
+# CHECK-R-ARM-NEXT:    frame-setup CFI_INSTRUCTION offset $d0, -112
+# CHECK-R-ARM-NEXT:    $sp = BFC killed $sp, 4294967288, 14 /* CC::al */, $noreg
+# CHECK-R-ARM-NEXT:    BL @bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+# CHECK-R-ARM-NEXT:    $sp = frame-destroy SUBri killed $r11, 100, 14 /* CC::al */, $noreg, $noreg
+# CHECK-R-ARM-NEXT:    $sp = frame-destroy VLDMDIA_UPD $sp, 14 /* CC::al */, $noreg, def $d0, def $d1, def $d2, def $d3, def $d4, def $d5, def $d6, def $d7
+# CHECK-R-ARM-NEXT:    $sp = frame-destroy LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r4, def $r5
+# CHECK-R-ARM-NEXT:    frame-destroy VMSR $r4, 14 /* CC::al */, $noreg, implicit-def $fpscr
+# CHECK-R-ARM-NEXT:    frame-destroy VMSR_FPEXC $r5, 14 /* CC::al */, $noreg, implicit-def $fpscr
+
+# =============================================================================
+# =========================== cortex-r thumb-mode =============================
+# =============================================================================
+# This IRQ will save 112 bytes:
+#
+# |-------+------+----------|
+# | reg   | size | zone     |
+# |-------+------+----------|
+# | LR    |  4x1 | GPR      |
+# | R12   |  4x1 |          |
+# | R7-R0 |  4x8 |          |
+# |-------+------+----------|
+# | FPEXC |  4x1 | FPStatus |
+# | FPSCR |  4x1 |          |
+# |-------+------+----------|
+# | D7-D0 |  8x8 | FPRegs   |
+# |-------+------+----------|
+# |       |  112 |          |
+# |-------+------+----------|
+#
+# ================================= Prologue =================================
+#
+# Frame pointer (r7) will be store at $original_sp - 12, but we can't save the
+# FP until after we save the GPR zone of registers. The GPR zone of registers
+# moves the stack by 40 bytes. So $original_sp = $current_sp + 40. Thus,
+# $current_sp + 40 - 12 = $current_sp + 28. Thus, we see the instruction:
+#
+# $r7 = t2ADDri $sp, 28
+#
+# We don't have dwarf information for the FPEXC and FPSCR registers, so there's
+# no CFI_INSTRUCTION for those saves. So, we should see an 8 byte disparity in
+# the register offsets. $r0 is -40, and $d7 is -56.
+#
+# (-32) - (-48) = 16.
+# 16 = 8 (bytes from $d7) + 8 (bytes from FPSCR + FPEXC)
+#
+# There's an extra BFC to force the stack to be aligned. This is done in 3
+# steps, because the value of $sp needs to be moved into a low register
+# (r0-r7), and then operated on, and then moved back.
+#
+# $r4 = tMOVr $sp, 14
+# $r4 = t2BFC $r4, 4294967288 /* ~0x7 */, 14
+# $sp = tMOVr $r4, 14
+#
+# ================================= Epilogue =================================
+#
+# We use the frame pointer to restore the SP. Since $r7 is currently pointing
+# to the previous $r7's stack position (aka base_of_stack - 12), and we
+# allocated 112 bytes, $sp = $r7 - (112 - 12), or $sp = $r7 - 100, which is
+# why we see this instruction:
+#
+# $r4 = t2SUBri $r7, 100
+# $sp = tMOVr $r4
+
+# CHECK-R-THUMB-LABEL: name: irq_fn
+# CHECK-R-THUMB-LABEL: bb.0 (%ir-block.0):
+# CHECK-R-THUMB:        $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r0, killed $r1, killed $r2, killed $r3, killed $r4, killed $r5, killed $r6, killed $r7, killed $r12, killed $lr
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION def_cfa_offset 40
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $lr, -4
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $ra_auth_code, -8
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r7, -12
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r6, -16
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r5, -20
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r4, -24
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r3, -28
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r2, -32
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r1, -36
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r0, -40
+# CHECK-R-THUMB-NEXT:    $r7 = frame-setup t2ADDri killed $sp, 28, 14 /* CC::al */, $noreg, $noreg
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION def_cfa $r7, 12
+# CHECK-R-THUMB-NEXT:    $r4 = frame-setup VMRS 14 /* CC::al */, $noreg, implicit $fpscr
+# CHECK-R-THUMB-NEXT:    $r5 = frame-setup VMRS_FPEXC 14 /* CC::al */, $noreg, implicit $fpscr
+# CHECK-R-THUMB-NEXT:    $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, $r4, $r5
+# CHECK-R-THUMB-NEXT:    $sp = frame-setup VSTMDDB_UPD $sp, 14 /* CC::al */, $noreg, killed $d0, killed $d1, killed $d2, killed $d3, killed $d4, killed $d5, killed $d6, killed $d7
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d7, -56
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d6, -64
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d5, -72
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d4, -80
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d3, -88
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d2, -96
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d1, -104
+# CHECK-R-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d0, -112
+# CHECK-R-THUMB-NEXT:    $r4 = tMOVr killed $sp, 14 /* CC::al */, $noreg
+# CHECK-R-THUMB-NEXT:    $r4 = t2BFC killed $r4, 4294967288, 14 /* CC::al */, $noreg
+# CHECK-R-THUMB-NEXT:    $sp = tMOVr killed $r4, 14 /* CC::al */, $noreg
+# CHECK-R-THUMB-NEXT:    BL @bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+# CHECK-R-THUMB-NEXT:    $r4 = frame-destroy t2SUBri killed $r7, 100, 14 /* CC::al */, $noreg, $noreg
+# CHECK-R-THUMB-NEXT:    $sp = frame-destroy tMOVr $r4, 14 /* CC::al */, $noreg
+# CHECK-R-THUMB-NEXT:    $sp = frame-destroy VLDMDIA_UPD $sp, 14 /* CC::al */, $noreg, def $d0, def $d1, def $d2, def $d3, def $d4, def $d5, def $d6, def $d7
+# CHECK-R-THUMB-NEXT:    $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r4, def $r5
+# CHECK-R-THUMB-NEXT:    frame-destroy VMSR $r4, 14 /* CC::al */, $noreg, implicit-def $fpscr
+# CHECK-R-THUMB-NEXT:    frame-destroy VMSR_FPEXC $r5, 14 /* CC::al */, $noreg, implicit-def $fpscr
+# CHECK-R-THUMB-NEXT:    $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r0, def $r1, def $r2, def $r3, def $r4, def $r5, def $r6, def $r7, def $r12, def $lr
+# CHECK-R-THUMB-NEXT:    SUBS_PC_LR 4, 14 /* CC::al */, $noreg
+
+# =============================================================================
+# ============================== cortex-m thumb ===============================
+# =============================================================================
+# This IRQ will save 88 bytes:
+#
+# |---------+------+----------|
+# | reg     | size | zone     |
+# |---------+------+----------|
+# | LR      |  4x1 | GPR      |
+# | R7-R6   |  4x2 |          |
+# | R4      |  4x1 |          |
+# |---------+------+----------|
+# | FPSCR   |  4x1 | FPStatus |
+# |---------+------+----------|
+# | EMPTY   |  4x1 | Align    |
+# |---------+------+----------|
+# | D7-D0   |  8x8 | FPRegs   |
+# |---------+------+----------|
+# |         |   88 |          |
+# |---------+------+----------|
+
+# CHECK-M-THUMB-LABEL: name: irq_fn
+# CHECK-M-THUMB-LABEL: bb.0 (%ir-block.0):
+# CHECK-M-THUMB:         $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r4, killed $r6, killed $r7, killed $lr
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $lr, -4
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r7, -8
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r6, -12
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $r4, -16
+# CHECK-M-THUMB-NEXT:    $r7 = frame-setup t2ADDri killed $sp, 8, 14 /* CC::al */, $noreg, $noreg
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION def_cfa $r7, 8
+# CHECK-M-THUMB-NEXT:    $r4 = frame-setup VMRS 14 /* CC::al */, $noreg, implicit $fpscr
+# CHECK-M-THUMB-NEXT:    $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, $r4
+# CHECK-M-THUMB-NEXT:    $sp = frame-setup tSUBspi $sp, 1, 14 /* CC::al */, $noreg
+# CHECK-M-THUMB-NEXT:    $sp = frame-setup VSTMDDB_UPD $sp, 14 /* CC::al */, $noreg, killed $d0, killed $d1, killed $d2, killed $d3, killed $d4, killed $d5, killed $d6, killed $d7
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d7, -32
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d6, -40
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d5, -48
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d4, -56
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d3, -64
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d2, -72
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d1, -80
+# CHECK-M-THUMB-NEXT:    frame-setup CFI_INSTRUCTION offset $d0, -88
+# CHECK-M-THUMB-NEXT:    $r4 = tMOVr killed $sp, 14 /* CC::al */, $noreg
+# CHECK-M-THUMB-NEXT:    $r4 = t2BFC killed $r4, 4294967288, 14 /* CC::al */, $noreg
+# CHECK-M-THUMB-NEXT:    $sp = tMOVr killed $r4, 14 /* CC::al */, $noreg
+# CHECK-M-THUMB-NEXT:    BL @bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+# CHECK-M-THUMB-NEXT:    $r4 = frame-destroy t2SUBri killed $r7, 80, 14 /* CC::al */, $noreg, $noreg
+# CHECK-M-THUMB-NEXT:    $sp = frame-destroy tMOVr $r4, 14 /* CC::al */, $noreg
+# CHECK-M-THUMB-NEXT:    $sp = frame-destroy VLDMDIA_UPD $sp, 14 /* CC::al */, $noreg, def $d0, def $d1, def $d2, def $d3, def $d4, def $d5, def $d6, def $d7
+# CHECK-M-THUMB-NEXT:    $sp = frame-destroy tADDspi $sp, 1, 14 /* CC::al */, $noreg
+# CHECK-M-THUMB-NEXT:    $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r4
+# CHECK-M-THUMB-NEXT:    frame-destroy VMSR $r4, 14 /* CC::al */, $noreg, implicit-def $fpscr
+# CHECK-M-THUMB-NEXT:    $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r4, def $r6, def $r7, def $lr
+# CHECK-M-THUMB-NEXT:    SUBS_PC_LR 4, 14 /* CC::al */, $noreg
+
+--- |
+  ; ModuleID = '/scratch/benson/tools2/llvm_cgt/llvm-project/llvm/test/CodeGen/ARM/fp-attr-fpscr.ll'
+  source_filename = "/scratch/benson/tools2/llvm_cgt/llvm-project/llvm/test/CodeGen/ARM/fp-attr-fpscr.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
+  declare arm_aapcscc void @bar()
+
+  ; Function Attrs: alignstack(8)
+  define arm_aapcscc void @irq_fn() #1 {
+    call arm_aapcscc void @bar()
+    ret void
+  }
+
+  attributes #1 = { alignstack=8 "interrupt"="IRQ" "target-features"="+fpregs" "save-fp" }
+
+...
+---
+name:            irq_fn
+frameInfo:
+  adjustsStack:    true
+alignment:       16
+body:             |
+  bb.0 (%ir-block.0):
+    ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
+    BL @bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
+    SUBS_PC_LR 4, 14 /* CC::al */, $noreg
+...

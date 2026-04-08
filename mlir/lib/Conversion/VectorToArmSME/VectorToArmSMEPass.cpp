@@ -14,7 +14,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOARMSME
+#define GEN_PASS_DEF_CONVERTVECTORTOARMSMEPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -23,7 +23,7 @@ using namespace mlir::vector;
 
 namespace {
 struct ConvertVectorToArmSMEPass
-    : public impl::ConvertVectorToArmSMEBase<ConvertVectorToArmSMEPass> {
+    : public impl::ConvertVectorToArmSMEPassBase<ConvertVectorToArmSMEPass> {
 
   void runOnOperation() override;
 };
@@ -34,8 +34,4 @@ void ConvertVectorToArmSMEPass::runOnOperation() {
   populateVectorToArmSMEPatterns(patterns, getContext());
 
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> mlir::createConvertVectorToArmSMEPass() {
-  return std::make_unique<ConvertVectorToArmSMEPass>();
 }

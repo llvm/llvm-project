@@ -1,4 +1,4 @@
-; RUN: opt < %s -debug-only=loop-vectorize -passes=loop-vectorize -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
+; RUN: opt < %s -debug-only=loop-vectorize,vplan -passes=loop-vectorize -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that the register usage estimation is not affected by the presence of
@@ -28,7 +28,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
-define i32 @test_g(ptr nocapture readonly %a, i32 %n) local_unnamed_addr !dbg !6 {
+define i32 @test_g(ptr nocapture readonly %a, i32 %n) !dbg !6 {
 entry:
   tail call void @llvm.dbg.value(metadata ptr %a, i64 0, metadata !12, metadata !16), !dbg !17
   tail call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !13, metadata !16), !dbg !18
@@ -70,7 +70,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
-define i32 @test(ptr nocapture readonly %a, i32 %n) local_unnamed_addr {
+define i32 @test(ptr nocapture readonly %a, i32 %n) {
 entry:
   %cmp6 = icmp eq i32 %n, 0
   br i1 %cmp6, label %for.end, label %for.body.preheader

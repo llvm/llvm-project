@@ -14,7 +14,7 @@
 subroutine s0
   common // a0, b0
 
-  ! CHECK: call void @_QPs(ptr @__BLNK__, ptr getelementptr (i8, ptr @__BLNK__, i64 4))
+  ! CHECK: call void @_QPs(ptr @__BLNK__, ptr getelementptr inbounds nuw (i8, ptr @__BLNK__, i64 4))
   call s(a0, b0)
 end subroutine s0
 
@@ -23,7 +23,7 @@ subroutine s1
   common /x/ a1, b1
   data a1 /1.0/, b1 /2.0/
 
-  ! CHECK: call void @_QPs(ptr @x_, ptr getelementptr (i8, ptr @x_, i64 4))
+  ! CHECK: call void @_QPs(ptr @x_, ptr getelementptr inbounds nuw (i8, ptr @x_, i64 4))
   call s(a1, b1)
 end subroutine s1
 
@@ -31,7 +31,7 @@ end subroutine s1
 subroutine s2
   common /y/ a2, b2, c2
 
-  ! CHECK: call void @_QPs(ptr @y_, ptr getelementptr (i8, ptr @y_, i64 4))
+  ! CHECK: call void @_QPs(ptr @y_, ptr getelementptr inbounds nuw (i8, ptr @y_, i64 4))
   call s(a2, b2)
 end subroutine s2
 
@@ -58,7 +58,7 @@ subroutine s4
   use mod_with_common
   ! CHECK: load i32, ptr @c_in_mod_
   print *, i
-  ! CHECK: load i32, ptr getelementptr (i8, ptr @c_in_mod_, i64 4)
+  ! CHECK: load i32, ptr getelementptr inbounds nuw (i8, ptr @c_in_mod_, i64 4)
   print *, j
 end subroutine s4
 

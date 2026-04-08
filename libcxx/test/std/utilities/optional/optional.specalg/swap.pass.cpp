@@ -12,9 +12,10 @@
 // template <class T> void swap(optional<T>& x, optional<T>& y)
 //     noexcept(noexcept(x.swap(y)));
 
+#include <cassert>
+#include <memory>
 #include <optional>
 #include <type_traits>
-#include <cassert>
 
 #include "test_macros.h"
 #include "archetypes.h"
@@ -109,9 +110,120 @@ void test_swap_sfinae() {
     }
 }
 
+#if TEST_STD_VER >= 26
+template <typename T>
+constexpr bool test_swap_ref() {
+  {
+    optional<T&> opt1;
+    optional<T&> opt2;
+    static_assert(noexcept(swap(opt1, opt2)) == true);
+    assert(static_cast<bool>(opt1) == false);
+    assert(static_cast<bool>(opt2) == false);
+    swap(opt1, opt2);
+    assert(static_cast<bool>(opt1) == false);
+    assert(static_cast<bool>(opt2) == false);
+  }
+  {
+    T one{1};
+    optional<T&> opt1(one);
+    optional<T&> opt2;
+    static_assert(noexcept(swap(opt1, opt2)) == true);
+    assert(static_cast<bool>(opt1) == true);
+    assert(*opt1 == 1);
+    assert(std::addressof(*opt1) == std::addressof(one));
+    assert(static_cast<bool>(opt2) == false);
+    swap(opt1, opt2);
+    assert(static_cast<bool>(opt1) == false);
+    assert(static_cast<bool>(opt2) == true);
+    assert(*opt2 == 1);
+    assert(std::addressof(*opt2) == std::addressof(one));
+  }
+  {
+    T two{2};
+    optional<T&> opt1;
+    optional<T&> opt2(two);
+    static_assert(noexcept(swap(opt1, opt2)) == true);
+    assert(static_cast<bool>(opt1) == false);
+    assert(static_cast<bool>(opt2) == true);
+    assert(*opt2 == 2);
+    assert(std::addressof(*opt2) == std::addressof(two));
+    swap(opt1, opt2);
+    assert(static_cast<bool>(opt1) == true);
+    assert(*opt1 == 2);
+    assert(std::addressof(*opt1) == std::addressof(two));
+    assert(static_cast<bool>(opt2) == false);
+  }
+  {
+    T one{1};
+    T two{2};
+    optional<T&> opt1(one);
+    optional<T&> opt2(two);
+    static_assert(noexcept(swap(opt1, opt2)) == true);
+    assert(static_cast<bool>(opt1) == true);
+    assert(*opt1 == 1);
+    assert(std::addressof(*opt1) == std::addressof(one));
+    assert(static_cast<bool>(opt2) == true);
+    assert(*opt2 == 2);
+    assert(std::addressof(*opt2) == std::addressof(two));
+    swap(opt1, opt2);
+    assert(static_cast<bool>(opt1) == true);
+    assert(*opt1 == 2);
+    assert(std::addressof(*opt1) == std::addressof(two));
+    assert(static_cast<bool>(opt2) == true);
+    assert(*opt2 == 1);
+    assert(std::addressof(*opt2) == std::addressof(one));
+  }
+  return true;
+}
+
+struct ADLSwap {
+  static inline bool called_adl_swap{false};
+
+  friend void swap(ADLSwap&, ADLSwap&) noexcept { called_adl_swap = true; }
+  friend void swap(ADLSwap*&, ADLSwap*&) noexcept { called_adl_swap = true; }
+};
+
+struct DelADLSwap {
+  static inline bool called_adl_swap{false};
+
+  friend void swap(DelADLSwap&, DelADLSwap&) noexcept   = delete;
+  friend void swap(DelADLSwap*&, DelADLSwap*&) noexcept = delete;
+};
+
+// LWG4439: Verify that an ADL-found swap is not selected when calling optional<T&>::swap()
+void test_ref_swap_adl() {
+  ADLSwap t1{};
+  ADLSwap t2{};
+
+  std::optional<ADLSwap&> o{t1};
+  std::optional<ADLSwap&> o2{t2};
+
+  o.swap(o2);
+
+  assert(!ADLSwap::called_adl_swap);
+
+  DelADLSwap td1{};
+  DelADLSwap td2{};
+
+  std::optional<DelADLSwap&> od1{td1};
+  std::optional<DelADLSwap&> od2{td2};
+
+  // Ensure that no ADL ever occurs, the following line will be invalid if it does
+  od1.swap(od2);
+}
+
+#endif
+
 int main(int, char**)
 {
     test_swap_sfinae();
+#if TEST_STD_VER >= 26
+    static_assert(test_swap_ref<int>());
+    static_assert(test_swap_ref<double>());
+    test_swap_ref<int>();
+    test_swap_ref<double>();
+    test_ref_swap_adl();
+#endif
     {
         optional<int> opt1;
         optional<int> opt2;

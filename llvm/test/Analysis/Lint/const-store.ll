@@ -1,6 +1,6 @@
-; RUN: not opt --mtriple=amdgcn --passes=lint --lint-abort-on-error %s -disable-output 2>&1 | FileCheck %s
+; RUN: not opt --mtriple=amdgcn --passes='lint<abort-on-error>' %s -disable-output 2>&1 | FileCheck %s
 ; RUN: opt --mtriple=amdgcn --mcpu=gfx1030 --passes=lint %s -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK0
-; RUN: opt --mtriple=x86_64 --passes=lint --lint-abort-on-error %s -disable-output 2>&1 | FileCheck %s --allow-empty --check-prefix=NOERR
+; RUN: opt --mtriple=x86_64 --passes='lint<abort-on-error>' %s -disable-output 2>&1 | FileCheck %s --allow-empty --check-prefix=NOERR
 ; NOERR: {{^$}}
 
 define amdgpu_kernel void @store_const(ptr addrspace(4) %out, i32 %a, i32 %b) {

@@ -371,7 +371,7 @@ OPTIONS
   * Prints an address's debug-data discriminator when it is non-zero. One way to
     produce discriminators is to compile with clang's -fdebug-info-for-profiling.
 
-  ``JSON`` style provides a machine readable output in JSON. If addresses are
+  ``JSON`` style provides a machine-readable output in JSON. If addresses are
     supplied via stdin, the output JSON will be a series of individual objects.
     Otherwise, all results will be contained in a single array.
 
@@ -444,7 +444,7 @@ OPTIONS
 
 .. option:: --pretty-print, -p
 
-  Print human readable output. If :option:`--inlining` is specified, the
+  Print human-readable output. If :option:`--inlining` is specified, the
   enclosing scope is prefixed by (inlined by).
   For JSON output, the option will cause JSON to be indented and split over
   new lines. Otherwise, the JSON output will be printed in a compact form.
@@ -535,16 +535,20 @@ MACH-O SPECIFIC OPTIONS
 .. option:: --default-arch <arch>
 
   If a binary contains object files for multiple architectures (e.g. it is a
-  Mach-O universal binary), symbolize the object file for a given architecture.
-  You can also specify the architecture by writing ``binary_name:arch_name`` in
-  the input (see example below). If the architecture is not specified in either
-  way, the address will not be symbolized. Defaults to empty string.
+  Mach-O universal binary or an archive with architecture variants),
+  symbolize the object file for a given architecture. You can also specify
+  the architecture by writing ``binary_name:arch_name`` in the input (see
+  example below). For archives, the format ``archive.a(member.o):arch``
+  is also supported. If the architecture is not specified,
+  the address will not be symbolized. Defaults to empty string.
 
   .. code-block:: console
 
     $ cat addr.txt
     /tmp/mach_universal_binary:i386 0x1f84
     /tmp/mach_universal_binary:x86_64 0x100000f24
+    /tmp/archive.a(member.o):ppc 0x1000
+    /tmp/archive.a(member.o):ppc64 0x2000
 
     $ llvm-symbolizer < addr.txt
     _main
@@ -552,6 +556,12 @@ MACH-O SPECIFIC OPTIONS
 
     _main
     /tmp/source_x86_64.cc:8
+
+    _foo
+    /tmp/source_ppc.cc:12
+
+    _foo
+    /tmp/source_ppc64.cc:12
 
 .. option:: --dsym-hint <path/to/file.dSYM>
 

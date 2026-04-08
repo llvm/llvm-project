@@ -21,13 +21,13 @@
 //   r = test2(value)
 // end function
 
-// CMPLXOFF-DAG: fir.call @_QPtest1({{.*}}, {{.*}}, {{.*}}) : (!fir.ref<!fir.char<1,?>>, complex<f32>, i64) -> complex<f32>
-// CMPLXOFF-DAG: fir.call @_QPtest2({{.*}}, {{.*}}, {{.*}}) : (!fir.ref<!fir.char<1,10>>, index, complex<f32>) -> !fir.boxchar<1>
+// CMPLXOFF-DAG: fir.call @_QPtest1({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<!fir.char<1,?>>, complex<f32>, i64) -> complex<f32>
+// CMPLXOFF-DAG: fir.call @_QPtest2({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<!fir.char<1,10>>, index, complex<f32>) -> !fir.boxchar<1>
 // CMPLXOFF-DAG: func.func private @_QPtest1(!fir.ref<!fir.char<1,?>>, complex<f32>, i64) -> complex<f32>
 // CMPLXOFF-DAG: func.func private @_QPtest2(!fir.ref<!fir.char<1,10>>, index, complex<f32>) -> !fir.boxchar<1>
 
-// CHAROFF-DAG: fir.call @_QPtest1({{.*}}, {{.*}}) : (!fir.boxchar<1>, !fir.vector<2:f32>) -> !fir.vector<2:f32>
-// CHAROFF-DAG: fir.call @_QPtest2({{.*}}, {{.*}}, {{.*}}) : (!fir.ref<!fir.char<1,10>>, index, !fir.vector<2:f32>) -> !fir.boxchar<1>
+// CHAROFF-DAG: fir.call @_QPtest1({{.*}}, {{.*}}) fastmath<contract> : (!fir.boxchar<1>, !fir.vector<2:f32>) -> !fir.vector<2:f32>
+// CHAROFF-DAG: fir.call @_QPtest2({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<!fir.char<1,10>>, index, !fir.vector<2:f32>) -> !fir.boxchar<1>
 // CHAROFF-DAG: func.func private @_QPtest1(!fir.boxchar<1>, !fir.vector<2:f32>) -> !fir.vector<2:f32>
 // CHAROFF-DAG: func.func private @_QPtest2(!fir.ref<!fir.char<1,10>>, index, !fir.vector<2:f32>) -> !fir.boxchar<1>
 

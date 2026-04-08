@@ -246,27 +246,27 @@ TEST(LlvmLibcSScanfTest, FloatConvSimple) {
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 123.0);
+  EXPECT_FP_EQ(result, 123.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("456.1", "%a", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 456.1);
+  EXPECT_FP_EQ(result, 456.1f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x789.ap0", "%e", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0x789.ap0);
+  EXPECT_FP_EQ(result, 0x789.ap0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x.8", "%e", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0x0.8p0);
+  EXPECT_FP_EQ(result, 0x0.8p0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x8.", "%e", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0x8.0p0);
+  EXPECT_FP_EQ(result, 0x8.0p0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("+12.0e1", "%g", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 12.0e1);
+  EXPECT_FP_EQ(result, 12.0e1f);
 
   ret_val = LIBC_NAMESPACE::sscanf("inf", "%F", &result);
   EXPECT_EQ(ret_val, 1);
@@ -282,19 +282,19 @@ TEST(LlvmLibcSScanfTest, FloatConvSimple) {
 
   ret_val = LIBC_NAMESPACE::sscanf("1e10", "%G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 1e10);
+  EXPECT_FP_EQ(result, 1e10f);
 
   ret_val = LIBC_NAMESPACE::sscanf(".1", "%G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.1);
+  EXPECT_FP_EQ(result, 0.1f);
 
   ret_val = LIBC_NAMESPACE::sscanf("1.", "%G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 1.0);
+  EXPECT_FP_EQ(result, 1.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("Not a float", "%f", &result);
   EXPECT_EQ(ret_val, 0);
@@ -407,7 +407,7 @@ TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1.0e3", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0x1.0e3p0);
+  EXPECT_FP_EQ(result, 0x1.0e3p0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("", "%a", &result);
   EXPECT_EQ(ret_val, 0);
@@ -463,11 +463,11 @@ TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
 
   ret_val = LIBC_NAMESPACE::sscanf("-.1e1", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, -.1e1);
+  EXPECT_FP_EQ(result, -.1e1f);
 
   ret_val = LIBC_NAMESPACE::sscanf("1.2.e1", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 1.2);
+  EXPECT_FP_EQ(result, 1.2f);
 }
 
 TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
@@ -478,22 +478,22 @@ TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%3f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 123.0);
+  EXPECT_FP_EQ(result, 123.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%5f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 123.0);
+  EXPECT_FP_EQ(result, 123.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("456", "%1f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 4.0);
+  EXPECT_FP_EQ(result, 4.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("-789", "%1f", &result);
   EXPECT_EQ(ret_val, 0);
 
   ret_val = LIBC_NAMESPACE::sscanf("-123", "%2f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, -1.0);
+  EXPECT_FP_EQ(result, -1.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("inf", "%2f", &result);
   EXPECT_EQ(ret_val, 0);
@@ -519,11 +519,11 @@ TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
 
   ret_val = LIBC_NAMESPACE::sscanf("01", "%1f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1", "%2f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("100e", "%4f", &result);
   EXPECT_EQ(ret_val, 0);
@@ -533,7 +533,7 @@ TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
 
   ret_val = LIBC_NAMESPACE::sscanf("100e10", "%5f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 100e1);
+  EXPECT_FP_EQ(result, 100e1f);
 }
 
 TEST(LlvmLibcSScanfTest, FloatConvNoWrite) {
@@ -542,51 +542,51 @@ TEST(LlvmLibcSScanfTest, FloatConvNoWrite) {
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%*f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("456.1", "%*a", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x789.ap0", "%*e", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("+12.0e1", "%*g", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("inf", "%*F", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("NaN", "%*A", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("-InFiNiTy", "%*E", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("1e10", "%*G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf(".1", "%*G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%*3f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%*5f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("456", "%*1f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("Not a float", "%*f", &result);
   EXPECT_EQ(ret_val, 0);

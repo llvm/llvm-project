@@ -13,7 +13,6 @@
 #ifndef FORTRAN_LOWER_BRIDGE_H
 #define FORTRAN_LOWER_BRIDGE_H
 
-#include "flang/Common/Fortran.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/AbstractConverter.h"
@@ -22,6 +21,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
 #include <set>
@@ -76,6 +76,7 @@ public:
                           loweringOptions, envDefaults, languageFeatures,
                           targetMachine, targetOptions, codeGenOptions);
   }
+  ~LoweringBridge();
 
   //===--------------------------------------------------------------------===//
   // Getters
@@ -174,6 +175,7 @@ private:
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
   const Fortran::common::LanguageFeatureControl &languageFeatures;
   std::set<std::string> tempNames;
+  std::optional<mlir::DiagnosticEngine::HandlerID> diagHandlerID;
 };
 
 } // namespace lower

@@ -18,11 +18,11 @@ define i32 @main(i32 %argc, ptr nocapture readnone %argv) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@main
 ; CHECK-SAME: (i32 [[ARGC:%.*]], ptr readnone captures(none) [[ARGV:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void (ptr, ptr, ptr, ptr, ptr, ...) @callee_t0f(ptr undef, ptr undef, ptr undef, ptr undef, ptr undef, ptr byval([[STRUCT_TT0:%.*]]) align 8 @t45)
+; CHECK-NEXT:    tail call void (ptr, ptr, ptr, ptr, ptr, ...) @callee_t0f(ptr poison, ptr poison, ptr poison, ptr poison, ptr poison, ptr byval([[STRUCT_TT0:%.*]]) align 8 @t45)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  tail call void (ptr, ptr, ptr, ptr, ptr, ...) @callee_t0f(ptr undef, ptr undef, ptr undef, ptr undef, ptr undef, ptr byval(%struct.tt0) align 8 @t45)
+  tail call void (ptr, ptr, ptr, ptr, ptr, ...) @callee_t0f(ptr poison, ptr poison, ptr poison, ptr poison, ptr poison, ptr byval(%struct.tt0) align 8 @t45)
   ret i32 0
 }
 

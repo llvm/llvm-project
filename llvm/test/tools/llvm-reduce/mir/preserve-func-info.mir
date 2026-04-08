@@ -20,7 +20,7 @@
 # RESULT-NEXT: hasFakeUses: true
 # RESULT-NEXT: callsEHReturn: true
 # RESULT-NEXT: callsUnwindInit: true
-# RESULT-NEXT: hasEHCatchret: true
+# RESULT-NEXT: hasEHContTarget: true
 # RESULT-NEXT: hasEHScopes: true
 # RESULT-NEXT: hasEHFunclets: true
 # RESULT-NEXT: failsVerification: true
@@ -53,7 +53,7 @@ failsVerification: true
 tracksDebugUserValues: true
 callsEHReturn: true
 callsUnwindInit: true
-hasEHCatchret: true
+hasEHContTarget: true
 hasEHScopes: true
 hasEHFunclets: true
 

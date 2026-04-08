@@ -24,6 +24,12 @@ class NamespaceBreakpointTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
         module_list = lldb.SBFileSpecList()
         module_list.Append(lldb.SBFileSpec(exe, False))
+        self.assertEqual(
+            module_list[0].GetFilename(), lldb.SBFileSpec(exe, False).GetFilename()
+        )
+        self.assertEqual(
+            module_list[-1].GetFilename(), lldb.SBFileSpec(exe, False).GetFilename()
+        )
         cu_list = lldb.SBFileSpecList()
         # Set a breakpoint by name "func" which should pick up all functions
         # whose basename is "func"
@@ -237,12 +243,12 @@ class NamespaceTestCase(TestBase):
 
         self.expect(
             "expression myanonfunc",
-            patterns=["\(anonymous namespace\)::myanonfunc\(int\)"],
+            patterns=[r"\(anonymous namespace\)::myanonfunc\(int\)"],
         )
 
         self.expect(
             "expression variadic_sum",
-            patterns=["\(anonymous namespace\)::variadic_sum\(int, ...\)"],
+            patterns=[r"\(anonymous namespace\)::variadic_sum\(int, ...\)"],
         )
 
         self.expect_expr("::B::Bar b; b.x()", result_type="int", result_value="42")

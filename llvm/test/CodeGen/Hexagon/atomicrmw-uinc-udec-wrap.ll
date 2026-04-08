@@ -156,12 +156,12 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:     r5:4 = memd_locked(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     p0 = cmp.gtu(r3:2,r5:4)
 ; CHECK-NEXT:     r9:8 = add(r5:4,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = cmp.gtu(r3:2,r5:4)
-; CHECK-NEXT:     if (!p0.new) r8 = add(r1,#0)
-; CHECK-NEXT:     if (!p0.new) r9 = add(r1,#0)
+; CHECK-NEXT:     if (!p0) r8 = add(r1,#0)
+; CHECK-NEXT:     if (!p0) r9 = add(r1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memd_locked(r0,p0) = r9:8
@@ -345,11 +345,11 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:     r5:4 = memd_locked(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r13:12 = add(r5:4,r7:6)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     p1 = cmp.gtu(r5:4,r3:2)
 ; CHECK-NEXT:     p0 = cmp.eq(r5:4,r9:8)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r13:12 = add(r5:4,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = mux(p1,r2,r12)

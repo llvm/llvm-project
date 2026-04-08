@@ -100,7 +100,7 @@ namespace test0 {
   struct A {};
   struct B : virtual A { int x; };
   struct C : B {};
-  
+
   void test(C &in) {
     C tmp = in;
   }
@@ -117,7 +117,7 @@ namespace test1 {
 
 // Ensure that we
 // a) emit the ABI-required but useless complete object and deleting destructor
-//    symbols for an abstract class, and 
+//    symbols for an abstract class, and
 // b) do *not* emit references to virtual base destructors for an abstract class
 //
 // Our approach to this is to give these functions a body that simply traps.
@@ -167,4 +167,30 @@ namespace abstract {
 
   // CHECK-NOT: @_ZN8abstract1BD0Ev(
   B::~B() {}
+}
+
+namespace redecl {
+  struct A {
+    A();
+  };
+  class A;
+
+  // CHECK-LABEL: define{{.*}} void @_ZN6redecl1AC2Ev(
+  // CHECK:       define{{.*}} void @_ZN6redecl1AC1Ev(
+  // CHECK:       call {{.*}} @_ZN6redecl1AC2Ev(
+  A::A() {}
+}
+
+namespace fwdecl {
+  struct A;
+  struct A {
+    int v;
+  };
+  struct B : A {
+    B() = default;
+    B(int);
+  };
+  struct C : B {};
+
+  void f() { C{}; }
 }

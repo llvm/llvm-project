@@ -14,7 +14,7 @@
 @s = internal global i32 0, align 4, !dbg !6
 
 ; Function Attrs: norecurse nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !14 {
+define dso_local i32 @test() local_unnamed_addr !dbg !14 {
   %1 = load i32, ptr @g, align 4, !dbg !17, !tbaa !18
   %2 = load volatile i32, ptr @s, align 4, !dbg !22, !tbaa !18
   %3 = add nsw i32 %2, %1, !dbg !23
@@ -26,8 +26,6 @@ define dso_local i32 @test() local_unnamed_addr #0 !dbg !14 {
 ; CHECK-RELOC: R_BPF_64_NODYLD32 .bss
 ; CHECK-RELOC: R_BPF_64_NODYLD32 g
 ; CHECK-RELOC: RELOCATION RECORDS FOR [.BTF.ext]:
-
-attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!10, !11, !12}

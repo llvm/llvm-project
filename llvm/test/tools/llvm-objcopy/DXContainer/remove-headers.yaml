@@ -1,0 +1,51 @@
+## Tests that the copied DXContainer correctly has the specified headers
+## removed.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --remove-section=FKE1 --remove-section=FKE4 %t %t.out
+# RUN: obj2yaml %t.out | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+## FileSize = 1996 - 8 (FKE1 content) - 1688 (FKE4 content)
+##          - 8 (2 part offsets) - 16 (2 part headers)
+##          = 276
+# CHECK: FileSize:       276
+  FileSize:        1996
+# CHECK-NEXT: PartCount:      5
+  PartCount:       7
+# CHECK-NEXT: PartOffsets:    [ 52, 68, 84, 212, 240 ]
+  PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
+Parts:
+# CHECK-NEXT: Parts
+# CHECK-NOT: FKE1
+# CHECK-NOT: FKE4
+  - Name:            FKE0
+    Size:            8
+  - Name:            FKE1
+    Size:            8
+  - Name:            FKE2
+    Size:            8
+  - Name:            FKE3
+    Size:            120
+  - Name:            FKE4
+    Size:            1688
+  - Name:            FKE5
+    Size:            20
+  - Name:            DXIL
+    Size:            28
+    Program:
+      MajorVersion:    6
+      MinorVersion:    5
+      ShaderKind:      5
+      Size:            8
+      DXILMajorVersion: 1
+      DXILMinorVersion: 5
+      DXILSize:        4
+      DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+...

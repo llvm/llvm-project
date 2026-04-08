@@ -61,7 +61,7 @@ declare i32 @__CxxFrameHandler3(...)
 
 ; Don't emit a reference to the LSDA.
 ; CHECK: .seh_handlerdata
-; CHECK-NOT:  .long   ("$cppxdata$?f@@YAXXZ")@IMGREL
+; CHECK-NOT:  .long   "$cppxdata$?f@@YAXXZ"@IMGREL
 ; CHECK-NEXT: .text
 ; CHECK: .seh_endproc
 
@@ -92,6 +92,6 @@ declare i32 @__CxxFrameHandler3(...)
 
 ; Emit a reference to the LSDA.
 ; CHECK: .seh_handlerdata
-; CHECK-NEXT:  .long   ("$cppxdata$?f@@YAXXZ")@IMGREL
+; CHECK-NEXT:  .long   "$cppxdata$?f@@YAXXZ"@IMGREL
 ; CHECK-NEXT: .text
 ; CHECK: .seh_endproc

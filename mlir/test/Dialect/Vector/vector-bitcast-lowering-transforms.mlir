@@ -24,7 +24,7 @@ func.func @vector_bitcast_2d(%arg0: vector<2x4xi32>) -> vector<2x2xi64> {
 }
 // CHECK-LABEL: func.func @vector_bitcast_2d
 // CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]
-// CHECK:         %[[INIT:.+]] = arith.constant {{.+}} : vector<2x2xi64>
+// CHECK:         %[[INIT:.+]] = ub.poison : vector<2x2xi64>
 // CHECK:         %[[V1:.+]] = vector.extract %[[IN]][0] : vector<4xi32> from vector<2x4xi32>
 // CHECK:         %[[B1:.+]] = vector.bitcast %[[V1]] : vector<4xi32> to vector<2xi64>
 // CHECK:         %[[R1:.+]] = vector.insert %[[B1]], %[[INIT]] [0]
@@ -39,7 +39,7 @@ func.func @vector_bitcast_4d_with_scalable_dim(%arg0: vector<1x2x[3]x4xi64>) -> 
 }
 // CHECK-LABEL: func.func @vector_bitcast_4d_with_scalable_dim
 // CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]
-// CHECK:         %[[INIT:.+]] = arith.constant dense<0> : vector<1x2x[3]x8xi32>
+// CHECK:         %[[INIT:.+]] = ub.poison : vector<1x2x[3]x8xi32>
 // CHECK:         %[[V1:.+]] = vector.extract %[[IN]][0, 0] : vector<[3]x4xi64> from vector<1x2x[3]x4xi64>
 // CHECK:         %[[B1:.+]] = vector.bitcast %[[V1]] : vector<[3]x4xi64> to vector<[3]x8xi32>
 // CHECK:         %[[R1:.+]] = vector.insert %[[B1]], %[[INIT]] [0, 0] : vector<[3]x8xi32> into vector<1x2x[3]x8xi32>
@@ -54,7 +54,7 @@ func.func @vector_bitcast_2d_trailing_scalable_dim(%arg0: vector<2x[2]xi64>) -> 
 }
 // CHECK-LABEL: func.func @vector_bitcast_2d_trailing_scalable_dim
 // CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]
-// CHECK:         %[[INIT:.+]] = arith.constant dense<0> : vector<2x[4]xi32>
+// CHECK:         %[[INIT:.+]] = ub.poison : vector<2x[4]xi32>
 // CHECK:         %[[V1:.+]] = vector.extract %[[IN]][0] : vector<[2]xi64> from vector<2x[2]xi64>
 // CHECK:         %[[B1:.+]] = vector.bitcast %[[V1]] : vector<[2]xi64> to vector<[4]xi32>
 // CHECK:         %[[R1:.+]] = vector.insert %[[B1]], %[[INIT]] [0] : vector<[4]xi32> into vector<2x[4]xi32>

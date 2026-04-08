@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ConfigFragment.h"
+#include "support/Logger.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -68,6 +69,7 @@ public:
     Dict.handle("Hover", [&](Node &N) { parse(F.Hover, N); });
     Dict.handle("InlayHints", [&](Node &N) { parse(F.InlayHints, N); });
     Dict.handle("SemanticTokens", [&](Node &N) { parse(F.SemanticTokens, N); });
+    Dict.handle("Documentation", [&](Node &N) { parse(F.Documentation, N); });
     Dict.parse(N);
     return !(N.failed() || HadError);
   }
@@ -103,6 +105,10 @@ private:
     Dict.handle("Remove", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.Remove = std::move(*Values);
+    });
+    Dict.handle("BuiltinHeaders", [&](Node &N) {
+      if (auto BuiltinHeaders = scalarValue(N, "BuiltinHeaders"))
+        F.BuiltinHeaders = *BuiltinHeaders;
     });
     Dict.handle("CompilationDatabase", [&](Node &N) {
       F.CompilationDatabase = scalarValue(N, "CompilationDatabase");
@@ -241,6 +247,18 @@ private:
       if (auto ArgumentLists = scalarValue(N, "ArgumentLists"))
         F.ArgumentLists = *ArgumentLists;
     });
+    Dict.handle("HeaderInsertion", [&](Node &N) {
+      if (auto HeaderInsertion = scalarValue(N, "HeaderInsertion"))
+        F.HeaderInsertion = *HeaderInsertion;
+    });
+    Dict.handle("CodePatterns", [&](Node &N) {
+      if (auto CodePatterns = scalarValue(N, "CodePatterns"))
+        F.CodePatterns = *CodePatterns;
+    });
+    Dict.handle("MacroFilter", [&](Node &N) {
+      if (auto MacroFilter = scalarValue(N, "MacroFilter"))
+        F.MacroFilter = *MacroFilter;
+    });
     Dict.parse(N);
   }
 
@@ -249,6 +267,10 @@ private:
     Dict.handle("ShowAKA", [&](Node &N) {
       if (auto ShowAKA = boolValue(N, "ShowAKA"))
         F.ShowAKA = *ShowAKA;
+    });
+    Dict.handle("MacroContentsLimit", [&](Node &N) {
+      if (auto MacroContentsLimit = uint32Value(N, "MacroContentsLimit"))
+        F.MacroContentsLimit = *MacroContentsLimit;
     });
     Dict.parse(N);
   }
@@ -295,6 +317,15 @@ private:
     Dict.handle("DisabledModifiers", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.DisabledModifiers = std::move(*Values);
+    });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::DocumentationBlock &F, Node &N) {
+    DictParser Dict("Documentation", this);
+    Dict.handle("CommentFormat", [&](Node &N) {
+      if (auto Value = scalarValue(N, "CommentFormat"))
+        F.CommentFormat = *Value;
     });
     Dict.parse(N);
   }
@@ -474,6 +505,7 @@ std::vector<Fragment> Fragment::parseYAML(llvm::StringRef YAML,
                                           DiagnosticCallback Diags) {
   // The YAML document may contain multiple conditional fragments.
   // The SourceManager is shared for all of them.
+  log("Loading config file at {0}", BufferName);
   auto SM = std::make_shared<llvm::SourceMgr>();
   auto Buf = llvm::MemoryBuffer::getMemBufferCopy(YAML, BufferName);
   // Adapt DiagnosticCallback to function-pointer interface.

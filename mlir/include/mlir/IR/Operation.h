@@ -30,7 +30,7 @@ enum class OpProperties : char {};
 
 /// Operation is the basic unit of execution within MLIR.
 ///
-/// The following documentation are recommended to understand this class:
+/// The following documentations are recommended to understand this class:
 /// - https://mlir.llvm.org/docs/LangRef/#operations
 /// - https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
 ///
@@ -66,14 +66,14 @@ enum class OpProperties : char {};
 /// tail allocated with the operation class itself, but can be dynamically moved
 /// out-of-line in a dynamic allocation as needed.
 ///
-/// An Operation may contain optionally one or multiple Regions, stored in a
+/// An Operation may optionally contain one or multiple Regions, stored in a
 /// tail allocated array. Each `Region` is a list of Blocks. Each `Block` is
 /// itself a list of Operations. This structure is effectively forming a tree.
 ///
 /// Some operations like branches also refer to other Block, in which case they
 /// would have an array of `BlockOperand`.
 ///
-/// An Operation may contain optionally a "Properties" object: this is a
+/// An Operation may optionally contain a "Properties" object: this is a
 /// pre-defined C++ object with a fixed size. This object is owned by the
 /// operation and deleted with the operation. It can be converted to an
 /// Attribute on demand, or loaded from an Attribute.
@@ -92,17 +92,15 @@ public:
   /// necessary.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           NamedAttrList &&attributes,
-                           OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           NamedAttrList &&attributes, PropertyRef properties,
+                           BlockRange successors, unsigned numRegions);
 
   /// Create a new Operation with the specific fields. This constructor uses an
   /// existing attribute dictionary to avoid uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes,
-                           OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           DictionaryAttr attributes, PropertyRef properties,
+                           BlockRange successors, unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
@@ -110,8 +108,7 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           NamedAttrList &&attributes,
-                           OpaqueProperties properties,
+                           NamedAttrList &&attributes, PropertyRef properties,
                            BlockRange successors = {},
                            RegionRange regions = {});
 
@@ -140,18 +137,20 @@ public:
   /// * Whether cloning should recursively traverse into the regions of the
   ///   operation or not.
   /// * Whether cloning should also clone the operands of the operation.
+  /// * Whether to use different result types or clone them.
   class CloneOptions {
   public:
     /// Default constructs an option with all flags set to false. That means all
     /// parts of an operation that may optionally not be cloned, are not cloned.
     CloneOptions();
 
-    /// Constructs an instance with the clone regions and clone operands flags
-    /// set accordingly.
-    CloneOptions(bool cloneRegions, bool cloneOperands);
+    /// Constructs an instance with the options set accordingly.
+    CloneOptions(bool cloneRegions, bool cloneOperands,
+                 std::optional<SmallVector<Type>> resultTypes);
 
-    /// Returns an instance with all flags set to true. This is the default
-    /// when using the clone method and clones all parts of the operation.
+    /// Returns an instance such that all elements of the operation are cloned.
+    /// This is the default when using the clone method and clones all parts of
+    /// the operation.
     static CloneOptions all();
 
     /// Configures whether cloning should traverse into any of the regions of
@@ -172,11 +171,29 @@ public:
     /// Returns whether operands should be cloned as well.
     bool shouldCloneOperands() const { return cloneOperandsFlag; }
 
+    /// Configures different result types to use for the cloned operation.
+    /// If an empty optional, the result types are cloned from the original
+    /// operation.
+    CloneOptions &withResultTypes(std::optional<SmallVector<Type>> resultTypes);
+
+    /// Returns true if the results are cloned from the operation.
+    bool shouldCloneResults() const { return !resultTypes.has_value(); }
+
+    /// Returns the result types that should be used for the created operation
+    /// or `defaultResultTypes` if none were set.
+    TypeRange resultTypesOr(TypeRange defaultResultTypes) const {
+      if (resultTypes)
+        return *resultTypes;
+      return defaultResultTypes;
+    }
+
   private:
     /// Whether regions should be cloned.
     bool cloneRegionsFlag : 1;
     /// Whether operands should be cloned.
     bool cloneOperandsFlag : 1;
+    /// New result types to use in the cloned operation.
+    std::optional<SmallVector<Type>> resultTypes;
   };
 
   /// Create a deep copy of this operation, remapping any operands that use
@@ -185,7 +202,8 @@ public:
   /// sub-operations to the corresponding operation that is copied, and adds
   /// those mappings to the map.
   /// Optionally, one may configure what parts of the operation to clone using
-  /// the options parameter.
+  /// the options parameter. If parts of the operation (e.g. results or regions)
+  /// are not cloned, they will not appear in the mapper.
   ///
   /// Calling this method from multiple threads is generally safe if through the
   /// process of cloning no new uses of 'Value's from outside the operation are
@@ -194,8 +212,8 @@ public:
   /// mapper, it is possible to avoid adding uses to outside operands by
   /// remapping them to 'Value's owned by the caller thread.
   Operation *clone(IRMapping &mapper,
-                   CloneOptions options = CloneOptions::all());
-  Operation *clone(CloneOptions options = CloneOptions::all());
+                   const CloneOptions &options = CloneOptions::all());
+  Operation *clone(const CloneOptions &options = CloneOptions::all());
 
   /// Create a partial copy of this operation without traversing into attached
   /// regions. The new operation will have the same number of regions as the
@@ -242,6 +260,14 @@ public:
         return parentOp;
     return OpTy();
   }
+  template <typename... OpTy>
+  std::enable_if_t<(sizeof...(OpTy) > 1), Operation *> getParentOfType() {
+    auto *op = this;
+    while ((op = op->getParentOp()))
+      if (isa<OpTy...>(op))
+        return op;
+    return nullptr;
+  }
 
   /// Returns the closest surrounding parent operation with trait `Trait`.
   template <template <typename T> class Trait>
@@ -286,7 +312,7 @@ public:
   void destroy();
 
   /// This drops all operand uses from this operation, which is an essential
-  /// step in breaking cyclic dependences between references when they are to
+  /// step in breaking cyclic dependencies between references when they are to
   /// be deleted.
   void dropAllReferences();
 
@@ -318,7 +344,7 @@ public:
   /// take O(N) where N is the number of operations within the parent block.
   bool isBeforeInBlock(Operation *other);
 
-  void print(raw_ostream &os, const OpPrintingFlags &flags = std::nullopt);
+  void print(raw_ostream &os, const OpPrintingFlags &flags = {});
   void print(raw_ostream &os, AsmState &state);
   void dump();
 
@@ -448,11 +474,11 @@ public:
   /// to use Properties instead.
   void setInherentAttr(StringAttr name, Attribute value);
 
-  /// Access a discardable attribute by name, returns an null Attribute if the
+  /// Access a discardable attribute by name, returns a null Attribute if the
   /// discardable attribute does not exist.
   Attribute getDiscardableAttr(StringRef name) { return attrs.get(name); }
 
-  /// Access a discardable attribute by name, returns an null Attribute if the
+  /// Access a discardable attribute by name, returns a null Attribute if the
   /// discardable attribute does not exist.
   Attribute getDiscardableAttr(StringAttr name) { return attrs.get(name); }
 
@@ -515,7 +541,7 @@ public:
   DictionaryAttr getAttrDictionary();
 
   /// Set the attributes from a dictionary on this operation.
-  /// These methods are expensive: if the dictionnary only contains discardable
+  /// These methods are expensive: if the dictionary only contains discardable
   /// attributes, `setDiscardableAttrs` is more efficient.
   void setAttrs(DictionaryAttr newAttrs);
   void setAttrs(ArrayRef<NamedAttribute> newAttrs);
@@ -529,7 +555,7 @@ public:
   }
 
   /// Return the specified attribute if present, null otherwise.
-  /// These methods are expensive: if the dictionnary only contains discardable
+  /// These methods are expensive: if the dictionary only contains discardable
   /// attributes, `getDiscardableAttr` is more efficient.
   Attribute getAttr(StringAttr name) {
     if (getPropertiesStorageSize()) {
@@ -679,8 +705,7 @@ public:
     if (numRegions == 0)
       return MutableArrayRef<Region>();
 
-    auto *regions = getTrailingObjects<Region>();
-    return {regions, numRegions};
+    return getTrailingObjects<Region>(numRegions);
   }
 
   /// Returns the region held by this operation at position 'index'.
@@ -694,7 +719,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   MutableArrayRef<BlockOperand> getBlockOperands() {
-    return {getTrailingObjects<BlockOperand>(), numSuccs};
+    return getTrailingObjects<BlockOperand>(numSuccs);
   }
 
   // Successor iteration.
@@ -897,23 +922,29 @@ public:
   int getPropertiesStorageSize() const {
     return ((int)propertiesStorageSize) * 8;
   }
-  /// Returns the properties storage.
-  OpaqueProperties getPropertiesStorage() {
+
+  /// Return a generic (but typed) reference to the property type storage.
+  PropertyRef getPropertiesStorage() {
     if (propertiesStorageSize)
-      return getPropertiesStorageUnsafe();
-    return {nullptr};
+      return PropertyRef(name.getOpPropertiesTypeID(),
+                         getRawPropertiesStorageUnsafe());
+    return {};
   }
-  OpaqueProperties getPropertiesStorage() const {
+
+  PropertyRef getPropertiesStorage() const {
     if (propertiesStorageSize)
-      return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
-          getTrailingObjects<detail::OpProperties>()))};
-    return {nullptr};
+      return PropertyRef(
+          name.getOpPropertiesTypeID(),
+          reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+              getTrailingObjects<detail::OpProperties>())));
+    return {};
   }
-  /// Returns the properties storage without checking whether properties are
-  /// present.
-  OpaqueProperties getPropertiesStorageUnsafe() {
-    return {
-        reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+
+  /// Returns a pointer to the properties storage (if it exists) with no type
+  /// information.
+  void *getRawPropertiesStorageUnsafe() {
+    return reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+        getTrailingObjects<detail::OpProperties>()));
   }
 
   /// Return the properties converted to an attribute.
@@ -933,7 +964,7 @@ public:
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.
-  void copyProperties(OpaqueProperties rhs);
+  void copyProperties(PropertyRef rhs);
 
   /// Compute a hash for the op properties (if any).
   llvm::hash_code hashProperties();
@@ -951,7 +982,7 @@ private:
   /// operation.
   static constexpr unsigned kOrderStride = 5;
 
-  /// Update the order index of this operation of this operation if necessary,
+  /// Update the order index of this operation if necessary,
   /// potentially recomputing the order of the parent block.
   void updateOrderIfNecessary();
 
@@ -962,7 +993,7 @@ private:
   Operation(Location location, OperationName name, unsigned numResults,
             unsigned numSuccessors, unsigned numRegions,
             int propertiesStorageSize, DictionaryAttr attributes,
-            OpaqueProperties properties, bool hasOperandStorage);
+            PropertyRef properties, bool hasOperandStorage);
 
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.
@@ -1100,6 +1131,52 @@ private:
 
 inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
   const_cast<Operation &>(op).print(os, OpPrintingFlags().useLocalScope());
+  return os;
+}
+
+/// A wrapper class that allows for printing an operation with a set of flags,
+/// useful to act as a "stream modifier" to customize printing an operation
+/// with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithFlags(op, OpPrintingFlags().skipRegions());
+/// This always prints the operation with the local scope, to avoid introducing
+/// spurious newlines in the stream.
+class OpWithFlags {
+public:
+  OpWithFlags(Operation *op, OpPrintingFlags flags = {})
+      : op(op), theFlags(flags) {}
+  OpPrintingFlags &flags() { return theFlags; }
+  const OpPrintingFlags &flags() const { return theFlags; }
+  Operation *getOperation() const { return op; }
+
+private:
+  Operation *op;
+  OpPrintingFlags theFlags;
+  friend raw_ostream &operator<<(raw_ostream &os, OpWithFlags op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os, OpWithFlags opWithFlags) {
+  opWithFlags.flags().useLocalScope();
+  opWithFlags.op->print(os, opWithFlags.flags());
+  return os;
+}
+
+/// A wrapper class that allows for printing an operation with a custom
+/// AsmState, useful to act as a "stream modifier" to customize printing an
+/// operation with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithState(op, OpPrintingFlags().skipRegions());
+class OpWithState {
+public:
+  OpWithState(Operation *op, AsmState &state) : op(op), theState(state) {}
+
+private:
+  Operation *op;
+  AsmState &theState;
+  friend raw_ostream &operator<<(raw_ostream &os, const OpWithState &op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const OpWithState &opWithState) {
+  opWithState.op->print(os, const_cast<OpWithState &>(opWithState).theState);
   return os;
 }
 

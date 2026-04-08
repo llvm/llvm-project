@@ -12,10 +12,8 @@
 
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
@@ -97,9 +95,8 @@ bool clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
     return false;
   auto [N, W] = Value.split('=');
   double A;
-  if (W.getAsDouble(A))
+  if (W.getAsDouble(A) || A < 0.0 || A > 1.0)
     return false;
-  A = std::clamp(A, 0.0, 1.0);
   // AllowGroups is already taken into account for ParsedKind,
   // hence we unconditionally expandSanitizerGroups.
   Cutoffs.set(expandSanitizerGroups(ParsedKind), A);

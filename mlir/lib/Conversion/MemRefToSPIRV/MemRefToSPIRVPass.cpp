@@ -17,7 +17,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTMEMREFTOSPIRV
+#define GEN_PASS_DEF_CONVERTMEMREFTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -26,7 +26,8 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR MemRef operations into the SPIR-V dialect.
 class ConvertMemRefToSPIRVPass
-    : public impl::ConvertMemRefToSPIRVBase<ConvertMemRefToSPIRVPass> {
+    : public impl::ConvertMemRefToSPIRVPassBase<ConvertMemRefToSPIRVPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
@@ -53,8 +54,4 @@ void ConvertMemRefToSPIRVPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<>> mlir::createConvertMemRefToSPIRVPass() {
-  return std::make_unique<ConvertMemRefToSPIRVPass>();
 }

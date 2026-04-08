@@ -38,7 +38,7 @@ public:
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     const lldb::VariableSP &var_sp);
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 
@@ -75,8 +75,9 @@ protected:
 
   /// The variable that this value object is based upon.
   lldb::VariableSP m_variable_sp;
-  ///< The value that DWARFExpression resolves this variable to before we patch
-  ///< it up.
+
+  /// The value that DWARFExpression resolves this variable to before we patch
+  /// it up.
   Value m_resolved_value;
 
 private:

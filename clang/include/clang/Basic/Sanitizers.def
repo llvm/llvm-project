@@ -152,8 +152,7 @@ SANITIZER_GROUP("undefined", Undefined,
                     FloatCastOverflow |
                     IntegerDivideByZero | NonnullAttribute | Null | ObjectSize |
                     PointerOverflow | Return | ReturnsNonnullAttribute | Shift |
-                    SignedIntegerOverflow | Unreachable | VLABound | Function |
-                    Vptr)
+                    SignedIntegerOverflow | Unreachable | VLABound | Function)
 
 // -fsanitize=undefined-trap is an alias for -fsanitize=undefined.
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)
@@ -195,6 +194,9 @@ SANITIZER_GROUP("bounds", Bounds, ArrayBounds | LocalBounds)
 
 // Scudo hardened allocator
 SANITIZER("scudo", Scudo)
+
+// AllocToken
+SANITIZER("alloc-token", AllocToken)
 
 // Magic group, containing all sanitizers. For example, "-fno-sanitize=all"
 // can be used to disable all the sanitizers.

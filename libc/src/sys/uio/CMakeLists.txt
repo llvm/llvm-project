@@ -8,3 +8,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.writev
 )
+
+add_entrypoint_object(
+  readv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.readv
+)

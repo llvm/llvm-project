@@ -1843,7 +1843,7 @@ define <2 x double> @test_mm_cvtu64_sd(<2 x double> %__A, i64 %__B) {
 ; X86-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X86-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
-; X86-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtu64_sd:
@@ -1891,7 +1891,7 @@ define <4 x float> @test_mm_cvtu64_ss(<4 x float> %__A, i64 %__B) {
 ; X86-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -6625,7 +6625,7 @@ define i64 @test_mm512_reduce_mul_epi64(<8 x i64> %__W) {
 ; X64-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; X64-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    vpmuludq %xmm0, %xmm2, %xmm2
 ; X64-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-NEXT:    vpmuludq %xmm3, %xmm1, %xmm3
@@ -6833,7 +6833,7 @@ define i64 @test_mm512_mask_reduce_mul_epi64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X64-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; X64-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    vpmuludq %xmm0, %xmm2, %xmm2
 ; X64-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; X64-NEXT:    vpmuludq %xmm3, %xmm1, %xmm3

@@ -24,8 +24,8 @@ define arm_aapcs_vfpcc void @fast_float_mul(ptr nocapture %a, ptr nocapture read
 ; CHECK-NEXT:    cmpeq.w r12, #0
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    subs r4, r3, #1
 ; CHECK-NEXT:    and r12, r3, #3
+; CHECK-NEXT:    subs r4, r3, #1
 ; CHECK-NEXT:    cmp r4, #3
 ; CHECK-NEXT:    bhs .LBB0_6
 ; CHECK-NEXT:  @ %bb.3:

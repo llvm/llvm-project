@@ -12,9 +12,7 @@ define i32 @test() {
 ; CHECK-NEXT:    br i1 false, label [[BB4:%.*]], label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP5]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5]] = add <2 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <8 x i32> [ [[TMP1]], [[BB1]] ]

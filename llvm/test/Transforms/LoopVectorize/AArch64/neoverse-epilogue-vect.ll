@@ -72,17 +72,13 @@ entry:
   br i1 %17, label %7, label %9
 }
 
-; TODO: The V3 will generate a scalable vector body, so doesn't need a
-; epilogue loop, but will need to be checked that is really the best thing to
-; for the V3.
-;
 define noundef i32 @V3(ptr noalias nocapture noundef %0, ptr noalias nocapture noundef readonly %1, i32 noundef %2) #2 {
 ;
 ; CHECK-LABEL: @V3(
-; CHECK-NOT:   vec.epilog.ph:
-; CHECK-NOT:   vec.epilog.vector.body:
-; CHECK-NOT:   vec.epilog.middle.block:
-; CHECK-NOT:   vec.epilog.scalar.ph:
+; CHECK:       vec.epilog.ph:
+; CHECK:       vec.epilog.vector.body:
+; CHECK:       vec.epilog.middle.block:
+; CHECK:       vec.epilog.scalar.ph:
 ;
 entry:
   %4 = icmp sgt i32 %2, 0

@@ -57,14 +57,8 @@ private:
 
 public:
   // constructor and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI extreme_value_distribution() : extreme_value_distribution(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit extreme_value_distribution(result_type __a, result_type __b = 1)
-      : __p_(param_type(__a, __b)) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit extreme_value_distribution(result_type __a = 0, result_type __b = 1)
       : __p_(param_type(__a, __b)) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit extreme_value_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 

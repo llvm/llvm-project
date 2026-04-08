@@ -8,7 +8,7 @@
 
 #include "AArch64TargetObjectFile.h"
 #include "AArch64TargetMachine.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
@@ -16,17 +16,31 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCValue.h"
 using namespace llvm;
 using namespace dwarf;
 
+static cl::opt<bool> EmitAArch64DebugTLSLocation(
+    "aarch64-emit-debug-tls-location",
+    cl::desc("Emit the TLS DWARF location with DTPREL relocation for AArch64"),
+    cl::Hidden);
+
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  // AARCH64 ELF ABI does not define static relocation type for TLS offset
-  // within a module.  Do not generate AT_location for TLS variables.
-  SupportDebugThreadLocalLocation = false;
+  PLTPCRelativeSpecifier = AArch64::S_PLT;
+  SupportIndirectSymViaGOTPCRel = true;
+  SupportDebugThreadLocalLocation = EmitAArch64DebugTLSLocation;
+
+  // Make sure the implicitly created empty .text section has the
+  // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
+  // present.
+  if (TM.getMCSubtargetInfo()->hasFeature(AArch64::FeatureExecuteOnly)) {
+    auto *Text = static_cast<MCSectionELF *>(TextSection);
+    Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
+  }
 }
 
 void AArch64_ELFTargetObjectFile::emitPersonalityValueImpl(
@@ -47,11 +61,12 @@ void AArch64_ELFTargetObjectFile::emitPersonalityValueImpl(
 const MCExpr *AArch64_ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
     const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
-  int64_t FinalOffset = Offset + MV.getConstant();
-  const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, getContext());
-  const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
-  return MCBinaryExpr::createAdd(Res, Off, getContext());
+  auto &Ctx = getContext();
+  const MCExpr *Res = MCSymbolRefExpr::create(Sym, Ctx);
+  if (int64_t FinalOffset = Offset + MV.getConstant())
+    Res = MCBinaryExpr::createAdd(Res, MCConstantExpr::create(FinalOffset, Ctx),
+                                  Ctx);
+  return MCSpecifierExpr::create(Res, AArch64::S_GOTPCREL, Ctx);
 }
 
 AArch64_MachoTargetObjectFile::AArch64_MachoTargetObjectFile() {
@@ -68,7 +83,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getTTypeGlobalReference(
   if (Encoding & (DW_EH_PE_indirect | DW_EH_PE_pcrel)) {
     const MCSymbol *Sym = TM.getSymbol(GV);
     const MCExpr *Res =
-        MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, getContext());
+        MCSymbolRefExpr::create(Sym, AArch64::S_MACHO_GOT, getContext());
     MCSymbol *PCSym = getContext().createTempSymbol();
     Streamer.emitLabel(PCSym);
     const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());
@@ -93,7 +108,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
   // On ARM64 Darwin, we can reference symbols with foo@GOT-., which
   // is an indirect pc-relative reference.
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, getContext());
+      MCSymbolRefExpr::create(Sym, AArch64::S_MACHO_GOT, getContext());
   MCSymbol *PCSym = getContext().createTempSymbol();
   Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());
@@ -147,4 +162,35 @@ MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
   auto &MachOMMI = MMI->getObjFileInfo<MachineModuleInfoMachO>();
   return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, MachOMMI, RawSym,
                                     Key, Discriminator);
+}
+
+static bool isExecuteOnlyFunction(const GlobalObject *GO, SectionKind Kind,
+                                  const TargetMachine &TM) {
+  if (const Function *F = dyn_cast<Function>(GO))
+    if (TM.getSubtarget<AArch64Subtarget>(*F).genExecuteOnly() && Kind.isText())
+      return true;
+  return false;
+}
+
+MCSection *AArch64_ELFTargetObjectFile::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // Set execute-only access for the explicit section
+  if (isExecuteOnlyFunction(GO, Kind, TM))
+    Kind = SectionKind::getExecuteOnly();
+
+  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, Kind, TM);
+}
+
+MCSection *AArch64_ELFTargetObjectFile::SelectSectionForGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // Set execute-only access for the explicit section
+  if (isExecuteOnlyFunction(GO, Kind, TM))
+    Kind = SectionKind::getExecuteOnly();
+
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
+}
+
+const MCExpr *AArch64_ELFTargetObjectFile::getDebugThreadLocalSymbol(
+    const MCSymbol *Sym) const {
+  return MCSpecifierExpr::create(Sym, AArch64::S_DTPREL, getContext());
 }

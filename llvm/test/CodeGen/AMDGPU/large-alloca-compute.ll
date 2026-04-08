@@ -63,7 +63,7 @@ define amdgpu_kernel void @large_alloca_compute_shader(i32 %x, i32 %y) #0 {
   store volatile i32 %x, ptr addrspace(5) %gep
   %gep1 = getelementptr [8192 x i32], ptr addrspace(5) %large, i32 0, i32 %y
   %val = load volatile i32, ptr addrspace(5) %gep1
-  store volatile i32 %val, ptr addrspace(1) undef
+  store volatile i32 %val, ptr addrspace(1) poison
   ret void
 }
 

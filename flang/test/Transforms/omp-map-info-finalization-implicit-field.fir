@@ -15,20 +15,31 @@ fir.global internal @_QFEdst_record : !record_t {
   fir.has_value %0 : !record_t
 }
 
+omp.declare_mapper @record_mapper : !record_t {
+^bb0(%arg0: !fir.ref<!record_t>):
+  %0 = omp.map.info var_ptr(%arg0: !fir.ref<!record_t>, !record_t) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<!record_t>
+  omp.declare_mapper.info map_entries(%0: !fir.ref<!record_t>)
+}
+
 func.func @_QQmain() {
   %6 = fir.address_of(@_QFEdst_record) : !fir.ref<!record_t>
   %7:2 = hlfir.declare %6 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
   %16 = omp.map.info var_ptr(%7#1 : !fir.ref<!record_t>, !record_t) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<!record_t> {name = "dst_record"}
-  omp.target map_entries(%16 -> %arg0 : !fir.ref<!record_t>) {
+  %17 = omp.map.info var_ptr(%7#1 : !fir.ref<!record_t>, !record_t) map_clauses(implicit, tofrom) capture(ByRef) mapper(@record_mapper) -> !fir.ref<!record_t> {name = "dst_record_with_mapper"}
+  omp.target map_entries(%16 -> %arg0, %17 -> %arg1 : !fir.ref<!record_t>, !fir.ref<!record_t>) {
     %20:2 = hlfir.declare %arg0 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
+    %21:2 = hlfir.declare %arg1 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
+
     %23 = hlfir.designate %20#0{"to_implicitly_map"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!record_t>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+
+    %24 = hlfir.designate %21#0{"to_implicitly_map"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!record_t>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     omp.terminator
   }
   return
 }
 
 // CHECK: %[[RECORD_DECL:.*]]:2 = hlfir.declare %0 {uniq_name = "_QFEdst_record"}
-// CHECK: %[[FIELD_COORD:.*]] = fir.coordinate_of %[[RECORD_DECL]]#1, %{{c1.*}}
+// CHECK: %[[FIELD_COORD:.*]] = fir.coordinate_of %[[RECORD_DECL]]#1, to_implicitly_map
 
 // CHECK: %[[UPPER_BOUND:.*]] = arith.subi %{{.*}}#1, %{{c1.*}} : index
 
@@ -39,9 +50,9 @@ func.func @_QQmain() {
 
 // CHECK: %[[BASE_ADDR:.*]] = fir.box_offset %[[FIELD_COORD]] base_addr
 // CHECK: %[[FIELD_BASE_ADDR_MAP:.*]] = omp.map.info var_ptr(
-// CHECK-SAME: %[[FIELD_COORD]] : {{.*}}) var_ptr_ptr(
-// CHECK-SAME: %[[BASE_ADDR]] : {{.*}}) map_clauses(
-// CHECK-SAME: implicit, tofrom) capture(ByRef) bounds(
+// CHECK-SAME: %[[FIELD_COORD]] : {{.*}}) map_clauses(
+// CHECK-SAME: implicit, tofrom) capture(ByRef) var_ptr_ptr(
+// CHECK-SAME: %[[BASE_ADDR]] : {{.*}}) bounds(
 // CHECK-SAME: %[[BOUNDS]])
 
 // CHECK: %[[FIELD_MAP:.*]] = omp.map.info var_ptr(
@@ -55,6 +66,19 @@ func.func @_QQmain() {
 // CHECK-SAME: %[[FIELD_MAP]], %[[FIELD_BASE_ADDR_MAP]] :
 // CHECK-SAME: [1], [1, 0] : {{.*}}) -> {{.*}}> {name =
 // CHECK-SAME: "dst_record", partial_map = true}
+
+// Verify map ops when using a mapper:
+// Implicit field mapping is the same as for the non-mapper case.
+// CHECK: omp.map.info
+// CHECK: omp.map.info
+
+// Verify that partial-map is not set if the map info op uses a user-defined (or
+// compiler-emitted) mapper.
+// CHECK: %[[RECORD_MAP_MAPPER:.*]] = omp.map.info var_ptr(
+// CHECK-SAME: %[[RECORD_DECL]]#1 : {{.*}}) map_clauses(
+// CHECK-SAME: implicit, tofrom) capture(ByRef) mapper(@record_mapper) 
+// CHECK-SAME: members(%{{.*}}, %{{.*}} : [1], [1, 0] : {{.*}}) -> {{.*}}> {name =
+// CHECK-SAME: "dst_record_with_mapper"}
 
 // CHECK: omp.target map_entries(
 // CHECK-SAME: %[[RECORD_MAP]] -> %{{[^[:space:]]+}},

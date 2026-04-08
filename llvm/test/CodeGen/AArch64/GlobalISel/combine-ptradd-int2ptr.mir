@@ -8,9 +8,11 @@ body:             |
   bb.1:
     liveins: $x0
     ; CHECK-LABEL: name: agc.test_combine_ptradd_constants_intres
-    ; CHECK: [[C:%[0-9]+]]:_(p64) = G_CONSTANT i64 44
-    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[C]](p64)
-    ; CHECK: $x0 = COPY [[PTRTOINT]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(p64) = G_CONSTANT i64 44
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[C]](p64)
+    ; CHECK-NEXT: $x0 = COPY [[PTRTOINT]](s64)
     %1:_(s64) = G_CONSTANT i64 42
     %2:_(s32) = G_CONSTANT i32 2
     %3:_(p64) = G_INTTOPTR %2
@@ -24,8 +26,10 @@ body:             |
   bb.1:
     liveins: $x0
     ; CHECK-LABEL: name: agc.test_combine_ptradd_constants_ptrres
-    ; CHECK: [[C:%[0-9]+]]:_(p64) = G_CONSTANT i64 44
-    ; CHECK: $x0 = COPY [[C]](p64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(p64) = G_CONSTANT i64 44
+    ; CHECK-NEXT: $x0 = COPY [[C]](p64)
     %1:_(s64) = G_CONSTANT i64 42
     %2:_(s32) = G_CONSTANT i32 2
     %3:_(p64) = G_INTTOPTR %2
@@ -39,11 +43,13 @@ body:             |
     liveins: $x0, $x1
     ; Ensure non-constant G_PTR_ADDs are not folded.
     ; CHECK-LABEL: name: agc.test_not_combine_variable_ptradd
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-    ; CHECK: [[COPY:%[0-9]+]]:_(p64) = COPY $x1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p64) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[PTR_ADD]](p64)
-    ; CHECK: $x0 = COPY [[PTRTOINT]](s64)
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p64) = COPY $x1
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p64) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[PTR_ADD]](p64)
+    ; CHECK-NEXT: $x0 = COPY [[PTRTOINT]](s64)
     %1:_(s64) = G_CONSTANT i64 42
     %2:_(p64) = COPY $x1
     %3:_(p64) = G_PTR_ADD %2, %1
@@ -57,7 +63,9 @@ body:             |
   liveins: $x0
 
     ; CHECK-LABEL: name: test_combine_zero_extend
-    ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 4291891236
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 4291891236
     ; CHECK-NEXT: $x0 = COPY [[C]](p0)
     %0:_(s32) = G_CONSTANT i32 -3076096
     %1:_(p0) = G_INTTOPTR %0:_(s32)

@@ -8,8 +8,8 @@ Within your LLVM pass:
 
 ``` C++
 // 1. Include the necessary Sandbox IR header files.
-#include "llvm/SandboxIR/Context.h
-#include "llvm/SandboxIR/Function.h
+#include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 
 // 2. Create a sandboxir::Context using LLVMContext `LLVMCtx`.
 sandboxir::Context Ctx(LLVMCtx);
@@ -104,3 +104,6 @@ Internally this will go through the changes and run any finalization required.
 
 Please note that after a call to `revert()` or `accept()` tracking will stop.
 To start tracking again, the user needs to call `save()`.
+
+# Users of Sandbox IR
+- [The Sandbox Vectorizer](project:SandboxVectorizer.md)

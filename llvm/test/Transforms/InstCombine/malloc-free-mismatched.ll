@@ -3,7 +3,7 @@
 
 define dso_local i32 @_Z6answeri(i32 %0) {
 ; CHECK-LABEL: @_Z6answeri(
-; CHECK-NEXT:    [[TMP2:%.*]] = call noalias nonnull dereferenceable(80) ptr @_Znam(i64 80) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call noalias nonnull dereferenceable(80) ptr @_Znam(i64 80) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @free(ptr [[TMP2]])
 ; CHECK-NEXT:    ret i32 42
 ;
@@ -25,11 +25,29 @@ define void @test_alloca() {
   ret void
 }
 
+; Test that missing `alloc-family` attributes don't crash LLVM
+; https://github.com/llvm/llvm-project/issues/63749
+
+define void @no_family() {
+; CHECK-LABEL: @no_family(
+; CHECK-NEXT:       [[ALLOC:%.*]] = call ptr @customalloc(i64 64)
+; CHECK-NEXT:       call void @customfree(ptr [[ALLOC]])
+; CHECK-NEXT:       ret void
+;
+  %alloc = call ptr @customalloc(i64 64)
+  call void @customfree(ptr %alloc)
+  ret void
+}
+
+
 ; Function Attrs: nobuiltin allocsize(0)
 declare dso_local nonnull ptr @_Znam(i64) #1
 
 ; Function Attrs: nounwind
 declare dso_local void @free(ptr) allockind("free") "alloc-family"="malloc"
+
+declare ptr @customalloc(i64) allockind("alloc")
+declare void @customfree(ptr allocptr) allockind("free")
 
 attributes #0 = { builtin allocsize(0) }
 attributes #1 = { nobuiltin allocsize(0) allockind("alloc,uninitialized") "alloc-family"="_Znam" }

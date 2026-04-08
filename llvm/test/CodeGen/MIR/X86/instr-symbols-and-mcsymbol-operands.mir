@@ -14,7 +14,7 @@
     call void @f(i32 %x)
     call void @g(i32 %x)
     call void @h(i32 %x), !dbg !9
-    ret i64 undef
+    ret i64 poison
   }
 
   !llvm.dbg.cu = !{!0}

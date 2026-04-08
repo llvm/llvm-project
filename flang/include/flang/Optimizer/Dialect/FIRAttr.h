@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 
+#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 namespace mlir {
@@ -163,5 +164,7 @@ void printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 
 #define GET_ATTRDEF_CLASSES
 #include "flang/Optimizer/Dialect/FIRAttr.h.inc"
+
+#include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.h"
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H

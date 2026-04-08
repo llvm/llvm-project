@@ -15,6 +15,9 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/OffloadBinary.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -39,7 +42,7 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
                                           Constant *Addr, StringRef Name,
                                           uint64_t Size, uint32_t Flags,
                                           uint64_t Data, Constant *AuxAddr) {
-  llvm::Triple Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
   Type *PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
@@ -80,12 +83,12 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
   return {EntryInitializer, Str};
 }
 
-void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
-                                     Constant *Addr, StringRef Name,
-                                     uint64_t Size, uint32_t Flags,
-                                     uint64_t Data, StringRef SectionName,
-                                     Constant *AuxAddr) {
-  llvm::Triple Triple(M.getTargetTriple());
+GlobalVariable *
+offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
+                                Constant *Addr, StringRef Name, uint64_t Size,
+                                uint32_t Flags, uint64_t Data,
+                                Constant *AuxAddr, StringRef SectionName) {
+  const llvm::Triple &Triple = M.getTargetTriple();
 
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
       M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
@@ -103,12 +106,13 @@ void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
     Entry->setSection((SectionName + "$OE").str());
   else
     Entry->setSection(SectionName);
-  Entry->setAlignment(Align(1));
+  Entry->setAlignment(Align(object::OffloadBinary::getAlignment()));
+  return Entry;
 }
 
 std::pair<GlobalVariable *, GlobalVariable *>
 offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
-  llvm::Triple Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
 
   auto *ZeroInitilaizer =
       ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
@@ -135,6 +139,7 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
         M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
         ZeroInitilaizer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
     appendToCompilerUsed(M, DummyEntry);
   } else {
     // The COFF linker will merge sections containing a '$' together into a
@@ -372,4 +377,50 @@ Error llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
     }
   }
   return Error::success();
+}
+
+Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
+                                    llvm::Triple Triple,
+                                    object::ImageKind ImageKind,
+                                    object::OffloadKind OffloadKind,
+                                    int32_t ImageFlags,
+                                    MapVector<StringRef, StringRef> &MetaData) {
+  using namespace object;
+
+  // Create inner OffloadBinary containing the raw image.
+  OffloadBinary::OffloadingImage InnerImage;
+  InnerImage.TheImageKind = ImageKind;
+  InnerImage.TheOffloadKind = OffloadKind;
+  InnerImage.Flags = ImageFlags;
+
+  InnerImage.StringData["triple"] = Triple.getTriple();
+  for (const auto &[Key, Value] : MetaData)
+    InnerImage.StringData[Key] = Value;
+
+  InnerImage.Image = std::move(Img);
+
+  SmallString<0> InnerBinaryData = OffloadBinary::write(InnerImage);
+
+  Img = MemoryBuffer::getMemBufferCopy(InnerBinaryData);
+  return Error::success();
+}
+
+Error offloading::intel::containerizeOpenMPSPIRVImage(
+    std::unique_ptr<MemoryBuffer> &Binary, llvm::Triple Triple,
+    StringRef CompileOpts, StringRef LinkOpts) {
+  constexpr char INTEL_ONEOMP_OFFLOAD_VERSION[] = "1.0";
+
+  assert(Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::Intel &&
+         "Expected SPIR-V triple with Intel vendor");
+
+  MapVector<StringRef, StringRef> MetaData;
+  MetaData["version"] = INTEL_ONEOMP_OFFLOAD_VERSION;
+  if (!CompileOpts.empty())
+    MetaData["compile-opts"] = CompileOpts;
+  if (!LinkOpts.empty())
+    MetaData["link-opts"] = LinkOpts;
+
+  return containerizeImage(Binary, Triple, object::ImageKind::IMG_SPIRV,
+                           object::OffloadKind::OFK_OpenMP, /*ImageFlags=*/0,
+                           MetaData);
 }

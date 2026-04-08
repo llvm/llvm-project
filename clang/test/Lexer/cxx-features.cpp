@@ -49,6 +49,10 @@
 #error "wrong value for __cpp_placeholder_variables"
 #endif
 
+#if check(trivial_relocatability, 202502, 202502, 202502, 202502, 202502, 202502, 202502)
+#error "wrong value for __cpp_trivial_relocatability"
+#endif
+
 // --- C++23 features ---
 
 #if check(auto_cast, 0, 0, 0, 0, 0, 202110, 202110)
@@ -144,7 +148,7 @@
 
 // init_captures checked below
 
-#if check(modules, 0, 0, 0, 0, 0, 0, 0)
+#if check(modules, 0, 0, 0, 0, 1, 1, 1)
 // FIXME: 201907 in C++20
 #error "wrong value for __cpp_modules"
 #endif
@@ -229,7 +233,7 @@
 #error "wrong value for __cpp_aggregate_bases"
 #endif
 
-#if check(structured_bindings, 0, 0, 0, 202403L, 202403L, 202403L, 202403L)
+#if check(structured_bindings, 0, 0, 0, 202411L, 202411L, 202411L, 202411L)
 #error "wrong value for __cpp_structured_bindings"
 #endif
 
@@ -314,7 +318,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202406L)
+#if check(constexpr, 0, 200704, 201304, 201603, 202002, 202211, 202406L)
 #error "wrong value for __cpp_constexpr"
 #endif
 

@@ -79,7 +79,11 @@
 # RUN:           -out:testx2.dll -verbose 2>&1 | FileCheck -check-prefix=VERBOSEX %s
 # VERBOSEX: Added 5 thunks with margin {{.*}} in 1 passes
 
+# RUN: lld-link -machine:arm64ec -noentry -dll funcs-arm64ec.obj funcs-aarch64.obj loadconfig-arm64.obj loadconfig-arm64ec.obj \
+# RUN:           -out:testx2ec.dll -verbose 2>&1 | FileCheck -check-prefix=VERBOSEX %s
+
 # RUN: llvm-objdump -d testx2.dll | FileCheck --check-prefix=DISASMX %s
+# RUN: llvm-objdump -d testx2ec.dll | FileCheck --check-prefix=DISASMX %s
 
 # DISASMX:      Disassembly of section .code1:
 # DISASMX-EMPTY:
@@ -126,6 +130,7 @@
 # DISASMX-NEXT: 180016010: d61f0200     br      x16
 
 # RUN: llvm-readobj --coff-load-config testx2.dll | FileCheck --check-prefix=LOADCFGX2 %s
+# RUN: llvm-readobj --coff-load-config testx2ec.dll | FileCheck --check-prefix=LOADCFGX2 %s
 
 # LOADCFGX2:       CodeMap [
 # LOADCFGX2-NEXT:    0x4000 - 0x4014  ARM64EC

@@ -43,18 +43,16 @@
 
 #include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <algorithm>
@@ -64,9 +62,12 @@
 
 using namespace llvm;
 
-namespace {
-
 #define DEBUG_TYPE "mergeicmps"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+namespace {
 
 // A BCE atom "Binary Compare Expression Atom" represents an integer load
 // that is a constant offset from a base value, e.g. `a` or `o.c` in the example
@@ -128,11 +129,12 @@ private:
   unsigned Order = 1;
   DenseMap<const Value*, int> BaseToIndex;
 };
+} // namespace
 
 // If this value is a load from a constant offset w.r.t. a base address, and
 // there are no other users of the load or address, returns the base address and
 // the offset.
-BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
+static BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
   auto *const LoadI = dyn_cast<LoadInst>(Val);
   if (!LoadI)
     return {};
@@ -175,6 +177,7 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
   return BCEAtom(GEP, LoadI, BaseId.getBaseId(Base), Offset);
 }
 
+namespace {
 // A comparison between two BCE atoms, e.g. `a == o.a` in the example at the
 // top.
 // Note: the terminology is misleading: the comparison is symmetric, so there
@@ -239,6 +242,7 @@ class BCECmpBlock {
 private:
   BCECmp Cmp;
 };
+} // namespace
 
 bool BCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
                                     AliasAnalysis &AA) const {
@@ -302,9 +306,9 @@ bool BCECmpBlock::doesOtherWork() const {
 
 // Visit the given comparison. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-std::optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
-                                const ICmpInst::Predicate ExpectedPredicate,
-                                BaseIdentifier &BaseId) {
+static std::optional<BCECmp>
+visitICmp(const ICmpInst *const CmpI,
+          const ICmpInst::Predicate ExpectedPredicate, BaseIdentifier &BaseId) {
   // The comparison can only be used once:
   //  - For intermediate blocks, as a branch condition.
   //  - For the final block, as an incoming value for the Phi.
@@ -332,26 +336,22 @@ std::optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
 
 // Visit the given comparison block. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-std::optional<BCECmpBlock> visitCmpBlock(Value *const Val,
-                                         BasicBlock *const Block,
-                                         const BasicBlock *const PhiBlock,
-                                         BaseIdentifier &BaseId) {
+static std::optional<BCECmpBlock>
+visitCmpBlock(Value *const Val, BasicBlock *const Block,
+              const BasicBlock *const PhiBlock, BaseIdentifier &BaseId) {
   if (Block->empty())
     return std::nullopt;
-  auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
-  if (!BranchI)
-    return std::nullopt;
-  LLVM_DEBUG(dbgs() << "branch\n");
+  auto *Term = Block->getTerminator();
   Value *Cond;
   ICmpInst::Predicate ExpectedPredicate;
-  if (BranchI->isUnconditional()) {
+  if (isa<UncondBrInst>(Term)) {
     // In this case, we expect an incoming value which is the result of the
     // comparison. This is the last link in the chain of comparisons (note
     // that this does not mean that this is the last incoming value, blocks
     // can be reordered).
     Cond = Val;
     ExpectedPredicate = ICmpInst::ICMP_EQ;
-  } else {
+  } else if (auto *BranchI = dyn_cast<CondBrInst>(Term)) {
     // In this case, we expect a constant incoming value (the comparison is
     // chained).
     const auto *const Const = cast<ConstantInt>(Val);
@@ -364,7 +364,8 @@ std::optional<BCECmpBlock> visitCmpBlock(Value *const Val,
     Cond = BranchI->getCondition();
     ExpectedPredicate =
         FalseBlock == PhiBlock ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
-  }
+  } else
+    return std::nullopt;
 
   auto *CmpI = dyn_cast<ICmpInst>(Cond);
   if (!CmpI)
@@ -376,7 +377,7 @@ std::optional<BCECmpBlock> visitCmpBlock(Value *const Val,
     return std::nullopt;
 
   BCECmpBlock::InstructionSet BlockInsts(
-      {Result->Lhs.LoadI, Result->Rhs.LoadI, Result->CmpI, BranchI});
+      {Result->Lhs.LoadI, Result->Rhs.LoadI, Result->CmpI, Term});
   if (Result->Lhs.GEP)
     BlockInsts.insert(Result->Lhs.GEP);
   if (Result->Rhs.GEP)
@@ -397,6 +398,7 @@ static inline void enqueueBlock(std::vector<BCECmpBlock> &Comparisons,
   Comparisons.push_back(std::move(Comparison));
 }
 
+namespace {
 // A chain of comparisons.
 class BCECmpChain {
 public:
@@ -420,6 +422,7 @@ private:
   // The original entry block (before sorting);
   BasicBlock *EntryBlock_;
 };
+} // namespace
 
 static bool areContiguous(const BCECmpBlock &First, const BCECmpBlock &Second) {
   return First.Lhs().BaseId == Second.Lhs().BaseId &&
@@ -479,6 +482,10 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   BaseIdentifier BaseId;
   for (BasicBlock *const Block : Blocks) {
     assert(Block && "invalid block");
+    if (Block->hasAddressTaken()) {
+      LLVM_DEBUG(dbgs() << "cannot merge blocks with blockaddress\n");
+      return;
+    }
     std::optional<BCECmpBlock> Comparison = visitCmpBlock(
         Phi.getIncomingValueForBlock(Block), Block, Phi.getParent(), BaseId);
     if (!Comparison) {
@@ -599,6 +606,37 @@ private:
 };
 } // namespace
 
+/// Determine the branch weights for the resulting conditional branch, resulting
+/// after merging \p Comparisons.
+static std::optional<SmallVector<uint32_t, 2>>
+computeMergedBranchWeights(ArrayRef<BCECmpBlock> Comparisons) {
+  assert(!Comparisons.empty());
+  if (ProfcheckDisableMetadataFixes)
+    return std::nullopt;
+  if (Comparisons.size() == 1) {
+    SmallVector<uint32_t, 2> Weights;
+    if (!extractBranchWeights(*Comparisons[0].BB->getTerminator(), Weights))
+      return std::nullopt;
+    return Weights;
+  }
+  // The probability to go to the phi block is the disjunction of the
+  // probability to go to the phi block from the individual Comparisons. We'll
+  // swap the weights because `getDisjunctionWeights` computes the disjunction
+  // for the "true" branch, then swap back.
+  SmallVector<uint64_t, 2> Weights{0, 1};
+  // At this point, Weights encodes "0-probability" for the "true" side.
+  for (const auto &C : Comparisons) {
+    SmallVector<uint32_t, 2> W;
+    if (!extractBranchWeights(*C.BB->getTerminator(), W))
+      return std::nullopt;
+
+    std::swap(W[0], W[1]);
+    Weights = getDisjunctionWeights(Weights, W);
+  }
+  std::swap(Weights[0], Weights[1]);
+  return fitWeights(Weights);
+}
+
 // Merges the given contiguous comparison blocks into one memcmp block.
 static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
                                     BasicBlock *const InsertBefore,
@@ -632,7 +670,7 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
   // If there is one block that requires splitting, we do it now, i.e.
   // just before we know we will collapse the chain. The instructions
   // can be executed before any of the instructions in the chain.
-  const auto ToSplit = llvm::find_if(
+  const auto *ToSplit = llvm::find_if(
       Comparisons, [](const BCECmpBlock &B) { return B.RequireSplit; });
   if (ToSplit != Comparisons.end()) {
     LLVM_DEBUG(dbgs() << "Splitting non_BCE work to header\n");
@@ -647,6 +685,7 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     LhsLoad->replaceUsesOfWith(LhsLoad->getOperand(0), Lhs);
     RhsLoad->replaceUsesOfWith(RhsLoad->getOperand(0), Rhs);
     // There are no blocks to merge, just do the comparison.
+    // If we condition on this IsEqual, we already have its probabilities.
     IsEqual = Builder.CreateICmpEQ(LhsLoad, RhsLoad);
   } else {
     const unsigned TotalSizeBits = std::accumulate(
@@ -676,7 +715,9 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     DTU.applyUpdates({{DominatorTree::Insert, BB, PhiBB}});
   } else {
     // Continue to next block if equal, exit to phi else.
-    Builder.CreateCondBr(IsEqual, NextCmpBlock, PhiBB);
+    auto *BI = Builder.CreateCondBr(IsEqual, NextCmpBlock, PhiBB);
+    if (auto BranchWeights = computeMergedBranchWeights(Comparisons))
+      setBranchWeights(*BI, BranchWeights.value(), /*IsExpected=*/false);
     Phi.addIncoming(ConstantInt::getFalse(Context), BB);
     DTU.applyUpdates({{DominatorTree::Insert, BB, NextCmpBlock},
                       {DominatorTree::Insert, BB, PhiBB}});
@@ -738,9 +779,8 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
   return true;
 }
 
-std::vector<BasicBlock *> getOrderedBlocks(PHINode &Phi,
-                                           BasicBlock *const LastBlock,
-                                           int NumBlocks) {
+static std::vector<BasicBlock *>
+getOrderedBlocks(PHINode &Phi, BasicBlock *const LastBlock, int NumBlocks) {
   // Walk up from the last block to find other blocks.
   std::vector<BasicBlock *> Blocks(NumBlocks);
   assert(LastBlock && "invalid last block");
@@ -773,8 +813,8 @@ std::vector<BasicBlock *> getOrderedBlocks(PHINode &Phi,
   return Blocks;
 }
 
-bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI, AliasAnalysis &AA,
-                DomTreeUpdater &DTU) {
+static bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI,
+                       AliasAnalysis &AA, DomTreeUpdater &DTU) {
   LLVM_DEBUG(dbgs() << "processPhi()\n");
   if (Phi.getNumIncomingValues() <= 1) {
     LLVM_DEBUG(dbgs() << "skip: only one incoming value in phi\n");
@@ -845,7 +885,7 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI, AliasAnalysis &AA,
 static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
                     const TargetTransformInfo &TTI, AliasAnalysis &AA,
                     DominatorTree *DT) {
-  LLVM_DEBUG(dbgs() << "MergeICmpsLegacyPass: " << F.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "MergeICmpsPass: " << F.getName() << "\n");
 
   // We only try merging comparisons if the target wants to expand memcmp later.
   // The rationale is to avoid turning small chains into memcmp calls.
@@ -869,48 +909,6 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
 
   return MadeChange;
 }
-
-class MergeICmpsLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  MergeICmpsLegacyPass() : FunctionPass(ID) {
-    initializeMergeICmpsLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F)) return false;
-    const auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    const auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    // MergeICmps does not need the DominatorTree, but we update it if it's
-    // already available.
-    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-    return runImpl(F, TLI, TTI, AA, DTWP ? &DTWP->getDomTree() : nullptr);
-  }
-
- private:
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-};
-
-} // namespace
-
-char MergeICmpsLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(MergeICmpsLegacyPass, "mergeicmps",
-                      "Merge contiguous icmps into a memcmp", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(MergeICmpsLegacyPass, "mergeicmps",
-                    "Merge contiguous icmps into a memcmp", false, false)
-
-Pass *llvm::createMergeICmpsLegacyPass() { return new MergeICmpsLegacyPass(); }
 
 PreservedAnalyses MergeICmpsPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {

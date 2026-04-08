@@ -1,6 +1,5 @@
 ; RUN: opt -passes=debugify,loop-vectorize \
-; RUN: -force-tail-folding-style=data-with-evl \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -S < %s 2>&1 | FileCheck --check-prefix=DEBUGLOC %s
 
 ; Testing the debug locations of the generated vector intrinsic is same as
@@ -9,7 +8,7 @@
 define void @vp_select(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; DEBUGLOC-LABEL: define void @vp_select(
 ; DEBUGLOC: vector.body:
-; DEBUGLOC:   = call <vscale x 4 x i32> @llvm.vp.select.nxv4i32(<vscale x 4 x i1> %{{.+}}, <vscale x 4 x i32> %{{.+}}, <vscale x 4 x i32> %{{.+}}, i32 %{{.+}}), !dbg ![[SELLOC:[0-9]+]]
+; DEBUGLOC:   = select <vscale x 4 x i1> %{{.+}}, <vscale x 4 x i32> %{{.+}}, <vscale x 4 x i32> %{{.+}}, !dbg ![[SELLOC:[0-9]+]]
 ; DEBUGLOC: loop:
 ; DEBUGLOC:   = select i1 %{{.+}}, i32 %{{.+}}, i32 %{{.+}}, !dbg ![[SELLOC]]
 ;

@@ -4,13 +4,13 @@
 
 # LLVM libc unittest library.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
+load("//libc/test:libc_test_rules.bzl", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
-libc_support_library(
+libc_test_library(
     name = "test_logger",
     srcs = ["TestLogger.cpp"],
     hdrs = ["TestLogger.h"],
@@ -26,18 +26,21 @@ libc_support_library(
         "//libc:func_free",
         "//libc:func_malloc",
         "//libc:func_realloc",
+        "//libc:hdr_stdint_proxy",
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "LibcUnitTest",
     srcs = [
         "BazelFilePath.cpp",
         "ExecuteFunctionUnix.cpp",
+        "LibcDeathTestExecutors.cpp",
         "LibcTest.cpp",
         "LibcTestMain.cpp",
     ],
     hdrs = [
+        "ErrnoCheckingTest.h",
         "ErrnoSetterMatcher.h",
         "ExecuteFunction.h",
         "LibcTest.h",
@@ -49,6 +52,7 @@ libc_support_library(
         "//libc:__support_c_string",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
+        "//libc:__support_cpp_limits",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
@@ -57,8 +61,10 @@ libc_support_library(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_rounding_mode",
+        "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
         "//libc:__support_macros_properties_architectures",
+        "//libc:__support_macros_properties_compiler",
         "//libc:__support_macros_properties_types",
         "//libc:__support_stringutil",
         "//libc:__support_uint128",
@@ -67,12 +73,16 @@ libc_support_library(
         "//libc:func_free",
         "//libc:func_malloc",
         "//libc:func_realloc",
+        "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_macros_stdfix_macros",
         "//llvm:Support",
     ],
+    # Force linking in this library's `main()` to surface
+    # a duplicate symbol error if a test defines its own main.
+    alwayslink = True,
 )
 
-libc_support_library(
+libc_test_library(
     name = "fp_test_helpers",
     srcs = [
         "FEnvSafeTest.cpp",
@@ -99,15 +109,18 @@ libc_support_library(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_rounding_mode",
+        "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
+        "//libc:__support_macros_optimization",
         "//libc:__support_macros_properties_architectures",
         "//libc:hdr_fenv_macros",
         "//libc:hdr_math_macros",
+        "//libc:hdr_stdint_proxy",
         "//libc:types_fenv_t",
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "memory_matcher",
     srcs = [
         "MemoryMatcher.cpp",
@@ -126,7 +139,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "printf_matcher",
     srcs = [
         "PrintfMatcher.cpp",
@@ -139,11 +152,12 @@ libc_support_library(
         ":string_utils",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_macros_config",
+        "//libc:hdr_stdint_proxy",
         "//libc:printf_core_structs",
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "string_utils",
     hdrs = [
         "StringUtils.h",

@@ -39,6 +39,8 @@ public:
   static llvm::VersionTuple GetOSVersion();
   static std::optional<std::string> GetOSBuildString();
 
+  static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
+
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);

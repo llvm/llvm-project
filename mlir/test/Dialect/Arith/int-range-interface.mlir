@@ -1,4 +1,4 @@
-// RUN: mlir-opt -int-range-optimizations -canonicalize %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -int-range-optimizations -canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: func @add_min_max
 // CHECK: %[[c3:.*]] = arith.constant 3 : index
@@ -118,8 +118,10 @@ func.func @for_loop_with_constant_result() -> i1 {
 
 // Test to catch a bug present in some versions of the data flow analysis
 // CHECK-LABEL: func @while_false
-// CHECK: %[[false:.*]] = arith.constant false
-// CHECK: scf.condition(%[[false]])
+// CHECK: %[[divui:.*]] = arith.divui
+// CHECK-NOT: scf.while
+// CHECK-NOT: scf.condition
+// CHECK: return %[[divui]]
 func.func @while_false(%arg0 : index) -> index {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -222,6 +224,15 @@ func.func @ceil_divui(%arg0 : index) -> i1 {
     %6 = arith.cmpi eq, %5, %c1 : index
     %7 = arith.andi %3, %6 : i1
     func.return %7 : i1
+}
+
+// CHECK-LABEL: func @ceil_divui_by_zero_issue_131273
+// CHECK-NEXT: return
+func.func @ceil_divui_by_zero_issue_131273() {
+    %0 = test.with_bounds {smax = 0 : i32, smin = -1 : i32, umax = 0 : i32, umin = -1 : i32} : i32
+    %c7_i32 = arith.constant 7 : i32
+    %1 = arith.ceildivui %c7_i32, %0 : i32
+    return
 }
 
 // CHECK-LABEL: func @ceil_divsi
@@ -654,6 +665,24 @@ func.func @select_union(%arg0 : index, %arg1 : i1) -> i1 {
     func.return %5 : i1
 }
 
+// CHECK-LABEL: func @select_undefined_union
+// CHECK-COUNT-2: arith.select
+// CHECK: %[[ret:.*]] = arith.cmpi eq
+// CHECK: return %[[ret]]
+
+func.func @select_undefined_union(%arg0: i1) -> i1 {
+  %c32 = arith.constant 32 : index
+  %c64 = arith.constant 64 : index
+  %0 = test.without_bounds : index
+  %1 = arith.select %arg0, %0, %c64 : index
+  %2 = arith.cmpi eq, %1, %c64 : index
+  %3 = test.without_bounds : index
+  %4 = arith.select %2, %c32, %3 : index
+  %5 = arith.cmpi eq, %4, %c32 : index
+
+  return %5 : i1
+}
+
 // CHECK-LABEL: func @if_union
 // CHECK: %[[true:.*]] = arith.constant true
 // CHECK: return %[[true]]
@@ -1011,5 +1040,23 @@ func.func @zero_trip_loop2() {
   scf.for %arg0 = %idx1 to %idx1 step %idxm1 {
     %138 = index.floordivs %arg0, %arg0
   }
+  return
+}
+
+// CHECK-LABEL: @noninteger_operation_result
+func.func @noninteger_operation_result(%lb: index, %ub: index, %step: index, %cond: i1) {
+  %c1_i32 = arith.constant 1 : i32
+
+  %0 = "some_fp_op"() : () -> f32
+  // CHECK: [[OUTS:%.*]]:2 = scf.for
+  %outs:2 = scf.for %i = %lb to %ub step %step iter_args(%a = %c1_i32, %b = %0) -> (i32, f32) {
+    %1:2 = "some_op"() : () -> (i32, f32)
+    scf.yield %1#0, %1#1 : i32, f32
+  }
+
+  // CHECK: [[RESULT:%.*]] = arith.select %{{.*}}, %c1_i32, [[OUTS]]#0
+  %result = arith.select %cond, %c1_i32, %outs#0 : i32
+  // CHECK: "use"([[RESULT]], [[OUTS]]#1)
+  "use"(%result, %outs#1) : (i32, f32) -> ()
   return
 }

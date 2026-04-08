@@ -6,7 +6,7 @@
 //
 //==------------------------------------------------------------------------==//
 #include "SPIRVOpenMP.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -27,7 +27,8 @@ void SPIRVOpenMPToolChain::addClangTargetOptions(
   if (DeviceOffloadingKind != Action::OFK_OpenMP)
     return;
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return;
   addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, "", getTriple(), HostTC);
 }

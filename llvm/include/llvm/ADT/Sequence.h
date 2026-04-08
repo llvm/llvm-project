@@ -86,6 +86,7 @@
 #include <type_traits> // std::is_integral, std::is_enum, std::underlying_type,
                        // std::enable_if
 
+#include "llvm/ADT/STLForwardCompat.h" // llvm::to_underlying
 #include "llvm/Support/MathExtras.h" // AddOverflow / SubOverflow
 
 namespace llvm {
@@ -139,8 +140,7 @@ struct CheckedInt {
   template <typename Enum,
             std::enable_if_t<std::is_enum<Enum>::value, bool> = 0>
   static CheckedInt from(Enum FromValue) {
-    using type = std::underlying_type_t<Enum>;
-    return from<type>(static_cast<type>(FromValue));
+    return from(llvm::to_underlying(FromValue));
   }
 
   // Equality

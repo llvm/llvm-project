@@ -1,0 +1,34 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVAESDF_VS_M1_M1 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=ZVK
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVGHSH_VV_M1 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=ZVK
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVSM4K_VI_M1 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=ZVK
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVSM3C_VI_M2 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=ZVK
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVSHA2MS_VV_M1_E32 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --allow-empty --check-prefix=ZVKNH
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVSHA2MS_VV_M2_E64 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --allow-empty --check-prefix=ZVKNH
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVSM3C_VI_M1 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --allow-empty --check-prefix=EMPTY
+# UNSUPPORTED: expensive_checks
+
+# Most vector crypto only supports SEW=32, except Zvknhb which also supports SEW=64
+# ZVK-NOT: SEW: e{{(8|16)}}
+# ZVK: SEW: e32
+# ZVK-NOT: SEW: e64
+
+# ZVKNH(A|B) can either have SEW=32 (EGW=128) or SEW=64 (EGW=256)
+
+# ZVKNH-NOT: SEW: e{{(8|16)}}
+# ZVKNH: SEW: e{{(32|64)}}
+
+# EMPTY-NOT: SEW: e{{(8|16|32|64)}}

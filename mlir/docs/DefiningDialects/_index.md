@@ -43,7 +43,7 @@ extends to all of the MLIR constructs, including [Interfaces](../Interfaces.md) 
 
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
-// our dialect. 
+// our dialect.
 include "mlir/IR/DialectBase.td"
 
 // Here is a simple definition of a dialect.
@@ -649,7 +649,7 @@ Type MyDialect::parseType(DialectAsmParser &parser) const {
             return dynType;
          return Type();
     }
-    
+
     ...
 }
 ```
@@ -669,7 +669,7 @@ It is also possible to cast a `Type` known to be defined at runtime to a
 `DynamicType`.
 
 ```c++
-auto dynType = type.cast<DynamicType>();
+auto dynType = cast<DynamicType>(type);
 auto typeDef = dynType.getTypeDef();
 auto args = dynType.getParams();
 ```
@@ -679,7 +679,7 @@ auto args = dynType.getParams();
 Similar to types defined at runtime, attributes defined at runtime can only have
 as argument a list of `Attribute`.
 
-Similarily to types, an attribute is defined at runtime using the class
+Similarly to types, an attribute is defined at runtime using the class
 `DynamicAttrDefinition`, which is created using the `DynamicAttrDefinition::get`
 functions. An attribute definition requires a name, the dialect that will
 register the attribute, and a parameter verifier. It can also define optionally
@@ -767,7 +767,7 @@ It is also possible to cast an `Attribute` known to be defined at runtime to a
 `DynamicAttr`.
 
 ```c++
-auto dynAttr = attr.cast<DynamicAttr>();
+auto dynAttr = cast<DynamicAttr>(attr);
 auto attrDef = dynAttr.getAttrDef();
 auto args = dynAttr.getParams();
 ```

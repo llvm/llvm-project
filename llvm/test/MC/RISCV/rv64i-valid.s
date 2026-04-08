@@ -15,8 +15,8 @@ lwu x2, +4(x3)
 # CHECK-ASM-AND-OBJ: lwu tp, -2048(t0)
 # CHECK-ASM: encoding: [0x03,0xe2,0x02,0x80]
 lwu x4, -2048(x5)
-# CHECK-ASM-AND-OBJ: lwu t1, -2048(t2)
-# CHECK-ASM: encoding: [0x03,0xe3,0x03,0x80]
+# CHECK-ASM: lwu t1, %lo(2048)(t2) # encoding: [0x03,0xe3,0bAAAA0011,A]
+# CHECK-OBJ: lwu t1, -2048(t2)
 lwu x6, %lo(2048)(x7)
 # CHECK-ASM-AND-OBJ: lwu s0, 2047(s1)
 # CHECK-ASM: encoding: [0x03,0xe4,0xf4,0x7f]
@@ -25,8 +25,8 @@ lwu x8, 2047(x9)
 # CHECK-ASM-AND-OBJ: ld a0, -2048(a1)
 # CHECK-ASM: encoding: [0x03,0xb5,0x05,0x80]
 ld x10, -2048(x11)
-# CHECK-ASM-AND-OBJ: ld a2, -2048(a3)
-# CHECK-ASM: encoding: [0x03,0xb6,0x06,0x80]
+# CHECK-ASM: ld a2, %lo(2048)(a3) # encoding: [0x03,0xb6,0bAAAA0110,A]
+# CHECK-OBJ: ld a2, -2048(a3)
 ld x12, %lo(2048)(x13)
 # CHECK-ASM-AND-OBJ: ld a4, 2047(a5)
 # CHECK-ASM: encoding: [0x03,0xb7,0xf7,0x7f]
@@ -35,8 +35,8 @@ ld x14, 2047(x15)
 # CHECK-ASM-AND-OBJ: sd a6, -2048(a7)
 # CHECK-ASM: encoding: [0x23,0xb0,0x08,0x81]
 sd x16, -2048(x17)
-# CHECK-ASM-AND-OBJ: sd s2, -2048(s3)
-# CHECK-ASM: encoding: [0x23,0xb0,0x29,0x81]
+# CHECK-ASM: sd s2, %lo(2048)(s3) # encoding: [0x23'A',0xb0'A',0x29'A',0x01'A']
+# CHECK-OBJ: sd s2, -2048(s3)
 sd x18, %lo(2048)(x19)
 # CHECK-ASM-AND-OBJ: sd s4, 2047(s5)
 # CHECK-ASM: encoding: [0xa3,0xbf,0x4a,0x7f]

@@ -215,14 +215,33 @@ gpu.module @barriers {
 
   // CHECK-LABEL: gpu_barrier
   func.func @gpu_barrier() {
-    // CHECK:         [[FLAGS:%.*]] = llvm.mlir.constant(1 : i32) : i32
-    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[FLAGS]]) {
+    // CHECK:         [[GLOBAL_AND_LOCAL_FLAG:%.*]] = llvm.mlir.constant(3 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[GLOBAL_AND_LOCAL_FLAG]]) {
     // CHECK-SAME-DAG:  no_unwind
     // CHECK-SAME-DAG:  convergent
     // CHECK-SAME-DAG:  will_return
     // CHECK-NOT:       memory_effects = #llvm.memory_effects
     // CHECK-SAME:    } : (i32) -> ()
     gpu.barrier
+    // CHECK:         [[GLOBAL_AND_LOCAL_FLAG2:%.*]] = llvm.mlir.constant(3 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[GLOBAL_AND_LOCAL_FLAG2]])
+    gpu.barrier memfence [#gpu.address_space<global>, #gpu.address_space<workgroup>]
+    // CHECK:         [[LOCAL_FLAG:%.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[LOCAL_FLAG]])
+    gpu.barrier memfence [#gpu.address_space<workgroup>]
+    // CHECK:         [[GLOBAL_FLAG:%.*]] = llvm.mlir.constant(2 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[GLOBAL_FLAG]])
+    gpu.barrier memfence [#gpu.address_space<global>]
+    // CHECK:         [[NONE_FLAG:%.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG]])
+    gpu.barrier memfence []
+    // CHECK:         [[NONE_FLAG2:%.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG2]])
+    gpu.barrier memfence [#gpu.address_space<private>]
+    // Constant memory is read-only, no fencing needed (same as private)
+    // CHECK:         [[NONE_FLAG3:%.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG3]])
+    gpu.barrier memfence [#gpu.address_space<constant>]
     return
   }
 }
@@ -329,6 +348,25 @@ gpu.module @shuffles {
 
 // -----
 
+// Check `gpu.shuffle` conversion with no explicit subgroup size.
+
+// CHECK: llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32 attributes {convergent, no_unwind, will_return}
+// CHECK-LABEL: llvm.func @gpu_shuffles(
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
+// CHECK: %[[C16:.*]] = arith.constant 16 : i32
+// CHECK: %[[SHUF:.*]] = llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[ARG0]], %[[ARG1]]) {convergent, no_unwind, will_return} : (i32, i32) -> i32
+// CHECK: %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
+// CHECK: llvm.return
+gpu.module @shuffles_without_intel_reqd_sub_group_size_attribute {
+  llvm.func @gpu_shuffles(%val: i32, %id: i32) {
+    %width = arith.constant 16 : i32
+    %shuffleResult, %valid = gpu.shuffle idx %val, %id, %width : i32
+    llvm.return
+  }
+}
+
+// -----
+
 // Cannot convert due to shuffle width and target subgroup size mismatch
 
 gpu.module @shuffles_mismatch {
@@ -415,8 +453,8 @@ gpu.module @kernels {
 
 // MemRef descriptor built from allocated pointer
 
-// CHECK-64:        %[[VAL_4:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-32:        %[[VAL_4:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK-64:        %[[VAL_4:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-32:        %[[VAL_4:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
 
 // CHECK:           %[[VAL_5:.*]] = llvm.insertvalue %[[VAL_3]], %[[VAL_4]][0]
 // CHECK:           llvm.insertvalue %[[VAL_3]], %[[VAL_5]][1]
@@ -426,8 +464,8 @@ gpu.module @kernels {
 // CHECK:           %[[VAL_14:.*]] = llvm.mlir.constant(16 : i64) : i64
 // CHECK:           %[[VAL_15:.*]] = llvm.alloca %[[VAL_14]] x i16 : (i64) -> !llvm.ptr
 
-// CHECK-64:        %[[VAL_16:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-32:        %[[VAL_16:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK-64:        %[[VAL_16:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-32:        %[[VAL_16:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
 
 // CHECK:           %[[VAL_17:.*]] = llvm.insertvalue %[[VAL_15]], %[[VAL_16]][0]
 // CHECK:           llvm.insertvalue %[[VAL_15]], %[[VAL_17]][1]
@@ -445,16 +483,16 @@ gpu.module @kernels {
 
 // MemRef descriptor built from new argument
 
-// CHECK-64:        %[[VAL_31:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-32:        %[[VAL_31:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK-64:        %[[VAL_31:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-32:        %[[VAL_31:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i32, array<1 x i32>, array<1 x i32>)>
 
 // CHECK:           %[[VAL_32:.*]] = llvm.insertvalue %[[VAL_29]], %[[VAL_31]][0]
 // CHECK:           llvm.insertvalue %[[VAL_29]], %[[VAL_32]][1]
 
 // Same as above
 
-// CHECK-64:        %[[VAL_41:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-32:        %[[VAL_41:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK-64:        %[[VAL_41:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-32:        %[[VAL_41:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i32, array<1 x i32>, array<1 x i32>)>
 
 // CHECK:           %[[VAL_42:.*]] = llvm.insertvalue %[[VAL_30]], %[[VAL_41]][0]
 // CHECK:           llvm.insertvalue %[[VAL_30]], %[[VAL_42]][1]
@@ -526,7 +564,7 @@ gpu.module @kernels {
     gpu.return
   }
 // CHECK-LABEL:   func.func @no_address_spaces_callee(
-// CHECK-SAME:                                             [[ARG0:%.*]]: memref<2x2xf32, 1> 
+// CHECK-SAME:                                             [[ARG0:%.*]]: memref<2x2xf32, 1>
 // CHECK-SAME:                                             [[ARG1:%.*]]: memref<4xf32, 1>
 // CHECK:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         [[I0:%.*]] = llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {

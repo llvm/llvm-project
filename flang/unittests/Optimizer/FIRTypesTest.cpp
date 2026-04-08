@@ -316,3 +316,39 @@ TEST_F(FIRTypesTest, getTypeAsString) {
   EXPECT_EQ("boxchar_c8xU",
       fir::getTypeAsString(fir::BoxCharType::get(&context, 1), *kindMap));
 }
+
+TEST_F(FIRTypesTest, isVolatileType) {
+  mlir::Type i32 = mlir::IntegerType::get(&context, 32);
+
+  mlir::Type i32NonVolatileRef = fir::ReferenceType::get(i32);
+  mlir::Type i32NonVolatileBox = fir::BoxType::get(i32);
+  mlir::Type i32NonVolatileClass = fir::ClassType::get(i32);
+
+  // Ensure the default value is false
+  EXPECT_EQ(i32NonVolatileRef, fir::ReferenceType::get(i32, false));
+  EXPECT_EQ(i32NonVolatileBox, fir::BoxType::get(i32, false));
+  EXPECT_EQ(i32NonVolatileClass, fir::ClassType::get(i32, false));
+
+  EXPECT_FALSE(fir::isa_volatile_type(i32));
+  EXPECT_FALSE(fir::isa_volatile_type(i32NonVolatileRef));
+  EXPECT_FALSE(fir::isa_volatile_type(i32NonVolatileBox));
+  EXPECT_FALSE(fir::isa_volatile_type(i32NonVolatileClass));
+
+  // Should return the same type if it's not capable of representing volatility.
+  EXPECT_EQ(i32, fir::updateTypeWithVolatility(i32, true));
+
+  mlir::Type i32VolatileRef =
+      fir::updateTypeWithVolatility(i32NonVolatileRef, true);
+  mlir::Type i32VolatileBox =
+      fir::updateTypeWithVolatility(i32NonVolatileBox, true);
+  mlir::Type i32VolatileClass =
+      fir::updateTypeWithVolatility(i32NonVolatileClass, true);
+
+  EXPECT_TRUE(fir::isa_volatile_type(i32VolatileRef));
+  EXPECT_TRUE(fir::isa_volatile_type(i32VolatileBox));
+  EXPECT_TRUE(fir::isa_volatile_type(i32VolatileClass));
+
+  EXPECT_EQ(i32VolatileRef, fir::ReferenceType::get(i32, true));
+  EXPECT_EQ(i32VolatileBox, fir::BoxType::get(i32, true));
+  EXPECT_EQ(i32VolatileClass, fir::ClassType::get(i32, true));
+}

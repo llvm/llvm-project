@@ -110,10 +110,9 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     uint64_t Size = getContext().getTypeSize(Ty);
     if (IsInt && Size > GRLen)
       return false;
-    // Can't be eligible if larger than the FP registers. Half precision isn't
-    // currently supported on LoongArch and the ABI hasn't been confirmed, so
-    // default to the integer ABI in that case.
-    if (IsFloat && (Size > FRLen || Size < 32))
+    // Can't be eligible if larger than the FP registers. Handling of half
+    // precision values has been specified in the ABI, so don't block those.
+    if (IsFloat && Size > FRLen)
       return false;
     // Can't be eligible if an integer type was already found (int+int pairs
     // are not eligible).
@@ -150,7 +149,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.
-    if (const auto *RTy = EltTy->getAs<RecordType>()) {
+    if (const auto *RTy = EltTy->getAsCanonical<RecordType>()) {
       if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getDecl()) &&
           isEmptyRecord(getContext(), EltTy, true, true))
         return false;
@@ -165,12 +164,12 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     return true;
   }
 
-  if (const auto *RTy = Ty->getAs<RecordType>()) {
+  if (const auto *RTy = Ty->getAsCanonical<RecordType>()) {
     // Structures with either a non-trivial destructor or a non-trivial
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    const RecordDecl *RD = RTy->getDecl();
+    const RecordDecl *RD = RTy->getDecl()->getDefinitionOrSelf();
     if (isEmptyRecord(getContext(), Ty, true, true) &&
         (!RD->isUnion() || !isa<CXXRecordDecl>(RD)))
       return true;
@@ -181,8 +180,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // If this is a C++ record, check the bases first.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       for (const CXXBaseSpecifier &B : CXXRD->bases()) {
-        const auto *BDecl =
-            cast<CXXRecordDecl>(B.getType()->castAs<RecordType>()->getDecl());
+        const auto *BDecl = B.getType()->castAsCXXRecordDecl();
         if (!detectFARsEligibleStructHelper(
                 B.getType(), CurOff + Layout.getBaseClassOffset(BDecl),
                 Field1Ty, Field1Off, Field2Ty, Field2Off))
@@ -305,8 +303,9 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     if (GARsLeft)
       GARsLeft -= 1;
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                           CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   uint64_t Size = getContext().getTypeSize(Ty);
@@ -368,8 +367,8 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
 
   if (!isAggregateTypeForABI(Ty) && !Ty->isVectorType()) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl())
+      Ty = ED->getIntegerType();
 
     // All integral types are promoted to GRLen width.
     if (Size < GRLen && Ty->isIntegralOrEnumerationType())
@@ -381,7 +380,9 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
            EIT->getNumBits() > 64))
-        return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+        return getNaturalAlignIndirect(
+            Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/false);
     }
 
     return ABIArgInfo::getDirect();
@@ -404,7 +405,9 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     return ABIArgInfo::getDirect(
         llvm::ArrayType::get(llvm::IntegerType::get(getVMContext(), GRLen), 2));
   }
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(
+      Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      /*ByVal=*/false);
 }
 
 ABIArgInfo LoongArchABIInfo::classifyReturnType(QualType RetTy) const {

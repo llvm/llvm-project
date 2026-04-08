@@ -225,7 +225,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
   for (const auto Node : depth_first(DT)) {
     BasicBlock *BB = Node->getBlock();
     for (Instruction &OrigI : *BB) {
-      const SCEV *OrigSCEV = nullptr;
+      SCEVUse OrigSCEV = nullptr;
       if (Instruction *NewI = tryReassociate(&OrigI, OrigSCEV)) {
         Changed = true;
         OrigI.replaceAllUsesWith(NewI);
@@ -234,7 +234,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         DeadInsts.push_back(WeakTrackingVH(&OrigI));
         // Add the rewritten instruction to SeenExprs; the original
         // instruction is deleted.
-        const SCEV *NewSCEV = SE->getSCEV(NewI);
+        SCEVUse NewSCEV = SE->getSCEV(NewI);
         SeenExprs[NewSCEV].push_back(WeakTrackingVH(NewI));
 
         // Ideally, NewSCEV should equal OldSCEV because tryReassociate(I)
@@ -273,7 +273,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
 template <typename PredT>
 Instruction *
 NaryReassociatePass::matchAndReassociateMinOrMax(Instruction *I,
-                                                 const SCEV *&OrigSCEV) {
+                                                 SCEVUse &OrigSCEV) {
   Value *LHS = nullptr;
   Value *RHS = nullptr;
 
@@ -292,8 +292,8 @@ NaryReassociatePass::matchAndReassociateMinOrMax(Instruction *I,
   return nullptr;
 }
 
-Instruction *NaryReassociatePass::tryReassociate(Instruction * I,
-                                                 const SCEV *&OrigSCEV) {
+Instruction *NaryReassociatePass::tryReassociate(Instruction *I,
+                                                 SCEVUse &OrigSCEV) {
 
   if (!SE->isSCEVable(I->getType()))
     return nullptr;
@@ -397,24 +397,24 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
                                               Value *RHS, Type *IndexedType) {
   // Look for GEP's closest dominator that has the same SCEV as GEP except that
   // the I-th index is replaced with LHS.
-  SmallVector<const SCEV *, 4> IndexExprs;
+  SmallVector<SCEVUse, 4> IndexExprs;
   for (Use &Index : GEP->indices())
     IndexExprs.push_back(SE->getSCEV(Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
+  Type *GEPArgType = SE->getEffectiveSCEVType(GEP->getOperand(I)->getType());
+  Type *LHSType = SE->getEffectiveSCEVType(LHS->getType());
+  size_t LHSSize = DL->getTypeSizeInBits(LHSType).getFixedValue();
+  size_t GEPArgSize = DL->getTypeSizeInBits(GEPArgType).getFixedValue();
   if (isKnownNonNegative(LHS, SimplifyQuery(*DL, DT, AC, GEP)) &&
-      DL->getTypeSizeInBits(LHS->getType()).getFixedValue() <
-          DL->getTypeSizeInBits(GEP->getOperand(I)->getType())
-              .getFixedValue()) {
+      LHSSize < GEPArgSize) {
     // Zero-extend LHS if it is non-negative. InstCombine canonicalizes sext to
     // zext if the source operand is proved non-negative. We should do that
     // consistently so that CandidateExpr more likely appears before. See
     // @reassociate_gep_assume for an example of this canonicalization.
-    IndexExprs[I] =
-        SE->getZeroExtendExpr(IndexExprs[I], GEP->getOperand(I)->getType());
+    IndexExprs[I] = SE->getZeroExtendExpr(IndexExprs[I], GEPArgType);
   }
-  const SCEV *CandidateExpr = SE->getGEPExpr(cast<GEPOperator>(GEP),
-                                             IndexExprs);
+  SCEVUse CandidateExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexExprs);
 
   Value *Candidate = findClosestMatchingDominator(CandidateExpr, GEP);
   if (Candidate == nullptr)
@@ -480,8 +480,8 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(Value *LHS, Value *RHS,
   if (LHS->hasOneUse() && matchTernaryOp(I, LHS, A, B)) {
     // I = (A op B) op RHS
     //   = (A op RHS) op B or (B op RHS) op A
-    const SCEV *AExpr = SE->getSCEV(A), *BExpr = SE->getSCEV(B);
-    const SCEV *RHSExpr = SE->getSCEV(RHS);
+    SCEVUse AExpr = SE->getSCEV(A), BExpr = SE->getSCEV(B);
+    SCEVUse RHSExpr = SE->getSCEV(RHS);
     if (BExpr != RHSExpr) {
       if (auto *NewI =
               tryReassociatedBinaryOp(getBinarySCEV(I, AExpr, RHSExpr), B, I))
@@ -496,7 +496,7 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(Value *LHS, Value *RHS,
   return nullptr;
 }
 
-Instruction *NaryReassociatePass::tryReassociatedBinaryOp(const SCEV *LHSExpr,
+Instruction *NaryReassociatePass::tryReassociatedBinaryOp(SCEVUse LHSExpr,
                                                           Value *RHS,
                                                           BinaryOperator *I) {
   // Look for the closest dominator LHS of I that computes LHSExpr, and replace
@@ -534,9 +534,8 @@ bool NaryReassociatePass::matchTernaryOp(BinaryOperator *I, Value *V,
   return false;
 }
 
-const SCEV *NaryReassociatePass::getBinarySCEV(BinaryOperator *I,
-                                               const SCEV *LHS,
-                                               const SCEV *RHS) {
+SCEVUse NaryReassociatePass::getBinarySCEV(BinaryOperator *I, SCEVUse LHS,
+                                           SCEVUse RHS) {
   switch (I->getOpcode()) {
   case Instruction::Add:
     return SE->getAddExpr(LHS, RHS);
@@ -549,7 +548,7 @@ const SCEV *NaryReassociatePass::getBinarySCEV(BinaryOperator *I,
 }
 
 Instruction *
-NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
+NaryReassociatePass::findClosestMatchingDominator(SCEVUse CandidateExpr,
                                                   Instruction *Dominatee) {
   auto Pos = SeenExprs.find(CandidateExpr);
   if (Pos == SeenExprs.end())
@@ -610,23 +609,22 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   Value *A = nullptr, *B = nullptr;
   MaxMinT m_MaxMin(m_Value(A), m_Value(B));
 
+  if (!match(LHS, m_MaxMin))
+    return nullptr;
+
   if (LHS->hasNUsesOrMore(3) ||
       // The optimization is profitable only if LHS can be removed in the end.
       // In other words LHS should be used (directly or indirectly) by I only.
-      llvm::any_of(LHS->users(),
-                    [&](auto *U) {
-                      return U != I &&
-                             !(U->hasOneUser() && *U->users().begin() == I);
-                    }) ||
-      !match(LHS, m_MaxMin))
+      llvm::any_of(LHS->users(), [&](auto *U) {
+        return U != I && !(U->hasOneUser() && *U->users().begin() == I);
+      }))
     return nullptr;
 
-  auto tryCombination = [&](Value *A, const SCEV *AExpr, Value *B,
-                            const SCEV *BExpr, Value *C,
-                            const SCEV *CExpr) -> Value * {
-    SmallVector<const SCEV *, 2> Ops1{BExpr, AExpr};
+  auto tryCombination = [&](Value *A, SCEVUse AExpr, Value *B, SCEVUse BExpr,
+                            Value *C, SCEVUse CExpr) -> Value * {
+    SmallVector<SCEVUse, 2> Ops1{BExpr, AExpr};
     const SCEVTypes SCEVType = convertToSCEVype(m_MaxMin);
-    const SCEV *R1Expr = SE->getMinMaxExpr(SCEVType, Ops1);
+    SCEVUse R1Expr = SE->getMinMaxExpr(SCEVType, Ops1);
 
     Instruction *R1MinMax = findClosestMatchingDominator(R1Expr, I);
 
@@ -635,11 +633,10 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
 
     LLVM_DEBUG(dbgs() << "NARY: Found common sub-expr: " << *R1MinMax << "\n");
 
-    SmallVector<const SCEV *, 2> Ops2{SE->getUnknown(C),
-                                      SE->getUnknown(R1MinMax)};
-    const SCEV *R2Expr = SE->getMinMaxExpr(SCEVType, Ops2);
+    SmallVector<SCEVUse, 2> Ops2{SE->getUnknown(C), SE->getUnknown(R1MinMax)};
+    SCEVUse R2Expr = SE->getMinMaxExpr(SCEVType, Ops2);
 
-    SCEVExpander Expander(*SE, *DL, "nary-reassociate");
+    SCEVExpander Expander(*SE, "nary-reassociate");
     Value *NewMinMax = Expander.expandCodeFor(R2Expr, I->getType(), I);
     NewMinMax->setName(Twine(I->getName()).concat(".nary"));
 
@@ -648,9 +645,9 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
     return NewMinMax;
   };
 
-  const SCEV *AExpr = SE->getSCEV(A);
-  const SCEV *BExpr = SE->getSCEV(B);
-  const SCEV *RHSExpr = SE->getSCEV(RHS);
+  SCEVUse AExpr = SE->getSCEV(A);
+  SCEVUse BExpr = SE->getSCEV(B);
+  SCEVUse RHSExpr = SE->getSCEV(RHS);
 
   if (BExpr != RHSExpr) {
     // Try (A op RHS) op B

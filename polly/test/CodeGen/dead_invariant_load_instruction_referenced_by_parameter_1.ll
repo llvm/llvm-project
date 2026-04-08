@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen < %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' < %s
 ;
 ; Check we do not crash even though the dead %tmp8 is referenced by a parameter
 ; and we do not pre-load it (as it is dead).
@@ -35,7 +35,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @global4 = external global ptr, align 8
 
 ; Function Attrs: uwtable
-define i32 @foo(ptr %arg) #0 personality ptr @blam {
+define i32 @foo(ptr %arg) personality ptr @blam {
 bb:
   br label %bb3
 
@@ -83,40 +83,33 @@ bb19:                                             ; preds = %bb19, %bb14
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start(i64, ptr nocapture)
 
 ; Function Attrs: nounwind readnone
-declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64) #2
+declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
 
 ; Function Attrs: nobuiltin
-declare noalias ptr @eggs(i64) #3
+declare noalias ptr @eggs(i64)
 
 ; Function Attrs: nobuiltin
-declare noalias ptr @bar(i64) #3
+declare noalias ptr @bar(i64)
 
 ; Function Attrs: uwtable
-declare void @zot(ptr, i32, i32, i32, i32, i32, ptr, i32, i32, ptr) unnamed_addr #0 align 2
+declare void @zot(ptr, i32, i32, i32, i32, i32, ptr, i32, i32, ptr) unnamed_addr align 2
 
 declare i32 @blam(...)
 
 ; Function Attrs: nobuiltin nounwind
-declare void @zot5(ptr) #4
+declare void @zot5(ptr)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end(i64, ptr nocapture)
 
 ; Function Attrs: uwtable
-declare i32 @eggs6(ptr) #0
+declare i32 @eggs6(ptr)
 
 ; Function Attrs: nounwind uwtable
-declare void @eggs7(ptr, i32, i32, i32) unnamed_addr #5 align 2
-
-attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind }
-attributes #2 = { nounwind readnone }
-attributes #3 = { nobuiltin "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nobuiltin nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #5 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+declare void @eggs7(ptr, i32, i32, i32) unnamed_addr align 2
 
 !llvm.ident = !{!0}
 

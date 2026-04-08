@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse -x cuda %s 2>&1 | FileCheck %s
 include "cuf-sanity-common"
 !CHECK: SUBROUTINE atcuf
 !CHECK: END SUBROUTINE

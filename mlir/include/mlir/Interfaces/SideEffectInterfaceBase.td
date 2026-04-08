@@ -140,7 +140,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
               }] # baseEffect # [{>> & effects) {
       getEffects(effects);
       ::llvm::erase_if(effects, [&](auto &it) {
-        return it.getResource() != resource;
+        return it.getResource()->getResourceID() != resource->getResourceID();
       });
     }
   }];

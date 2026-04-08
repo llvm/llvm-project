@@ -67,8 +67,7 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
     if (!isHomogeneousAggregate(AT->getElementType(), Base, Members))
       return false;
     Members *= NElements;
-  } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+  } else if (const auto *RD = Ty->getAsRecordDecl()) {
     if (RD->hasFlexibleArrayMember())
       return false;
 
@@ -171,11 +170,11 @@ bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   return false;
 }
 
-ABIArgInfo ABIInfo::getNaturalAlignIndirect(QualType Ty, bool ByVal,
-                                            bool Realign,
+ABIArgInfo ABIInfo::getNaturalAlignIndirect(QualType Ty, unsigned AddrSpace,
+                                            bool ByVal, bool Realign,
                                             llvm::Type *Padding) const {
-  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty), ByVal,
-                                 Realign, Padding);
+  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty),
+                                 AddrSpace, ByVal, Realign, Padding);
 }
 
 ABIArgInfo ABIInfo::getNaturalAlignIndirectInReg(QualType Ty,
@@ -218,8 +217,8 @@ void ABIInfo::appendAttributeMangling(StringRef AttrStr,
     // only have "+" prefixes here.
     assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
-    return TI.getFMVPriority({LHS.substr(1)}) >
-           TI.getFMVPriority({RHS.substr(1)});
+    return TI.getFMVPriority({LHS.substr(1)})
+        .ugt(TI.getFMVPriority({RHS.substr(1)}));
   });
 
   bool IsFirst = true;
@@ -242,6 +241,19 @@ ABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *T,
   if (T->getNumElements() == 3 && !Opt.PreserveVec3Type)
     return llvm::FixedVectorType::get(T->getElementType(), 4);
   return T;
+}
+
+llvm::Value *ABIInfo::createCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
+                                        CodeGenFunction &CGF) const {
+  return nullptr;
+}
+
+void ABIInfo::createCoercedStore(llvm::Value *Val, Address DstAddr,
+                                 const ABIArgInfo &AI, bool DestIsVolatile,
+                                 CodeGenFunction &CGF) const {}
+
+ABIArgInfo ABIInfo::classifyArgForArm64ECVarArg(QualType Ty) const {
+  llvm_unreachable("Only implemented for x86");
 }
 
 // Pin the vtable to this file.

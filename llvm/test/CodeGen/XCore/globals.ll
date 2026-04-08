@@ -127,4 +127,4 @@ entry:
 
 @array = global [10 x i16] zeroinitializer, align 2
 ; CHECK: .globl  array.globound
-; CHECK: .set array.globound, 10
+; CHECK: array.globound = 10

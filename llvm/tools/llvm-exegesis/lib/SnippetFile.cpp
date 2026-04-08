@@ -14,7 +14,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegister.h"
@@ -202,8 +202,6 @@ private:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return false;
   }
-  void emitValueToAlignment(Align Alignment, int64_t Value, unsigned ValueSize,
-                            unsigned MaxBytesToEmit) override {}
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                     Align ByteAlignment, SMLoc Loc) override {}
 

@@ -77,6 +77,7 @@ public:
   uint32_t getInputSectionOffset() const { return inputSectionOffset; }
 
   size_t getNumRelocations() const { return relocations.size(); }
+  size_t getNumLiveRelocations() const;
   void writeRelocations(llvm::raw_ostream &os) const;
   bool generateRelocationCode(raw_ostream &os) const;
 
@@ -96,7 +97,11 @@ public:
 
   // After assignAddresses is called, this represents the offset from
   // the beginning of the output section this chunk was assigned to.
-  int32_t outSecOff = 0;
+  //
+  // WASM sections can be up to 4GB. We use a larger, signed integer here to
+  // be able to detect section size overflow instead of a silent wrap-around
+  // and corrupted output sections.
+  int64_t outSecOff = 0;
 
   uint8_t sectionKind : 3;
 

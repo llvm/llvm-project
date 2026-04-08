@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -177,6 +178,22 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
+    if (auto nestedAttr = dyn_cast<TestNestedAliasAttr>(attr)) {
+      std::optional<StringRef> aliasName =
+          StringSwitch<std::optional<StringRef>>(nestedAttr.getValue())
+              .Case("alias_test:trailing_digit_conflict_base",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base_conflict",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base1",
+                    StringRef("unique_base1"))
+              .Default(std::nullopt);
+      if (!aliasName)
+        return AliasResult::NoAlias;
+      os << *aliasName;
+      return AliasResult::FinalAlias;
+    }
+
     StringAttr strAttr = dyn_cast<StringAttr>(attr);
     if (!strAttr)
       return AliasResult::NoAlias;
@@ -187,12 +204,24 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
         StringSwitch<std::optional<StringRef>>(strAttr.getValue())
             .Case("alias_test:dot_in_name", StringRef("test.alias"))
             .Case("alias_test:trailing_digit", StringRef("test_alias0"))
+            .Case("alias_test:trailing_digit_conflict_a",
+                  StringRef("test_alias_conflict0_1_1_1"))
+            .Case("alias_test:trailing_digit_conflict_b",
+                  StringRef("test_alias_conflict0"))
+            .Case("alias_test:trailing_digit_conflict_c",
+                  StringRef("test_alias_conflict0"))
+            .Case("alias_test:trailing_digit_conflict_d",
+                  StringRef("test_alias_conflict0_"))
+            .Case("alias_test:trailing_digit_conflict_e",
+                  StringRef("test_alias_conflict0_1"))
+            .Case("alias_test:trailing_digit_conflict_f",
+                  StringRef("test_alias_conflict0_1"))
+            .Case("alias_test:trailing_digit_conflict_g",
+                  StringRef("test_alias_conflict0_1_"))
+            .Case("alias_test:trailing_digit_conflict_h",
+                  StringRef("test_alias_conflict0_1_1"))
             .Case("alias_test:prefixed_digit", StringRef("0_test_alias"))
             .Case("alias_test:prefixed_symbol", StringRef("%test"))
-            .Case("alias_test:sanitize_conflict_a",
-                  StringRef("test_alias_conflict0"))
-            .Case("alias_test:sanitize_conflict_b",
-                  StringRef("test_alias_conflict0_"))
             .Case("alias_test:tensor_encoding", StringRef("test_encoding"))
             .Default(std::nullopt);
     if (!aliasName)
@@ -315,6 +344,19 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   //===--------------------------------------------------------------------===//
 
   /// Handle the given inlined terminator by replacing it with a new operation
+  /// as necessary (multi-block inlining case: replace test.return with a
+  /// branch to the successor block that carries the inlined results).
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    auto returnOp = dyn_cast<TestReturnOp>(op);
+    if (!returnOp)
+      return;
+    OpBuilder builder(op);
+    cf::BranchOp::create(builder, op->getLoc(), newDest,
+                         returnOp.getOperands());
+    op->erase();
+  }
+
+  /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
   void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only handle "test.return" here.
@@ -322,8 +364,11 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     if (!returnOp)
       return;
 
-    // Replace the values directly with the return operands.
-    assert(returnOp.getNumOperands() == valuesToRepl.size());
+    // Replace the values directly with the return operands. Skip if the
+    // number of operands doesn't match (e.g., when inlining into a call
+    // with a different result arity due to invalid IR mixing dialects).
+    if (returnOp.getNumOperands() != valuesToRepl.size())
+      return;
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
@@ -342,7 +387,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
         !(input.getType().isSignlessInteger(16) ||
           input.getType().isSignlessInteger(32)))
       return nullptr;
-    return builder.create<TestCastOp>(conversionLoc, resultType, input);
+    return TestCastOp::create(builder, conversionLoc, resultType, input);
   }
 
   Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
@@ -350,16 +395,16 @@ struct TestInlinerInterface : public DialectInlinerInterface {
                        DictionaryAttr argumentAttrs) const final {
     if (!argumentAttrs.contains("test.handle_argument"))
       return argument;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), argument.getType(),
-                                             argument);
+    return TestTypeChangerOp::create(builder, call->getLoc(),
+                                     argument.getType(), argument);
   }
 
   Value handleResult(OpBuilder &builder, Operation *call, Operation *callable,
                      Value result, DictionaryAttr resultAttrs) const final {
     if (!resultAttrs.contains("test.handle_result"))
       return result;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), result.getType(),
-                                             result);
+    return TestTypeChangerOp::create(builder, call->getLoc(), result.getType(),
+                                     result);
   }
 
   void processInlinedCallBlocks(

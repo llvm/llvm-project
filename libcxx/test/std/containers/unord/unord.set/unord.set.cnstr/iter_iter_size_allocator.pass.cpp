@@ -33,45 +33,29 @@
 #include "min_allocator.h"
 
 template <class Allocator>
-void test(const Allocator& alloc)
-{
-    typedef std::unordered_set<int,
-                               test_hash<int>,
-                               test_equal_to<int>,
-                               Allocator> C;
-    int a[] =
-    {
-        1,
-        2,
-        3,
-        4,
-        1,
-        2
-    };
-    C c(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + sizeof(a)/sizeof(a[0])),
-        7,
-        alloc
-        );
-    LIBCPP_ASSERT(c.bucket_count() == 7);
-    assert(c.size() == 4);
-    assert(c.count(1) == 1);
-    assert(c.count(2) == 1);
-    assert(c.count(3) == 1);
-    assert(c.count(4) == 1);
-    assert(c.hash_function() == test_hash<int>());
-    assert(c.key_eq() == test_equal_to<int>());
-    assert(c.get_allocator() == alloc);
-    assert(!c.empty());
-    assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
-    assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
-    assert(c.max_load_factor() == 1);
+void test(const Allocator& alloc) {
+  typedef std::unordered_set<int, test_hash<int>, test_equal_to<int>, Allocator> C;
+  int a[] = {1, 2, 3, 4, 1, 2};
+  C c(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + sizeof(a) / sizeof(a[0])), 7, alloc);
+  LIBCPP_ASSERT(c.bucket_count() == 7);
+  assert(c.size() == 4);
+  assert(c.count(1) == 1);
+  assert(c.count(2) == 1);
+  assert(c.count(3) == 1);
+  assert(c.count(4) == 1);
+  assert(c.hash_function() == test_hash<int>());
+  assert(c.key_eq() == test_equal_to<int>());
+  assert(c.get_allocator() == alloc);
+  assert(!c.empty());
+  assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+  assert(std::fabs(c.load_factor() - (float)c.size() / c.bucket_count()) < FLT_EPSILON);
+  assert(c.max_load_factor() == 1);
 }
 
-int main(int, char**)
-{
-    test(test_allocator<int>(10));
-    test(min_allocator<int>());
-    test(explicit_allocator<int>());
+int main(int, char**) {
+  test(test_allocator<int>(10));
+  test(min_allocator<int>());
+  test(explicit_allocator<int>());
 
-    return 0;
+  return 0;
 }

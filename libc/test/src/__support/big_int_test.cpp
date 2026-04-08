@@ -197,8 +197,8 @@ TYPED_TEST(LlvmLibcUIntClassTest, CountBits, Types) {
     for (size_t i = 0; i < T::BITS; ++i) {
       const auto l_one = T::all_ones() << i; // 0b111...000
       const auto r_one = T::all_ones() >> i; // 0b000...111
-      const int zeros = i;
-      const int ones = T::BITS - zeros;
+      const int zeros = static_cast<int>(i);
+      const int ones = static_cast<int>(T::BITS - static_cast<size_t>(zeros));
       ASSERT_EQ(cpp::countr_one(r_one), ones);
       ASSERT_EQ(cpp::countl_one(l_one), ones);
       ASSERT_EQ(cpp::countr_zero(l_one), zeros);
@@ -871,13 +871,13 @@ TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
   ASSERT_EQ(static_cast<int>(c >> 64), 123);
   ASSERT_EQ(static_cast<uint64_t>(d), static_cast<uint64_t>(b));
   ASSERT_EQ(static_cast<uint64_t>(d >> 64), static_cast<uint64_t>(b >> 64));
-  ASSERT_EQ(c + d, LL_Int128(a + b));
+  ASSERT_EQ(c + d, LL_Int128(a + static_cast<__uint128_t>(b)));
 
   ASSERT_EQ(static_cast<int>(e), 1);
   ASSERT_EQ(static_cast<int>(e >> 64), 123);
   ASSERT_EQ(static_cast<uint64_t>(f), static_cast<uint64_t>(b));
   ASSERT_EQ(static_cast<uint64_t>(f >> 64), static_cast<uint64_t>(b >> 64));
-  ASSERT_EQ(LL_UInt192(e + f), LL_UInt192(a + b));
+  ASSERT_EQ(LL_UInt192(e + f), LL_UInt192(a + static_cast<__uint128_t>(b)));
 }
 
 TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {

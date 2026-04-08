@@ -4,17 +4,9 @@
 // CHECK: encoding: [0x62,0xf2,0x65,0x28,0x67,0xd4]
           vcvt2ps2phx ymm2, ymm3, ymm4
 
-// CHECK: vcvt2ps2phx ymm2, ymm3, ymm4, {rn-sae}
-// CHECK: encoding: [0x62,0xf2,0x61,0x18,0x67,0xd4]
-          vcvt2ps2phx ymm2, ymm3, ymm4, {rn-sae}
-
 // CHECK: vcvt2ps2phx ymm2 {k7}, ymm3, ymm4
 // CHECK: encoding: [0x62,0xf2,0x65,0x2f,0x67,0xd4]
           vcvt2ps2phx ymm2 {k7}, ymm3, ymm4
-
-// CHECK: vcvt2ps2phx ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
-// CHECK: encoding: [0x62,0xf2,0x61,0xff,0x67,0xd4]
-          vcvt2ps2phx ymm2 {k7} {z}, ymm3, ymm4, {rz-sae}
 
 // CHECK: vcvt2ps2phx zmm2, zmm3, zmm4
 // CHECK: encoding: [0x62,0xf2,0x65,0x48,0x67,0xd4]

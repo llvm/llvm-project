@@ -3,12 +3,13 @@ header_template: signal.h.def
 macros: []
 types:
   - type_name: pid_t
-  - type_name: stack_t
-  - type_name: siginfo_t
-  - type_name: struct_sigaction
-  - type_name: sigset_t
-  - type_name: union_sigval
   - type_name: sig_atomic_t
+  - type_name: sighandler_t
+  - type_name: siginfo_t
+  - type_name: sigset_t
+  - type_name: stack_t
+  - type_name: struct_sigaction
+  - type_name: union_sigval
 enums: []
 objects: []
 functions:
@@ -69,10 +70,15 @@ functions:
   - name: signal
     standards:
       - stdc
-    return_type: __sighandler_t
+    # May the Geneva Convention have mercy on my soul... Why this insanity?
+    # Well: signal returns a function pointer to a function with no return
+    # value and which accepts an int. The parameter list appears on the far
+    # right of the declaration. i.e.
+    # void (*signal(int, void (*)(int)))(int);
+    return_type: void (*
     arguments:
       - type: int
-      - type: __sighandler_t
+      - type: void (*)(int)))(int
   - name: sigprocmask
     standards:
       - POSIX

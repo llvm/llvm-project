@@ -21,13 +21,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -1836,6 +1836,8 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
     for (auto &MI : reverse(MBB)) {
       if (WebAssembly::isTry(MI.getOpcode()))
         EHPadStack.pop_back();
+      else if (MI.getOpcode() == WebAssembly::DELEGATE)
+        EHPadStack.push_back(MI.getOperand(0).getMBB());
       else if (WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
 
@@ -1850,13 +1852,12 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
 
       // If the EH pad on the stack top is where this instruction should unwind
       // next, we're good.
-      MachineBasicBlock *UnwindDest = getFakeCallerBlock(MF);
+      MachineBasicBlock *UnwindDest = nullptr;
       for (auto *Succ : MBB.successors()) {
         // Even though semantically a BB can have multiple successors in case an
-        // exception is not caught by a catchpad, in our backend implementation
-        // it is guaranteed that a BB can have at most one EH pad successor. For
-        // details, refer to comments in findWasmUnwindDestinations function in
-        // SelectionDAGBuilder.cpp.
+        // exception is not caught by a catchpad, the first unwind destination
+        // should appear first in the successor list, based on the calculation
+        // in findUnwindDestinations() in SelectionDAGBuilder.cpp.
         if (Succ->isEHPad()) {
           UnwindDest = Succ;
           break;
@@ -1924,8 +1925,10 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
         RecordCallerMismatchRange(EHPadStack.back());
 
       // If EHPadStack is empty, that means it correctly unwinds to the caller
-      // if it throws, so we're good. If MI does not throw, we're good too.
-      else if (EHPadStack.empty() || !MayThrow) {
+      // if it throws, so we're good. A delegate targeting FakeCallerBB also
+      // correctly unwinds to the caller. If MI does not throw, we're good too.
+      else if (EHPadStack.empty() || EHPadStack.back() == FakeCallerBB ||
+               !MayThrow) {
       }
 
       // We found an instruction that unwinds to the caller but currently has an
@@ -1941,6 +1944,8 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
       // Update EHPadStack.
       if (WebAssembly::isTry(MI.getOpcode()))
         EHPadStack.pop_back();
+      else if (MI.getOpcode() == WebAssembly::DELEGATE)
+        EHPadStack.push_back(MI.getOperand(0).getMBB());
       else if (WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
     }
@@ -2170,7 +2175,8 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
 
         // The EHPad's next unwind destination is the caller, but we incorrectly
         // unwind to another EH pad.
-        else if (!EHPadStack.empty() && !EHInfo->hasUnwindDest(EHPad)) {
+        else if (!EHPadStack.empty() && EHPadStack.back() != FakeCallerBB &&
+                 !EHInfo->hasUnwindDest(EHPad)) {
           EHPadToUnwindDest[EHPad] = getFakeCallerBlock(MF);
           LLVM_DEBUG(dbgs()
                      << "- Catch unwind mismatch:\nEHPad = " << EHPad->getName()
@@ -2306,7 +2312,6 @@ void WebAssemblyCFGStackify::recalculateScopeTops(MachineFunction &MF) {
   // Renumber BBs and recalculate ScopeTop info because new BBs might have been
   // created and inserted during fixing unwind mismatches.
   MF.RenumberBlocks();
-  MDT->updateBlockNumbers();
   ScopeTops.clear();
   ScopeTops.resize(MF.getNumBlockIDs());
   for (auto &MBB : reverse(MF)) {
@@ -2476,8 +2481,11 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
     // Add an 'unreachable' after 'end_try_table's.
     addUnreachableAfterTryTables(MF, TII);
     // Fix mismatches in unwind destinations induced by linearizing the code.
-    fixCallUnwindMismatches(MF);
+    // Run fixCatchUnwindMismatches() first so that fixCallUnwindMismatches()
+    // will see and correct any new call/rethrow unwind mismatches introduced by
+    // fixCatchUnwindMismatches().
     fixCatchUnwindMismatches(MF);
+    fixCallUnwindMismatches(MF);
     // addUnreachableAfterTryTables and fixUnwindMismatches create new BBs, so
     // we need to recalculate ScopeTops.
     recalculateScopeTops(MF);

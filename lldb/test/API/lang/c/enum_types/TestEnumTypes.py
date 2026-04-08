@@ -27,7 +27,7 @@ class EnumTypesTestCase(TestBase):
         self.expect("fr var c", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = C$"])
         self.expect("fr var ab", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = AB$"])
         self.expect(
-            "fr var ac", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = A \| C$"]
+            "fr var ac", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[r" = A \| C$"]
         )
         self.expect("fr var all", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = ALL$"])
         # Test that an enum that doesn't match the heuristic we use in
@@ -39,7 +39,7 @@ class EnumTypesTestCase(TestBase):
         self.expect(
             "expression (enum bitfield)nonsense",
             DATA_TYPES_DISPLAYED_CORRECTLY,
-            patterns=[" = B \| C \| 0x10$"],
+            patterns=[r" = B \| C \| 0x10$"],
         )
 
         # Break inside the main.

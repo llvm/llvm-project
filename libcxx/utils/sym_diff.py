@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -79,6 +79,11 @@ def main():
     if args.only_stdlib:
         old_syms_list, _ = util.filter_stdlib_symbols(old_syms_list)
         new_syms_list, _ = util.filter_stdlib_symbols(new_syms_list)
+
+    for symbol in new_syms_list:
+        if symbol["is_defined"] and 'B' in symbol["name"]:
+            print(f"Symbol {symbol['name']} contains an ABI tag!")
+            sys.exit(1)
 
     added, removed, changed = diff.diff(old_syms_list, new_syms_list)
     if args.removed_only:

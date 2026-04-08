@@ -217,6 +217,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesValidateSystemHeaders : 1;
 
+  /// Whether to force the validation of user input files when a module is
+  /// loaded (even despite the build session saying that is not necessary).
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesForceValidateUserHeaders : 1;
+
   // Whether the content of input files should be hashed and used to
   // validate consistency.
   LLVM_PREFERRED_TYPE(bool)
@@ -235,6 +240,7 @@ public:
 
   /// Whether to entirely skip writing diagnostic options.
   /// Primarily used to speed up deserialization during dependency scanning.
+  /// FIXME: Consider moving these into separate `SerializationOptions` class.
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesSkipDiagnosticOptions : 1;
 
@@ -277,6 +283,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned AllowModuleMapSubdirectorySearch : 1;
 
+  /// Whether modules from module maps should only be loaded when used, not just
+  /// when parsed.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned LazyLoadModuleMaps : 1;
+
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
         ImplicitModuleMaps(false), ModuleMapFileHomeIsCwd(false),
@@ -285,6 +296,7 @@ public:
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
+        ModulesForceValidateUserHeaders(true),
         ValidateASTInputFilesContent(false),
         ForceCheckCXX20ModulesInputFiles(false), UseDebugInfo(false),
         ModulesValidateDiagnosticOptions(true),
@@ -294,7 +306,7 @@ public:
         ModulesPruneNonAffectingModuleMaps(true), ModulesHashContent(false),
         ModulesSerializeOnlyPreprocessor(false),
         ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false),
-        AllowModuleMapSubdirectorySearch(true) {}
+        AllowModuleMapSubdirectorySearch(true), LazyLoadModuleMaps(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,

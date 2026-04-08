@@ -29,8 +29,12 @@ define void @use_variables() sanitize_address {
 ; CHECK-NEXT:    [[TMP10:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(1) [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP3]], i32 [[TMP11]]
-; CHECK-NEXT:    [[X:%.*]] = addrspacecast ptr addrspace(3) [[TMP8]] to ptr
-; CHECK-NEXT:    [[TMP13:%.*]] = addrspacecast ptr addrspace(3) [[TMP8]] to ptr
+; CHECK-NEXT:    [[TMP18:%.*]] = ptrtoint ptr addrspace(3) [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = addrspacecast ptr addrspace(1) [[TMP19]] to ptr
+; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr addrspace(3) [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP16]]
+; CHECK-NEXT:    [[TMP13:%.*]] = addrspacecast ptr addrspace(1) [[TMP17]] to ptr
 ; CHECK-NEXT:    store i8 3, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr addrspace(3) [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP14]]
@@ -59,7 +63,7 @@ define amdgpu_kernel void @k0() sanitize_address #1 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 4, i32 2), align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
@@ -100,7 +104,7 @@ define amdgpu_kernel void @k0() sanitize_address #1 {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
-; CHECK-NEXT:    [[TMP34:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP34:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP35:%.*]] = ptrtoint ptr [[TMP34]] to i64
 ; CHECK-NEXT:    [[TMP36:%.*]] = ptrtoint ptr addrspace(1) [[TMP25]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP36]], i64 [[TMP35]])

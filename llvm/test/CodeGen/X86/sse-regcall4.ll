@@ -7,19 +7,19 @@
 define x86_regcallcc i1 @test_argReti1(i1 %a)  {
 ; WIN32-LABEL: test_argReti1:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    incb %cl
+; WIN32-NEXT:    xorb $1, %cl
 ; WIN32-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; WIN32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argReti1:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    incb %al
+; WIN64-NEXT:    xorb $1, %al
 ; WIN64-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX-LABEL: test_argReti1:
 ; LINUXOSX:       # %bb.0:
-; LINUXOSX-NEXT:    incb %al
+; LINUXOSX-NEXT:    xorb $1, %al
 ; LINUXOSX-NEXT:    # kill: def $al killed $al killed $eax
 ; LINUXOSX-NEXT:    retq
   %add = add i1 %a, 1
@@ -30,10 +30,10 @@ define x86_regcallcc i1 @test_argReti1(i1 %a)  {
 define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; WIN32-LABEL: test_CallargReti1:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    incb %cl
+; WIN32-NEXT:    xorb $1, %cl
 ; WIN32-NEXT:    movzbl %cl, %ecx
 ; WIN32-NEXT:    calll _test_argReti1
-; WIN32-NEXT:    incb %cl
+; WIN32-NEXT:    xorb $1, %cl
 ; WIN32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_CallargReti1:
@@ -41,10 +41,10 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; WIN64-NEXT:    pushq %rax
 ; WIN64-NEXT:    .seh_stackalloc 8
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    incb %al
+; WIN64-NEXT:    xorb $1, %al
 ; WIN64-NEXT:    movzbl %al, %eax
 ; WIN64-NEXT:    callq test_argReti1
-; WIN64-NEXT:    incb %al
+; WIN64-NEXT:    xorb $1, %al
 ; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rcx
 ; WIN64-NEXT:    .seh_endepilogue
@@ -55,10 +55,10 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; LINUXOSX:       # %bb.0:
 ; LINUXOSX-NEXT:    pushq %rax
 ; LINUXOSX-NEXT:    .cfi_def_cfa_offset 16
-; LINUXOSX-NEXT:    incb %al
+; LINUXOSX-NEXT:    xorb $1, %al
 ; LINUXOSX-NEXT:    movzbl %al, %eax
 ; LINUXOSX-NEXT:    callq *test_argReti1@GOTPCREL(%rip)
-; LINUXOSX-NEXT:    incb %al
+; LINUXOSX-NEXT:    xorb $1, %al
 ; LINUXOSX-NEXT:    popq %rcx
 ; LINUXOSX-NEXT:    .cfi_def_cfa_offset 8
 ; LINUXOSX-NEXT:    retq

@@ -252,6 +252,11 @@ fixupBlock(MachineBasicBlock &CurrBB, const BlockFlagsVector &BlockInfo,
   if (!Info.Reachable)
     return false;
 
+  // If we don't need to perform full CFI fix up, we only need to fix up the
+  // first basic block in the section.
+  if (!TFL.enableFullCFIFixup(MF) && !CurrBB.isBeginSection())
+    return false;
+
   // If the previous block and the current block are in the same section,
   // the frame info will propagate from the previous block to the current one.
   const BlockFlags &PrevInfo =

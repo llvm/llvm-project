@@ -5,7 +5,7 @@
 # CHECK:      name: fun0
 # CHECK:      renamable $r1l = AHIMuxK killed renamable $r1l, -1, implicit-def dead $cc
 # CHECK-NEXT: CHIMux renamable $r5h, 9, implicit-def $cc
-# CHECK-NEXT: $r14h = COPY killed renamable $r1l
+# CHECK-NEXT: $r14h = COPY renamable $r1l
 ---
 name:            fun0
 tracksRegLiveness: true

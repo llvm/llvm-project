@@ -49,4 +49,15 @@ module m
     type (int) :: c, a, b
     c = a+b ! ok resolve to addDevice
   end subroutine overload
+
+  attributes(host,device) subroutine hostdev(a)
+    integer :: a(*)
+  end subroutine
+  
+  subroutine host()
+    integer :: a(10)
+    call hostdev(a) ! ok because hostdev is attributes(host,device)
+  end subroutine
+    
+
 end

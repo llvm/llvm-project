@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mattr=sse2 -mattr=avx | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=sse2 -mattr=avx | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=sse2 -mattr=avx | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=sse2 -mattr=avx --use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s
 ; GNU environment.
 ; RUN: llc < %s -mtriple=x86_64-win32-gnu -mattr=sse2 -mattr=avx | FileCheck -check-prefix=MINGW %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -101,4 +102,32 @@ entry:
 ; CHECK: 	.quad	8589934593              # 0x200000001
 ; CHECK: 	.quad	17179869187             # 0x400000003
 ; CHECK: 	.quad	8589934593              # 0x200000001
-; CHECK: 	.quad	17179869187
+; CHECK: 	.quad	17179869187             # 0x400000003
+
+define <4 x i64> @ymm_splat() {
+entry:
+  ret <4 x i64> splat(i64 8589934593)
+}
+
+; CHECK:	.globl	__ymm@0000000200000001000000020000000100000002000000010000000200000001
+; CHECK:	.section	.rdata,"dr",discard,__ymm@0000000200000001000000020000000100000002000000010000000200000001
+; CHECK:	.p2align	5
+; CHECK: __ymm@0000000200000001000000020000000100000002000000010000000200000001
+; CHECK: 	.quad	8589934593             # 0x200000001
+; CHECK: 	.quad	8589934593             # 0x200000001
+; CHECK: 	.quad	8589934593             # 0x200000001
+; CHECK: 	.quad	8589934593             # 0x200000001
+
+define <4 x double> @ymm_splat_double() {
+entry:
+  ret <4 x double> splat(double 0x0000000000800000)
+}
+
+; CHECK:	.globl	__ymm@0000000000800000000000000080000000000000008000000000000000800000
+; CHECK:	.section	.rdata,"dr",discard,__ymm@0000000000800000000000000080000000000000008000000000000000800000
+; CHECK:	.p2align	5, 0x0
+; CHECK: __ymm@0000000000800000000000000080000000000000008000000000000000800000:
+; CHECK:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
+; CHECK:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
+; CHECK:	.quad	0x0000000000800000              # double 4.1445230292290475E-317
+; CHECK:	.quad	0x0000000000800000              # double 4.1445230292290475E-317

@@ -21,6 +21,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
@@ -29,8 +30,8 @@ namespace fuzzerop {
 
 /// @{
 /// Populate a small list of potentially interesting constants of a given type.
-void makeConstantsWithType(Type *T, std::vector<Constant *> &Cs);
-std::vector<Constant *> makeConstantsWithType(Type *T);
+LLVM_ABI void makeConstantsWithType(Type *T, std::vector<Constant *> &Cs);
+LLVM_ABI std::vector<Constant *> makeConstantsWithType(Type *T);
 /// @}
 
 /// A matcher/generator for finding suitable values for the next source in an

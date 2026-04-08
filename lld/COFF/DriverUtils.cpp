@@ -17,7 +17,6 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -28,14 +27,11 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
-#include <limits>
 #include <memory>
 #include <optional>
 
@@ -147,18 +143,6 @@ void LinkerDriver::parseSubsystem(StringRef arg, WindowsSubsystem *sys,
 
 // Parse a string of the form of "<from>=<to>".
 // Results are directly written to Config.
-void LinkerDriver::parseAlternateName(StringRef s) {
-  auto [from, to] = s.split('=');
-  if (from.empty() || to.empty())
-    Fatal(ctx) << "/alternatename: invalid argument: " << s;
-  auto it = ctx.config.alternateNames.find(from);
-  if (it != ctx.config.alternateNames.end() && it->second != to)
-    Fatal(ctx) << "/alternatename: conflicts: " << s;
-  ctx.config.alternateNames.insert(it, std::make_pair(from, to));
-}
-
-// Parse a string of the form of "<from>=<to>".
-// Results are directly written to Config.
 void LinkerDriver::parseMerge(StringRef s) {
   auto [from, to] = s.split('=');
   if (from.empty() || to.empty())
@@ -230,20 +214,41 @@ void LinkerDriver::parseSection(StringRef s) {
   ctx.config.section[name] = parseSectionAttributes(ctx, attrs);
 }
 
-// Parses /aligncomm option argument.
-void LinkerDriver::parseAligncomm(StringRef s) {
-  auto [name, align] = s.split(',');
-  if (name.empty() || align.empty()) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
+// Parses /sectionlayout: option argument.
+void LinkerDriver::parseSectionLayout(StringRef path) {
+  if (path.starts_with("@"))
+    path = path.substr(1);
+  std::unique_ptr<MemoryBuffer> layoutFile =
+      CHECK(MemoryBuffer::getFile(path), "could not open " + path);
+  StringRef content = layoutFile->getBuffer();
+  int index = 0;
+
+  while (!content.empty()) {
+    size_t pos = content.find_first_of("\r\n");
+    StringRef line;
+
+    if (pos == StringRef::npos) {
+      line = content;
+      content = StringRef();
+    } else {
+      line = content.substr(0, pos);
+      content = content.substr(pos).ltrim("\r\n");
+    }
+
+    line = line.trim();
+    if (line.empty())
+      continue;
+
+    StringRef sectionName = line.split(' ').first;
+
+    if (ctx.config.sectionOrder.count(sectionName.str())) {
+      Warn(ctx) << "duplicate section '" << sectionName.str()
+                << "' in section layout file, ignoring";
+      continue;
+    }
+
+    ctx.config.sectionOrder[sectionName.str()] = index++;
   }
-  int v;
-  if (align.getAsInteger(0, v)) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
-  }
-  ctx.config.alignComm[std::string(name)] =
-      std::max(ctx.config.alignComm[std::string(name)], 1 << v);
 }
 
 void LinkerDriver::parseDosStub(StringRef path) {
@@ -360,6 +365,22 @@ void LinkerDriver::parseSwaprun(StringRef arg) {
   } while (!arg.empty());
 }
 
+void LinkerDriver::parseSameAddress(StringRef arg) {
+  auto mangledName = getArm64ECMangledFunctionName(arg);
+  Symbol *sym = ctx.symtab.addUndefined(mangledName ? *mangledName : arg);
+
+  // MSVC appears to generate thunks even for non-hybrid ARM64EC images.
+  // As a side effect, the native symbol is pulled in. Since this is used
+  // in the CRT for thread-local constructors, it results in the image
+  // containing unnecessary native code. As these thunks don't appear to
+  // be useful, we limit this behavior to actual hybrid targets. This may
+  // change if compatibility becomes necessary.
+  if (ctx.config.machine != ARM64X)
+    return;
+  Symbol *nativeSym = ctx.hybridSymtab->addUndefined(arg);
+  ctx.config.sameAddresses.emplace_back(sym, nativeSym);
+}
+
 // An RAII temporary file class that automatically removes a temporary file.
 namespace {
 class TemporaryFile {
@@ -419,7 +440,7 @@ std::string LinkerDriver::createDefaultXml() {
      << "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\"\n"
      << "          manifestVersion=\"1.0\">\n";
   if (ctx.config.manifestUAC) {
-    os << "  <trustInfo>\n"
+    os << "  <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">\n"
        << "    <security>\n"
        << "      <requestedPrivileges>\n"
        << "         <requestedExecutionLevel level=" << ctx.config.manifestLevel
@@ -445,7 +466,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
       MemoryBuffer::getMemBufferCopy(defaultXml);
 
   windows_manifest::WindowsManifestMerger merger;
-  if (auto e = merger.merge(*defaultXmlCopy.get()))
+  if (auto e = merger.merge(*defaultXmlCopy))
     Fatal(ctx) << "internal manifest tool failed on default xml: "
                << toString(std::move(e));
 
@@ -458,7 +479,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
                  << toString(std::move(e));
   }
 
-  return std::string(merger.getMergedManifest().get()->getBuffer());
+  return std::string(merger.getMergedManifest()->getBuffer());
 }
 
 std::string
@@ -840,6 +861,9 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
       Warn(ctx) << "ignoring unknown argument '" << arg->getAsString(args)
                 << "', did you mean '" << nearest << "'";
   }
+
+  if (args.hasArg(OPT_link))
+    Warn(ctx) << "ignoring /link, did you pass it multiple times?";
 
   if (args.hasArg(OPT_lib))
     Warn(ctx) << "ignoring /lib since it's not the first argument";

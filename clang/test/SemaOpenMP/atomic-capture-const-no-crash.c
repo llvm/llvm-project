@@ -3,7 +3,7 @@
 // or https://github.com/llvm/llvm-project/pull/71480
 
 void test() {
-  int v; const int x; // expected-note {{variable 'x' declared const here}}
+  int v; const int x = 0; // expected-note {{variable 'x' declared const here}}
 #pragma omp atomic capture
   { 
     v = x; 

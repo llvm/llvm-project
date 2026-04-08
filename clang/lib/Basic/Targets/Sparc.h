@@ -48,7 +48,7 @@ public:
 
   bool hasFeature(StringRef Feature) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
     // FIXME: Implement!
     return {};
   }
@@ -151,7 +151,7 @@ class LLVM_LIBRARY_VISIBILITY SparcV8TargetInfo : public SparcTargetInfo {
 public:
   SparcV8TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : SparcTargetInfo(Triple, Opts) {
-    resetDataLayout("E-m:e-p:32:32-i64:64-i128:128-f128:64-n32-S64");
+    resetDataLayout();
     // NetBSD / OpenBSD use long (same as llvm default); everyone else uses int.
     switch (getTriple().getOS()) {
     default:
@@ -166,6 +166,13 @@ public:
       PtrDiffType = SignedLong;
       break;
     }
+
+    // The SPARCv8 System V ABI has long double 128-bits in size, but 64-bit
+    // aligned.
+    LongDoubleWidth = 128;
+    LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
+
     // Up to 32 bits (V8) or 64 bits (V9) are lock-free atomic, but we're
     // willing to do atomic ops on up to 64 bits.
     MaxAtomicPromoteWidth = 64;
@@ -188,7 +195,7 @@ class LLVM_LIBRARY_VISIBILITY SparcV8elTargetInfo : public SparcV8TargetInfo {
 public:
   SparcV8elTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : SparcV8TargetInfo(Triple, Opts) {
-    resetDataLayout("e-m:e-p:32:32-i64:64-i128:128-f128:64-n32-S64");
+    resetDataLayout();
   }
 };
 
@@ -198,7 +205,7 @@ public:
   SparcV9TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : SparcTargetInfo(Triple, Opts) {
     // FIXME: Support Sparc quad-precision long double?
-    resetDataLayout("E-m:e-i64:64-i128:128-n32:64-S128");
+    resetDataLayout();
     // This is an LP64 platform.
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
 

@@ -428,7 +428,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 }
 
 // Just check that SOMETHING is being output.
-// CHECK-LABEL @sum_dim() {
+// CHECK-LABEL: @sum_dim() {
 // CHECK: return
 
 
@@ -459,7 +459,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 }
 
 // Just check that SOMETHING is being output.
-// CHECK-LABEL @sum_1d_unknown() {
+// CHECK-LABEL: @sum_1d_unknown(
 // CHECK: return
 
 // -----
@@ -1260,9 +1260,9 @@ func.func private @_FortranACountDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i
 
 // CHECK-LABEL:   func.func @_QMtestPcount_generate_mask(
 // CHECK-SAME:                                           %[[A:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "mask"}) -> !fir.array<10xi32> {
-// CHECK-NOT        fir.call @_FortranACountDimLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountDimLogical4_simplified({{.*}})
 // CHECK:           fir.call @_FortranACountDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> ()
-// CHECK-NOT        fir.call @_FortranACountDimLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountDimLogical4_simplified({{.*}})
 
 // -----
 // Ensure count isn't simplified for unknown dimension arrays
@@ -1285,9 +1285,9 @@ func.func private @_FortranACount(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
 
 // CHECK-LABEL:   func.func @_QPmc(
 // CHECK-SAME:                     %[[VAL_0:.*]]: !fir.box<!fir.array<?x?x?x!fir.logical<4>>> {fir.bindc_name = "m"}) -> i32 {
-// CHECK-NOT        fir.call @_FortranACountLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountLogical4_simplified({{.*}})
 // CHECK:           %[[RES:.*]] = fir.call @_FortranACount({{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
-// CHECK-NOT        fir.call @_FortranACountLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountLogical4_simplified({{.*}})
 
 // -----
 // Ensure Any is simplified in correct usage
@@ -1443,9 +1443,9 @@ func.func private @_FortranAAnyDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32
 
 // CHECK-LABEL:   func.func @_QPtestAny_DimArg(
 // CHECK-SAME:                          %[[ARR:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.array<10x!fir.logical<4>> {
-// CHECK-NOT        fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranAAnyDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
-// CHECK-NOT        fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
 
 // -----
 // Ensure Any is not simplified for unknown dimension arrays
@@ -1468,9 +1468,9 @@ func.func private @_FortranAAny(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1 at
 
 // CHECK-LABEL:   func.func @_QPtestAny_UnknownDim(
 // CHECK-SAME:                          %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.logical<4> {
-// CHECK-NOT        fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranAAny({{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
-// CHECK-NOT        fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
 
 // -----
 // Check that multi-rank Any cases are properly simplified
@@ -1682,9 +1682,9 @@ func.func private @_FortranAAllDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32
 
 // CHECK-LABEL:   func.func @_QPtestAll_DimArg(
 // CHECK-SAME:                          %[[ARR:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.array<10x!fir.logical<4>> {
-// CHECK-NOT        fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranAAllDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
-// CHECK-NOT        fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
 
 // -----
 // Check Minloc simplifies correctly for 1D case with 1D mask, I32 input
@@ -1996,10 +1996,9 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:           %[[OUTARR_IDX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
 // CHECK:           fir.store %[[INIT_OUT_IDX]] to %[[OUTARR_ITEM0]] : !fir.ref<i32>
-// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<1xi1>>
-// CHECK:           %[[MASK_IDX0:.*]] = arith.constant 0 : index
-// CHECK:           %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[MASK_IDX0]] : (!fir.box<!fir.array<1xi1>>, index) -> !fir.ref<i1>
-// CHECK:           %[[MASK:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<i1>
+// CHECK:           %[[MASK_ADDR:.*]] = fir.box_addr %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.ref<!fir.logical<4>>
+// CHECK:           %[[MASK_LOGICAL:.*]] = fir.load %[[MASK_ADDR]] : !fir.ref<!fir.logical<4>>
+// CHECK:           %[[MASK:.*]] = fir.convert %[[MASK_LOGICAL]] : (!fir.logical<4>) -> i1
 // CHECK:           %[[INIT_RES:.*]] = fir.if %[[MASK]] -> (f64) {
 // CHECK:             %[[C_INDEX0:.*]] = arith.constant 0 : index
 // CHECK:             %[[BOX_INARR:.*]] = fir.convert %[[BOX_INARR_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf64>>
@@ -2573,10 +2572,9 @@ func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:           %[[OUTARR_IDX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
 // CHECK:           fir.store %[[INIT_OUT_IDX]] to %[[OUTARR_ITEM0]] : !fir.ref<i32>
-// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<1xi1>>
-// CHECK:           %[[MASK_IDX0:.*]] = arith.constant 0 : index
-// CHECK:           %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[MASK_IDX0]] : (!fir.box<!fir.array<1xi1>>, index) -> !fir.ref<i1>
-// CHECK:           %[[MASK:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<i1>
+// CHECK:           %[[MASK_ADDR:.*]] = fir.box_addr %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.ref<!fir.logical<4>>
+// CHECK:           %[[MASK_LOGICAL:.*]] = fir.load %[[MASK_ADDR]] : !fir.ref<!fir.logical<4>>
+// CHECK:           %[[MASK:.*]] = fir.convert %[[MASK_LOGICAL]] : (!fir.logical<4>) -> i1
 // CHECK:           %[[INIT_RES:.*]] = fir.if %[[MASK]] -> (f64) {
 // CHECK:             %[[C_INDEX0:.*]] = arith.constant 0 : index
 // CHECK:             %[[BOX_INARR:.*]] = fir.convert %[[BOX_INARR_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf64>>

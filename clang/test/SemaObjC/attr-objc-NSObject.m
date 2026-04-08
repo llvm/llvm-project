@@ -18,6 +18,6 @@ void good() {
 void bad() {
   BarRef object;
   NSArray<BarRef> *array; // expected-error {{type argument 'BarRef' (aka 'struct Bar *') is neither an Objective-C object nor a block type}}
-  [array containsObject:object]; // expected-warning {{incompatible pointer types sending 'BarRef' (aka 'struct Bar *') to parameter of type 'id'}}
+  [array containsObject:object]; // expected-error {{incompatible pointer types sending 'BarRef' (aka 'struct Bar *') to parameter of type 'id'}}
   [object description]; // expected-warning {{receiver type 'BarRef' (aka 'struct Bar *') is not 'id' or interface pointer, consider casting it to 'id'}}
 }

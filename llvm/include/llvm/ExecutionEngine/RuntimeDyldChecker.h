@@ -11,6 +11,7 @@
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
@@ -81,35 +82,41 @@ class RuntimeDyldChecker {
 public:
   class MemoryRegionInfo {
   public:
-    MemoryRegionInfo() = default;
+    MemoryRegionInfo() : Size(0), Initialized(false) {}
 
     /// Constructor for symbols/sections with content and TargetFlag.
     MemoryRegionInfo(ArrayRef<char> Content, JITTargetAddress TargetAddress,
                      TargetFlagsType TargetFlags)
         : ContentPtr(Content.data()), Size(Content.size()),
-          TargetAddress(TargetAddress), TargetFlags(TargetFlags) {}
+          TargetAddress(TargetAddress), TargetFlags(TargetFlags) {
+      Initialized = true;
+    }
 
     /// Constructor for zero-fill symbols/sections.
     MemoryRegionInfo(uint64_t Size, JITTargetAddress TargetAddress)
-        : Size(Size), TargetAddress(TargetAddress) {}
+        : Size(Size), TargetAddress(TargetAddress) {
+      Initialized = true;
+    }
 
     /// Returns true if this is a zero-fill symbol/section.
     bool isZeroFill() const {
-      assert(Size && "setContent/setZeroFill must be called first");
+      assert(Initialized && "setZeroFill / setContent not called");
       return !ContentPtr;
     }
 
     /// Set the content for this memory region.
     void setContent(ArrayRef<char> Content) {
-      assert(!ContentPtr && !Size && "Content/zero-fill already set");
+      assert(!Initialized && "Content/zero-fill already set");
       ContentPtr = Content.data();
       Size = Content.size();
+      Initialized = true;
     }
 
     /// Set a zero-fill length for this memory region.
     void setZeroFill(uint64_t Size) {
-      assert(!ContentPtr && !this->Size && "Content/zero-fill already set");
+      assert(!Initialized && "Content/zero-fill already set");
       this->Size = Size;
+      Initialized = true;
     }
 
     /// Returns the content for this section if there is any.
@@ -144,7 +151,8 @@ public:
 
   private:
     const char *ContentPtr = nullptr;
-    uint64_t Size = 0;
+    uint64_t Size : 63;
+    uint64_t Initialized : 1;
     JITTargetAddress TargetAddress = 0;
     TargetFlagsType TargetFlags = 0;
   };
@@ -159,23 +167,22 @@ public:
   using GetGOTInfoFunction = std::function<Expected<MemoryRegionInfo>(
       StringRef GOTContainer, StringRef TargetName)>;
 
-  RuntimeDyldChecker(IsSymbolValidFunction IsSymbolValid,
-                     GetSymbolInfoFunction GetSymbolInfo,
-                     GetSectionInfoFunction GetSectionInfo,
-                     GetStubInfoFunction GetStubInfo,
-                     GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness,
-                     Triple TT, StringRef CPU, SubtargetFeatures TF,
-                     raw_ostream &ErrStream);
-  ~RuntimeDyldChecker();
+  LLVM_ABI RuntimeDyldChecker(
+      IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
+      GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
+      GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness, Triple TT,
+      StringRef CPU, SubtargetFeatures TF, raw_ostream &ErrStream);
+  LLVM_ABI ~RuntimeDyldChecker();
 
   /// Check a single expression against the attached RuntimeDyld
   ///        instance.
-  bool check(StringRef CheckExpr) const;
+  LLVM_ABI bool check(StringRef CheckExpr) const;
 
   /// Scan the given memory buffer for lines beginning with the string
   ///        in RulePrefix. The remainder of the line is passed to the check
   ///        method to be evaluated as an expression.
-  bool checkAllRulesInBuffer(StringRef RulePrefix, MemoryBuffer *MemBuf) const;
+  LLVM_ABI bool checkAllRulesInBuffer(StringRef RulePrefix,
+                                      MemoryBuffer *MemBuf) const;
 
   /// Returns the address of the requested section (or an error message
   ///        in the second element of the pair if the address cannot be found).
@@ -183,13 +190,13 @@ public:
   /// if 'LocalAddress' is true, this returns the address of the section
   /// within the linker's memory. If 'LocalAddress' is false it returns the
   /// address within the target process (i.e. the load address).
-  std::pair<uint64_t, std::string> getSectionAddr(StringRef FileName,
-                                                  StringRef SectionName,
-                                                  bool LocalAddress);
+  LLVM_ABI std::pair<uint64_t, std::string>
+  getSectionAddr(StringRef FileName, StringRef SectionName, bool LocalAddress);
 
   /// If there is a section at the given local address, return its load
   /// address, otherwise return std::nullopt.
-  std::optional<uint64_t> getSectionLoadAddress(void *LocalAddress) const;
+  LLVM_ABI std::optional<uint64_t>
+  getSectionLoadAddress(void *LocalAddress) const;
 
 private:
   std::unique_ptr<RuntimeDyldCheckerImpl> Impl;

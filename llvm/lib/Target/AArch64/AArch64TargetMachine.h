@@ -70,9 +70,24 @@ public:
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
     return getPointerSize(SrcAS) == getPointerSize(DestAS);
   }
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
+
+  size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const override;
+
+  /// Returns true if the new SME ABI lowering should be used.
+  bool useNewSMEABILowering() const { return UseNewSMEABILowering; }
+
+  /// Returns the optimisation level that enables GlobalISel.
+  unsigned getEnableGlobalISelAtO() const;
 
 private:
   bool isLittle;
+  bool UseNewSMEABILowering;
 };
 
 // AArch64 little endian target machine.

@@ -17,14 +17,14 @@
 // Make sure we don't assume copyable, default constructible, movable etc.
 struct MinimalElementType {
   int val;
-  constexpr MinimalElementType() = delete;
+  constexpr MinimalElementType()                          = delete;
   constexpr MinimalElementType(const MinimalElementType&) = delete;
-  constexpr explicit MinimalElementType(int v) noexcept : val(v){}
+  constexpr explicit MinimalElementType(int v) noexcept : val(v) {}
   constexpr MinimalElementType& operator=(const MinimalElementType&) = delete;
 };
 
 // Helper class to create pointer to MinimalElementType
-template<class T, size_t N>
+template <class T, size_t N>
 struct ElementPool {
   constexpr ElementPool() {
     ptr_ = std::allocator<std::remove_const_t<T>>().allocate(N);

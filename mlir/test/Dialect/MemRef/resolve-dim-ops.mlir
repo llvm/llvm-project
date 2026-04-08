@@ -34,8 +34,7 @@ func.func @dim_out_of_bounds_2(%idx1 : index, %idx2 : index) -> index {
 //  CHECK-NEXT:           tensor.dim %[[arg]], %[[c2]]
 //  CHECK-NEXT:           return
 func.func @dynamic_dim_of_transpose_op(%arg0: tensor<1x2x?x8xi8>) -> index {
-  %0 = "tosa.const"() <{value = dense<[0, 3, 1, 2]> : tensor<4xi32>}> : () -> tensor<4xi32>
-  %1 = tosa.transpose %arg0, %0 : (tensor<1x2x?x8xi8>, tensor<4xi32>) -> tensor<1x8x2x?xi8>
+  %1 = tosa.transpose %arg0 { perms = array<i32: 0, 3, 1, 2> }: (tensor<1x2x?x8xi8>) -> tensor<1x8x2x?xi8>
   %c3 = arith.constant 3 : index
   %dim = tensor.dim %1, %c3 : tensor<1x8x2x?xi8>
   return %dim : index
@@ -47,8 +46,7 @@ func.func @dynamic_dim_of_transpose_op(%arg0: tensor<1x2x?x8xi8>) -> index {
 //  CHECK:           arith.constant 100 : index
 //  CHECK:           return
 func.func @static_dim_of_transpose_op(%arg0: tensor<1x100x?x8xi8>) -> index {
-  %0 = "tosa.const"() <{value = dense<[0, 3, 1, 2]> : tensor<4xi32>}> : () -> tensor<4xi32>
-  %1 = tosa.transpose %arg0, %0 : (tensor<1x100x?x8xi8>, tensor<4xi32>) -> tensor<1x8x100x?xi8>
+  %1 = tosa.transpose %arg0 { perms = array<i32: 0, 3, 1, 2> }: (tensor<1x100x?x8xi8>) -> tensor<1x8x100x?xi8>
   %c2 = arith.constant 2 : index
   %dim = tensor.dim %1, %c2 : tensor<1x8x100x?xi8>
   return %dim : index
@@ -98,4 +96,39 @@ func.func @iter_to_init_arg_loop_like(
     }
   }
   return %result : tensor<?x?xf32>
+}
+
+// -----
+
+// Test case: Folding of memref.dim(memref.assume_alignment) with static dims
+// CHECK-LABEL: func @dim_of_assume_alignment_static(
+//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<2x3xf32>
+//  CHECK-DAG:    %[[C2:.*]] = arith.constant 2 : index
+//  CHECK-DAG:    %[[C3:.*]] = arith.constant 3 : index
+//       CHECK:   return %[[C2]], %[[C3]] : index, index
+func.func @dim_of_assume_alignment_static(%arg0: memref<2x3xf32>) -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = memref.assume_alignment %arg0, 64 : memref<2x3xf32>
+  %d0 = memref.dim %0, %c0 : memref<2x3xf32>
+  %d1 = memref.dim %0, %c1 : memref<2x3xf32>
+  return %d0, %d1 : index, index
+}
+
+// -----
+
+// Test case: Folding of memref.dim(memref.assume_alignment) with dynamic dims
+// CHECK-LABEL: func @dim_of_assume_alignment_dynamic(
+//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<4x?xf32>
+//  CHECK-DAG:    %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-DAG:    %[[C4:.*]] = arith.constant 4 : index
+//       CHECK:   %[[D1:.*]] = memref.dim %[[MEM]], %[[C1]]
+//       CHECK:   return %[[C4]], %[[D1]] : index, index
+func.func @dim_of_assume_alignment_dynamic(%arg0: memref<4x?xf32>) -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = memref.assume_alignment %arg0, 64 : memref<4x?xf32>
+  %d0 = memref.dim %0, %c0 : memref<4x?xf32>
+  %d1 = memref.dim %0, %c1 : memref<4x?xf32>
+  return %d0, %d1 : index, index
 }

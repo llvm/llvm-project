@@ -14,7 +14,7 @@ define ptr @b(ptr %q) {
 	ret ptr %tmp
 }
 
-; CHECK: define ptr @c(ptr readnone returned %r)
+; CHECK: define ptr @c(ptr readnone returned captures(address_is_null, ret: address, provenance) %r)
 @g = global i32 0
 define ptr @c(ptr %r) {
 	%a = icmp eq ptr %r, null

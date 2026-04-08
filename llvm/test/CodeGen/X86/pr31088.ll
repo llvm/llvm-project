@@ -45,8 +45,6 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; F16C-O0-LABEL: ir_fadd_v1f16:
@@ -55,12 +53,6 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-O0-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; F16C-O0-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-O0-NEXT:    vmovd %xmm0, %eax
-; F16C-O0-NEXT:    movw %ax, %cx
-; F16C-O0-NEXT:    # implicit-def: $eax
-; F16C-O0-NEXT:    movw %cx, %ax
-; F16C-O0-NEXT:    # implicit-def: $xmm0
-; F16C-O0-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; F16C-O0-NEXT:    retq
   %retval = fadd <1 x half> %arg0, %arg1
   ret <1 x half> %retval

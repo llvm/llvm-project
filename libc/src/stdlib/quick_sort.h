@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 #define LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/qsort_pivot.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -167,7 +166,9 @@ LIBC_INLINE void quick_sort_impl(A &array, const void *ancestor_pivot,
   }
 }
 
-constexpr size_t ilog2(size_t n) { return cpp::bit_width(n) - 1; }
+constexpr size_t ilog2(size_t n) {
+  return static_cast<size_t>(cpp::bit_width(n)) - 1;
+}
 
 template <typename A, typename F>
 LIBC_INLINE void quick_sort(A &array, const F &is_less) {

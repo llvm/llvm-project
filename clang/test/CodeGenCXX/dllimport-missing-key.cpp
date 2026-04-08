@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i686-windows-gnu -emit-llvm -std=c++1y -O0 -o - %s -w | FileCheck --check-prefix=GNU %s
+// RUN: %clang_cc1 -triple i686-pc-cygwin   -emit-llvm -std=c++1y -O0 -o - %s -w | FileCheck --check-prefix=GNU %s
 
 class __declspec(dllimport) QObjectData {
 public:

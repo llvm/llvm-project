@@ -1,4 +1,4 @@
-//===--- SuspiciousIncludeCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,14 +39,18 @@ private:
 SuspiciousIncludeCheck::SuspiciousIncludeCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()),
-      ImplementationFileExtensions(Context->getImplementationFileExtensions()) {
-}
+      IgnoredRegexString(Options.get("IgnoredRegex").value_or(StringRef{})),
+      IgnoredRegex(IgnoredRegexString) {}
 
 void SuspiciousIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(
-      ::std::make_unique<SuspiciousIncludePPCallbacks>(*this, SM, PP));
+      std::make_unique<SuspiciousIncludePPCallbacks>(*this, SM, PP));
+}
+
+void SuspiciousIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  if (!IgnoredRegexString.empty())
+    Options.store(Opts, "IgnoredRegex", IgnoredRegexString);
 }
 
 void SuspiciousIncludePPCallbacks::InclusionDirective(
@@ -57,22 +61,25 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
   if (IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import)
     return;
 
-  SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
+  if (!Check.IgnoredRegexString.empty() && Check.IgnoredRegex.match(FileName))
+    return;
 
-  const std::optional<StringRef> IFE =
-      utils::getFileExtension(FileName, Check.ImplementationFileExtensions);
+  const SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
+
+  const std::optional<StringRef> IFE = utils::getFileExtension(
+      FileName, Check.getImplementationFileExtensions());
   if (!IFE)
     return;
 
   Check.diag(DiagLoc, "suspicious #%0 of file with '%1' extension")
       << IncludeTok.getIdentifierInfo()->getName() << *IFE;
 
-  for (const auto &HFE : Check.HeaderFileExtensions) {
+  for (const auto &HFE : Check.getHeaderFileExtensions()) {
     SmallString<128> GuessedFileName(FileName);
     llvm::sys::path::replace_extension(GuessedFileName,
                                        (!HFE.empty() ? "." : "") + HFE);
 
-    OptionalFileEntryRef File =
+    const OptionalFileEntryRef File =
         PP->LookupFile(DiagLoc, GuessedFileName, IsAngled, nullptr, nullptr,
                        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     if (File) {

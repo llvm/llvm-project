@@ -114,7 +114,7 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
                                   unsigned RecDepth, unsigned RootBucket,
                                   unsigned Offset,
                                   std::optional<BPThreadPool> &TP) const {
-  unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
+  unsigned NumNodes = llvm::size(Nodes);
   if (NumNodes <= 1 || RecDepth >= Config.SplitDepth) {
     // We've reach the lowest level of the recursion tree. Fall back to the
     // original order and assign to buckets.
@@ -168,7 +168,7 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
                                          unsigned LeftBucket,
                                          unsigned RightBucket,
                                          std::mt19937 &RNG) const {
-  unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
+  unsigned NumNodes = llvm::size(Nodes);
   DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeIndex;
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
@@ -177,7 +177,8 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
   // functions
   for (auto &N : Nodes)
     llvm::erase_if(N.UtilityNodes, [&](auto &UN) {
-      return UtilityNodeIndex[UN] == 1 || UtilityNodeIndex[UN] == NumNodes;
+      unsigned UNI = UtilityNodeIndex[UN];
+      return UNI == 1 || UNI == NumNodes;
     });
 
   // Renumber utility nodes so they can be used to index into Signatures
@@ -230,7 +231,7 @@ unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
   }
 
   // Compute move gains
-  typedef std::pair<float, BPFunctionNode *> GainPair;
+  using GainPair = std::pair<float, BPFunctionNode *>;
   std::vector<GainPair> Gains;
   for (auto &N : Nodes) {
     bool FromLeftToRight = (N.Bucket == LeftBucket);
@@ -302,10 +303,10 @@ bool BalancedPartitioning::moveFunctionNode(BPFunctionNode &N,
 
 void BalancedPartitioning::split(const FunctionNodeRange Nodes,
                                  unsigned StartBucket) const {
-  unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
+  unsigned NumNodes = llvm::size(Nodes);
   auto NodesMid = Nodes.begin() + (NumNodes + 1) / 2;
 
-  std::nth_element(Nodes.begin(), NodesMid, Nodes.end(), [](auto &L, auto &R) {
+  llvm::sort(Nodes, [](auto &L, auto &R) {
     return L.InputOrderIndex < R.InputOrderIndex;
   });
 

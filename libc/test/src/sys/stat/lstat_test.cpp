@@ -6,27 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/stat/lstat.h"
 #include "src/unistd/close.h"
 #include "src/unistd/unlink.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/fcntl_macros.h"
 #include <sys/stat.h>
 
-TEST(LlvmLibcLStatTest, CreatAndReadMode) {
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcLStatTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
+TEST_F(LlvmLibcLStatTest, CreatAndReadMode) {
   // The test file is initially writable. We open it for writing and ensure
   // that it indeed can be opened for writing. Next, we close the file and
   // make it readonly using chmod. We test that chmod actually succeeded by
   // trying to open the file for writing and failing.
   constexpr const char *TEST_FILE = "testdata/lstat.test";
-  LIBC_NAMESPACE::libc_errno = 0;
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd, 0);
@@ -41,11 +40,8 @@ TEST(LlvmLibcLStatTest, CreatAndReadMode) {
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 }
 
-TEST(LlvmLibcLStatTest, NonExistentFile) {
-  LIBC_NAMESPACE::libc_errno = 0;
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+TEST_F(LlvmLibcLStatTest, NonExistentFile) {
   struct stat statbuf;
   ASSERT_THAT(LIBC_NAMESPACE::lstat("non-existent-file", &statbuf),
               Fails(ENOENT));
-  LIBC_NAMESPACE::libc_errno = 0;
 }

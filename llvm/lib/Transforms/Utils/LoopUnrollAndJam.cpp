@@ -53,7 +53,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
 #include <memory>
-#include <type_traits>
 #include <vector>
 
 using namespace llvm;
@@ -102,7 +101,7 @@ static bool partitionOuterLoopBlocks(
     Loop &Root, Loop &JamLoop, BasicBlockSet &JamLoopBlocks,
     DenseMap<Loop *, BasicBlockSet> &ForeBlocksMap,
     DenseMap<Loop *, BasicBlockSet> &AftBlocksMap, DominatorTree &DT) {
-  JamLoopBlocks.insert(JamLoop.block_begin(), JamLoop.block_end());
+  JamLoopBlocks.insert_range(JamLoop.blocks());
 
   for (Loop *L : Root.getLoopsInPreorder()) {
     if (L == &JamLoop)
@@ -122,7 +121,7 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
                                      BasicBlockSet &SubLoopBlocks,
                                      BasicBlockSet &AftBlocks,
                                      DominatorTree *DT) {
-  SubLoopBlocks.insert(SubLoop->block_begin(), SubLoop->block_end());
+  SubLoopBlocks.insert_range(SubLoop->blocks());
   return partitionLoopBlocks(*L, ForeBlocks, AftBlocks, *DT);
 }
 
@@ -294,8 +293,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   BasicBlock *LatchBlock = L->getLoopLatch();
   assert(Preheader && "No preheader");
   assert(LatchBlock && "No latch block");
-  BranchInst *BI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
-  assert(BI && !BI->isUnconditional());
+  CondBrInst *BI = cast<CondBrInst>(LatchBlock->getTerminator());
   bool ContinueOnTrue = L->contains(BI->getSuccessor(0));
   BasicBlock *LoopExit = BI->getSuccessor(ContinueOnTrue);
   bool SubLoopContinueOnTrue = SubLoop->contains(
@@ -395,13 +393,15 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       }
 
       // Update our running maps of newest clones
-      PrevItValueMap[New] = (It == 1 ? *BB : LastValueMap[*BB]);
-      LastValueMap[*BB] = New;
+      auto &Last = LastValueMap[*BB];
+      PrevItValueMap[New] = (It == 1 ? *BB : Last);
+      Last = New;
       for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end();
            VI != VE; ++VI) {
+        auto &LVM = LastValueMap[VI->first];
         PrevItValueMap[VI->second] =
-            const_cast<Value *>(It == 1 ? VI->first : LastValueMap[VI->first]);
-        LastValueMap[VI->first] = VI->second;
+            const_cast<Value *>(It == 1 ? VI->first : LVM);
+        LVM = VI->second;
       }
 
       NewBlocks.push_back(New);
@@ -484,10 +484,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                            LastValueMap);
 
   // Update ForeBlocks successors and phi nodes
-  BranchInst *ForeTerm =
-      cast<BranchInst>(ForeBlocksLast.back()->getTerminator());
-  assert(ForeTerm->getNumSuccessors() == 1 && "Expecting one successor");
-  ForeTerm->setSuccessor(0, SubLoopBlocksFirst[0]);
+  UncondBrInst *ForeTerm =
+      cast<UncondBrInst>(ForeBlocksLast.back()->getTerminator());
+  ForeTerm->setSuccessor(SubLoopBlocksFirst[0]);
 
   if (CompletelyUnroll) {
     while (PHINode *Phi = dyn_cast<PHINode>(ForeBlocksFirst[0]->begin())) {
@@ -502,15 +501,14 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   for (unsigned It = 1; It != Count; It++) {
     // Remap ForeBlock successors from previous iteration to this
-    BranchInst *ForeTerm =
-        cast<BranchInst>(ForeBlocksLast[It - 1]->getTerminator());
-    assert(ForeTerm->getNumSuccessors() == 1 && "Expecting one successor");
-    ForeTerm->setSuccessor(0, ForeBlocksFirst[It]);
+    UncondBrInst *ForeTerm =
+        cast<UncondBrInst>(ForeBlocksLast[It - 1]->getTerminator());
+    ForeTerm->setSuccessor(ForeBlocksFirst[It]);
   }
 
   // Subloop successors and phis
-  BranchInst *SubTerm =
-      cast<BranchInst>(SubLoopBlocksLast.back()->getTerminator());
+  CondBrInst *SubTerm =
+      cast<CondBrInst>(SubLoopBlocksLast.back()->getTerminator());
   SubTerm->setSuccessor(!SubLoopContinueOnTrue, SubLoopBlocksFirst[0]);
   SubTerm->setSuccessor(SubLoopContinueOnTrue, AftBlocksFirst[0]);
   SubLoopBlocksFirst[0]->replacePhiUsesWith(ForeBlocksLast[0],
@@ -521,9 +519,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   for (unsigned It = 1; It != Count; It++) {
     // Replace the conditional branch of the previous iteration subloop with an
     // unconditional one to this one
-    BranchInst *SubTerm =
-        cast<BranchInst>(SubLoopBlocksLast[It - 1]->getTerminator());
-    BranchInst::Create(SubLoopBlocksFirst[It], SubTerm->getIterator());
+    CondBrInst *SubTerm =
+        cast<CondBrInst>(SubLoopBlocksLast[It - 1]->getTerminator());
+    UncondBrInst::Create(SubLoopBlocksFirst[It], SubTerm->getIterator());
     SubTerm->eraseFromParent();
 
     SubLoopBlocksFirst[It]->replacePhiUsesWith(ForeBlocksLast[It],
@@ -534,9 +532,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   }
 
   // Aft blocks successors and phis
-  BranchInst *AftTerm = cast<BranchInst>(AftBlocksLast.back()->getTerminator());
+  CondBrInst *AftTerm = cast<CondBrInst>(AftBlocksLast.back()->getTerminator());
   if (CompletelyUnroll) {
-    BranchInst::Create(LoopExit, AftTerm->getIterator());
+    UncondBrInst::Create(LoopExit, AftTerm->getIterator());
     AftTerm->eraseFromParent();
   } else {
     AftTerm->setSuccessor(!ContinueOnTrue, ForeBlocksFirst[0]);
@@ -549,9 +547,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   for (unsigned It = 1; It != Count; It++) {
     // Replace the conditional branch of the previous iteration subloop with an
     // unconditional one to this one
-    BranchInst *AftTerm =
-        cast<BranchInst>(AftBlocksLast[It - 1]->getTerminator());
-    BranchInst::Create(AftBlocksFirst[It], AftTerm->getIterator());
+    CondBrInst *AftTerm =
+        cast<CondBrInst>(AftBlocksLast[It - 1]->getTerminator());
+    UncondBrInst::Create(AftBlocksFirst[It], AftTerm->getIterator());
     AftTerm->eraseFromParent();
 
     AftBlocksFirst[It]->replacePhiUsesWith(SubLoopBlocksLast[It],
@@ -578,9 +576,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Merge adjacent basic blocks, if possible.
   SmallPtrSet<BasicBlock *, 16> MergeBlocks;
-  MergeBlocks.insert(ForeBlocksLast.begin(), ForeBlocksLast.end());
-  MergeBlocks.insert(SubLoopBlocksLast.begin(), SubLoopBlocksLast.end());
-  MergeBlocks.insert(AftBlocksLast.begin(), AftBlocksLast.end());
+  MergeBlocks.insert_range(ForeBlocksLast);
+  MergeBlocks.insert_range(SubLoopBlocksLast);
+  MergeBlocks.insert_range(AftBlocksLast);
 
   MergeBlockSuccessorsIntoGivenBlocks(MergeBlocks, L, &DTU, LI);
 
@@ -709,7 +707,7 @@ static bool checkDependency(Instruction *Src, Instruction *Dst,
   //   (0,0,>=,*,*)
   // Now, the dependency is not necessarily non-negative anymore, i.e.
   // unroll-and-jam may violate correctness.
-  std::unique_ptr<Dependence> D = DI.depends(Src, Dst, true);
+  std::unique_ptr<Dependence> D = DI.depends(Src, Dst);
   if (!D)
     return true;
   assert(D->isOrdered() && "Expected an output, flow or anti dep.");

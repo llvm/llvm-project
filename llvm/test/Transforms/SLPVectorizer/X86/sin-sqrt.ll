@@ -11,16 +11,25 @@ declare double @llvm.sin.f64(double)
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @src, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 2, i32 6>
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 3, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 2), align 8
+; CHECK-NEXT:    [[A3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 3), align 8
+; CHECK-NEXT:    [[A6:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 6), align 8
+; CHECK-NEXT:    [[A7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 7), align 8
+; CHECK-NEXT:    [[SIN0:%.*]] = call fast double @llvm.sin.f64(double [[A2]])
+; CHECK-NEXT:    [[SIN1:%.*]] = call fast double @llvm.sin.f64(double [[A3]])
+; CHECK-NEXT:    [[SIN2:%.*]] = call fast double @llvm.sin.f64(double [[A6]])
+; CHECK-NEXT:    [[SIN3:%.*]] = call fast double @llvm.sin.f64(double [[A7]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <6 x double>, ptr @src, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <6 x double> [[TMP1]], <6 x double> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <6 x double> [[TMP1]], <6 x double> poison, <2 x i32> <i32 0, i32 4>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 1, i32 5>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <6 x double> [[TMP1]], <6 x double> poison, <2 x i32> <i32 1, i32 5>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[SIN1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP13]], double [[SIN3]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[SIN0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP14]], double [[SIN2]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    store <2 x double> [[TMP12]], ptr @dst, align 8

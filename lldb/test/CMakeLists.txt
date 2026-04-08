@@ -132,6 +132,15 @@ if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()
 
+if(TARGET darwin-mte-launcher)
+  add_lldb_test_dependency(darwin-mte-launcher)
+  set(LLDB_LAUNCHER ${LLVM_RUNTIME_OUTPUT_INTDIR}/darwin-mte-launcher${CMAKE_EXECUTABLE_SUFFIX})
+endif()
+
+if (LLDB_CAN_USE_LLDB_RPC_SERVER)
+  add_lldb_test_dependency(lldb-rpc-generate-sources)
+endif()
+
 # Add dependencies that are not exported targets when building standalone.
 if(NOT LLDB_BUILT_STANDALONE)
   add_lldb_test_dependency(
@@ -160,9 +169,14 @@ if(TARGET clang)
   if (TARGET libcxx OR ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES))
     set(LLDB_HAS_LIBCXX ON)
     if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-      set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+      set(LIBCXX_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+      if(LIBCXX_LIBDIR_SUBDIR)
+        string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})
+      endif()
+      cmake_path(NORMAL_PATH LIBCXX_TARGET_SUBDIR)
+      set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXX_TARGET_SUBDIR})
       set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
-      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
+      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LIBCXX_TARGET_SUBDIR}/c++/v1")
     else()
       set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
       set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
@@ -220,6 +234,7 @@ add_lldb_test_dependency(
   llvm-pdbutil
   llvm-readobj
   llvm-ar
+  yaml2macho-core
   )
 
 if(TARGET lld)
@@ -235,21 +250,29 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(LLDB_IS_64_BITS 1)
 endif()
 
+if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
+  set(LLDB_USE_ARM64E_DEBUGSERVER ON)
+endif()
+
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
   LLDB_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
+  LLVM_ENABLE_DIA_SDK
   LLDB_HAS_LIBCXX
   LLDB_TEST_SHELL_DISABLE_REMOTE
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS)
+  LLDB_IS_64_BITS
+  LLDB_BUILD_LLDBRPC
+  LLDB_USE_ARM64E_DEBUGSERVER)
 
 # Configure the individual test suites.
 add_subdirectory(API)

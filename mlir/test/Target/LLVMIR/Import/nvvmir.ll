@@ -73,11 +73,17 @@ define float @nvvm_rcp(float %0) {
 
 ; CHECK-LABEL: @llvm_nvvm_barrier0()
 define void @llvm_nvvm_barrier0() {
-  ; CHECK: nvvm.barrier0
+  ; CHECK: llvm.nvvm.barrier.cta.sync.aligned.all
   call void @llvm.nvvm.barrier0()
   ret void
 }
 
+; CHECK-LABEL: @llvm_nvvm_bar_warp_sync
+define void @llvm_nvvm_bar_warp_sync(i32 %mask) {
+  ; CHECK: nvvm.bar.warp.sync %{{.*}} : i32
+  call void @llvm.nvvm.bar.warp.sync(i32 %mask)
+  ret void
+}
 
 ; TODO: Support the intrinsics below once they derive from NVVM_IntrOp rather than from NVVM_Op.
 ;
@@ -269,6 +275,8 @@ declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
 declare float @llvm.nvvm.rcp.approx.ftz.f(float)
 
 declare void @llvm.nvvm.barrier0()
+
+declare void @llvm.nvvm.bar.warp.sync(i32)
 
 declare i32 @llvm.nvvm.shfl.sync.bfly.i32(i32, i32, i32, i32)
 

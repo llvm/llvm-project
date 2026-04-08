@@ -105,8 +105,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_cptr_value(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:           %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i64>) -> i64
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i64>
 ! CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]]

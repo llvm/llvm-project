@@ -571,7 +571,7 @@ X:
 
 define amdgpu_kernel void @always_uniform() {
 ; CHECK-LABEL: UniformityInfo for function 'always_uniform':
-; CHECK: CYCLES ASSSUMED DIVERGENT:
+; CHECK: CYCLES ASSUMED DIVERGENT:
 ; CHECK:   depth=1: entries(bb2 bb3)
 
 bb:

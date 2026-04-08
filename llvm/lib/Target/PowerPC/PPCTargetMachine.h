@@ -63,6 +63,10 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 
   bool isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
   bool hasGlibcHWCAPAccess() const { return HasGlibcHWCAPAccess; }

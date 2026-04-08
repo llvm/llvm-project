@@ -160,7 +160,7 @@ int check_all_features() {
 //
 int __attribute__((target("simd"))) neon_code() { return 1; }
 
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
 // CHECK-LABEL: define dso_local i32 @sve_code(
 // CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -220,8 +220,7 @@ int test_versions() {
 //.
 // CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
-// CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
+// CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone vscale_range(1,16) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

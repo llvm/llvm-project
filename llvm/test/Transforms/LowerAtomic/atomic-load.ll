@@ -78,3 +78,46 @@ define float @fmin() {
   ret float %j
 ; CHECK: ret float [[INST]]
 }
+
+define float @fmaximum() {
+; CHECK-LABEL: @fmaximum(
+  %i = alloca float
+  %j = atomicrmw fmaximum ptr %i, float 42.0 monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: call float @llvm.maximum.f32
+; CHECK-NEXT: store
+  ret float %j
+; CHECK: ret float [[INST]]
+}
+
+define float @fminimum() {
+; CHECK-LABEL: @fminimum(
+  %i = alloca float
+  %j = atomicrmw fminimum ptr %i, float 42.0 monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: call float @llvm.minimum.f32
+; CHECK-NEXT: store
+  ret float %j
+; CHECK: ret float [[INST]]
+}
+
+define <2 x half> @fmaximum_2xhalf(<2 x half> %val) {
+; CHECK-LABEL: @fmaximum_2xhalf(
+  %i = alloca <2 x half>, align 4
+  %j = atomicrmw fmaximum ptr %i, <2 x half> %val monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: call <2 x half> @llvm.maximum.v2f16
+; CHECK-NEXT: store
+  ret <2 x half> %j
+}
+
+define <2 x half> @fminimum_2xhalf(<2 x half> %val) {
+; CHECK-LABEL: @fminimum_2xhalf(
+  %i = alloca <2 x half>, align 4
+  %j = atomicrmw fminimum ptr %i, <2 x half> %val monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: call <2 x half> @llvm.minimum.v2f16
+; CHECK-NEXT: store
+  ret <2 x half> %j
+}
+

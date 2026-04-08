@@ -23,7 +23,7 @@
 #include <complex>
 #include <functional>
 #if HAS_QUADMATHLIB
-#include "quadmath.h"
+#include "quadmath_wrapper.h"
 #endif
 #include "flang/Common/float128.h"
 #include "flang/Common/float80.h"
@@ -559,6 +559,23 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
 #endif // HAS_FLOAT80 || HAS_LDBL128
 #endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
 
+#ifdef _WIN32
+template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<double, double>;
+  using FN = FuncPointer<double, int, double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::_j0}>::Create("bessel_j0"),
+      FolderFactory<F, F{::_j1}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::_jn}>::Create("bessel_jn"),
+      FolderFactory<F, F{::_y0}>::Create("bessel_y0"),
+      FolderFactory<F, F{::_y1}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::_yn}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif
+
 /// Define pgmath description
 #if LINK_WITH_LIBPGMATH
 // Only use libpgmath for folding if it is available.
@@ -1026,7 +1043,7 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
   if (const auto *hostFunction{
           SearchHostRuntime(name, biggerResultType, biggerArgTypes)}) {
     auto hostFolderWithChecks{AddArgumentVerifierIfAny(name, *hostFunction)};
-    return [hostFunction, resultType, hostFolderWithChecks](
+    return [hostFunction, resultType, hostFolderWithChecks, name](
                FoldingContext &context, std::vector<Expr<SomeType>> &&args) {
       auto nArgs{args.size()};
       for (size_t i{0}; i < nArgs; ++i) {
@@ -1034,6 +1051,8 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
             ConvertToType(hostFunction->argumentTypes[i], std::move(args[i]))
                 .value());
       }
+      auto restorer{context.SetRealFlagWarningContext(
+          "compilation-time evaluation of a call to '"s + name + "'"s)};
       return Fold(context,
           ConvertToType(
               resultType, hostFolderWithChecks(context, std::move(args)))

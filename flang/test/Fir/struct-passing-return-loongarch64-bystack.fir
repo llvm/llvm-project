@@ -1,7 +1,6 @@
 /// Test LoongArch64 ABI rewrite of struct passed and returned by value (BIND(C), VALUE derived types).
 /// This test test cases where the struct must be passed or returned on the stack.
 
-// REQUIRES: loongarch-registered-target
 // RUN: tco --target=loongarch64-unknown-linux-gnu %s | FileCheck %s
 
 !ty_int_toobig = !fir.type<int_toobig{i:!fir.array<5xi32>}>
