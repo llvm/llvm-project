@@ -7144,6 +7144,24 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
   const MachineOperand &BarOp = I.getOperand(1);
   const MachineOperand &CntOp = I.getOperand(2);
 
+  // A member count of 0 means "keep existing member count". That plus a known
+  // constant value for the barrier ID lets us use the immarg form.
+  if (IntrID == Intrinsic::amdgcn_s_barrier_signal_var) {
+    std::optional<int64_t> CntImm =
+        getIConstantVRegSExtVal(CntOp.getReg(), *MRI);
+    if (CntImm && *CntImm == 0) {
+      std::optional<int64_t> BarValImm =
+          getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
+      if (BarValImm) {
+        auto BarID = ((*BarValImm) >> 4) & 0x3F;
+        BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
+            .addImm(BarID);
+        I.eraseFromParent();
+        return true;
+      }
+    }
+  }
+
   // BarID = (BarOp >> 4) & 0x3F
   Register TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHR_B32), TmpReg0)
