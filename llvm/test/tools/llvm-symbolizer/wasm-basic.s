@@ -1,4 +1,4 @@
-# REQUIRES: webassembly-registered-target
+# REQUIRES: webassembly-registered-target, lld
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %s -o %t.o -g
 # RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.o 1 2 3 4 5 6 7 8 9 10 11 12 13 | FileCheck %s
 
