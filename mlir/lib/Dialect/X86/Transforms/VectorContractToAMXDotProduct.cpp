@@ -966,10 +966,8 @@ struct VectorContractToAMXDotProduct
       unsigned int pairCount = 0;
       for (size_t j = 0; j < ops.size(); j++) {
         for (size_t i = j; i < ops.size(); i++) {
-
-          if (i != j && validatePairVectorContract(ops[j], ops[i], true, 16)) {
+          if (i != j && validatePairVectorContract(ops[j], ops[i], true, 16))
             pairCount = pairCount + 2;
-          }
         }
       }
 
@@ -1116,7 +1114,6 @@ struct VectorContractToAMXDotProduct
 
     // Case 2b: Reduction loop depth is 1.
     if (loopLists.size() == 1) {
-      outerLoop = loopLists[0];
       innerLoop = loopLists[0];
 
       SmallVector<Value> loopItrArgs = createTileZeros(
@@ -1189,6 +1186,10 @@ struct VectorContractToAMXDotProduct
                               packedBuffer, false, c0, isInnerLoopUBLarger,
                               isInnerLoopUBHasOddQuot);
       }
+
+      // This helps the final store back to the acc uses the same code for
+      // the both reduction loop depth 1 or 2.
+      outerLoop = innerLoop;
     }
 
     // Copy the amx tile accumulation results to a MemRef buffer, add the
