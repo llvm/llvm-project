@@ -232,6 +232,7 @@ public:
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
   bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
+  bool VisitCXXReflectExpr(const CXXReflectExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);

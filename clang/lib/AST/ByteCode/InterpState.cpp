@@ -11,6 +11,7 @@
 #include "InterpStack.h"
 #include "Program.h"
 #include "State.h"
+#include "Reflect.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 

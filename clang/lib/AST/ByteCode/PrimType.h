@@ -26,6 +26,7 @@ class Boolean;
 class Floating;
 class MemberPointer;
 class FixedPoint;
+class Reflect;
 template <bool Signed> class IntegralAP;
 template <unsigned Bits, bool Signed> class Integral;
 
@@ -46,6 +47,7 @@ enum PrimType : uint8_t {
   PT_Float = 12,
   PT_Ptr = 13,
   PT_MemberPtr = 14,
+  PT_Reflect = 15,
 };
 
 constexpr bool isIntegerOrBoolType(PrimType T) { return T <= PT_Bool; }
@@ -183,6 +185,9 @@ template <> struct PrimConv<PT_MemberPtr> {
 template <> struct PrimConv<PT_FixedPoint> {
   using T = FixedPoint;
 };
+template <> struct PrimConv<PT_Reflect> {
+  using T = Reflect;
+};
 
 /// Returns the size of a primitive type in bytes.
 size_t primSize(PrimType Type);
@@ -228,6 +233,7 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
       TYPE_SWITCH_CASE(PT_MemberPtr, B)                                        \
       TYPE_SWITCH_CASE(PT_FixedPoint, B)                                       \
+      TYPE_SWITCH_CASE(PT_Reflect, B)                                          \
     }                                                                          \
   } while (0)
 

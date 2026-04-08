@@ -16,6 +16,7 @@
 #include "Function.h"
 #include "Pointer.h"
 #include "PrimType.h"
+#include "Reflect.h"
 #include "Record.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"

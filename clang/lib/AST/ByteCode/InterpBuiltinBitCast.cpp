@@ -474,7 +474,7 @@ using PrimTypeVariant =
                  Integral<8, false>, Integral<8, true>, Integral<16, false>,
                  Integral<16, true>, Integral<32, false>, Integral<32, true>,
                  Integral<64, false>, Integral<64, true>, IntegralAP<true>,
-                 IntegralAP<false>, Boolean, Floating>;
+                 IntegralAP<false>, Boolean, Floating, Reflect>;
 
 // NB: This implementation isn't exactly ideal, but:
 //   1) We can't just do a bitcast here since we need to be able to

@@ -16,6 +16,7 @@
 #include "FixedPoint.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
+#include "Reflect.h"
 #include "PrimType.h"
 
 namespace clang {
@@ -207,6 +208,8 @@ private:
       return PT_MemberPtr;
     else if constexpr (std::is_same_v<T, FixedPoint>)
       return PT_FixedPoint;
+    else if constexpr (std::is_same_v<T, Reflect>)
+      return PT_Reflect;
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }
