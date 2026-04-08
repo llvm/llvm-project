@@ -2956,9 +2956,9 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
         i = j;
         break;
       }
-      // For strict checks in Diff Mode, any skipped non-whitespace text is
-      // treated as a stray line. Even if a match is found later, we report
-      // the gap as a mismatch.
+      // In Diff Mode with strict checking, any text found between the current
+      // position and the match is treated as a stray. Even if a match is found
+      // later, we report the gap as a mismatch.
       if (IsDiffFormat && IsStrict && MatchPos > 0) {
         // Create a temporary view that starts with next new line.
         size_t CurrentLineEnd = CheckRegion.find_first_of("\n\r");
