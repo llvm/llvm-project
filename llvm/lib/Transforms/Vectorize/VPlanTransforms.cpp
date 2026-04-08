@@ -2911,9 +2911,12 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   // Transitively disconnect all blocks that became unreachable, removing
   // incoming values from phi recipes and replacing remaining uses with poison.
   VPTypeAnalysis TypeInfo(Plan);
+  SmallVector<VPRecipeBase *> ToDelete;
+  SmallPtrSet<VPBlockBase *, 8> Visited;
   while (!DeadSuccs.empty()) {
     VPBlockBase *DeadBlock = DeadSuccs.pop_back_val();
-    if (!DeadBlock->getPredecessors().empty())
+    if (!DeadBlock->getPredecessors().empty() ||
+        !Visited.insert(DeadBlock).second)
       continue;
     for (VPBlockBase *Succ :
          to_vector(DeadBlock->successors())) {
@@ -2932,9 +2935,11 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
         if (Def->getNumUsers() > 0)
           Def->replaceAllUsesWith(Plan.getOrAddLiveIn(
               PoisonValue::get(TypeInfo.inferScalarType(Def))));
-      R.eraseFromParent();
+      ToDelete.push_back(&R);
     }
   }
+  for (VPRecipeBase *R : ToDelete)
+    R->eraseFromParent();
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
