@@ -52,11 +52,10 @@ public:
                           lldb::DataExtractorSP &extractor_sp,
                           lldb::offset_t file_offset, lldb::offset_t length);
 
-  static bool MagicBytesMatch(lldb::DataExtractorSP &extractor_sp,
-                              lldb::addr_t offset, lldb::addr_t length);
+  static std::optional<llvm::XCOFF::MagicNumber>
+  GetMagicBytes(lldb::DataExtractorSP &extractor_sp, lldb::addr_t offset,
+                lldb::addr_t length);
 
-  static uint16_t GetMagicBytes(lldb::DataExtractorSP &extractor_sp, lldb::addr_t offset,
-                              lldb::addr_t length);
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
