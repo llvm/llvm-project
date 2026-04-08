@@ -1397,10 +1397,10 @@ void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
         target_address.CalculateSymbolContext(&sym_ctx);
 
         if (sym_ctx.function && comments_string.empty()) {
-          const char *func_name = sym_ctx.function->GetName().AsCString();
+          const char *func_name = sym_ctx.function->GetName().AsCString(nullptr);
           if (sym_ctx.line_entry.IsValid()) {
             const char *file =
-                sym_ctx.line_entry.GetFile().GetFilename().AsCString();
+                sym_ctx.line_entry.GetFile().GetFilename().AsCString(nullptr);
             std::string line = std::to_string(sym_ctx.line_entry.line);
             comments_stream << func_name << " at " << file << ":" << line;
           } else
@@ -1408,7 +1408,7 @@ void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
 
         } else if (sym_ctx.symbol && comments_string.empty()) {
           comments_stream << "symbol stub for: "
-                          << sym_ctx.symbol->GetName().AsCString();
+                          << sym_ctx.symbol->GetName().AsCString(nullptr);
         }
       } // if(op.isImm() && target)
     } // if (desc.isBranch() || desc.isCall())
