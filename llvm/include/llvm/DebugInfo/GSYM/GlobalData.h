@@ -19,10 +19,10 @@ class DataExtractor;
 namespace gsym {
 class FileWriter;
 
-/// IMPORTANT: Do not change the value of existing enumerators. They are
-/// serialized into the GSYM file and must not change. If you need to add a new
-/// type, add it right above NumTypes with an incrementing value. This ensures
-/// that for-loops can use NumTypes to iterate over all types.
+/// GlobalInfoType allows GSYM files to encode global information within a GSYM
+/// file in a way that is extensible for future versions of GSYM. It is
+/// designed to contain information needed by the GSYM encoding, along with any
+/// common data that FunctionInfo InfoType entries might require.
 enum class GlobalInfoType : uint32_t {
   EndOfList = 0u,
   // The address offsets table. It's a list of function addresses subtracted by
@@ -49,9 +49,6 @@ enum class GlobalInfoType : uint32_t {
   FunctionInfo = 5u,
   // Optional UUID of the GSYM.
   UUID = 6u,
-  // IMPORTANT: Add new types above this line with incrementing values.
-  // This ensures that for-loops can use NumTypes to iterate over all types.
-  NumTypes
 };
 
 /// GlobalData describes a section of data in a GSYM file by its type, file

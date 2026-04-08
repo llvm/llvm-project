@@ -14,7 +14,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include <vector>
 

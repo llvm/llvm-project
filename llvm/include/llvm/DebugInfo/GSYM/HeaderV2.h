@@ -52,11 +52,11 @@ enum class StringTableEncoding : uint8_t {
 ///   [Data sections at arbitrary file offsets, zero-padded for alignment]
 ///
 /// Each GlobalData entry (see GlobalData.h) describes a section by its type,
-/// file offset, and file size. The sections can appear in any order in the file
-/// since each GlobalData entry contains an absolute file offset. The
-/// GlobalData array is terminated by an entry with type EndOfList and all
-/// other fields set to zero. See GlobalInfoType (in GlobalData.h) for all
-/// section types.
+/// file offset, and file size. The sections can appear in any order in the
+/// file since each GlobalData entry contains an offset from the first byte of
+/// the GSYM header. The GlobalData array is terminated by an entry with type
+/// EndOfList and all other fields set to zero. See GlobalInfoType (in
+/// GlobalData.h) for all section types.
 struct HeaderV2 {
   /// The magic bytes should be set to GSYM_MAGIC. This helps detect if a file
   /// is a GSYM file by scanning the first 4 bytes of a file or section.
