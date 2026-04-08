@@ -4019,15 +4019,27 @@ be used within constant expressions.
   T            __builtin_stdc_bit_floor(T value);
   T            __builtin_stdc_bit_ceil(T value);
 
-where ``T`` is any unsigned integer type, including ``_BitInt`` types.
+where ``T`` is any unsigned integer type except ``bool`` and enumeration types,
+including ``_BitInt`` types.
 
 **Description**:
 
-These builtins implement the C23 ``<stdbit.h>`` operations. Counts and position
-queries return ``unsigned int``; ``has_single_bit`` returns ``bool``; and
+These builtins implement the C23 ``<stdbit.h>`` operations. Following the C23
+standard, ``unsigned int`` is used as the ``generic_return_type`` for count and
+position queries (``leading_zeros``, ``leading_ones``, ``trailing_zeros``,
+``trailing_ones``, ``first_leading_zero``, ``first_leading_one``,
+``first_trailing_zero``, ``first_trailing_one``, ``count_zeros``,
+``count_ones``, ``bit_width``); ``has_single_bit`` returns ``bool``; and
 ``bit_floor``/``bit_ceil`` return the same type as the operand. Zero and
 all-ones cases follow the C23 definitions. All are usable in constant
 expressions.
+
+``bool`` and enumeration types are rejected as arguments because C23 does not
+permit them for these functions.
+
+As a Clang extension, ``_BitInt`` types of arbitrary widths are supported. C23
+only requires support for bit-precise integers whose width matches a standard
+or extended integer type.
 
 **Examples**:
 

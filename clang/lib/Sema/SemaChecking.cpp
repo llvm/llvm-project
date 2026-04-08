@@ -2371,6 +2371,11 @@ static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall,
   TheCall->setArg(0, Arg);
 
   QualType ArgTy = Arg->getType();
+  // C23 stdbit.h functions do not permit bool or enumeration types.
+  if (ArgTy->isBooleanType() || ArgTy->isEnumeralType())
+    return S.Diag(Arg->getBeginLoc(),
+                  diag::err_builtin_stdc_invalid_arg_type_bool_or_enum)
+           << 1 /*1st argument*/ << ArgTy;
   if (!ArgTy->isUnsignedIntegerType())
     return S.Diag(Arg->getBeginLoc(), diag::err_builtin_stdc_invalid_arg_type)
            << 1 /*1st argument*/ << ArgTy;

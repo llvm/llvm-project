@@ -332,6 +332,54 @@ _Static_assert(__builtin_stdc_bit_ceil(1UL) == 1UL, "");
 _Static_assert(__builtin_stdc_bit_ceil(7UL) == 8UL, "");
 _Static_assert(__builtin_stdc_bit_ceil(1UL << (ULONG_WIDTH - 1)) == (1UL << (ULONG_WIDTH - 1)), "");
 
+// Error cases - all 14 builtins reject bool and enumeration arguments
+enum UnsignedEnum { UE_A = 0, UE_B = 1 };
+enum SignedEnum { SE_A = -1, SE_B = 1 };
+void test_bool_enum_errors(_Bool b, enum UnsignedEnum ue, enum SignedEnum se) {
+  __builtin_stdc_leading_zeros(b);   // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_leading_zeros(ue);  // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+  __builtin_stdc_leading_zeros(se);  // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum SignedEnum')}}
+
+  __builtin_stdc_leading_ones(b);    // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_leading_ones(ue);   // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_trailing_zeros(b);  // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_trailing_zeros(ue); // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_trailing_ones(b);   // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_trailing_ones(ue);  // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_first_leading_zero(b);   // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_first_leading_zero(ue);  // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_first_leading_one(b);    // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_first_leading_one(ue);   // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_first_trailing_zero(b);  // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_first_trailing_zero(ue); // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_first_trailing_one(b);   // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_first_trailing_one(ue);  // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_count_ones(b);      // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_count_ones(ue);     // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_count_zeros(b);     // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_count_zeros(ue);    // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_has_single_bit(b);  // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_has_single_bit(ue); // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_bit_width(b);       // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_bit_width(ue);      // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_bit_floor(b);       // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_bit_floor(ue);      // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+
+  __builtin_stdc_bit_ceil(b);        // expected-error {{1st argument must not be a boolean or enumeration type (was 'bool')}}
+  __builtin_stdc_bit_ceil(ue);       // expected-error {{1st argument must not be a boolean or enumeration type (was 'enum UnsignedEnum')}}
+}
+
 // Error cases - all 14 builtins reject signed and floating-point arguments
 void test_errors(int si, float f) {
   __builtin_stdc_leading_zeros(si);  // expected-error {{1st argument must be a scalar unsigned integer type (was 'int')}}
