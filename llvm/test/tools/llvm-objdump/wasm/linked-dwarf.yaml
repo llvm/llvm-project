@@ -1,0 +1,114 @@
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: llvm-objdump -d --line-numbers %t.wasm | FileCheck %s
+
+# CHECK:      {{.*}} <__original_main>:
+# CHECK-NEXT:        .local i32
+# CHECK-NEXT: ; __original_main():
+# CHECK-NEXT: ; {{.*}}test.c:1
+# CHECK-NEXT:       {{.*}}: 23 80 80 80 80 00     global.get  0
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:
+          - I32
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1 ]
+  - Type:            TABLE
+    Tables:
+      - Index:           0
+        ElemType:        FUNCREF
+        Limits:
+          Flags:           [ HAS_MAX ]
+          Minimum:         0x1
+          Maximum:         0x1
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x1
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+      - Name:            main
+        Kind:            FUNCTION
+        Index:           1
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           1
+        Body:            23808080800041106B21002000410036020C412A0F0B
+      - Index:           1
+        Locals:          []
+        Body:            1080808080000F0B
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         011101250E1305030E10171B0E110112060000022E00110112064018030E3A0B3B0B49133F190000032400030E3E0B0B0B000000
+  - Type:            CUSTOM
+    Name:            .debug_info
+    Payload:         4200000004000000000004012F0000001D00280000000000000004000000020000001900000002020000001900000004ED00009F2300000001013E0000000300000000050400
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         696E74002F622F6F626A64756D702F656D736372697074656E2D72656C6561736573006D61696E00746573742E6300636C616E672076657273696F6E2032332E302E30676974202873736F3A2F2F6368726F6D69756D2F65787465726E616C2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A65637420643733366531626430623938373036636564396236383932313163386466333961626237636434362900
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         3600000004001E000000010101FB0E0D00010101010000000100000100746573742E630000000000000502020000000105050A084B0204000101
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            __original_main
+      - Index:           1
+        Name:            main
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+  - Type:            CUSTOM
+    Name:            producers
+    Languages:
+      - Name:            C11
+        Version:         ''
+    Tools:
+      - Name:            clang
+        Version:         '23.0.0git (sso://chromium/external/github.com/llvm/llvm-project d736e1bd0b98706ced9b689211c8df39abb7cd46)'
+  - Type:            CUSTOM
+    Name:            target_features
+    Features:
+      - Prefix:          USED
+        Name:            bulk-memory
+      - Prefix:          USED
+        Name:            bulk-memory-opt
+      - Prefix:          USED
+        Name:            call-indirect-overlong
+      - Prefix:          USED
+        Name:            multivalue
+      - Prefix:          USED
+        Name:            mutable-globals
+      - Prefix:          USED
+        Name:            nontrapping-fptoint
+      - Prefix:          USED
+        Name:            reference-types
+      - Prefix:          USED
+        Name:            sign-ext
+...

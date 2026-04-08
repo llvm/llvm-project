@@ -269,6 +269,23 @@ bool SymbolizableObjectFile::shouldOverrideWithSymbolTable(
          isa<DWARFContext>(DebugInfoContext.get());
 }
 
+object::SectionedAddress SymbolizableObjectFile::getWasmCodeDwarfOffset(
+    object::SectionedAddress ModuleOffset) const {
+  if (!Module->isWasm())
+    return ModuleOffset;
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
+    ModuleOffset.SectionIndex =
+        getModuleSectionIndexForAddress(ModuleOffset.Address);
+  for (const SectionRef &Sec : Module->sections()) {
+    if (Sec.getIndex() == ModuleOffset.SectionIndex) {
+      if (Sec.isText())
+        ModuleOffset.Address -= Sec.getAddress();
+      break;
+    }
+  }
+  return ModuleOffset;
+}
+
 DILineInfo
 SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                       DILineInfoSpecifier LineInfoSpecifier,
@@ -277,8 +294,9 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
   DILineInfo LineInfo;
+  object::SectionedAddress DWARFOffset = getWasmCodeDwarfOffset(ModuleOffset);
   std::optional<DILineInfo> DBGLineInfo =
-      DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
+      DebugInfoContext->getLineInfoForAddress(DWARFOffset, LineInfoSpecifier);
   if (DBGLineInfo)
     LineInfo = *DBGLineInfo;
 
@@ -305,8 +323,9 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
+  object::SectionedAddress DWARFOffset = getWasmCodeDwarfOffset(ModuleOffset);
   DIInliningInfo InlinedContext = DebugInfoContext->getInliningInfoForAddress(
-      ModuleOffset, LineInfoSpecifier);
+      DWARFOffset, LineInfoSpecifier);
 
   // Make sure there is at least one frame in context.
   bool EmptyFrameAdded = false;
@@ -358,7 +377,8 @@ std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
-  return DebugInfoContext->getLocalsForAddress(ModuleOffset);
+  object::SectionedAddress DWARFOffset = getWasmCodeDwarfOffset(ModuleOffset);
+  return DebugInfoContext->getLocalsForAddress(DWARFOffset);
 }
 
 std::vector<object::SectionedAddress>
