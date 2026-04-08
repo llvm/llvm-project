@@ -128,7 +128,8 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
 
     const TemplateArgument TArg = TArgs->get(0);
     if (TArg.getKind() == TemplateArgument::Type) {
-      const CanQualType TargetTy = TArg.getAsType()->getCanonicalTypeUnqualified();
+      const CanQualType TargetTy =
+          TArg.getAsType()->getCanonicalTypeUnqualified();
       TargetTypes.emplace_back(TargetTy);
     } else if (TArg.getKind() == TemplateArgument::Pack) {
       for (const auto &E : TArg.pack_elements()) {
