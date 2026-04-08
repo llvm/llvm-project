@@ -51,3 +51,15 @@ defm merged_functions_filter :
      "When used with --address/--addresses-from-stdin and --merged-functions,\n"
      "filters the merged functions output to only show functions matching any of the specified regex patterns.\n"
      "Can be specified multiple times.">;
+defm output_version :
+  Eq<"output-version",
+     "Set the GSYM output version (v1, v2). Default: v1.">,
+  Flags<[HelpHidden]>;
+def benchmark_reader :
+  FF<"benchmark-reader",
+     "Open a GSYM file and perform a lookup for every function start address to benchmark the reader performance">,
+  Flags<[HelpHidden]>;
+def wait_for_debugger :
+  FF<"wait-for-debugger",
+     "Pause execution in an infinite loop, waiting for a debugger to attach">,
+  Flags<[HelpHidden]>;

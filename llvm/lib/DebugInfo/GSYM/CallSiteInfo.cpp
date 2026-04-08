@@ -27,7 +27,7 @@ Error CallSiteInfo::encode(FileWriter &O) const {
   O.writeU8(Flags);
   O.writeU32(MatchRegex.size());
   for (uint32_t Entry : MatchRegex)
-    O.writeU32(Entry);
+    O.writeStringOffset(Entry);
   return Error::success();
 }
 
@@ -60,7 +60,7 @@ Expected<CallSiteInfo> CallSiteInfo::decode(DataExtractor &Data,
       return createStringError(std::errc::io_error,
                                "0x%8.8" PRIx64 ": missing MatchRegex entry",
                                Offset);
-    uint32_t Entry = Data.getU32(&Offset);
+    uint32_t Entry = Data.getStringOffset(&Offset);
     CSI.MatchRegex.push_back(Entry);
   }
 

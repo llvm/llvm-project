@@ -56,6 +56,10 @@ class OutputAggregator;
 ///
 /// Once the object has been finalized, it can be saved to a file or section.
 ///
+/// This base class contains all shared state and logic. Subclasses
+/// (GsymCreatorV1, GsymCreatorV2) implement version-specific encoding via
+/// encode() and calculateHeaderAndTableSize().
+///
 /// ENCODING
 ///
 /// GSYM files are designed to be memory mapped into a process as shared, read
@@ -133,6 +137,7 @@ class OutputAggregator;
 /// entry in the Function Info Offsets Table. For details on the exact encoding
 /// of FunctionInfo objects, see "llvm/DebugInfo/GSYM/FunctionInfo.h".
 class GsymCreator {
+protected:
   // Private member variables require Mutex protections
   mutable std::mutex Mutex;
   std::vector<FunctionInfo> Funcs;
@@ -177,7 +182,7 @@ class GsymCreator {
   /// on the current contents of the GSYM file.
   ///
   /// \returns The size in byets of the address offsets.
-  uint8_t getAddressOffsetSize() const;
+  virtual uint8_t getAddressOffsetSize() const = 0;
 
   /// Get the maximum address offset for the current address offset size.
   ///
@@ -189,20 +194,38 @@ class GsymCreator {
   /// file.
   uint64_t getMaxAddressOffset() const;
 
+  /// Validate that the creator is ready for encoding.
+  ///
+  /// Checks that functions exist, the creator is finalized, the function count
+  /// fits in 32 bits, and the base address is valid.
+  ///
+  /// \param[out] BaseAddr Set to the base address on success.
+  /// \returns An error if validation fails, or Error::success().
+  llvm::Error validateForEncoding(std::optional<uint64_t> &BaseAddr) const;
+
+  /// Write the address offsets table to the output stream.
+  ///
+  /// \param O The file writer to write to.
+  /// \param AddrOffSize The byte width of each address offset.
+  /// \param BaseAddr The base address to subtract from each function address.
+  void encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
+                         uint64_t BaseAddr) const;
+
+  /// Write the file table to the output stream.
+  ///
+  /// \param O The file writer to write to.
+  /// \returns An error if the file table is too large, or Error::success().
+  llvm::Error encodeFileTable(FileWriter &O) const;
+
   /// Calculate the byte size of the GSYM header and tables sizes.
   ///
-  /// This function will calculate the exact size in bytes of the encocded GSYM
-  /// for the following items:
-  /// - The GSYM header
-  /// - The Address offset table
-  /// - The Address info offset table
-  /// - The file table
-  /// - The string table
+  /// Version-specific because V1 and V2 have different header and table
+  /// layouts.
   ///
   /// This is used to help split GSYM files into segments.
   ///
   /// \returns Size in bytes the GSYM header and tables.
-  uint64_t calculateHeaderAndTableSize() const;
+  virtual uint64_t calculateHeaderAndTableSize() const = 0;
 
   /// Copy a FunctionInfo from the \a SrcGC GSYM creator into this creator.
   ///
@@ -292,8 +315,20 @@ class GsymCreator {
     IsSegment = true;
   }
 
+  /// Create a new empty creator of the same version.
+  ///
+  /// Used by createSegment() to create segment creators of the correct
+  /// version type.
+  virtual std::unique_ptr<GsymCreator> createNew(bool Quiet) const = 0;
+
 public:
   LLVM_ABI GsymCreator(bool Quiet = false);
+  virtual ~GsymCreator() = default;
+
+  /// Get the size in bytes needed for encoding string offsets.
+  ///
+  /// \returns The size in bytes of each string table offset.
+  virtual uint8_t getStringOffsetSize() const = 0;
 
   /// Save a GSYM file to a stand alone file.
   ///
@@ -317,7 +352,7 @@ public:
   ///
   /// \param O The stream to save the binary data to
   /// \returns An error object that indicates success or failure of the save.
-  LLVM_ABI llvm::Error encode(FileWriter &O) const;
+  virtual llvm::Error encode(FileWriter &O) const = 0;
 
   /// Insert a string into the GSYM string table.
   ///

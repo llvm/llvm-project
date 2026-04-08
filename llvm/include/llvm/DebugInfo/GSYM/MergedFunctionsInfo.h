@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include <stdint.h>
 #include <vector>
@@ -20,7 +21,6 @@ class raw_ostream;
 
 namespace gsym {
 
-class GsymReader;
 struct FunctionInfo;
 struct MergedFunctionsInfo {
   std::vector<FunctionInfo> MergedFunctions;

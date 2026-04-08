@@ -33,61 +33,61 @@ namespace gsym {
 /// GsymReader is used to read GSYM data from a file or buffer.
 ///
 /// This class is optimized for very quick lookups when the endianness matches
-/// the host system. The Header, address table, address info offsets, and file
+/// the host system. The header, address table, address info offsets, and file
 /// table is designed to be mmap'ed as read only into memory and used without
 /// any parsing needed. If the endianness doesn't match, we swap these objects
-/// and tables into GsymReader::SwappedData and then point our header and
-/// ArrayRefs to this swapped internal data.
+/// and tables into version-specific SwappedData and then point the ArrayRefs
+/// to the swapped internal data.
+///
+/// This base class contains all shared state and logic.
 ///
 /// GsymReader objects must use one of the static functions to create an
 /// instance: GsymReader::openFile(...) and GsymReader::copyBuffer(...).
 
 class GsymReader {
-  GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
-  llvm::Error parse();
-
+protected:
   std::unique_ptr<MemoryBuffer> MemBuffer;
-  StringRef GsymBytes;
   llvm::endianness Endian;
-  const Header *Hdr = nullptr;
   ArrayRef<uint8_t> AddrOffsets;
-  ArrayRef<uint32_t> AddrInfoOffsets;
-  ArrayRef<FileEntry> Files;
   StringTable StrTab;
-  /// When the GSYM file's endianness doesn't match the host system then
-  /// we must decode all data structures that need to be swapped into
-  /// local storage and set point the ArrayRef objects above to these swapped
-  /// copies.
-  struct SwappedData {
-    Header Hdr;
-    std::vector<uint8_t> AddrOffsets;
-    std::vector<uint32_t> AddrInfoOffsets;
-    std::vector<FileEntry> Files;
-  };
-  std::unique_ptr<SwappedData> Swap;
+
+  GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
 
 public:
   LLVM_ABI GsymReader(GsymReader &&RHS);
-  LLVM_ABI ~GsymReader();
+  virtual ~GsymReader() = default;
+
+  /// Get the base address of this GSYM file.
+  virtual uint64_t getBaseAddress() const = 0;
+
+  /// Get the number of addresses in this GSYM file.
+  virtual uint64_t getNumAddresses() const = 0;
+
+  /// Get the address offset byte size for this GSYM file.
+  virtual uint64_t getAddressOffsetByteSize() const = 0;
+
+  /// Get the address info offset byte size for this GSYM file.
+  virtual uint64_t getAddressInfoOffsetByteSize() const = 0;
+
+  /// Get the string offset byte size for this GSYM file.
+  virtual uint64_t getStringOffsetByteSize() const = 0;
 
   /// Construct a GsymReader from a file on disk.
   ///
   /// \param Path The file path the GSYM file to read.
-  /// \returns An expected GsymReader that contains the object or an error
-  /// object that indicates reason for failing to read the GSYM.
-  LLVM_ABI static llvm::Expected<GsymReader> openFile(StringRef Path);
+  /// \returns An expected unique_ptr to a GsymReader or an error object that
+  /// indicates reason for failing to read the GSYM.
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  openFile(StringRef Path);
 
   /// Construct a GsymReader from a buffer.
   ///
   /// \param Bytes A set of bytes that will be copied and owned by the
   /// returned object on success.
-  /// \returns An expected GsymReader that contains the object or an error
-  /// object that indicates reason for failing to read the GSYM.
-  LLVM_ABI static llvm::Expected<GsymReader> copyBuffer(StringRef Bytes);
-
-  /// Access the GSYM header.
-  /// \returns A native endian version of the GSYM header.
-  LLVM_ABI const Header &getHeader() const;
+  /// \returns An expected unique_ptr to a GsymReader or an error object that
+  /// indicates reason for failing to read the GSYM.
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  copyBuffer(StringRef Bytes);
 
   /// Get the full function info for an address.
   ///
@@ -169,16 +169,12 @@ public:
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
   /// valid, or std::nullopt if the file index is out of bounds,
-  std::optional<FileEntry> getFile(uint32_t Index) const {
-    if (Index < Files.size())
-      return Files[Index];
-    return std::nullopt;
-  }
+  virtual std::optional<FileEntry> getFile(uint32_t Index) const = 0;
 
   /// Dump the entire Gsym data contained in this object.
   ///
   /// \param  OS The output stream to dump to.
-  LLVM_ABI void dump(raw_ostream &OS);
+  virtual void dump(raw_ostream &OS) = 0;
 
   /// Dump a FunctionInfo object.
   ///
@@ -266,30 +262,41 @@ public:
   /// \param FE The object to dump.
   LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 
-  /// Get the number of addresses in this Gsym file.
-  uint32_t getNumAddresses() const {
-    return Hdr->NumAddresses;
-  }
-
   /// Gets an address from the address table.
   ///
-  /// Addresses are stored as offsets frrom the gsym::Header::BaseAddress.
+  /// Addresses are stored as offsets from the base address.
   ///
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
   /// or std::nullopt if Index is out of bounds.
-  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
+  virtual std::optional<uint64_t> getAddress(size_t Index) const = 0;
+
+  /// Get an unsigned integer of any byte size 1-8 from a byte array.
+  ///
+  /// \param Data The raw byte array in the correct endianness.
+  /// \param ElementByteSize The size in bytes of each element (1-8).
+  /// \param Index The element index to extract.
+  /// \returns The element value, or std::nullopt if Index is out of bounds.
+  static std::optional<uint64_t>
+  getUnsigned(ArrayRef<uint8_t> Data, uint8_t ElementByteSize, size_t Index) {
+    uint64_t Offset = Index * ElementByteSize;
+    if (Offset + ElementByteSize > Data.size())
+      return std::nullopt;
+    DataExtractor DE(
+        StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()),
+        llvm::endianness::native == llvm::endianness::little, 8);
+    return DE.getUnsigned(&Offset, ElementByteSize);
+  }
 
 protected:
-
   /// Get an appropriate address info offsets array.
   ///
-  /// The address table in the GSYM file is stored as array of 1, 2, 4 or 8
-  /// byte offsets from the The gsym::Header::BaseAddress. The table is stored
-  /// internally as a array of bytes that are in the correct endianness. When
-  /// we access this table we must get an array that matches those sizes. This
-  /// templatized helper function is used when accessing address offsets in the
-  /// AddrOffsets member variable.
+  /// The address table in the GSYM file is stored as array of 1-8 byte offsets
+  /// from the base address. The table is stored internally as an array of
+  /// bytes that are in the correct endianness. When we access this table we
+  /// must get an array that matches those sizes. This templatized helper
+  /// function is used when accessing address offsets in the AddrOffsets member
+  /// variable.
   ///
   /// \returns An ArrayRef of an appropriate address offset size.
   template <class T> ArrayRef<T>
@@ -297,75 +304,6 @@ protected:
     return ArrayRef<T>(reinterpret_cast<const T *>(AddrOffsets.data()),
                        AddrOffsets.size()/sizeof(T));
   }
-
-  /// Get an appropriate address from the address table.
-  ///
-  /// The address table in the GSYM file is stored as array of 1, 2, 4 or 8
-  /// byte address offsets from the The gsym::Header::BaseAddress. The table is
-  /// stored internally as a array of bytes that are in the correct endianness.
-  /// In order to extract an address from the address table we must access the
-  /// address offset using the correct size and then add it to the BaseAddress
-  /// in the header.
-  ///
-  /// \param Index An index into the AddrOffsets array.
-  /// \returns An virtual address that matches the original object file for the
-  /// address as the specified index, or std::nullopt if Index is out of bounds.
-  template <class T>
-  std::optional<uint64_t> addressForIndex(size_t Index) const {
-    ArrayRef<T> AIO = getAddrOffsets<T>();
-    if (Index < AIO.size())
-      return AIO[Index] + Hdr->BaseAddress;
-    return std::nullopt;
-  }
-  /// Lookup an address offset in the AddrOffsets table.
-  ///
-  /// Given an address offset, look it up using a binary search of the
-  /// AddrOffsets table.
-  ///
-  /// \param AddrOffset An address offset, that has already been computed by
-  /// subtracting the gsym::Header::BaseAddress.
-  /// \returns The matching address offset index. This index will be used to
-  /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
-  template <class T>
-  std::optional<uint64_t>
-  getAddressOffsetIndex(const uint64_t AddrOffset) const {
-    ArrayRef<T> AIO = getAddrOffsets<T>();
-    const auto Begin = AIO.begin();
-    const auto End = AIO.end();
-    auto Iter = std::lower_bound(Begin, End, AddrOffset);
-    // Watch for addresses that fall between the gsym::Header::BaseAddress and
-    // the first address offset.
-    if (Iter == Begin && AddrOffset < *Begin)
-      return std::nullopt;
-    if (Iter == End || AddrOffset < *Iter)
-      --Iter;
-
-    // GSYM files have sorted function infos with the most information (line
-    // table and/or inline info) first in the array of function infos, so
-    // always backup as much as possible as long as the address offset is the
-    // same as the previous entry.
-    while (Iter != Begin) {
-      auto Prev = Iter - 1;
-      if (*Prev == *Iter)
-        Iter = Prev;
-      else
-        break;
-    }
-
-    return std::distance(Begin, Iter);
-  }
-
-  /// Create a GSYM from a memory buffer.
-  ///
-  /// Called by both openFile() and copyBuffer(), this function does all of the
-  /// work of parsing the GSYM file and returning an error.
-  ///
-  /// \param MemBuffer A memory buffer that will transfer ownership into the
-  /// GsymReader.
-  /// \returns An expected GsymReader that contains the object or an error
-  /// object that indicates reason for failing to read the GSYM.
-  LLVM_ABI static llvm::Expected<llvm::gsym::GsymReader>
-  create(std::unique_ptr<MemoryBuffer> &MemBuffer);
 
   /// Given an address, find the address index.
   ///
@@ -376,7 +314,7 @@ protected:
   /// \returns An index into the address table. This index can be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   /// Returns an error if the address isn't in the GSYM with details of why.
-  LLVM_ABI Expected<uint64_t> getAddressIndex(const uint64_t Addr) const;
+  virtual Expected<uint64_t> getAddressIndex(const uint64_t Addr) const = 0;
 
   /// Given an address index, get the offset for the FunctionInfo.
   ///
@@ -387,7 +325,7 @@ protected:
   /// \param Index An index into the address table.
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
-  LLVM_ABI std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+  virtual uint64_t getAddressInfoOffset(size_t Index) const = 0;
 
   /// Given an address, find the correct function info data and function
   /// address.

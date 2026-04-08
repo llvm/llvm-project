@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
@@ -74,139 +75,8 @@ llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
   if (EC)
     return llvm::errorCodeToError(EC);
   FileWriter O(OutStrm, ByteOrder);
+  O.setStringOffsetSize(getStringOffsetSize());
   return encode(O);
-}
-
-llvm::Error GsymCreator::encode(FileWriter &O) const {
-  std::lock_guard<std::mutex> Guard(Mutex);
-  if (Funcs.empty())
-    return createStringError(std::errc::invalid_argument,
-                             "no functions to encode");
-  if (!Finalized)
-    return createStringError(std::errc::invalid_argument,
-                             "GsymCreator wasn't finalized prior to encoding");
-
-  if (Funcs.size() > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument,
-                             "too many FunctionInfos");
-
-  std::optional<uint64_t> BaseAddress = getBaseAddress();
-  // Base address should be valid if we have any functions.
-  if (!BaseAddress)
-    return createStringError(std::errc::invalid_argument,
-                             "invalid base address");
-  Header Hdr;
-  Hdr.Magic = GSYM_MAGIC;
-  Hdr.Version = GSYM_VERSION;
-  Hdr.AddrOffSize = getAddressOffsetSize();
-  Hdr.UUIDSize = static_cast<uint8_t>(UUID.size());
-  Hdr.BaseAddress = *BaseAddress;
-  Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
-  Hdr.StrtabOffset = 0; // We will fix this up later.
-  Hdr.StrtabSize = 0;   // We will fix this up later.
-  memset(Hdr.UUID, 0, sizeof(Hdr.UUID));
-  if (UUID.size() > sizeof(Hdr.UUID))
-    return createStringError(std::errc::invalid_argument,
-                             "invalid UUID size %u", (uint32_t)UUID.size());
-  // Copy the UUID value if we have one.
-  if (UUID.size() > 0)
-    memcpy(Hdr.UUID, UUID.data(), UUID.size());
-  // Write out the header.
-  llvm::Error Err = Hdr.encode(O);
-  if (Err)
-    return Err;
-
-  const uint64_t MaxAddressOffset = getMaxAddressOffset();
-  // Write out the address offsets.
-  O.alignTo(Hdr.AddrOffSize);
-  for (const auto &FuncInfo : Funcs) {
-    uint64_t AddrOffset = FuncInfo.startAddress() - Hdr.BaseAddress;
-    // Make sure we calculated the address offsets byte size correctly by
-    // verifying the current address offset is within ranges. We have seen bugs
-    // introduced when the code changes that can cause problems here so it is
-    // good to catch this during testing.
-    assert(AddrOffset <= MaxAddressOffset);
-    (void)MaxAddressOffset;
-    switch (Hdr.AddrOffSize) {
-    case 1:
-      O.writeU8(static_cast<uint8_t>(AddrOffset));
-      break;
-    case 2:
-      O.writeU16(static_cast<uint16_t>(AddrOffset));
-      break;
-    case 4:
-      O.writeU32(static_cast<uint32_t>(AddrOffset));
-      break;
-    case 8:
-      O.writeU64(AddrOffset);
-      break;
-    }
-  }
-
-  // Write out all zeros for the AddrInfoOffsets.
-  O.alignTo(4);
-  const off_t AddrInfoOffsetsOffset = O.tell();
-  for (size_t i = 0, n = Funcs.size(); i < n; ++i)
-    O.writeU32(0);
-
-  // Write out the file table
-  O.alignTo(4);
-  assert(!Files.empty());
-  assert(Files[0].Dir == 0);
-  assert(Files[0].Base == 0);
-  size_t NumFiles = Files.size();
-  if (NumFiles > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument, "too many files");
-  O.writeU32(static_cast<uint32_t>(NumFiles));
-  for (auto File : Files) {
-    O.writeU32(File.Dir);
-    O.writeU32(File.Base);
-  }
-
-  // Write out the string table.
-  const off_t StrtabOffset = O.tell();
-  StrTab.write(O.get_stream());
-  const off_t StrtabSize = O.tell() - StrtabOffset;
-  std::vector<uint32_t> AddrInfoOffsets;
-
-  // Verify that the size of the string table does not exceed 32-bit max.
-  // This means the offsets in the string table will not exceed 32-bit max.
-  if (StrtabSize > UINT32_MAX) {
-    return createStringError(std::errc::invalid_argument,
-                             "string table size exceeded 32-bit max");
-  }
-
-  // Write out the address infos for each function info.
-  for (const auto &FuncInfo : Funcs) {
-    if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O)) {
-      // Verify that the address info offsets do not exceed 32-bit max.
-      uint64_t Offset = OffsetOrErr.get();
-      if (Offset > UINT32_MAX) {
-        return createStringError(std::errc::invalid_argument,
-                                 "address info offset exceeded 32-bit max");
-      }
-
-      AddrInfoOffsets.push_back(Offset);
-    } else
-      return OffsetOrErr.takeError();
-  }
-  // Fixup the string table offset and size in the header
-  O.fixup32((uint32_t)StrtabOffset, offsetof(Header, StrtabOffset));
-  O.fixup32((uint32_t)StrtabSize, offsetof(Header, StrtabSize));
-
-  // Fixup all address info offsets
-  uint64_t Offset = 0;
-  for (auto AddrInfoOffset : AddrInfoOffsets) {
-    O.fixup32(AddrInfoOffset, AddrInfoOffsetsOffset + Offset);
-    Offset += 4;
-  }
-  return ErrorSuccess();
-}
-
-llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
-  // Use the loader to load call site information from the YAML file.
-  CallSiteInfoLoader Loader(*this, Funcs);
-  return Loader.loadYAML(YAMLFile);
 }
 
 void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
@@ -468,44 +338,59 @@ std::optional<uint64_t> GsymCreator::getBaseAddress() const {
 }
 
 uint64_t GsymCreator::getMaxAddressOffset() const {
-  switch (getAddressOffsetSize()) {
-    case 1: return UINT8_MAX;
-    case 2: return UINT16_MAX;
-    case 4: return UINT32_MAX;
-    case 8: return UINT64_MAX;
-  }
-  llvm_unreachable("invalid address offset");
+  const uint8_t Size = getAddressOffsetSize();
+  if (Size >= 8)
+    return UINT64_MAX;
+  return (static_cast<uint64_t>(1) << (Size * 8)) - 1;
 }
 
-uint8_t GsymCreator::getAddressOffsetSize() const {
-  const std::optional<uint64_t> BaseAddress = getBaseAddress();
-  const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
-  if (BaseAddress && LastFuncAddr) {
-    const uint64_t AddrDelta = *LastFuncAddr - *BaseAddress;
-    if (AddrDelta <= UINT8_MAX)
-      return 1;
-    else if (AddrDelta <= UINT16_MAX)
-      return 2;
-    else if (AddrDelta <= UINT32_MAX)
-      return 4;
-    return 8;
-  }
-  return 1;
+llvm::Error
+GsymCreator::validateForEncoding(std::optional<uint64_t> &BaseAddr) const {
+  if (Funcs.empty())
+    return createStringError(std::errc::invalid_argument,
+                             "no functions to encode");
+  if (!Finalized)
+    return createStringError(std::errc::invalid_argument,
+                             "GsymCreator wasn't finalized prior to encoding");
+  if (Funcs.size() > UINT32_MAX)
+    return createStringError(std::errc::invalid_argument,
+                             "too many FunctionInfos");
+  BaseAddr = getBaseAddress();
+  if (!BaseAddr)
+    return createStringError(std::errc::invalid_argument,
+                             "invalid base address");
+  return Error::success();
 }
 
-uint64_t GsymCreator::calculateHeaderAndTableSize() const {
-  uint64_t Size = sizeof(Header);
-  const size_t NumFuncs = Funcs.size();
-  // Add size of address offset table
-  Size += NumFuncs * getAddressOffsetSize();
-  // Add size of address info offsets which are 32 bit integers in version 1.
-  Size += NumFuncs * sizeof(uint32_t);
-  // Add file table size
-  Size += Files.size() * sizeof(FileEntry);
-  // Add string table size
-  Size += StrTab.getSize();
+void GsymCreator::encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
+                                    uint64_t BaseAddr) const {
+  const uint64_t MaxAddressOffset = getMaxAddressOffset();
+  O.alignTo(AddrOffSize);
+  for (const auto &FI : Funcs) {
+    uint64_t AddrOffset = FI.startAddress() - BaseAddr;
+    // Make sure we calculated the address offsets byte size correctly by
+    // verifying the current address offset is within ranges. We have seen bugs
+    // introduced when the code changes that can cause problems here so it is
+    // good to catch this during testing.
+    assert(AddrOffset <= MaxAddressOffset);
+    // Suppress unused variable warning in release builds.
+    (void)MaxAddressOffset;
+    O.writeUnsigned(AddrOffset, AddrOffSize);
+  }
+}
 
-  return Size;
+llvm::Error GsymCreator::encodeFileTable(FileWriter &O) const {
+  assert(!Files.empty());
+  assert(Files[0].Dir == 0);
+  assert(Files[0].Base == 0);
+  if (Files.size() > UINT32_MAX)
+    return createStringError(std::errc::invalid_argument, "too many files");
+  O.writeU32(static_cast<uint32_t>(Files.size()));
+  for (const auto &File : Files) {
+    O.writeStringOffset(File.Dir);
+    O.writeStringOffset(File.Base);
+  }
+  return Error::success();
 }
 
 // This function takes a InlineInfo class that was copy constructed from an
@@ -549,7 +434,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
   }
   std::lock_guard<std::mutex> Guard(Mutex);
   Funcs.emplace_back(DstFI);
-  return Funcs.back().cacheEncoding();
+  return Funcs.back().cacheEncoding(*this);
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,
@@ -595,7 +480,7 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
   if (FuncIdx >= Funcs.size())
     return std::unique_ptr<GsymCreator>();
 
-  std::unique_ptr<GsymCreator> GC(new GsymCreator(/*Quiet=*/true));
+  std::unique_ptr<GsymCreator> GC = createNew(/*Quiet=*/true);
 
   // Tell the creator that this is a segment.
   GC->setIsSegment();
@@ -624,4 +509,9 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
     SegmentFuncInfosSize += alignTo(GC->copyFunctionInfo(*this, FuncIdx), 4);
   }
   return std::move(GC);
+}
+
+llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
+  CallSiteInfoLoader Loader(*this, Funcs);
+  return Loader.loadYAML(YAMLFile);
 }

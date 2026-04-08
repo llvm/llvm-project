@@ -25,6 +25,7 @@ class raw_ostream;
 
 namespace gsym {
 
+class GsymCreator;
 class GsymReader;
 /// Function information in GSYM files encodes information for one contiguous
 /// address range. If a function has discontiguous address ranges, they will
@@ -169,7 +170,7 @@ struct FunctionInfo {
   ///
   /// \returns The size in bytes of the FunctionInfo if it were to be encoded
   /// into a byte stream.
-  LLVM_ABI uint64_t cacheEncoding();
+  LLVM_ABI uint64_t cacheEncoding(GsymCreator &GC);
 
   /// Lookup an address within a FunctionInfo object's data stream.
   ///

@@ -74,7 +74,7 @@ static bool skip(DataExtractor &Data, uint64_t &Offset, bool SkippedRanges) {
       return false;
   }
   bool HasChildren = Data.getU8(&Offset) != 0;
-  Data.getU32(&Offset); // Skip Inline.Name.
+  Data.getStringOffset(&Offset); // Skip Inline.Name.
   Data.getULEB128(&Offset); // Skip Inline.CallFile.
   Data.getULEB128(&Offset); // Skip Inline.CallLine.
   if (HasChildren) {
@@ -117,7 +117,7 @@ static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
   // The address range is contained within this InlineInfo, add the source
   // location for this InlineInfo and any children that contain the address.
   bool HasChildren = Data.getU8(&Offset) != 0;
-  Inline.Name = Data.getU32(&Offset);
+  Inline.Name = Data.getStringOffset(&Offset);
   Inline.CallFile = (uint32_t)Data.getULEB128(&Offset);
   Inline.CallLine = (uint32_t)Data.getULEB128(&Offset);
   if (HasChildren) {
@@ -185,10 +185,11 @@ static llvm::Expected<InlineInfo> decode(DataExtractor &Data, uint64_t &Offset,
         "0x%8.8" PRIx64 ": missing InlineInfo uint8_t indicating children",
         Offset);
   bool HasChildren = Data.getU8(&Offset) != 0;
-  if (!Data.isValidOffsetForDataOfSize(Offset, 4))
+  if (!Data.isValidOffsetForDataOfSize(Offset, Data.getStringOffsetSize()))
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": missing InlineInfo uint32_t for name", Offset);
-  Inline.Name = Data.getU32(&Offset);
+                             "0x%8.8" PRIx64 ": missing InlineInfo name",
+                             Offset);
+  Inline.Name = Data.getStringOffset(&Offset);
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": missing ULEB128 for InlineInfo call file", Offset);
@@ -230,7 +231,7 @@ llvm::Error InlineInfo::encode(FileWriter &O, uint64_t BaseAddr) const {
   encodeRanges(Ranges, O, BaseAddr);
   bool HasChildren = !Children.empty();
   O.writeU8(HasChildren);
-  O.writeU32(Name);
+  O.writeStringOffset(Name);
   O.writeULEB(CallFile);
   O.writeULEB(CallLine);
   if (HasChildren) {

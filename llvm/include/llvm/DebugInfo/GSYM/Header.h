@@ -24,7 +24,6 @@ class FileWriter;
 
 constexpr uint32_t GSYM_MAGIC = 0x4753594d; // 'GSYM'
 constexpr uint32_t GSYM_CIGAM = 0x4d595347; // 'MYSG'
-constexpr uint32_t GSYM_VERSION = 1;
 constexpr size_t GSYM_MAX_UUID_SIZE = 20;
 
 /// The GSYM header.
@@ -85,6 +84,9 @@ struct Header {
   /// bytes in the UUID value that appear after the first UUIDSize bytes should
   /// be set to zero.
   uint8_t UUID[GSYM_MAX_UUID_SIZE];
+
+  /// Return the version of this header.
+  static constexpr uint32_t getVersion() { return 1; }
 
   /// Check if a header is valid and return an error if anything is wrong.
   ///

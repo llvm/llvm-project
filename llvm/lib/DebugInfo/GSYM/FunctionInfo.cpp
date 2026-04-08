@@ -8,9 +8,10 @@
 
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
+#include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
+#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/Support/DataExtractor.h"
 #include <optional>
 
@@ -49,7 +50,7 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   if (!Data.isValidOffsetForDataOfSize(Offset, 4))
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": missing FunctionInfo Name", Offset);
-  FI.Name = Data.getU32(&Offset);
+  FI.Name = Data.getStringOffset(&Offset);
   if (FI.Name == 0)
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": invalid FunctionInfo Name value 0x%8.8x",
@@ -69,8 +70,8 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
           "0x%8.8" PRIx64 ": missing FunctionInfo data for InfoType %u",
           Offset, IT);
     DataExtractor InfoData(Data.getData().substr(Offset, InfoLength),
-                           Data.isLittleEndian(),
-                           Data.getAddressSize());
+                           Data.isLittleEndian(), Data.getAddressSize());
+    InfoData.setStringOffsetSize(Data.getStringOffsetSize());
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
@@ -116,12 +117,13 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   return std::move(FI);
 }
 
-uint64_t FunctionInfo::cacheEncoding() {
+uint64_t FunctionInfo::cacheEncoding(GsymCreator &GC) {
   EncodingCache.clear();
   if (!isValid())
     return 0;
   raw_svector_ostream OutStrm(EncodingCache);
   FileWriter FW(OutStrm, llvm::endianness::native);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   llvm::Expected<uint64_t> Result = encode(FW);
   if (!Result) {
     EncodingCache.clear();
@@ -154,8 +156,8 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
   // Write the size in bytes of this function as a uint32_t. This can be zero
   // if we just have a symbol from a symbol table and that symbol has no size.
   Out.writeU32(size());
-  // Write the name of this function as a uint32_t string table offset.
-  Out.writeU32(Name);
+  // Write the name of this function as a string table offset.
+  Out.writeStringOffset(Name);
 
   if (OptLineTable) {
     Out.writeU32(InfoType::LineTableInfo);
@@ -243,7 +245,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
   LR.LookupAddr = Addr;
   uint64_t Offset = 0;
   LR.FuncRange = {FuncAddr, FuncAddr + Data.getU32(&Offset)};
-  uint32_t NameOffset = Data.getU32(&Offset);
+  uint32_t NameOffset = Data.getStringOffset(&Offset);
   // The "lookup" functions doesn't report errors as accurately as the "decode"
   // function as it is meant to be fast. For more accurage errors we could call
   // "decode".
@@ -277,6 +279,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
                                "FunctionInfo data is truncated");
     DataExtractor InfoData(InfoBytes, Data.isLittleEndian(),
                            Data.getAddressSize());
+    InfoData.setStringOffsetSize(Data.getStringOffsetSize());
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
@@ -301,7 +304,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
         InlineInfoData = InfoData;
         break;
 
-      case InfoType::CallSiteInfo:
+      case InfoType::CallSiteInfo: {
         if (auto CSIC = CallSiteInfoCollection::decode(InfoData)) {
           // Find matching call site based on relative offset
           for (const auto &CS : CSIC->CallSites) {
@@ -318,6 +321,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
           return CSIC.takeError();
         }
         break;
+      }
 
       default:
         break;
@@ -353,8 +357,9 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
     return LR;
   // We have inline information. Try to augment the lookup result with this
   // data.
-  llvm::Error Err = InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr,
-                                       LR.Locations);
+  InlineInfoData->setStringOffsetSize(Data.getStringOffsetSize());
+  llvm::Error Err =
+      InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr, LR.Locations);
   if (Err)
     return std::move(Err);
   return LR;
