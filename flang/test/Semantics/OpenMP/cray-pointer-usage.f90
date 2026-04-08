@@ -52,11 +52,22 @@ subroutine test_nested_cray_pointer
   X = 1.0
   P = loc(X)
 
-  ! Test nested constructs: pointer declared in outer parallel, pointee used in nested critical
-  ! This should compile successfully - pointer P is in shared clause of parallel
   !$omp parallel default(none) shared(P, X)
     !$omp critical
       B = B + 2.0
     !$omp end critical
+  !$omp end parallel
+
+  !$omp parallel default(none) shared(P, X)
+    !$omp parallel default(none)
+      ! ERROR: The DEFAULT(NONE) clause requires that the Cray Pointer 'p' must be listed in a data-sharing attribute clause
+      B = B + 1.0
+    !$omp end parallel
+  !$omp end parallel
+
+  !$omp parallel default(none) shared(P, X)
+    !$omp parallel default(none) shared(P, X)
+      B = B + 1.0
+    !$omp end parallel
   !$omp end parallel
 end subroutine test_nested_cray_pointer
