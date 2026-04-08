@@ -68,18 +68,6 @@ void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   }
 }
 
-void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  warning(GetErrorStream()) << sstrm.GetString();
-}
-
 void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
   if (in_string.empty())
     return;

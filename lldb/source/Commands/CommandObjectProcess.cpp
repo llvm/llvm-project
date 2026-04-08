@@ -388,7 +388,7 @@ protected:
             new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
     } else if (!new_exec_module_sp) {
-      result.AppendWarningWithFormat("No executable binary.");
+      result.AppendWarning("No executable binary.");
     } else if (old_exec_module_sp->GetFileSpec() !=
                new_exec_module_sp->GetFileSpec()) {
 
