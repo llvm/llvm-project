@@ -543,8 +543,8 @@ protected:
           ModuleSpec module_spec(module_file_spec);
           target.GetImages().FindModules(module_spec, m_module_list);
           if (m_module_list.IsEmpty())
-            result.AppendWarningWithFormat("No module found for '%s'.\n",
-                                           m_options.modules[i].c_str());
+            result.AppendWarningWithFormatv("No module found for '{0}'.",
+                                            m_options.modules[i]);
         }
       }
       if (!m_module_list.GetSize()) {

@@ -392,10 +392,10 @@ protected:
     } else if (old_exec_module_sp->GetFileSpec() !=
                new_exec_module_sp->GetFileSpec()) {
 
-      result.AppendWarningWithFormat(
-          "Executable binary changed from \"%s\" to \"%s\".\n",
-          old_exec_module_sp->GetFileSpec().GetPath().c_str(),
-          new_exec_module_sp->GetFileSpec().GetPath().c_str());
+      result.AppendWarningWithFormatv(
+          "Executable binary changed from \"{0}\" to \"{1}\".",
+          old_exec_module_sp->GetFileSpec().GetPath(),
+          new_exec_module_sp->GetFileSpec().GetPath());
     }
 
     if (!old_arch_spec.IsValid()) {
@@ -403,10 +403,10 @@ protected:
           "Architecture set to: {0}.",
           target->GetArchitecture().GetTriple().getTriple().c_str());
     } else if (!old_arch_spec.IsExactMatch(target->GetArchitecture())) {
-      result.AppendWarningWithFormat(
-          "Architecture changed from %s to %s.\n",
-          old_arch_spec.GetTriple().getTriple().c_str(),
-          target->GetArchitecture().GetTriple().getTriple().c_str());
+      result.AppendWarningWithFormatv(
+          "Architecture changed from {0} to {1}.",
+          old_arch_spec.GetTriple().getTriple(),
+          target->GetArchitecture().GetTriple().getTriple());
     }
 
     // This supports the use-case scenario of immediately continuing the
