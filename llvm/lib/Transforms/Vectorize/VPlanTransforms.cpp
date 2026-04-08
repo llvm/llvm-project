@@ -6070,7 +6070,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     Type *ElemTy = TypeInfo.inferScalarType(BinOp);
     auto *Zero = Plan.getZero(ElemTy);
     auto *NegRecipe =
-        new VPWidenRecipe(Instruction::Sub, {Zero, BinOp}, *WidenRecipe,
+        new VPWidenRecipe(Instruction::Sub, {Zero, BinOp}, VPIRFlags(),
                           VPIRMetadata(), DebugLoc::getUnknown());
     Builder.insert(NegRecipe);
     BinOp = NegRecipe;
