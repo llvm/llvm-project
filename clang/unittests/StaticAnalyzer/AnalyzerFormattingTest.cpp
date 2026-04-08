@@ -31,13 +31,13 @@ static void runPrintFormattedEntry(
 // No initial pad.
 TEST(PrintFormattedEntryTest, SimplePrint) {
   llvm::SmallString<256> Buffer;
-  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", "A description"},
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checker", "A description"},
                          /*InitialPad=*/0,
                          /*EntryWidth=*/20,
                          /*MinLineWidth=*/0,
                          /*OutBuffer=*/Buffer);
 
-  EXPECT_EQ(Buffer, "Checkers            A description");
+  EXPECT_EQ(Buffer, "Checker             A description");
 }
 
 // With wrapping after checker's name.
@@ -60,14 +60,14 @@ TEST(PrintFormattedEntryTest, EntryLongerThanWidth) {
 // Corner case, when checker's name length equal to EntryWidth.
 TEST(PrintFormattedEntryTest, ExactFillWidth) {
   llvm::SmallString<256> Buffer;
-  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", "A description"},
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checker", "A description"},
                          /*InitialPad=*/0,
-                         /*EntryWidth=*/8,
+                         /*EntryWidth=*/7,
                          /*MinLineWidth=*/0,
                          /*OutBuffer=*/Buffer);
 
-  EXPECT_EQ(Buffer, "Checkers\n"
-                    "        A description");
+  EXPECT_EQ(Buffer, "Checker\n"
+                    "       A description");
 }
 
 // With wrapping after checker's name.
@@ -77,27 +77,27 @@ TEST(PrintFormattedEntryTest, ExactFillWidth) {
 // in -analyzer-checker-help, which led to a formatting bug.
 TEST(PrintFormattedEntryTest, ExactFillWidthWithInitialPad) {
   llvm::SmallString<256> Buffer;
-  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", "A description"},
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checker", "A description"},
                          /*InitialPad=*/2,
-                         /*EntryWidth=*/8,
+                         /*EntryWidth=*/7,
                          /*MinLineWidth=*/0,
                          /*OutBuffer=*/Buffer);
 
-  EXPECT_EQ(Buffer, "  Checkers\n"
-                    "          A description");
+  EXPECT_EQ(Buffer, "  Checker\n"
+                    "         A description");
 }
 
 // No wrapping after checker's name.
 // With initial pad.
 TEST(PrintFormattedEntryTest, WithInitialPadding) {
   llvm::SmallString<256> Buffer;
-  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", "A description"},
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checker", "A description"},
                          /*InitialPad=*/2,
                          /*EntryWidth=*/20,
                          /*MinLineWidth=*/0,
                          /*OutBuffer=*/Buffer);
 
-  EXPECT_EQ(Buffer, "  Checkers            A description");
+  EXPECT_EQ(Buffer, "  Checker             A description");
 }
 
 // No wrapping after checker's name.
@@ -107,14 +107,14 @@ TEST(PrintFormattedEntryTest, WrapDescription) {
   llvm::SmallString<256> Buffer;
   llvm::StringRef Desc =
       "This is a long description that should be wrapped into multiple lines.";
-  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", Desc},
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checker", Desc},
                          /*InitialPad=*/2,
                          /*EntryWidth=*/20,
                          /*MinLineWidth=*/40,
                          /*OutBuffer=*/Buffer);
 
   llvm::StringRef Expected =
-      "  Checkers            This is a long description\n"
+      "  Checker             This is a long description\n"
       "                      that should be wrapped\n"
       "                      into multiple lines.";
   EXPECT_EQ(Buffer, Expected);
@@ -127,13 +127,13 @@ TEST(PrintFormattedEntryTest, NoWrap) {
   llvm::SmallString<256> Buffer;
   llvm::StringRef Desc = "This is a very long description that will not be "
                          "wrapped because MinLineWidth=0.";
-  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", Desc},
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checker", Desc},
                          /*InitialPad=*/2,
                          /*EntryWidth=*/20,
                          /*MinLineWidth=*/0,
                          /*OutBuffer=*/Buffer);
 
-  std::string Expected = "  Checkers            " + Desc.str();
+  std::string Expected = "  Checker             " + Desc.str();
   EXPECT_EQ(Buffer, Expected);
 }
 
@@ -142,13 +142,13 @@ TEST(PrintFormattedEntryTest, NoWrap) {
 // Corner case with empty descriptions.
 TEST(PrintFormattedEntryTest, EmptyDescription) {
   llvm::SmallString<256> Buffer;
-  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", ""},
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checker", ""},
                          /*InitialPad=*/0,
                          /*EntryWidth=*/20,
                          /*MinLineWidth=*/0,
                          /*OutBuffer=*/Buffer);
 
-  EXPECT_EQ(Buffer, "Checkers            ");
+  EXPECT_EQ(Buffer, "Checker             ");
 }
 
 // No wrapping after checker's name.
@@ -171,13 +171,13 @@ TEST(PrintFormattedEntryTest, EmptyEntry) {
 TEST(PrintFormattedEntryTest, NarrowMinLineWidthNoSpaces) {
   llvm::SmallString<256> Buffer;
   runPrintFormattedEntry(
-      /*EntryDescPair=*/{"Checkers", "This_is_a_long_word_without_spaces"},
+      /*EntryDescPair=*/{"Checker", "This_is_a_long_word_without_spaces"},
       /*InitialPad=*/2,
       /*EntryWidth=*/20,
       /*MinLineWidth=*/10,
       /*OutBuffer=*/Buffer);
 
-  EXPECT_EQ(Buffer, "  Checkers            This_is_a_long_word_without_spaces");
+  EXPECT_EQ(Buffer, "  Checker             This_is_a_long_word_without_spaces");
 }
 
 // No wrapping after checker's name.
@@ -185,13 +185,13 @@ TEST(PrintFormattedEntryTest, NarrowMinLineWidthNoSpaces) {
 // With wrapping in checker's description.
 TEST(PrintFormattedEntryTest, MinLineWidthLessThanPad) {
   llvm::SmallString<256> Buffer;
-  runPrintFormattedEntry(/*EntryDescPair=*/{"Checkers", "short phrase"},
+  runPrintFormattedEntry(/*EntryDescPair=*/{"Checker", "short phrase"},
                          /*InitialPad=*/2,
                          /*EntryWidth=*/20,
                          /*MinLineWidth=*/15,
                          /*OutBuffer=*/Buffer);
 
-  llvm::StringRef Expected = "  Checkers            short\n"
+  llvm::StringRef Expected = "  Checker             short\n"
                              "                      phrase";
   EXPECT_EQ(Buffer, Expected);
 }
