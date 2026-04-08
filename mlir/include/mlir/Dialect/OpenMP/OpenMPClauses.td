@@ -1856,31 +1856,23 @@ class OpenMP_DynGroupprivateClauseSkip<
                     extraClassDeclaration> {
 
   let arguments = (ins
-    OptionalAttr<AccessGroupModifierAttr>:$access_group,
-    OptionalAttr<FallbackModifierAttr>:$fallback,
+    OptionalAttr<AccessGroupModifierAttr>:$dyn_groupprivate_access_group,
+    OptionalAttr<FallbackModifierAttr>:$dyn_groupprivate_fallback,
     Optional<AnyInteger>:$dyn_groupprivate_size
   );
 
   let description = [{
-    The `dyn_groupprivate` clause allows you to dynamically allocate group-private
-    memory in OpenMP parallel regions, specifically for `target` and `teams` directives.
-    This clause enables runtime-sized private memory allocation and applicable to
-    target and teams ops.
-
-    Syntax:
-    ```
-    dyn_groupprivate(cgroup, fallback(abort), %size)
-    ```
-
-    Example:
-    ```
-    omp.target dyn_groupprivate(cgroup, fallback(default_mem), %size : i32)
-    ```
+    The `dyn_groupprivate_access_group` attribute specifies the access group
+    modifier for the dynamically allocated group-private memory. The
+    `dyn_groupprivate_fallback` attribute specifies the fallback behavior when
+    allocation fails. The `dyn_groupprivate_size` operand specifies the size in
+    bytes to allocate.
   }];
 
   let optAssemblyFormat = [{
     `dyn_groupprivate` `(`
-      custom<DynGroupprivateClause>($access_group, $fallback,
+      custom<DynGroupprivateClause>($dyn_groupprivate_access_group,
+      $dyn_groupprivate_fallback,
       $dyn_groupprivate_size, type($dyn_groupprivate_size))
     `)`
   }];

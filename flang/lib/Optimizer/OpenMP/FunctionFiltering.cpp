@@ -313,6 +313,7 @@ private:
       targetOp.setDependIteratedKindsAttr(nullptr);
       targetOp.getDeviceMutable().clear();
       targetOp.getIfExprMutable().clear();
+      targetOp.getDynGroupprivateSizeMutable().clear();
 
       // TODO: Clear some of these operands rather than rewriting them,
       // depending on whether they are needed by device codegen once support for
@@ -333,8 +334,6 @@ private:
         collectRewrite(privateVar, rewriteValues);
       for (Value threadLimit : targetOp.getThreadLimitVars())
         collectRewrite(threadLimit, rewriteValues);
-      if (Value dynGpSize = targetOp.getDynGroupprivateSize())
-        collectRewrite(dynGpSize, rewriteValues);
     }
 
     // Move omp.map.info ops to the new block and collect dependencies.

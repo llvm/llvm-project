@@ -338,7 +338,7 @@ def VariableCaptureKindAttr : OpenMP_EnumAttr<VariableCaptureKind,
 }
 
 //===----------------------------------------------------------------------===//
-// dyn_groupprivate enums.
+// access_group_modifier enum.
 //===----------------------------------------------------------------------===//
 
 def AccessGroupCGroup : I32EnumAttrCase<"cgroup", 0>;
@@ -353,6 +353,10 @@ def AccessGroupModifierAttr : OpenMP_EnumAttr<AccessGroupModifier,
                                             "access_group_modifier"> {
   let assemblyFormat = "`(` $value `)`";
 }
+
+//===----------------------------------------------------------------------===//
+// fallback_modifier enum.
+//===----------------------------------------------------------------------===//
 
 def FallbackAbort : I32EnumAttrCase<"abort", 0>;
 def FallbackNull : I32EnumAttrCase<"null", 1>;

@@ -930,20 +930,12 @@ static void printHeapAllocClause(OpAsmPrinter &p, Operation *op,
 // Parser, printer and verify for dyn_groupprivate Clause
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyDynGroupprivateClause(
-    Operation *op, AccessGroupModifierAttr modifierFirst,
-    FallbackModifierAttr modifierSecond, Value dynGroupprivateSize) {
-
-  // Verify the size
-  if (dynGroupprivateSize) {
-    Type size_type = dynGroupprivateSize.getType();
-    // Check if the size type is an integer type
-    if (!size_type.isIntOrIndex()) {
-      return op->emitOpError(
-                 "dyn_groupprivate size must be an integer type, got ")
-             << size_type;
-    }
-  }
+static LogicalResult
+verifyDynGroupprivateClause(Operation *op, AccessGroupModifierAttr accessGroup,
+                            FallbackModifierAttr fallback,
+                            Value dynGroupprivateSize) {
+  if (!dynGroupprivateSize && (accessGroup || fallback))
+    return op->emitOpError("dyn_groupprivate modifiers require a size operand");
 
   return success();
 }
@@ -957,9 +949,8 @@ static ParseResult parseDynGroupprivateClause(
   bool parsedAccessGroup = false;
   bool parsedFallback = false;
 
-  // Parse modifiers separated by commas
-  while (true) {
-    // parse AccessGroupModifier
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    // Parse AccessGroupModifier.
     if (succeeded(parser.parseOptionalKeyword("cgroup"))) {
       if (parsedAccessGroup)
         return parser.emitError(parser.getCurrentLocation(),
@@ -967,9 +958,10 @@ static ParseResult parseDynGroupprivateClause(
       accessGroupAttr = AccessGroupModifierAttr::get(
           parser.getContext(), AccessGroupModifier::cgroup);
       parsedAccessGroup = true;
+      return success();
     }
-    // parse FallbackModifier
-    else if (succeeded(parser.parseOptionalKeyword("fallback"))) {
+    // Parse FallbackModifier.
+    if (succeeded(parser.parseOptionalKeyword("fallback"))) {
       if (parsedFallback)
         return parser.emitError(parser.getCurrentLocation(),
                                 "duplicate fallback modifier");
@@ -996,29 +988,20 @@ static ParseResult parseDynGroupprivateClause(
         return parser.emitError(parser.getCurrentLocation(),
                                 "expected ')' after fallback modifier");
       parsedFallback = true;
-    } else
-      break;
-
-    // Consume optional comma between modifiers
-    (void)parser.parseOptionalComma();
-  }
-
-  // Consume comma after modifiers, if both modifiers are present
-  (void)parser.parseOptionalComma();
-
-  OpAsmParser::UnresolvedOperand operand;
-  if (succeeded(parser.parseOperand(operand))) {
-    dynGroupprivateSize = operand;
-    if (failed(parser.parseColon()) || failed(parser.parseType(sizeType))) {
-      return parser.emitError(parser.getCurrentLocation(),
-                              "expected ':' and type after size operand");
+      return success();
     }
-  } else {
+    // Parse size operand.
+    OpAsmParser::UnresolvedOperand operand;
+    if (succeeded(parser.parseOperand(operand))) {
+      dynGroupprivateSize = operand;
+      if (failed(parser.parseColon()) || failed(parser.parseType(sizeType)))
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected ':' and type after size operand");
+      return success();
+    }
     return parser.emitError(parser.getCurrentLocation(),
                             "expected dyn_groupprivate_size operand");
-  }
-
-  return success();
+  });
 }
 
 static void printDynGroupprivateClause(OpAsmPrinter &printer, Operation *op,
@@ -2550,14 +2533,14 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
       builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.bare,
       makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
       makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
-      clauses.device, clauses.hasDeviceAddrVars, clauses.hostEvalVars,
-      clauses.ifExpr,
+      clauses.device, clauses.dynGroupprivateAccessGroup,
+      clauses.dynGroupprivateFallback, clauses.dynGroupprivateSize,
+      clauses.hasDeviceAddrVars, clauses.hostEvalVars, clauses.ifExpr,
       /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
       /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
       clauses.nowait, clauses.privateVars,
       makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
-      clauses.threadLimitVars, clauses.accessGroup, clauses.fallback,
-      clauses.dynGroupprivateSize,
+      clauses.threadLimitVars,
       /*private_maps=*/nullptr);
 }
 
@@ -2574,10 +2557,9 @@ LogicalResult TargetOp::verify() {
   if (failed(verifyMapClause(*this, getMapVars())))
     return failure();
 
-  // check dyn_groupprivate clause restrictions
-  if (failed(verifyDynGroupprivateClause(*this, getAccessGroupAttr(),
-                                         getFallbackAttr(),
-                                         getDynGroupprivateSize())))
+  if (failed(verifyDynGroupprivateClause(
+          *this, getDynGroupprivateAccessGroupAttr(),
+          getDynGroupprivateFallbackAttr(), getDynGroupprivateSize())))
     return failure();
 
   return verifyPrivateVarsMapping(*this);
@@ -2965,13 +2947,13 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   TeamsOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
-      clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpperVars,
-      /*private_vars=*/{}, /*private_syms=*/nullptr,
+      clauses.dynGroupprivateAccessGroup, clauses.dynGroupprivateFallback,
+      clauses.dynGroupprivateSize, clauses.ifExpr, clauses.numTeamsLower,
+      clauses.numTeamsUpperVars, /*private_vars=*/{}, /*private_syms=*/nullptr,
       /*private_needs_barrier=*/nullptr, clauses.reductionMod,
       clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars,
-      clauses.accessGroup, clauses.fallback, clauses.dynGroupprivateSize);
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars);
 }
 
 // Verify num_teams clause
@@ -3014,10 +2996,9 @@ LogicalResult TeamsOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
-  // check dyn_groupprivate clause restrictions
-  if (failed(verifyDynGroupprivateClause(op, getAccessGroupAttr(),
-                                         getFallbackAttr(),
-                                         getDynGroupprivateSize())))
+  if (failed(verifyDynGroupprivateClause(
+          op, getDynGroupprivateAccessGroupAttr(),
+          getDynGroupprivateFallbackAttr(), getDynGroupprivateSize())))
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
