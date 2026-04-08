@@ -214,13 +214,14 @@ protected:
   /// Get selected multilibs in priority order with default fallback.
   OrderedMultilibs getOrderedMultilibs() const;
 
-  /// Load multilib configuration from a YAML file at \p MultilibPath,
-  bool loadMultilibsFromYAML(const llvm::opt::ArgList &Args, const Driver &D,
-                             StringRef MultilibPath);
-
   /// Discover and load a multilib.yaml configuration.
-  bool discoverMultilibsFromYAML(const llvm::opt::ArgList &Args,
-                                 const Driver &D, StringRef FallbackDir = {});
+  bool loadMultilibsFromYAML(const llvm::opt::ArgList &Args, const Driver &D,
+                             StringRef Fallback = {});
+
+  /// Load multilib configuration from a YAML file at \p MultilibPath,
+  std::optional<std::string> findMultilibsYAML(const llvm::opt::ArgList &Args,
+                                               const Driver &D,
+                                               StringRef FallbackDir = {});
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
@@ -732,7 +733,7 @@ public:
 
   /// Get the list of extra macro defines requested by the multilib
   /// configuration.
-  virtual SmallVector<std::string>
+  SmallVector<std::string>
   getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
     return MultilibMacroDefines;
   }

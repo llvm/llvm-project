@@ -115,9 +115,13 @@ ToolChain::OrderedMultilibs ToolChain::getOrderedMultilibs() const {
 }
 
 bool ToolChain::loadMultilibsFromYAML(const llvm::opt::ArgList &Args,
-                                      const Driver &D, StringRef MultilibPath) {
+                                      const Driver &D, StringRef Fallback) {
+  std::optional<std::string> MultilibPath =
+      findMultilibsYAML(Args, D, Fallback);
+  if (!MultilibPath)
+    return false;
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
-      D.getVFS().getBufferForFile(MultilibPath);
+      D.getVFS().getBufferForFile(*MultilibPath);
   if (!MB)
     return false;
 
@@ -159,7 +163,7 @@ bool ToolChain::loadMultilibsFromYAML(const llvm::opt::ArgList &Args,
 
   // Prepend variant-specific library paths. The YAML's parent directory is
   // the base for file paths; getRuntimePath() is the base for runtime paths.
-  StringRef YAMLBase = llvm::sys::path::parent_path(MultilibPath);
+  StringRef YAMLBase = llvm::sys::path::parent_path(*MultilibPath);
   std::optional<std::string> RuntimeDir = getRuntimePath();
   size_t FileInsertPos = 0;
   size_t LibInsertPos = 0;
@@ -183,16 +187,16 @@ bool ToolChain::loadMultilibsFromYAML(const llvm::opt::ArgList &Args,
   return true;
 }
 
-bool ToolChain::discoverMultilibsFromYAML(const llvm::opt::ArgList &Args,
-                                          const Driver &D,
-                                          StringRef FallbackDir) {
+std::optional<std::string>
+ToolChain::findMultilibsYAML(const llvm::opt::ArgList &Args, const Driver &D,
+                             StringRef FallbackDir) {
   if (Arg *A = Args.getLastArg(options::OPT_multi_lib_config)) {
     SmallString<128> MultilibPath(A->getValue());
     if (!D.getVFS().exists(MultilibPath)) {
       D.Diag(clang::diag::err_drv_no_such_file) << MultilibPath.str();
-      return false;
+      return std::nullopt;
     }
-    return loadMultilibsFromYAML(Args, D, MultilibPath);
+    return std::string(MultilibPath);
   }
 
   SmallString<128> MultilibPath;
@@ -201,11 +205,11 @@ bool ToolChain::discoverMultilibsFromYAML(const llvm::opt::ArgList &Args,
   else if (std::optional<std::string> StdlibDir = getStdlibPath())
     MultilibPath = *StdlibDir;
   else
-    return false;
+    return std::nullopt;
   llvm::sys::path::append(MultilibPath, "multilib.yaml");
   if (!D.getVFS().exists(MultilibPath))
-    return false;
-  return loadMultilibsFromYAML(Args, D, MultilibPath);
+    return std::nullopt;
+  return std::string(MultilibPath);
 }
 
 void ToolChain::setTripleEnvironment(llvm::Triple::EnvironmentType Env) {

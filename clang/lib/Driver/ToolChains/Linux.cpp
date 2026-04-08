@@ -235,7 +235,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
 
-  discoverMultilibsFromYAML(Args, D);
+  loadMultilibsFromYAML(Args, D);
 
   llvm::Triple::ArchType Arch = Triple.getArch();
   std::string SysRoot = computeSysRoot();
@@ -766,11 +766,6 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  // After the resource directory, we prioritize the standard clang include
-  // directory.
-  if (std::optional<std::string> Path = getStdlibIncludePath())
-    addSystemInclude(DriverArgs, CC1Args, *Path);
-
   // Add multilib variant include paths in priority order.
   for (const Multilib &M : getOrderedMultilibs()) {
     if (M.isDefault())
@@ -782,6 +777,11 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
         addSystemInclude(DriverArgs, CC1Args, Dir);
     }
   }
+
+  // After the resource directory, we prioritize the standard clang include
+  // directory.
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
 
   // LOCAL_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, concat(SysRoot, "/usr/local/include"));

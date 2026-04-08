@@ -267,7 +267,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
   // Look for a multilib.yaml before trying target-specific hardwired logic.
   std::string FallbackDir =
       computeClangRuntimesSysRoot(D, /*IncludeTriple=*/false);
-  if (discoverMultilibsFromYAML(Args, D, FallbackDir)) {
+  if (loadMultilibsFromYAML(Args, D, FallbackDir)) {
     SysRoot = FallbackDir;
   } else if (isRISCVBareMetal(Triple) && !detectGCCToolchainAdjacent(D)) {
     DetectedMultilibs Result;
