@@ -428,12 +428,15 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
         match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
-        match(&R,
-              m_ComputeAnyOfResult(m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_ComputeReductionResult(m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
+      continue;
+    }
+    if (match(&R,
+              m_ComputeAnyOfResult(m_VPValue(), m_VPValue(), m_VPValue()))) {
+      addUniformForAllParts(cast<VPInstruction>(&R));
       continue;
     }
     VPValue *Op0;

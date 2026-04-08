@@ -1140,7 +1140,7 @@ define i32 @test_foldable_reduction(i64 %N) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[VEC_PHI]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> splat (i1 true))
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 true
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP4]], i32 0, i32 0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
@@ -1163,7 +1163,7 @@ define i32 @test_foldable_reduction(i64 %N) {
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[VEC_PHI6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> splat (i1 true))
-; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 true
 ; CHECK-NEXT:    [[RDX_SELECT8:%.*]] = select i1 [[TMP9]], i32 0, i32 0
 ; CHECK-NEXT:    [[CMP_N9:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N9]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
