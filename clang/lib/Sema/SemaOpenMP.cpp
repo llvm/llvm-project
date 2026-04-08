@@ -24859,13 +24859,18 @@ void SemaOpenMP::ActOnOpenMPDeclareTargetName(
     if (!IndirectE)
       IsIndirect = true;
   }
-  // FIXME: 'local' clause is not yet implemented in CodeGen. For now, it is
-  // treated as 'enter'. For host compilation, 'local' is a no-op.
+  // FIXME: 'local' with 'device_type(nohost)' is not yet fully supported
+  // in codegen. Treat as 'device_type(any)' for now. The variable will
+  // exist on both host and device, but the host copy is unused.
+  auto DT = DTCI.DT;
   if (MT == OMPDeclareTargetDeclAttr::MT_Local &&
-      getLangOpts().OpenMPIsTargetDevice)
-    Diag(Loc, diag::warn_omp_declare_target_local_not_implemented);
+      DT == OMPDeclareTargetDeclAttr::DT_NoHost) {
+    Diag(Loc, diag::warn_omp_declare_target_local_nohost);
+    DT = OMPDeclareTargetDeclAttr::DT_Any;
+  }
+
   auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-      getASTContext(), MT, DTCI.DT, IndirectE, IsIndirect, Level,
+      getASTContext(), MT, DT, IndirectE, IsIndirect, Level,
       SourceRange(Loc, Loc));
   ND->addAttr(A);
   if (ASTMutationListener *ML = getASTContext().getASTMutationListener())
