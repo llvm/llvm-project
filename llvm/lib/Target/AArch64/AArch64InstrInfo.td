@@ -3284,7 +3284,6 @@ defm ORN  : LogicalReg<0b01, 1, "orn",
                        BinOpFrag<(or node:$LHS, (not node:$RHS))>>;
 defm ORR  : LogicalReg<0b01, 0, "orr", or>;
 
-
 def : InstAlias<"mov $dst, $src",
                 (ORRWrs GPR32:$dst, WZR,
                         (logical_shifted_reg32 GPR32:$src, 0)), 2>;
