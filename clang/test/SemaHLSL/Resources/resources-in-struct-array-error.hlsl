@@ -21,4 +21,7 @@ void main(uint GI : SV_GroupThreadID) {
   array[1].ManyBufs[GI][0] = 4.0f; // ok
 
   array[1+1].ManyBufs[GI][0] = 4.0f; // ok
+
+  int x = 3;
+  array[1].ManyBufs[x][0] = 4.0f; // ok
 }
