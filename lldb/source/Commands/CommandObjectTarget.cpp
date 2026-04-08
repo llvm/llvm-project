@@ -5472,7 +5472,7 @@ protected:
       return;
     }
 
-    result.AppendMessageWithFormat("%u frame provider(s) registered:\n\n",
+    result.AppendMessageWithFormat("%zu frame provider(s) registered:\n\n",
                                    descriptors.size());
 
     for (const auto &entry : descriptors) {
