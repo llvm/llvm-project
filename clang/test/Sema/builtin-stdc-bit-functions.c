@@ -445,5 +445,106 @@ _Static_assert(stdc_has_single_bit(4U) == 1, "");
 _Static_assert(stdc_bit_width(7U) == 3, "");
 _Static_assert(stdc_bit_floor(6U) == 4U, "");
 _Static_assert(stdc_bit_ceil(6U) == 8U, "");
+
+// Type-specific: each builtin truncates to the target type before operating.
+_Static_assert(__builtin_stdc_leading_zeros((unsigned char)0) == 8, "");
+_Static_assert(__builtin_stdc_leading_zeros((unsigned short)0) == 16, "");
+_Static_assert(__builtin_stdc_leading_zeros((unsigned int)0) == 32, "");
+_Static_assert(__builtin_stdc_leading_zeros((unsigned long)0) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_leading_zeros((unsigned long long)0) == 64, "");
+
+_Static_assert(__builtin_stdc_leading_ones((unsigned char)0xFF) == 8, "");
+_Static_assert(__builtin_stdc_leading_ones((unsigned short)0xFFFF) == 16, "");
+_Static_assert(__builtin_stdc_leading_ones((unsigned int)0xFFFFFFFF) == 32, "");
+_Static_assert(__builtin_stdc_leading_ones(~0UL) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_leading_ones((unsigned long long)0xFFFFFFFFFFFFFFFF) == 64, "");
+
+_Static_assert(__builtin_stdc_trailing_zeros((unsigned char)0) == 8, "");
+_Static_assert(__builtin_stdc_trailing_zeros((unsigned short)0) == 16, "");
+_Static_assert(__builtin_stdc_trailing_zeros((unsigned int)0) == 32, "");
+_Static_assert(__builtin_stdc_trailing_zeros((unsigned long)0) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_trailing_zeros((unsigned long long)0) == 64, "");
+
+_Static_assert(__builtin_stdc_trailing_ones((unsigned char)0xFF) == 8, "");
+_Static_assert(__builtin_stdc_trailing_ones((unsigned short)0xFFFF) == 16, "");
+_Static_assert(__builtin_stdc_trailing_ones((unsigned int)0xFFFFFFFF) == 32, "");
+_Static_assert(__builtin_stdc_trailing_ones(~0UL) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_trailing_ones((unsigned long long)0xFFFFFFFFFFFFFFFF) == 64, "");
+
+_Static_assert(__builtin_stdc_first_leading_zero((unsigned char)0xFE) == 8, "");
+_Static_assert(__builtin_stdc_first_leading_zero((unsigned short)0xFFFE) == 16, "");
+_Static_assert(__builtin_stdc_first_leading_zero((unsigned int)0xFFFFFFFE) == 32, "");
+_Static_assert(__builtin_stdc_first_leading_zero(~1UL) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_first_leading_zero((unsigned long long)0xFFFFFFFFFFFFFFFE) == 64, "");
+
+_Static_assert(__builtin_stdc_first_leading_one((unsigned char)0x01) == 8, "");
+_Static_assert(__builtin_stdc_first_leading_one((unsigned short)0x0001) == 16, "");
+_Static_assert(__builtin_stdc_first_leading_one((unsigned int)0x00000001) == 32, "");
+_Static_assert(__builtin_stdc_first_leading_one(1UL) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_first_leading_one((unsigned long long)0x0000000000000001) == 64, "");
+
+_Static_assert(__builtin_stdc_first_trailing_zero((unsigned char)0x7F) == 8, "");
+_Static_assert(__builtin_stdc_first_trailing_zero((unsigned short)0x7FFF) == 16, "");
+_Static_assert(__builtin_stdc_first_trailing_zero((unsigned int)0x7FFFFFFF) == 32, "");
+_Static_assert(__builtin_stdc_first_trailing_zero(~0UL >> 1) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_first_trailing_zero((unsigned long long)0x7FFFFFFFFFFFFFFF) == 64, "");
+
+_Static_assert(__builtin_stdc_first_trailing_one((unsigned char)0x80) == 8, "");
+_Static_assert(__builtin_stdc_first_trailing_one((unsigned short)0x8000) == 16, "");
+_Static_assert(__builtin_stdc_first_trailing_one((unsigned int)0x80000000) == 32, "");
+_Static_assert(__builtin_stdc_first_trailing_one(1UL << (ULONG_WIDTH - 1)) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_first_trailing_one((unsigned long long)0x8000000000000000) == 64, "");
+
+_Static_assert(__builtin_stdc_count_zeros((unsigned char)0) == 8, "");
+_Static_assert(__builtin_stdc_count_zeros((unsigned short)0) == 16, "");
+_Static_assert(__builtin_stdc_count_zeros((unsigned int)0) == 32, "");
+_Static_assert(__builtin_stdc_count_zeros((unsigned long)0) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_count_zeros((unsigned long long)0) == 64, "");
+
+_Static_assert(__builtin_stdc_count_ones((unsigned char)0xFF) == 8, "");
+_Static_assert(__builtin_stdc_count_ones((unsigned short)0xFFFF) == 16, "");
+_Static_assert(__builtin_stdc_count_ones((unsigned int)0xFFFFFFFF) == 32, "");
+_Static_assert(__builtin_stdc_count_ones(~0UL) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_count_ones((unsigned long long)0xFFFFFFFFFFFFFFFF) == 64, "");
+
+_Static_assert(__builtin_stdc_has_single_bit((unsigned char)0x80) == 1, "");
+_Static_assert(__builtin_stdc_has_single_bit((unsigned short)0x8000) == 1, "");
+_Static_assert(__builtin_stdc_has_single_bit((unsigned int)0x80000000) == 1, "");
+_Static_assert(__builtin_stdc_has_single_bit(1UL << (ULONG_WIDTH - 1)) == 1, "");
+_Static_assert(__builtin_stdc_has_single_bit((unsigned long long)0x8000000000000000) == 1, "");
+
+_Static_assert(__builtin_stdc_bit_width((unsigned char)0xFF) == 8, "");
+_Static_assert(__builtin_stdc_bit_width((unsigned short)0xFFFF) == 16, "");
+_Static_assert(__builtin_stdc_bit_width((unsigned int)0xFFFFFFFF) == 32, "");
+_Static_assert(__builtin_stdc_bit_width(~0UL) == ULONG_WIDTH, "");
+_Static_assert(__builtin_stdc_bit_width((unsigned long long)0xFFFFFFFFFFFFFFFF) == 64, "");
+
+_Static_assert(__builtin_stdc_bit_floor((unsigned char)0x80) == 0x80, "");
+_Static_assert(__builtin_stdc_bit_floor((unsigned short)0x8000) == 0x8000, "");
+_Static_assert(__builtin_stdc_bit_floor((unsigned int)0x80000000) == 0x80000000U, "");
+_Static_assert(__builtin_stdc_bit_floor(~0UL) == (1UL << (ULONG_WIDTH - 1)), "");
+_Static_assert(__builtin_stdc_bit_floor((unsigned long long)0x8000000000000000) == 0x8000000000000000ULL, "");
+
+_Static_assert(__builtin_stdc_bit_ceil((unsigned char)0x7F) == 0x80, "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned short)0x7FFF) == 0x8000, "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned int)0x7FFFFFFF) == 0x80000000U, "");
+_Static_assert(__builtin_stdc_bit_ceil(1UL << (ULONG_WIDTH - 1)) == (1UL << (ULONG_WIDTH - 1)), "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned long long)0x7FFFFFFFFFFFFFFF) == 0x8000000000000000ULL, "");
+
+// Truncation: passing a large ull verifies only the low N bits are used.
+_Static_assert(__builtin_stdc_leading_zeros((unsigned char)0x8000000000000000ULL) == 8, "");
+_Static_assert(__builtin_stdc_leading_ones((unsigned char)0xFFFFFFFFFFFFFFFFULL) == 8, "");
+_Static_assert(__builtin_stdc_trailing_zeros((unsigned char)0x8000000000000000ULL) == 8, "");
+_Static_assert(__builtin_stdc_trailing_ones((unsigned char)0xFFFFFFFFFFFFFFFFULL) == 8, "");
+_Static_assert(__builtin_stdc_first_leading_zero((unsigned char)0xFFFFFFFFFFFFFFFFULL) == 0, "");
+_Static_assert(__builtin_stdc_first_leading_one((unsigned char)0xFF00000000000001ULL) == 8, "");
+_Static_assert(__builtin_stdc_first_trailing_zero((unsigned char)0xFFFFFFFFFFFFFFFFULL) == 0, "");
+_Static_assert(__builtin_stdc_first_trailing_one((unsigned char)0x8000000000000080ULL) == 8, "");
+_Static_assert(__builtin_stdc_count_zeros((unsigned char)0x8000000000000000ULL) == 8, "");
+_Static_assert(__builtin_stdc_count_ones((unsigned char)0xFFFFFFFFFFFFFFFFULL) == 8, "");
+_Static_assert(__builtin_stdc_has_single_bit((unsigned char)0x8000000080008080ULL) == 1, "");
+_Static_assert(__builtin_stdc_bit_width((unsigned char)0xFFFFFFFFFFFFFFFFULL) == 8, "");
+_Static_assert(__builtin_stdc_bit_floor((unsigned char)0x8000000080008080ULL) == 0x80, "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned char)0x800000008000807FULL) == 0x80, "");
 #endif
 #endif
