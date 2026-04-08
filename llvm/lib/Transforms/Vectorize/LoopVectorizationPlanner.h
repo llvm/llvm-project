@@ -272,6 +272,19 @@ public:
                           VPIRFlags(Pred, FastMathFlags()), {}, DL, Name));
   }
 
+  /// Create an AnyOf reduction pattern: or-reduce \p ChainOp, freeze the
+  /// result, then select between \p TrueVal and \p FalseVal.
+  VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
+                                      VPValue *FalseVal,
+                                      DebugLoc DL = DebugLoc::getUnknown()) {
+    VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                    FastMathFlags());
+    auto *OrReduce = createNaryOp(VPInstruction::ComputeReductionResult,
+                                  {ChainOp}, Flags, DL);
+    auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce});
+    return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
+  }
+
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -674,10 +687,10 @@ private:
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
-  /// Add recipes to compute the final reduction result (using
-  /// ComputeReductionResult) in the middle block. Selects are introduced for
-  /// reductions between the phi and users outside the vector region when
-  /// folding the tail.
+  /// Add ComputeReductionResult recipes to the middle block to compute the
+  /// final reduction results. Add Select recipes to the latch block when
+  /// folding tail, to feed ComputeReductionResult with the last or penultimate
+  /// iteration values according to the header mask.
   void addReductionResultComputation(VPlanPtr &Plan,
                                      VPRecipeBuilder &RecipeBuilder,
                                      ElementCount MinVF);
