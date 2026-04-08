@@ -89,7 +89,7 @@ int main() {
 
   auto t = []( /* comment */ ) { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES:   auto t = [] { return 42; };
+  // CHECK-FIXES:   auto t = [] /* comment */ { return 42; };
 
   auto u = []() /* comment */ { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
@@ -97,7 +97,7 @@ int main() {
 
   auto w = [](/* comment */) { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]
-  // CHECK-FIXES:   auto w = [] { return 42; };
+  // CHECK-FIXES:   auto w = []/* comment */ { return 42; };
 
   auto x = [] /* comment */ () { return 42; };
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: redundant empty parameter list in lambda expression [readability-redundant-lambda-parentheses]

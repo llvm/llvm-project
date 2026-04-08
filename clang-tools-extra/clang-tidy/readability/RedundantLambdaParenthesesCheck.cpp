@@ -60,7 +60,8 @@ void RedundantLambdaParenthesesCheck::check(
     return;
 
   diag(LParenLoc, "redundant empty parameter list in lambda expression")
-      << FixItHint::CreateRemoval({LParenLoc, RParenLoc});
+      << FixItHint::CreateRemoval(LParenLoc)
+      << FixItHint::CreateRemoval(RParenLoc);
 }
 
 } // namespace clang::tidy::readability
