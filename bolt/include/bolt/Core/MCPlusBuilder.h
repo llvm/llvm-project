@@ -138,10 +138,8 @@ private:
 
   MCInst::iterator getAnnotationInstOp(MCInst &Inst) const {
     for (MCInst::iterator Iter = Inst.begin(); Iter != Inst.end(); ++Iter) {
-      if (Iter->isInst()) {
-        assert(Iter->getInst() == nullptr && "Empty instruction expected.");
+      if (MCPlus::isAnnotationSentinel(*Iter))
         return Iter;
-      }
     }
     return Inst.end();
   }
