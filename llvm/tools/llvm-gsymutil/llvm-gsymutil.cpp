@@ -18,10 +18,12 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
@@ -101,6 +103,8 @@ static bool UseMergedFunctions = false;
 static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
+static bool ShowStatistics;
+static GsymReader::StatisticsFormat StatisticsFormat;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -194,6 +198,22 @@ static void parseArgs(int argc, char **argv) {
   }
 
   LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
+
+  ShowStatistics = Args.hasArg(OPT_statistics_EQ);
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_statistics_EQ)) {
+    StringRef Val = A->getValue();
+    if (Val == "" || Val == "text")
+      StatisticsFormat = GsymReader::StatisticsFormat::Text;
+    else if (Val == "json")
+      StatisticsFormat = GsymReader::StatisticsFormat::JSON;
+    else if (Val == "pretty-json")
+      StatisticsFormat = GsymReader::StatisticsFormat::PrettyJSON;
+    else {
+      errs() << "error: unknown statistics format '" << Val
+             << "'. Supported formats: text, json, pretty-json\n";
+      std::exit(1);
+    }
+  }
 
   for (const llvm::opt::Arg *A :
        Args.filtered(OPT_merged_functions_filter_EQ)) {
@@ -701,6 +721,11 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     auto Gsym = GsymReader::openFile(GSYMPath);
     if (!Gsym)
       error(GSYMPath, Gsym.takeError());
+
+    if (ShowStatistics) {
+      Gsym->dumpStatistics(GSYMPath, OS, StatisticsFormat);
+      continue;
+    }
 
     if (LookupAddresses.empty()) {
       Gsym->dump(outs());
