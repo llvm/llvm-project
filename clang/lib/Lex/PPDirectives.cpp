@@ -2652,8 +2652,9 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     NameWithoriginalSlashes.consume_front("\\\\?\\");
 #endif
     StringRef RealPathName = File->getFileEntry().tryGetRealPathName();
-    SmallVector<StringRef, 16> Components(llvm::sys::path::begin(Name),
-                                          llvm::sys::path::end(Name));
+    SmallVector<StringRef, 16> Components;
+    std::copy(llvm::sys::path::begin(Name), llvm::sys::path::end(Name),
+              std::back_inserter(Components));
 #if defined(_WIN32)
     // -Wnonportable-include-path is designed to diagnose includes using
     // case even on systems with a case-insensitive file system.

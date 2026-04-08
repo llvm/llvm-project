@@ -10053,7 +10053,7 @@ void SemaCodeCompletion::CodeCompleteObjCMethodDecl(
         IFace = Category->getClassInterface();
 
     if (IFace)
-      llvm::append_range(Containers, IFace->visible_categories());
+      llvm::copy(IFace->visible_categories(), std::back_inserter(Containers));
 
     if (IsInstanceMethod) {
       for (unsigned I = 0, N = Containers.size(); I != N; ++I)
