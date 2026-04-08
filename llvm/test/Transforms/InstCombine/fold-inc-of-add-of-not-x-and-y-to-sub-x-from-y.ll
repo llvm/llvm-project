@@ -182,6 +182,55 @@ define i32 @t7(i32 %x, i32 %y) {
   ret i32 %t2
 }
 
+define i32 @t5_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t5_5(
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 4
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = xor i32 %x, -1
+  call void @use32(i32 %t0)
+  %t1 = add i32 %t0, %y
+  %t2 = add i32 %t1, 5
+  ret i32 %t2
+}
+
+define i32 @t6_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t6_5(
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[Y:%.*]], [[T0]]
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 4
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = xor i32 %x, -1
+  %t1 = add i32 %t0, %y
+  call void @use32(i32 %t1)
+  %t2 = add i32 %t1, 5
+  ret i32 %t2
+}
+
+define i32 @t7_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t7_5(
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[Y:%.*]], [[T0]]
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 4
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = xor i32 %x, -1
+  call void @use32(i32 %t0)
+  %t1 = add i32 %t0, %y
+  call void @use32(i32 %t1)
+  %t2 = add i32 %t1, 5
+  ret i32 %t2
+}
+
 ;------------------------------------------------------------------------------;
 ; Commutativity
 ;------------------------------------------------------------------------------;
