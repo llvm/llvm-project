@@ -258,9 +258,11 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
 
-  // If the operation is already trivially dead just add it to the erase list.
+  // If the operation is already trivially dead, erase it immediately.
+  // Retaining dead operations in a region can affect the equivalence check
+  // between two region ops, causing CSE to miss optimization opportunities.
   if (isOpTriviallyDead(op)) {
-    opsToErase.push_back(op);
+    rewriter.eraseOp(op);
     ++numDCE;
     return success();
   }
@@ -308,7 +310,7 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
-  for (auto &op : *bb) {
+  for (auto &op : llvm::make_early_inc_range(*bb)) {
     // Most operations don't have regions, so fast path that case.
     if (op.getNumRegions() != 0) {
       // If this operation is isolated above, we can't process nested regions
@@ -398,7 +400,7 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   for (auto *op : opsToErase)
     rewriter.eraseOp(op);
   if (changed)
-    *changed = !opsToErase.empty();
+    *changed = numDCE || numCSE;
 
   // Note: CSE does currently not remove ops with regions, so DominanceInfo
   // does not have to be invalidated.
