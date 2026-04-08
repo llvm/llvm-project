@@ -1685,23 +1685,18 @@ def read_file_from_process_wd(test, name):
     return read_file_on_target(test, path)
 
 
-def wait_for_file_on_target(testcase, file_path, max_attempts=6):
-    for i in range(max_attempts):
+def wait_for_file_on_target(testcase, file_path):
+    import time
+
+    MAX_ATTEMPTS = 60
+    timeout_seconds = 20 if "ASAN_OPTIONS" in os.environ else 2
+    for i in range(MAX_ATTEMPTS):
         command = f"ls {file_path}"
         err, retcode, msg = testcase.run_platform_command(command)
-        if testcase.TraceOn():
-            testcase.trace(f"Ran command: {command}")
-            testcase.trace(f"Retcode: {retcode}")
-            testcase.trace(f"Output: {msg}")
-            testcase.trace(f"Error: {err.description}")
-
         if err.Success() and retcode == 0:
             break
-        if i < max_attempts:
-            # Exponential backoff!
-            import time
 
-            time.sleep(pow(2, i) * 0.25)
+        time.sleep(timeout_seconds)
     else:
         testcase.fail(
             "File %s not found even after %d attempts." % (file_path, max_attempts)
