@@ -181,6 +181,33 @@ llvm::Error GsymReader::parse() {
   return Error::success();
 }
 
+llvm::Error GsymReader::parseGlobalDataEntries(uint64_t Offset) {
+  const StringRef Buf = MemBuffer->getBuffer();
+  const uint64_t BufSize = Buf.size();
+  const bool IsLittleEndian = (Endian == llvm::endianness::little);
+  DataExtractor Data(Buf, IsLittleEndian, 8 /* address size, unused */);
+  while (Offset + sizeof(GlobalData) <= BufSize) {
+    auto GDOrErr = GlobalData::decode(Data, Offset);
+    if (!GDOrErr)
+      return GDOrErr.takeError();
+    const GlobalData &GD = *GDOrErr;
+
+    if (GD.Type == GlobalInfoType::EndOfList)
+      return Error::success();
+
+    if (GD.FileOffset + GD.FileSize > BufSize)
+      return createStringError(
+          std::errc::invalid_argument,
+          "GlobalData section type %u extends beyond "
+          "buffer (offset=%" PRIu64 ", size=%" PRIu64 ", bufsize=%" PRIu64 ")",
+          static_cast<uint32_t>(GD.Type), GD.FileOffset, GD.FileSize, BufSize);
+
+    GlobalDataSections[GD.Type] = GD;
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "GlobalData array not terminated by EndOfList");
+}
+
 llvm::Error GsymReader::parseAddrOffsets(StringRef Bytes) {
   const uint8_t AddrOffSize = getAddressOffsetSize();
   const uint32_t NumAddrs = getNumAddresses();

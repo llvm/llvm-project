@@ -318,7 +318,11 @@ protected:
     if (Buf.size() < HeaderT::getEncodedSize())
       return createStringError(std::errc::invalid_argument,
                                "not enough data for a GSYM header");
-    if (Endian != llvm::endianness::native) {
+    if (Endian == llvm::endianness::native) {
+      // Non-swap case. Mmap the header.
+      OutHdr = reinterpret_cast<const HeaderT *>(Buf.data());
+    } else {
+      // Swap case. Decode with a DataExtractor with the correct endianness.
       const bool IsLittleEndian = (Endian == llvm::endianness::little);
       DataExtractor Data(Buf, IsLittleEndian, 8 /* address size, unused */);
       OutSwappedHdr = std::make_unique<HeaderT>();
@@ -327,13 +331,17 @@ protected:
         return ExpectedHdr.takeError();
       *OutSwappedHdr = *ExpectedHdr;
       OutHdr = OutSwappedHdr.get();
-    } else {
-      OutHdr = reinterpret_cast<const HeaderT *>(Buf.data());
     }
     if (Error Err = OutHdr->checkForError())
       return Err;
     return Error::success();
   }
+
+  /// Parse GlobalData entries starting at \p Offset into GlobalDataSections.
+  ///
+  /// \param Offset The byte offset where GlobalData entries begin.
+  /// \returns Error on failure.
+  llvm::Error parseGlobalDataEntries(uint64_t Offset);
 
   /// Parse address offsets section bytes into AddrOffsets.
   ///

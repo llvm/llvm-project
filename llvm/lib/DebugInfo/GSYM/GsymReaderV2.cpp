@@ -23,48 +23,11 @@ GsymReaderV2::GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer,
                            llvm::endianness Endian)
     : GsymReader(std::move(Buffer), Endian) {}
 
-/// Helper to parse GlobalData entries from a GSYM V2 file.
-static llvm::Error
-parseGlobalDataEntries(DataExtractor &Data, uint64_t &Offset, uint64_t BufSize,
-                       std::map<GlobalInfoType, GlobalData> &Sections) {
-  while (Offset + sizeof(GlobalData) <= BufSize) {
-    auto GDOrErr = GlobalData::decode(Data, Offset);
-    if (!GDOrErr)
-      return GDOrErr.takeError();
-    const GlobalData &GD = *GDOrErr;
-
-    if (GD.Type == GlobalInfoType::EndOfList)
-      return Error::success();
-
-    if (GD.FileOffset + GD.FileSize > BufSize)
-      return createStringError(
-          std::errc::invalid_argument,
-          "GlobalData section type %u extends beyond "
-          "buffer (offset=%" PRIu64 ", size=%" PRIu64 ", bufsize=%" PRIu64 ")",
-          static_cast<uint32_t>(GD.Type), GD.FileOffset, GD.FileSize, BufSize);
-
-    Sections[GD.Type] = GD;
-  }
-  return createStringError(std::errc::invalid_argument,
-                           "GlobalData array not terminated by EndOfList");
-}
-
 /// For V2 file layout, see HeaderV2.h
 llvm::Error GsymReaderV2::parseHeaderAndGlobalDataDirectory() {
   if (auto Err = parseHeader(Hdr, SwappedHdr))
     return Err;
-
-  // Parse GlobalData entries to find section locations.
-  const StringRef Buf = MemBuffer->getBuffer();
-  const uint64_t BufSize = Buf.size();
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
-  DataExtractor Data(Buf, IsLittleEndian, 8);
-  uint64_t Offset = HeaderV2::getEncodedSize();
-  if (auto Err =
-          parseGlobalDataEntries(Data, Offset, BufSize, GlobalDataSections))
-    return Err;
-
-  return Error::success();
+  return parseGlobalDataEntries(HeaderV2::getEncodedSize());
 }
 
 static const char *getGlobalInfoTypeName(GlobalInfoType Type) {
