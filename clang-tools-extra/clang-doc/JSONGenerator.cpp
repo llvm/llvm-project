@@ -772,12 +772,6 @@ void JSONGenerator::serializeInfo(const NamespaceInfo &I, json::Object &Obj) {
   if (I.USR == GlobalNamespaceID)
     Obj["Name"] = "Global Namespace";
 
-  if (!I.Children.Namespaces.empty()) {
-    serializeArray(I.Children.Namespaces, Obj, "Namespaces",
-                   serializeReferenceLambda());
-    Obj["HasNamespaces"] = true;
-  }
-
   if (!I.Children.Functions.empty()) {
     serializeArray(I.Children.Functions, Obj, "Functions",
                    serializeInfoLambda());
