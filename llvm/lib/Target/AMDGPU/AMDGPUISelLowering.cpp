@@ -5560,6 +5560,28 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
   return isUInt<32>(Val.getZExtValue()) || TII->isInlineConstant(Val);
 }
 
+SDValue
+AMDGPUTargetLowering::performRetGlueCombine(SDNode *N,
+                                            DAGCombinerInfo &DCI) const {
+  Type *RetTy = DCI.DAG.getMachineFunction().getFunction().getReturnType();
+  if (RetTy->isVoidTy() || !RetTy->isIntegerTy())
+    return SDValue();
+
+  const TargetLowering &TLI = DCI.DAG.getTargetLoweringInfo();
+  TargetLoweringOpt TLO(DCI.DAG, !DCI.isBeforeLegalize(),
+                        !DCI.isBeforeLegalizeOps());
+  unsigned DemandedBitsVal = RetTy->getScalarSizeInBits();
+
+  APInt DemandedBits = APInt::getAllOnes(DemandedBitsVal);
+  SDValue Op = N->getOperand(0);
+  if (Op.getOpcode() == ISD::CopyToReg &&
+      Op.getOperand(2).getOpcode() == ISD::ANY_EXTEND) {
+    Op = Op.getOperand(2).getOperand(0);
+    TLI.SimplifyDemandedBits(Op, DemandedBits, DCI);
+  }
+  return SDValue();
+}
+
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5772,6 +5794,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performAssertSZExtCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicWOChainCombine(N, DCI);
+  case AMDGPUISD::RET_GLUE:
+    return performRetGlueCombine(N, DCI);
   case AMDGPUISD::FMAD_FTZ: {
     SDValue N0 = N->getOperand(0);
     SDValue N1 = N->getOperand(1);
