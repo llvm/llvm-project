@@ -228,6 +228,14 @@ class LLVMConfig(object):
         return None
 
     def with_environment(self, variable, value, append_path=False):
+        ### BEGIN SWIFT
+        # On Windows, env vars are case-insensitive and swiftc will
+        # crash if passed two variables that differ only in case.
+        if platform.system() == "Windows":
+            for key in list(self.config.environment):
+                if key.lower() == variable.lower() and key != variable:
+                    del self.config.environment[key]
+        ### END SWIFT
         if append_path:
             # For paths, we should be able to take a list of them and process
             # all of them.
