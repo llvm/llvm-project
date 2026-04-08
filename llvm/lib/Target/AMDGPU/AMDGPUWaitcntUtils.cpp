@@ -42,6 +42,7 @@ StringLiteral getInstCounterName(InstCounterType T) {
   case NUM_INST_CNTS:
     return "NUM_INST_CNTS";
   }
+  llvm_unreachable("Unhandled InstCounterType");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
