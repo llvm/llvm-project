@@ -252,8 +252,8 @@ void ProfiledBinary::load() {
   // in [buildid:]addr format. Main executables use empty FilterBuildID
   // since their addresses have no buildid prefix.
   file_magic Magic;
-  if (auto EC = identify_magic(Path, Magic); !EC &&
-      Magic == file_magic::elf_shared_object) {
+  if (auto EC = identify_magic(Path, Magic);
+      !EC && Magic == file_magic::elf_shared_object) {
     auto BID = object::getBuildID(Obj);
     if (!BID.empty())
       FilterBuildID = llvm::toHex(BID, /*LowerCase=*/true);
