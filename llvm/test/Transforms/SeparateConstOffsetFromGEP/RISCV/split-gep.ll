@@ -289,3 +289,49 @@ entry:
   store i32 %i, ptr %gep8
   ret i32 undef
 }
+
+; Case where inbounds can't be preserved despite the fact that %shr is positive -
+; byte offset (%shr * 8) is negative, so the GEP with %shr index can be outside of
+; bounds of the allocated object.
+define i64 @test_inbounds1(ptr %arr, i64 %x) {
+; CHECK-LABEL: @test_inbounds1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = tail call i64 @llvm.umin.i64(i64 [[X:%.*]], i64 4)
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[MIN]], -1
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[XOR]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [6 x i64], ptr [[ARR:%.*]], i64 0, i64 [[SHR]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 40
+; CHECK-NEXT:    [[RES:%.*]] = load i64, ptr [[GEP2]], align 8
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %min = tail call i64 @llvm.umin.i64(i64 %x, i64 4)
+  %xor = xor i64 %min, -1
+  %shr = lshr i64 %xor, 1
+  %sub = add nsw i64 %shr, -9223372036854775803
+  %gep = getelementptr inbounds nuw [6 x i64], ptr %arr, i64 0, i64 %sub
+  %res = load i64, ptr %gep, align 8
+  ret i64 %res
+}
+
+; The same case as above - inbounds attribute can't be preserved due to negative
+; GEP index (%sub).
+define i64 @test_inbounds2(ptr %arr, i64 %x) {
+; CHECK-LABEL: @test_inbounds2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = tail call i64 @llvm.umin.i64(i64 [[X:%.*]], i64 4)
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[MIN]], 1
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 0, [[SHR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [6 x i64], ptr [[ARR:%.*]], i64 0, i64 [[SUB1]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
+; CHECK-NEXT:    [[RES:%.*]] = load i64, ptr [[GEP2]], align 8
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %min = tail call i64 @llvm.umin.i64(i64 %x, i64 4)
+  %shr = lshr i64 %min, 1
+  %sub = sub nsw nuw i64 4, %shr
+  %gep = getelementptr inbounds nuw [6 x i64], ptr %arr, i64 0, i64 %sub
+  %res = load i64, ptr %gep, align 8
+  ret i64 %res
+}
