@@ -21,7 +21,16 @@ template <class _Tp, _Tp __v> struct integral_constant {
   static inline constexpr const _Tp value = __v;
 };
 
-template <class _Tp> constexpr _Tp &&forward(_Tp &&__t) noexcept {
+template <class _Tp>
+using remove_reference_t [[gnu::nodebug]] = __remove_reference_t(_Tp);
+
+template <class _Tp>
+constexpr _Tp &&forward(remove_reference_t<_Tp> &&__t) noexcept {
+  return static_cast<_Tp &&>(__t);
+}
+
+template <class _Tp>
+constexpr _Tp &&forward(remove_reference_t<_Tp> &__t) noexcept {
   return static_cast<_Tp &&>(__t);
 }
 
