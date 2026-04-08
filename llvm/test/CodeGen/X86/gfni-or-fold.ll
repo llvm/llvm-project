@@ -7,8 +7,7 @@ declare <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
 define <64 x i8> @test_or_disjoint_fold_512(<64 x i8> %src, <64 x i8> %matrix) nounwind {
 ; AVX512-LABEL: test_or_disjoint_fold_512:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    vgf2p8affineqb $8, %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %matrix, i8 0)
   %or = or disjoint <64 x i8> %gfni, splat(i8 8)
@@ -18,8 +17,7 @@ define <64 x i8> @test_or_disjoint_fold_512(<64 x i8> %src, <64 x i8> %matrix) n
 define <64 x i8> @test_or_disjoint_fold_nonzero_imm(<64 x i8> %src, <64 x i8> %matrix) nounwind {
 ; AVX512-LABEL: test_or_disjoint_fold_nonzero_imm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $4, %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    vgf2p8affineqb $12, %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %matrix, i8 4)
   %or = or disjoint <64 x i8> %gfni, splat(i8 8)
@@ -29,8 +27,7 @@ define <64 x i8> @test_or_disjoint_fold_nonzero_imm(<64 x i8> %src, <64 x i8> %m
 define <16 x i8> @test_or_disjoint_fold_128(<16 x i8> %src, <16 x i8> %matrix) nounwind {
 ; AVX512-LABEL: test_or_disjoint_fold_128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $8, %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> %matrix, i8 0)
   %or = or disjoint <16 x i8> %gfni, splat(i8 8)
