@@ -98,8 +98,8 @@ EXCLUDE_LINUX = {
     "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 
-# Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS
-# instead of LLVM_ENABLE_RUNTIMES.
+# Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS.
+# The same build may also use LLVM_ENABLE_RUNTIMES for other runtimes.
 CROSS_COMPILATION_RUNTIMES = {
     "libclc",
 }
