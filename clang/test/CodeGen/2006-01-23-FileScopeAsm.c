@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 
 // CHECK: module asm "foo1"
 __asm__ ("foo1");
