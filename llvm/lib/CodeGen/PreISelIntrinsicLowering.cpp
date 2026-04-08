@@ -37,7 +37,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
@@ -171,8 +170,7 @@ static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
       // If we have Native ARC, set nonlazybind attribute for these APIs for
       // performance.
       // Suppress on arm64e: inline GOT loads bypass auth stubs.
-      Triple TT(M->getTargetTriple());
-      if (!TT.isArm64e())
+      if (!M->getTargetTriple().isArm64e())
         Fn->addFnAttr(Attribute::NonLazyBind);
     }
   }
