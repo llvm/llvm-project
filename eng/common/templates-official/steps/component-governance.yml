@@ -1,7 +1,0 @@
-steps:
-- template: /eng/common/core-templates/steps/component-governance.yml
-  parameters:
-    is1ESPipeline: true
-
-    ${{ each parameter in parameters }}:
-      ${{ parameter.key }}: ${{ parameter.value }}

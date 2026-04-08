@@ -43,6 +43,10 @@ parameters:
 
   artifacts: {}
   is1ESPipeline: ''
+
+  # Publishing version w/default.
+  publishingVersion: 3
+
   repositoryAlias: self
   officialBuildId: ''
 
@@ -102,6 +106,7 @@ jobs:
       parameters:
         is1ESPipeline: ${{ parameters.is1ESPipeline }}
         continueOnError: ${{ parameters.continueOnError }}
+        publishingVersion: ${{ parameters.publishingVersion }}
         dependsOn:
         - ${{ if ne(parameters.publishBuildAssetsDependsOn, '') }}:
           - ${{ each job in parameters.publishBuildAssetsDependsOn }}:

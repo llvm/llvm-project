@@ -29,11 +29,11 @@ function InstallDarcCli ($darcVersion, $toolpath) {
   Write-Host "Installing Darc CLI version $darcVersion..."
   Write-Host 'You may need to restart your command window if this is the first dotnet tool you have installed.'
   if (-not $toolpath) {
-    Write-Host "'$dotnet' tool install $darcCliPackageName --version $darcVersion --add-source '$arcadeServicesSource' -v $verbosity -g"
-    & "$dotnet" tool install $darcCliPackageName --version $darcVersion --add-source "$arcadeServicesSource" -v $verbosity -g
+    Write-Host "'$dotnet' tool install $darcCliPackageName --version $darcVersion --source '$arcadeServicesSource' -v $verbosity -g"
+    & "$dotnet" tool install $darcCliPackageName --version $darcVersion --source "$arcadeServicesSource" -v $verbosity -g
   }else {
-    Write-Host "'$dotnet' tool install $darcCliPackageName --version $darcVersion --add-source '$arcadeServicesSource' -v $verbosity --tool-path '$toolpath'"
-    & "$dotnet" tool install $darcCliPackageName --version $darcVersion --add-source "$arcadeServicesSource" -v $verbosity --tool-path "$toolpath"
+    Write-Host "'$dotnet' tool install $darcCliPackageName --version $darcVersion --source '$arcadeServicesSource' -v $verbosity --tool-path '$toolpath'"
+    & "$dotnet" tool install $darcCliPackageName --version $darcVersion --source "$arcadeServicesSource" -v $verbosity --tool-path "$toolpath"
   }
 }
 

@@ -62,4 +62,4 @@ steps:
       artifactName: BuildLogs_SourceBuild_${{ parameters.platform.name }}_Attempt$(System.JobAttempt)
       continueOnError: true
       condition: succeededOrFailed()
-      sbomEnabled: false  # we don't need SBOM for logs
+      isProduction: false # logs are non-production artifacts

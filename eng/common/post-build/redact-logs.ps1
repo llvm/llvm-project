@@ -49,8 +49,8 @@ try {
     Write-Host "Installing Binlog redactor CLI..."
     Write-Host "'$dotnet' new tool-manifest"
     & "$dotnet" new tool-manifest
-    Write-Host "'$dotnet' tool install $packageName --local --add-source '$PackageFeed' -v $verbosity --version $BinlogToolVersion"
-    & "$dotnet" tool install $packageName --local --add-source "$PackageFeed" -v $verbosity --version $BinlogToolVersion
+    Write-Host "'$dotnet' tool install $packageName --local --source '$PackageFeed' -v $verbosity --version $BinlogToolVersion"
+    & "$dotnet" tool install $packageName --local --source "$PackageFeed" -v $verbosity --version $BinlogToolVersion
 
     if (Test-Path $TokensFilePath) {
         Write-Host "Adding additional sensitive data for redaction from file: " $TokensFilePath

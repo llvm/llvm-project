@@ -8,12 +8,11 @@ steps:
     - 'Illegal entry point, is1ESPipeline is not defined. Repository yaml should not directly reference templates in core-templates folder.': error
 
   - ${{ if eq(coalesce(parameters.PromoteToChannelIds, 0), 0) }}:
-    - task: DownloadBuildArtifacts@0
+    - task: DownloadPipelineArtifact@2
       displayName: Download Release Configs
       inputs:
-        buildType: current
         artifactName: ReleaseConfigs
-        checkDownloadedFiles: true
+        targetPath: '$(Build.StagingDirectory)/ReleaseConfigs'
 
   - task: AzureCLI@2
     name: setReleaseVars

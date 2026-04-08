@@ -81,7 +81,6 @@ eng\common\
             publish-build-artifacts.yml      (logic)
             publish-pipeline-artifacts.yml   (logic)
             component-governance.yml         (shim)
-            generate-sbom.yml                (shim)
             publish-logs.yml                 (shim)
             retain-build.yml                 (shim)
             send-to-helix.yml                (shim)
@@ -104,7 +103,6 @@ eng\common\
             setup-maestro-vars.yml           (logic)
         steps\
             component-governance.yml         (logic)
-            generate-sbom.yml                (logic)
             publish-build-artifacts.yml      (redirect)
             publish-logs.yml                 (logic)
             publish-pipeline-artifacts.yml   (redirect)

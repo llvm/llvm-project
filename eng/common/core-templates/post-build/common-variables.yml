@@ -11,8 +11,6 @@ variables:
   - name: MaestroApiVersion
     value: "2020-02-20"
 
-  - name: SourceLinkCLIVersion
-    value: 3.0.0
   - name: SymbolToolVersion
     value: 1.0.1
   - name: BinlogToolVersion

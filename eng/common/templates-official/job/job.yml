@@ -1,23 +1,14 @@
 parameters:
-# Sbom related params
-  enableSbom: true
   runAsPublic: false
-  PackageVersion: 9.0.0
-  BuildDropPath: '$(System.DefaultWorkingDirectory)/artifacts'
+# Sbom related params, unused now and can eventually be removed
+  enableSbom: unused
+  PackageVersion: unused
+  BuildDropPath: unused
 
 jobs:
 - template: /eng/common/core-templates/job/job.yml
   parameters:
     is1ESPipeline: true
-
-    componentGovernanceSteps:
-    - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.enableSbom, 'true')) }}:
-      - template: /eng/common/templates/steps/generate-sbom.yml
-        parameters:
-          PackageVersion: ${{ parameters.packageVersion }}
-          BuildDropPath: ${{ parameters.buildDropPath }}
-          ManifestDirPath: $(Build.ArtifactStagingDirectory)/sbom
-          publishArtifacts: false
 
     # publish artifacts
     # for 1ES managed templates, use the templateContext.output to handle multiple outputs.
@@ -26,12 +17,19 @@ jobs:
       outputs:
       - ${{ if ne(parameters.artifacts.publish, '') }}:
         - ${{ if and(ne(parameters.artifacts.publish.artifacts, 'false'), ne(parameters.artifacts.publish.artifacts, '')) }}:
-          - output: buildArtifacts
+          - output: pipelineArtifact
             displayName: Publish pipeline artifacts
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/artifacts'
-            ArtifactName: ${{ coalesce(parameters.artifacts.publish.artifacts.name , 'Artifacts_$(Agent.Os)_$(_BuildConfig)') }}
-            condition: always()
-            retryCountOnTaskFailure: 10 # for any logs being locked
+            targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
+            artifactName: ${{ coalesce(parameters.artifacts.publish.artifacts.name , 'Artifacts_$(Agent.Os)_$(_BuildConfig)') }}
+            condition: succeeded()
+            retryCountOnTaskFailure: 10 # for any files being locked
+            continueOnError: true
+          - output: pipelineArtifact
+            displayName: Publish pipeline artifacts
+            targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
+            artifactName: ${{ coalesce(parameters.artifacts.publish.artifacts.name , 'Artifacts_$(Agent.Os)_$(_BuildConfig)') }}_Attempt$(System.JobAttempt)
+            condition: not(succeeded())
+            retryCountOnTaskFailure: 10 # for any files being locked
             continueOnError: true
         - ${{ if and(ne(parameters.artifacts.publish.logs, 'false'), ne(parameters.artifacts.publish.logs, '')) }}:
           - output: pipelineArtifact
@@ -40,8 +38,8 @@ jobs:
             displayName: 'Publish logs'
             continueOnError: true
             condition: always()
-            retryCountOnTaskFailure: 10 # for any logs being locked
-            sbomEnabled: false  # we don't need SBOM for logs
+            retryCountOnTaskFailure: 10 # for any files being locked
+            isProduction: false # logs are non-production artifacts
 
       - ${{ if eq(parameters.enablePublishBuildArtifacts, true) }}:
         - output: pipelineArtifact
@@ -50,7 +48,8 @@ jobs:
           artifactName: ${{ coalesce(parameters.enablePublishBuildArtifacts.artifactName, '$(Agent.Os)_$(Agent.JobName)_Attempt$(System.JobAttempt)' ) }}
           continueOnError: true
           condition: always()
-          sbomEnabled: false  # we don't need SBOM for logs
+          retryCountOnTaskFailure: 10 # for any files being locked
+          isProduction: false # logs are non-production artifacts
 
       - ${{ if eq(parameters.enableBuildRetry, 'true') }}:
         - output: pipelineArtifact
@@ -58,14 +57,20 @@ jobs:
           artifactName: 'BuildConfiguration'
           displayName: 'Publish build retry configuration'
           continueOnError: true
-          sbomEnabled: false  # we don't need SBOM for BuildConfiguration
+          retryCountOnTaskFailure: 10 # for any files being locked
+          isProduction: false # BuildConfiguration is a non-production artifact
 
-      - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.enableSbom, 'true')) }}:
+      # V4 publishing: automatically publish staged artifacts as a pipeline artifact.
+      # The artifact name matches the SDK's FutureArtifactName ($(System.PhaseName)_Artifacts),
+      # which is encoded in the asset manifest for downstream publishing to discover.
+      # Jobs can opt in by setting enablePublishing: true.
+      - ${{ if and(eq(parameters.publishingVersion, 4), eq(parameters.enablePublishing, 'true')) }}:
         - output: pipelineArtifact
-          displayName: Publish SBOM manifest
+          displayName: 'Publish V4 pipeline artifacts'
+          targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
+          artifactName: '$(System.PhaseName)_Artifacts'
           continueOnError: true
-          targetPath: $(Build.ArtifactStagingDirectory)/sbom
-          artifactName: $(ARTIFACT_NAME)
+          retryCountOnTaskFailure: 10 # for any files being locked
 
       # add any outputs provided via root yaml
       - ${{ if ne(parameters.templateContext.outputs, '') }}:

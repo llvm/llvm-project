@@ -1,54 +1,14 @@
-# BuildDropPath - The root folder of the drop directory for which the manifest file will be generated.
-# PackageName - The name of the package this SBOM represents.
-# PackageVersion - The version of the package this SBOM represents. 
-# ManifestDirPath - The path of the directory where the generated manifest files will be placed
-# IgnoreDirectories - Directories to ignore for SBOM generation. This will be passed through to the CG component detector.
-
 parameters:
-  PackageVersion: 11.0.0
-  BuildDropPath: '$(System.DefaultWorkingDirectory)/artifacts'
-  PackageName: '.NET'
-  ManifestDirPath: $(Build.ArtifactStagingDirectory)/sbom
-  IgnoreDirectories: ''
-  sbomContinueOnError: true
-  is1ESPipeline: false
-  # disable publishArtifacts if some other step is publishing the artifacts (like job.yml).
-  publishArtifacts: true
+  PackageVersion: unused
+  BuildDropPath: unused
+  PackageName: unused
+  ManifestDirPath: unused
+  IgnoreDirectories: unused
+  sbomContinueOnError: unused
+  is1ESPipeline: unused
+  publishArtifacts: unused
 
 steps:
-- task: PowerShell@2 
-  displayName: Prep for SBOM generation in (Non-linux)
-  condition: or(eq(variables['Agent.Os'], 'Windows_NT'), eq(variables['Agent.Os'], 'Darwin'))
-  inputs: 
-    filePath: ./eng/common/generate-sbom-prep.ps1
-    arguments: ${{parameters.manifestDirPath}}
-
-# Chmodding is a workaround for https://github.com/dotnet/arcade/issues/8461
 - script: |
-    chmod +x ./eng/common/generate-sbom-prep.sh
-    ./eng/common/generate-sbom-prep.sh ${{parameters.manifestDirPath}}
-  displayName: Prep for SBOM generation in (Linux)
-  condition: eq(variables['Agent.Os'], 'Linux')
-  continueOnError: ${{ parameters.sbomContinueOnError }}
-
-- task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-  displayName: 'Generate SBOM manifest'
-  continueOnError: ${{ parameters.sbomContinueOnError }}
-  inputs:
-      PackageName: ${{ parameters.packageName }}
-      BuildDropPath: ${{ parameters.buildDropPath }}
-      PackageVersion: ${{ parameters.packageVersion }}
-      ManifestDirPath: ${{ parameters.manifestDirPath }}/$(ARTIFACT_NAME)
-      ${{ if ne(parameters.IgnoreDirectories, '') }}:
-        AdditionalComponentDetectorArgs: '--IgnoreDirectories ${{ parameters.IgnoreDirectories }}'
-
-- ${{ if eq(parameters.publishArtifacts, 'true')}}:
-  - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
-    parameters:
-      is1ESPipeline: ${{ parameters.is1ESPipeline }}
-      args:
-        displayName: Publish SBOM manifest
-        continueOnError: ${{parameters.sbomContinueOnError}}
-        targetPath: '${{ parameters.manifestDirPath }}'
-        artifactName: $(ARTIFACT_NAME)
-
+    echo "##vso[task.logissue type=warning]Including generate-sbom.yml is deprecated, SBOM generation is handled 1ES PT now. Remove this include."
+  displayName: Issue generate-sbom.yml deprecation warning

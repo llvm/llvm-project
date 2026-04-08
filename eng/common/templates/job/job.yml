@@ -1,12 +1,12 @@
 parameters: 
   enablePublishBuildArtifacts: false
-  disableComponentGovernance: ''
-  componentGovernanceIgnoreDirectories: ''
-# Sbom related params
-  enableSbom: true
   runAsPublic: false
-  PackageVersion: 9.0.0
-  BuildDropPath: '$(System.DefaultWorkingDirectory)/artifacts'
+# CG related params, unused now and can eventually be removed
+  disableComponentGovernance: unused
+# Sbom related params, unused now and can eventually be removed
+  enableSbom: unused
+  PackageVersion: unused
+  BuildDropPath: unused
 
 jobs:
 - template: /eng/common/core-templates/job/job.yml
@@ -21,32 +21,34 @@ jobs:
     - ${{ each step in parameters.steps }}:
       - ${{ step }}
 
-    componentGovernanceSteps:
-    - template: /eng/common/templates/steps/component-governance.yml
-      parameters:
-        ${{ if eq(parameters.disableComponentGovernance, '') }}:
-          ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.runAsPublic, 'false'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/dotnet/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/microsoft/'), eq(variables['Build.SourceBranch'], 'refs/heads/main'))) }}:
-            disableComponentGovernance: false
-          ${{ else }}:
-            disableComponentGovernance: true
-        ${{ else }}:
-          disableComponentGovernance: ${{ parameters.disableComponentGovernance }}
-        componentGovernanceIgnoreDirectories: ${{ parameters.componentGovernanceIgnoreDirectories }}
+    # we don't run CG in public
+    - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+      - script: echo "##vso[task.setvariable variable=skipComponentGovernanceDetection]true"
+        displayName: Set skipComponentGovernanceDetection variable
 
     artifactPublishSteps:
     - ${{ if ne(parameters.artifacts.publish, '') }}:
       - ${{ if and(ne(parameters.artifacts.publish.artifacts, 'false'), ne(parameters.artifacts.publish.artifacts, '')) }}:
-        - template: /eng/common/core-templates/steps/publish-build-artifacts.yml
+        - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
           parameters:
             is1ESPipeline: false
             args:
               displayName: Publish pipeline artifacts
-              pathToPublish: '$(Build.ArtifactStagingDirectory)/artifacts'
-              publishLocation: Container
+              targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
               artifactName: ${{ coalesce(parameters.artifacts.publish.artifacts.name , 'Artifacts_$(Agent.Os)_$(_BuildConfig)') }}
               continueOnError: true
-              condition: always()
-              retryCountOnTaskFailure: 10 # for any logs being locked
+              condition: succeeded()
+              retryCountOnTaskFailure: 10 # for any files being locked
+        - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
+          parameters:
+            is1ESPipeline: false
+            args:
+              displayName: Publish pipeline artifacts
+              targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
+              artifactName: ${{ coalesce(parameters.artifacts.publish.artifacts.name , 'Artifacts_$(Agent.Os)_$(_BuildConfig)') }}_Attempt$(System.JobAttempt)
+              continueOnError: true
+              condition: not(succeeded())
+              retryCountOnTaskFailure: 10 # for any files being locked
       - ${{ if and(ne(parameters.artifacts.publish.logs, 'false'), ne(parameters.artifacts.publish.logs, '')) }}:
         - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
           parameters:
@@ -57,8 +59,7 @@ jobs:
               displayName: 'Publish logs'
               continueOnError: true
               condition: always()
-              retryCountOnTaskFailure: 10 # for any logs being locked
-              sbomEnabled: false  # we don't need SBOM for logs
+              retryCountOnTaskFailure: 10 # for any files being locked
 
     - ${{ if ne(parameters.enablePublishBuildArtifacts, 'false') }}:
       - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
@@ -70,7 +71,7 @@ jobs:
             artifactName: ${{ coalesce(parameters.enablePublishBuildArtifacts.artifactName, '$(Agent.Os)_$(Agent.JobName)_Attempt$(System.JobAttempt)' ) }}
             continueOnError: true
             condition: always()
-            sbomEnabled: false
+            retryCountOnTaskFailure: 10 # for any files being locked
 
     - ${{ if eq(parameters.enableBuildRetry, 'true') }}:
       - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
@@ -81,4 +82,4 @@ jobs:
             artifactName: 'BuildConfiguration'
             displayName: 'Publish build retry configuration'
             continueOnError: true
-            sbomEnabled: false  # we don't need SBOM for BuildConfiguration
+            retryCountOnTaskFailure: 10 # for any files being locked

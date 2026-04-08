@@ -9,6 +9,7 @@ parameters:
   default: 3
   values:
   - 3
+  - 4
 
 - name: BARBuildId
   displayName: BAR Build Id
@@ -130,16 +131,30 @@ stages:
           PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
           is1ESPipeline: ${{ parameters.is1ESPipeline }}
 
-      - task: DownloadBuildArtifacts@0
-        displayName: Download Package Artifacts
-        inputs:
-          buildType: specific
-          buildVersionToDownload: specific
-          project: $(AzDOProjectName)
-          pipeline: $(AzDOPipelineId)
-          buildId: $(AzDOBuildId)
-          artifactName: PackageArtifacts
-          checkDownloadedFiles: true
+      - ${{ if ne(parameters.publishingInfraVersion, 4) }}:
+        - task: DownloadBuildArtifacts@0
+          displayName: Download Package Artifacts
+          inputs:
+            buildType: specific
+            buildVersionToDownload: specific
+            project: $(AzDOProjectName)
+            pipeline: $(AzDOPipelineId)
+            buildId: $(AzDOBuildId)
+            artifactName: PackageArtifacts
+            checkDownloadedFiles: true
+      - ${{ if eq(parameters.publishingInfraVersion, 4) }}:
+        - task: DownloadPipelineArtifact@2
+          displayName: Download Pipeline Artifacts (V4)
+          inputs:
+            itemPattern: '*/packages/**/*.nupkg'
+            targetPath: '$(Build.ArtifactStagingDirectory)/PipelineArtifactsDownload'
+        - task: CopyFiles@2
+          displayName: Flatten packages to PackageArtifacts
+          inputs:
+            SourceFolder: '$(Build.ArtifactStagingDirectory)/PipelineArtifactsDownload'
+            Contents: '**/*.nupkg'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/PackageArtifacts'
+            flattenFolders: true
 
       - task: PowerShell@2
         displayName: Validate
@@ -173,16 +188,30 @@ stages:
           PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
           is1ESPipeline: ${{ parameters.is1ESPipeline }}
 
-      - task: DownloadBuildArtifacts@0
-        displayName: Download Package Artifacts
-        inputs:
-          buildType: specific
-          buildVersionToDownload: specific
-          project: $(AzDOProjectName)
-          pipeline: $(AzDOPipelineId)
-          buildId: $(AzDOBuildId)
-          artifactName: PackageArtifacts
-          checkDownloadedFiles: true
+      - ${{ if ne(parameters.publishingInfraVersion, 4) }}:
+        - task: DownloadBuildArtifacts@0
+          displayName: Download Package Artifacts
+          inputs:
+            buildType: specific
+            buildVersionToDownload: specific
+            project: $(AzDOProjectName)
+            pipeline: $(AzDOPipelineId)
+            buildId: $(AzDOBuildId)
+            artifactName: PackageArtifacts
+            checkDownloadedFiles: true
+      - ${{ if eq(parameters.publishingInfraVersion, 4) }}:
+        - task: DownloadPipelineArtifact@2
+          displayName: Download Pipeline Artifacts (V4)
+          inputs:
+            itemPattern: '*/packages/**/*.nupkg'
+            targetPath: '$(Build.ArtifactStagingDirectory)/PipelineArtifactsDownload'
+        - task: CopyFiles@2
+          displayName: Flatten packages to PackageArtifacts
+          inputs:
+            SourceFolder: '$(Build.ArtifactStagingDirectory)/PipelineArtifactsDownload'
+            Contents: '**/*.nupkg'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/PackageArtifacts'
+            flattenFolders: true
 
       # This is necessary whenever we want to publish/restore to an AzDO private feed
       # Since sdk-task.ps1 tries to restore packages we need to do this authentication here
@@ -208,53 +237,20 @@ stages:
           JobLabel: 'Signing'
           BinlogToolVersion: $(BinlogToolVersion)
 
-    - job:
-      displayName: SourceLink Validation
-      condition: eq( ${{ parameters.enableSourceLinkValidation }}, 'true')
-      pool:
-        # We don't use the collection uri here because it might vary (.visualstudio.com vs. dev.azure.com)
-        ${{ if eq(variables['System.TeamProject'], 'DevDiv') }}:
-          name: AzurePipelines-EO
-          image: 1ESPT-Windows2025
-          demands: Cmd
-          os: windows
-        # If it's not devdiv, it's dnceng
-        ${{ else }}:
-          ${{ if eq(parameters.is1ESPipeline, true) }}:
-            name: $(DncEngInternalBuildPool)
-            image: windows.vs2026.amd64
-            os: windows
-          ${{ else }}:
-            name: $(DncEngInternalBuildPool)
-            demands: ImageOverride -equals windows.vs2026.amd64
-      steps:
-      - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
-        parameters:
-          BARBuildId: ${{ parameters.BARBuildId }}
-          PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
-          is1ESPipeline: ${{ parameters.is1ESPipeline }}
-
-      - task: DownloadBuildArtifacts@0
-        displayName: Download Blob Artifacts
-        inputs:
-          buildType: specific
-          buildVersionToDownload: specific
-          project: $(AzDOProjectName)
-          pipeline: $(AzDOPipelineId)
-          buildId: $(AzDOBuildId)
-          artifactName: BlobArtifacts
-          checkDownloadedFiles: true
-
-      - task: PowerShell@2
-        displayName: Validate
-        inputs:
-          filePath: $(System.DefaultWorkingDirectory)/eng/common/post-build/sourcelink-validation.ps1
-          arguments: -InputPath $(Build.ArtifactStagingDirectory)/BlobArtifacts/ 
-            -ExtractPath $(Agent.BuildDirectory)/Extract/ 
-            -GHRepoName $(Build.Repository.Name) 
-            -GHCommit $(Build.SourceVersion)
-            -SourcelinkCliVersion $(SourceLinkCLIVersion)
-        continueOnError: true
+    # SourceLink validation has been removed — the underlying CLI tool
+    # (targeting netcoreapp2.1) has not functioned for years.
+    # The enableSourceLinkValidation parameter is kept but ignored so
+    # existing pipelines that pass it are not broken.
+    # See https://github.com/dotnet/arcade/issues/16647
+    - ${{ if eq(parameters.enableSourceLinkValidation, 'true') }}:
+      - job:
+        displayName: 'SourceLink Validation Removed - please remove enableSourceLinkValidation from your pipeline'
+        pool: server
+        steps:
+        - task: Delay@1
+          displayName: 'Warning: SourceLink validation removed (see https://github.com/dotnet/arcade/issues/16647)'
+          inputs:
+            delayForMinutes: '0'
 
 - ${{ if ne(parameters.publishAssetsImmediately, 'true') }}:
   - stage: publish_using_darc
@@ -317,7 +313,7 @@ stages:
           scriptPath: $(System.DefaultWorkingDirectory)/eng/common/post-build/publish-using-darc.ps1
           arguments: >
               -BuildId $(BARBuildId)
-              -PublishingInfraVersion ${{ parameters.publishingInfraVersion }}
+              -PublishingInfraVersion 3
               -AzdoToken '$(System.AccessToken)'
               -WaitPublishingFinish true
               -RequireDefaultChannels ${{ parameters.requireDefaultChannels }}
