@@ -38,6 +38,8 @@
 // RUN: %clang_cc1 -std=c++20 %t/func_like_macro.cpp -D'm(x)=x' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/lparen.cpp -D'm(x)=x' -D'LPAREN=(' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/control_line.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/digraph.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/digraph2.cpp -fsyntax-only -verify
 
 
 //--- hash.cpp
@@ -205,3 +207,27 @@ export module m; // expected-error {{module directive lines are not allowed on l
                  // expected-error {{module declaration must occur at the start of the translation unit}} \
                  // expected-note@#1 {{add 'module;'}}
 #endif
+
+//--- digraph.cpp
+// expected-no-diagnostics
+int
+import <:10
+:>;
+
+void foo() {
+    for (int i = 0; i < 10; ++i)
+        import[i] = i;
+}
+
+//--- digraph2.cpp
+// expected-no-diagnostics
+using import = int;
+
+void bar(int);
+
+void foo(int val =
+import <%%>
+) {
+   bar(val);
+}
+
