@@ -60,6 +60,13 @@ defset list<VTypeInfoToWide> AllZvzipVectors = {
   def : VTypeInfoToWide<VF16M2,  VF16M4>;
   def : VTypeInfoToWide<VF16M4,  VF16M8>;
 
+  // BF16
+  def : VTypeInfoToWide<VBF16MF4, VBF16MF2>;
+  def : VTypeInfoToWide<VBF16MF2, VBF16M1>;
+  def : VTypeInfoToWide<VBF16M1,  VBF16M2>;
+  def : VTypeInfoToWide<VBF16M2,  VBF16M4>;
+  def : VTypeInfoToWide<VBF16M4,  VBF16M8>;
+
   // Floating-point 32-bit
   def : VTypeInfoToWide<VF32MF2, VF32M1>;
   def : VTypeInfoToWide<VF32M1,  VF32M2>;
