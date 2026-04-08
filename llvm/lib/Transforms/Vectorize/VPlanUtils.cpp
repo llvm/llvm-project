@@ -402,18 +402,19 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   VPRecipeBase *R = V->getDefiningRecipe();
   VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
   VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
-  if (VPBB &&
-      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-    if (match(V->getDefiningRecipe(),
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
-      return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
-  }
+  if (VPBB) {
+    if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
+      if (match(V->getDefiningRecipe(),
+                m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
+        return false;
+      return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    }
 
-  if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
-    // Canonical IV is uniform.
-    if (V == EnclosingRegion->getCanonicalIV())
-      return true;
+    if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
+      // Canonical IV is uniform.
+      if (V == EnclosingRegion->getCanonicalIV())
+        return true;
+    }
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
