@@ -1,0 +1,135 @@
+//===-- SPIRVNonSemanticDebugHandler.h - NSDI AsmPrinter handler -*- C++
+//-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file declares SPIRVNonSemanticDebugHandler, a DebugHandlerBase subclass
+// that emits NonSemantic.Shader.DebugInfo.100 instructions in the SPIR-V
+// AsmPrinter. It replaces SPIRVEmitNonSemanticDI, which was a
+// MachineFunctionPass, with a handler that controls instruction placement
+// directly instead of routing through SPIRVModuleAnalysis.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVNONSEMANTICDEBUGHANDLER_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVNONSEMANTICDEBUGHANDLER_H
+
+#include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "SPIRVModuleAnalysis.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegister.h"
+
+namespace llvm {
+
+class SPIRVSubtarget;
+
+/// AsmPrinter handler that emits NonSemantic.Shader.DebugInfo.100 (NSDI)
+/// instructions for the SPIR-V backend. Registered with SPIRVAsmPrinter when
+/// the module contains debug info (llvm.dbg.cu).
+///
+/// Call sequence:
+///   beginModule()                    -- collect compile-unit metadata.
+///   prepareModuleOutput()            -- add extension + ext inst set to MAI.
+///   emitNonSemanticGlobalDebugInfo() -- emit DebugSource,
+///                                       DebugCompilationUnit, DebugTypeBasic,
+///                                       DebugTypePointer.
+///   beginFunctionImpl()              -- no-op (no per-function DI yet).
+///   endFunctionImpl()                -- no-op.
+class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
+  struct CompileUnitInfo {
+    SmallString<128> FilePath;
+    unsigned SpirvSourceLanguage = 0; // NonSemantic.Shader.DebugInfo.100 source
+                                      // language code (section 4.3)
+  };
+  SmallVector<CompileUnitInfo> CompileUnits;
+  int64_t DwarfVersion = 0;
+  int64_t DebugInfoVersion = 0;
+
+  // Types referenced by debug variable records, collected in beginModule().
+  SetVector<const DIBasicType *> BasicTypes;
+  SetVector<const DIDerivedType *> PointerTypes;
+
+  // Cache of already-emitted i32 constants, keyed by value. Prevents
+  // duplicate OpConstant instructions for the same integer value.
+  DenseMap<uint32_t, MCRegister> I32ConstantCache;
+
+  // True once emitNonSemanticGlobalDebugInfo() has run. Both
+  // SPIRVAsmPrinter::emitFunctionHeader() and emitEndOfAsmFile() may call
+  // outputModuleSections(), each guarded by ModuleSectionsEmitted, so only
+  // one fires. This flag provides a secondary guard in case the call sites
+  // change.
+  bool GlobalDIEmitted = false;
+
+public:
+  explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
+
+  /// Collect compile-unit metadata from the module. Called by
+  /// AsmPrinter::doInitialization() via the handler list. No emission.
+  void beginModule(Module *M) override;
+
+  /// Add SPV_KHR_non_semantic_info extension and
+  /// NonSemantic.Shader.DebugInfo.100 ext inst set entry to MAI. Must be called
+  /// before outputGlobalRequirements() and outputOpExtInstImports() in
+  /// SPIRVAsmPrinter::outputModuleSections().
+  void prepareModuleOutput(const SPIRVSubtarget &ST,
+                           SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit module-scope NSDI instructions (DebugSource, DebugCompilationUnit,
+  /// DebugTypeBasic, DebugTypePointer). Called by SPIRVAsmPrinter::
+  /// outputModuleSections() at section 10 in place of
+  /// outputModuleSection(MB_NonSemanticGlobalDI).
+  void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+
+protected:
+  // All module-level output is driven by emitNonSemanticGlobalDebugInfo(),
+  // called explicitly from SPIRVAsmPrinter::outputModuleSections(). Nothing
+  // needs to happen in the AsmPrinterHandler::endModule() callback.
+  void endModule() override {}
+
+  // DebugHandlerBase stores MMI as a pointer copy from Asm->MMI at construction
+  // time (DebugHandlerBase.cpp: `MMI(Asm->MMI)`). The handler is constructed
+  // before AsmPrinter::doInitialization() runs, so Asm->MMI is null at that
+  // point and MMI remains null for this handler's entire lifetime. The
+  // base-class beginInstruction/endInstruction dereference MMI to create temp
+  // symbols for label tracking and would crash. Override them as no-ops.
+  // When per-function NSDI is implemented, use Asm->OutStreamer->getContext()
+  // for MCContext access rather than MMI->getContext().
+  void beginInstruction(const MachineInstr *MI) override {}
+  void endInstruction() override {}
+
+  // TODO: Emit DebugFunction and DebugFunctionDefinition here once per-function
+  // NSDI emission is implemented. DebugHandlerBase::beginFunction() populates
+  // LScopes and DbgValues, which are needed for DebugLine emission. Do not
+  // override beginFunction() until that work is in place.
+  void beginFunctionImpl(const MachineFunction *MF) override {}
+  // TODO: Add per-function cleanup when DebugFunction emission is in place.
+  void endFunctionImpl(const MachineFunction *MF) override {}
+
+private:
+  void emitMCInst(MCInst &Inst);
+  MCRegister emitOpString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
+  MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
+                               SPIRV::ModuleAnalysisInfo &MAI);
+  MCRegister emitExtInst(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
+                         MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
+                         ArrayRef<MCRegister> Operands,
+                         SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Map a DWARF source language code to a NonSemantic.Shader.DebugInfo.100
+  /// source language code.
+  static unsigned toNSDISrcLang(unsigned DwarfSrcLang);
+};
+
+} // namespace llvm
+
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVNONSEMANTICDEBUGHANDLER_H

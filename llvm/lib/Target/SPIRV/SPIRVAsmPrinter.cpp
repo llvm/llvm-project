@@ -16,6 +16,7 @@
 #include "SPIRVInstrInfo.h"
 #include "SPIRVMCInstLower.h"
 #include "SPIRVModuleAnalysis.h"
+#include "SPIRVNonSemanticDebugHandler.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -105,6 +106,10 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
 
+  // Non-owning pointer to the NSDI handler registered via addAsmPrinterHandler.
+  // Set in doInitialization() when the module has debug info.
+  SPIRVNonSemanticDebugHandler *NSDebugHandler = nullptr;
+
 protected:
   void cleanUp(Module &M);
 };
@@ -118,7 +123,7 @@ void SPIRVAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 
 // If the module has no functions, we need output global info anyway.
 void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
-  if (ModuleSectionsEmitted == false) {
+  if (!ModuleSectionsEmitted) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
   }
@@ -149,7 +154,7 @@ void SPIRVAsmPrinter::cleanUp(Module &M) {
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {
-  if (ModuleSectionsEmitted == false) {
+  if (!ModuleSectionsEmitted) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
   }
@@ -166,6 +171,15 @@ void SPIRVAsmPrinter::emitFunctionHeader() {
 
   auto Section = getObjFileLowering().SectionForGlobal(&F, TM);
   MF->setSection(Section);
+
+  // SPIRVAsmPrinter::emitFunctionHeader() does not call the base class,
+  // so handlers never receive beginFunction() from the normal path. Drive the
+  // per-function lifecycle here, matching what AsmPrinter::emitFunctionHeader()
+  // does for other targets.
+  for (auto &Handler : Handlers) {
+    Handler->beginFunction(MF);
+    Handler->beginBasicBlockSection(MF->front());
+  }
 }
 
 void SPIRVAsmPrinter::outputOpFunctionEnd() {
@@ -821,6 +835,12 @@ void SPIRVAsmPrinter::outputModuleSections() {
   TII = ST->getInstrInfo();
   MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
+
+  // Let the NSDI handler add its extension and ext inst import entry to MAI
+  // before the module header sections are emitted.
+  if (NSDebugHandler)
+    NSDebugHandler->prepareModuleOutput(*ST, *MAI);
+
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
   // instructions.
@@ -851,8 +871,11 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // the first section to allow use of: OpLine and OpNoLine debug information;
   // non-semantic instructions with OpExtInst.
   outputModuleSection(SPIRV::MB_TypeConstVars);
-  // 10. All global NonSemantic.Shader.DebugInfo.100 instructions.
-  outputModuleSection(SPIRV::MB_NonSemanticGlobalDI);
+  // 10. All global NonSemantic.Shader.DebugInfo.100 instructions. The
+  // SPIRVNonSemanticDebugHandler emits these directly as MCInsts; the
+  // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
+  if (NSDebugHandler)
+    NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
   // 11. All function declarations (functions without a body).
   outputExtFuncDecls();
   // 12. All function definitions (functions with a body).
@@ -861,6 +884,13 @@ void SPIRVAsmPrinter::outputModuleSections() {
 
 bool SPIRVAsmPrinter::doInitialization(Module &M) {
   ModuleSectionsEmitted = false;
+  // Register the NSDI handler before calling the base class so that
+  // AsmPrinter::doInitialization() calls Handler->beginModule(M) for it.
+  if (M.getNamedMetadata("llvm.dbg.cu")) {
+    auto Handler = std::make_unique<SPIRVNonSemanticDebugHandler>(*this);
+    NSDebugHandler = Handler.get();
+    addAsmPrinterHandler(std::move(Handler));
+  }
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }
