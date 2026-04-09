@@ -2650,3 +2650,21 @@ func.func @test_hoist_is_assumed_size_extent(%arg0: index, %arg1: !fir.ref<i1>) 
   }
   return
 }
+
+// -----
+// Test that fir.no_reassoc is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_no_reassoc(
+// CHECK-SAME:      %[[ARG0:.*]]: f64,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<f64>)
+// CHECK:           %[[NR:.*]] = fir.no_reassoc %[[ARG0]] : f64
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[NR]] to %[[ARG1]] : !fir.ref<f64>
+func.func @test_hoist_no_reassoc(%arg0: f64, %arg1: !fir.ref<f64>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.no_reassoc %arg0 : f64
+    fir.store %0 to %arg1 : !fir.ref<f64>
+  }
+  return
+}

@@ -3106,7 +3106,7 @@ def fir_TypeDescOp : fir_OneResultOp<"type_desc", [Pure]> {
 }
 
 def fir_NoReassocOp : fir_OneResultOp<"no_reassoc",
-    [NoMemoryEffect, SameOperandsAndResultType]> {
+    [Pure, SameOperandsAndResultType]> {
   let summary = "synthetic op to prevent reassociation";
   let description = [{
     Primitive operation meant to intrusively prevent operator reassociation.
