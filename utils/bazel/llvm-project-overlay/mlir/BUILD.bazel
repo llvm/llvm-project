@@ -1052,10 +1052,10 @@ filegroup(
 
 cc_library(
     name = "MLIRBindingsPythonHeaders",
+    hdrs = [":MLIRBindingsPythonHeaderFiles"],
     includes = [
         "include",
     ],
-    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
@@ -1067,8 +1067,8 @@ cc_library(
 
 cc_library(
     name = "MLIRBindingsPythonHeadersAndDeps",
+    hdrs = [":MLIRBindingsPythonHeaderFiles"],
     includes = ["include"],
-    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1080,8 +1080,8 @@ cc_library(
 
 cc_library(
     name = "MLIRBindingsPythonNanobindHeaders",
+    hdrs = [":MLIRBindingsPythonHeaderFiles"],
     includes = ["include"],
-    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
@@ -1093,8 +1093,8 @@ cc_library(
 
 cc_library(
     name = "MLIRBindingsPythonNanobindHeadersAndDeps",
+    hdrs = [":MLIRBindingsPythonHeaderFiles"],
     includes = ["include"],
-    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1138,22 +1138,23 @@ filegroup(
 
 cc_library(
     name = "MLIRBindingsPythonLibHeaders",
+    hdrs = [":MLIRBindingsPythonCoreHeaders"],
     includes = ["lib/Bindings/Python"],
-    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":MLIRBindingsPythonNanobindHeaders",
+        "@nanobind",
     ],
 )
 
 cc_library(
     name = "MLIRBindingsPythonCore",
     srcs = [":MLIRBindingsPythonSourceFiles"],
+    hdrs = [":MLIRBindingsPythonCoreHeaders"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
-    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsync",
         ":CAPIDebug",
@@ -1172,12 +1173,12 @@ cc_library(
 cc_library(
     name = "MLIRBindingsPythonCoreNoCAPI",
     srcs = [":MLIRBindingsPythonSourceFiles"],
+    hdrs = [":MLIRBindingsPythonCoreHeaders"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
-    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
@@ -10390,12 +10391,10 @@ cc_library(
         include = ["include/mlir/Dialect/OpenACC/*.h"],
         exclude = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"],
     ) + [
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h",
     ],
     includes = ["include"],
-    textual_hdrs = [
-        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
-    ],
     deps = [
         ":ArithDialect",
         ":AtomicInterfaces",
@@ -10624,11 +10623,9 @@ cc_library(
         exclude = ["include/mlir/Dialect/OpenMP/OpenMPInterfaces.h"],
     ) + [
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h",
-    ],
-    includes = ["include"],
-    textual_hdrs = [
         "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
     ],
+    includes = ["include"],
     deps = [
         ":AtomicInterfaces",
         ":AtomicInterfacesIncGen",
