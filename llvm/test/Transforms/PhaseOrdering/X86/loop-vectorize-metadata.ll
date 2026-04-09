@@ -4,9 +4,8 @@
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O3>" -S -unroll-threshold=150 -unroll-allow-partial=0 | FileCheck %s --check-prefix=O3
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O3>" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O3DEFAULT
 ; RUN: opt < %s -mcpu=corei7 -passes="default<Os>" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=Os
-; RUN: opt < %s -mcpu=corei7 -passes="default<Oz>" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=Oz
+; RUN: opt < %s -mcpu=corei7 -passes="default<Oz>" -force-attribute=minsize -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=Oz
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O1>,loop-vectorize" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O1VEC2
-; RUN: opt < %s -mcpu=corei7 -passes="default<Oz>,loop-vectorize" -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=OzVEC2
 ; RUN: opt < %s -mcpu=corei7 -passes="default<O3>" -unroll-threshold=150 -vectorize-loops=false -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O3DIS
 
 ; This file tests the llvm.loop.vectorize.enable metadata forcing
@@ -446,84 +445,18 @@ define i32 @enabled(ptr noalias nocapture %a, ptr noalias nocapture readonly %b,
 ; Oz-NEXT:  entry:
 ; Oz-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; Oz-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; Oz-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 16
-; Oz-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; Oz-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; Oz-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 16
-; Oz-NEXT:    store <4 x i32> [[TMP1]], ptr [[A]], align 4
-; Oz-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP3]], align 4
-; Oz-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
-; Oz-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 48
-; Oz-NEXT:    [[WIDE_LOAD_1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
-; Oz-NEXT:    [[WIDE_LOAD1_1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
-; Oz-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_1]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_1]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; Oz-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 48
-; Oz-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4
-; Oz-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP9]], align 4
-; Oz-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 64
-; Oz-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 80
-; Oz-NEXT:    [[WIDE_LOAD_2:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4
-; Oz-NEXT:    [[WIDE_LOAD1_2:%.*]] = load <4 x i32>, ptr [[TMP11]], align 4
-; Oz-NEXT:    [[TMP12:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_2]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_2]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 64
-; Oz-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 80
-; Oz-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP14]], align 4
-; Oz-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP15]], align 4
-; Oz-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 96
-; Oz-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 112
-; Oz-NEXT:    [[WIDE_LOAD_3:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4
-; Oz-NEXT:    [[WIDE_LOAD1_3:%.*]] = load <4 x i32>, ptr [[TMP17]], align 4
-; Oz-NEXT:    [[TMP18:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_3]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP19:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_3]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 96
-; Oz-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 112
-; Oz-NEXT:    store <4 x i32> [[TMP18]], ptr [[TMP20]], align 4
-; Oz-NEXT:    store <4 x i32> [[TMP19]], ptr [[TMP21]], align 4
-; Oz-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 128
-; Oz-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 144
-; Oz-NEXT:    [[WIDE_LOAD_4:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4
-; Oz-NEXT:    [[WIDE_LOAD1_4:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4
-; Oz-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_4]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP25:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_4]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
-; Oz-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 144
-; Oz-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP26]], align 4
-; Oz-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP27]], align 4
-; Oz-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 160
-; Oz-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 176
-; Oz-NEXT:    [[WIDE_LOAD_5:%.*]] = load <4 x i32>, ptr [[TMP28]], align 4
-; Oz-NEXT:    [[WIDE_LOAD1_5:%.*]] = load <4 x i32>, ptr [[TMP29]], align 4
-; Oz-NEXT:    [[TMP30:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_5]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP31:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_5]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 160
-; Oz-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 176
-; Oz-NEXT:    store <4 x i32> [[TMP30]], ptr [[TMP32]], align 4
-; Oz-NEXT:    store <4 x i32> [[TMP31]], ptr [[TMP33]], align 4
-; Oz-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 192
-; Oz-NEXT:    [[TMP35:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 208
-; Oz-NEXT:    [[WIDE_LOAD_6:%.*]] = load <4 x i32>, ptr [[TMP34]], align 4
-; Oz-NEXT:    [[WIDE_LOAD1_6:%.*]] = load <4 x i32>, ptr [[TMP35]], align 4
-; Oz-NEXT:    [[TMP36:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_6]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP37:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_6]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP38:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 192
-; Oz-NEXT:    [[TMP39:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 208
-; Oz-NEXT:    store <4 x i32> [[TMP36]], ptr [[TMP38]], align 4
-; Oz-NEXT:    store <4 x i32> [[TMP37]], ptr [[TMP39]], align 4
-; Oz-NEXT:    [[TMP40:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 224
-; Oz-NEXT:    [[TMP41:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 240
-; Oz-NEXT:    [[WIDE_LOAD_7:%.*]] = load <4 x i32>, ptr [[TMP40]], align 4
+; Oz-NEXT:    br label [[VECTOR_BODY:%.*]]
+; Oz:       vector.body:
+; Oz-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; Oz-NEXT:    [[TMP41:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B:%.*]], i64 [[INDEX]]
 ; Oz-NEXT:    [[WIDE_LOAD1_7:%.*]] = load <4 x i32>, ptr [[TMP41]], align 4
-; Oz-NEXT:    [[TMP42:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_7]], [[BROADCAST_SPLAT]]
 ; Oz-NEXT:    [[TMP43:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_7]], [[BROADCAST_SPLAT]]
-; Oz-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 224
-; Oz-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 240
-; Oz-NEXT:    store <4 x i32> [[TMP42]], ptr [[TMP44]], align 4
+; Oz-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; Oz-NEXT:    store <4 x i32> [[TMP43]], ptr [[TMP45]], align 4
+; Oz-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; Oz-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
+; Oz-NEXT:    br i1 [[TMP3]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; Oz:       for.end:
 ; Oz-NEXT:    [[TMP46:%.*]] = load i32, ptr [[A]], align 4
 ; Oz-NEXT:    ret i32 [[TMP46]]
 ;
@@ -611,91 +544,6 @@ define i32 @enabled(ptr noalias nocapture %a, ptr noalias nocapture readonly %b,
 ; O1VEC2-NEXT:    store <4 x i32> [[TMP43]], ptr [[TMP45]], align 4
 ; O1VEC2-NEXT:    [[TMP46:%.*]] = load i32, ptr [[A]], align 4
 ; O1VEC2-NEXT:    ret i32 [[TMP46]]
-;
-; OzVEC2-LABEL: @enabled(
-; OzVEC2-NEXT:  entry:
-; OzVEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
-; OzVEC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; OzVEC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 16
-; OzVEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; OzVEC2-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 16
-; OzVEC2-NEXT:    store <4 x i32> [[TMP1]], ptr [[A]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP3]], align 4
-; OzVEC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
-; OzVEC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 48
-; OzVEC2-NEXT:    [[WIDE_LOAD_1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1_1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
-; OzVEC2-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_1]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_1]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; OzVEC2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 48
-; OzVEC2-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP9]], align 4
-; OzVEC2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 64
-; OzVEC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 80
-; OzVEC2-NEXT:    [[WIDE_LOAD_2:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1_2:%.*]] = load <4 x i32>, ptr [[TMP11]], align 4
-; OzVEC2-NEXT:    [[TMP12:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_2]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_2]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 64
-; OzVEC2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 80
-; OzVEC2-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP14]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP15]], align 4
-; OzVEC2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 96
-; OzVEC2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 112
-; OzVEC2-NEXT:    [[WIDE_LOAD_3:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1_3:%.*]] = load <4 x i32>, ptr [[TMP17]], align 4
-; OzVEC2-NEXT:    [[TMP18:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_3]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP19:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_3]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 96
-; OzVEC2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 112
-; OzVEC2-NEXT:    store <4 x i32> [[TMP18]], ptr [[TMP20]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP19]], ptr [[TMP21]], align 4
-; OzVEC2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 128
-; OzVEC2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 144
-; OzVEC2-NEXT:    [[WIDE_LOAD_4:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1_4:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4
-; OzVEC2-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_4]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP25:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_4]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
-; OzVEC2-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 144
-; OzVEC2-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP26]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP27]], align 4
-; OzVEC2-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 160
-; OzVEC2-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 176
-; OzVEC2-NEXT:    [[WIDE_LOAD_5:%.*]] = load <4 x i32>, ptr [[TMP28]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1_5:%.*]] = load <4 x i32>, ptr [[TMP29]], align 4
-; OzVEC2-NEXT:    [[TMP30:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_5]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP31:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_5]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 160
-; OzVEC2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 176
-; OzVEC2-NEXT:    store <4 x i32> [[TMP30]], ptr [[TMP32]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP31]], ptr [[TMP33]], align 4
-; OzVEC2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 192
-; OzVEC2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 208
-; OzVEC2-NEXT:    [[WIDE_LOAD_6:%.*]] = load <4 x i32>, ptr [[TMP34]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1_6:%.*]] = load <4 x i32>, ptr [[TMP35]], align 4
-; OzVEC2-NEXT:    [[TMP36:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_6]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP37:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_6]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP38:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 192
-; OzVEC2-NEXT:    [[TMP39:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 208
-; OzVEC2-NEXT:    store <4 x i32> [[TMP36]], ptr [[TMP38]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP37]], ptr [[TMP39]], align 4
-; OzVEC2-NEXT:    [[TMP40:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 224
-; OzVEC2-NEXT:    [[TMP41:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 240
-; OzVEC2-NEXT:    [[WIDE_LOAD_7:%.*]] = load <4 x i32>, ptr [[TMP40]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1_7:%.*]] = load <4 x i32>, ptr [[TMP41]], align 4
-; OzVEC2-NEXT:    [[TMP42:%.*]] = add nsw <4 x i32> [[WIDE_LOAD_7]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP43:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1_7]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 224
-; OzVEC2-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 240
-; OzVEC2-NEXT:    store <4 x i32> [[TMP42]], ptr [[TMP44]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP43]], ptr [[TMP45]], align 4
-; OzVEC2-NEXT:    [[TMP46:%.*]] = load i32, ptr [[A]], align 4
-; OzVEC2-NEXT:    ret i32 [[TMP46]]
 ;
 ; O3DIS-LABEL: @enabled(
 ; O3DIS-NEXT:  entry:
@@ -1161,17 +1009,19 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ;
 ; Oz-LABEL: @nopragma(
 ; Oz-NEXT:  entry:
+; Oz-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
+; Oz-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; Oz-NEXT:    br label [[FOR_BODY:%.*]]
-; Oz:       for.body:
+; Oz:       vector.body:
 ; Oz-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; Oz-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B:%.*]], i64 [[INDVARS_IV]]
-; Oz-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; Oz-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[N:%.*]]
+; Oz-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
+; Oz-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; Oz-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[INDVARS_IV]]
-; Oz-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
-; Oz-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; Oz-NEXT:    store <4 x i32> [[TMP2]], ptr [[ARRAYIDX2]], align 4
+; Oz-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 4
 ; Oz-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 64
-; Oz-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; Oz-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; Oz:       for.end:
 ; Oz-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; Oz-NEXT:    ret i32 [[TMP1]]
@@ -1203,34 +1053,6 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; O1VEC2:       for.end:
 ; O1VEC2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[A]], align 4
 ; O1VEC2-NEXT:    ret i32 [[TMP11]]
-;
-; OzVEC2-LABEL: @nopragma(
-; OzVEC2-NEXT:  entry:
-; OzVEC2-NEXT:    br label [[VECTOR_PH:%.*]]
-; OzVEC2:       vector.ph:
-; OzVEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
-; OzVEC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; OzVEC2-NEXT:    br label [[VECTOR_BODY:%.*]]
-; OzVEC2:       vector.body:
-; OzVEC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; OzVEC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B:%.*]], i64 [[INDEX]]
-; OzVEC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 4
-; OzVEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; OzVEC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
-; OzVEC2-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; OzVEC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
-; OzVEC2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP6]], i64 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP6]], align 4
-; OzVEC2-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP8]], align 4
-; OzVEC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; OzVEC2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; OzVEC2-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; OzVEC2:       middle.block:
-; OzVEC2-NEXT:    br label [[FOR_BODY:%.*]]
-; OzVEC2:       for.end:
-; OzVEC2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[A]], align 4
-; OzVEC2-NEXT:    ret i32 [[TMP11]]
 ;
 ; O3DIS-LABEL: @nopragma(
 ; O3DIS-NEXT:  entry:
@@ -1414,7 +1236,7 @@ define i32 @disabled(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; Oz-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; Oz-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; Oz-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 48
-; Oz-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; Oz-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; Oz:       for.end:
 ; Oz-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; Oz-NEXT:    ret i32 [[TMP1]]
@@ -1435,23 +1257,6 @@ define i32 @disabled(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; O1VEC2:       for.end:
 ; O1VEC2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; O1VEC2-NEXT:    ret i32 [[TMP1]]
-;
-; OzVEC2-LABEL: @disabled(
-; OzVEC2-NEXT:  entry:
-; OzVEC2-NEXT:    br label [[FOR_BODY:%.*]]
-; OzVEC2:       for.body:
-; OzVEC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; OzVEC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B:%.*]], i64 [[INDVARS_IV]]
-; OzVEC2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; OzVEC2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[N:%.*]]
-; OzVEC2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[INDVARS_IV]]
-; OzVEC2-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
-; OzVEC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; OzVEC2-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 48
-; OzVEC2-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; OzVEC2:       for.end:
-; OzVEC2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
-; OzVEC2-NEXT:    ret i32 [[TMP1]]
 ;
 ; O3DIS-LABEL: @disabled(
 ; O3DIS-NEXT:  entry:
