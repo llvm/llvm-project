@@ -17,3 +17,6 @@ needs SPIRV/COMGR
 breaks build of runtime
 Revert "[compiler-rt] Enable minimal ubsan for GPU targets (#188289)
 ---
+needs help on OMPIRBuilder
+[OMPIRBuilder] Move debug records to correct blocks. (#157125)
+---
