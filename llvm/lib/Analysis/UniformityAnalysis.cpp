@@ -167,14 +167,13 @@ template struct llvm::GenericUniformityAnalysisImplDeleter<
 
 llvm::UniformityInfo UniformityInfoAnalysis::run(Function &F,
                                                  FunctionAnalysisManager &FAM) {
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  if (!TTI.hasBranchDivergence(&F))
+    return UniformityInfo{};
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &CI = FAM.getResult<CycleAnalysis>(F);
   UniformityInfo UI{DT, CI, &TTI};
-  // Skip computation if we can assume everything is uniform.
-  if (TTI.hasBranchDivergence(&F))
-    UI.compute();
-
+  UI.compute();
   return UI;
 }
 
@@ -215,18 +214,20 @@ void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
-  auto &cycleInfo = getAnalysis<CycleInfoWrapperPass>().getResult();
-  auto &domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &targetTransformInfo =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   m_function = &F;
+
+  if (!targetTransformInfo.hasBranchDivergence(m_function)) {
+    m_uniformityInfo = UniformityInfo{};
+    return false;
+  }
+
+  auto &cycleInfo = getAnalysis<CycleInfoWrapperPass>().getResult();
+  auto &domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   m_uniformityInfo = UniformityInfo{domTree, cycleInfo, &targetTransformInfo};
-
-  // Skip computation if we can assume everything is uniform.
-  if (targetTransformInfo.hasBranchDivergence(m_function))
-    m_uniformityInfo.compute();
-
+  m_uniformityInfo.compute();
   return false;
 }
 
