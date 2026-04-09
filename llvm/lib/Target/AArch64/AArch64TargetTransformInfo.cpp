@@ -5163,8 +5163,8 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 
   // Return true only if we are able to lower using the SVE2p2/SME2p2
   // expand instruction.
-  return (ST->hasSVE2p2() && (!ST->isStreaming() || ST->hasSMEFA64())) ||
-         ST->hasSME2p2();
+  return (ST->isSVEAvailable() && ST->hasSVE2p2()) ||
+         (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {

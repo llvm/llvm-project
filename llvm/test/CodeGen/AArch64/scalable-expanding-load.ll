@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve2p2 < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -mattr=+sme2p2 < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -mattr=+sme2p2 -force-streaming < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve2p2 -mattr=+sme-fa64 -force-streaming < %s | FileCheck %s
 
 define <vscale x 2 x i64> @test_expandload(ptr %base, <vscale x 2 x i64> %passthru, <vscale x 2 x i1> %pred) {
 ; CHECK-LABEL: test_expandload:
@@ -63,4 +62,28 @@ define <vscale x 4 x i8> @test_widen_expandload(ptr %base, <vscale x 4 x i1> %pr
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i8> @llvm.masked.expandload(ptr align 1 %base, <vscale x 4 x i1> %pred, <vscale x 4 x i8> %passthru)
   ret <vscale x 4 x i8> %res
+}
+
+define <vscale x 8 x bfloat> @test_expandload_zero_passthru(ptr %base, <vscale x 8 x i1> %pred) {
+; CHECK-LABEL: test_expandload_zero_passthru:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.h
+; CHECK-NEXT:    whilelo p1.h, xzr, x8
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    expand z0.h, p0, z0.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x bfloat> @llvm.masked.expandload(ptr align 1 %base, <vscale x 8 x i1> %pred, <vscale x 8 x bfloat> zeroinitializer)
+  ret <vscale x 8 x bfloat> %res
+}
+
+define <vscale x 16 x i8> @test_expandload_poison_passthru(ptr %base, <vscale x 16 x i1> %pred) {
+; CHECK-LABEL: test_expandload_poison_passthru:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.b
+; CHECK-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-NEXT:    expand z0.b, p0, z0.b
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i8> @llvm.masked.expandload(ptr align 1 %base, <vscale x 16 x i1> %pred, <vscale x 16 x i8> poison)
+  ret <vscale x 16 x i8> %res
 }

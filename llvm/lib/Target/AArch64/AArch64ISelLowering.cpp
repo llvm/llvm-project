@@ -7306,10 +7306,10 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDValue PassThru = LoadNode->getPassThru();
   SDValue Mask = LoadNode->getMask();
 
-  if (PassThru->isUndef() || isZerosVector(PassThru.getNode()))
-    return Op;
-
   if (!LoadNode->isExpandingLoad()) {
+    if (PassThru->isUndef() || isZerosVector(PassThru.getNode()))
+      return Op;
+
     SDValue Load = DAG.getMaskedLoad(
         VT, DL, LoadNode->getChain(), LoadNode->getBasePtr(),
         LoadNode->getOffset(), Mask, DAG.getUNDEF(VT), LoadNode->getMemoryVT(),
@@ -7344,13 +7344,15 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   // Expand instruction copies the low-numbered elements to active elements
   // in the original predicate.
-  SDValue Expand = DAG.getNode(
+  SDValue Result = DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, VT,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_expand, DL, MVT::i64), Mask,
       Load);
 
-  // Copy the passthrough value.
-  SDValue Result = DAG.getSelect(DL, VT, Mask, Expand, PassThru);
+  // Copy the passthrough value unless zero/undef.
+  if (!PassThru->isUndef() && !isZerosVector(PassThru.getNode()))
+    Result = DAG.getSelect(DL, VT, Mask, Result, PassThru);
+
   return DAG.getMergeValues({Result, Load.getValue(1)}, DL);
 }
 
@@ -31447,10 +31449,10 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
   } else {
     // Fixed-length masked.expandload intrinsics should have been scalarised
     // if the required features are not available to use EXPAND.
-    assert(
-        (Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||
-        (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2()) &&
-            "Expected SVE2p2 or SME2p2");
+    assert(((Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||
+            (Subtarget->isSVEorStreamingSVEAvailable() &&
+             Subtarget->hasSME2p2())) &&
+           "Expected SVE2p2 or SME2p2");
 
     SDValue CntActive = DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
@@ -31461,11 +31463,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
         DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, Mask->getValueType(0),
                     DAG.getConstant(0, DL, MVT::i64), CntActive);
 
-    NewLoad =
-        DAG.getMaskedLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
-                          Load->getOffset(), ActiveMask, PassThru,
-                          Load->getMemoryVT(), Load->getMemOperand(),
-                          Load->getAddressingMode(), Load->getExtensionType());
+    NewLoad = DAG.getMaskedLoad(
+        ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
+        Load->getOffset(), ActiveMask, DAG.getUNDEF(ContainerVT),
+        Load->getMemoryVT(), Load->getMemOperand(), Load->getAddressingMode(),
+        Load->getExtensionType());
 
     Result = DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
