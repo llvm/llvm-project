@@ -217,12 +217,15 @@ Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
 
 llvm::Expected<CompilerType>
 Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
-                                  lldb::ValueObjectSP &rhs, uint32_t location) {
-  // Apply unary conversion for both operands.
-  auto lhs_or_err = UnaryConversion(lhs, location);
-  if (!lhs_or_err)
-    return lhs_or_err.takeError();
-  lhs = *lhs_or_err;
+                                  lldb::ValueObjectSP &rhs, uint32_t location,
+                                  bool is_assign) {
+  // Apply unary conversion for both operands, unless doing assignment.
+  if (!is_assign) {
+    auto lhs_or_err = UnaryConversion(lhs, location);
+    if (!lhs_or_err)
+      return lhs_or_err.takeError();
+    lhs = *lhs_or_err;
+  }
   auto rhs_or_err = UnaryConversion(rhs, location);
   if (!rhs_or_err)
     return rhs_or_err.takeError();
@@ -735,6 +738,18 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
                                 lldb::ValueObjectSP rhs, uint32_t location) {
 
+  // Determine the appropriate type for the rhs.
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location,
+                                          /*is_assign=*/ true);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType rhs_type = *type_or_err;
+  // If rhs_type contains a valid type, cast rhs to that type. Otherwise
+  // the conversion function did not find a better type, so leave rhs
+  // as is.
+  if (rhs_type.GetTypeName(false) != "<invalid>")
+    rhs = rhs->Cast(rhs_type);
+
   Status status;
   lhs->SetValueFromInteger(rhs, status, m_allow_var_updates);
   if (status.Success())
@@ -747,16 +762,27 @@ Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddAssign(
     lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
-  lldb::ValueObjectSP ret;
 
   auto ret_or_err = EvaluateBinaryAddition(lhs, rhs, location);
   if (!ret_or_err)
     return ret_or_err;
 
-  ret = *ret_or_err;
+  lldb::ValueObjectSP sum = *ret_or_err;
+
+  // Determine the appropriate type for sum.
+  auto type_or_err = ArithmeticConversion(lhs, sum, location,
+                                          /*is_assign=*/ true);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType sum_type = *type_or_err;
+  // If sum_type contains a valid type, cast sum to that type. Otherwise
+  // the conversion function did not find a better type, so leave sum
+  // as is.
+  if (sum_type.GetTypeName(false) != "<invalid>")
+    sum = sum->Cast(sum_type);
 
   Status status;
-  lhs->SetValueFromInteger(ret, status, m_allow_var_updates);
+  lhs->SetValueFromInteger(sum, status, m_allow_var_updates);
   if (status.Success())
     return lhs;
 
@@ -767,16 +793,27 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddAssign(
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubAssign(
     lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
-  lldb::ValueObjectSP ret;
 
   auto ret_or_err = EvaluateBinarySubtraction(lhs, rhs, location);
   if (!ret_or_err)
     return ret_or_err;
 
-  ret = *ret_or_err;
+  lldb::ValueObjectSP diff = *ret_or_err;
+
+  // Determine the appropriate type for diff.
+  auto type_or_err = ArithmeticConversion(lhs, diff, location,
+                                          /*is_assign=*/ true);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType diff_type = *type_or_err;
+  // If diff_type contains a valid type, cast diff to that type. Otherwise
+  // the conversion function did not find a better type, so leave diff
+  // as is.
+  if (diff_type.GetTypeName(false) != "<invalid>")
+    diff = diff->Cast(diff_type);
 
   Status status;
-  lhs->SetValueFromInteger(ret, status, m_allow_var_updates);
+  lhs->SetValueFromInteger(diff, status, m_allow_var_updates);
   if (status.Success())
     return lhs;
 

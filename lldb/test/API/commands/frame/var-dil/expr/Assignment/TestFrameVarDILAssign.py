@@ -45,6 +45,15 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect("frame variable 'i = (int)eTwo'", substrs=["i = 1"])
         self.expect_var_path("i", value="1")
 
+        # Assigning "int" with a small value to "short" should work.
+        self.expect("frame variable 's = i'", substrs=["s = 1"])
+        # Assigning "int" with a big value to "short" should fail.
+        self.expect(
+            "frame variable 's = 78246'",
+            error=True,
+            substrs=["new value is too big"],
+        )
+
         # Assigning to a float var
         self.expect_var_path("f", value="1.5")
         self.expect("frame variable 'f = 17.823f'", substrs=["f = 17.823"])
@@ -58,26 +67,19 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect_var_path("f", value="3.5")
 
         # Assigning to an enum
-        self.expect(
-            "frame variable 'i = eOne'",
-            error=True,
-            substrs=["illegal argument: new value should be of the same size"],
-        )
-
+        self.expect("frame variable 'i = eOne'", substrs=["0"])
         self.expect("frame variable 'eOne = 1'", substrs=["eOne = TWO"])
 
         # Assigning to a pointer
-        self.expect(
-            "frame variable 'p = 1'",
-            error=True,
-            substrs=["illegal argument: new value should be of the same size"],
-        )
-
         if Is32Bit:
+            self.expect("frame variable 'p = 1'", substrs=["p = 0x00000001"])
             self.expect("frame variable 'p = (int*)12'", substrs=["p = 0x0000000c"])
             self.expect_var_path("p", value="0x0000000c")
             self.expect("frame variable 'p = 0'", substrs=["p = 0x00000000"])
         else:
+            self.expect(
+                "frame variable 'p = 1'", substrs=["p = 0x0000000000000001"]
+            )
             self.expect(
                 "frame variable 'p = (int*)12'", substrs=["p = 0x000000000000000c"]
             )
@@ -86,11 +88,8 @@ class TestFrameVarDILAssignment(TestBase):
                 "frame variable 'p = (int *)0'", substrs=["p = 0x0000000000000000"]
             )
 
-        self.expect(
-            "frame variable 'p = farr'",
-            error=True,
-            substrs=["illegal argument: new value should be of the same size"],
-        )
+         # Just verify the result value prefix is an address.
+        self.expect("frame variable 'p = farr'", substrs=["(int *) p = 0x0000"])
 
         # Assigning to a bool
         self.expect_var_path("b", value="false")

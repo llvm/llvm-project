@@ -20,6 +20,7 @@ class TestFrameVarDILAssignment(TestBase):
         self.runCmd("settings set target.experimental.use-DIL true")
 
         self.expect("frame variable 'i += 1'", substrs=["2"])
+        self.expect("frame variable 's += i'", substrs=["9"])
         self.expect("frame variable 'i += 2'", substrs=["4"])
         self.expect("frame variable 'i += -4'", substrs=["0"])
         self.expect("frame variable 'i += eOne'", substrs=["0"])

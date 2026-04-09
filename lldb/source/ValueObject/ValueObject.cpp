@@ -1238,10 +1238,14 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
     if (auto temp = llvm::expectedToOptional(
             GetCompilerType().GetByteSize(target.get())))
       byte_size = temp.value();
-    if (value.getBitWidth() != byte_size * CHAR_BIT) {
-      error = Status::FromErrorString(
-          "illegal argument: new value should be of the same size");
-      return;
+    if (value.getBitWidth() > byte_size * CHAR_BIT) {
+      // The type is too big, but maybe the value itself is small enough?
+      uint64_t u_max = (1 << (byte_size * CHAR_BIT)) - 1;
+      if (*(value.getRawData()) > u_max) {
+        error =
+            Status::FromErrorString("illegal argument: new value is too big");
+        return;
+      }
     }
   }
 

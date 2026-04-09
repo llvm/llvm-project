@@ -6,6 +6,7 @@ int main(int argc, char **argv) {
   float pi = 3.14159f;
   int *p = (int *)10;
   bool b = false;
+  short s = 7;
   float farr[2] = {1.0f, 2.0f};
   int arr[2] = {1, 2};
 

@@ -83,11 +83,13 @@ private:
                                                     CompilerType &rhs_type);
 
   /// Perform an arithmetic conversion on two values from an arithmetic
-  /// operation.
+  /// operation. If this is part of an assignment operation (is_assign is
+  /// true), do not change the lhs, which is likely to be a program variable.
   /// \returns The result type of an arithmetic operation.
   llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                                     lldb::ValueObjectSP &rhs,
-                                                    uint32_t location);
+                                                    uint32_t location,
+                                                    bool is_assign = false);
 
   /// Add or subtract the offset to the pointer according to the pointee type
   /// byte size.
