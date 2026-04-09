@@ -522,6 +522,10 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           if (auto Pair = matchSymmetricPair(B, C)) {
             replaceOperand(*Op0, 0, Pair->first);
             replaceOperand(*Op0, 1, Pair->second);
+            if (hasNoUnsignedWrap(*Op0))
+              Op0->setHasNoUnsignedWrap(false);
+            if (hasNoSignedWrap(*Op0))
+              Op0->setHasNoSignedWrap(false);
             replaceOperand(I, 1, A);
             I.swapOperands();
             ClearSubclassDataAfterReassociation(I);
