@@ -279,7 +279,7 @@ Changes in existing checks
 
 - Improved :doc:`container-data-pointer
   <clang-tidy/checks/readability/container-data-pointer>` check
-  to use ``c_str()`` for const's when available and present on a container.
+  to use ``c_str()`` for ``const``'s when available and present on a container.
 
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
