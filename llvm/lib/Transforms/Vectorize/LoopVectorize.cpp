@@ -7180,7 +7180,7 @@ LoopVectorizationPlanner::computeBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return {{*FirstPlan.vectorFactors().begin(), 0, 0}, &FirstPlan};
+    return {{FirstPlan.getSingleVF(), 0, 0}, &FirstPlan};
 
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
                     << (CM.CostKind == TTI::TCK_RecipThroughput
@@ -9636,7 +9636,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (EpiPlan) {
     VPlan &BestEpiPlan = *EpiPlan;
     VPlan &BestMainPlan = BestPlan;
-    ElementCount EpilogueVF = *BestEpiPlan.vectorFactors().begin();
+    ElementCount EpilogueVF = BestEpiPlan.getSingleVF();
 
     // The first pass vectorizes the main loop and creates a scalar epilogue
     // to be vectorized by executing the plan (potentially with a different

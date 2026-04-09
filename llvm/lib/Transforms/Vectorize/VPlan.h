@@ -4792,6 +4792,13 @@ public:
     return VFs;
   }
 
+  /// Returns the single VF of the plan, asserting that the plan has exactly
+  /// one VF.
+  ElementCount getSingleVF() const {
+    assert(VFs.size() == 1 && "expected plan with single VF");
+    return VFs[0];
+  }
+
   bool hasScalarVFOnly() const {
     bool HasScalarVFOnly = VFs.size() == 1 && VFs[0].isScalar();
     assert(HasScalarVFOnly == hasVF(ElementCount::getFixed(1)) &&
