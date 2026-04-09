@@ -94,10 +94,8 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
   bool IsSingleWaveWG = false;
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    unsigned WGMaxSize = ST.getFlatWorkGroupSizes(*I.getFunction()).second;
-    IsSingleWaveWG = WGMaxSize <= ST.getWavefrontSize();
-  }
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    IsSingleWaveWG = ST.isSingleWavefrontWorkgroup(*I.getFunction());
 
   IRBuilder<> B(&I);
 
