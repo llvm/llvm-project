@@ -721,6 +721,9 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
   if (InInitStatement && Tok.isNot(tok::identifier))
     return nullptr;
 
+  std::optional<ParsingDeclRAIIObject> UsingRAII;
+  UsingRAII.emplace(*this, ParsingDeclRAIIObject::NoParent);
+
   UsingDeclarator D;
   bool InvalidDeclarator = ParseUsingDeclarator(Context, D);
 
@@ -760,8 +763,12 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     Decl *AD = ParseAliasDeclarationAfterDeclarator(
         TemplateInfo, UsingLoc, D, DeclEnd, AS, Attrs, &DeclFromDeclSpec);
 
-    if (!AD)
+    if (!AD) {
+      UsingRAII->abort();
       return nullptr;
+    }
+
+    UsingRAII->complete(AD);
 
     return Actions.ConvertDeclToDeclGroup(AD, DeclFromDeclSpec);
   }
@@ -779,6 +786,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     // Unfortunately, we have to bail out instead of recovering by
     // ignoring the parameters, just in case the nested name specifier
     // depends on the parameters.
+    UsingRAII->abort();
     return nullptr;
   }
 
@@ -789,9 +797,10 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     DiagnoseCXX11AttributeExtension(Attrs);
     Attrs.prepend(PrefixAttrs.begin(), PrefixAttrs.end());
 
-    if (InvalidDeclarator)
+    if (InvalidDeclarator) {
       SkipUntil(tok::comma, tok::semi, StopBeforeMatch);
-    else {
+      UsingRAII->abort();
+    } else {
       // "typename" keyword is allowed for identifiers only,
       // because it may be a type definition.
       if (D.TypenameLoc.isValid() &&
@@ -806,12 +815,18 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
       Decl *UD = Actions.ActOnUsingDeclaration(getCurScope(), AS, UsingLoc,
                                                D.TypenameLoc, D.SS, D.Name,
                                                D.EllipsisLoc, Attrs);
-      if (UD)
+      if (UD) {
         DeclsInGroup.push_back(UD);
+        UsingRAII->complete(UD);
+      } else {
+        UsingRAII->abort();
+      }
     }
 
     if (!TryConsumeToken(tok::comma))
       break;
+
+    UsingRAII.emplace(*this, ParsingDeclRAIIObject::NoParent);
 
     // Parse another using-declarator.
     Attrs.clear();
