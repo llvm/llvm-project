@@ -140,7 +140,7 @@ private:
 
   // A helper function for tryReassociateBinaryOp. LHS and RHS are explicitly
   // passed.
-  Instruction *tryReassociateBinaryOp(Value *LHS, Value *RHS,
+  Instruction *tryReassociateBinaryOp(const Use &LHSUse, const Use &RHSUse,
                                       BinaryOperator *I);
   // Rewrites I to (LHS op RHS) if LHS is computed already.
   Instruction *tryReassociatedBinaryOp(SCEVUse LHS, Value *RHS,

@@ -488,19 +488,22 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
 }
 
 Instruction *NaryReassociatePass::tryReassociateBinaryOp(BinaryOperator *I) {
-  Value *LHS = I->getOperand(0), *RHS = I->getOperand(1);
   // There is no need to reassociate 0.
   if (SE->getSCEV(I)->isZero())
     return nullptr;
-  if (auto *NewI = tryReassociateBinaryOp(LHS, RHS, I))
+  if (Instruction *NewI =
+          tryReassociateBinaryOp(I->getOperandUse(0), I->getOperandUse(1), I))
     return NewI;
-  if (auto *NewI = tryReassociateBinaryOp(RHS, LHS, I))
+  if (Instruction *NewI =
+          tryReassociateBinaryOp(I->getOperandUse(1), I->getOperandUse(0), I))
     return NewI;
   return nullptr;
 }
 
-Instruction *NaryReassociatePass::tryReassociateBinaryOp(Value *LHS, Value *RHS,
+Instruction *NaryReassociatePass::tryReassociateBinaryOp(const Use &LHSUse,
+                                                         const Use &RHSUse,
                                                          BinaryOperator *I) {
+  Value *LHS = LHSUse.get(), *RHS = RHSUse.get();
   Value *A = nullptr, *B = nullptr;
   // To be conservative, we reassociate I only when it is the only user of (A op
   // B).
@@ -525,9 +528,8 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(Value *LHS, Value *RHS,
     // divergent. The symmetric case (A and RHS uniform, B divergent) is already
     // handled by the default order which tries (A op RHS) op B first.
     User *LHSOp = cast<User>(LHS);
-    unsigned RHSIdx = (I->getOperand(0) == LHS) ? 1 : 0;
     if (UI && !UI->isDivergentUse(LHSOp->getOperandUse(1)) &&
-        !UI->isDivergentUse(I->getOperandUse(RHSIdx)) &&
+        !UI->isDivergentUse(RHSUse) &&
         UI->isDivergentUse(LHSOp->getOperandUse(0))) {
       LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for " << *I
                         << "\n");
