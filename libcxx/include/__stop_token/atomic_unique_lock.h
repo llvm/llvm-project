@@ -12,6 +12,7 @@
 
 #include <__bit/has_single_bit.h>
 #include <__config>
+#include <__thread/this_thread.h>
 #include <atomic>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -81,7 +82,6 @@ public:
     // unset the _LockedBit. `memory_order_release` because we need to make sure all the write operations before calling
     // `__unlock` will be made visible to other threads
     __state_.fetch_and(static_cast<_State>(~_LockedBit), std::memory_order_release);
-    __state_.notify_all();
     __is_locked_ = false;
   }
 
@@ -103,9 +103,8 @@ private:
           return false;
         } else if ((__current_state & _LockedBit) != 0) {
           // another thread has locked the state, we need to wait
-          __state_.wait(__current_state, std::memory_order_relaxed);
-          // when it is woken up by notifyAll or spuriously, the __state_
-          // might have changed. reload the state
+          this_thread::yield();
+          // the __state_ might have changed. reload the state
           // Note that the new state's _LockedBit may or may not equal to 0
           __current_state = __state_.load(std::memory_order_relaxed);
         } else {
