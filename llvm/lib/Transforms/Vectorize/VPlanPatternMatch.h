@@ -16,6 +16,9 @@
 #define LLVM_TRANSFORM_VECTORIZE_VPLANPATTERNMATCH_H
 
 #include "VPlan.h"
+#include "llvm/ADT/PatternMatchHelpers.h"
+
+using namespace llvm::PatternMatchHelpers;
 
 namespace llvm::VPlanPatternMatch {
 
@@ -41,17 +44,6 @@ template <typename Pattern> auto match_fn(const Pattern &P) {
 
 template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
   return P.match(static_cast<const VPRecipeBase *>(R));
-}
-
-/// A match-wrapper around isa.
-template <typename... To> struct match_isapred {
-  template <typename ArgTy> bool match(const ArgTy *V) const {
-    return isa<To...>(V);
-  }
-};
-
-template <typename... To> inline match_isapred<To...> m_Isa() {
-  return match_isapred<To...>();
 }
 
 /// Match an arbitrary VPValue and ignore it.
@@ -230,39 +222,6 @@ inline match_poison m_Poison() { return match_poison(); }
 /// Match a plain integer constant no wider than 64-bits, capturing it if we
 /// match.
 inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
-
-/// Matching combinators
-template <typename... Ty> struct match_combine_or {
-  std::tuple<Ty...> Ps;
-
-  match_combine_or(const Ty &...Ps) : Ps(Ps...) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    return std::apply([V](auto &&...Ps) { return (Ps.match(V) || ...); }, Ps);
-  }
-};
-
-template <typename... Ty> struct match_combine_and {
-  std::tuple<Ty...> Ps;
-
-  match_combine_and(const Ty &...Ps) : Ps(Ps...) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    return std::apply([V](auto &&...Ps) { return (Ps.match(V) && ...); }, Ps);
-  }
-};
-
-/// Combine two pattern matchers matching any of Ps patterns.
-template <typename... Ty>
-inline match_combine_or<Ty...> m_CombineOr(const Ty &...Ps) {
-  return {Ps...};
-}
-
-/// Combine two pattern matchers matching all of Ps patterns.
-template <typename... Ty>
-inline match_combine_and<Ty...> m_CombineAnd(const Ty &...Ps) {
-  return {Ps...};
-}
 
 /// Match a VPValue, capturing it if we match.
 inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
@@ -599,12 +558,6 @@ inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
                         AllRecipe_match<Instruction::SExt, Op0_t>>
 m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
-}
-
-/// A variant of m_Isa that also matches SubPattern.
-template <typename... To, typename SubPattern>
-inline auto m_Isa(const SubPattern &P) {
-  return m_CombineAnd(m_Isa<To...>(), P);
 }
 
 template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
