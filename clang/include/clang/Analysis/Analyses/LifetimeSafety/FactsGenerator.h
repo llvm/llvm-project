@@ -66,8 +66,6 @@ private:
 
   void handlePointerArithmetic(const BinaryOperator *BO);
 
-  void handleTernaryOperator(const ConditionalOperator *CO);
-
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
