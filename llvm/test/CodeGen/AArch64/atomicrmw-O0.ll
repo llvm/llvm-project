@@ -303,8 +303,8 @@ define i8 @test_rmw_nand_8(ptr %dst)   {
 ; NOLSE-NEXT:    // Child Loop BB5_2 Depth 2
 ; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
 ; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
-; NOLSE-NEXT:    mov w8, #-2 // =0xfffffffe
-; NOLSE-NEXT:    orn w12, w8, w9
+; NOLSE-NEXT:    mvn w8, w9
+; NOLSE-NEXT:    orr w12, w8, #0xfffffffe
 ; NOLSE-NEXT:  .LBB5_2: // %atomicrmw.start
 ; NOLSE-NEXT:    // Parent Loop BB5_1 Depth=1
 ; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
@@ -339,8 +339,8 @@ define i8 @test_rmw_nand_8(ptr %dst)   {
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
 ; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
-; LSE-NEXT:    mov w8, #-2 // =0xfffffffe
-; LSE-NEXT:    orn w10, w8, w9
+; LSE-NEXT:    mvn w8, w9
+; LSE-NEXT:    orr w10, w8, #0xfffffffe
 ; LSE-NEXT:    mov w8, w9
 ; LSE-NEXT:    casalb w8, w10, [x11]
 ; LSE-NEXT:    subs w9, w8, w9, uxtb
@@ -371,8 +371,8 @@ define i16 @test_rmw_nand_16(ptr %dst)   {
 ; NOLSE-NEXT:    // Child Loop BB6_2 Depth 2
 ; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
 ; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
-; NOLSE-NEXT:    mov w8, #-2 // =0xfffffffe
-; NOLSE-NEXT:    orn w12, w8, w9
+; NOLSE-NEXT:    mvn w8, w9
+; NOLSE-NEXT:    orr w12, w8, #0xfffffffe
 ; NOLSE-NEXT:  .LBB6_2: // %atomicrmw.start
 ; NOLSE-NEXT:    // Parent Loop BB6_1 Depth=1
 ; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
@@ -407,8 +407,8 @@ define i16 @test_rmw_nand_16(ptr %dst)   {
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
 ; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
-; LSE-NEXT:    mov w8, #-2 // =0xfffffffe
-; LSE-NEXT:    orn w10, w8, w9
+; LSE-NEXT:    mvn w8, w9
+; LSE-NEXT:    orr w10, w8, #0xfffffffe
 ; LSE-NEXT:    mov w8, w9
 ; LSE-NEXT:    casalh w8, w10, [x11]
 ; LSE-NEXT:    subs w9, w8, w9, uxth
@@ -439,8 +439,8 @@ define i32 @test_rmw_nand_32(ptr %dst)   {
 ; NOLSE-NEXT:    // Child Loop BB7_2 Depth 2
 ; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
 ; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
-; NOLSE-NEXT:    mov w8, #-2 // =0xfffffffe
-; NOLSE-NEXT:    orn w12, w8, w9
+; NOLSE-NEXT:    mvn w8, w9
+; NOLSE-NEXT:    orr w12, w8, #0xfffffffe
 ; NOLSE-NEXT:  .LBB7_2: // %atomicrmw.start
 ; NOLSE-NEXT:    // Parent Loop BB7_1 Depth=1
 ; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
@@ -475,8 +475,8 @@ define i32 @test_rmw_nand_32(ptr %dst)   {
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
 ; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
-; LSE-NEXT:    mov w8, #-2 // =0xfffffffe
-; LSE-NEXT:    orn w10, w8, w9
+; LSE-NEXT:    mvn w8, w9
+; LSE-NEXT:    orr w10, w8, #0xfffffffe
 ; LSE-NEXT:    mov w8, w9
 ; LSE-NEXT:    casal w8, w10, [x11]
 ; LSE-NEXT:    subs w9, w8, w9

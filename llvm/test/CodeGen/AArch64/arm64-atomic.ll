@@ -82,10 +82,10 @@ define i64 @val_compare_and_swap_64(ptr %p, i64 %cmp, i64 %new) #0 {
 
 define i32 @fetch_and_nand(ptr %p) #0 {
 ; CHECK-LABEL: fetch_and_nand:
-; CHECK: mov    [[CST_REG:w[0-9]+]], #-8
 ; CHECK: [[TRYBB:.?LBB[0-9_]+]]:
 ; CHECK: ldxr   w[[DEST_REG:[0-9]+]], [x0]
-; CHECK: orn    [[SCRATCH2_REG:w[0-9]+]], [[CST_REG]], w[[DEST_REG]]
+; CHECK: mvn    [[TMP_REG:w[0-9]+]], w[[DEST_REG]]
+; CHECK: orr    [[SCRATCH2_REG:w[0-9]+]], [[TMP_REG]], #0xfffffff8
 ; CHECK-NOT: stlxr [[SCRATCH2_REG]], [[SCRATCH2_REG]]
 ; CHECK: stlxr   [[SCRATCH_REG:w[0-9]+]], [[SCRATCH2_REG]], [x0]
 ; CHECK: cbnz   [[SCRATCH_REG]], [[TRYBB]]

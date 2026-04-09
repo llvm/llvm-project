@@ -26,15 +26,17 @@
 // RUN:   %t/main.cpp \
 // RUN:   -### 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
-// RUN:   | FileCheck %s -DPREFIX=%/t
+// RUN:   | FileCheck %s -check-prefix=MAIN-CC1 -check-prefix=STDLIB-MOD-CC1 -DPREFIX=%/t
 
-// CHECK: "-cc1" {{.*}} "-Wno-reserved-module-identifier" {{.*}} "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/std.cppm" {{.*}} "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
+// MAIN-CC1: "-cc1"
+// MAIN-CC1-SAME: "main.cpp"
+// MAIN-CC1-NOT: "-Wno-reserved-module-identifier"
+// MAIN-CC1-NOT: "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
 
-// The adjustments should only be made for inputs from the Standard Library module manifest:
-// Check that the -cc1 command line does not contain those adjustments!
-// CHECK: "-cc1" {{.*}}main
-// CHECK-NOT: "-Wno-reserved-module-identifier"
-// CHECK-NOT: "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
+// STDLIB-MOD-CC1: "-cc1"
+// STDLIB-MOD-CC1-SAME: "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/std.cppm"
+// STDLIB-MOD-CC1-SAME: "-Wno-reserved-module-identifier"
+// STDLIB-MOD-CC1-SAME: "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
 
 //--- main.cpp
 import std;
