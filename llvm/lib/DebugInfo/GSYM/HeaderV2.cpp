@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace gsym;
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const HeaderV2 &H) {
-  OS << "HeaderV2:\n";
+  OS << "Header:\n";
   OS << "  Magic          = " << HEX32(H.Magic) << "\n";
   OS << "  Version        = " << HEX16(H.Version) << '\n';
   OS << "  AddrOffSize    = " << HEX8(H.AddrOffSize) << '\n';

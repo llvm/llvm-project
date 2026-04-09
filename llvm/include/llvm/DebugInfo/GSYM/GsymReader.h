@@ -485,10 +485,10 @@ protected:
   /// index for the address. This index is then used to get the offset of the
   /// FunctionInfo data that we will decode using this function.
   ///
-  /// \param Index An index into the address table. Must be valid.
-  /// \returns A GSYM data offset for the offset of the FunctionInfo that needs
-  /// to be decoded.
-  uint64_t getAddressInfoOffset(size_t Index) const;
+  /// \param Index An index into the address table.
+  /// \returns An optional GSYM data offset for the offset of the FunctionInfo
+  /// that needs to be decoded.
+  LLVM_ABI std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
 
   /// Given an address, find the correct function info data and function
   /// address.

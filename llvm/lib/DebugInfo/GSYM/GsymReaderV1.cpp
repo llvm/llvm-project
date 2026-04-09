@@ -120,7 +120,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "INDEX  Offset\n";
   OS << "====== ==========\n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I)
-    OS << format("[%4u] ", I) << HEX32(getAddressInfoOffset(I)) << "\n";
+    OS << format("[%4u] ", I) << HEX32(*getAddressInfoOffset(I)) << "\n";
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
   OS << "====== ========== ========== ==============================\n";
@@ -138,7 +138,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "\n";
 
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
-    OS << "FunctionInfo @ " << HEX32(getAddressInfoOffset(I)) << ": ";
+    OS << "FunctionInfo @ " << HEX32(*getAddressInfoOffset(I)) << ": ";
     if (auto FI = getFunctionInfoAtIndex(I))
       dump(OS, *FI);
     else

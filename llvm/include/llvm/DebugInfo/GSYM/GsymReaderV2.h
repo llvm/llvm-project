@@ -17,7 +17,7 @@ class MemoryBuffer;
 
 namespace gsym {
 
-/// GsymReaderV2 reads GSYM V2 data from a file or buffer.
+/// GsymReaderV2 reads GSYM V2 data from a buffer.
 class GsymReaderV2 : public GsymReader {
   friend class GsymReader;
   const HeaderV2 *Hdr = nullptr;

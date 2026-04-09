@@ -297,11 +297,8 @@ GsymReader::getOptionalGlobalData(GlobalInfoType Type) const {
     return std::nullopt;
   const GlobalData &GD = It->second;
   StringRef Buf = MemBuffer->getBuffer();
-  // It should already be checked in parseGlobalDataEntries() that the file
-  // offset and size are valid
-  assert(GD.FileSize != 0 && "Global data section has zero size");
-  assert(GD.FileOffset + GD.FileSize <= Buf.size() &&
-         "Global data section is beyond buffer's bounds");
+  if (GD.FileSize == 0 || GD.FileOffset + GD.FileSize > Buf.size())
+    return std::nullopt;
   return Buf.substr(GD.FileOffset, GD.FileSize);
 }
 
@@ -315,7 +312,9 @@ std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   return std::nullopt;
 }
 
-uint64_t GsymReader::getAddressInfoOffset(size_t Index) const {
+std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
+  if (Index >= getNumAddresses())
+    return std::nullopt;
   uint64_t Offset = Index * getAddressInfoOffsetSize();
   return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetSize()) +
          // The exitence of FunctionInfo in GlobalDataSections is guaranteed by
@@ -401,17 +400,17 @@ GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
 llvm::Expected<DataExtractor>
 GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
                                        uint64_t &FuncStartAddr) const {
-  if (AddrIdx >= getNumAddresses())
+  const std::optional<uint64_t> AddrInfoOffset = getAddressInfoOffset(AddrIdx);
+  if (AddrInfoOffset == std::nullopt)
     return createStringError(std::errc::invalid_argument,
                              "invalid address index %" PRIu64, AddrIdx);
-  const uint64_t AddrInfoOffset = getAddressInfoOffset(AddrIdx);
   assert((Endian == endianness::big || Endian == endianness::little) &&
          "Endian must be either big or little");
-  StringRef Bytes = MemBuffer->getBuffer().substr(AddrInfoOffset);
+  StringRef Bytes = MemBuffer->getBuffer().substr(*AddrInfoOffset);
   if (Bytes.empty())
     return createStringError(std::errc::invalid_argument,
                              "invalid address info offset 0x%" PRIx64,
-                             AddrInfoOffset);
+                             *AddrInfoOffset);
   std::optional<uint64_t> OptFuncStartAddr = getAddress(AddrIdx);
   if (!OptFuncStartAddr)
     return createStringError(std::errc::invalid_argument,
