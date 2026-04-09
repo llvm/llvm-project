@@ -112,12 +112,13 @@ extends:
         parameters:
           enablePublishBuildArtifacts: true
           enablePublishBuildAssets: true
-          enablePublishUsingPipelines: true
+          publishingVersion: 4
           jobs:
 
           ############ LINUX BUILD ############
           - ${{ each buildjob in parameters.linuxBuilds }}:
             - job: Build_${{ replace(buildjob.assetManifestOS, '-', '_') }}_${{ buildjob.arch }}
+              enablePublishing: true
               displayName: ${{ buildjob.assetManifestOS }} ${{ buildjob.arch }}
               timeoutInMinutes: 600
               variables:
@@ -154,6 +155,7 @@ extends:
           ############ MACOS BUILD ############
           - ${{ each buildjob in parameters.macBuilds }}:
             - job: Build_macOS_${{ buildjob.arch }}
+              enablePublishing: true
               displayName: macOS ${{ buildjob.arch }}
               timeoutInMinutes: 600
               variables:
@@ -187,6 +189,7 @@ extends:
           ############ WINDOWS BUILD ############
           - ${{ each buildjob in parameters.windowsBuilds }}:
             - job: Build_Windows_${{ buildjob.arch }}_${{ buildjob.BuildConfig }}
+              enablePublishing: true
               displayName: Windows ${{ buildjob.arch }} ${{ buildjob.BuildConfig }}
               timeoutInMinutes: 600
               variables:
@@ -224,6 +227,7 @@ extends:
     ############ POST BUILD ARCADE LOGIC ############
     - template: /eng/common/templates-official/post-build/post-build.yml@self
       parameters:
+        publishingInfraVersion: 4
         enableSourceLinkValidation: false
         enableSigningValidation: false
         enableSymbolValidation: false

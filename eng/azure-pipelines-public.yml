@@ -26,7 +26,6 @@ stages:
     parameters:
       enablePublishBuildArtifacts: true
       enablePublishBuildAssets: true
-      enablePublishUsingPipelines: true
       enableSourceBuild: true
       sourceBuildParameters:
         platforms:
