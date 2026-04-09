@@ -1965,7 +1965,7 @@ def fir_CoordinateOp
   }];
 }
 
-def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {
+def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [Pure]> {
   let summary = "Extract a value from an aggregate SSA-value";
 
   let description = [{

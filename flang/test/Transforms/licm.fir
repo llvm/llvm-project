@@ -2488,3 +2488,21 @@ func.func @test_hoist_emboxchar(%arg0: !fir.ref<!fir.char<1>>, %arg1: i32, %arg2
   }
   return
 }
+
+// -----
+// Test that fir.extract_value is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_extract_value(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.type<derived{f:f32}>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<f32>)
+// CHECK:           %[[EV:.*]] = fir.extract_value %[[ARG0]], ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[EV]] to %[[ARG1]] : !fir.ref<f32>
+func.func @test_hoist_extract_value(%arg0: !fir.type<derived{f:f32}>, %arg1: !fir.ref<f32>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.extract_value %arg0, ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
+    fir.store %0 to %arg1 : !fir.ref<f32>
+  }
+  return
+}
