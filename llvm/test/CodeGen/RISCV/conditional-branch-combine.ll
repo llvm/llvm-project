@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=riscv64 -riscv-cbc-max-branch=4 < %s | FileCheck %s
 
 ;
-; Test whether a chain of consecutive conditional branches can be broken.
+; Test whether a chain of consecutive conditional branches needs to be broken.
 
 define void @func(i32 noundef signext %0, ptr noundef %1, ptr noundef %2, ptr noundef %3, ptr noundef %4, ptr noundef %5, ptr noundef %6, ptr noundef %7) {
 ; CHECK:      # %bb.0:
