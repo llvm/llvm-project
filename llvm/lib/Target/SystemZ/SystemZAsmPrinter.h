@@ -117,6 +117,7 @@ public:
   void emitXXStructorList(const DataLayout &DL, const Constant *List,
                           bool IsCtor) override;
   void emitEndOfAsmFile(Module &M) override;
+  void emitExternalGlobalVariableEnd(MCSymbol *Sym) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,

@@ -215,7 +215,8 @@ static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
 
     OS << ")";
   }
-  if (ADA)
+  // Emit PSECT only for code symbols.
+  if (ADA && Executable != GOFF::ESD_EXE_DATA)
     OS << Sep << "PSECT(" << ADA->getName() << ")";
   if (BindingScope != GOFF::ESD_BSC_Unspecified) {
     OS << Sep << "SCOPE(";
@@ -368,7 +369,7 @@ void SystemZHLASMAsmStreamer::finishImpl() {
       continue;
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
     if (Sym.getCodeData() == GOFF::ESD_EXE_DATA) {
-      OS << "C_WSA64 CATTR PART(" << Sym.getName() << ")";
+      OS << Sym.getADA()->getExternalName() << " CATTR PART(" << Sym.getName() << ")";
       EmitEOL();
     } else {
       OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();

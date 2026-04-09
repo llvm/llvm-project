@@ -286,7 +286,6 @@ class GOFFWriter {
   GOFFOstream OS;
   MCAssembler &Asm;
   MCSectionGOFF *RootSD;
-  MCSectionGOFF *ExternalED;
 
   /// Saved relocation data collected in recordRelocations().
   std::vector<GOFFRelocationEntry> &Relocations;
@@ -304,17 +303,15 @@ class GOFFWriter {
 
 public:
   GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm, MCSectionGOFF *RootSD,
-             MCSectionGOFF *ExternalED,
              std::vector<GOFFRelocationEntry> &Relocations);
   uint64_t writeObject();
 };
 } // namespace
 
 GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm,
-                       MCSectionGOFF *RootSD, MCSectionGOFF *ExternalED,
+                       MCSectionGOFF *RootSD,
                        std::vector<GOFFRelocationEntry> &Relocations)
-    : OS(OS), Asm(Asm), RootSD(RootSD), ExternalED(ExternalED),
-      Relocations(Relocations) {}
+    : OS(OS), Asm(Asm), RootSD(RootSD), Relocations(Relocations) {}
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
   if (Section.isSD()) {
@@ -364,8 +361,9 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
   if (Symbol.getCodeData() == GOFF::ESD_EXE_DATA) {
-    GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(),
-                  ExternalED->getOrdinal(), ExternalED->getEDAttributes(),
+    MCSectionGOFF *ED = Symbol.getADA();
+    GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
+                  ED->getEDAttributes(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
                                Symbol.getLinkage(), Symbol.getBindingScope(),
                                0});
@@ -803,8 +801,7 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
 }
 
 uint64_t GOFFObjectWriter::writeObject() {
-  uint64_t Size =
-      GOFFWriter(OS, *Asm, RootSD, ExternalED, Relocations).writeObject();
+  uint64_t Size = GOFFWriter(OS, *Asm, RootSD, Relocations).writeObject();
   return Size;
 }
 

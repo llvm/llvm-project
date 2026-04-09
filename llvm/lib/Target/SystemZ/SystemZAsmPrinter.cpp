@@ -1232,6 +1232,21 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
   emitAttributes(M);
 }
 
+void SystemZAsmPrinter::emitExternalGlobalVariableEnd(MCSymbol *Sym) {
+  auto TT = OutContext.getTargetTriple();
+  if (TT.isOSzOS()) {
+    // On z/OS, we need to associate an external data reference with an ED
+    // symbol, for which we use the the ED of the ADA. We also need to mark the
+    // reference as being to data, otherwise we cannot bind with code generated
+    // by XL.
+    MCSymbolGOFF *EmittedSym = static_cast<MCSymbolGOFF *>(Sym);
+    EmittedSym->setADA(static_cast<MCSectionGOFF *>(
+                           OutContext.getObjectFileInfo()->getADASection())
+                           ->getParent());
+    OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_ELF_TypeObject);
+  }
+}
+
 void SystemZAsmPrinter::emitADASection() {
   OutStreamer->pushSection();
 

@@ -673,6 +673,10 @@ public:
   virtual bool
   isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const;
 
+  /// Targets can override this if they need to emit additional data after an
+  /// external global variable was emitted.
+  virtual void emitExternalGlobalVariableEnd(MCSymbol *Sym) {}
+
   /// Targets can override this to customize the output of IMPLICIT_DEF
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
