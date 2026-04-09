@@ -1183,11 +1183,13 @@ Error LVCodeViewReader::loadTargetInfo(const ObjectFile &Obj) {
   TT.setOS(Triple::UnknownOS);
 
   // Features to be passed to target/subtarget
+  Expected<SubtargetFeatures> Features = Obj.getFeatures();
   SubtargetFeatures FeaturesValue;
-  if (Expected<SubtargetFeatures> Features = Obj.getFeatures())
-    FeaturesValue = std::move(*Features);
-  else
+  if (!Features) {
     consumeError(Features.takeError());
+    FeaturesValue = SubtargetFeatures();
+  }
+  FeaturesValue = *Features;
 
   StringRef CPU;
   if (auto OptCPU = Obj.tryGetCPUName())
