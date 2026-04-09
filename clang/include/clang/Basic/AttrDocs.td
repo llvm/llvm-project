@@ -1640,24 +1640,28 @@ the Clang Static Analyzer makes sure that allocating functions annotated with
 safely deallocated with the standard ``free()``.
 
 * Use ``ownership_returns`` to mark a function as an allocating function.
-  It takes 1 or 2 parameters.
-  The first parameter is a user-provided identifier representing the "kind" of the allocation.
-  This is basically what is enforced when checking the deallocation.
-  The second parameter is optional.
+  It takes 1 or 2 arguments.
+  The first argument is a user-provided identifier representing the "kind" of the allocation.
+  This is basically what is enforced when checking the deallocation. This is mandatory.
+  The second argument is optional.
   It represents the index of the parameter that represents the allocation size in bytes (counting from 1).
   The referenced parameter must have some integral type.
   This attribute may appear at most once per declaration.
-  If forward declarations have this attribute, those must have the same parameters.
+  If this argument is not set, then tooling, such as the Clang Static Analyzer,
+  won't be able to reason about the size of the allocation, thus check potential out-of-bounds accesses.
+  However, such tooling could still warn if the wrong deallocation function
+  was used for the ``ownership_returns`` attributed resource.
+  If forward declarations have this attribute, those must have the same arguments.
 * Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
-  parameters: the allocation type, and the index of the parameter that is being
+  arguments: the allocation type, and the index of the parameter that is being
   deallocated (counting from 1).
 * Use ``ownership_holds`` to mark that a function takes over the ownership of a
   piece of memory and will free it at some unspecified point in the future. Like
-  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  ``ownership_takes``, this takes 2 arguments: the allocation type, and the
   index of the parameter whose ownership will be taken over (counting from 1).
 
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
-leak reports (concerning the specified argument); the difference between them
+leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
 is assumed to be legitimate.
 
@@ -1672,10 +1676,10 @@ Example:
   // 'sz' (parameter 1) is the allocation size.
   void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
 
-  // Denotes that my_free will deallocate its parameter using free().
+  // Denotes that my_free will deallocate its argument using free().
   void __attribute((ownership_takes(malloc, 1))) my_free(void *);
 
-  // Denotes that my_hold will take over the ownership of its parameter that was
+  // Denotes that my_hold will take over the ownership of its argument that was
   // allocated via malloc().
   void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
 
