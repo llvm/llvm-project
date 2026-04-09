@@ -2456,8 +2456,9 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
     QualType EltTy = Type->castAsArrayTypeUnsafe()->getElementType();
 
     // C++26 [expr.const]p2:
-    //   An inactive union subobject includes [...] an element E of an array
-    //   member of a union where E is not within its lifetime.
+    //   A union elemental subobject is a direct member of a union or an
+    //   element of an array that is a union elemental subobject.
+    //   An inactive union elemental subobject is one not within its lifetime.
     // Skip such elements during constituent values checking.
     bool IsUnionArrayMember =
         Info.getLangOpts().CPlusPlus26 && SubobjectDecl &&

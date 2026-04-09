@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %s
 
-// P3726R1: __builtin_start_lifetime and constituent values tests
+// P3726R2: __builtin_start_lifetime and constituent values tests
 
 namespace std {
   using size_t = decltype(sizeof(0));
@@ -90,8 +90,9 @@ consteval int test_start_lifetime_struct() {
 static_assert(test_start_lifetime_struct() == 3);
 
 // ===== Constituent values: array with holes in union =====
-// Array elements not within their lifetime in a union are inactive union
-// subobjects and should be skipped (see C++26 [expr.const]p2).
+// C++26 [expr.const]p2: A union elemental subobject is a direct member of a
+// union or an element of an array that is a union elemental subobject.
+// An inactive union elemental subobject is one not within its lifetime.
 
 struct CVResult {
   union { int arr[4]; };
@@ -108,8 +109,12 @@ consteval CVResult test_constituent_values() {
   return s;
 }
 // This should be a valid constexpr variable even though arr[2] and arr[3]
-// are not initialized — they are inactive union subobjects per P3726R1.
+// are not initialized — they are inactive union elemental subobjects.
 constexpr auto cv_result = test_constituent_values();
 static_assert(cv_result.arr[0] == 100);
 static_assert(cv_result.arr[1] == 200);
 static_assert(cv_result.size == 2);
+
+// TODO: Multi-dimensional array support for start_lifetime requires
+// the constexpr evaluator to handle intermediate array element lifetime.
+// This is tracked separately.
