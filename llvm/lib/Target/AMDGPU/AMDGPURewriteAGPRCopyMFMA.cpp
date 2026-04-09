@@ -41,11 +41,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-rewrite-agpr-copy-mfma"
 
-static cl::opt<bool> DisableRewriteAGPRCopyMFMA(
-    "amdgpu-disable-rewrite-agpr-copy-mfma", cl::Hidden,
-    cl::desc("Disable the post-RA AGPR copy MFMA rewriting pass."),
-    cl::init(false));
-
 static cl::opt<unsigned> RewriteAGPRCopyMFMALimit(
     "amdgpu-rewrite-agpr-copy-mfma-limit", cl::Hidden,
     cl::desc("Maximum number of MFMA instructions to rewrite to AGPR form."),
@@ -569,9 +564,6 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 }
 
 bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
-  if (DisableRewriteAGPRCopyMFMA)
-    return false;
-
   // This only applies on subtargets that have a configurable AGPR vs. VGPR
   // allocation.
   if (!ST.hasGFX90AInsts())
