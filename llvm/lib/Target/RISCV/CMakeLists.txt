@@ -70,6 +70,7 @@ add_llvm_target(RISCVCodeGen
   RISCVTargetTransformInfo.cpp
   RISCVVectorMaskDAGMutation.cpp
   RISCVVectorPeephole.cpp
+  RISCVConditionalBranchCombine.cpp
   RISCVVLOptimizer.cpp
   RISCVVMV0Elimination.cpp
   RISCVVSETVLIInfoAnalysis.cpp
