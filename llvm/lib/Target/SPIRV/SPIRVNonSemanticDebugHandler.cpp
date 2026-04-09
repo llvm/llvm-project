@@ -177,6 +177,25 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
   return Reg;
 }
 
+void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  if (CompileUnits.empty())
+    return;
+  // Check that prepareModuleOutput() registered the extended instruction set.
+  // If the subtarget does not support the extension, neither strings nor ext
+  // insts are emitted.
+  constexpr unsigned NSSet = static_cast<unsigned>(
+      SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
+  if (!MAI.getExtInstSetReg(NSSet).isValid())
+    return;
+
+  for (const CompileUnitInfo &Info : CompileUnits)
+    FileStringRegs.push_back(emitOpString(Info.FilePath, MAI));
+
+  for (const DIBasicType *BT : BasicTypes)
+    BasicTypeNameRegs.push_back(emitOpString(BT->getName(), MAI));
+}
+
 void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
     SPIRV::ModuleAnalysisInfo &MAI) {
   if (GlobalDIEmitted || CompileUnits.empty())
@@ -229,21 +248,32 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   // Emit integer constants shared across all NSDI instructions. The constant
   // cache ensures each value is emitted at most once even when referenced from
-  // multiple instructions.
+  // multiple instructions. All constants are pre-emitted before any DebugSource
+  // so that the output order is: constants, then
+  // DebugSource+DebugCompilationUnit pairs. This keeps OpConstant instructions
+  // grouped before the OpExtInst instructions.
   MCRegister DebugInfoVersionReg = emitOpConstantI32(
       static_cast<uint32_t>(DebugInfoVersion), I32TypeReg, MAI);
   MCRegister DwarfVersionReg =
       emitOpConstantI32(static_cast<uint32_t>(DwarfVersion), I32TypeReg, MAI);
 
+  // Pre-emit source language constants for all compile units before entering
+  // the DebugSource loop.
+  SmallVector<MCRegister> SrcLangRegs;
+  SrcLangRegs.reserve(CompileUnits.size());
+  for (const CompileUnitInfo &Info : CompileUnits)
+    SrcLangRegs.push_back(
+        emitOpConstantI32(Info.SpirvSourceLanguage, I32TypeReg, MAI));
+
   // Emit DebugSource and DebugCompilationUnit for each compile unit.
-  for (const CompileUnitInfo &Info : CompileUnits) {
-    MCRegister FileStrReg = emitOpString(Info.FilePath, MAI);
+  // FileStringRegs was populated by emitNonSemanticDebugStrings() in section 7.
+  assert(FileStringRegs.size() == CompileUnits.size() &&
+         "FileStringRegs must be populated by emitNonSemanticDebugStrings()");
+  for (auto [Info, FileStrReg, SrcLangReg] :
+       llvm::zip(CompileUnits, FileStringRegs, SrcLangRegs)) {
     MCRegister DebugSourceReg =
         emitExtInst(SPIRV::NonSemanticExtInst::DebugSource, VoidTypeReg,
                     ExtInstSetReg, {FileStrReg}, MAI);
-
-    MCRegister SrcLangReg =
-        emitOpConstantI32(Info.SpirvSourceLanguage, I32TypeReg, MAI);
     emitExtInst(
         SPIRV::NonSemanticExtInst::DebugCompilationUnit, VoidTypeReg,
         ExtInstSetReg,
@@ -259,8 +289,14 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   // operands in DebugTypePointer instructions.
   SmallVector<std::pair<const DIBasicType *, MCRegister>> BasicTypeRegs;
 
+  // BasicTypeNameRegs was populated by emitNonSemanticDebugStrings() in
+  // section 7.
+  assert(
+      BasicTypeNameRegs.size() == BasicTypes.size() &&
+      "BasicTypeNameRegs must be populated by emitNonSemanticDebugStrings()");
+  unsigned BTIdx = 0;
   for (const DIBasicType *BT : BasicTypes) {
-    MCRegister NameReg = emitOpString(BT->getName(), MAI);
+    MCRegister NameReg = BasicTypeNameRegs[BTIdx++];
     MCRegister SizeReg = emitOpConstantI32(
         static_cast<uint32_t>(BT->getSizeInBits()), I32TypeReg, MAI);
 

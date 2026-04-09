@@ -129,6 +129,12 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
   }
 
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
+  // SPIRVModuleAnalysis sets GR->Bound = MAI->MaxID before printing. Any IDs
+  // allocated by AsmPrinter handlers (e.g. SPIRVNonSemanticDebugHandler) during
+  // outputModuleSections() are not counted. Refresh the bound here so the
+  // formula below sees the final allocation count.
+  if (MAI)
+    ST->getSPIRVGlobalRegistry()->setBound(MAI->MaxID);
   VersionTuple SPIRVVersion = ST->getSPIRVVersion();
   uint32_t Major = SPIRVVersion.getMajor();
   uint32_t Minor = SPIRVVersion.getMinor().value_or(0);
@@ -330,6 +336,13 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
   Inst.addOperand(
       MCOperand::createImm(static_cast<unsigned>(MAI->SrcLangVersion)));
   outputMCInst(Inst);
+  // Emit OpString instructions for NSDI file paths and type names here, in
+  // section 7. OpString must precede type/constant declarations per the SPIR-V
+  // module layout (section 2.4). The OpExtInst instructions that reference
+  // these strings are emitted later at section 10 by
+  // emitNonSemanticGlobalDebugInfo().
+  if (NSDebugHandler)
+    NSDebugHandler->emitNonSemanticDebugStrings(*MAI);
 }
 
 void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {

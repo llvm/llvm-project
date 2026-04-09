@@ -63,6 +63,14 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // duplicate OpConstant instructions for the same integer value.
   DenseMap<uint32_t, MCRegister> I32ConstantCache;
 
+  // OpString registers for NSDI instructions, populated by
+  // emitNonSemanticDebugStrings() (section 7) and consumed by
+  // emitNonSemanticGlobalDebugInfo() (section 10). OpString must appear in
+  // section 7 per the SPIR-V module layout; it cannot be emitted alongside the
+  // OpExtInst instructions in section 10.
+  SmallVector<MCRegister> FileStringRegs;    // one per CompileUnits entry
+  SmallVector<MCRegister> BasicTypeNameRegs; // one per BasicTypes entry
+
   // True once emitNonSemanticGlobalDebugInfo() has run. Both
   // SPIRVAsmPrinter::emitFunctionHeader() and emitEndOfAsmFile() may call
   // outputModuleSections(), each guarded by ModuleSectionsEmitted, so only
@@ -76,6 +84,14 @@ public:
   /// Collect compile-unit metadata from the module. Called by
   /// AsmPrinter::doInitialization() via the handler list. No emission.
   void beginModule(Module *M) override;
+
+  /// Emit OpString instructions for all NSDI file paths and basic type names
+  /// into the debug section (section 7 of the SPIR-V module layout). Must be
+  /// called from SPIRVAsmPrinter::outputDebugSourceAndStrings(), after
+  /// prepareModuleOutput() has registered the ext inst set. The resulting
+  /// registers are cached in FileStringRegs and BasicTypeNameRegs for use by
+  /// emitNonSemanticGlobalDebugInfo().
+  void emitNonSemanticDebugStrings(SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Add SPV_KHR_non_semantic_info extension and
   /// NonSemantic.Shader.DebugInfo.100 ext inst set entry to MAI. Must be called

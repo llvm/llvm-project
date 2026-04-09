@@ -10,17 +10,21 @@
 ; tests the same instructions at the SPIR-V text output level.
 
 ; CHECK-SPIRV: [[ext_inst_non_semantic:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; OpString is in section 7 (before types/constants), so it appears before OpTypeVoid.
+; CHECK-SPIRV: [[filename_str_sycl:%[0-9]+]] = OpString "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC{{[/\\]}}example.c"
+; CHECK-SPIRV: [[filename_str_cpp:%[0-9]+]] = OpString "/DDDDDDDDDD/EEEEEEEE/FFFFFFFFF{{[/\\]}}example1.cpp"
+; Types and constants appear after OpString (sections 9+) but before DebugSource.
+; Source language constants are pre-emitted before the DebugSource loop, so they
+; can be matched here as a DAG group together with the types.
 ; CHECK-SPIRV-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
 ; CHECK-SPIRV-DAG: [[type_i32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: [[debug_info_version:%[0-9]+]] = OpConstant [[type_i32]] 3
 ; CHECK-SPIRV-DAG: [[dwarf_version:%[0-9]+]] = OpConstant [[type_i32]] 5
-; CHECK-SPIRV: [[filename_str_sycl:%[0-9]+]] = OpString "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC{{[/\\]}}example.c"
-; CHECK-SPIRV: [[debug_source_sycl:%[0-9]+]] = OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugSource [[filename_str_sycl]]
 ; CHECK-SPIRV-DAG: [[source_language_sycl:%[0-9]+]] = OpConstant [[type_i32]] 7
-; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugCompilationUnit [[debug_info_version]] [[dwarf_version]] [[debug_source_sycl]] [[source_language_sycl]]
-; CHECK-SPIRV: [[filename_str_cpp:%[0-9]+]] = OpString "/DDDDDDDDDD/EEEEEEEE/FFFFFFFFF{{[/\\]}}example1.cpp"
-; CHECK-SPIRV: [[debug_source_cpp:%[0-9]+]] = OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugSource [[filename_str_cpp]]
 ; CHECK-SPIRV-DAG: [[source_language_cpp:%[0-9]+]] = OpConstant [[type_i32]] 4
+; CHECK-SPIRV: [[debug_source_sycl:%[0-9]+]] = OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugSource [[filename_str_sycl]]
+; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugCompilationUnit [[debug_info_version]] [[dwarf_version]] [[debug_source_sycl]] [[source_language_sycl]]
+; CHECK-SPIRV: [[debug_source_cpp:%[0-9]+]] = OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugSource [[filename_str_cpp]]
 ; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugCompilationUnit [[debug_info_version]] [[dwarf_version]] [[debug_source_cpp]] [[source_language_cpp]]
 
 ; CHECK-OPTION: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
