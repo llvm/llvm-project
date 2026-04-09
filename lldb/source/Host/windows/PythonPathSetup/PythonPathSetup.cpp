@@ -52,7 +52,7 @@ bool AddPythonDLLToSearchPath() {
   sys::fs::make_absolute(path);
 
   SmallVector<wchar_t, 1> path_wide;
-  if (sys::windows::widenPath(path.data(), path_wide))
+  if (sys::windows::widenPath(StringRef(path.data(), path.size()), path_wide))
     return false;
 
   if (sys::fs::exists(path))
