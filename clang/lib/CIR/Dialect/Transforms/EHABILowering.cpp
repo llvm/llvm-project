@@ -200,8 +200,7 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
   auto funcOp =
       cir::FuncOp::create(builder, loc, "__clang_call_terminate", funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
-  funcOp.setGlobalVisibilityAttr(
-      cir::VisibilityAttr::get(ctx, cir::VisibilityKind::Hidden));
+  funcOp.setGlobalVisibility(cir::VisibilityKind::Hidden);
 
   mlir::Block *entryBlock = funcOp.addEntryBlock();
   builder.setInsertionPointToStart(entryBlock);

@@ -23,6 +23,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 using namespace llvm;
@@ -42,7 +43,18 @@ void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
 namespace {
 using testing::AllOf;
 using testing::ElementsAre;
+using testing::HasSubstr;
 using testing::IsEmpty;
+
+MATCHER_P(WithMessage, M,
+          "has diagnostic message that " +
+              ::testing::DescribeMatcher<std::string>(M)) {
+  return testing::ExplainMatchResult(M, arg.getMessage().str(),
+                                     result_listener);
+}
+MATCHER(IsError, "has error severity") {
+  return arg.getLevel() == DiagnosticsEngine::Level::Error;
+}
 
 // Check that DiagnosticErrorTrap works with SuppressAllDiagnostics.
 TEST(DiagnosticTest, suppressAndTrap) {
@@ -164,19 +176,19 @@ TEST(DiagnosticTest, diagnosticError) {
   EXPECT_EQ(Value->first, 20);
 }
 
+class CaptureDiagnosticConsumer : public DiagnosticConsumer {
+public:
+  SmallVector<StoredDiagnostic> StoredDiags;
+
+  void HandleDiagnostic(DiagnosticsEngine::Level level,
+                        const Diagnostic &Info) override {
+    StoredDiags.push_back(StoredDiagnostic(level, Info));
+  }
+};
+
 TEST(DiagnosticTest, storedDiagEmptyWarning) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts);
-
-  class CaptureDiagnosticConsumer : public DiagnosticConsumer {
-  public:
-    SmallVector<StoredDiagnostic> StoredDiags;
-
-    void HandleDiagnostic(DiagnosticsEngine::Level level,
-                          const Diagnostic &Info) override {
-      StoredDiags.push_back(StoredDiagnostic(level, Info));
-    }
-  };
 
   CaptureDiagnosticConsumer CaptureConsumer;
   Diags.setClient(&CaptureConsumer, /*ShouldOwnClient=*/false);
@@ -185,6 +197,21 @@ TEST(DiagnosticTest, storedDiagEmptyWarning) {
 
   // Make sure an empty warning can round-trip with \c StoredDiagnostic.
   Diags.Report(CaptureConsumer.StoredDiags.front());
+}
+
+// std::string_view is used by downstream consumers.
+TEST(DiagnosticTest, reportAcceptsStringViewMessage) {
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts);
+
+  CaptureDiagnosticConsumer CaptureConsumer;
+  Diags.setClient(&CaptureConsumer, /*ShouldOwnClient=*/false);
+
+  std::string_view SV = "diagnostic";
+  Diags.Report(diag::err_target_unknown_triple) << SV;
+
+  EXPECT_THAT(CaptureConsumer.StoredDiags,
+              ElementsAre(WithMessage(HasSubstr("diagnostic"))));
 }
 
 class SuppressionMappingTest : public testing::Test {
@@ -225,13 +252,6 @@ private:
   };
   CaptureDiagnosticConsumer CaptureConsumer;
 };
-
-MATCHER_P(WithMessage, Msg, "has diagnostic message") {
-  return arg.getMessage() == Msg;
-}
-MATCHER(IsError, "has error severity") {
-  return arg.getLevel() == DiagnosticsEngine::Level::Error;
-}
 
 TEST_F(SuppressionMappingTest, MissingMappingFile) {
   Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";

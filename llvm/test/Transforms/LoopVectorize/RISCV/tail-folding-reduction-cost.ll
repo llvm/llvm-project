@@ -3,8 +3,8 @@
 ; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s 2>&1 | FileCheck %s
 
+; CHECK: Cost of 0 for VF vscale x 4: WIDEN-REDUCTION-PHI ir<%rdx> = phi
 ; CHECK: Cost of 2 for VF vscale x 4: WIDEN-INTRINSIC vp<%{{.+}}> = call llvm.vp.merge(ir<true>, ir<%add>, ir<%rdx>, vp<%{{.+}}>)
-; CHECK: LV: Found an estimated cost of 2 for VF vscale x 4 For instruction:   %rdx = phi i32 [ %start, %entry ], [ %add, %loop ]
 
 define i32 @add(ptr %a, i64 %n, i32 %start) {
 entry:
