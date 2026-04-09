@@ -482,8 +482,8 @@ struct LoopBounds {
 
 } // end anonymous namespace
 
-// Specialize po_iterator_storage in order to prune the post-order traversal so
-// it is limited to the current loop and doesn't traverse the loop back edges.
+// Restrict the post-order traversal to the current loop and don't traverse the
+// loop back edges.
 template <typename GraphT>
 class LoopBoundsPostOrderTraversal
     : public PostOrderTraversalBase<LoopBoundsPostOrderTraversal<GraphT>,

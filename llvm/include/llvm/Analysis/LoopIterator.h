@@ -198,7 +198,7 @@ public:
       : DFS(Storage), LI(LInfo) {}
 
   /// Postorder traversal over the graph. This only needs to be done once.
-  /// po_iterator "automatically" calls back to visitPreorder and
+  /// PostOrderTraversalBase "automatically" calls back to insertEdge and
   /// finishPostorder to record the DFS result.
   iterator begin() {
     assert(DFS.PostBlocks.empty() && "Need clear DFS result before traversing");
@@ -208,9 +208,9 @@ public:
   }
   iterator end() { return PostOrderTraversalBase::end(); }
 
-  /// Called by po_iterator upon reaching a block via a CFG edge. If this block
-  /// is contained in the loop and has not been visited, then mark it preorder
-  /// visited and return true.
+  /// Called upon reaching a block via a CFG edge. If this block is contained
+  /// in the loop and has not been visited, then mark it preorder visited and
+  /// return true (i.e., traverse the edge).
   ///
   /// TODO: If anyone is interested, we could record preorder numbers here.
   bool insertEdge(std::optional<BasicBlock *> /*From*/, BasicBlock *BB) {
@@ -220,8 +220,7 @@ public:
     return DFS.PostNumbers.insert(std::make_pair(BB, 0)).second;
   }
 
-  /// Called by po_iterator each time it advances, indicating a block's
-  /// postorder.
+  /// Called each time the iterator advances, indicating a block's postorder.
   void finishPostorder(BasicBlock *BB) {
     assert(DFS.PostNumbers.count(BB) && "Loop DFS skipped preorder");
     DFS.PostBlocks.push_back(BB);

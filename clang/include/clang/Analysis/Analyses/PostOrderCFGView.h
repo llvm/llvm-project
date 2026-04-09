@@ -37,7 +37,6 @@ public:
     CFGBlockSet(const CFG *G) : VisitedBlockIDs(G->getNumBlockIDs(), false) {}
 
     /// Set the bit associated with a particular CFGBlock.
-    /// This is the important method for the SetType template parameter.
     std::pair<std::nullopt_t, bool> insert(const CFGBlock *Block) {
       if (VisitedBlockIDs.test(Block->getBlockID()))
         return std::make_pair(std::nullopt, false);
