@@ -8,9 +8,9 @@ RUN:              __alloc_token_123__Z3foov \
 RUN:              __alloc_token_malloc \
 RUN:   | FileCheck %s
 
-CHECK: operator new(unsigned long)
-CHECK-NEXT: operator new[](unsigned long)
-CHECK-NEXT: operator new(unsigned long)
-CHECK-NEXT: operator new[](unsigned long)
-CHECK-NEXT: foo()
+CHECK: operator new(unsigned long) (.alloc_token)
+CHECK-NEXT: operator new[](unsigned long) (.alloc_token)
+CHECK-NEXT: operator new(unsigned long) (.alloc_token)
+CHECK-NEXT: operator new[](unsigned long) (.alloc_token)
+CHECK-NEXT: foo() (.alloc_token)
 CHECK-NEXT: __alloc_token_malloc
