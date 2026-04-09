@@ -300,7 +300,6 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   unsigned getDeviceKernelCallingConv() const override;
-  bool supportsKernelLowering() const override { return true; }
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;

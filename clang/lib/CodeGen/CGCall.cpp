@@ -867,7 +867,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
 
   // Compute ABI information.
   if (info.getCC() == CC_DeviceKernel &&
-      !CGM.getTargetCodeGenInfo().supportsKernelLowering()) {
+      (CC == llvm::CallingConv::SPIR_KERNEL || CC == llvm::CallingConv::C)) {
     // Force target independent argument handling for the host visible
     // kernel functions.
     computeSPIRKernelABIInfo(CGM, *FI);
