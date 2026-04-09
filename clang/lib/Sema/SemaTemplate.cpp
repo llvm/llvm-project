@@ -11266,14 +11266,11 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
   return T;
 }
 
-/// Build the type that describes a C++ typename specifier,
-/// e.g., "typename T::type".
-QualType
-Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
-                        SourceLocation KeywordLoc,
-                        NestedNameSpecifierLoc QualifierLoc,
-                        const IdentifierInfo &II,
-                        SourceLocation IILoc, bool DeducedTSTContext) {
+QualType Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
+                                 SourceLocation KeywordLoc,
+                                 NestedNameSpecifierLoc QualifierLoc,
+                                 const IdentifierInfo &II, SourceLocation IILoc,
+                                 bool DeducedTSTContext) {
   assert((Keyword != ElaboratedTypeKeyword::None) == KeywordLoc.isValid());
 
   CXXScopeSpec SS;
@@ -11307,6 +11304,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     LookupQualifiedName(Result, Ctx, SS);
   else
     LookupName(Result, CurScope);
+
   unsigned DiagID = 0;
   Decl *Referenced = nullptr;
   switch (Result.getResultKind()) {

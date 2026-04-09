@@ -3180,29 +3180,6 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     D->setTypeSourceInfo(TSI);
   }
 
-  SmallVector<ParmVarDecl *, 4> Params;
-  TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
-  if (!TInfo)
-    return nullptr;
-  QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
-
-  if (TemplateParams && TemplateParams->size()) {
-    auto *LastParam =
-        dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
-    if (LastParam && LastParam->isImplicit() &&
-        LastParam->hasTypeConstraint()) {
-      // In abbreviated templates, the type-constraints of invented template
-      // type parameters are instantiated with the function type, invalidating
-      // the TemplateParameterList which relied on the template type parameter
-      // not having a type constraint. Recreate the TemplateParameterList with
-      // the updated parameter list.
-      TemplateParams = TemplateParameterList::Create(
-          SemaRef.Context, TemplateParams->getTemplateLoc(),
-          TemplateParams->getLAngleLoc(), TemplateParams->asArray(),
-          TemplateParams->getRAngleLoc(), TemplateParams->getRequiresClause());
-    }
-  }
-
   NestedNameSpecifierLoc QualifierLoc = D->getQualifierLoc();
   if (QualifierLoc) {
     QualifierLoc = SemaRef.SubstNestedNameSpecifierLoc(QualifierLoc,
@@ -3233,14 +3210,39 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
   DeclarationNameInfo NameInfo
     = SemaRef.SubstDeclarationNameInfo(D->getNameInfo(), TemplateArgs);
+  if (!NameInfo.getName())
+    return nullptr;
+
+  CXXMethodDecl *Method = nullptr;
+  SourceLocation StartLoc = D->getInnerLocStart();
+
+  SmallVector<ParmVarDecl *, 4> Params;
+  TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
+  if (!TInfo)
+    return nullptr;
+
+  QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
+
+  if (TemplateParams && TemplateParams->size()) {
+    auto *LastParam =
+        dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
+    if (LastParam && LastParam->isImplicit() &&
+        LastParam->hasTypeConstraint()) {
+      // In abbreviated templates, the type-constraints of invented template
+      // type parameters are instantiated with the function type, invalidating
+      // the TemplateParameterList which relied on the template type parameter
+      // not having a type constraint. Recreate the TemplateParameterList with
+      // the updated parameter list.
+      TemplateParams = TemplateParameterList::Create(
+          SemaRef.Context, TemplateParams->getTemplateLoc(),
+          TemplateParams->getLAngleLoc(), TemplateParams->asArray(),
+          TemplateParams->getRAngleLoc(), TemplateParams->getRequiresClause());
+    }
+  }
 
   if (FunctionRewriteKind != RewriteKind::None)
     adjustForRewrite(FunctionRewriteKind, D, T, TInfo, NameInfo);
 
-  // Build the instantiated method declaration.
-  CXXMethodDecl *Method = nullptr;
-
-  SourceLocation StartLoc = D->getInnerLocStart();
   if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
     Method = CXXConstructorDecl::Create(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
@@ -4712,12 +4714,36 @@ Decl *TemplateDeclInstantiator::VisitObjCAtDefsFieldDecl(ObjCAtDefsFieldDecl *D)
 }
 
 Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  // FIXME: We need to be able to instantiate FriendTemplateDecls.
-  unsigned DiagID = SemaRef.getDiagnostics().getCustomDiagID(
-                                               DiagnosticsEngine::Error,
-                                               "cannot instantiate %0 yet");
-  SemaRef.Diag(D->getLocation(), DiagID)
-    << D->getDeclKindName();
+  unsigned NumTPLists = D->getFriendTypeNumTemplateParameterLists();
+  SmallVector<TemplateParameterList *, 1> TPL(NumTPLists);
+  for (unsigned I = 0, N = NumTPLists; I != N; ++I) {
+    TemplateParameterList *InstParams =
+        SubstTemplateParams(D->getFriendTypeTemplateParameterList(I));
+    if (!InstParams)
+      return nullptr;
+
+    TPL[I] = InstParams;
+  }
+
+  Decl *FTD = nullptr;
+  if (TypeSourceInfo *FT = D->getFriendType()) {
+    TypeSourceInfo *TSI = SemaRef.SubstType(FT, TemplateArgs, D->getLocation(),
+                                            DeclarationName());
+    if (TSI)
+      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+                                       TSI, D->getFriendLoc(), TPL);
+  } else {
+    if (cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
+            D->getLocation(), D->getFriendDecl(), TemplateArgs)))
+      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+                                       D->getFriendDecl(), D->getFriendLoc(),
+                                       TPL);
+  }
+
+  if (FTD) {
+    FTD->setAccess(AS_public);
+    Owner->addDecl(FTD);
+  }
 
   return nullptr;
 }
@@ -5099,9 +5125,8 @@ TemplateDeclInstantiator::InstantiateVarTemplatePartialSpecialization(
   return InstPartialSpec;
 }
 
-TypeSourceInfo*
-TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
-                              SmallVectorImpl<ParmVarDecl *> &Params) {
+TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
+    FunctionDecl *D, SmallVectorImpl<ParmVarDecl *> &Params) {
   TypeSourceInfo *OldTInfo = D->getTypeSourceInfo();
   assert(OldTInfo && "substituting function without type source info");
   assert(Params.empty() && "parameter vector is non-empty at start");
@@ -5170,8 +5195,9 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
           continue;
         }
 
-        ParmVarDecl *Parm =
-            cast_or_null<ParmVarDecl>(VisitParmVarDecl(OldParam));
+        ParmVarDecl *Parm = SemaRef.SubstParmVarDecl(
+            OldParam, TemplateArgs, /*indexAdjustment=*/0, std::nullopt,
+            /*ExpectParameterPack=*/false, EvaluateConstraints);
         if (!Parm)
           return nullptr;
         Params.push_back(Parm);

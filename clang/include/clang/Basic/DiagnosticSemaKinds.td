@@ -1921,6 +1921,8 @@ def err_friend_template_decl_multiple_specifiers: Error<
   "a friend declaration that befriends a template must contain exactly one type-specifier">;
 def friend_template_decl_malformed_pack_expansion : Error<
   "friend declaration expands pack %0 that is declared it its own template parameter list">;
+def err_dependent_friend_not_member : Error<
+  "friend declaration does not name a member of a class template specialization">;
 
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "

@@ -2431,6 +2431,35 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     FriendTemplateDecl *FTD1,
+                                     FriendTemplateDecl *FTD2) {
+  if (FTD1->getFriendTypeNumTemplateParameterLists() !=
+      FTD2->getFriendTypeNumTemplateParameterLists())
+    return false;
+
+  for (unsigned I = 0, N = FTD1->getFriendTypeNumTemplateParameterLists();
+       I != N; ++I) {
+    if (!Context.IsEquivalent(FTD1->getFriendTypeTemplateParameterList(I),
+                              FTD2->getFriendTypeTemplateParameterList(I)))
+      return false;
+  }
+
+  if ((FTD1->getFriendType() && FTD2->getFriendDecl()) ||
+      (FTD1->getFriendDecl() && FTD2->getFriendType()))
+    return false;
+
+  if (FTD1->getFriendDecl() && FTD2->getFriendDecl())
+    return IsStructurallyEquivalent(Context, FTD1->getFriendDecl(),
+                                    FTD2->getFriendDecl());
+
+  if (FTD1->getFriendType() && FTD2->getFriendType())
+    return IsStructurallyEquivalent(Context, FTD1->getFriendType()->getType(),
+                                    FTD2->getFriendType()->getType());
+
+  return false;
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      TypedefNameDecl *D1, TypedefNameDecl *D2) {
   if (!IsStructurallyEquivalent(D1->getIdentifier(), D2->getIdentifier()))
     return false;
@@ -2765,6 +2794,25 @@ bool StructuralEquivalenceContext::CheckCommonEquivalence(Decl *D1, Decl *D2) {
     return false;
 
   // FIXME: Move check for identifier names into this function.
+
+  return true;
+}
+
+bool StructuralEquivalenceContext::IsEquivalent(TemplateParameterList *TPL1,
+                                                TemplateParameterList *TPL2) {
+  if (TPL1 == TPL2)
+    return true;
+
+  if (!TPL1 || !TPL2)
+    return false;
+
+  if (TPL1->size() != TPL2->size())
+    return false;
+
+  for (unsigned I = 0, N = TPL1->size(); I != N; ++I) {
+    if (!IsEquivalent(TPL1->getParam(I), TPL2->getParam(I)))
+      return false;
+  }
 
   return true;
 }

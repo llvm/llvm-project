@@ -23,7 +23,8 @@ namespace Access {
   };
   template<typename T> struct D : B { // expected-note {{not viable}} \
                                          expected-note {{implicit deduction guide declared as 'template <typename T> D(Access::D<T>) -> Access::D<T>'}}
-    D(T, typename T::type); // expected-note {{private member}} \
+    D(T, typename T::type); // expected-error {{'type' is a private member of 'Access::Y'}} \
+                            // expected-note {{private member}} \
                             // expected-note {{implicit deduction guide declared as 'template <typename T> D(T, typename T::type) -> Access::D<T>'}}
   };
   D b = {B(), {}};
@@ -36,10 +37,10 @@ namespace Access {
   // Once we implement proper support for dependent nested name specifiers in
   // friends, this should still work.
   class Y {
-    template <typename T> friend D<T>::D(T, typename T::type); // expected-warning {{dependent nested name specifier}}
-    struct type {};
+    template <typename T> friend D<T>::D(T, typename T::type);
+    struct type {}; // expected-note {{implicitly declared private here}}
   };
-  D y = {Y(), {}};
+  D y = {Y(), {}}; // expected-note {{in instantiation of template class 'Access::D<Access::Y>' requested here}}
 
   class Z {
     template <typename T> friend class D;

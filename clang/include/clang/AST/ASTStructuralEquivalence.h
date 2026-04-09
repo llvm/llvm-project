@@ -135,6 +135,8 @@ struct StructuralEquivalenceContext {
   /// \c VisitedDecls members) and can cause faulty equivalent results.
   bool IsEquivalent(Stmt *S1, Stmt *S2);
 
+  bool IsEquivalent(TemplateParameterList *TPL1, TemplateParameterList *TPL2);
+
   /// Find the index of the given anonymous struct/union within its
   /// context.
   ///

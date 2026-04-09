@@ -12012,6 +12012,9 @@ public:
   bool CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
   void CompleteMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
 
+  bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
+                            TemplateParameterList *FPL);
+
   // Explicit instantiation of a class template specialization
   DeclResult ActOnExplicitInstantiation(
       Scope *S, SourceLocation ExternLoc, SourceLocation TemplateLoc,
