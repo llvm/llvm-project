@@ -6988,14 +6988,13 @@ static SDValue widenIntVectorSelect(SDNode *N, SelectionDAG &DAG,
                                     const TargetLowering &TLI, SDValue Cond,
                                     SDValue TrueVal, SDValue FalseVal) {
   EVT ResultVT = N->getValueType(0);
-  if (ResultVT.isSimple() || !ResultVT.isVector() ||
-      ResultVT.isPow2VectorType() ||
+  if (ResultVT.isSimple() || ResultVT.isPow2VectorType() ||
       TLI.getTypeAction(*DAG.getContext(), ResultVT) !=
           TargetLowering::TypeWidenVector)
     return SDValue();
 
   EVT EltVT = ResultVT.getVectorElementType();
-  if (!EltVT.isInteger() || ResultVT.getVectorElementCount().isScalar())
+  if (!EltVT.isInteger())
     return SDValue();
 
   SDValue WidenTrue = DAG.WidenVector(TrueVal, SDLoc(TrueVal));
@@ -7017,16 +7016,16 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
                                    const TargetLowering &TLI, SDValue Cond,
                                    SDValue TrueVal, SDValue FalseVal) {
   EVT ResultVT = N->getValueType(0);
-  if (!ResultVT.isVector() || ResultVT.isScalableVector() ||
+  if (ResultVT.isScalableVector() ||
       TLI.getTypeAction(*DAG.getContext(), ResultVT) ==
           TargetLowering::TypeLegal)
     return SDValue();
 
   EVT EltVT = ResultVT.getVectorElementType();
-  if (!EltVT.isInteger() || ResultVT.getVectorElementCount().isScalar())
+  if (!EltVT.isInteger())
     return SDValue();
 
-  unsigned NewEltBitSize = EltVT.getSizeInBits() * 2;
+  TypeSize NewEltBitSize = EltVT.getSizeInBits() * 2;
   EVT NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
                                                         NewEltBitSize);
 
@@ -13059,11 +13058,14 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
     return R;
 
-  if (SDValue R = widenIntVectorSelect(N, DAG, TLI, N0, N1, N2))
-    return R;
+  EVT ResultVT = N->getValueType(0);
+  if (ResultVT.isVector() && !ResultVT.getVectorElementCount().isScalar()) {
+    if (SDValue R = widenIntVectorSelect(N, DAG, TLI, N0, N1, N2))
+      return R;
 
-  if (SDValue R = castIntVectorSelect(N, DAG, TLI, N0, N1, N2))
-    return R;
+    if (SDValue R = castIntVectorSelect(N, DAG, TLI, N0, N1, N2))
+      return R;
+  }
 
   return SDValue();
 }

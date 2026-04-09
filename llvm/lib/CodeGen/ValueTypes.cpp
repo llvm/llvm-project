@@ -60,16 +60,16 @@ EVT EVT::getExtendedVectorVT(LLVMContext &Context, EVT VT, ElementCount EC) {
 }
 
 EVT EVT::getIntegerVectorWithElementWidth(LLVMContext &Context,
-                                          unsigned NewEltWidth) const {
+                                          TypeSize NewEltWidth) const {
   if (!isVector() || !isInteger() || isScalableVector())
     return EVT();
 
   TypeSize TotalBits =
       TypeSize::getFixed(getVectorMinNumElements() * getScalarSizeInBits());
-  if (TotalBits % NewEltWidth != 0 || NewEltWidth > TotalBits)
+  if (!TotalBits.isKnownMultipleOf(NewEltWidth))
     return EVT();
 
-  unsigned NewNumElements = TotalBits / NewEltWidth;
+  unsigned NewNumElements = TotalBits.getKnownScalarFactor(NewEltWidth);
   EVT NewEltVT = EVT::getIntegerVT(Context, NewEltWidth);
 
   // Preserve scalability

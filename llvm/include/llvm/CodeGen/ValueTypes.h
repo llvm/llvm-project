@@ -470,7 +470,7 @@ namespace llvm {
     /// integer vector, or if the total bits are not evenly divisible by the new
     /// element width.
     EVT getIntegerVectorWithElementWidth(LLVMContext &Context,
-                                         unsigned NewEltWidth) const;
+                                         TypeSize NewEltWidth) const;
 
     // Return a VT for a vector type with the same element type but
     // half the number of elements. The type returned may be an
