@@ -1173,8 +1173,8 @@ Expected<Archive::Child> Archive::Symbol::getMember() const {
   } else if (Parent->kind() == K_ZOS) {
     // The contents of the symbol table member in order are:
     // 1. The number of symbols, NS (4 byte integer).
-    // 2. NS pairs of integers (the first in each pair of integers is the offset 
-    //    to the header of the entry... the second being coded attributes). 
+    // 2. NS pairs of integers (the first in each pair of integers is the offset
+    //    to the header of the entry... the second being coded attributes).
     //    Length is NS*(4+4) bytes.
     // 3. NS null terminated strings of corresponding symbol names.
     Offset = read32be(Offsets + SymbolIndex * 8);

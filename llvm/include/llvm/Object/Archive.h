@@ -167,7 +167,8 @@ public:
 //   char ar_gid[6];   /* group id (decimal) */
 //   char ar_mode[8];  /* access mode (octal) */
 //   char ar_size[10]; /* length in bytes (decimal) */
-//   char ar_fmag[2];  /* contains backtick (X'79'), followed by new line (X'15') */
+//   char ar_fmag[2];  /* contains backtick (X'79'), followed by new line
+//   (X'15') */
 // };
 class ZOSArchiveMemberHeader : public ArchiveMemberHeader {
 public:
