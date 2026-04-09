@@ -287,7 +287,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType,
                                        TemplateName)) {
           TPA.Revert();
-          break;
+          ConsumeToken();
+          return true;
         }
 
         if (TemplateName.getKind() != UnqualifiedIdKind::IK_OperatorFunctionId &&
@@ -296,7 +297,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
                diag::err_id_after_template_in_nested_name_spec)
             << TemplateName.getSourceRange();
           TPA.Revert();
-          break;
+          ConsumeToken();
+          return true;
         }
       } else {
         TPA.Revert();
