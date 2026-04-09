@@ -35,9 +35,9 @@ class TestFrameVarDILAssignment(TestBase):
             Is32Bit = True
 
         self.expect(
-            "frame variable 'i -= p'", # Try assigning pointer to int.
-            error = True,
-            substrs = ["invalid operands to binary expression"],
+            "frame variable 'i -= p'",  # Try assigning pointer to int.
+            error=True,
+            substrs=["invalid operands to binary expression"],
         )
 
         if Is32Bit:

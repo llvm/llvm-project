@@ -754,8 +754,8 @@ Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
   // variables.
   bool lhs_is_pointer = lhs->GetCompilerType().IsPointerType();
   bool rhs_is_pointer = rhs->GetCompilerType().IsPointerType();
-  if ((lhs_is_pointer && !rhs_is_pointer)
-      || (!lhs_is_pointer && rhs_is_pointer)) {
+  if ((lhs_is_pointer && !rhs_is_pointer) ||
+      (!lhs_is_pointer && rhs_is_pointer)) {
     std::string errMsg =
         "Invalid assignment: Can only assign pointers to pointers";
     return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
@@ -797,8 +797,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddAssign(
   // variables.
   bool lhs_is_pointer = lhs->GetCompilerType().IsPointerType();
   bool rhs_is_pointer = sum->GetCompilerType().IsPointerType();
-  if ((lhs_is_pointer && !rhs_is_pointer)
-      || (!lhs_is_pointer && rhs_is_pointer)) {
+  if ((lhs_is_pointer && !rhs_is_pointer) ||
+      (!lhs_is_pointer && rhs_is_pointer)) {
     std::string errMsg =
         "Invalid assignment: Can only assign pointers to pointers";
     return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
@@ -840,8 +840,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubAssign(
   // variables.
   bool lhs_is_pointer = lhs->GetCompilerType().IsPointerType();
   bool rhs_is_pointer = diff->GetCompilerType().IsPointerType();
-  if ((lhs_is_pointer && !rhs_is_pointer)
-      || (!lhs_is_pointer && rhs_is_pointer)) {
+  if ((lhs_is_pointer && !rhs_is_pointer) ||
+      (!lhs_is_pointer && rhs_is_pointer)) {
     std::string errMsg =
         "Invalid assignment: Can only assign pointers to pointers";
     return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),

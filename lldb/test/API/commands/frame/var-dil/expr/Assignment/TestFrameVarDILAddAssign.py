@@ -36,9 +36,9 @@ class TestFrameVarDILAssignment(TestBase):
             Is32Bit = True
 
         self.expect(
-            "frame variable 'i += p'", # Try assigning pointer to int.
-            error = True,
-            substrs = ["Invalid assignment: Can only assign pointers to pointers"],
+            "frame variable 'i += p'",  # Try assigning pointer to int.
+            error=True,
+            substrs=["Invalid assignment: Can only assign pointers to pointers"],
         )
 
         if Is32Bit:
