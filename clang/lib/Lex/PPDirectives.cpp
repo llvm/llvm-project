@@ -2733,6 +2733,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     }
 
     bool SuppressBackslashDiag =
+        // The diagnostic logic is expensive, so only run it if it's enabled.
         Diags->isIgnored(diag::pp_nonportable_path_separator, FilenameLoc) ||
         FilenameLoc.isMacroID() ||
         SourceMgr.isWrittenInBuiltinFile(FilenameLoc) ||
