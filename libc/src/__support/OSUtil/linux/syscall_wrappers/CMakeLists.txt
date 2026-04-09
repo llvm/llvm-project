@@ -39,6 +39,18 @@ add_header_library(
 )
 
 add_header_library(
+  listen
+  HDRS
+    listen.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   read
   HDRS
     read.h
