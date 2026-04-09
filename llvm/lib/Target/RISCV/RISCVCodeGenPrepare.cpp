@@ -304,7 +304,7 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
   // This is the reason we're here - to force a vsetvli toggle once at m1.
   auto *M1Ty = FixedVectorType::get(VecTy->getElementType(), M1VF);
   Value *Sub =
-    Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)0, "rdx.sub");
+      Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)0, "rdx.sub");
   Value *Rdx =
       Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul, {M1Ty}, {Sub});
   II.replaceAllUsesWith(Rdx);
