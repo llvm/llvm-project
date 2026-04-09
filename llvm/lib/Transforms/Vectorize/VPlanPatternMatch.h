@@ -272,6 +272,11 @@ inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 /// Match a VPIRValue.
 inline bind_ty<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
 
+/// Match a VPSingleDefRecipe, capturing if we match.
+inline bind_ty<VPSingleDefRecipe> m_VPSingleDefRecipe(VPSingleDefRecipe *&V) {
+  return V;
+}
+
 /// Match a VPInstruction, capturing if we match.
 inline bind_ty<VPInstruction> m_VPInstruction(VPInstruction *&V) { return V; }
 
