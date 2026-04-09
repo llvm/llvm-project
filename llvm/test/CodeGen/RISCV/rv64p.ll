@@ -1021,8 +1021,7 @@ entry:
 define i64 @mul_w00_sexti32_sext_inreg(i32 signext %a, i64 %b) nounwind {
 ; CHECK-LABEL: mul_w00_sexti32_sext_inreg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a1, a1
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mul.w00 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_sext = sext i32 %a to i64
   %b_trunc = trunc i64 %b to i32
@@ -1034,8 +1033,7 @@ define i64 @mul_w00_sexti32_sext_inreg(i32 signext %a, i64 %b) nounwind {
 define i64 @mul_w00_sexti32_sext_inreg_commute(i32 signext %a, i64 %b) nounwind {
 ; CHECK-LABEL: mul_w00_sexti32_sext_inreg_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a1, a1
-; CHECK-NEXT:    mul a0, a1, a0
+; CHECK-NEXT:    mul.w00 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_sext = sext i32 %a to i64
   %b_trunc = trunc i64 %b to i32
@@ -1047,8 +1045,7 @@ define i64 @mul_w00_sexti32_sext_inreg_commute(i32 signext %a, i64 %b) nounwind 
 define i64 @mulu_w00_zexti32_and(i32 zeroext %a, i64 %b) nounwind {
 ; CHECK-LABEL: mulu_w00_zexti32_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.w a1, a1
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mulu.w00 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_zext = zext i32 %a to i64
   %b_and = and i64 %b, 4294967295
@@ -1059,8 +1056,7 @@ define i64 @mulu_w00_zexti32_and(i32 zeroext %a, i64 %b) nounwind {
 define i64 @mulu_w00_zexti32_and_commute(i32 zeroext %a, i64 %b) nounwind {
 ; CHECK-LABEL: mulu_w00_zexti32_and_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.w a1, a1
-; CHECK-NEXT:    mul a0, a1, a0
+; CHECK-NEXT:    mulu.w00 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_zext = zext i32 %a to i64
   %b_and = and i64 %b, 4294967295
@@ -1071,8 +1067,7 @@ define i64 @mulu_w00_zexti32_and_commute(i32 zeroext %a, i64 %b) nounwind {
 define i64 @mulsu_w00_sexti32_and(i32 signext %a, i64 %b) nounwind {
 ; CHECK-LABEL: mulsu_w00_sexti32_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.w a1, a1
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_sext = sext i32 %a to i64
   %b_and = and i64 %b, 4294967295
@@ -1083,8 +1078,7 @@ define i64 @mulsu_w00_sexti32_and(i32 signext %a, i64 %b) nounwind {
 define i64 @mulsu_w00_sexti32_and_commute(i32 signext %a, i64 %b) nounwind {
 ; CHECK-LABEL: mulsu_w00_sexti32_and_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.w a1, a1
-; CHECK-NEXT:    mul a0, a1, a0
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_sext = sext i32 %a to i64
   %b_and = and i64 %b, 4294967295
@@ -1095,8 +1089,7 @@ define i64 @mulsu_w00_sexti32_and_commute(i32 signext %a, i64 %b) nounwind {
 define i64 @mulsu_w00_sext_inreg_zexti32(i64 %a, i32 zeroext %b) nounwind {
 ; CHECK-LABEL: mulsu_w00_sext_inreg_zexti32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a0, a0
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_trunc = trunc i64 %a to i32
   %a_sext = sext i32 %a_trunc to i64
@@ -1108,8 +1101,7 @@ define i64 @mulsu_w00_sext_inreg_zexti32(i64 %a, i32 zeroext %b) nounwind {
 define i64 @mulsu_w00_sext_inreg_zexti32_commute(i64 %a, i32 zeroext %b) nounwind {
 ; CHECK-LABEL: mulsu_w00_sext_inreg_zexti32_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a0, a0
-; CHECK-NEXT:    mul a0, a1, a0
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_trunc = trunc i64 %a to i32
   %a_sext = sext i32 %a_trunc to i64
@@ -1233,9 +1225,7 @@ define i64 @maccsu_w00_swap_operands_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @macc_w00_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out) nounwind {
 ; CHECK-LABEL: macc_w00_multiple_uses:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a0, a0
-; CHECK-NEXT:    sext.w a1, a1
-; CHECK-NEXT:    mul a1, a0, a1
+; CHECK-NEXT:    mul.w00 a1, a0, a1
 ; CHECK-NEXT:    add a0, a2, a1
 ; CHECK-NEXT:    sd a1, 0(a3)
 ; CHECK-NEXT:    ret
