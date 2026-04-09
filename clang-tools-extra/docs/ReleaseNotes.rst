@@ -429,7 +429,7 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check by 
+  <clang-tidy/checks/readability/identifier-naming>` check:
 
   - Fixed incorrect naming style application to C++17 structured bindings.
 
