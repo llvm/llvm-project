@@ -982,6 +982,7 @@ let SMETargetGuard = "sme-lutv2" in {
 }
 
 let SMETargetGuard = "sme2p3" in {
+  def SVLUTI6_X4      : SInst<"svluti6_lane_{d}_x4[_{1}_x2]", "422.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
   def SVLUTI6_ZT      : SInst<"svluti6_zt_{d}", "di[", "cUcm", MergeNone, "aarch64_sme_luti6_zt", [IsOverloadNone, IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
   def SVLUTI6_ZT_X4   : SInst<"svluti6_zt_{d}_x4", "4i3.[", "cUcm", MergeNone, "aarch64_sme_luti6_zt_x4", [IsOverloadNone, IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
 }
