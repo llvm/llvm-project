@@ -28,14 +28,14 @@ entry:
   %cmp7 = icmp sgt i32 %n, 0, !dbg !8
   br i1 %cmp7, label %for.body.preheader, label %for.cond.cleanup, !dbg !9
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64, !dbg !9
   br label %for.body, !dbg !10
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void, !dbg !11
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %a.addr.08 = phi i32 [ %0, %for.body ], [ %a, %for.body.preheader ]
 
