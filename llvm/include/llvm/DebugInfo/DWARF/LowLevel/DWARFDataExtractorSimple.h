@@ -48,14 +48,14 @@ public:
   void setAddressSize(unsigned Size) { AddressSize = Size; }
 
   //------------------------------------------------------------------
-  /// Extract an pointer from \a *offset_ptr.
+  /// Extract a pointer from \a *OffsetPtr.
   ///
   /// Extract a single pointer from the data and update the offset
-  /// pointed to by \a offset_ptr. The size of the extracted pointer
+  /// pointed to by \a OffsetPtr. The size of the extracted pointer
   /// is \a getAddressSize(), so the address size has to be
   /// set correctly prior to extracting any pointer values.
   ///
-  /// @param[in,out] offset_ptr
+  /// @param[in,out] OffsetPtr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
@@ -64,8 +64,8 @@ public:
   ///
   /// @return
   ///     The extracted pointer value as a 64 integer.
-  uint64_t getAddress(uint64_t *offset_ptr) const {
-    return getUnsigned(offset_ptr, AddressSize);
+  uint64_t getAddress(uint64_t *OffsetPtr) const {
+    return getUnsigned(OffsetPtr, AddressSize);
   }
 
   /// Extract a pointer-sized unsigned integer from the location given by the
@@ -74,14 +74,14 @@ public:
   uint64_t getAddress(Cursor &C) const { return getUnsigned(C, AddressSize); }
 
   /// Test the availability of enough bytes of data for a pointer from
-  /// \a offset. The size of a pointer is \a getAddressSize().
+  /// \a Offset. The size of a pointer is \a getAddressSize().
   ///
   /// @return
-  ///     \b true if \a offset is a valid offset and there are enough
+  ///     \b true if \a Offset is a valid offset and there are enough
   ///     bytes for a pointer available at that offset, \b false
   ///     otherwise.
-  bool isValidOffsetForAddress(uint64_t offset) const {
-    return isValidOffsetForDataOfSize(offset, AddressSize);
+  bool isValidOffsetForAddress(uint64_t Offset) const {
+    return isValidOffsetForDataOfSize(Offset, AddressSize);
   }
 
   /// Extracts a value and returns it as adjusted by the Relocator

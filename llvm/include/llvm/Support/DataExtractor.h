@@ -88,11 +88,11 @@ public:
                        Data.size())),
         IsLittleEndian(IsLittleEndian) {}
 
-  // TODO: Deprecate.
+  // TODO: Delete.
   DataExtractor(StringRef Data, bool IsLittleEndian, uint8_t)
       : DataExtractor(Data, IsLittleEndian) {}
 
-  // TODO: Deprecate.
+  // TODO: Delete.
   DataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian, uint8_t)
       : DataExtractor(Data, IsLittleEndian) {}
 
