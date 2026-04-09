@@ -4443,10 +4443,20 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
                                       const CallExpr *Call, bool IsSaturating) {
-  const auto *SrcVecT = Call->getArg(0)->getType()->castAs<VectorType>();
-  const auto *OpAVecT = Call->getArg(1)->getType()->castAs<VectorType>();
-  const auto *OpBVecT = Call->getArg(2)->getType()->castAs<VectorType>();
-  const auto *DstVecT = Call->getType()->castAs<VectorType>();
+  assert(Call->getNumArgs() == 3);
+
+  QualType SrcT = Call->getArg(0)->getType();
+  QualType OpAT = Call->getArg(1)->getType();
+  QualType OpBT = Call->getArg(2)->getType();
+  QualType DstT = Call->getType();
+  if (!SrcT->isVectorType() || !OpAT->isVectorType() || !OpBT->isVectorType() ||
+      !DstT->isVectorType())
+    return false;
+
+  const auto *SrcVecT = SrcT->castAs<VectorType>();
+  const auto *OpAVecT = OpAT->castAs<VectorType>();
+  const auto *OpBVecT = OpBT->castAs<VectorType>();
+  const auto *DstVecT = DstT->castAs<VectorType>();
 
   assert(OpAVecT->getNumElements() == OpBVecT->getNumElements());
 
