@@ -10,7 +10,6 @@ module {
     cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
     ^bb0(%arg0: !cir.ptr<!rec_S>):
       cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
-      cir.yield
     }
     cir.return
   }
@@ -21,7 +20,6 @@ module {
   // CHECK:   cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
   // CHECK:   ^bb0(%arg0: !cir.ptr<!rec_S>):
   // CHECK:     cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
-  // CHECK:     cir.yield
   // CHECK:   }
   // CHECK:   cir.return
   // CHECK: }

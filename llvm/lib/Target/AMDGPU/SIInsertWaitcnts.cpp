@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUWaitcntUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
@@ -1745,6 +1746,8 @@ static std::optional<InstCounterType> counterTypeForInstr(unsigned Opcode) {
     return KM_CNT;
   case AMDGPU::S_WAIT_XCNT:
     return X_CNT;
+  case AMDGPU::S_WAIT_ASYNCCNT:
+    return ASYNC_CNT;
   default:
     return {};
   }

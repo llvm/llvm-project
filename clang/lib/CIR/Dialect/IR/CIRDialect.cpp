@@ -290,6 +290,77 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
 }
 
 //===----------------------------------------------------------------------===//
+// ArrayCtor & ArrayDtor
+//===----------------------------------------------------------------------===//
+
+template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
+  auto ptrTy = mlir::cast<cir::PointerType>(op.getAddr().getType());
+  mlir::Type pointeeTy = ptrTy.getPointee();
+
+  mlir::Block &body = op.getBody().front();
+  if (body.getNumArguments() != 1)
+    return op.emitOpError("body must have exactly one block argument");
+
+  auto expectedEltPtrTy =
+      mlir::dyn_cast<cir::PointerType>(body.getArgument(0).getType());
+  if (!expectedEltPtrTy)
+    return op.emitOpError("block argument must be a !cir.ptr type");
+
+  if (op.getNumElements()) {
+    auto recTy = mlir::dyn_cast<cir::RecordType>(pointeeTy);
+    if (!recTy)
+      return op.emitOpError(
+          "when 'num_elements' is present, 'addr' must be a pointer to a "
+          "!cir.record type");
+
+    if (expectedEltPtrTy != ptrTy)
+      return op.emitOpError("when 'num_elements' is present, 'addr' type must "
+                            "match the block argument type");
+  } else {
+    auto arrayTy = mlir::dyn_cast<cir::ArrayType>(pointeeTy);
+    if (!arrayTy)
+      return op.emitOpError(
+          "when 'num_elements' is absent, 'addr' must be a pointer to a "
+          "!cir.array type");
+
+    mlir::Type innerEltTy = arrayTy.getElementType();
+    while (auto nested = mlir::dyn_cast<cir::ArrayType>(innerEltTy))
+      innerEltTy = nested.getElementType();
+
+    auto recTy = mlir::dyn_cast<cir::RecordType>(innerEltTy);
+    if (!recTy)
+      return op.emitOpError(
+          "the block argument type must be a pointer to a !cir.record type");
+
+    if (expectedEltPtrTy.getPointee() != innerEltTy)
+      return op.emitOpError(
+          "block argument pointee type must match the innermost array "
+          "element type");
+  }
+
+  return success();
+}
+
+LogicalResult cir::ArrayCtor::verify() {
+  if (failed(verifyArrayCtorDtor(*this)))
+    return failure();
+
+  mlir::Region &partialDtor = getPartialDtor();
+  if (!partialDtor.empty()) {
+    mlir::Block &dtorBlock = partialDtor.front();
+    if (dtorBlock.getNumArguments() != 1)
+      return emitOpError("partial_dtor must have exactly one block argument");
+
+    auto bodyArgTy = getBody().front().getArgument(0).getType();
+    if (dtorBlock.getArgument(0).getType() != bodyArgTy)
+      return emitOpError("partial_dtor block argument type must match "
+                         "the body block argument type");
+  }
+  return success();
+}
+LogicalResult cir::ArrayDtor::verify() { return verifyArrayCtorDtor(*this); }
+
+//===----------------------------------------------------------------------===//
 // BreakOp
 //===----------------------------------------------------------------------===//
 

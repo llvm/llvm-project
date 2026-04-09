@@ -13,9 +13,9 @@ from lldbsuite.test import lldbutil
 class FrameProviderPassThroughPrefixTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    # The frame list IDs used by 'bt --provider' are internal sequential IDs:
+    # The frame list IDs used by 'bt --provider' match the descriptor IDs
+    # returned by RegisterScriptedFrameProvider:
     # 0 = base unwinder, 1 = first provider, 2 = second provider, etc.
-    # These are NOT the descriptor IDs returned by RegisterScriptedFrameProvider.
     UNWINDER_FRAME_LIST_ID = 0
     FIRST_PROVIDER_FRAME_LIST_ID = 1
     SECOND_PROVIDER_FRAME_LIST_ID = 2
@@ -89,7 +89,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
                 f"Frame {i} should be '{expected}' after provider",
             )
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_shows_unwinder_frames(self):
         """
         Test that 'bt --provider 0' shows the base unwinder frames
@@ -123,7 +122,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         self.assertIn("baz", output)
         self.assertNotIn("my_custom_", output)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_shows_provider_frames(self):
         """
         Test that 'bt --provider <id>' shows the provider's transformed frames
@@ -165,7 +163,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         self.assertIn("my_custom_foo", output)
         self.assertIn("my_custom_main", output)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_range(self):
         """
         Test that 'bt --provider 0-<id>' shows both the base unwinder
@@ -205,7 +202,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         self.assertIn("Base Unwinder", output)
         self.assertIn("PrefixPassThroughProvider", output)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_range_not_starting_at_zero(self):
         """
         Test that 'bt --provider <id>-<id>' works when the range doesn't
@@ -246,7 +242,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         self.assertIn("PrefixPassThroughProvider", output)
         self.assertIn("my_custom_baz", output)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_range_with_to_separator(self):
         """
         Test that 'bt --provider 0 to <id>' works with the 'to' separator.
@@ -315,7 +310,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         self.assertFalse(result.Succeeded(), "bt --provider 5-2 should fail")
         self.assertIn("invalid provider range", result.GetError())
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_star_shows_all(self):
         """
         Test that 'bt --provider *' shows all providers including the
@@ -345,7 +339,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         self.assertIn("Base Unwinder", output)
         self.assertIn("PrefixPassThroughProvider", output)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_all_shows_all(self):
         """
         Test that 'bt --provider all' shows all providers including the
@@ -383,7 +376,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         self.assertIn("PrefixPassThroughProvider", output)
         self.assertIn("UpperCasePassThroughProvider", output)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_multiple_providers(self):
         """
         Test 'bt --provider' with two chained providers. Register
@@ -436,7 +428,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         # outermost output should have fully upper-cased prefixed names.
         self.assertIn("MY_CUSTOM_BAZ", output)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_bt_provider_star_from_within_provider(self):
         """
         Test that running 'bt --provider *' re-entrantly from within a

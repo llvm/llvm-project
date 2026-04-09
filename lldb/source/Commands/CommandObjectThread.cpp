@@ -877,10 +877,11 @@ public:
           result.AppendError("no valid thread indexes were specified");
           return;
         } else {
+          Stream &strm = result.GetOutputStream();
           if (resume_threads.size() == 1)
-            result.AppendMessageWithFormat("Resuming thread: ");
+            strm << "Resuming thread: ";
           else
-            result.AppendMessageWithFormat("Resuming threads: ");
+            strm << "Resuming threads: ";
 
           for (uint32_t idx = 0; idx < num_threads; ++idx) {
             Thread *thread =
@@ -891,9 +892,9 @@ public:
             if (this_thread_pos != resume_threads.end()) {
               resume_threads.erase(this_thread_pos);
               if (!resume_threads.empty())
-                result.AppendMessageWithFormat("%u, ", thread->GetIndexID());
+                strm << llvm::formatv("{0}, ", thread->GetIndexID());
               else
-                result.AppendMessageWithFormat("%u ", thread->GetIndexID());
+                strm << llvm::formatv("{0} ", thread->GetIndexID());
 
               const bool override_suspend = true;
               thread->SetResumeState(eStateRunning, override_suspend);
