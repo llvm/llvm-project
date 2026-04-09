@@ -696,7 +696,7 @@ public:
     } else {
       // Input iterator, we can't know ahead how many elements we'll add.
       for (; in_start != in_end; ++in_start)
-        this->push_back(*in_start);
+        this->emplace_back(*in_start);
     }
   }
 
