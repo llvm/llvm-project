@@ -51,6 +51,44 @@ svuint16_t test_svdot_u16_x2(svuint16_t op1, svuint8_t op2, svuint8_t op3) ATTR
   return SVE_ACLE_FUNC(svdot,_u16_u8)(op1, op2, op3);
 }
 
+// CHECK-LABEL: @test_svdot_n_s16_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[OP3:%.*]], i64 0
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sdot.x2.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z19test_svdot_n_s16_x2u11__SVInt16_tu10__SVInt8_ta(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[OP3:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sdot.x2.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+//
+svint16_t test_svdot_n_s16_x2(svint16_t op1, svint8_t op2, int8_t op3) ATTR
+{
+  return SVE_ACLE_FUNC(svdot,_n_s16_s8)(op1, op2, op3);
+}
+
+// CHECK-LABEL: @test_svdot_n_u16_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[OP3:%.*]], i64 0
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.udot.x2.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z19test_svdot_n_u16_x2u12__SVUint16_tu11__SVUint8_th(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[OP3:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.udot.x2.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+//
+svuint16_t test_svdot_n_u16_x2(svuint16_t op1, svuint8_t op2, uint8_t op3) ATTR
+{
+  return SVE_ACLE_FUNC(svdot,_n_u16_u8)(op1, op2, op3);
+}
+
 // CHECK-LABEL: @test_svdot_lane_s16_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sdot.lane.x2.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 7)

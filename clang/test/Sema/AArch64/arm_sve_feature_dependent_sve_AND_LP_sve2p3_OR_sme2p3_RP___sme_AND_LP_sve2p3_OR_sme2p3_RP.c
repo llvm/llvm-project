@@ -10,49 +10,67 @@
 // Properties: guard="sve,(sve2p3|sme2p3)" streaming_guard="sme,(sve2p3|sme2p3)" flags="feature-dependent"
 
 void test(void) {
+  int8_t int8_t_val;
   svint8_t svint8_t_val;
   svint16_t svint16_t_val;
   svuint8_t svuint8_t_val;
   svuint16_t svuint16_t_val;
+  uint8_t uint8_t_val;
 
+  svdot(svint16_t_val, svint8_t_val, int8_t_val);
   svdot(svint16_t_val, svint8_t_val, svint8_t_val);
   svdot(svuint16_t_val, svuint8_t_val, svuint8_t_val);
+  svdot(svuint16_t_val, svuint8_t_val, uint8_t_val);
   svdot_lane(svint16_t_val, svint8_t_val, svint8_t_val, 2);
   svdot_lane(svuint16_t_val, svuint8_t_val, svuint8_t_val, 2);
   svdot_lane_s16_s8(svint16_t_val, svint8_t_val, svint8_t_val, 2);
   svdot_lane_u16_u8(svuint16_t_val, svuint8_t_val, svuint8_t_val, 2);
+  svdot_n_s16_s8(svint16_t_val, svint8_t_val, int8_t_val);
+  svdot_n_u16_u8(svuint16_t_val, svuint8_t_val, uint8_t_val);
   svdot_s16_s8(svint16_t_val, svint8_t_val, svint8_t_val);
   svdot_u16_u8(svuint16_t_val, svuint8_t_val, svuint8_t_val);
 }
 
 void test_streaming(void) __arm_streaming{
+  int8_t int8_t_val;
   svint8_t svint8_t_val;
   svint16_t svint16_t_val;
   svuint8_t svuint8_t_val;
   svuint16_t svuint16_t_val;
+  uint8_t uint8_t_val;
 
+  svdot(svint16_t_val, svint8_t_val, int8_t_val);
   svdot(svint16_t_val, svint8_t_val, svint8_t_val);
   svdot(svuint16_t_val, svuint8_t_val, svuint8_t_val);
+  svdot(svuint16_t_val, svuint8_t_val, uint8_t_val);
   svdot_lane(svint16_t_val, svint8_t_val, svint8_t_val, 2);
   svdot_lane(svuint16_t_val, svuint8_t_val, svuint8_t_val, 2);
   svdot_lane_s16_s8(svint16_t_val, svint8_t_val, svint8_t_val, 2);
   svdot_lane_u16_u8(svuint16_t_val, svuint8_t_val, svuint8_t_val, 2);
+  svdot_n_s16_s8(svint16_t_val, svint8_t_val, int8_t_val);
+  svdot_n_u16_u8(svuint16_t_val, svuint8_t_val, uint8_t_val);
   svdot_s16_s8(svint16_t_val, svint8_t_val, svint8_t_val);
   svdot_u16_u8(svuint16_t_val, svuint8_t_val, svuint8_t_val);
 }
 
 void test_streaming_compatible(void) __arm_streaming_compatible{
+  int8_t int8_t_val;
   svint8_t svint8_t_val;
   svint16_t svint16_t_val;
   svuint8_t svuint8_t_val;
   svuint16_t svuint16_t_val;
+  uint8_t uint8_t_val;
 
+  svdot(svint16_t_val, svint8_t_val, int8_t_val);
   svdot(svint16_t_val, svint8_t_val, svint8_t_val);
   svdot(svuint16_t_val, svuint8_t_val, svuint8_t_val);
+  svdot(svuint16_t_val, svuint8_t_val, uint8_t_val);
   svdot_lane(svint16_t_val, svint8_t_val, svint8_t_val, 2);
   svdot_lane(svuint16_t_val, svuint8_t_val, svuint8_t_val, 2);
   svdot_lane_s16_s8(svint16_t_val, svint8_t_val, svint8_t_val, 2);
   svdot_lane_u16_u8(svuint16_t_val, svuint8_t_val, svuint8_t_val, 2);
+  svdot_n_s16_s8(svint16_t_val, svint8_t_val, int8_t_val);
+  svdot_n_u16_u8(svuint16_t_val, svuint8_t_val, uint8_t_val);
   svdot_s16_s8(svint16_t_val, svint8_t_val, svint8_t_val);
   svdot_u16_u8(svuint16_t_val, svuint8_t_val, svuint8_t_val);
 }

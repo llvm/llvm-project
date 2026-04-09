@@ -2480,6 +2480,8 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2p2" in {
 let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
   def SVDOT_X2_SH : SInst<"svdot[_{d}_{2}]", "ddhh", "s",  MergeNone, "aarch64_sve_sdot_x2", [VerifyRuntimeMode], []>;
   def SVDOT_X2_UH : SInst<"svdot[_{d}_{2}]", "ddhh", "Us", MergeNone, "aarch64_sve_udot_x2", [VerifyRuntimeMode], []>;
+  def SVDOT_N_X2_SH : SInst<"svdot[_n_{d}_{2}]", "ddhR", "s",  MergeNone, "aarch64_sve_sdot_x2", [VerifyRuntimeMode], []>;
+  def SVDOT_N_X2_UH : SInst<"svdot[_n_{d}_{2}]", "ddhR", "Us", MergeNone, "aarch64_sve_udot_x2", [VerifyRuntimeMode], []>;
 
   def SVDOT_LANE_X2_SH : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "s",  MergeNone, "aarch64_sve_sdot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
   def SVDOT_LANE_X2_UH : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "Us", MergeNone, "aarch64_sve_udot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
