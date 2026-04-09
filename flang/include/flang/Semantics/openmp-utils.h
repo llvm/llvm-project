@@ -134,6 +134,12 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
+inline bool IsDoConcurrentLegal(unsigned version) {
+  // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
+  // in OpenMP 6.0+.
+  return version >= 60;
+}
+
 struct LoopControl {
   LoopControl(LoopControl &&x) = default;
   LoopControl(const LoopControl &x) = default;
@@ -245,6 +251,10 @@ struct LoopSequence {
 
   WithReason<bool> isWellFormedSequence() const;
   WithReason<bool> isWellFormedNest() const;
+
+  /// Return the first DO CONCURRENT loop contained in this sequence.
+  /// If there are no such loops, return nullptr.
+  const LoopSequence *getNestedDoConcurrent() const;
 
   std::vector<LoopControl> getLoopControls() const;
   // Check if this loop's bounds are invariant in each of the `outer`
