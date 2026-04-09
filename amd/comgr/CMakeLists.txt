@@ -77,6 +77,7 @@ set(SOURCES
   src/comgr-disassembly.cpp
   src/comgr-env.cpp
   src/comgr-hotswap.cpp
+  src/comgr-libcxx-headers.cpp
   src/comgr-metadata.cpp
   src/comgr-signal.cpp
   src/comgr-spirv-command.cpp
@@ -85,20 +86,11 @@ set(SOURCES
   src/comgr-unbundle-command.cpp
   src/time-stat/time-stat.cpp)
 
+# Add Windows resource file for version info
 if(WIN32)
-  # TODO: Evaluate whether this should be set from the super-project?
-  # NOTE: This is quite ugly and requires some hacks as of now.
-  #       Eventually, we would like for the DLL name to be set uniformly across all build platforms.
-  if (DEFINED THEROCK_HIP_MAJOR_VERSION AND DEFINED THEROCK_HIP_MINOR_VERSION)
-    set(AMD_COMGR_BUILD_SOURCE "TheRock")
-    set(COMGR_DLL_NAME "amd_comgr0${THEROCK_HIP_MAJOR_VERSION}0${THEROCK_HIP_MINOR_VERSION}.dll")
-  else()
-    set(AMD_COMGR_BUILD_SOURCE "Driver")
-    set(COMGR_DLL_NAME "amd_comgr_${amd_comgr_VERSION_MAJOR}.dll")
-  endif()
+  # Allow users to override the DLL name via -DCOMGR_DLL_NAME
+  set(COMGR_DLL_NAME "amd_comgr.dll" CACHE STRING "Windows DLL output name")
   string(TIMESTAMP COMGR_BUILD_YEAR "%Y")
-
-  # Add Windows resource file for version info
   set(COMGR_MANIFEST_NAME "AMD.ROCM.Comgr")
   configure_file(
     cmake/${COMGR_MANIFEST_NAME}.MANIFEST.in
@@ -306,10 +298,11 @@ include(bc2h)
 include(opencl_header)
 include(DeviceLibs)
 
-# Add major version to the name on windows, including Win64
-if (WIN32)
-  set_target_properties(amd_comgr PROPERTIES
-    OUTPUT_NAME "amd_comgr_${amd_comgr_VERSION_MAJOR}")
+# Embed libc++ headers for HIPRTC std C++ support
+# Can be disabled with -DCOMGR_EMBED_LIBCXX_HEADERS=OFF to reduce library size
+option(COMGR_EMBED_LIBCXX_HEADERS "Embed libc++ headers for HIPRTC" ON)
+if(COMGR_EMBED_LIBCXX_HEADERS)
+  include(LibcxxHeaders)
 endif()
 
 set_target_properties(amd_comgr PROPERTIES
@@ -327,6 +320,12 @@ endif()
 # Overwrite the name on 32-bit Linux and Windows
 if (CMAKE_SIZEOF_VOID_P EQUAL 4)
   set_target_properties(amd_comgr PROPERTIES OUTPUT_NAME "amd_comgr32")
+endif()
+
+# Set the DLL output name on Windows based on COMGR_DLL_NAME
+if (WIN32)
+  string(REGEX REPLACE "\\.dll$" "" COMGR_OUTPUT_NAME "${COMGR_DLL_NAME}")
+  set_target_properties(amd_comgr PROPERTIES OUTPUT_NAME "${COMGR_OUTPUT_NAME}")
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
