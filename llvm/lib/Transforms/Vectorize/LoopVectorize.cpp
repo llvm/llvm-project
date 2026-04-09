@@ -8368,9 +8368,13 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
                             ? AnyOfSelect->getOperand(2)
                             : AnyOfSelect->getOperand(1);
-      FinalReductionResult =
-          Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
-                               {Start, NewVal, NewExitingVPV}, ExitDL);
+      VPIRFlags OrFlags(RecurKind::Or, /*IsOrdered=*/false,
+                        /*IsInLoop=*/false, FastMathFlags());
+      auto *OrReduce =
+          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
+                               {NewExitingVPV}, OrFlags, ExitDL);
+      FinalReductionResult = Builder.createNaryOp(
+          VPInstruction::ComputeAnyOfResult, {Start, NewVal, OrReduce}, ExitDL);
     } else {
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlags());
@@ -8416,11 +8420,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
-      // Skip FindIV reduction chain recipes (ComputeReductionResult, icmp).
-      if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
-          match(U, m_CombineOr(
-                       m_VPInstruction<VPInstruction::ComputeReductionResult>(),
-                       m_VPInstruction<Instruction::ICmp>())))
+      // Skip ComputeReductionResult and FindIV reductions when they are not the
+      // final result.
+      if (match(U, m_VPInstruction<VPInstruction::ComputeReductionResult>()) ||
+          (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
+           match(U, m_VPInstruction<Instruction::ICmp>())))
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
 
@@ -8995,12 +8999,21 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
       // Find the reduction result by searching users of the phi or its backedge
       // value.
+      using namespace VPlanPatternMatch;
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
         if (!VPI)
           return false;
-        return VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-               VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+        if (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult)
+          return true;
+        // ComputeReductionResult is also considered, unless it is used for the
+        // Or reduction in AnyOf reductions and feeds a ComputeAnyOfReduction,
+        // in which case the latter will be considered instead.
+        if (VPI->getOpcode() != VPInstruction::ComputeReductionResult)
+          return false;
+        return !any_of(VPI->users(), [](VPUser *U) {
+          return match(U, m_VPInstruction<VPInstruction::ComputeAnyOfResult>());
+        });
       };
       auto *RdxResult = cast<VPInstruction>(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
