@@ -38,6 +38,8 @@ class AMDGPUCompiler {
   /// Whether we need to disable Clang's device-lib linking.
   bool NoGpuLib = true;
   bool UseVFS = false;
+  /// Whether embedded libc++ headers were loaded into the VFS.
+  bool HasEmbeddedHeaders = false;
 
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
