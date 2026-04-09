@@ -97,7 +97,6 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret i32 %r.0.lcssa
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

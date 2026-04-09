@@ -4102,6 +4102,19 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      // Lower CanonicalIVIncrementForPart to plain Add.
+      if (match(
+              &R,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
+        auto *VPI = cast<VPInstruction>(&R);
+        VPValue *Add = Builder.createOverflowingOp(
+            Instruction::Add, VPI->operands(), VPI->getNoWrapFlags(),
+            VPI->getDebugLoc());
+        VPI->replaceAllUsesWith(Add);
+        ToRemove.push_back(VPI);
+        continue;
+      }
+
       // Lower BranchOnCount to ICmp + BranchOnCond.
       VPValue *IV, *TC;
       if (match(&R, m_BranchOnCount(m_VPValue(IV), m_VPValue(TC)))) {
@@ -5934,9 +5947,13 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
       AnyOfPhi->setOperand(1, OrVal);
 
+      VPIRFlags OrFlags(RecurKind::Or, /*IsOrdered=*/false,
+                        /*IsInLoop=*/false, FastMathFlags());
+      auto *OrReduce = MiddleBuilder.createNaryOp(
+          VPInstruction::ComputeReductionResult, {OrVal}, OrFlags, ExitDL);
       NewRdxResult = MiddleBuilder.createNaryOp(
           VPInstruction::ComputeAnyOfResult,
-          {StartVPV, VectorRegionExitingVal, OrVal}, {}, ExitDL);
+          {StartVPV, VectorRegionExitingVal, OrReduce}, {}, ExitDL);
 
       // Initialize the IV reduction phi with the neutral element, not the
       // original start value, to ensure correct min/max reduction results.
@@ -6069,11 +6086,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = TypeInfo.inferScalarType(BinOp);
     auto *Zero = Plan.getZero(ElemTy);
-    VPIRFlags Flags = WidenRecipe->getUnderlyingInstr()
-                          ? VPIRFlags(*WidenRecipe->getUnderlyingInstr())
-                          : VPIRFlags();
-    auto *NegRecipe = new VPWidenRecipe(Instruction::Sub, {Zero, BinOp}, Flags,
-                                        VPIRMetadata(), DebugLoc::getUnknown());
+    auto *NegRecipe =
+        new VPWidenRecipe(Instruction::Sub, {Zero, BinOp}, VPIRFlags(),
+                          VPIRMetadata(), DebugLoc::getUnknown());
     Builder.insert(NegRecipe);
     BinOp = NegRecipe;
   }

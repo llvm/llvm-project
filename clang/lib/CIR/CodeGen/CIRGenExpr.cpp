@@ -1895,10 +1895,9 @@ LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
 LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
   RValue rv = emitCallExpr(e);
 
-  if (!rv.isScalar()) {
-    cgm.errorNYI(e->getSourceRange(), "emitCallExprLValue: non-scalar return");
-    return {};
-  }
+  if (!rv.isScalar())
+    return makeAddrLValue(rv.getAggregateAddress(), e->getType(),
+                          AlignmentSource::Decl);
 
   assert(e->getCallReturnType(getContext())->isReferenceType() &&
          "Can't have a scalar return unless the return type is a "

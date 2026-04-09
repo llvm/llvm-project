@@ -1349,7 +1349,6 @@ for.end:
   ret float %muladd2
 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
 
 ; Test case with invariant store where fadd is strict.
 define void @reduction_store_to_invariant_address(ptr %dst, ptr readonly %src) {

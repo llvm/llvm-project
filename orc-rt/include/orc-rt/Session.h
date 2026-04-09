@@ -28,7 +28,7 @@
 #include "orc-rt-c/WrapperFunction.h"
 
 #include <cassert>
-#include <future>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -218,6 +218,10 @@ public:
   Session(Session &&) = delete;
   Session &operator=(Session &&) = delete;
 
+  /// Destroy the session object.
+  ///
+  /// This will trigger shutdown if it has not happened already. Destruction
+  /// will block until the Session lifecycle completes.
   ~Session();
 
   /// Provides information about the host process that the Session is running
@@ -288,8 +292,8 @@ public:
   /// Shutdown proceeds through the following phases:
   ///   1. Detach: If not already detached, disconnects the controller and
   ///      notifies all Services via onDetach.
-  ///   2. Drain: Waits for all in-flight managed code calls to complete
-  ///      (via ManagedCodeCallsGroup).
+  ///   2. Drain: Waits for all in-flight tasks accessing managed code to
+  ///      complete (via ManagedCodeTaskGroup).
   ///   3. Shutdown services: Calls onShutdown on all Services in reverse
   ///      order.
   ///   4. Shutdown TaskDispatcher.
@@ -297,9 +301,6 @@ public:
   /// The optional OnShutdown callback is called after step (3), before
   /// the TaskDispatcher is shut down.
   void shutdown(OnShutdownFn OnShutdown = {});
-
-  /// Initiate session shutdown and block until complete.
-  void waitForShutdown();
 
   /// Register a callback to be called when the Session detaches from the
   /// controller. If the Session has already detached, the callback will be
@@ -310,23 +311,24 @@ public:
   /// Session has already shut down, the callback will be called immediately.
   void addOnShutdown(OnShutdownFn OnShutdown);
 
-  /// Returns a reference to this Session's ManagedCodeCallsGroup.
+  /// Returns a reference to this Session's ManagedCodeTaskGroup.
   ///
   /// When calling code managed by a Session (e.g. JIT'd code, or library code
   /// loaded on behalf of JIT'd code), clients should hold a token for this
   /// group. That token will prevent the Session from shutting down any Services
-  /// (and the Session itself) until calls into managed code have completed.
+  /// (and the Session itself) until tasks accessing managed code have
+  /// completed.
   ///
   /// Clients should prefer using the callManagedCodeSync and
   /// callManagedCodeAsync helpers to automatically acquire and hold a token
   /// for the duration of a call.
-  const std::shared_ptr<TaskGroup> &managedCodeCallsGroup() const {
-    return ManagedCodeCallsGroup;
+  const std::shared_ptr<TaskGroup> &managedCodeTaskGroup() const {
+    return ManagedCodeTaskGroup;
   }
 
   /// Synchronously call managed code.
   ///
-  /// This helper tries to acquire a ManagedCodeCallsGroup token and then call
+  /// This helper tries to acquire a ManagedCodeTaskGroup token and then call
   /// the given function object with the given arguments while holding the
   /// token.
   ///
@@ -340,7 +342,7 @@ public:
   template <typename FnT, typename... ArgTs>
   decltype(auto) callManagedCodeSync(FnT &&Fn, ArgTs &&...Args) {
     return ManagedCodeSyncCaller<std::invoke_result_t<FnT, ArgTs...>>::call(
-        TaskGroup::Token(ManagedCodeCallsGroup), std::forward<FnT>(Fn),
+        TaskGroup::Token(ManagedCodeTaskGroup), std::forward<FnT>(Fn),
         std::forward<ArgTs>(Args)...);
   }
 
@@ -349,7 +351,7 @@ public:
   /// ReturnT must be a function object that takes either a boolean or a
   /// std::optional<T>.
   ///
-  /// callManagedCodeAsync tries to acquire a ManagedCodeCallsGroup token and
+  /// callManagedCodeAsync tries to acquire a ManagedCodeTaskGroup token and
   /// then call the given async function object while holding that token.
   ///
   /// If the token is successfully acquired then this function will call Fn,
@@ -363,7 +365,7 @@ public:
   template <typename ReturnT, typename FnT, typename... ArgTs>
   void callManagedCodeAsync(ReturnT &&Return, FnT &&Fn, ArgTs &&...Args) {
     ManagedCodeAsyncCaller<typename CallableArgInfo<ReturnT>::args_tuple_type>::
-        call(TaskGroup::Token(ManagedCodeCallsGroup),
+        call(TaskGroup::Token(ManagedCodeTaskGroup),
              std::forward<ReturnT>(Return), std::forward<FnT>(Fn),
              std::forward<ArgTs>(Args)...);
   }
@@ -425,7 +427,6 @@ private:
   };
 
   class NotificationService;
-  NotificationService &addNotificationService();
 
   void appendService(std::unique_ptr<Service> Srv);
 
@@ -435,15 +436,15 @@ private:
   void detachServices(std::vector<Service *> ToNotify, bool ShutdownRequested);
   void completeDetach();
 
-  void waitForManagedCodeCallsThenShutdown();
+  void waitForManagedCodeTasksThenShutdown();
   void proceedToShutdown();
   void shutdownServices(std::vector<Service *> ToNotify);
   void completeShutdown();
 
   void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
                          WrapperFunctionBuffer ArgBytes) {
-    if (!ManagedCodeCallsGroup->acquireToken()) {
-      // The ManagedCodeCallsGroup is only closed after detach, so if token
+    if (!ManagedCodeTaskGroup->acquireToken()) {
+      // The ManagedCodeTaskGroup is only closed after detach, so if token
       // acquisition fails we don't try to return an error: the controller
       // should already have signalled error to the caller, and we have no
       // way to transmit an error anyway.
@@ -458,7 +459,7 @@ private:
   void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
     if (auto TmpCA = std::atomic_load(&CA))
       TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
-    ManagedCodeCallsGroup->releaseToken();
+    ManagedCodeTaskGroup->releaseToken();
   }
 
   static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
@@ -466,11 +467,12 @@ private:
 
   ExecutorProcessInfo EPI;
   std::unique_ptr<TaskDispatcher> Dispatcher;
-  std::shared_ptr<TaskGroup> ManagedCodeCallsGroup = TaskGroup::Create();
+  std::shared_ptr<TaskGroup> ManagedCodeTaskGroup = TaskGroup::Create();
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
 
   mutable std::mutex M;
+  std::condition_variable CV;
   State CurrentState = State::Start;
   State TargetState = State::None;
   std::vector<std::unique_ptr<Service>> Services;

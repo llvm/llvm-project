@@ -505,6 +505,21 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   }
 }
 
+ISD::NodeType ISD::getUnmaskedBinOpOpcode(unsigned MaskedOpc) {
+  switch (MaskedOpc) {
+  case ISD::MASKED_UDIV:
+    return ISD::UDIV;
+  case ISD::MASKED_SDIV:
+    return ISD::SDIV;
+  case ISD::MASKED_UREM:
+    return ISD::UREM;
+  case ISD::MASKED_SREM:
+    return ISD::SREM;
+  default:
+    llvm_unreachable("Expected masked binop opcode");
+  }
+}
+
 bool ISD::isVPOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -2818,7 +2833,7 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     ISD::CondCode SwappedCond = ISD::getSetCCSwappedOperands(Cond);
     if (!TLI->isCondCodeLegal(SwappedCond, OpVT.getSimpleVT()))
       return SDValue();
-    return getSetCC(dl, VT, N2, N1, SwappedCond, /*Chian=*/{},
+    return getSetCC(dl, VT, N2, N1, SwappedCond, /*Chain=*/{},
                     /*IsSignaling=*/false, Flags);
   } else if ((N2CFP && N2CFP->getValueAPF().isNaN()) ||
              (OpVT.isFloatingPoint() && (N1.isUndef() || N2.isUndef()))) {
