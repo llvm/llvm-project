@@ -178,12 +178,8 @@ bool NaryReassociateLegacyPass::runOnFunction(Function &F) {
   auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-
-  // Only compute UniformityInfo on targets with branch divergence to avoid
-  // the compile-time cost of CycleAnalysis on targets that don't need it.
-  UniformityInfo *UI = nullptr;
-  if (TTI->hasBranchDivergence(&F))
-    UI = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  UniformityInfo *UI =
+      &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
   return Impl.runImpl(F, AC, DT, SE, TLI, TTI, UI);
 }
@@ -195,12 +191,7 @@ PreservedAnalyses NaryReassociatePass::run(Function &F,
   auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
-
-  // Only compute UniformityInfo on targets with branch divergence to avoid
-  // the compile-time cost of CycleAnalysis on targets that don't need it.
-  UniformityInfo *UI = nullptr;
-  if (TTI->hasBranchDivergence(&F))
-    UI = &AM.getResult<UniformityInfoAnalysis>(F);
+  UniformityInfo *UI = &AM.getResult<UniformityInfoAnalysis>(F);
 
   if (!runImpl(F, AC, DT, SE, TLI, TTI, UI))
     return PreservedAnalyses::all();
@@ -408,7 +399,8 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // to be uniform, keeping uniform computations grouped together.
     // Default order tries LHS first (RHS as remainder). If LHS is uniform and
     // RHS is divergent, try RHS first so uniform LHS becomes the remainder.
-    if (UI && UI->isUniform(LHS) && !UI->isUniform(RHS)) {
+    if (UI && !UI->isDivergentUse(AO->getOperandUse(0)) &&
+        UI->isDivergentUse(AO->getOperandUse(1))) {
       LLVM_DEBUG(
           dbgs() << "NARY: Preferring uniform remainder for GEP index\n");
       if (GetElementPtrInst *NewGEP =
@@ -532,7 +524,11 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(Value *LHS, Value *RHS,
     // We only need to handle the case where B and RHS are uniform but A is
     // divergent. The symmetric case (A and RHS uniform, B divergent) is already
     // handled by the default order which tries (A op RHS) op B first.
-    if (UI && UI->isUniform(B) && UI->isUniform(RHS) && !UI->isUniform(A)) {
+    User *LHSOp = cast<User>(LHS);
+    unsigned RHSIdx = (I->getOperand(0) == LHS) ? 1 : 0;
+    if (UI && !UI->isDivergentUse(LHSOp->getOperandUse(1)) &&
+        !UI->isDivergentUse(I->getOperandUse(RHSIdx)) &&
+        UI->isDivergentUse(LHSOp->getOperandUse(0))) {
       LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for " << *I
                         << "\n");
       if (AExpr != RHSExpr) {
@@ -721,7 +717,12 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   // For I = minmax(minmax(A, B), RHS), we can form:
   //   - minmax(minmax(A, RHS), B): groups A and RHS
   //   - minmax(minmax(B, RHS), A): groups B and RHS
-  if (UI && UI->isUniform(B) && UI->isUniform(RHS) && !UI->isUniform(A)) {
+  User *LHSOp = cast<User>(LHS);
+  unsigned AIdx = (LHSOp->getOperand(0) == A) ? 0 : 1;
+  unsigned RHSIdx = (I->getOperand(0) == RHS) ? 0 : 1;
+  if (UI && !UI->isDivergentUse(LHSOp->getOperandUse(1 - AIdx)) &&
+      !UI->isDivergentUse(I->getOperandUse(RHSIdx)) &&
+      UI->isDivergentUse(LHSOp->getOperandUse(AIdx))) {
     LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for minmax " << *I
                       << "\n");
     // Try (B op RHS) op A first - groups uniform B with uniform RHS
