@@ -1523,11 +1523,10 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   return nullptr;
 }
 
-/// Canonicalize a nested add/sub with a constant on the inner RHS by
-/// sinking the constant to the outer RHS.
-/// (X +/- C) +/- Y  ->  (X +/- Y) +/- C
-/// TODO:
-///   (C - X) +/- Y  ->  (Y -/+ X) + C
+/// Canonicalize a nested add by sinking an inner RHS constant outward.
+/// Only handle inner adds to stay compatible with Reassociate.
+///   (X + C) + Y  ->  (X + Y) + C
+///   (X + C) - Y  ->  (X - Y) + C
 static Instruction *
 canonicalizeNestedAddSubWithConstant(BinaryOperator &I,
                                      InstCombiner::BuilderTy &Builder) {
@@ -1539,16 +1538,17 @@ canonicalizeNestedAddSubWithConstant(BinaryOperator &I,
   if (isa<Constant>(Y))
     return nullptr;
 
+  auto *Inner = dyn_cast<BinaryOperator>(I.getOperand(0));
+  if (!Inner || !Inner->hasOneUse())
+    return nullptr;
+
   Value *X;
   Constant *C;
-  auto *Inner = dyn_cast<BinaryOperator>(I.getOperand(0));
-  if (!Inner || !Inner->hasOneUse() ||
-      (!match(Inner, m_Add(m_Value(X), m_ImmConstant(C))) &&
-       !match(Inner, m_Sub(m_Value(X), m_ImmConstant(C)))))
+  if (!match(Inner, m_Add(m_Value(X), m_ImmConstant(C))))
     return nullptr;
 
   Value *XY = Builder.CreateBinOp(I.getOpcode(), X, Y);
-  return BinaryOperator::Create(Inner->getOpcode(), XY, C);
+  return BinaryOperator::CreateAdd(XY, C);
 }
 
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
