@@ -613,8 +613,9 @@ PdbAstBuilderClang::CreateModifierType(const ModifierRecord &modifier) {
   return unmodified_type;
 }
 
-clang::QualType PdbAstBuilderClang::CreateRecordType(PdbTypeSymId id,
-                                                     const CVTagRecord &record) {
+clang::QualType
+PdbAstBuilderClang::CreateRecordType(PdbTypeSymId id,
+                                     const CVTagRecord &record) {
   clang::DeclContext *context = nullptr;
   std::string uname;
   std::tie(context, uname) = CreateDeclInfoForType(record.asTag(), id.index);

@@ -1,10 +1,14 @@
 // This was used to generate `dynamic-types.yaml` and `dynamic-types-exe.yaml`.
 
+// clang-format off
+
 // clang-cl /Z7 /GR- /GS- .\dynamic-types.cpp -fuse-ld=lld-link -Og /link /nodefaultlib /entry:main
 // obj2yaml .\dynamic-types.exe -o dynamic-types-exe.yaml
 // llvm-pdbutil pdb2yaml --tpi-stream dynamic-types.pdb > dynamic-types.yaml
 // rm dynamic-types.exe
 // rm dynamic-types.pdb
+
+// clang-format on
 
 struct Base {
   virtual ~Base() = default;
