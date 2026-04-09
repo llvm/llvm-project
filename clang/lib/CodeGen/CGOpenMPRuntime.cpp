@@ -11274,8 +11274,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   // the normal code generation.
   if (!CGM.getLangOpts().OpenMPIsTargetDevice) {
     if (const auto *FD = dyn_cast<FunctionDecl>(GD.getDecl()))
-      if (isAssumedToBeNotEmitted(FD,
-                                  CGM.getLangOpts().OpenMPIsTargetDevice))
+      if (isAssumedToBeNotEmitted(FD, CGM.getLangOpts().OpenMPIsTargetDevice))
         return true;
     return false;
   }
@@ -11285,8 +11284,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
     StringRef Name = CGM.getMangledName(GD);
     scanForTargetRegionsFunctions(FD->getBody(), Name);
-    if (isAssumedToBeNotEmitted(FD,
-                                CGM.getLangOpts().OpenMPIsTargetDevice))
+    if (isAssumedToBeNotEmitted(FD, CGM.getLangOpts().OpenMPIsTargetDevice))
       return true;
   }
 
@@ -12884,8 +12882,7 @@ void CGOpenMPRuntime::emitLastprivateConditionalUpdate(CodeGenFunction &CGF,
   // decltype(priv_a) last_a;
   llvm::GlobalVariable *Last = OMPBuilder.getOrCreateInternalVariable(
       CGF.ConvertTypeForMem(LVal.getType()), UniqueDeclName);
-  Last->setAlignment(
-      LVal.getAlignment().getAsAlign());
+  Last->setAlignment(LVal.getAlignment().getAsAlign());
   LValue LastLVal =
       CGF.MakeRawAddrLValue(Last, LVal.getType(), LVal.getAlignment());
 

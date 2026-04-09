@@ -4663,8 +4663,7 @@ CGDebugInfo::getGlobalVariableForwardDeclaration(const VarDecl *VD) {
       DContext, Name, LinkageName, Unit, Line, getOrCreateType(T, Unit),
       !VD->isExternallyVisible(), nullptr, TemplateParameters, Align);
   FwdDeclReplaceMap.emplace_back(
-      std::piecewise_construct,
-      std::make_tuple(VD->getCanonicalDecl()),
+      std::piecewise_construct, std::make_tuple(VD->getCanonicalDecl()),
       std::make_tuple(static_cast<llvm::Metadata *>(GV)));
   return GV;
 }

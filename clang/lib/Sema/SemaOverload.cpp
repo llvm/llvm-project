@@ -13889,8 +13889,8 @@ private:
       // If we're in C, we need to support types that aren't exactly identical.
       if (!S.getLangOpts().CPlusPlus ||
           candidateHasExactlyCorrectType(FunDecl)) {
-        Matches.push_back(std::make_pair(
-            CurAccessFunPair, FunDecl->getCanonicalDecl()));
+        Matches.push_back(
+            std::make_pair(CurAccessFunPair, FunDecl->getCanonicalDecl()));
         FoundNonTemplateFunction = true;
         return true;
       }

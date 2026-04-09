@@ -7198,8 +7198,7 @@ void SemaCodeCompletion::CodeCompleteConstructorInitializer(
       InitializedBases.insert(getASTContext().getCanonicalType(
           QualType(Initializers[I]->getBaseClass(), 0)));
     else
-      InitializedFields.insert(
-          Initializers[I]->getAnyMember());
+      InitializedFields.insert(Initializers[I]->getAnyMember());
   }
 
   // Add completions for base classes.
@@ -7307,8 +7306,7 @@ void SemaCodeCompletion::CodeCompleteConstructorInitializer(
 
   // Add completions for members.
   for (auto *Field : ClassDecl->fields()) {
-    if (!InitializedFields.insert(Field->getCanonicalDecl())
-             .second) {
+    if (!InitializedFields.insert(Field->getCanonicalDecl()).second) {
       SawLastInitializer = !Initializers.empty() &&
                            Initializers.back()->isAnyMemberInitializer() &&
                            Initializers.back()->getAnyMember() == Field;

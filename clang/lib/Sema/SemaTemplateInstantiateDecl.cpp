@@ -3943,8 +3943,8 @@ Decl *TemplateDeclInstantiator::VisitBaseUsingDecls(BaseUsingDecl *D,
       InstTarget = UnresolvedUsingIfExistsDecl::Create(
           SemaRef.Context, Owner, EmptyD->getLocation(), EmptyD->getDeclName());
     } else {
-      InstTarget = SemaRef.FindInstantiatedDecl(
-          Shadow->getLocation(), OldTarget, TemplateArgs);
+      InstTarget = SemaRef.FindInstantiatedDecl(Shadow->getLocation(),
+                                                OldTarget, TemplateArgs);
     }
     if (!InstTarget)
       return nullptr;

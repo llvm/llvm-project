@@ -1324,8 +1324,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     llvm::SmallVector<TemplateArgument, 8> TemplateArgs;
     if (DS.isConstrainedAuto()) {
       if (TemplateIdAnnotation *TemplateId = DS.getRepAsTemplateId()) {
-        TypeConstraintConcept =
-            TemplateId->Template.get().getAsTemplateDecl();
+        TypeConstraintConcept = TemplateId->Template.get().getAsTemplateDecl();
         TemplateArgumentListInfo TemplateArgsInfo;
         TemplateArgsInfo.setLAngleLoc(TemplateId->LAngleLoc);
         TemplateArgsInfo.setRAngleLoc(TemplateId->RAngleLoc);

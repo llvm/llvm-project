@@ -3362,8 +3362,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
       llvm::Function *Func = llvm::Function::Create(
           InitFnTy, Var->getLinkage(), InitFnName.str(), &CGM.getModule());
       const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
-      CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI,
-                                    Func,
+      CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Func,
                                     /*IsThunk=*/false);
       // Create a function body that just returns
       llvm::BasicBlock *Entry = llvm::BasicBlock::Create(Context, "", Func);

@@ -9364,7 +9364,8 @@ Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,
   Error ImportErrors = Error::success();
   for (auto *FromOverriddenMethod : FromMethod->overridden_methods()) {
     if (auto ImportedOrErr = import(FromOverriddenMethod))
-      ToMethod->getCanonicalDecl()->addOverriddenMethod((*ImportedOrErr)->getCanonicalDecl());
+      ToMethod->getCanonicalDecl()->addOverriddenMethod(
+          (*ImportedOrErr)->getCanonicalDecl());
     else
       ImportErrors =
           joinErrors(std::move(ImportErrors), ImportedOrErr.takeError());

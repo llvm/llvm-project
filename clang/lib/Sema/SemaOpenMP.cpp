@@ -25508,8 +25508,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPUsesAllocatorClause(
              diag::err_omp_predefined_allocator_with_traits)
             << D.AllocatorTraits->getSourceRange();
         Diag(D.Allocator->getExprLoc(), diag::note_omp_predefined_allocator)
-            << DRE->getDecl()->getName()
-            << D.Allocator->getSourceRange();
+            << DRE->getDecl()->getName() << D.Allocator->getSourceRange();
         continue;
       }
       // OpenMP [2.12.5, target Construct]

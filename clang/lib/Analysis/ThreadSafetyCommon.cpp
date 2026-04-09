@@ -526,8 +526,7 @@ til::SExpr *SExprBuilder::translateCXXMemberCallExpr(
       // return E;
     }
   }
-  return translateCallExpr(ME, Ctx,
-                           ME->getImplicitObjectArgument());
+  return translateCallExpr(ME, Ctx, ME->getImplicitObjectArgument());
 }
 
 til::SExpr *SExprBuilder::translateCXXOperatorCallExpr(

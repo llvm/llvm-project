@@ -5811,10 +5811,9 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
   // missing a module import.
   llvm::SmallVector<Module*, 8> Modules;
   if (D->hasDefaultArgument() && !S.hasReachableDefaultArgument(D, &Modules)) {
-    S.diagnoseMissingImport(Loc, TD,
-                            D->getDefaultArgumentLoc(), Modules,
+    S.diagnoseMissingImport(Loc, TD, D->getDefaultArgumentLoc(), Modules,
                             Sema::MissingImportKind::DefaultArgument,
-                            /*Recover*/true);
+                            /*Recover*/ true);
     return true;
   }
 
@@ -10555,8 +10554,7 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   CheckExplicitInstantiation(*this, Record, NameLoc, true, TSK);
 
   // Verify that it is okay to explicitly instantiate here.
-  CXXRecordDecl *PrevDecl
-    = Record->getPreviousDecl();
+  CXXRecordDecl *PrevDecl = Record->getPreviousDecl();
   if (!PrevDecl && Record->getDefinition())
     PrevDecl = Record;
   if (PrevDecl) {
@@ -10573,14 +10571,12 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
       return TagD;
   }
 
-  CXXRecordDecl *RecordDef
-    = Record->getDefinition();
+  CXXRecordDecl *RecordDef = Record->getDefinition();
   if (!RecordDef) {
     // C++ [temp.explicit]p3:
     //   A definition of a member class of a class template shall be in scope
     //   at the point of an explicit instantiation of the member class.
-    CXXRecordDecl *Def
-      = Pattern->getDefinition();
+    CXXRecordDecl *Def = Pattern->getDefinition();
     if (!Def) {
       Diag(TemplateLoc, diag::err_explicit_instantiation_undefined_member)
         << 0 << Record->getDeclName() << Record->getDeclContext();

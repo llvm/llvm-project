@@ -450,8 +450,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       assert(Param->hasInheritedDefaultArg());
       FunctionDecl *Old;
       if (const auto *FunTmpl = dyn_cast<FunctionTemplateDecl>(LM.Method))
-        Old =
-            FunTmpl->getTemplatedDecl()->getPreviousDecl();
+        Old = FunTmpl->getTemplatedDecl()->getPreviousDecl();
       else
         Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();
       if (Old) {

@@ -3521,8 +3521,7 @@ bool Sema::InstantiateClassImpl(
     CXXRecordDecl *Pattern, const MultiLevelTemplateArgumentList &TemplateArgs,
     TemplateSpecializationKind TSK, bool Complain) {
 
-  CXXRecordDecl *PatternDef
-    = Pattern->getDefinition();
+  CXXRecordDecl *PatternDef = Pattern->getDefinition();
   if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Instantiation,
                                 Instantiation->getInstantiatedFromMemberClass(),
                                      Pattern, PatternDef, TSK, Complain))

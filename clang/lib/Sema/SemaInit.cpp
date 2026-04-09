@@ -10451,8 +10451,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     return QualType();
 
   case OR_No_Viable_Function: {
-    CXXRecordDecl *Primary =
-        Template->getTemplatedDecl();
+    CXXRecordDecl *Primary = Template->getTemplatedDecl();
     bool Complete = isCompleteType(Kind.getLocation(),
                                    Context.getCanonicalTagType(Primary));
     Candidates.NoteCandidates(
