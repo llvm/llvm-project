@@ -34,7 +34,7 @@
 //===----------------------------------------------------------------------===//
 
 #if SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
-#include <dlfcn.h>
+#  include <dlfcn.h>
 #endif
 
 #include <stdarg.h>
@@ -6541,7 +6541,11 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   }
 
   void *res = COMMON_INTERCEPTOR_DLOPEN(filename, flag);
-  if ((flag & RTLD_NOLOAD) == 0) {
+  bool is_noload = false;
+#ifdef RTLD_NOLOAD
+  is_noload = (flag & RTLD_NOLOAD) != 0;
+#endif
+  if (!is_noload) {
     Symbolizer::GetOrInit()->InvalidateModuleList();
     COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, res);
   }
