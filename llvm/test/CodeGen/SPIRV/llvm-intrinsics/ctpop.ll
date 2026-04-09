@@ -1,4 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-linux %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-vulkan-compute %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: [[i8_t:%.+]]  = OpTypeInt 8 0
 ; CHECK-DAG: [[i16_t:%.+]] = OpTypeInt 16 0
@@ -12,7 +15,7 @@
 ; CHECK-DAG: [[i64x4_t:%.+]] = OpTypeVector [[i64_t]] 4
 ; CHECK-DAG: [[i16x3_t:%.+]] = OpTypeVector [[i16_t]] 3
 
-; CHECK-DAG: [[zero:%.*]] = OpConstantNull [[i32_t]]
+; CHECK-DAG: [[zero:%.*]] = OpConstant [[i32_t]] 0
 ; CHECK-DAG: [[one:%.*]] = OpConstant [[i32_t]] 1
 ; CHECK-DAG: [[two:%.*]] = OpConstant [[i64_t]] 2
 
@@ -113,7 +116,7 @@
 @g9 = addrspace(1) global <3 x i16> zeroinitializer, align 4
 
 
-define dso_local spir_kernel void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32, <2 x i64> %x2i64, <3 x i64> %x3i64, <4 x i64> %x4i64, <3 x i16> %x3i16) local_unnamed_addr {
+define dso_local spir_kernel void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32, <2 x i64> %x2i64, <3 x i64> %x3i64, <4 x i64> %x4i64, <3 x i16> %x3i16) local_unnamed_addr #1 {
 entry:
   %0 = tail call i8 @llvm.ctpop.i8(i8 %x8)
   store i8 %0, ptr addrspace(1) @g1, align 4
@@ -136,12 +139,4 @@ entry:
   ret void
 }
 
-declare i8 @llvm.ctpop.i8(i8)
-
-declare i16 @llvm.ctpop.i16(i16)
-
-declare i32 @llvm.ctpop.i32(i32)
-
-declare i64 @llvm.ctpop.i64(i64)
-
-declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
+attributes #1 = { "hlsl.numthreads"="8,1,1" "hlsl.shader"="compute" }
