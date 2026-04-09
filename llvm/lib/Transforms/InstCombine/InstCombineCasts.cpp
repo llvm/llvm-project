@@ -21,6 +21,8 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1920,6 +1922,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
         if (Log2_32(*MaxVScale) < (SrcBitSize - 1))
           return replaceInstUsesWith(Sext, Builder.CreateVScale(DestTy));
     }
+  }
+
+  // sext(scmp(x, y)) -> scmp(x, y) with a wider result type.
+  // sext(ucmp(x, y)) -> ucmp(x, y) with a wider result type.
+  // scmp/ucmp return only -1, 0, or 1, which sign-extend correctly to any
+  // wider integer type, so we can sink the extension into the intrinsic.
+  if (auto *II = dyn_cast<IntrinsicInst>(Src)) {
+    Intrinsic::ID IID = II->getIntrinsicID();
+    if ((IID == Intrinsic::scmp || IID == Intrinsic::ucmp) && II->hasOneUse())
+      return replaceInstUsesWith(
+          Sext, Builder.CreateIntrinsic(
+                    DestTy, IID, {II->getArgOperand(0), II->getArgOperand(1)}));
   }
 
   return nullptr;

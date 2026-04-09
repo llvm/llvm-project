@@ -801,8 +801,7 @@ define i8 @scmp_ashr_slt_pattern_neg(i8 %a) {
 define i64 @sext_scmp(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i64 @sext_scmp(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[CMP]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %cmp = call i8 @llvm.scmp(i32 %x, i32 %y)
