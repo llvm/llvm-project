@@ -1115,129 +1115,20 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
-static bool requiresMatchCmpRegallocHint(unsigned Opc) {
-  switch (Opc) {
-  default:
-    return false;
-  // All match instructions
-  case AArch64::MATCH_PPzZZ_B:
-  case AArch64::MATCH_PPzZZ_H:
-  // Vector compare instructions (CMPL* are aliases of CMPG*/H*)
-  case AArch64::CMPEQ_PPzZZ_B:
-  case AArch64::CMPEQ_PPzZZ_H:
-  case AArch64::CMPEQ_PPzZZ_S:
-  case AArch64::CMPEQ_PPzZZ_D:
-  case AArch64::CMPNE_PPzZZ_B:
-  case AArch64::CMPNE_PPzZZ_H:
-  case AArch64::CMPNE_PPzZZ_S:
-  case AArch64::CMPNE_PPzZZ_D:
-  case AArch64::CMPGE_PPzZZ_B:
-  case AArch64::CMPGE_PPzZZ_H:
-  case AArch64::CMPGE_PPzZZ_S:
-  case AArch64::CMPGE_PPzZZ_D:
-  case AArch64::CMPHS_PPzZZ_B:
-  case AArch64::CMPHS_PPzZZ_H:
-  case AArch64::CMPHS_PPzZZ_S:
-  case AArch64::CMPHS_PPzZZ_D:
-  case AArch64::CMPGT_PPzZZ_B:
-  case AArch64::CMPGT_PPzZZ_H:
-  case AArch64::CMPGT_PPzZZ_S:
-  case AArch64::CMPGT_PPzZZ_D:
-  case AArch64::CMPHI_PPzZZ_B:
-  case AArch64::CMPHI_PPzZZ_H:
-  case AArch64::CMPHI_PPzZZ_S:
-  case AArch64::CMPHI_PPzZZ_D:
-  // Vector/immediate compare instructions
-  case AArch64::CMPEQ_PPzZI_B:
-  case AArch64::CMPEQ_PPzZI_H:
-  case AArch64::CMPEQ_PPzZI_S:
-  case AArch64::CMPEQ_PPzZI_D:
-  case AArch64::CMPNE_PPzZI_B:
-  case AArch64::CMPNE_PPzZI_H:
-  case AArch64::CMPNE_PPzZI_S:
-  case AArch64::CMPNE_PPzZI_D:
-  case AArch64::CMPGE_PPzZI_B:
-  case AArch64::CMPGE_PPzZI_H:
-  case AArch64::CMPGE_PPzZI_S:
-  case AArch64::CMPGE_PPzZI_D:
-  case AArch64::CMPHS_PPzZI_B:
-  case AArch64::CMPHS_PPzZI_H:
-  case AArch64::CMPHS_PPzZI_S:
-  case AArch64::CMPHS_PPzZI_D:
-  case AArch64::CMPGT_PPzZI_B:
-  case AArch64::CMPGT_PPzZI_H:
-  case AArch64::CMPGT_PPzZI_S:
-  case AArch64::CMPGT_PPzZI_D:
-  case AArch64::CMPHI_PPzZI_B:
-  case AArch64::CMPHI_PPzZI_H:
-  case AArch64::CMPHI_PPzZI_S:
-  case AArch64::CMPHI_PPzZI_D:
-  case AArch64::CMPLE_PPzZI_B:
-  case AArch64::CMPLE_PPzZI_H:
-  case AArch64::CMPLE_PPzZI_S:
-  case AArch64::CMPLE_PPzZI_D:
-  case AArch64::CMPLS_PPzZI_B:
-  case AArch64::CMPLS_PPzZI_H:
-  case AArch64::CMPLS_PPzZI_S:
-  case AArch64::CMPLS_PPzZI_D:
-  case AArch64::CMPLT_PPzZI_B:
-  case AArch64::CMPLT_PPzZI_H:
-  case AArch64::CMPLT_PPzZI_S:
-  case AArch64::CMPLT_PPzZI_D:
-  case AArch64::CMPLO_PPzZI_B:
-  case AArch64::CMPLO_PPzZI_H:
-  case AArch64::CMPLO_PPzZI_S:
-  case AArch64::CMPLO_PPzZI_D:
-  // Wide-vector compare instructions
-  case AArch64::CMPEQ_WIDE_PPzZZ_B:
-  case AArch64::CMPEQ_WIDE_PPzZZ_H:
-  case AArch64::CMPEQ_WIDE_PPzZZ_S:
-  case AArch64::CMPNE_WIDE_PPzZZ_B:
-  case AArch64::CMPNE_WIDE_PPzZZ_H:
-  case AArch64::CMPNE_WIDE_PPzZZ_S:
-  case AArch64::CMPGE_WIDE_PPzZZ_B:
-  case AArch64::CMPGE_WIDE_PPzZZ_H:
-  case AArch64::CMPGE_WIDE_PPzZZ_S:
-  case AArch64::CMPHS_WIDE_PPzZZ_B:
-  case AArch64::CMPHS_WIDE_PPzZZ_H:
-  case AArch64::CMPHS_WIDE_PPzZZ_S:
-  case AArch64::CMPGT_WIDE_PPzZZ_B:
-  case AArch64::CMPGT_WIDE_PPzZZ_H:
-  case AArch64::CMPGT_WIDE_PPzZZ_S:
-  case AArch64::CMPHI_WIDE_PPzZZ_B:
-  case AArch64::CMPHI_WIDE_PPzZZ_H:
-  case AArch64::CMPHI_WIDE_PPzZZ_S:
-  case AArch64::CMPLE_WIDE_PPzZZ_B:
-  case AArch64::CMPLE_WIDE_PPzZZ_H:
-  case AArch64::CMPLE_WIDE_PPzZZ_S:
-  case AArch64::CMPLS_WIDE_PPzZZ_B:
-  case AArch64::CMPLS_WIDE_PPzZZ_H:
-  case AArch64::CMPLS_WIDE_PPzZZ_S:
-  case AArch64::CMPLT_WIDE_PPzZZ_B:
-  case AArch64::CMPLT_WIDE_PPzZZ_H:
-  case AArch64::CMPLT_WIDE_PPzZZ_S:
-  case AArch64::CMPLO_WIDE_PPzZZ_B:
-  case AArch64::CMPLO_WIDE_PPzZZ_H:
-  case AArch64::CMPLO_WIDE_PPzZZ_S:
-    return true;
-  }
-}
-
-static bool HandleMatchCmpPredicateHint(Register VirtReg,
-                                        ArrayRef<MCPhysReg> Order,
-                                        SmallVectorImpl<MCPhysReg> &Hints,
-                                        const VirtRegMap *VRM,
-                                        const MachineRegisterInfo &MRI,
-                                        const AArch64Subtarget &ST,
-                                        const LiveRegMatrix *Matrix) {
+static bool HandleMatchCmpPredicateHint(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const VirtRegMap *VRM,
+    const MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
+    const AArch64Subtarget &ST, const LiveRegMatrix *Matrix) {
   const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
-  if (!ST.useDistinctDstRegCmpMatch() ||
+  if (!ST.useDistinctPredicateDstReg() ||
       !AArch64::PPRRegClass.hasSubClassEq(RegRC) || !MRI.hasOneDef(VirtReg) ||
       Order.size() < 2)
     return false;
 
   const MachineInstr *DefInst = MRI.getOneDef(VirtReg)->getParent();
-  if (!requiresMatchCmpRegallocHint(DefInst->getOpcode()))
+  if ((TII.get(DefInst->getOpcode()).TSFlags &
+       AArch64::DestructiveInstTypeMask) != AArch64::DestructivePredicate)
     return false;
 
   Register Op1Reg = DefInst->getOperand(1).getReg();
@@ -1357,7 +1248,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       return ConsiderOnlyHints;
   }
 
-  if (HandleMatchCmpPredicateHint(VirtReg, Order, Hints, VRM, MRI, ST, Matrix))
+  if (HandleMatchCmpPredicateHint(VirtReg, Order, Hints, VRM, MRI, *TII, ST,
+                                  Matrix))
     return ConsiderOnlyHints;
 
   if (!ST.hasSME() || !ST.isStreaming())

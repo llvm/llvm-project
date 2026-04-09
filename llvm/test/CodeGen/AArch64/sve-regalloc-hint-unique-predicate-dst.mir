@@ -3,8 +3,8 @@
 --- |
   target triple = "aarch64"
 
-  define aarch64_sve_vector_pcs void @regalloc_hint_cmp_match_dont_introduce_csr_spill() #0 { unreachable }
-  define aarch64_sve_vector_pcs void @regalloc_hint_cmp_match_reuse_p4() #0 { unreachable }
+  define aarch64_sve_vector_pcs void @regalloc_hint_cmp_dont_introduce_csr_spill() #0 { unreachable }
+  define aarch64_sve_vector_pcs void @regalloc_hint_cmp_reuse_p4() #0 { unreachable }
 
   attributes #0 = { "target-features"="+sve" }
 ...
@@ -12,13 +12,13 @@
 # When suggesting a regalloc hint to choose a distinct destination register for %0,
 # avoid using a callee-save register as that will require a spill/fill.
 ---
-name:            regalloc_hint_cmp_match_dont_introduce_csr_spill
+name:            regalloc_hint_cmp_dont_introduce_csr_spill
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $z0, $z1, $p0, $p1, $p2, $p3
 
-    ; CHECK-LABEL: name: regalloc_hint_cmp_match_dont_introduce_csr_spill
+    ; CHECK-LABEL: name: regalloc_hint_cmp_dont_introduce_csr_spill
     ; CHECK: liveins: $p0, $p1, $p2, $p3, $x0, $z0, $z1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $p0 = CMPEQ_PPzZZ_B $p0, $z0, $z1, implicit-def dead $nzcv
@@ -38,13 +38,13 @@ body:             |
 # For this test, the register allocator can safely reuse $p4 because it was already clobbered
 # for other purposes.
 ---
-name:            regalloc_hint_cmp_match_reuse_p4
+name:            regalloc_hint_cmp_reuse_p4
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $z0, $z1, $p0, $p1, $p2, $p3
 
-    ; CHECK-LABEL: name: regalloc_hint_cmp_match_reuse_p4
+    ; CHECK-LABEL: name: regalloc_hint_cmp_reuse_p4
     ; CHECK: liveins: $p0, $p1, $p2, $p3, $x0, $z0, $z1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $p4 = IMPLICIT_DEF

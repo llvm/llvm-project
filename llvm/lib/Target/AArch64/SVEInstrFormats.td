@@ -2023,6 +2023,7 @@ class sve_int_pred_log<bits<4> opc, string asm>
 
   let Defs = !if(!eq (opc{2}, 1), [NZCV], []);
   let hasSideEffects = 0;
+  let DestructiveInstType = !if(!ne(opc, 0b0011), DestructivePredicate, NotDestructive);
 }
 
 multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op,
@@ -5749,6 +5750,7 @@ class sve_int_cmp<bit cmp_1, bits<2> sz8_64, bits<3> opc, string asm,
   let ElementSize = pprty.ElementSize;
   let hasSideEffects = 0;
   let isPTestLike = 1;
+  let DestructiveInstType = DestructivePredicate;
 }
 
 multiclass SVE_SETCC_Pat<CondCode cc, CondCode invcc, ValueType predvt,
@@ -5839,6 +5841,7 @@ class sve_int_scmp_vi<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty,
   let ElementSize = pprty.ElementSize;
   let hasSideEffects = 0;
   let isPTestLike = 1;
+  let DestructiveInstType = DestructivePredicate;
 }
 
 multiclass SVE_SETCC_Imm_Pat<CondCode cc, CondCode commuted_cc,
@@ -5913,6 +5916,7 @@ class sve_int_ucmp_vi<bits<2> sz8_64, bits<2> opc, string asm, PPRRegOp pprty,
   let ElementSize = pprty.ElementSize;
   let hasSideEffects = 0;
   let isPTestLike = 1;
+  let DestructiveInstType = DestructivePredicate;
 }
 
 multiclass sve_int_ucmp_vi<bits<2> opc, string asm, CondCode cc,
@@ -9201,6 +9205,7 @@ class sve_int_brkp<bits<2> opc, string asm>
 
   let Defs = !if(!eq (opc{1}, 1), [NZCV], []);
   let hasSideEffects = 0;
+  let DestructiveInstType = DestructivePredicate;
 }
 
 multiclass sve_int_brkp<bits<2> opc, string asm, SDPatternOperator op> {
@@ -9235,6 +9240,7 @@ class sve_int_brkn<bit S, string asm>
   let Defs = !if(S, [NZCV], []);
   let ElementSize = ElementSizeB;
   let hasSideEffects = 0;
+  let DestructiveInstType = DestructivePredicate;
 }
 
 multiclass sve_int_brkn<bits<1> opc, string asm, SDPatternOperator op> {
@@ -9263,6 +9269,7 @@ class sve_int_break<bits<3> opc, string asm, string suffix, dag iops>
   let Constraints = !if(!eq (opc{0}, 1), "$Pd = $_Pd", "");
   let Defs = !if(!eq (opc{1}, 1), [NZCV], []);
   let hasSideEffects = 0;
+  let DestructiveInstType = DestructivePredicate;
 }
 
 multiclass sve_int_break_m<bits<3> opc, string asm, SDPatternOperator op> {
@@ -9305,6 +9312,7 @@ class sve2_char_match<bit sz, bit opc, string asm,
   let ElementSize = pprty.ElementSize;
   let hasSideEffects = 0;
   let isPTestLike = 1;
+  let DestructiveInstType = DestructivePredicate;
 }
 
 multiclass sve2_char_match<bit opc, string asm, SDPatternOperator op> {

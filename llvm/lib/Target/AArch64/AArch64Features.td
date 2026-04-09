@@ -911,15 +911,17 @@ def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
                                                "HasDisableFastIncVL", "true",
                                                "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
 
-// For some cores it is preferable to choose a destination register that does
-// not match the governing predicate for the CMP<> and MATCH instructions. When
-// enabled the register allocator tries to use a distinct register. While the
-// algorithm tries to avoid introducing callee-save spill/fills and therefore
-// shouldn't have any adverse affects on cores where using distinct registers
-// is not necessarily preferable, we still provide a way to turn the feature off.
-def FeatureDisableDistinctDstRegCmpMatch : SubtargetFeature<
-    "disable-distinct-dst-reg-cmp-match", "UseDistinctDstRegCmpMatch",
-    "false", "Use distinct destination register for CMP/MATCH instructions">;
+// For some cores it is preferable to choose a destination predicate register
+// that does not match the governing predicate, for example integer compares
+// and logical predicate instructions.
+// While the algorithm avoids introducing callee-save spill/fills and therefore
+// shouldn't have any adverse affects on cores where using distinct registers is
+// not necessarily preferable, we still provide a way to turn the feature off.
+def FeatureDisableDistinctPredicateDstReg : SubtargetFeature<
+    "disable-distinct-predicate-dst-reg", "UseDistinctPredicateDstReg",
+    "false",
+    "Disabling selecting a distinct predicate register for the destination "
+    "operand of instructions that take a governing predicate">;
 
 // On most processors we want to avoid moving from WZR to vector registers
 // (relying on materializing 0 to a FPR and moving from there instead),
