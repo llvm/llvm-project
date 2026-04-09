@@ -86,7 +86,7 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static bool isContainerConst(const Expr* ContainerExpr) {
+static bool isContainerConst(const Expr *ContainerExpr) {
   QualType ContainerType = ContainerExpr->getType();
   if (ContainerType->isPointerType())
     ContainerType = ContainerType->getPointeeType();
@@ -118,7 +118,7 @@ static bool shouldUseCStr(const MatchFinder::MatchResult &Result) {
     if (isConstPointer(Cast->getType()))
       return true;
   } else if (const auto *RetStmt = Parents[0].get<ReturnStmt>()) {
-    const Expr* RetValue = RetStmt->getRetValue();
+    const Expr *RetValue = RetStmt->getRetValue();
     if (isConstPointer(RetValue->getType()))
       return true;
   }
@@ -140,7 +140,7 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else if (ACE)
     CE = ACE;
 
-  bool UseCStr = shouldUseCStr(Result);
+  const auto UseCStr = shouldUseCStr(Result);
 
   const SourceRange SrcRange = CE->getSourceRange();
 
