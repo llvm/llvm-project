@@ -3,7 +3,8 @@ add_target_library(omptarget.rtl.cuda CUDA)
 
 target_sources(omptarget.rtl.cuda PRIVATE src/rtl.cpp)
 
-find_package(CUDAToolkit QUIET)
+find_package(CUDAToolkit QUIET ${OFFLOAD_MINIMUM_CUDA_VERSION})
+
 if(CUDAToolkit_FOUND AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building CUDA plugin linked against libcuda")
   target_link_libraries(omptarget.rtl.cuda PRIVATE CUDA::cuda_driver)

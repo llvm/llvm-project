@@ -1594,6 +1594,22 @@ struct CUDAPluginTy final : public GenericPluginTy {
     if (auto Err = Plugin::check(Res, "error in cuInit: %s"))
       return std::move(Err);
 
+    // Get the latest CUDA version supported by the driver.
+    int Version;
+    Res = cuDriverGetVersion(&Version);
+    if (auto Err = Plugin::check(Res, "error in cuDriverGetVersion: %s"))
+      return std::move(Err);
+
+    // Verify that the driver supports the minimum CUDA version required.
+    constexpr int MinVersion = 11080;
+    if (Version < MinVersion) {
+      ODBG(OLDT_Init) << "Minimum CUDA version not supported by the driver.";
+      return Plugin::error(
+          ErrorCode::UNSUPPORTED,
+          "CUDA driver does not support minimum CUDA version %d (%d detected)",
+          MinVersion, Version);
+    }
+
     // Get the number of devices.
     int NumDevices;
     Res = cuDeviceGetCount(&NumDevices);

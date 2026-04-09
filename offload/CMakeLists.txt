@@ -4,6 +4,9 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "liboffload")
 
+# The minimum versions required for dependencies.
+set(OFFLOAD_MINIMUM_CUDA_VERSION 11.8.0)
+
 # Check that the library can actually be built.
 if(APPLE OR WIN32 OR WASM)
   message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
