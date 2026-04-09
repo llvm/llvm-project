@@ -1706,8 +1706,6 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
   bool ZeroAsNull = !STI.isShader();
 
   MachineIRBuilder MIRBuilder(I);
-  bool IsSigned = GR.isScalarOrVectorSigned(ResType);
-
   SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
   SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
       I32Type, 2 * ComponentCount, MIRBuilder, false);
@@ -1723,12 +1721,16 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
   bool IsScalarRes = ResType->getOpcode() != SPIRV::OpTypeVector;
 
   Register HighReg, LowReg;
+  SPIRVTypeInst PartsType;
+
   Register ConstIntZero =
       GR.getOrCreateConstInt(0, I, I32Type, TII, ZeroAsNull);
   Register ConstIntOne = GR.getOrCreateConstInt(1, I, I32Type, TII, ZeroAsNull);
+
   if (IsScalarRes) {
-    HighReg = MRI->createVirtualRegister(GR.getRegClass(I32Type));
-    LowReg = MRI->createVirtualRegister(GR.getRegClass(I32Type));
+    PartsType = I32Type;
+    HighReg = MRI->createVirtualRegister(GR.getRegClass(PartsType));
+    LowReg = MRI->createVirtualRegister(GR.getRegClass(PartsType));
 
     if (!selectOpWithSrcs(HighReg, I32Type, I, {PopCountReg, ConstIntOne},
                           SPIRV::OpVectorExtractDynamic))
@@ -1737,16 +1739,16 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
                           SPIRV::OpVectorExtractDynamic))
       return false;
   } else {
-    SPIRVTypeInst HalfVecI32Type = GR.getOrCreateSPIRVVectorType(
-        I32Type, ComponentCount, MIRBuilder, false);
+    PartsType = GR.getOrCreateSPIRVVectorType(I32Type, ComponentCount,
+                                              MIRBuilder, false);
 
-    HighReg = MRI->createVirtualRegister(GR.getRegClass(HalfVecI32Type));
-    LowReg = MRI->createVirtualRegister(GR.getRegClass(HalfVecI32Type));
+    HighReg = MRI->createVirtualRegister(GR.getRegClass(PartsType));
+    LowReg = MRI->createVirtualRegister(GR.getRegClass(PartsType));
 
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpVectorShuffle))
                    .addDef(HighReg)
-                   .addUse(GR.getSPIRVTypeID(HalfVecI32Type))
+                   .addUse(GR.getSPIRVTypeID(PartsType))
                    .addUse(PopCountReg)
                    .addUse(PopCountReg);
     for (unsigned J = 1; J < ComponentCount * 2; J += 2)
@@ -1756,7 +1758,7 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
     MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                   TII.get(SPIRV::OpVectorShuffle))
               .addDef(LowReg)
-              .addUse(GR.getSPIRVTypeID(HalfVecI32Type))
+              .addUse(GR.getSPIRVTypeID(PartsType))
               .addUse(PopCountReg)
               .addUse(PopCountReg);
     for (unsigned J = 0; J < ComponentCount * 2; J += 2)
@@ -1765,7 +1767,13 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
   }
 
   unsigned OpAdd = IsScalarRes ? SPIRV::OpIAddS : SPIRV::OpIAddV;
-  return selectOpWithSrcs(ResVReg, ResType, I, {HighReg, LowReg}, OpAdd);
+  Register AddReg = MRI->createVirtualRegister(GR.getRegClass(PartsType));
+  if (!selectOpWithSrcs(AddReg, PartsType, I, {HighReg, LowReg}, OpAdd))
+    return false;
+
+  bool IsSigned = GR.isScalarOrVectorSigned(PartsType);
+  return selectOpWithSrcs(ResVReg, ResType, I, {AddReg},
+                          IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert);
 }
 
 bool SPIRVInstructionSelector::selectPopCount(Register ResVReg,
