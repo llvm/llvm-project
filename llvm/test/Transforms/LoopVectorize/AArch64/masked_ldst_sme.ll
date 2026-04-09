@@ -118,18 +118,18 @@ bb:
   %icmp = icmp sgt i32 %arg, 0
   br i1 %icmp, label %bb7, label %bb25
 
-bb7:                                              ; preds = %bb
+bb7:
   %zext = zext nneg i32 %arg to i64
   br label %bb8
 
-bb8:                                              ; preds = %bb21, %bb7
+bb8:
   %phi = phi i64 [ 0, %bb7 ], [ %add22, %bb21 ]
   %getelementptr = getelementptr inbounds nuw i8, ptr %arg5, i64 %phi
   %load = load i8, ptr %getelementptr, align 1
   %icmp9 = icmp ult i8 %load, %arg6
   br i1 %icmp9, label %bb21, label %bb10
 
-bb10:                                             ; preds = %bb8
+bb10:
   %getelementptr11 = getelementptr inbounds nuw i8, ptr %arg1, i64 %phi
   %load12 = load i8, ptr %getelementptr11, align 1
   %getelementptr13 = getelementptr inbounds nuw i8, ptr %arg3, i64 %phi
@@ -146,15 +146,15 @@ bb10:                                             ; preds = %bb8
   store i8 %add20, ptr %getelementptr17, align 1
   br label %bb21
 
-bb21:                                             ; preds = %bb10, %bb8
+bb21:
   %add22 = add nuw nsw i64 %phi, 1
   %icmp23 = icmp eq i64 %add22, %zext
   br i1 %icmp23, label %bb24, label %bb8, !llvm.loop !0
 
-bb24:                                             ; preds = %bb21
+bb24:
   br label %bb25
 
-bb25:                                             ; preds = %bb24, %bb
+bb25:
   ret void
 }
 

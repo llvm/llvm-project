@@ -10,7 +10,7 @@ define void @exp_f32(ptr nocapture %varray) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to float
@@ -21,7 +21,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -37,7 +37,7 @@ define void @exp_f64(ptr nocapture %varray) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to double
@@ -48,7 +48,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !11
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -64,7 +64,7 @@ define void @log_f32(ptr nocapture %varray) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to float
@@ -75,7 +75,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !21
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -91,7 +91,7 @@ define void @log_f64(ptr nocapture %varray) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to double
@@ -102,7 +102,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !31
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -118,7 +118,7 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to float
@@ -131,7 +131,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !41
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -147,7 +147,7 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to double
@@ -160,7 +160,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !51
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

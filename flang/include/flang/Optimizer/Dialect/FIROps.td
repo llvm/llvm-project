@@ -2845,6 +2845,77 @@ def fir_DivcOp : ComplexArithmeticOp<"divc",
     [DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
 // Pow is a builtin call and not a primitive
 
+// Logical operations
+
+class LogicalBinaryOp<string mnemonic, list<Trait> traits = []> :
+      fir_ArithmeticOp<mnemonic, !listconcat(traits, [Pure])>,
+      Arguments<(ins AnyLogicalOrIntegerLike:$lhs,
+                     AnyLogicalOrIntegerLike:$rhs)>;
+
+def fir_LogicalAndOp : LogicalBinaryOp<"logical_and", [Commutative]> {
+  let summary = "logical AND";
+
+  let description = [{
+    Logical AND of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.logical_and %a, %b : !fir.logical<4>
+      %s = fir.logical_and %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_LogicalOrOp : LogicalBinaryOp<"logical_or", [Commutative]> {
+  let summary = "logical OR";
+
+  let description = [{
+    Logical OR of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.logical_or %a, %b : !fir.logical<4>
+      %s = fir.logical_or %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_EqvOp : LogicalBinaryOp<"eqv", [Commutative]> {
+  let summary = "logical equivalence";
+
+  let description = [{
+    Logical equivalence (EQV) of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.eqv %a, %b : !fir.logical<4>
+      %s = fir.eqv %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_NeqvOp : LogicalBinaryOp<"neqv", [Commutative]> {
+  let summary = "logical non-equivalence";
+
+  let description = [{
+    Logical non-equivalence (NEQV / XOR) of two values of fir.logical or
+    integer type. Both operands and the result must have the same type.
+
+    ```
+      %r = fir.neqv %a, %b : !fir.logical<4>
+      %s = fir.neqv %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
 def fir_CmpcOp : fir_Op<"cmpc",
     [NoMemoryEffect, SameTypeOperands, SameOperandsAndResultShape,
     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {

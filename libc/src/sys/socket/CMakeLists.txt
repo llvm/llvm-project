@@ -24,6 +24,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  listen
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.listen
+)
+
+add_entrypoint_object(
   socketpair
   ALIAS
   DEPENDS
