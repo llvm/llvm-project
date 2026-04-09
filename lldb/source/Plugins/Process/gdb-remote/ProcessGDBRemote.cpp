@@ -6392,3 +6392,195 @@ void ProcessGDBRemote::DidExec() {
   }
   Process::DidExec();
 }
+
+llvm::Error ProcessGDBRemote::UpdateBreakpointSitesNotBatched(
+    const std::map<lldb::BreakpointSiteSP, Process::BreakpointAction>
+        &site_to_action) {
+  llvm::Error joined = llvm::Error::success();
+  for (auto &[site, action] : site_to_action) {
+    llvm::Error error = action == Process::BreakpointAction::Enable
+                            ? DoEnableBreakpointSite(*site)
+                            : DoDisableBreakpointSite(*site);
+    joined = llvm::joinErrors(std::move(joined), std::move(error));
+  }
+  return joined;
+}
+
+static llvm::Expected<StringExtractorGDBRemote>
+SendMultiBreakpointPacket(GDBRemoteCommunicationClient &gdb_comm,
+                          llvm::StringRef packet_str,
+                          std::chrono::seconds interrupt_timeout) {
+  StringExtractorGDBRemote response;
+  GDBRemoteCommunication::PacketResult packet_result =
+      gdb_comm.SendPacketAndWaitForResponse(packet_str, response,
+                                            interrupt_timeout);
+  if (packet_result != GDBRemoteCommunication::PacketResult::Success)
+    return llvm::createStringErrorV(
+        "MultiBreakpoint failed to send packet: '{0}'", packet_str);
+
+  if (response.IsUnsupportedResponse())
+    return llvm::createStringErrorV(
+        "MultiBreakpoint unsupported response: '{0}'", response.GetStringRef());
+
+  return response;
+}
+
+/// Parse a MultiBreakpoint response into per-request results.
+/// Returns a vector of results: std::nullopt means OK, a uint8_t value is the
+/// error code from an Exx response.
+static llvm::SmallVector<std::optional<uint8_t>>
+ParseMultiBreakpointResponse(llvm::StringRef response_str) {
+  llvm::SmallVector<std::optional<uint8_t>> results;
+
+  StructuredData::ObjectSP parsed = StructuredData::ParseJSON(response_str);
+  StructuredData::Dictionary *dict =
+      parsed ? parsed->GetAsDictionary() : nullptr;
+  StructuredData::Array *array = nullptr;
+  if (dict)
+    dict->GetValueForKeyAsArray("results", array);
+  if (!array)
+    return results;
+
+  array->ForEach([&results](StructuredData::Object *object) -> bool {
+    llvm::StringRef token;
+    if (auto *string = object->GetAsString())
+      token = string->GetValue();
+    if (token == "OK") {
+      results.push_back(std::nullopt);
+      return true;
+    }
+    if (token.size() != 3 || !token.starts_with("E")) {
+      results.push_back(uint8_t(0xff));
+      return true;
+    }
+    uint8_t error_code = 0;
+    if (token.drop_front(1).getAsInteger(16, error_code))
+      results.push_back(0xff);
+    else
+      results.push_back(error_code);
+    return true;
+  });
+  return results;
+}
+
+/// Determine the GDB stoppoint type for a breakpoint site by checking which
+/// packet types the remote supports (for insertions), or by checking the site
+/// type (for deletions).
+static std::optional<GDBStoppointType>
+GetStoppointType(BreakpointSite &site, bool insert,
+                 GDBRemoteCommunicationClient &gdb_comm) {
+  if (insert) {
+    if (!site.HardwareRequired() &&
+        gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
+      return eBreakpointSoftware;
+    if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware))
+      return eBreakpointHardware;
+    return std::nullopt;
+  }
+
+  switch (site.GetType()) {
+  case BreakpointSite::eExternal:
+    return eBreakpointSoftware;
+  case BreakpointSite::eHardware:
+    return eBreakpointHardware;
+  case BreakpointSite::eSoftware:
+    return std::nullopt;
+  }
+  llvm_unreachable("unhandled BreakpointSite type");
+}
+
+namespace {
+struct BreakpointPacketInfo {
+  BreakpointSite &site;
+  size_t trap_opcode_size;
+  GDBStoppointType type;
+  bool is_enable;
+};
+
+std::string to_string(const BreakpointPacketInfo &info) {
+  char packet = info.is_enable ? 'Z' : 'z';
+  return llvm::formatv("{0}{1},{2:x-},{3:x-}", packet,
+                       static_cast<int>(info.type), info.site.GetLoadAddress(),
+                       info.trap_opcode_size)
+      .str();
+}
+} // namespace
+
+llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
+    const std::map<lldb::BreakpointSiteSP, BreakpointAction> &site_to_action) {
+  if (site_to_action.empty())
+    return llvm::Error::success();
+  if (!m_gdb_comm.GetMultiBreakpointSupported())
+    return UpdateBreakpointSitesNotBatched(site_to_action);
+
+  Log *log = GetLog(GDBRLog::Breakpoints);
+
+  std::vector<BreakpointPacketInfo> breakpoint_infos;
+
+  for (auto [site, action] : site_to_action) {
+    addr_t addr = site->GetLoadAddress();
+    size_t trap_opcode_size = GetSoftwareBreakpointTrapOpcode(site.get());
+    std::optional<GDBStoppointType> type =
+        GetStoppointType(*site, action == BreakpointAction::Enable, m_gdb_comm);
+    if (!type) {
+      LLDB_LOG(log, "MultiBreakpoint: site {0} at {1:x} can't be batched",
+               site->GetID(), addr);
+      return UpdateBreakpointSitesNotBatched(site_to_action);
+    }
+    breakpoint_infos.push_back(
+        {*site, trap_opcode_size, *type, action == BreakpointAction::Enable});
+  }
+
+  StreamString stream;
+  stream << "jMultiBreakpoint:";
+
+  auto args_array = std::make_shared<StructuredData::Array>();
+  for (auto &bp_info : breakpoint_infos)
+    args_array->AddStringItem(to_string(bp_info));
+
+  StructuredData::Dictionary packet_dict;
+  packet_dict.AddItem("breakpoint_requests", args_array);
+  packet_dict.Dump(stream, false);
+
+  StreamGDBRemote escaped_stream;
+  escaped_stream.PutEscapedBytes(stream.GetString());
+  llvm::Expected<StringExtractorGDBRemote> response = SendMultiBreakpointPacket(
+      m_gdb_comm, escaped_stream.GetString(), GetInterruptTimeout());
+
+  if (!response) {
+    LLDB_LOG_ERROR(log, response.takeError(), "jMultiBreakpoint failed: {0}");
+    return UpdateBreakpointSitesNotBatched(site_to_action);
+  }
+
+  llvm::SmallVector<std::optional<uint8_t>> results =
+      ParseMultiBreakpointResponse(response->GetStringRef());
+
+  // This is a protocol violation, do nothing.
+  if (results.size() != site_to_action.size())
+    return llvm::createStringErrorV(
+        "MultiBreakpoint response count mismatch (expected {0}, got {1})",
+        site_to_action.size(), results.size());
+
+  // Process results: mark successful sites as enabled/disabled, retry failed
+  // sites individually.
+  llvm::Error joined = llvm::Error::success();
+  for (auto [error_code, bp_info] : llvm::zip(results, breakpoint_infos)) {
+    BreakpointSite &site = bp_info.site;
+    if (error_code == std::nullopt) {
+      SetBreakpointSiteEnabled(site, bp_info.is_enable);
+      if (bp_info.is_enable)
+        site.SetType(bp_info.type == eBreakpointHardware
+                         ? BreakpointSite::eHardware
+                         : BreakpointSite::eExternal);
+      continue;
+    }
+    LLDB_LOG(log,
+             "MultiBreakpoint: site {0} at {1:x} failed (E{2:X-2}), retrying",
+             site.GetID(), site.GetLoadAddress(), *error_code);
+    llvm::Error error = bp_info.is_enable ? DoEnableBreakpointSite(site)
+                                          : DoDisableBreakpointSite(site);
+    joined = llvm::joinErrors(std::move(joined), std::move(error));
+  }
+
+  return joined;
+}
