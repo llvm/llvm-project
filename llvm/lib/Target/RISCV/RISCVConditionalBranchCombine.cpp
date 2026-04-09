@@ -423,7 +423,6 @@ bool RISCVConditionalBranchCombine::runOnMachineFunction(MachineFunction &MF) {
     if (isSafeToCombine(*Br1, *Br2)) {
       combineTwoBranches(&*Br1, &*Br2);
       Changed = true;
-      errs() << "[成功合并!]\n";
     }
   }
 
