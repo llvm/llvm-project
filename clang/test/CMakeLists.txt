@@ -207,6 +207,12 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
   endif()
 endif()
 
+if(CLANG_PLUGIN_SUPPORT AND LLVM_ENABLE_PLUGINS)
+  list(APPEND CLANG_TEST_DEPS
+    SSAFExamplePlugin
+    )
+endif()
+
 if (HAVE_CLANG_REPL_SUPPORT)
   list(APPEND CLANG_TEST_DEPS
     clang-repl

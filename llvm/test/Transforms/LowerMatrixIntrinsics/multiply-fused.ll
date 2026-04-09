@@ -11,15 +11,17 @@ target triple = "aarch64-apple-ios"
 define void @multiply(ptr %A, ptr %B, ptr %C) !prof !0 {
 ; CHECK-LABEL: @multiply(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP6:%.*]] = alloca [16 x double], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [16 x double], align 8
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 128
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       alias_cont:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]], !prof [[PROF1]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [16 x double], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(128) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(128) [[A]], i64 128, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -28,11 +30,11 @@ define void @multiply(ptr %A, ptr %B, ptr %C) !prof !0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END4]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[ALIAS_CONT1:%.*]], label [[NO_ALIAS3:%.*]], !prof [[PROF1]]
 ; CHECK:       alias_cont1:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP6]])
 ; CHECK-NEXT:    [[LOAD_END5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 128
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]], !prof [[PROF1]]
 ; CHECK:       copy2:
-; CHECK-NEXT:    [[TMP6:%.*]] = alloca [16 x double], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(128) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(128) [[B]], i64 128, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
@@ -176,6 +178,8 @@ define void @multiply(ptr %A, ptr %B, ptr %C) !prof !0 {
 ; CHECK-NEXT:    store <2 x double> [[TMP51]], ptr [[TMP54]], align 8
 ; CHECK-NEXT:    [[VEC_GEP158:%.*]] = getelementptr i8, ptr [[C]], i64 112
 ; CHECK-NEXT:    store <2 x double> [[TMP53]], ptr [[VEC_GEP158]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP2]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP6]])
 ; CHECK-NEXT:    ret void
 ;
 

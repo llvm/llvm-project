@@ -7485,7 +7485,8 @@ static void printFailMsgforFold(const MachineInstr &MI, unsigned Idx) {
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
-    unsigned Size, Align Alignment, bool AllowCommute) const {
+    unsigned Size, Align Alignment, bool AllowCommute,
+    LiveIntervals *LIS) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
   unsigned Opc = MI.getOpcode();
 
@@ -7592,18 +7593,27 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
     }
 
-    if (NoNDDM) {
+    if (NoNDDM && !IsTwoAddr) {
       Register SrcReg = MI.getOperand(1).getReg();
       if (MI.killsRegister(SrcReg, /*TRI=*/nullptr))
         return NewMI;
 
       const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
       Register NewSrc = MF.getRegInfo().createVirtualRegister(&RC);
-      BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
-              get(TargetOpcode::COPY))
-          .addReg(NewSrc, RegState::Define)
-          .addReg(SrcReg);
+      MachineInstr *Copy = BuildMI(*NewMI->getParent(), *NewMI,
+                                   MI.getDebugLoc(), get(TargetOpcode::COPY))
+                               .addReg(NewSrc, RegState::Define)
+                               .addReg(SrcReg);
       NewMI->getOperand(1).setReg(NewSrc);
+
+      if (LIS) {
+        SlotIndex CopyIdx = LIS->InsertMachineInstrInMaps(*Copy);
+        SlotIndex Idx = LIS->getInstructionIndex(MI);
+        LiveInterval &LI = LIS->getInterval(SrcReg);
+        LiveRange::Segment *S = LI.getSegmentContaining(Idx);
+        if (S->end.getBaseIndex() == Idx)
+          S->end = CopyIdx.getRegSlot();
+      }
     }
     return NewMI;
   }
@@ -7618,7 +7628,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     }
     // Attempt to fold with the commuted version of the instruction.
     NewMI = foldMemoryOperandImpl(MF, MI, CommuteOpIdx2, MOs, InsertPt, Size,
-                                  Alignment, /*AllowCommute=*/false);
+                                  Alignment, /*AllowCommute=*/false, LIS);
     if (NewMI)
       return NewMI;
     // Folding failed again - undo the commute before returning.
@@ -7667,7 +7677,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   auto Impl = [&]() {
     return foldMemoryOperandImpl(MF, MI, Ops[0],
                                  MachineOperand::CreateFI(FrameIndex), InsertPt,
-                                 Size, Alignment, /*AllowCommute=*/true);
+                                 Size, Alignment, /*AllowCommute=*/true, LIS);
   };
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     unsigned NewOpc = 0;
@@ -8444,7 +8454,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   }
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
-                               /*Size=*/0, Alignment, /*AllowCommute=*/true);
+                               /*Size=*/0, Alignment, /*AllowCommute=*/true,
+                               LIS);
 }
 
 MachineInstr *

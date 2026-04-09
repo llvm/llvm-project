@@ -2843,8 +2843,10 @@ public:
     Instruction *OldUserI = cast<Instruction>(OldUse->getUser());
     IRB.SetInsertPoint(OldUserI);
     IRB.SetCurrentDebugLocation(OldUserI->getDebugLoc());
-    IRB.getInserter().SetNamePrefix(Twine(NewAI.getName()) + "." +
-                                    Twine(BeginOffset) + ".");
+    // Avoid materializing the name prefix when it is discarded anyway.
+    if (!IRB.getContext().shouldDiscardValueNames())
+      IRB.getInserter().SetNamePrefix(Twine(NewAI.getName()) + "." +
+                                      Twine(BeginOffset) + ".");
 
     CanSROA &= visit(cast<Instruction>(OldUse->getUser()));
     if (VecTy || IntTy)
