@@ -102,12 +102,12 @@ namespace Intrinsic {
   /// \p M. If it does not exist, add a declaration and return it. Otherwise,
   /// return the existing declaration.
   ///
-  /// The \p Tys parameter is for intrinsics with overloaded types (e.g., those
-  /// using iAny, fAny, vAny, or pAny).  For a declaration of an overloaded
-  /// intrinsic, Tys must provide exactly one type for each overloaded type in
-  /// the intrinsic.
+  /// The \p OverloadTys parameter is for intrinsics with overloaded types
+  // (e.g., those using iAny, fAny, vAny, or pAny).  For a declaration of an
+  // overloaded intrinsic, OverloadTys must provide exactly one type for each
+  // overloaded type in the intrinsic.
   LLVM_ABI Function *getOrInsertDeclaration(Module *M, ID id,
-                                            ArrayRef<Type *> Tys = {});
+                                            ArrayRef<Type *> OverloadTys = {});
 
   /// Look up the Function declaration of the intrinsic \p IID in the Module
   /// \p M. If it does not exist, add a declaration and return it. Otherwise,
@@ -131,7 +131,7 @@ namespace Intrinsic {
 
   /// This version supports overloaded intrinsics.
   LLVM_ABI Function *getDeclarationIfExists(Module *M, ID id,
-                                            ArrayRef<Type *> Tys,
+                                            ArrayRef<Type *> OverloadTys,
                                             FunctionType *FT = nullptr);
 
   /// Map a Clang builtin name to an intrinsic ID.
@@ -265,13 +265,13 @@ namespace Intrinsic {
 
   /// Match the specified function type with the type constraints specified by
   /// the .td file. If the given type is an overloaded type it is pushed to the
-  /// ArgTys vector.
+  /// OverloadTys vector.
   ///
   /// Returns false if the given type matches with the constraints, true
   /// otherwise.
   LLVM_ABI MatchIntrinsicTypesResult
   matchIntrinsicSignature(FunctionType *FTy, ArrayRef<IITDescriptor> &Infos,
-                          SmallVectorImpl<Type *> &ArgTys);
+                          SmallVectorImpl<Type *> &OverloadTys);
 
   /// Verify if the intrinsic has variable arguments. This method is intended to
   /// be called after all the fixed arguments have been matched first.
@@ -282,16 +282,16 @@ namespace Intrinsic {
 
   /// Gets the type arguments of an intrinsic call by matching type contraints
   /// specified by the .td file. The overloaded types are pushed into the
-  /// AgTys vector.
+  /// OverloadTys vector.
   ///
   /// Returns false if the given ID and function type combination is not a
   /// valid intrinsic call.
   LLVM_ABI bool getIntrinsicSignature(Intrinsic::ID, FunctionType *FT,
-                                      SmallVectorImpl<Type *> &ArgTys);
+                                      SmallVectorImpl<Type *> &OverloadTys);
 
   /// Same as previous, but accepts a Function instead of ID and FunctionType.
   LLVM_ABI bool getIntrinsicSignature(Function *F,
-                                      SmallVectorImpl<Type *> &ArgTys);
+                                      SmallVectorImpl<Type *> &OverloadTys);
 
   // Checks if the intrinsic name matches with its signature and if not
   // returns the declaration with the same signature and remangled name.

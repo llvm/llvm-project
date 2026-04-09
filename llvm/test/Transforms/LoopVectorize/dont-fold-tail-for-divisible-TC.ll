@@ -230,4 +230,3 @@ exit:
   ret void
 }
 
-declare void @llvm.assume(i1 noundef) nofree nosync nounwind willreturn

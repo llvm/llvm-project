@@ -105,10 +105,10 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %loop.preheader, label %for.end
 
-loop.preheader:                               ; preds = %entry
+loop.preheader:
   br label %loop
 
-loop:                                         ; preds = %loop.preheader, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
   %x.06 = phi float [ %conv1, %loop ], [ 1.000000e+00, %loop.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %iv
@@ -119,10 +119,10 @@ loop:                                         ; preds = %loop.preheader, %loop
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %loop
 
-for.end.loopexit:                                 ; preds = %loop
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -163,10 +163,10 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %loop.preheader, label %for.end
 
-loop.preheader:                               ; preds = %entry
+loop.preheader:
   br label %loop
 
-loop:                                         ; preds = %loop.preheader, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
   %x.06 = phi float [ %conv1, %loop ], [ 1.000000e+00, %loop.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %iv
@@ -177,10 +177,10 @@ loop:                                         ; preds = %loop.preheader, %loop
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %loop
 
-for.end.loopexit:                                 ; preds = %loop
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 

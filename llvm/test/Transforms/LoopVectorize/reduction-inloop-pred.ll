@@ -69,7 +69,7 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l7, %.lr.ph ], [ 0, %entry ]
   %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -80,7 +80,7 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l7, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }
@@ -175,7 +175,7 @@ define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l9, %.lr.ph ], [ 0, %entry ]
   %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -191,7 +191,7 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l9, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }
@@ -265,7 +265,7 @@ define i32 @reduction_sum_const(ptr noalias nocapture %A) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l9, %.lr.ph ], [ 0, %entry ]
   %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -277,7 +277,7 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l9, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }
@@ -372,7 +372,7 @@ define i32 @reduction_prod(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %prod.02 = phi i32 [ %l9, %.lr.ph ], [ 1, %entry ]
   %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -388,7 +388,7 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %prod.0.lcssa = phi i32 [ %l9, %.lr.ph ]
   ret i32 %prod.0.lcssa
 }
@@ -481,7 +481,7 @@ define i32 @reduction_mix(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l9, %.lr.ph ], [ 0, %entry ]
   %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -497,7 +497,7 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l9, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }
@@ -587,7 +587,7 @@ define i32 @reduction_mul(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l7, %.lr.ph ], [ 19, %entry ]
   %l2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -601,7 +601,7 @@ entry:
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l7, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }
@@ -691,7 +691,7 @@ define i32 @reduction_and(ptr nocapture %A, ptr nocapture %B) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %and, %for.body ], [ -1, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -705,7 +705,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %result.0.lcssa = phi i32 [ %and, %for.body ]
   ret i32 %result.0.lcssa
 }
@@ -793,7 +793,7 @@ define i32 @reduction_or(ptr nocapture %A, ptr nocapture %B) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %or, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -807,7 +807,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %result.0.lcssa = phi i32 [ %or, %for.body ]
   ret i32 %result.0.lcssa
 }
@@ -895,7 +895,7 @@ define i32 @reduction_xor(ptr nocapture %A, ptr nocapture %B) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %xor, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -909,7 +909,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %result.0.lcssa = phi i32 [ %xor, %for.body ]
   ret i32 %result.0.lcssa
 }
@@ -997,7 +997,7 @@ define float @reduction_fadd(ptr nocapture %A, ptr nocapture %B) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi float [ %fadd, %for.body ], [ 0.0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -1011,7 +1011,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %result.0.lcssa = phi float [ %fadd, %for.body ]
   ret float %result.0.lcssa
 }
@@ -1101,7 +1101,7 @@ define float @reduction_fmul(ptr nocapture %A, ptr nocapture %B) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi float [ %fmul, %for.body ], [ 0.0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -1115,7 +1115,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %result.0.lcssa = phi float [ %fmul, %for.body ]
   ret float %result.0.lcssa
 }
@@ -1186,7 +1186,7 @@ define i32 @reduction_min(ptr nocapture %A, ptr nocapture %B) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %v0, %for.body ], [ 1000, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -1198,7 +1198,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %result.0.lcssa = phi i32 [ %v0, %for.body ]
   ret i32 %result.0.lcssa
 }
@@ -1269,7 +1269,7 @@ define i32 @reduction_max(ptr nocapture %A, ptr nocapture %B) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %v0, %for.body ], [ 1000, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -1281,7 +1281,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, 257
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %result.0.lcssa = phi i32 [ %v0, %for.body ]
   ret i32 %result.0.lcssa
 }
@@ -1436,7 +1436,7 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i32 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02p = phi i32 [ %l9, %.lr.ph ], [ 255, %entry ]
   %sum.02 = and i32 %sum.02p, 255
@@ -1448,7 +1448,7 @@ entry:
   %exitcond = icmp eq i32 %indvars.iv.next, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l9, %.lr.ph ]
   %ret = trunc i32 %sum.0.lcssa to i8
   ret i8 %ret
@@ -1527,7 +1527,7 @@ define i8 @reduction_and_trunc(ptr noalias nocapture %A) {
 entry:
   br label %.lr.ph
 
-.lr.ph:                                           ; preds = %entry, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i32 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02p = phi i32 [ %l9, %.lr.ph ], [ 255, %entry ]
   %sum.02 = and i32 %sum.02p, 255
@@ -1539,7 +1539,7 @@ entry:
   %exitcond = icmp eq i32 %indvars.iv.next, 257
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph
+._crit_edge:
   %sum.0.lcssa = phi i32 [ %l9, %.lr.ph ]
   %ret = trunc i32 %sum.0.lcssa to i8
   ret i8 %ret

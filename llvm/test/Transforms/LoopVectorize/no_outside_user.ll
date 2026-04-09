@@ -369,7 +369,7 @@ entry:
   %c1 = icmp sgt i32 %n, 0
   br i1 %c1, label %header, label %._crit_edge
 
-header:                                           ; preds = %0, %.lr.ph
+header:
   %indvars.iv = phi i64 [ %indvars.iv.next, %bb16 ], [ 0, %entry ]
   %sum.02 = phi i32 [ %c9, %bb16 ], [ 0, %entry ]
   %c2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -393,7 +393,7 @@ bb16:
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %header
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %c9, %bb16 ]
   %nonhdr.lcssa = phi i32 [ 1, %entry], [ %tmp17, %bb16 ]
   ret i32 %sum.0.lcssa
@@ -484,7 +484,7 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %latch ], [ 0, %entry ]
   %x.05 = phi i32 [ %tmp17, %latch ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -506,7 +506,7 @@ latch:
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %x.0.lcssa = phi i32 [ 0, %entry ], [ %tmp17 , %latch ]
   ret i32 %x.0.lcssa
 }
@@ -617,7 +617,7 @@ entry:
   %cmp7 = icmp sgt i32 %n, 0
   br i1 %cmp7, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %or, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -631,7 +631,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %result.0.lcssa = phi i32 [ 0, %entry ], [ %1, %for.body ]
   ret i32 %result.0.lcssa
 }
@@ -768,7 +768,7 @@ define i32 @non_uniform_live_out() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %i.09 = add i32 %i.08, 7
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.09
@@ -779,7 +779,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 20000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   %lcssa = phi i32 [%i.09, %for.body]
   %arrayidx.out = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %lcssa
   store i8 42, ptr %arrayidx.out, align 1

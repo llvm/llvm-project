@@ -23,7 +23,7 @@ entry:
   %tmp = alloca i32
   br label %loop
 
-loop:                                              ; preds = %bb2, %bb
+loop:
   %iv = phi i32 [ %iv.next, %loop], [ 0, %entry ]
   %idx.mul = mul nuw nsw i32 %iv, 7
   %idx.start = add nuw nsw i32 %idx.mul, 1
@@ -53,7 +53,7 @@ loop:                                              ; preds = %bb2, %bb
   %exit.cond = icmp eq i32 %iv.next, %N
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret void
 }
 
@@ -68,7 +68,7 @@ entry:
   %tmp = alloca i32
   br label %loop
 
-loop:                                              ; preds = %bb2, %bb
+loop:
   %iv = phi i32 [ %iv.next, %loop], [ 0, %entry ]
   %idx.start = mul nuw nsw i32 %iv, 5
   %tmp6 = getelementptr inbounds i32, ptr %arg, i32 %idx.start
@@ -88,7 +88,7 @@ loop:                                              ; preds = %bb2, %bb
   %exit.cond = icmp eq i32 %iv.next, 128
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret void
 }
 

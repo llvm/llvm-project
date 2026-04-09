@@ -22,7 +22,7 @@ define void @const_fold_ptradd(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -62,7 +62,7 @@ define void @const_fold_inbounds_ptradd(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -103,7 +103,7 @@ define void @const_fold_select(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -143,7 +143,7 @@ define void @const_fold_add_sub_mul_ashr_lshr(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -187,7 +187,7 @@ define void @const_fold_and_or_xor(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -229,7 +229,7 @@ define void @const_fold_cmp_zext(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -270,7 +270,7 @@ define void @const_fold_trunc(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
