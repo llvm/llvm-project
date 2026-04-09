@@ -24,7 +24,7 @@
 
 using namespace llvm;
 
-WinCFGuard::WinCFGuard(AsmPrinter *A) : Asm(A) {}
+WinCFGuard::WinCFGuard(AsmPrinter *A) : EHStreamer(A) {}
 
 WinCFGuard::~WinCFGuard() = default;
 
