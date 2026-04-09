@@ -213,6 +213,13 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
     }
   } else {
     lldb::addr_t pc_addr = thread.GetRegisterContext()->GetPC(0);
+
+    if (m_direction == eRunReverse &&
+        eStopReasonHistoryBoundary == thread.GetStopReason()) {
+      SetPlanComplete();
+      return true;
+    }
+
     if (pc_addr != m_instruction_addr) {
       if (--m_iteration_count <= 0) {
         SetPlanComplete();
