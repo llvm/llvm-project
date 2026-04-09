@@ -28,6 +28,8 @@ ThreadPlanStepInstruction::ThreadPlanStepInstruction(
                  report_run_vote),
       m_instruction_addr(0), m_stop_other_threads(stop_other_threads),
       m_step_over(step_over), m_direction(direction) {
+  // We don't support step_over when the direction equals eRunReverse.
+  assert(!step_over || direction == eRunForward);
   m_takes_iteration_count = true;
   SetUpState();
 }
