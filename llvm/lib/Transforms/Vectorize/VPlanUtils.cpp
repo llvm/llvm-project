@@ -13,9 +13,11 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
@@ -892,7 +894,40 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   return false;
 }
 
-VPValue *VPBuilder::VPSCEVExpander::tryToExpand(const SCEV *S) {
+/// Try to find a loop-invariant IR value for \p S in \p OrigLoop's preheader
+/// that can be reused. Returns the corresponding live-in VPValue, or nullptr
+/// if no reusable IR value is found.
+VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
+  if (isa<SCEVConstant, SCEVUnknown>(S))
+    return nullptr;
+  BasicBlock *PH = OrigLoop.getLoopPreheader();
+  if (!PH)
+    return nullptr;
+  for (Value *V : SE.getSCEVValues(S)) {
+    if (V->getType() != S->getType())
+      continue;
+    // Non-instruction values (arguments, globals) are always reusable.
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return Builder.getPlan().getOrAddLiveIn(V);
+    // Only reuse instructions in the loop preheader, as instructions in
+    // sibling branches may not dominate this loop's preheader.
+    if (I->getParent() != PH)
+      continue;
+    SmallVector<Instruction *> DropPoisonGeneratingInsts;
+    if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
+      continue;
+    for (Instruction *DropI : DropPoisonGeneratingInsts)
+      SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(SE, DropI);
+    return Builder.getPlan().getOrAddLiveIn(V);
+  }
+  return nullptr;
+}
+
+VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
+  if (VPValue *V = tryToReuseIRValue(S))
+    return V;
+
   switch (S->getSCEVType()) {
   case scConstant:
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());

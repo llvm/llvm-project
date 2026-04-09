@@ -181,6 +181,29 @@ VPValue *findIncomingAliasMask(const VPlan &Plan);
 
 } // namespace vputils
 
+/// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
+/// VPInstructions where possible, falling back to VPExpandSCEVRecipe for
+/// unsupported expressions (casts, min/max).
+class VPSCEVExpander {
+  VPBuilder &Builder;
+  ScalarEvolution &SE;
+  Loop &OrigLoop;
+  DebugLoc DL;
+
+  /// Try to find a loop-invariant IR value in OrigLoop's preheader whose
+  /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
+  /// if none is found.
+  VPValue *tryToReuseIRValue(const SCEV *S);
+
+public:
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, Loop &OrigLoop,
+                 DebugLoc DL = DebugLoc())
+      : Builder(Builder), SE(SE), OrigLoop(OrigLoop), DL(DL) {}
+
+  /// Try to expand \p S into recipes and live-ins using the builder. Returns
+  /// nullptr if \p S cannot be expanded yet.
+  VPValue *tryToExpand(const SCEV *S);
+};
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.
 //===----------------------------------------------------------------------===//
