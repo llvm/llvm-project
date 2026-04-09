@@ -560,6 +560,8 @@ namespace GH132592 {
   static_assert(x<void> && !X<void>); // expected-error {{ambiguous partial specializations of 'x'}}
   static_assert(!X<void> && x<void>); // expected-error {{ambiguous partial specializations of 'x'}}
 
+}
+
 namespace GH54439 {
   template <bool B> struct enable_if {};
   template <> struct enable_if<true> {
