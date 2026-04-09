@@ -5128,6 +5128,7 @@ cc_library(
         ":AffineAnalysis",
         ":AffineDialect",
         ":ArithDialect",
+        ":ArithUtils",
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
