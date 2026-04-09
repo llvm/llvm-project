@@ -1529,27 +1529,24 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
 static Instruction *
 canonicalizeNestedAddSubWithConstant(BinaryOperator &I,
                                      InstCombiner::BuilderTy &Builder) {
-
   assert((I.getOpcode() == Instruction::Add ||
           I.getOpcode() == Instruction::Sub) &&
          "Expecting add/sub instruction");
 
-  auto *Inner = dyn_cast<BinaryOperator>(I.getOperand(0));
-  if (!Inner || !Inner->hasOneUse() || isa<Constant>(I.getOperand(1)))
+  Value *Y = I.getOperand(1);
+  if (isa<Constant>(Y))
     return nullptr;
 
-  Value *X, *Y = I.getOperand(1);
-  Instruction::BinaryOps OuterOpcode;
+  Value *X;
   Constant *C;
-  if (match(Inner, m_Add(m_Value(X), m_ImmConstant(C))))
-    OuterOpcode = Instruction::Add;
-  else if (match(Inner, m_Sub(m_Value(X), m_ImmConstant(C))))
-    OuterOpcode = Instruction::Sub;
-  else
+  auto *Inner = dyn_cast<BinaryOperator>(I.getOperand(0));
+  if (!Inner || !Inner->hasOneUse() ||
+      (!match(Inner, m_Add(m_Value(X), m_ImmConstant(C))) &&
+       !match(Inner, m_Sub(m_Value(X), m_ImmConstant(C)))))
     return nullptr;
 
   Value *XY = Builder.CreateBinOp(I.getOpcode(), X, Y);
-  return BinaryOperator::Create(OuterOpcode, XY, C);
+  return BinaryOperator::Create(Inner->getOpcode(), XY, C);
 }
 
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
