@@ -1084,3 +1084,25 @@ func.func @test_bitcast(%arg0: i32, %arg1: f32, %arg2: !fir.logical<4>, %arg3: !
   %8 = fir.bitcast %arg0 : (i32) -> !fir.logical<4>
   return
 }
+
+// CHECK-LABEL: func @test_logical_ops(
+// CHECK-SAME: %[[L1:.*]]: !fir.logical<4>, %[[L2:.*]]: !fir.logical<4>, %[[I1:.*]]: i32, %[[I2:.*]]: i32)
+func.func @test_logical_ops(%l1: !fir.logical<4>, %l2: !fir.logical<4>, %i1: i32, %i2: i32) {
+// CHECK: %{{.*}} = fir.logical_and %[[L1]], %[[L2]] : !fir.logical<4>
+  %0 = fir.logical_and %l1, %l2 : !fir.logical<4>
+// CHECK: %{{.*}} = fir.logical_or %[[L1]], %[[L2]] : !fir.logical<4>
+  %1 = fir.logical_or %l1, %l2 : !fir.logical<4>
+// CHECK: %{{.*}} = fir.eqv %[[L1]], %[[L2]] : !fir.logical<4>
+  %2 = fir.eqv %l1, %l2 : !fir.logical<4>
+// CHECK: %{{.*}} = fir.neqv %[[L1]], %[[L2]] : !fir.logical<4>
+  %3 = fir.neqv %l1, %l2 : !fir.logical<4>
+// CHECK: %{{.*}} = fir.logical_and %[[I1]], %[[I2]] : i32
+  %4 = fir.logical_and %i1, %i2 : i32
+// CHECK: %{{.*}} = fir.logical_or %[[I1]], %[[I2]] : i32
+  %5 = fir.logical_or %i1, %i2 : i32
+// CHECK: %{{.*}} = fir.eqv %[[I1]], %[[I2]] : i32
+  %6 = fir.eqv %i1, %i2 : i32
+// CHECK: %{{.*}} = fir.neqv %[[I1]], %[[I2]] : i32
+  %7 = fir.neqv %i1, %i2 : i32
+  return
+}
