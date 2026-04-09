@@ -148,11 +148,6 @@ private:
   bool vectorizeInserts(InstSetVector &Instructions, BasicBlock *BB,
                         slpvectorizer::BoUpSLP &R);
 
-  /// Tries to vectorize the operands of the non-trivially-vectorizable
-  /// intrinsic calls.
-  bool vectorizeNonTriviallyVectrizableIntrinsicCallOperand(
-      InstSetVector &IIs, BasicBlock *BB, slpvectorizer::BoUpSLP &R);
-
   /// Scan the basic block and look for patterns that are likely to start
   /// a vectorization chain.
   bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
