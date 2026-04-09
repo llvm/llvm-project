@@ -93,3 +93,40 @@ TEST(OutputBufferTest, Extend) {
 
   std::free(OB.getBuffer());
 }
+
+TEST(OutputBufferTest, Notifications) {
+  struct MyOutputBuffer : public OutputBuffer {
+    size_t Inserted = 0;
+    size_t LatestPos = 0;
+
+    void notifyDeletion(size_t OldPos, size_t NewPos) override {
+      LatestPos = NewPos;
+    }
+
+    void notifyInsertion(size_t Position, size_t Count) override {
+      Inserted += Count;
+      LatestPos = Position;
+    }
+  } OB;
+
+  OB.prepend("n");
+  EXPECT_EQ(OB.Inserted, 1U);
+  EXPECT_EQ(OB.LatestPos, 0U);
+
+  OB.prepend("");
+  EXPECT_EQ(OB.Inserted, 1U);
+  EXPECT_EQ(OB.LatestPos, 0U);
+
+  OB.prepend("abc");
+  EXPECT_EQ(OB.Inserted, 4U);
+  EXPECT_EQ(OB.LatestPos, 0U);
+
+  OB.insert(2, "abc", 3U);
+  EXPECT_EQ(OB.Inserted, 7U);
+  EXPECT_EQ(OB.LatestPos, 2U);
+
+  OB.setCurrentPosition(3U);
+  EXPECT_EQ(OB.LatestPos, 3U);
+
+  std::free(OB.getBuffer());
+}

@@ -106,3 +106,10 @@ func.func @named_region_has_wrong_number_of_blocks() {
 test.single_no_terminator_custom_asm_op {
   "important_dont_drop"() : () -> ()
 }
+
+// -----
+
+// CHECK: test.dummy_op_with_region_ref
+test.dummy_op_with_region_ref {
+  ^bb0:
+}

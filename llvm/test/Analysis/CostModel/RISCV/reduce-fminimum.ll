@@ -34,13 +34,6 @@ define float @reduce_fmaximum_f32(float %arg) {
 %V128   = call float @llvm.vector.reduce.fminimum.v128f32(<128 x float> undef)
 ret float undef
 }
-declare float @llvm.vector.reduce.fminimum.v2f32(<2 x float>)
-declare float @llvm.vector.reduce.fminimum.v4f32(<4 x float>)
-declare float @llvm.vector.reduce.fminimum.v8f32(<8 x float>)
-declare float @llvm.vector.reduce.fminimum.v16f32(<16 x float>)
-declare float @llvm.vector.reduce.fminimum.v32f32(<32 x float>)
-declare float @llvm.vector.reduce.fminimum.v64f32(<64 x float>)
-declare float @llvm.vector.reduce.fminimum.v128f32(<128 x float>)
 
 define double @reduce_fmaximum_f64(double %arg) {
 ; CHECK-LABEL: 'reduce_fmaximum_f64'
@@ -69,9 +62,3 @@ define double @reduce_fmaximum_f64(double %arg) {
 %V64   = call double @llvm.vector.reduce.fminimum.v64f64(<64 x double> undef)
 ret double undef
 }
-declare double @llvm.vector.reduce.fminimum.v2f64(<2 x double>)
-declare double @llvm.vector.reduce.fminimum.v4f64(<4 x double>)
-declare double @llvm.vector.reduce.fminimum.v8f64(<8 x double>)
-declare double @llvm.vector.reduce.fminimum.v16f64(<16 x double>)
-declare double @llvm.vector.reduce.fminimum.v32f64(<32 x double>)
-declare double @llvm.vector.reduce.fminimum.v64f64(<64 x double>)

@@ -13,6 +13,8 @@ from lldbsuite.test import lldbutil
 
 
 class targetCommandTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -74,7 +76,7 @@ class targetCommandTestCase(TestBase):
             # Find the largest index of the existing list.
             import re
 
-            pattern = re.compile("target #(\d+):")
+            pattern = re.compile(r"target #(\d+):")
             for line in reversed(output.split(os.linesep)):
                 match = pattern.search(line)
                 if match:

@@ -10,7 +10,7 @@
 // VINTERP encoding
 //===----------------------------------------------------------------------===//
 
-class VINTERPe <VOPProfile P> : Enc64 {
+class VINTERPe : Enc64 {
   bits<11> vdst;
   bits<4> src0_modifiers;
   bits<11> src0;
@@ -27,10 +27,10 @@ class VINTERPe <VOPProfile P> : Enc64 {
   let Inst{7-0}   = vdst{7-0};
   let Inst{10-8}  = waitexp;
   // Fields for hi/lo 16-bits of register selection
-  let Inst{11} = !if(P.HasSrc0, src0_modifiers{2}, 0);
-  let Inst{12} = !if(P.HasSrc1, src1_modifiers{2}, 0);
-  let Inst{13} = !if(P.HasSrc2, src2_modifiers{2}, 0);
-  let Inst{14} = !if(P.HasDst, src0_modifiers{3}, 0);
+  let Inst{11}    = src0_modifiers{2};
+  let Inst{12}    = src1_modifiers{2};
+  let Inst{13}    = src2_modifiers{2};
+  let Inst{14}    = src0_modifiers{3};
   let Inst{15}    = clamp;
   let Inst{40-32} = src0{8-0};
   let Inst{49-41} = src1{8-0};
@@ -40,11 +40,11 @@ class VINTERPe <VOPProfile P> : Enc64 {
   let Inst{63}    = src2_modifiers{0}; // neg(2)
 }
 
-class VINTERPe_gfx11 <bits<7> op, VOPProfile P> : VINTERPe<P> {
+class VINTERPe_gfx11 <bits<7> op> : VINTERPe {
   let Inst{22-16} = op;
 }
 
-class VINTERPe_gfx12 <bits<7> op, VOPProfile P> : VINTERPe<P> {
+class VINTERPe_gfx12_gfx13 <bits<7> op> : VINTERPe {
   let Inst{20-16} = op{4-0};
 }
 
@@ -181,8 +181,42 @@ multiclass VInterpF16Pat <SDPatternOperator op, Instruction inst,
   def : VInterpF16Pat<op, inst, dst_type, 1, high_pat>;
 }
 
+class VInterpF16Pat_t16 <SDPatternOperator op, Instruction inst,
+                     ValueType dstVT, bit high, bit isP2> : GCNPat <
+   (dstVT (op
+      (VINTERPMods f32:$src0, i32:$src0_modifiers),
+      (VINTERPMods f32:$src1, i32:$src1_modifiers),
+      (VINTERPMods f32:$src2, i32:$src2_modifiers),
+      !if(high, (i1 -1), (i1 0)))),
+    (inst $src0_modifiers,
+          (f16 (EXTRACT_SUBREG VGPR_32:$src0, !if(high, hi16, lo16))),
+          $src1_modifiers, VGPR_32:$src1,
+          $src2_modifiers,
+          !if(isP2, (f32 VGPR_32:$src2),
+                    (f16 (EXTRACT_SUBREG VGPR_32:$src2, !if(high, hi16, lo16)))),
+          0, /* clamp */
+          7) /* wait_exp */
+>;
+
+multiclass VInterpF16Pat_t16 <SDPatternOperator op, Instruction inst,
+                          ValueType dstVT, bit isP2> {
+  def : VInterpF16Pat_t16<op, inst, dstVT, 0, isP2>;
+  def : VInterpF16Pat_t16<op, inst, dstVT, 1, isP2>;
+}
+
 def : VInterpF32Pat<int_amdgcn_interp_inreg_p10, V_INTERP_P10_F32_inreg>;
 def : VInterpF32Pat<int_amdgcn_interp_inreg_p2, V_INTERP_P2_F32_inreg>;
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : VInterpF16Pat_t16<int_amdgcn_interp_inreg_p10_f16,
+                     V_INTERP_P10_F16_F32_inreg_t16, f32, 0>;
+defm : VInterpF16Pat_t16<int_amdgcn_interp_inreg_p2_f16,
+                     V_INTERP_P2_F16_F32_inreg_t16, f16, 1>;
+defm : VInterpF16Pat_t16<int_amdgcn_interp_p10_rtz_f16,
+                     V_INTERP_P10_RTZ_F16_F32_inreg_t16, f32, 0>;
+defm : VInterpF16Pat_t16<int_amdgcn_interp_p2_rtz_f16,
+                     V_INTERP_P2_RTZ_F16_F32_inreg_t16, f16, 1>;
+}
 
 let True16Predicate = UseFakeTrue16Insts in {
 defm : VInterpF16Pat<int_amdgcn_interp_inreg_p10_f16,
@@ -203,38 +237,36 @@ defm : VInterpF16Pat<int_amdgcn_interp_p2_rtz_f16,
 // VINTERP Real Instructions
 //===----------------------------------------------------------------------===//
 
-multiclass VINTERP_Real_gfx11 <bits<7> op, string asmName> {
+multiclass VINTERP_Real <GFXGen Gen, bits<7> op, string asmName> {
   defvar ps = !cast<VOP3_Pseudo>(NAME);
-  let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" #
+  let AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace #
                            !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
-    def _gfx11 :
-      VINTERP_Real<ps, SIEncodingFamily.GFX11, asmName>,
-      VINTERPe_gfx11<op, ps.Pfl>;
+    if !eq(Gen.Subtarget, SIEncodingFamily.GFX11) then
+    def Gen.Suffix :
+      VINTERP_Real<ps, Gen.Subtarget, asmName>,
+      VINTERPe_gfx11<op>;
+    else // gfx12, gfx13
+    def Gen.Suffix :
+      VINTERP_Real<ps, Gen.Subtarget, asmName>,
+      VINTERPe_gfx12_gfx13<op>;
   }
 }
 
-multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName> {
-  defvar ps = !cast<VOP3_Pseudo>(NAME);
-  let AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12" #
-                           !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
-    def _gfx12 :
-      VINTERP_Real<ps, SIEncodingFamily.GFX12, asmName>,
-      VINTERPe_gfx12<op, ps.Pfl>;
-  }
-}
+multiclass VINTERP_Real_gfx11_gfx12_gfx13 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> :
+  VINTERP_Real<GFX11Gen, op, asmName>, VINTERP_Real<GFX12Gen, op, asmName>, VINTERP_Real<GFX13Gen, op, asmName>;
 
-multiclass VINTERP_Real_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> :
-  VINTERP_Real_gfx11<op, asmName>, VINTERP_Real_gfx12<op, asmName>;
-
-multiclass VINTERP_Real_t16_and_fake16_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> {
-  defm _t16:    VINTERP_Real_gfx11_gfx12<op, asmName>;
-  defm _fake16: VINTERP_Real_gfx11_gfx12<op, asmName>;
+multiclass VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> {
+  defm _t16:    VINTERP_Real_gfx11_gfx12_gfx13<op, asmName>;
+  defm _fake16: VINTERP_Real_gfx11_gfx12_gfx13<op, asmName>;
 }
 
 
-defm V_INTERP_P10_F32_inreg : VINTERP_Real_gfx11_gfx12<0x000>;
-defm V_INTERP_P2_F32_inreg : VINTERP_Real_gfx11_gfx12<0x001>;
-defm V_INTERP_P10_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x002, "v_interp_p10_f16_f32">;
-defm V_INTERP_P2_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x003, "v_interp_p2_f16_f32">;
-defm V_INTERP_P10_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x004, "v_interp_p10_rtz_f16_f32">;
-defm V_INTERP_P2_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x005, "v_interp_p2_rtz_f16_f32">;
+defm V_INTERP_P10_F32_inreg : VINTERP_Real_gfx11_gfx12_gfx13<0x000>;
+defm V_INTERP_P2_F32_inreg : VINTERP_Real_gfx11_gfx12_gfx13<0x001>;
+defm V_INTERP_P10_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13<0x002, "v_interp_p10_f16_f32">;
+defm V_INTERP_P2_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13<0x003, "v_interp_p2_f16_f32">;
+defm V_INTERP_P10_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13<0x004, "v_interp_p10_rtz_f16_f32">;
+defm V_INTERP_P2_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13<0x005, "v_interp_p2_rtz_f16_f32">;
+
+let AssemblerPredicate = isGFX11Plus in
+def : AMDGPUMnemonicAlias<"v_interp_p2_new_f32", "v_interp_p2_f32">;

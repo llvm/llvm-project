@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FIND_SEGMENT_IF_H
-#define _LIBCPP___ALGORITHM_FIND_SEGMENT_IF_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_FIND_SEGMENT_IF_H
+#define _LIBCPP___CXX03___ALGORITHM_FIND_SEGMENT_IF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/segmented_iterator.h>
@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // ranges algorithms, or __identity for classic algorithms.
 
 template <class _SegmentedIterator, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
+_LIBCPP_HIDE_FROM_ABI _SegmentedIterator
 __find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred __pred, _Proj& __proj) {
   using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
 
@@ -59,4 +59,4 @@ __find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred _
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FIND_SEGMENT_IF_H
+#endif // _LIBCPP___CXX03___ALGORITHM_FIND_SEGMENT_IF_H

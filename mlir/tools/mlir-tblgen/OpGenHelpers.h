@@ -29,7 +29,7 @@ getRequestedOpDefinitions(const llvm::RecordKeeper &records);
 /// Regenerate using python -c"print(set(sorted(__import__('keyword').kwlist)))"
 bool isPythonReserved(llvm::StringRef str);
 
-/// Shard the op defintions into the number of shards set by "op-shard-count".
+/// Shard the op definitions into the number of shards set by "op-shard-count".
 void shardOpDefinitions(
     ArrayRef<const llvm::Record *> defs,
     SmallVectorImpl<ArrayRef<const llvm::Record *>> &shardedDefs);

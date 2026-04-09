@@ -14,10 +14,12 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 #include "ConstantsContext.h"
 
-namespace llvm {
+using namespace llvm;
+
 bool Operator::hasPoisonGeneratingFlags() const {
   switch (getOpcode()) {
   case Instruction::Add:
@@ -52,6 +54,16 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return false;
   case Instruction::ICmp:
     return cast<ICmpInst>(this)->hasSameSign();
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+        return cast<ConstantInt>(II->getArgOperand(1))->isOneValue();
+      }
+    }
+    [[fallthrough]];
   default:
     if (const auto *FP = dyn_cast<FPMathOperator>(this))
       return FP->hasNoNaNs() || FP->hasNoInfs();
@@ -125,8 +137,9 @@ bool GEPOperator::accumulateConstantOffset(
     Type *SourceType, ArrayRef<const Value *> Index, const DataLayout &DL,
     APInt &Offset, function_ref<bool(Value &, APInt &)> ExternalAnalysis) {
   // Fast path for canonical getelementptr i8 form.
-  if (SourceType->isIntegerTy(8) && !ExternalAnalysis) {
-    if (auto *CI = dyn_cast<ConstantInt>(Index.front())) {
+  if (SourceType->isIntegerTy(8) && !Index.empty() && !ExternalAnalysis) {
+    auto *CI = dyn_cast<ConstantInt>(Index.front());
+    if (CI && CI->getType()->isIntegerTy()) {
       Offset += CI->getValue().sextOrTrunc(Offset.getBitWidth());
       return true;
     }
@@ -165,7 +178,8 @@ bool GEPOperator::accumulateConstantOffset(
     Value *V = GTI.getOperand();
     StructType *STy = GTI.getStructTypeOrNull();
     // Handle ConstantInt if possible.
-    if (auto ConstOffset = dyn_cast<ConstantInt>(V)) {
+    auto *ConstOffset = dyn_cast<ConstantInt>(V);
+    if (ConstOffset && ConstOffset->getType()->isIntegerTy()) {
       if (ConstOffset->isZero())
         continue;
       // if the type is scalable and the constant is not zero (vscale * n * 0 =
@@ -226,7 +240,8 @@ bool GEPOperator::collectOffset(
     Value *V = GTI.getOperand();
     StructType *STy = GTI.getStructTypeOrNull();
     // Handle ConstantInt if possible.
-    if (auto ConstOffset = dyn_cast<ConstantInt>(V)) {
+    auto *ConstOffset = dyn_cast<ConstantInt>(V);
+    if (ConstOffset && ConstOffset->getType()->isIntegerTy()) {
       if (ConstOffset->isZero())
         continue;
       // If the type is scalable and the constant is not zero (vscale * n * 0 =
@@ -285,4 +300,3 @@ void FastMathFlags::print(raw_ostream &O) const {
       O << " afn";
   }
 }
-} // namespace llvm

@@ -138,9 +138,8 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
     // If we have any sections that are loaded, try and resolve using the
     // section load list
     Target *target = exe_ctx.GetTargetPtr();
-    if (target && !target->GetSectionLoadList().IsEmpty()) {
-      if (target->GetSectionLoadList().ResolveLoadAddress(deref_addr,
-                                                          deref_so_addr))
+    if (target && target->HasLoadedSections()) {
+      if (target->ResolveLoadAddress(deref_addr, deref_so_addr))
         return true;
     } else {
       // If we were not running, yet able to read an integer, we must have a
@@ -226,7 +225,7 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
 
     if (len < k_buf_len)
       break;
-    curr_address.SetOffset(curr_address.GetOffset() + bytes_read);
+    curr_address.Slide(bytes_read);
   }
   strm->PutChar('"');
   return total_len;
@@ -264,22 +263,11 @@ bool Address::ResolveAddressUsingFileSections(addr_t file_addr,
   return false; // Failed to resolve this address to a section offset value
 }
 
-/// if "addr_range_ptr" is not NULL, then fill in with the address range of the function.
-bool Address::ResolveFunctionScope(SymbolContext &sym_ctx,
-                                   AddressRange *addr_range_ptr) {
+bool Address::ResolveFunctionScope(SymbolContext &sym_ctx) {
   constexpr SymbolContextItem resolve_scope =
     eSymbolContextFunction | eSymbolContextSymbol;
 
-  if (!(CalculateSymbolContext(&sym_ctx, resolve_scope) & resolve_scope)) {
-    if (addr_range_ptr)
-      addr_range_ptr->Clear();
-   return false;
-  }
-
-  if (!addr_range_ptr)
-    return true;
-
-  return sym_ctx.GetAddressRange(resolve_scope, 0, false, *addr_range_ptr);
+  return CalculateSymbolContext(&sym_ctx, resolve_scope) & resolve_scope;
 }
 
 ModuleSP Address::GetModule() const {
@@ -512,11 +500,11 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
           if (module_sp) {
             if (Symtab *symtab = module_sp->GetSymtab()) {
               const addr_t file_Addr = GetFileAddress();
-              Symbol *symbol =
+              const Symbol *symbol =
                   symtab->FindSymbolContainingFileAddress(file_Addr);
               if (symbol) {
-                const char *symbol_name = symbol->GetName().AsCString();
-                if (symbol_name) {
+                llvm::StringRef symbol_name = symbol->GetName().GetStringRef();
+                if (!symbol_name.empty()) {
                   s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
@@ -564,7 +552,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                 s->PutCString("{ ");
 #endif
                 Address cstr_addr(*this);
-                cstr_addr.SetOffset(cstr_addr.GetOffset() + pointer_size);
+                cstr_addr.Slide(pointer_size);
                 func_sc.DumpStopContext(s, exe_scope, so_addr, true, true,
                                         false, true, true);
                 if (ReadAddress(exe_scope, cstr_addr, pointer_size, so_addr)) {
@@ -590,8 +578,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
 
         case eSectionTypeDataObjCCFStrings: {
           Address cfstring_data_addr(*this);
-          cfstring_data_addr.SetOffset(cfstring_data_addr.GetOffset() +
-                                       (2 * pointer_size));
+          cfstring_data_addr.Slide(2 * pointer_size);
           if (ReadAddress(exe_scope, cfstring_data_addr, pointer_size,
                           so_addr)) {
 #if VERBOSE_OUTPUT
@@ -760,7 +747,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               DumpAddressRange(s->AsRawOstream(), range->GetRangeBase(),
                                range->GetRangeEnd(), addr_size);
             s->PutCString(", location = ");
-            var_sp->DumpLocations(s, all_ranges ? LLDB_INVALID_ADDRESS : *this);
+            var_sp->DumpLocations(s, all_ranges ? Address() : *this);
             s->PutCString(", decl = ");
             var_sp->GetDeclaration().DumpStopContext(s, false);
             s->EOL();
@@ -1046,8 +1033,9 @@ AddressClass Address::GetAddressClass() const {
 
 bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,
                              bool allow_section_end) {
-  if (target && target->GetSectionLoadList().ResolveLoadAddress(
-                    load_addr, *this, allow_section_end))
+  if (target && target->ResolveLoadAddress(load_addr, *this,
+                                           SectionLoadHistory::eStopIDNow,
+                                           allow_section_end))
     return true;
   m_section_wp.reset();
   m_offset = load_addr;

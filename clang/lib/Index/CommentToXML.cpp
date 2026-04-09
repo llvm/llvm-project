@@ -11,11 +11,10 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
 #include "clang/AST/CommentVisitor.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -899,7 +898,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
     {
       // Print line and column number.
       SourceLocation Loc = DI->CurrentDecl->getLocation();
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+      FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
       FileID FID = LocInfo.first;
       unsigned FileOffset = LocInfo.second;
 
@@ -1066,7 +1065,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       if (AA->getUnavailable())
         Result << "<Unavailable/>";
 
-      IdentifierInfo *Environment = AA->getEnvironment();
+      const IdentifierInfo *Environment = AA->getEnvironment();
       if (Environment) {
         Result << "<Environment>" << Environment->getName() << "</Environment>";
       }

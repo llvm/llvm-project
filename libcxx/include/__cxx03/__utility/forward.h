@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_FORWARD_H
-#define _LIBCPP___UTILITY_FORWARD_H
+#ifndef _LIBCPP___CXX03___UTILITY_FORWARD_H
+#define _LIBCPP___CXX03___UTILITY_FORWARD_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_reference.h>
@@ -21,13 +21,13 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp&&
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _Tp&&
 forward(_LIBCPP_LIFETIMEBOUND __libcpp_remove_reference_t<_Tp>& __t) _NOEXCEPT {
   return static_cast<_Tp&&>(__t);
 }
 
 template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp&&
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _Tp&&
 forward(_LIBCPP_LIFETIMEBOUND __libcpp_remove_reference_t<_Tp>&& __t) _NOEXCEPT {
   static_assert(!is_lvalue_reference<_Tp>::value, "cannot forward an rvalue as an lvalue");
   return static_cast<_Tp&&>(__t);
@@ -35,4 +35,4 @@ forward(_LIBCPP_LIFETIMEBOUND __libcpp_remove_reference_t<_Tp>&& __t) _NOEXCEPT 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_FORWARD_H
+#endif // _LIBCPP___CXX03___UTILITY_FORWARD_H

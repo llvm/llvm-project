@@ -15,6 +15,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::UnorderedElementsAre;
+
 TWEAK_TEST(DefineOutline);
 
 TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
@@ -116,12 +118,6 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   EXPECT_UNAVAILABLE(R"cpp(
     template <typename T> void fo^o() {}
     template <> void fo^o<int>() {}
-  )cpp");
-
-  // Not available on member function templates with unnamed template
-  // parameters.
-  EXPECT_UNAVAILABLE(R"cpp(
-    struct Foo { template <typename> void ba^r() {} };
   )cpp");
 
   // Not available on methods of unnamed classes.
@@ -410,14 +406,14 @@ inline typename O1<T, U...>::template O2<V, A>::E O1<T, U...>::template O2<V, A>
       {
           R"cpp(
             struct Foo {
-              template <typename T, bool B = true>
+              template <typename T, typename, bool B = true>
               T ^bar() { return {}; }
             };)cpp",
           R"cpp(
             struct Foo {
-              template <typename T, bool B = true>
+              template <typename T, typename, bool B = true>
               T bar() ;
-            };template <typename T, bool B>
+            };template <typename T, typename, bool B>
 inline T Foo::bar() { return {}; }
 )cpp",
           ""},
@@ -426,13 +422,13 @@ inline T Foo::bar() { return {}; }
       {
           R"cpp(
             template <typename T> struct Foo {
-              template <typename U> T ^bar(const T& t, const U& u) { return {}; }
+              template <typename U, bool> T ^bar(const T& t, const U& u) { return {}; }
             };)cpp",
           R"cpp(
             template <typename T> struct Foo {
-              template <typename U> T bar(const T& t, const U& u) ;
+              template <typename U, bool> T bar(const T& t, const U& u) ;
             };template <typename T>
-template <typename U>
+template <typename U, bool>
 inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
 )cpp",
           ""},
@@ -452,7 +448,6 @@ inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
 
 TEST_F(DefineOutlineTest, InCppFile) {
   FileName = "Test.cpp";
-
   struct {
     llvm::StringRef Test;
     llvm::StringRef ExpectedSource;
@@ -636,6 +631,19 @@ TEST_F(DefineOutlineTest, QualifyReturnValue) {
         class Foo {};
         Foo foo() ;)cpp",
        "Foo foo() { return {}; }"},
+      {R"cpp(
+        template <typename T> class Expected {};
+        class Foo {
+          class Bar {};
+          Expected<Bar> fu^nc() { return {}; }
+        };)cpp",
+       R"cpp(
+        template <typename T> class Expected {};
+        class Foo {
+          class Bar {};
+          Expected<Bar> func() ;
+        };)cpp",
+       "Expected<Foo::Bar> Foo::func() { return {}; }\n"},
   };
   llvm::StringMap<std::string> EditedFiles;
   for (auto &Case : Cases) {
@@ -753,6 +761,263 @@ TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
   }
 }
 
+TWEAK_WORKSPACE_TEST(DefineOutline);
+
+// Test that DefineOutline's use of getCorrespondingHeaderOrSource()
+// to find the source file corresponding to a header file in which the
+// tweak is invoked is working as intended.
+TEST_F(DefineOutlineWorkspaceTest, FindsCorrespondingSource) {
+  llvm::Annotations HeaderBefore(R"cpp(
+class A {
+  void bar();
+  void f^oo(){}
+};
+)cpp");
+  std::string SourceBefore(R"cpp(
+#include "a.hpp"
+void A::bar(){}
+)cpp");
+  std::string HeaderAfter = R"cpp(
+class A {
+  void bar();
+  void foo();
+};
+)cpp";
+  std::string SourceAfter = R"cpp(
+#include "a.hpp"
+void A::bar(){}void A::foo(){}
+
+)cpp";
+  Workspace.addSource("a.hpp", HeaderBefore.code());
+  Workspace.addMainFile("a.cpp", SourceBefore);
+  auto Result = apply("a.hpp", {HeaderBefore.point(), HeaderBefore.point()});
+  EXPECT_THAT(Result,
+              AllOf(withStatus("success"),
+                    editedFiles(UnorderedElementsAre(
+                        FileWithContents(testPath("a.hpp"), HeaderAfter),
+                        FileWithContents(testPath("a.cpp"), SourceAfter)))));
+}
+
+// Test that the definition is inserted in a sensible location
+// under various circumstances.
+// Note that the formatting looks a little off here and there,
+// which is because in contrast to the actual tweak, the test procedure
+// does not run clang-format on the resulting code.
+TEST_F(DefineOutlineWorkspaceTest, SensibleInsertionLocations) {
+  const struct {
+    llvm::StringRef HeaderBefore;
+    llvm::StringRef SourceBefore;
+    llvm::StringRef HeaderAfter;
+    llvm::StringRef SourceAfter;
+  } Cases[] = {
+      // Criterion 1: Distance
+      {
+          R"cpp(
+struct Foo {
+  void ignored1();     // Too far away
+  void ignored2();     // No definition
+  void ignored3() {}   // Defined inline
+  void fo^o() {}
+  void neighbor();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+void Foo::neighbor() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void ignored1();     // Too far away
+  void ignored2();     // No definition
+  void ignored3() {}   // Defined inline
+  void foo() ;
+  void neighbor();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+void Foo::foo() {}
+void Foo::neighbor() {}
+)cpp"},
+
+      // Criterion 2: Prefer preceding
+      {
+          R"cpp(
+struct Foo {
+  void neighbor();
+  void fo^o() {}
+  void ignored();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::neighbor() {}
+void Foo::ignored() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void neighbor();
+  void foo() ;
+  void ignored();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::neighbor() {}void Foo::foo() {}
+
+void Foo::ignored() {}
+)cpp"},
+
+      // Like above, but with a namespace
+      {
+          R"cpp(
+namespace NS {
+struct Foo {
+  void neighbor();
+  void fo^o() {}
+  void ignored();
+};
+}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+namespace NS {
+void Foo::neighbor() {}
+void Foo::ignored() {}
+}
+)cpp",
+          R"cpp(
+namespace NS {
+struct Foo {
+  void neighbor();
+  void foo() ;
+  void ignored();
+};
+}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+namespace NS {
+void Foo::neighbor() {}void Foo::foo() {}
+
+void Foo::ignored() {}
+}
+)cpp"},
+
+      // Like above, but there is no namespace at the definition site
+      {
+          R"cpp(
+namespace NS {
+struct Foo {
+  void neighbor();
+  void fo^o() {}
+  void ignored();
+};
+}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void NS::Foo::neighbor() {}
+void NS::Foo::ignored() {}
+)cpp",
+          R"cpp(
+namespace NS {
+struct Foo {
+  void neighbor();
+  void foo() ;
+  void ignored();
+};
+}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void NS::Foo::neighbor() {}void NS::Foo::foo() {}
+
+void NS::Foo::ignored() {}
+)cpp"},
+
+      // Neighbor's definition is in header
+      {
+          R"cpp(
+struct Foo {
+  void fo^o() {}
+  void neighbor();
+  void ignored();
+};
+inline void Foo::neighbor() {}
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void foo() ;
+  void neighbor();
+  void ignored();
+};
+inline void Foo::foo() {}
+inline void Foo::neighbor() {}
+)cpp",
+          {}},
+
+      // Adjacent definition with `= default`
+      {
+          R"cpp(
+struct Foo {
+  void ignored1();
+  Foo();
+  void fun^c() {}
+  void ignored2();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+Foo::Foo() = default;
+void Foo::ignored2() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void ignored1();
+  Foo();
+  void func() ;
+  void ignored2();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+Foo::Foo() = default;void Foo::func() {}
+
+void Foo::ignored2() {}
+)cpp"},
+  };
+
+  for (const auto &Case : Cases) {
+    Workspace = {};
+    llvm::Annotations Hdr(Case.HeaderBefore);
+    Workspace.addSource("a.hpp", Hdr.code());
+    Workspace.addMainFile("a.cpp", Case.SourceBefore);
+    auto Result = apply("a.hpp", {Hdr.point(), Hdr.point()});
+    if (Case.SourceAfter.empty()) {
+      EXPECT_THAT(Result,
+                  AllOf(withStatus("success"),
+                        editedFiles(UnorderedElementsAre(FileWithContents(
+                            testPath("a.hpp"), Case.HeaderAfter)))));
+
+    } else {
+      EXPECT_THAT(
+          Result,
+          AllOf(withStatus("success"),
+                editedFiles(UnorderedElementsAre(
+                    FileWithContents(testPath("a.hpp"), Case.HeaderAfter),
+                    FileWithContents(testPath("a.cpp"), Case.SourceAfter)))));
+    }
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

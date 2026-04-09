@@ -16,66 +16,83 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
 namespace llvm {
 
 /// This class implements a glob pattern matcher similar to the one found in
-/// bash, but with some key differences. Namely, that \p "*" matches all
+/// bash, but with some key differences. Namely, that `*` matches all
 /// characters and does not exclude path separators.
 ///
-/// * \p "?" matches a single character.
-/// * \p "*" matches zero or more characters.
-/// * \p "[<chars>]" matches one character in the bracket. Character ranges,
-///   e.g., \p "[a-z]", and negative sets via \p "[^ab]" or \p "[!ab]" are also
+/// * `?` matches a single character.
+/// * `*` matches zero or more characters.
+/// * `[<chars>]` matches one character in the bracket. Character ranges,
+///   e.g., `[a-z]`, and negative sets via `[^ab]` or `[!ab]` are also
 ///   supported.
-/// * \p "{<glob>,...}" matches one of the globs in the list. Nested brace
+/// * `{<glob>,...}` matches one of the globs in the list. Nested brace
 ///   expansions are not supported. If \p MaxSubPatterns is empty then
-///   brace expansions are not supported and characters \p "{,}" are treated as
+///   brace expansions are not supported and characters `{,}` are treated as
 ///   literals.
-/// * \p "\\" (a single backslash) escapes the next character so it is treated
-///   as a literal.
+/// * `\` escapes the next character so it is treated as a literal.
 ///
 /// Some known edge cases are:
-/// * \p "]" is allowed as the first character in a character class, i.e.,
-///   \p "[]]" is valid and matches the literal \p "]".
-/// * The empty character class, i.e., \p "[]", is invalid.
-/// * Empty or singleton brace expansions, e.g., \p "{}", \p "{a}", are invalid.
-/// * \p "}" and \p "," that are not inside a brace expansion are taken as
-///   literals, e.g., \p ",}" is valid but \p "{" is not.
+/// * The literal `]` is allowed as the first character in a character class,
+///    i.e., `[]]` is valid and matches the literal `]`.
+/// * The empty character class, i.e., `[]`, is invalid.
+/// * Empty or singleton brace expansions, e.g., `{}`, `{a}`, are invalid.
+/// * The literals `}` and `,` that are not inside a brace expansion are taken
+///   as literals, e.g., `,}` is valid but `{` is not.
 ///
-/// For example, \p "*[/\\\\]foo.{c,cpp}" (with two backslashes) will match
-/// (unix or windows) paths to all files named \p "foo.c" or \p "foo.cpp".
+/// Examples:
+/// * `*[/\\]foo.{c,cpp}` will match (unix or windows) paths to files named
+///   `foo.c` or `foo.cpp`.
+/// * `_Z{N,NK,}S[tabsoid]*` will match mangled C++ standard library functions.
 class GlobPattern {
 public:
   /// \param Pat the pattern to match against
   /// \param MaxSubPatterns if provided limit the number of allowed subpatterns
   ///                       created from expanding braces otherwise disable
   ///                       brace expansion
-  static Expected<GlobPattern>
+  LLVM_ABI static Expected<GlobPattern>
   create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {});
   /// \returns \p true if \p S matches this glob pattern
-  bool match(StringRef S) const;
+  LLVM_ABI bool match(StringRef S) const;
 
   // Returns true for glob pattern "*". Can be used to avoid expensive
   // preparation/acquisition of the input for match().
   bool isTrivialMatchAll() const {
-    if (!Prefix.empty())
+    if (PrefixSize)
+      return false;
+    if (SuffixSize)
       return false;
     if (SubGlobs.size() != 1)
       return false;
     return SubGlobs[0].getPat() == "*";
   }
 
+  // The following functions are just shortcuts for faster matching. They are
+  // conservative to simplify implementations.
+
+  // Returns plain prefix of the pattern.
+  StringRef prefix() const { return Pattern.take_front(PrefixSize); }
+  // Returns plain suffix of the pattern.
+  StringRef suffix() const { return Pattern.take_back(SuffixSize); }
+  // Returns the longest plain substring of the pattern between prefix and
+  // suffix.
+  LLVM_ABI_FOR_TEST StringRef longest_substr() const;
+
 private:
-  StringRef Prefix;
+  StringRef Pattern;
+  size_t PrefixSize = 0;
+  size_t SuffixSize = 0;
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
-    static Expected<SubGlobPattern> create(StringRef Pat);
+    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
     /// \returns \p true if \p S matches this glob pattern
-    bool match(StringRef S) const;
+    LLVM_ABI bool match(StringRef S) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
 
     // Brackets with their end position and matched bytes.

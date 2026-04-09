@@ -69,6 +69,22 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
   if (fpmr_data.GetByteSize() >= sizeof(uint64_t))
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskFPMR);
 
+  DataExtractor gcs_data = getRegset(notes, arch.GetTriple(), AARCH64_GCS_Desc);
+  struct __attribute__((packed)) gcs_regs {
+    uint64_t features_enabled;
+    uint64_t features_locked;
+    uint64_t gcspr_e0;
+  };
+  if (gcs_data.GetByteSize() >= sizeof(gcs_regs))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskGCS);
+
+  DataExtractor poe_data = getRegset(notes, arch.GetTriple(), AARCH64_POE_Desc);
+  struct poe_regs {
+    uint64_t por_reg;
+  };
+  if (poe_data.GetByteSize() >= sizeof(poe_regs))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPOE);
+
   auto register_info_up =
       std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
@@ -87,14 +103,19 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
   llvm::Triple::OSType os = process->GetArchitecture().GetTriple().getOS();
   if ((os == llvm::Triple::Linux) || (os == llvm::Triple::FreeBSD)) {
     AuxVector aux_vec(process->GetAuxvData());
-    std::optional<uint64_t> auxv_at_hwcap = aux_vec.GetAuxValue(
-        os == llvm::Triple::FreeBSD ? AuxVector::AUXV_FREEBSD_AT_HWCAP
-                                    : AuxVector::AUXV_AT_HWCAP);
+    bool is_freebsd = os == llvm::Triple::FreeBSD;
+    std::optional<uint64_t> auxv_at_hwcap =
+        aux_vec.GetAuxValue(is_freebsd ? AuxVector::AUXV_FREEBSD_AT_HWCAP
+                                       : AuxVector::AUXV_AT_HWCAP);
     std::optional<uint64_t> auxv_at_hwcap2 =
         aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
+    std::optional<uint64_t> auxv_at_hwcap3 =
+        is_freebsd ? std::nullopt
+                   : aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP3);
 
     m_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
-                                           auxv_at_hwcap2.value_or(0));
+                                           auxv_at_hwcap2.value_or(0),
+                                           auxv_at_hwcap3.value_or(0));
     m_register_flags_detector.UpdateRegisterInfo(GetRegisterInfo(),
                                                  GetRegisterCount());
   }
@@ -135,6 +156,12 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   if (m_register_info_up->IsFPMRPresent())
     m_fpmr_data = getRegset(notes, target_triple, AARCH64_FPMR_Desc);
+
+  if (m_register_info_up->IsGCSPresent())
+    m_gcs_data = getRegset(notes, target_triple, AARCH64_GCS_Desc);
+
+  if (m_register_info_up->IsPOEPresent())
+    m_poe_data = getRegset(notes, target_triple, AARCH64_POE_Desc);
 
   ConfigureRegisterContext();
 }
@@ -330,6 +357,11 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     assert(offset < m_mte_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_mte_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
+  } else if (IsGCS(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetGCSOffset();
+    assert(offset < m_gcs_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_gcs_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else if (IsSME(reg)) {
     // If you had SME in the process, active or otherwise, there will at least
     // be a ZA header. No header, no SME at all.
@@ -382,6 +414,11 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - m_register_info_up->GetFPMROffset();
     assert(offset < m_fpmr_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_fpmr_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+  } else if (IsPOE(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetPOEOffset();
+    assert(offset < m_poe_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_poe_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else
     return false;

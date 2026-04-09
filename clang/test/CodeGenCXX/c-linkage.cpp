@@ -29,5 +29,6 @@ extern "C" {
   struct test3_s {
   };
   bool operator==(const int& a, const test3_s& b)  {
+    return false;
   }
 }

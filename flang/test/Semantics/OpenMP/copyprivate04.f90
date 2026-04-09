@@ -70,6 +70,7 @@ program omp_copyprivate
   ! Named constants are shared.
   !$omp single
   !ERROR: COPYPRIVATE variable 'pi' is not PRIVATE or THREADPRIVATE in outer context
+  !ERROR: 'pi' must be a variable
   !$omp end single copyprivate(pi)
 
   !$omp parallel do

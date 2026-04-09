@@ -33,7 +33,7 @@ repl_map = {
     "__builtin_ia32_divsd": "_mm_div_sd",
     "__builtin_ia32_divpd": "_mm_div_pd",
     "__builtin_ia32_divps": "_mm_div_ps",
-    "__builtin_ia32_subss": "_mm_div_ss",
+    "__builtin_ia32_divss": "_mm_div_ss",
     "__builtin_ia32_andpd": "_mm_and_pd",
     "__builtin_ia32_andps": "_mm_and_ps",
     "__builtin_ia32_pand128": "_mm_and_si128",

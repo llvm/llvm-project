@@ -101,7 +101,7 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override {
     if (RC == &M68k::CCRCRegClass)
-      return &M68k::DR32RegClass;
+      return &M68k::DR16RegClass;
     return RC;
   }
 

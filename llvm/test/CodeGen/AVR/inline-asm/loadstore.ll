@@ -44,6 +44,19 @@ define i8 @loadz(ptr %0) {
   ret i8 %2
 }
 
+define i8 @load_ptr_imm() {
+; CHECK-LABEL: load_ptr_imm:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldi r26, 210
+; CHECK-NEXT:    ldi r27, 4
+; CHECK-NEXT:    ;APP
+; CHECK-NEXT:    ld r24, X
+; CHECK-NEXT:    ;NO_APP
+; CHECK-NEXT:    ret
+  %1 = tail call i8 asm sideeffect "ld $0, $1", "=r,e"(i16 1234)
+  ret i8 %1
+}
+
 define void @storex(ptr %0, i8 %1) {
 ; CHECK-LABEL: storex:
 ; CHECK:       ; %bb.0:
@@ -84,5 +97,18 @@ define void @storez(ptr %0, i8 %1) {
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    ret
   tail call void asm sideeffect "st ${0:a}, $1", "z,r"(ptr %0, i8 %1)
+  ret void
+}
+
+define void @store_ptr_imm(i8 %0) {
+; CHECK-LABEL: store_ptr_imm:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldi r26, 210
+; CHECK-NEXT:    ldi r27, 4
+; CHECK-NEXT:    ;APP
+; CHECK-NEXT:    st X, r24
+; CHECK-NEXT:    ;NO_APP
+; CHECK-NEXT:    ret
+  tail call void asm sideeffect "st $0, $1", "e,r"(i16 1234, i8 %0)
   ret void
 }

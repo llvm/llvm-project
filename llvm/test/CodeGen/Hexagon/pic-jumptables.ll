@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -relocation-model=pic < %s | FileCheck %s
 
 ; CHECK: r{{[0-9]+}} = add({{pc|PC}},##
 ; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#2)

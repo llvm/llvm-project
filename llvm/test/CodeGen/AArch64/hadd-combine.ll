@@ -1020,6 +1020,19 @@ define <2 x i32> @srhadd_signbits_v2i32_negative(<2 x i32> %a0, <2 x i32> %a1, p
   ret <2 x i32> %avg2
 }
 
+define <8 x i8> @dontcrashonnvcasts() {
+; CHECK-LABEL: dontcrashonnvcasts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2s, #128, lsl #24
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    fneg d0, d0
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %vrhadd_v.i = tail call <8 x i8> @llvm.aarch64.neon.urhadd.v8i8(<8 x i8> <i8 0, i8 0, i8 0, i8 -1, i8 0, i8 0, i8 0, i8 0>, <8 x i8> zeroinitializer)
+  %shuffle.i = shufflevector <8 x i8> %vrhadd_v.i, <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison>, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  ret <8 x i8> %shuffle.i
+}
+
 declare <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8>, <8 x i8>)
 declare <4 x i16> @llvm.aarch64.neon.shadd.v4i16(<4 x i16>, <4 x i16>)
 declare <2 x i32> @llvm.aarch64.neon.shadd.v2i32(<2 x i32>, <2 x i32>)

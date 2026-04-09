@@ -74,7 +74,7 @@ program test
   interface distinguishable3
     procedure :: s1a, s1b
   end interface
-  !ERROR: Generic 'indistinguishable' may not have specific procedures 's2b' and 's2a' as their interfaces are not distinguishable
+  !ERROR: Generic 'indistinguishable' may not have specific procedures 's2a' and 's2b' as their interfaces are not distinguishable
   interface indistinguishable
     procedure :: s2a, s2b
   end interface

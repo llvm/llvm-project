@@ -8,7 +8,7 @@ using namespace llvm;
 
 namespace {
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  auto TT(Triple::normalize("aarch64--"));
+  Triple TT("aarch64--");
   std::string CPU("generic");
   std::string FS("+sme");
 

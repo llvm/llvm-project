@@ -11,7 +11,8 @@ define dso_local void @naked() naked "frame-pointer"="all" {
 ;
 ; CHECK-64-LABEL: naked:
 ; CHECK-64:       # %bb.0:
-; CHECK-64-NEXT:    bl main
+; CHECK-64-NEXT:    pcaddu18i $ra, %call36(main)
+; CHECK-64-NEXT:    jirl $ra, $ra, 0
   call void @main()
   unreachable
 }
@@ -39,7 +40,8 @@ define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-64-NEXT:    .cfi_offset 22, -16
 ; CHECK-64-NEXT:    addi.d $fp, $sp, 16
 ; CHECK-64-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-64-NEXT:    bl main
+; CHECK-64-NEXT:    pcaddu18i $ra, %call36(main)
+; CHECK-64-NEXT:    jirl $ra, $ra, 0
   call void @main()
   unreachable
 }

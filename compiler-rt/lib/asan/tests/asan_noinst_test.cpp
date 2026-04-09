@@ -71,7 +71,7 @@ static void *MallocStress(void *NumOfItrPtr) {
       void *ptr = vec[idx];
       vec[idx] = vec.back();
       vec.pop_back();
-      __asan::asan_free(ptr, &stack1, __asan::FROM_MALLOC);
+      __asan::asan_free(ptr, &stack1);
     } else {
       size_t size = my_rand_r(&seed) % 1000 + 1;
       switch ((my_rand_r(&seed) % 128)) {
@@ -80,8 +80,7 @@ static void *MallocStress(void *NumOfItrPtr) {
         case 2: size += 4096; break;
       }
       size_t alignment = 1 << (my_rand_r(&seed) % 10 + 1);
-      char *ptr = (char*)__asan::asan_memalign(alignment, size,
-                                               &stack2, __asan::FROM_MALLOC);
+      char *ptr = (char *)__asan::asan_memalign(alignment, size, &stack2);
       EXPECT_EQ(size, __asan::asan_malloc_usable_size(ptr, 0, 0));
       vec.push_back(ptr);
       ptr[0] = 0;
@@ -89,8 +88,7 @@ static void *MallocStress(void *NumOfItrPtr) {
       ptr[size/2] = 0;
     }
   }
-  for (size_t i = 0; i < vec.size(); i++)
-    __asan::asan_free(vec[i], &stack3, __asan::FROM_MALLOC);
+  for (size_t i = 0; i < vec.size(); i++) __asan::asan_free(vec[i], &stack3);
   return nullptr;
 }
 
@@ -143,12 +141,12 @@ TEST(AddressSanitizer, QuarantineTest) {
 
   const int size = 1024;
   void *p = __asan::asan_malloc(size, &stack);
-  __asan::asan_free(p, &stack, __asan::FROM_MALLOC);
+  __asan::asan_free(p, &stack);
   size_t i;
   size_t max_i = 1 << 30;
   for (i = 0; i < max_i; i++) {
     void *p1 = __asan::asan_malloc(size, &stack);
-    __asan::asan_free(p1, &stack, __asan::FROM_MALLOC);
+    __asan::asan_free(p1, &stack);
     if (p1 == p) break;
   }
   EXPECT_GE(i, 10000U);
@@ -165,7 +163,7 @@ void *ThreadedQuarantineTestWorker(void *unused) {
 
   for (size_t i = 0; i < 1000; i++) {
     void *p = __asan::asan_malloc(1 + (my_rand_r(&seed) % 4000), &stack);
-    __asan::asan_free(p, &stack, __asan::FROM_MALLOC);
+    __asan::asan_free(p, &stack);
   }
   return NULL;
 }
@@ -204,7 +202,7 @@ void *ThreadedOneSizeMallocStress(void *unused) {
       p[i] = __asan::asan_malloc(32, &stack);
     }
     for (size_t i = 0; i < kNumMallocs; i++) {
-      __asan::asan_free(p[i], &stack, __asan::FROM_MALLOC);
+      __asan::asan_free(p[i], &stack);
     }
   }
   return NULL;
@@ -230,6 +228,43 @@ TEST(AddressSanitizer, ShadowRegionIsPoisonedTest) {
   EXPECT_EQ(ptr, __asan_region_is_poisoned(ptr, 100));
   ptr = kHighShadowBeg + 200;
   EXPECT_EQ(ptr, __asan_region_is_poisoned(ptr, 100));
+}
+
+// Test regions fully contained in the last 8 bytes (shadow granularity)
+// of a memory range (LowMem / MidMem / HighMem).
+static void TestIsPoisonedNearMemEnd(uptr end) {
+  static const uptr granularity = 1ULL << 3;  // shadow granularity
+  for (uptr offset = 0; offset < granularity; ++offset) {
+    const uptr first = end - offset;
+    for (uptr last = first; first <= last && last <= end; ++last) {
+      const uptr size = last - first + 1;
+      // __asan_region_is_poisoned() should not crash for the region.
+      uptr first_poisoned = __asan_region_is_poisoned(first, size);
+      EXPECT_TRUE(first_poisoned == 0 ||
+                  (first_poisoned >= first && first_poisoned <= last))
+          << " first=" << (void*)first << " size=" << size
+          << " first_poisoned=" << (void*)first_poisoned;
+
+      // __asan_region_is_poisoned() and __asan_address_is_poisoned() should
+      // behave consistently, i.e. both should return the same result.
+      if (size == 1) {
+        int is_poisoned = __asan_address_is_poisoned((void*)first);
+        EXPECT_EQ((void*)first_poisoned, is_poisoned ? (void*)first : 0);
+      }
+    }
+  }
+}
+
+TEST(AddressSanitizer, IsPoisonedOnMemoryBoundariesTest) {
+  using __asan::kHighMemEnd;
+  using __asan::kMidMemBeg;
+  using __asan::kMidMemEnd;
+
+  TestIsPoisonedNearMemEnd(kLowMemEnd);
+  if (__asan::kMidMemBeg)  // if mid memory is available
+    TestIsPoisonedNearMemEnd(__asan::kMidMemEnd);
+  if (kHighMemBeg)  // if high memory is available
+    TestIsPoisonedNearMemEnd(__asan::kHighMemEnd);
 }
 
 // Test __asan_load1 & friends.
@@ -260,7 +295,7 @@ static void TestLoadStoreCallbacks(CB cb[2][5]) {
         }
       }
     }
-    __asan::asan_free(ptr, &stack, __asan::FROM_MALLOC);
+    __asan::asan_free(ptr, &stack);
   }
   __asan_test_only_reported_buggy_pointer = 0;
 }

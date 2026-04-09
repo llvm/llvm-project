@@ -20,16 +20,17 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
 namespace llvm {
-cl::opt<bool> ShouldPreserveAllAttributes(
+LLVM_ABI cl::opt<bool> ShouldPreserveAllAttributes(
     "assume-preserve-all", cl::init(false), cl::Hidden,
-    cl::desc("enable preservation of all attrbitues. even those that are "
-             "unlikely to be usefull"));
+    cl::desc("enable preservation of all attributes. even those that are "
+             "unlikely to be useful"));
 
 cl::opt<bool> EnableKnowledgeRetention(
     "enable-knowledge-retention", cl::init(false), cl::Hidden,
@@ -114,12 +115,12 @@ struct AssumeBuilderState {
       : M(M), InstBeingModified(I), AC(AC), DT(DT) {}
 
   bool tryToPreserveWithoutAddingAssume(RetainedKnowledge RK) {
-    if (!InstBeingModified || !RK.WasOn)
+    if (!InstBeingModified || !RK.WasOn || !AC)
       return false;
     bool HasBeenPreserved = false;
     Use* ToUpdate = nullptr;
     getKnowledgeForValue(
-        RK.WasOn, {RK.AttrKind}, AC,
+        RK.WasOn, {RK.AttrKind}, *AC,
         [&](RetainedKnowledge RKOther, Instruction *Assume,
             const CallInst::BundleOpInfo *Bundle) {
           if (!isValidAssumeForContext(Assume, InstBeingModified, DT))
@@ -178,11 +179,9 @@ struct AssumeBuilderState {
     if (tryToPreserveWithoutAddingAssume(RK))
       return;
     MapKey Key{RK.WasOn, RK.AttrKind};
-    auto Lookup = AssumedKnowledgeMap.find(Key);
-    if (Lookup == AssumedKnowledgeMap.end()) {
-      AssumedKnowledgeMap[Key] = RK.ArgValue;
+    auto [Lookup, Inserted] = AssumedKnowledgeMap.try_emplace(Key, RK.ArgValue);
+    if (Inserted)
       return;
-    }
     assert(((Lookup->second == 0 && RK.ArgValue == 0) ||
             (Lookup->second != 0 && RK.ArgValue != 0)) &&
            "inconsistent argument value");
@@ -298,7 +297,7 @@ bool llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
   AssumeBuilderState Builder(I->getModule(), I, AC, DT);
   Builder.addInstruction(I);
   if (auto *Intr = Builder.build()) {
-    Intr->insertBefore(I);
+    Intr->insertBefore(I->getIterator());
     Changed = true;
     if (AC)
       AC->registerAssumption(Intr);
@@ -474,9 +473,9 @@ struct AssumeSimplify {
     AssumeBuilderState Builder(F.getParent());
 
     /// For now it is initialized to the best value it could have
-    Instruction *InsertPt = BB->getFirstNonPHI();
+    BasicBlock::iterator InsertPt = BB->getFirstNonPHIIt();
     if (isa<LandingPadInst>(InsertPt))
-      InsertPt = InsertPt->getNextNode();
+      InsertPt = std::next(InsertPt);
     for (IntrinsicInst *I : make_range(Begin, End)) {
       CleanupToDo.insert(I);
       for (CallInst::BundleOpInfo &BOI : I->bundle_op_infos()) {
@@ -487,8 +486,8 @@ struct AssumeSimplify {
         Builder.addKnowledge(RK);
         if (auto *I = dyn_cast_or_null<Instruction>(RK.WasOn))
           if (I->getParent() == InsertPt->getParent() &&
-              (InsertPt->comesBefore(I) || InsertPt == I))
-            InsertPt = I->getNextNode();
+              (InsertPt->comesBefore(I) || &*InsertPt == I))
+            InsertPt = I->getNextNode()->getIterator();
       }
     }
 
@@ -498,7 +497,7 @@ struct AssumeSimplify {
       for (auto It = (*Begin)->getIterator(), E = InsertPt->getIterator();
            It != E; --It)
         if (!isGuaranteedToTransferExecutionToSuccessor(&*It)) {
-          InsertPt = It->getNextNode();
+          InsertPt = std::next(It);
           break;
         }
     auto *MergedAssume = Builder.build();

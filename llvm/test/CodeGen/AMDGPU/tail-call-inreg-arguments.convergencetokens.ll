@@ -28,10 +28,10 @@ define void @tail_call_i64_inreg_uniform_in_vgpr_convergence_tokens() #0 {
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DS_READ_B64_gfx9_]].sub0
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY11]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY11]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @void_func_i64_inreg, target-flags(amdgpu-gotprel32-hi) @void_func_i64_inreg, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:ccr_sgpr_64 = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY8]]
@@ -43,12 +43,12 @@ define void @tail_call_i64_inreg_uniform_in_vgpr_convergence_tokens() #0 {
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY2]]
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY1]]
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY]]
-  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; CHECK-NEXT:   $sgpr16 = COPY [[V_READFIRSTLANE_B32_]]
+  ; CHECK-NEXT:   $sgpr17 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
-  ; CHECK-NEXT:   SI_TCRETURN killed [[S_LOAD_DWORDX2_IMM]], @void_func_i64_inreg, 0, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit $sgpr0, implicit $sgpr1, implicit [[CONVERGENCECTRL_ENTRY]]
+  ; CHECK-NEXT:   SI_TCRETURN killed [[S_LOAD_DWORDX2_IMM]], @void_func_i64_inreg, 0, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit $sgpr16, implicit $sgpr17, implicit [[CONVERGENCECTRL_ENTRY]]
   %t = call token @llvm.experimental.convergence.entry()
-  %uniform.vgpr = load i64, ptr addrspace(3) null, align 8
+  %uniform.vgpr = load i64, ptr addrspace(3) zeroinitializer, align 8
   tail call void @void_func_i64_inreg(i64 inreg %uniform.vgpr) #0 [ "convergencectrl"(token %t) ]
   ret void
 }

@@ -74,17 +74,15 @@ define i8 @foo1([19 x i8] %a, i8 %b) {
 define i8 @foo2([17 x i8] %a, i8 %b) {
 ; CHECK-LABEL: foo2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    push r8
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
-; CHECK-NEXT:    in r28, 61
-; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    ldd r24, Y+6
-; CHECK-NEXT:    sub r8, r24
-; CHECK-NEXT:    mov r24, r8
-; CHECK-NEXT:    pop r29
-; CHECK-NEXT:    pop r28
-; CHECK-NEXT:    pop r8
+; CHECK-NEXT:    in   r28, 61
+; CHECK-NEXT:    in   r29, 62
+; CHECK-NEXT:    mov  r24, r8
+; CHECK-NEXT:    ldd  r25, Y+5
+; CHECK-NEXT:    sub  r24, r25
+; CHECK-NEXT:    pop  r29
+; CHECK-NEXT:    pop  r28
 ; CHECK-NEXT:    ret
   %c = extractvalue [17 x i8] %a, 0
   %d = sub i8 %c, %b

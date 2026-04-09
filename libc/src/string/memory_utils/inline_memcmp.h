@@ -20,15 +20,13 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_x86
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/inline_memcmp.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_aarch64
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_aarch64_dispatch
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_GPU)
+#else
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_byte_per_byte
-#else
-#error "Unsupported architecture"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

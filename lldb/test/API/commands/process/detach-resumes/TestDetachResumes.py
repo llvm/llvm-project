@@ -12,6 +12,10 @@ from lldbsuite.test import lldbutil
 class DetachResumesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(
+        oslist=["windows"],
+        bugnumber="github.com/llvm/llvm-project/issues/144891",
+    )
     def test_detach_resumes(self):
         self.build()
         exe = self.getBuildArtifact()

@@ -20,8 +20,6 @@ export namespace std {
   // [flat.map.erasure], erasure for flat_map
   using std::erase_if;
 
-#endif // _LIBCPP_STD_VER >= 23
-#if 0
   // [flat.multimap], class template flat_multimap
   using std::flat_multimap;
 
@@ -29,5 +27,5 @@ export namespace std {
   using std::sorted_equivalent_t;
 
   // [flat.multimap.erasure], erasure for flat_multimap
-#endif
+#endif // _LIBCPP_STD_VER >= 23
 } // namespace std

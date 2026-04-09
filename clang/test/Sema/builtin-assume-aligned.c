@@ -74,7 +74,7 @@ int test13(int *a) {
 }
 
 int test14(int *a, int b) {
-  a = (int *)__builtin_assume_aligned(b, 32); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const void *}}
+  a = (int *)__builtin_assume_aligned(b, 32); // expected-error {{non-pointer argument to '__builtin_assume_aligned' is not allowed}}
 }
 
 int test15(int *b) {

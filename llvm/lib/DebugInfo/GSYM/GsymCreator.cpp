@@ -169,11 +169,25 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   const off_t StrtabSize = O.tell() - StrtabOffset;
   std::vector<uint32_t> AddrInfoOffsets;
 
+  // Verify that the size of the string table does not exceed 32-bit max.
+  // This means the offsets in the string table will not exceed 32-bit max.
+  if (StrtabSize > UINT32_MAX) {
+    return createStringError(std::errc::invalid_argument,
+                             "string table size exceeded 32-bit max");
+  }
+
   // Write out the address infos for each function info.
   for (const auto &FuncInfo : Funcs) {
-    if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O))
-      AddrInfoOffsets.push_back(OffsetOrErr.get());
-    else
+    if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O)) {
+      // Verify that the address info offsets do not exceed 32-bit max.
+      uint64_t Offset = OffsetOrErr.get();
+      if (Offset > UINT32_MAX) {
+        return createStringError(std::errc::invalid_argument,
+                                 "address info offset exceeded 32-bit max");
+      }
+
+      AddrInfoOffsets.push_back(Offset);
+    } else
       return OffsetOrErr.takeError();
   }
   // Fixup the string table offset and size in the header
@@ -189,13 +203,19 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
+llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
+  // Use the loader to load call site information from the YAML file.
+  CallSiteInfoLoader Loader(*this, Funcs);
+  return Loader.loadYAML(YAMLFile);
+}
+
 void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
   // Nothing to do if we have less than 2 functions.
   if (Funcs.size() < 2)
     return;
 
-  // Sort the function infos by address range first
-  llvm::sort(Funcs);
+  // Sort the function infos by address range first, preserving input order
+  llvm::stable_sort(Funcs);
   std::vector<FunctionInfo> TopLevelFuncs;
 
   // Add the first function info to the top level functions
@@ -269,8 +289,9 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   // object.
   if (!IsSegment) {
     if (NumBefore > 1) {
-      // Sort function infos so we can emit sorted functions.
-      llvm::sort(Funcs);
+      // Sort function infos so we can emit sorted functions. Use stable sort to
+      // ensure determinism.
+      llvm::stable_sort(Funcs);
       std::vector<FunctionInfo> FinalizedFuncs;
       FinalizedFuncs.reserve(Funcs.size());
       FinalizedFuncs.emplace_back(std::move(Funcs.front()));
@@ -377,6 +398,13 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   // another.
   StringOffsetMap.try_emplace(StrOff, CHStr);
   return StrOff;
+}
+
+StringRef GsymCreator::getString(uint32_t Offset) {
+  auto I = StringOffsetMap.find(Offset);
+  assert(I != StringOffsetMap.end() &&
+         "GsymCreator::getString expects a valid offset as parameter.");
+  return I->second.val();
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
@@ -538,7 +566,7 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
         createSegment(SegmentSize, FuncIdx);
     if (ExpectedGC) {
       GsymCreator *GC = ExpectedGC->get();
-      if (GC == NULL)
+      if (!GC)
         break; // We had not more functions to encode.
       // Don't collect any messages at all
       OutputAggregator Out(nullptr);
@@ -550,7 +578,6 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
       std::optional<uint64_t> FirstFuncAddr = GC->getFirstFunctionAddress();
       if (FirstFuncAddr) {
         SGP << Path << "-" << llvm::format_hex(*FirstFuncAddr, 1);
-        SGP.flush();
         Err = GC->save(SegmentedGsymPath, ByteOrder, std::nullopt);
         if (Err)
           return Err;

@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy  -check-suffixes=NSTRICT,STRICT %s cppcoreguidelines-pro-type-static-cast-downcast %t
-// RUN: %check_clang_tidy  -check-suffix=NSTRICT %s cppcoreguidelines-pro-type-static-cast-downcast %t -- -config="{CheckOptions: {StrictMode: false}}"
+// RUN: %check_clang_tidy  -check-suffix=NSTRICT %s cppcoreguidelines-pro-type-static-cast-downcast %t -- -config="{CheckOptions: {cppcoreguidelines-pro-type-static-cast-downcast.StrictMode: false}}"
 
 class Base {
 };

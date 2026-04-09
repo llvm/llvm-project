@@ -187,18 +187,22 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
     if (execution_result == lldb::eExpressionInterrupted ||
         execution_result == lldb::eExpressionHitBreakpoint) {
       const char *error_desc = nullptr;
+      const char *explanation = execution_result == lldb::eExpressionInterrupted
+                                    ? "was interrupted"
+                                    : "hit a breakpoint";
 
       if (user_expression_plan) {
         if (auto real_stop_info_sp = user_expression_plan->GetRealStopInfo())
           error_desc = real_stop_info_sp->GetDescription();
       }
+
       if (error_desc)
         diagnostic_manager.Printf(lldb::eSeverityError,
-                                  "Execution was interrupted, reason: %s.",
+                                  "Expression execution %s: %s.", explanation,
                                   error_desc);
       else
-        diagnostic_manager.PutString(lldb::eSeverityError,
-                                     "Execution was interrupted.");
+        diagnostic_manager.Printf(lldb::eSeverityError,
+                                  "Expression execution %s.", explanation);
 
       if ((execution_result == lldb::eExpressionInterrupted &&
            options.DoesUnwindOnError()) ||
@@ -212,31 +216,35 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
           user_expression_plan->TransferExpressionOwnership();
         diagnostic_manager.AppendMessageToDiagnostic(
             "The process has been left at the point where it was "
-            "interrupted, "
-            "use \"thread return -x\" to return to the state before "
-            "expression evaluation.");
+            "interrupted, use \"thread return -x\" to return to the state "
+            "before expression evaluation.");
       }
 
       return execution_result;
-    } else if (execution_result == lldb::eExpressionStoppedForDebug) {
+    }
+
+    if (execution_result == lldb::eExpressionStoppedForDebug) {
       diagnostic_manager.PutString(
           lldb::eSeverityInfo,
-          "Execution was halted at the first instruction of the expression "
-          "function because \"debug\" was requested.\n"
+          "Expression execution was halted at the first instruction of the "
+          "expression function because \"debug\" was requested.\n"
           "Use \"thread return -x\" to return to the state before expression "
           "evaluation.");
       return execution_result;
-    } else if (execution_result == lldb::eExpressionThreadVanished) {
-      diagnostic_manager.Printf(
-          lldb::eSeverityError,
-          "Couldn't complete execution; the thread "
-          "on which the expression was being run: 0x%" PRIx64
-          " exited during its execution.",
-          expr_thread_id);
-      return execution_result;
-    } else if (execution_result != lldb::eExpressionCompleted) {
+    }
+
+    if (execution_result == lldb::eExpressionThreadVanished) {
       diagnostic_manager.Printf(lldb::eSeverityError,
-                                "Couldn't execute function; result was %s",
+                                "Couldn't execute expression: the thread on "
+                                "which the expression was being run (0x%" PRIx64
+                                ") exited during its execution.",
+                                expr_thread_id);
+      return execution_result;
+    }
+
+    if (execution_result != lldb::eExpressionCompleted) {
+      diagnostic_manager.Printf(lldb::eSeverityError,
+                                "Couldn't execute expression: result was %s",
                                 toString(execution_result).c_str());
       return execution_result;
     }
@@ -245,9 +253,9 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result,
                            function_stack_bottom, function_stack_top)) {
     return lldb::eExpressionCompleted;
-  } else {
-    return lldb::eExpressionResultUnavailable;
   }
+
+  return lldb::eExpressionResultUnavailable;
 }
 
 bool LLVMUserExpression::FinalizeJITExecution(
@@ -305,25 +313,22 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
 
   if (m_jit_start_addr != LLDB_INVALID_ADDRESS || m_can_interpret) {
     if (m_materialized_address == LLDB_INVALID_ADDRESS) {
-      Status alloc_error;
-
       IRMemoryMap::AllocationPolicy policy =
           m_can_interpret ? IRMemoryMap::eAllocationPolicyHostOnly
                           : IRMemoryMap::eAllocationPolicyMirror;
 
       const bool zero_memory = false;
-
-      m_materialized_address = m_execution_unit_sp->Malloc(
-          m_materializer_up->GetStructByteSize(),
-          m_materializer_up->GetStructAlignment(),
-          lldb::ePermissionsReadable | lldb::ePermissionsWritable, policy,
-          zero_memory, alloc_error);
-
-      if (!alloc_error.Success()) {
+      if (auto address_or_error = m_execution_unit_sp->Malloc(
+              m_materializer_up->GetStructByteSize(),
+              m_materializer_up->GetStructAlignment(),
+              lldb::ePermissionsReadable | lldb::ePermissionsWritable, policy,
+              zero_memory)) {
+        m_materialized_address = *address_or_error;
+      } else {
         diagnostic_manager.Printf(
             lldb::eSeverityError,
             "Couldn't allocate space for materialized struct: %s",
-            alloc_error.AsCString());
+            toString(address_or_error.takeError()).c_str());
         return false;
       }
     }
@@ -331,8 +336,6 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     struct_address = m_materialized_address;
 
     if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
-      Status alloc_error;
-
       size_t stack_frame_size = target->GetExprAllocSize();
       if (stack_frame_size == 0) {
         ABISP abi_sp;
@@ -343,19 +346,17 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
       }
 
       const bool zero_memory = false;
-
-      m_stack_frame_bottom = m_execution_unit_sp->Malloc(
-          stack_frame_size, 8,
-          lldb::ePermissionsReadable | lldb::ePermissionsWritable,
-          IRMemoryMap::eAllocationPolicyHostOnly, zero_memory, alloc_error);
-
-      m_stack_frame_top = m_stack_frame_bottom + stack_frame_size;
-
-      if (!alloc_error.Success()) {
+      if (auto address_or_error = m_execution_unit_sp->Malloc(
+              stack_frame_size, 8,
+              lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+              IRMemoryMap::eAllocationPolicyHostOnly, zero_memory)) {
+        m_stack_frame_bottom = *address_or_error;
+        m_stack_frame_top = m_stack_frame_bottom + stack_frame_size;
+      } else {
         diagnostic_manager.Printf(
             lldb::eSeverityError,
             "Couldn't allocate space for the stack frame: %s",
-            alloc_error.AsCString());
+            toString(address_or_error.takeError()).c_str());
         return false;
       }
     }
@@ -374,4 +375,3 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   }
   return true;
 }
-

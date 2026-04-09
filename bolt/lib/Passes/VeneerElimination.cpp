@@ -29,10 +29,6 @@ static llvm::cl::opt<bool>
 namespace llvm {
 namespace bolt {
 
-static bool isPossibleVeneer(const BinaryFunction &BF) {
-  return BF.isAArch64Veneer() || BF.getOneName().starts_with("__AArch64");
-}
-
 Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
   if (!opts::EliminateVeneers || !BC.isAArch64())
     return Error::success();
@@ -40,22 +36,23 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
   std::unordered_map<const MCSymbol *, const MCSymbol *> VeneerDestinations;
   uint64_t NumEliminatedVeneers = 0;
   for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
-    if (!isPossibleVeneer(BF))
+    if (!BF.isPossibleVeneer())
       continue;
 
     if (BF.isIgnored())
       continue;
 
+    MCInst &FirstInstruction = *(BF.begin()->begin());
     const MCSymbol *VeneerTargetSymbol = 0;
     uint64_t TargetAddress;
-    if (BC.MIB->matchAbsLongVeneer(BF, TargetAddress)) {
+    if (BC.MIB->isTailCall(FirstInstruction)) {
+      VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction);
+    } else if (BC.MIB->matchAbsLongVeneer(BF, TargetAddress)) {
       if (BinaryFunction *TargetBF =
               BC.getBinaryFunctionAtAddress(TargetAddress))
         VeneerTargetSymbol = TargetBF->getSymbol();
-    } else {
-      MCInst &FirstInstruction = *(BF.begin()->begin());
-      if (BC.MIB->hasAnnotation(FirstInstruction, "AArch64Veneer"))
-        VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction, 1);
+    } else if (BC.MIB->hasAnnotation(FirstInstruction, "AArch64Veneer")) {
+      VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction, 1);
     }
 
     if (!VeneerTargetSymbol)

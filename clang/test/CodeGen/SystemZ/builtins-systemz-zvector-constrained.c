@@ -315,4 +315,6 @@ void test_float(void) {
   // CHECK: call <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 0, 0
   vd = vec_round(vd);
+  // CHECK: call <2 x double> @llvm.experimental.constrained.roundeven.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 4
 }

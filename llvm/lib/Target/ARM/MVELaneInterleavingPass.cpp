@@ -23,7 +23,7 @@
 //   %sb = sext v8i16 %b to v8i32
 //   %add = add v8i32 %sa, %sb
 //   %r = trunc %add to v8i16
-// And adds shuffles to allow the use of VMOVL/VMOVN instrctions:
+// And adds shuffles to allow the use of VMOVL/VMOVN instructions:
 //   %sha = shuffle v8i16 %a, undef, <0, 2, 4, 6, 1, 3, 5, 7>
 //   %sa = sext v8i16 %sha to v8i32
 //   %shb = shuffle v8i16 %b, undef, <0, 2, 4, 6, 1, 3, 5, 7>
@@ -70,7 +70,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mve-laneinterleave"
 
-cl::opt<bool> EnableInterleave(
+static cl::opt<bool> EnableInterleave(
     "enable-mve-interleave", cl::Hidden, cl::init(true),
     cl::desc("Enable interleave MVE vector operation lowering"));
 
@@ -176,7 +176,7 @@ static bool tryInterleave(Instruction *Start,
       Visited.insert(I);
       break;
 
-    // Extend leafs
+    // Extend leaves
     case Instruction::SExt:
     case Instruction::ZExt:
     case Instruction::FPExt:

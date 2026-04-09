@@ -3,16 +3,16 @@
 !https://github.com/llvm/llvm-project/issues/91205
 
 !CHECK: omp.parallel if(%{{[0-9]+}}) {
-!CHECK:   %[[THP1:[0-9]+]] = omp.threadprivate %{{[0-9]+}}#1
+!CHECK:   %[[THP1:[0-9]+]] = omp.threadprivate %{{[0-9]+}}#0
 !CHECK:   %[[DCL1:[0-9]+]]:2 = hlfir.declare %[[THP1]] {uniq_name = "_QFcopyin_scalar_arrayEx1"}
 !CHECK:   %[[LD1:[0-9]+]] = fir.load %{{[0-9]+}}#0
 !CHECK:   hlfir.assign %[[LD1]] to %[[DCL1]]#0
-!CHECK:   %[[THP2:[0-9]+]] = omp.threadprivate %{{[0-9]+}}#1
+!CHECK:   %[[THP2:[0-9]+]] = omp.threadprivate %{{[0-9]+}}#0
 !CHECK:   %[[SHP2:[0-9]+]] = fir.shape %c{{[0-9]+}}
 !CHECK:   %[[DCL2:[0-9]+]]:2 = hlfir.declare %[[THP2]](%[[SHP2]]) {uniq_name = "_QFcopyin_scalar_arrayEx2"}
 !CHECK:   hlfir.assign %{{[0-9]+}}#0 to %[[DCL2]]#0
 !CHECK:   omp.barrier
-!CHECK:   fir.call @_QPsub1(%[[DCL1]]#1, %[[DCL2]]#1)
+!CHECK:   fir.call @_QPsub1(%[[DCL1]]#0, %[[DCL2]]#0)
 !CHECK:   omp.terminator
 !CHECK: }
 

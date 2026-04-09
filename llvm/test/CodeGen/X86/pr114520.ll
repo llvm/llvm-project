@@ -5,7 +5,6 @@ define half @test1(half %x) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpextrw $0, %xmm0, %eax
-; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movl $64512, %ecx # imm = 0xFC00
@@ -21,83 +20,8 @@ entry:
 define <8 x half> @test2(<8 x half> %x) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm2
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = [-Inf,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    vucomiss %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    kmovw %eax, %k0
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[1,1,1,1,4,5,6,7]
-; CHECK-NEXT:    vcvtph2ps %xmm2, %xmm2
-; CHECK-NEXT:    vucomiss %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $14, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-5, %ax
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vcvtph2ps %xmm2, %xmm2
-; CHECK-NEXT:    vucomiss %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $13, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-9, %ax
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[3,3,3,3,4,5,6,7]
-; CHECK-NEXT:    vcvtph2ps %xmm2, %xmm2
-; CHECK-NEXT:    vucomiss %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $12, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-17, %ax
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; CHECK-NEXT:    vcvtph2ps %xmm2, %xmm2
-; CHECK-NEXT:    vucomiss %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $11, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-33, %ax
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtph2ps %xmm2, %xmm2
-; CHECK-NEXT:    vucomiss %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $10, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-65, %ax
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vcvtph2ps %xmm2, %xmm2
-; CHECK-NEXT:    vucomiss %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kshiftlw $6, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    kshiftlw $9, %k0, %k0
-; CHECK-NEXT:    kshiftrw $9, %k0, %k0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtph2ps %xmm2, %xmm2
-; CHECK-NEXT:    vucomiss %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    kshiftlw $7, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k1
+; CHECK-NEXT:    vcvtph2ps %xmm0, %ymm1
+; CHECK-NEXT:    vcmpgtps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
 ; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; CHECK-NEXT:    vmovdqa32 %ymm2, %ymm2 {%k1} {z}

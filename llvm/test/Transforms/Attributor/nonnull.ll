@@ -212,7 +212,7 @@ entry:
   br label %loop
 loop:
   %phi = phi ptr [%ret, %entry], [%phi, %loop]
-  br i1 undef, label %loop, label %exit
+  br i1 poison, label %loop, label %exit
 exit:
   ret ptr %phi
 }
@@ -336,15 +336,15 @@ define void @test13_helper() {
 ; TUNIT-LABEL: define {{[^@]+}}@test13_helper() {
 ; TUNIT-NEXT:    [[NONNULLPTR:%.*]] = tail call nonnull ptr @ret_nonnull()
 ; TUNIT-NEXT:    [[MAYBENULLPTR:%.*]] = tail call ptr @unknown()
-; TUNIT-NEXT:    tail call void @test13(ptr noalias nocapture nofree nonnull readnone [[NONNULLPTR]], ptr noalias nocapture nofree nonnull readnone [[NONNULLPTR]], ptr noalias nocapture nofree readnone [[MAYBENULLPTR]]) #[[ATTR5:[0-9]+]]
-; TUNIT-NEXT:    tail call void @test13(ptr noalias nocapture nofree nonnull readnone [[NONNULLPTR]], ptr noalias nocapture nofree readnone [[MAYBENULLPTR]], ptr noalias nocapture nofree nonnull readnone [[NONNULLPTR]]) #[[ATTR5]]
+; TUNIT-NEXT:    tail call void @test13(ptr noalias nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr noalias nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr noalias nofree readnone captures(none) [[MAYBENULLPTR]]) #[[ATTR5:[0-9]+]]
+; TUNIT-NEXT:    tail call void @test13(ptr noalias nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr noalias nofree readnone captures(none) [[MAYBENULLPTR]], ptr noalias nofree nonnull readnone captures(none) [[NONNULLPTR]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@test13_helper() {
 ; CGSCC-NEXT:    [[NONNULLPTR:%.*]] = tail call nonnull ptr @ret_nonnull()
 ; CGSCC-NEXT:    [[MAYBENULLPTR:%.*]] = tail call ptr @unknown()
-; CGSCC-NEXT:    tail call void @test13(ptr noalias nocapture nofree nonnull readnone [[NONNULLPTR]], ptr noalias nocapture nofree nonnull readnone [[NONNULLPTR]], ptr noalias nocapture nofree readnone [[MAYBENULLPTR]]) #[[ATTR4:[0-9]+]]
-; CGSCC-NEXT:    tail call void @test13(ptr noalias nocapture nofree nonnull readnone [[NONNULLPTR]], ptr noalias nocapture nofree readnone [[MAYBENULLPTR]], ptr noalias nocapture nofree nonnull readnone [[NONNULLPTR]]) #[[ATTR4]]
+; CGSCC-NEXT:    tail call void @test13(ptr noalias nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr noalias nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr noalias nofree readnone captures(none) [[MAYBENULLPTR]]) #[[ATTR4:[0-9]+]]
+; CGSCC-NEXT:    tail call void @test13(ptr noalias nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr noalias nofree readnone captures(none) [[MAYBENULLPTR]], ptr noalias nofree nonnull readnone captures(none) [[NONNULLPTR]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   %nonnullptr = tail call ptr @ret_nonnull()
@@ -357,18 +357,18 @@ define internal void @test13(ptr %a, ptr %b, ptr %c) {
 ;
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@test13
-; TUNIT-SAME: (ptr noalias nocapture nofree nonnull readnone [[A:%.*]], ptr noalias nocapture nofree readnone [[B:%.*]], ptr noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR5]] {
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR5]]
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[B]]) #[[ATTR5]]
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[C]]) #[[ATTR5]]
+; TUNIT-SAME: (ptr noalias nofree nonnull readnone captures(none) [[A:%.*]], ptr noalias nofree readnone captures(none) [[B:%.*]], ptr noalias nofree readnone captures(none) [[C:%.*]]) #[[ATTR5]] {
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[B]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[C]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@test13
-; CGSCC-SAME: (ptr noalias nocapture nofree nonnull readnone [[A:%.*]], ptr noalias nocapture nofree readnone [[B:%.*]], ptr noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR4]]
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[B]]) #[[ATTR4]]
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[C]]) #[[ATTR4]]
+; CGSCC-SAME: (ptr noalias nofree nonnull readnone captures(none) [[A:%.*]], ptr noalias nofree readnone captures(none) [[B:%.*]], ptr noalias nofree readnone captures(none) [[C:%.*]]) #[[ATTR4]] {
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[B]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[C]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @use_i8_ptr(ptr %a)
@@ -877,7 +877,7 @@ declare i32 @esfp(...)
 define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@parent8
-; TUNIT-SAME: (ptr nonnull [[A:%.*]], ptr nocapture nofree readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR5]] personality ptr @esfp {
+; TUNIT-SAME: (ptr nonnull [[A:%.*]], ptr nofree readnone captures(none) [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR5]] personality ptr @esfp {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
 ; TUNIT-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
@@ -890,7 +890,7 @@ define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@parent8
-; CGSCC-SAME: (ptr nonnull [[A:%.*]], ptr nocapture nofree readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR4]] personality ptr @esfp {
+; CGSCC-SAME: (ptr nonnull [[A:%.*]], ptr nofree readnone captures(none) [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR4]] personality ptr @esfp {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
 ; CGSCC-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
@@ -995,14 +995,14 @@ declare void @use_i32_ptr(ptr readnone nocapture) nounwind
 define internal void @called_by_weak(ptr %a) {
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@called_by_weak
-; TUNIT-SAME: (ptr noalias nocapture nofree nonnull readnone [[A:%.*]]) #[[ATTR5]] {
-; TUNIT-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR5]]
+; TUNIT-SAME: (ptr noalias nofree nonnull readnone captures(none) [[A:%.*]]) #[[ATTR5]] {
+; TUNIT-NEXT:    call void @use_i32_ptr(ptr noalias nofree nonnull readnone captures(none) [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@called_by_weak
-; CGSCC-SAME: (ptr noalias nocapture nofree nonnull readnone [[A:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR4]]
+; CGSCC-SAME: (ptr noalias nofree nonnull readnone captures(none) [[A:%.*]]) #[[ATTR4]] {
+; CGSCC-NEXT:    call void @use_i32_ptr(ptr noalias nofree nonnull readnone captures(none) [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1014,12 +1014,12 @@ define weak_odr void @weak_caller(ptr nonnull %a) {
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@weak_caller
 ; TUNIT-SAME: (ptr nonnull [[A:%.*]]) {
-; TUNIT-NEXT:    call void @called_by_weak(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @called_by_weak(ptr noalias nofree nonnull readnone captures(none) [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@weak_caller
 ; CGSCC-SAME: (ptr nonnull [[A:%.*]]) {
-; CGSCC-NEXT:    call void @called_by_weak(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @called_by_weak(ptr noalias nofree nonnull readnone captures(none) [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @called_by_weak(ptr %a)
@@ -1030,14 +1030,14 @@ define weak_odr void @weak_caller(ptr nonnull %a) {
 define internal void @control(ptr dereferenceable(4) %a) {
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@control
-; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
-; TUNIT-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
+; TUNIT-SAME: (ptr noalias nofree noundef nonnull readnone align 16 captures(none) dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+; TUNIT-NEXT:    call void @use_i32_ptr(ptr noalias nofree noundef nonnull readnone align 16 captures(none) dereferenceable(8) [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@control
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull readnone align 16 captures(none) dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
+; CGSCC-NEXT:    call void @use_i32_ptr(ptr noalias nofree noundef nonnull readnone align 16 captures(none) dereferenceable(8) [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1058,7 +1058,7 @@ define internal void @optnone(ptr dereferenceable(4) %a) optnone noinline {
 ; CHECK: Function Attrs: noinline optnone
 ; CHECK-LABEL: define {{[^@]+}}@optnone
 ; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr nocapture nofree noundef nonnull [[A]])
+; CHECK-NEXT:    call void @use_i32_ptr(ptr nofree noundef nonnull captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1068,14 +1068,14 @@ define void @make_live(ptr nonnull dereferenceable(8) %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@make_live
 ; TUNIT-SAME: (ptr noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
 ; TUNIT-NEXT:    call void @naked(ptr noundef nonnull align 16 dereferenceable(8) [[A]])
-; TUNIT-NEXT:    call void @control(ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @control(ptr noalias nofree noundef nonnull readnone align 16 captures(none) dereferenceable(8) [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    call void @optnone(ptr noundef nonnull align 16 dereferenceable(8) [[A]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@make_live
 ; CGSCC-SAME: (ptr noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
 ; CGSCC-NEXT:    call void @naked(ptr noundef nonnull align 16 dereferenceable(8) [[A]])
-; CGSCC-NEXT:    call void @control(ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @control(ptr noalias nofree noundef nonnull readnone align 16 captures(none) dereferenceable(8) [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    call void @optnone(ptr noundef nonnull align 16 dereferenceable(8) [[A]])
 ; CGSCC-NEXT:    ret void
 ;
@@ -1424,16 +1424,16 @@ define void @nonnull_assume_pos(ptr %arg) {
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@nonnull_assume_pos
-; TUNIT-SAME: (ptr nocapture nofree nonnull readnone [[ARG:%.*]]) {
+; TUNIT-SAME: (ptr nofree nonnull readnone captures(none) [[ARG:%.*]]) {
 ; TUNIT-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR16]] [ "nonnull"(ptr [[ARG]]) ]
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[ARG]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP1:%.*]] = call ptr @unknown()
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@nonnull_assume_pos
-; CGSCC-SAME: (ptr nocapture nofree nonnull readnone [[ARG:%.*]]) {
+; CGSCC-SAME: (ptr nofree nonnull readnone captures(none) [[ARG:%.*]]) {
 ; CGSCC-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR16]] [ "nonnull"(ptr [[ARG]]) ]
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[ARG]]) #[[ATTR4]]
 ; CGSCC-NEXT:    [[TMP1:%.*]] = call ptr @unknown()
 ; CGSCC-NEXT:    ret void
 ;
@@ -1457,27 +1457,27 @@ define void @nonnull_assume_neg(ptr %arg) {
 ;
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@nonnull_assume_neg
-; TUNIT-SAME: (ptr nocapture nofree readnone [[ARG:%.*]]) {
+; TUNIT-SAME: (ptr nofree readnone captures(none) [[ARG:%.*]]) {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = call ptr @unknown()
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[ARG]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG]]) #[[ATTR5]]
 ; TUNIT-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(ptr [[ARG]]) ]
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[ARG]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP2:%.*]] = call ptr @unknown()
-; TUNIT-NEXT:    call void @use_i8_ptr_ret(ptr noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree nonnull readnone captures(none) [[ARG]]) #[[ATTR5]]
 ; TUNIT-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(ptr [[ARG]]) ]
-; TUNIT-NEXT:    call void @use_i8_ptr_ret(ptr noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree nonnull readnone captures(none) [[ARG]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@nonnull_assume_neg
-; CGSCC-SAME: (ptr nocapture nofree readnone [[ARG:%.*]]) {
+; CGSCC-SAME: (ptr nofree readnone captures(none) [[ARG:%.*]]) {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = call ptr @unknown()
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[ARG]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG]]) #[[ATTR4]]
 ; CGSCC-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(ptr [[ARG]]) ]
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[ARG]]) #[[ATTR4]]
 ; CGSCC-NEXT:    [[TMP2:%.*]] = call ptr @unknown()
-; CGSCC-NEXT:    call void @use_i8_ptr_ret(ptr noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree nonnull readnone captures(none) [[ARG]]) #[[ATTR4]]
 ; CGSCC-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(ptr [[ARG]]) ]
-; CGSCC-NEXT:    call void @use_i8_ptr_ret(ptr noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree nonnull readnone captures(none) [[ARG]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   call ptr @unknown()
@@ -1555,14 +1555,14 @@ define void @phi_caller(ptr %p) {
 ; TUNIT-LABEL: define {{[^@]+}}@phi_caller
 ; TUNIT-SAME: (ptr nofree [[P:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:    [[C:%.*]] = call nonnull ptr @phi(ptr noalias nofree readnone [[P]]) #[[ATTR20:[0-9]+]]
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[C]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[C]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@phi_caller
 ; CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call nonnull ptr @phi(ptr noalias nofree readnone [[P]]) #[[ATTR21:[0-9]+]]
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[C]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[C]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   %c = call ptr @phi(ptr %p)
@@ -1595,14 +1595,14 @@ define void @multi_ret_caller(ptr %p) {
 ; TUNIT-LABEL: define {{[^@]+}}@multi_ret_caller
 ; TUNIT-SAME: (ptr nofree [[P:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:    [[C:%.*]] = call nonnull ptr @multi_ret(ptr noalias nofree readnone [[P]]) #[[ATTR20]]
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[C]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[C]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@multi_ret_caller
 ; CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call nonnull ptr @multi_ret(ptr noalias nofree readnone [[P]]) #[[ATTR21]]
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[C]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[C]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   %c = call ptr @multi_ret(ptr %p)

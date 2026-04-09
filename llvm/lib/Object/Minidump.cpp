@@ -145,7 +145,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
 
 iterator_range<MinidumpFile::FallibleMemory64Iterator>
 MinidumpFile::getMemory64List(Error &Err) const {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   auto end = FallibleMemory64Iterator::end(Memory64Iterator::end());
   Expected<minidump::Memory64ListHeader> ListHeader = getMemoryList64Header();
   if (!ListHeader) {

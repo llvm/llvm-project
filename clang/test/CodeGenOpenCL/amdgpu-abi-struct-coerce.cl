@@ -214,7 +214,8 @@ typedef struct struct_4regs
   int w;
 } struct_4regs;
 
-// CHECK: void @kernel_empty_struct_arg(%struct.empty_struct %s.coerce)
+// CHECK: void @kernel_empty_struct_arg(ptr addrspace(4) noundef readnone byref(%struct.empty_struct) align 1 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_empty_struct_arg()
 __kernel void kernel_empty_struct_arg(empty_struct s) { }
 
 // CHECK: void @kernel_single_element_struct_arg(i32 %arg1.coerce)
@@ -223,28 +224,35 @@ __kernel void kernel_single_element_struct_arg(single_element_struct_arg_t arg1)
 // CHECK: void @kernel_nested_single_element_struct_arg(i32 %arg1.coerce)
 __kernel void kernel_nested_single_element_struct_arg(nested_single_element_struct_arg_t arg1) { }
 
-// CHECK: void @kernel_struct_arg(%struct.struct_arg %arg1.coerce)
+// CHECK: void @kernel_struct_arg(ptr addrspace(4) noundef readonly byref(%struct.struct_arg) align 4 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_struct_arg(i32 %arg1.coerce0, float %arg1.coerce1, i32 %arg1.coerce2)
 __kernel void kernel_struct_arg(struct_arg_t arg1) { }
 
-// CHECK: void @kernel_struct_padding_arg(%struct.struct_padding_arg %arg1.coerce)
+// CHECK: void @kernel_struct_padding_arg(ptr addrspace(4) noundef readonly byref(%struct.struct_padding_arg) align 8 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_struct_padding_arg(i8 %arg1.coerce0, i64 %arg1.coerce1)
 __kernel void kernel_struct_padding_arg(struct_padding_arg arg1) { }
 
-// CHECK: void @kernel_test_struct_of_arrays_arg(%struct.struct_of_arrays_arg %arg1.coerce)
+// CHECK: void @kernel_test_struct_of_arrays_arg(ptr addrspace(4) noundef readonly byref(%struct.struct_of_arrays_arg) align 4 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_test_struct_of_arrays_arg([2 x i32] %arg1.coerce0, float %arg1.coerce1, [4 x i32] %arg1.coerce2, [3 x float] %arg1.coerce3, i32 %arg1.coerce4)
 __kernel void kernel_test_struct_of_arrays_arg(struct_of_arrays_arg_t arg1) { }
 
-// CHECK: void @kernel_struct_of_structs_arg(%struct.struct_of_structs_arg %arg1.coerce)
+// CHECK: void @kernel_struct_of_structs_arg(ptr addrspace(4) noundef readonly byref(%struct.struct_of_structs_arg) align 4 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_struct_of_structs_arg(i32 %arg1.coerce0, float %arg1.coerce1, %struct.struct_arg %arg1.coerce2, i32 %arg1.coerce3)
 __kernel void kernel_struct_of_structs_arg(struct_of_structs_arg_t arg1) { }
 
 // CHECK: void @test_kernel_transparent_union_arg(i32 %u.coerce)
 __kernel void test_kernel_transparent_union_arg(transparent_u u) { }
 
-// CHECK: void @kernel_single_array_element_struct_arg(%struct.single_array_element_struct_arg %arg1.coerce)
+// CHECK: void @kernel_single_array_element_struct_arg(ptr addrspace(4) noundef readonly byref(%struct.single_array_element_struct_arg) align 4 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_single_array_element_struct_arg([4 x i32] %arg1.coerce)
 __kernel void kernel_single_array_element_struct_arg(single_array_element_struct_arg_t arg1) { }
 
-// CHECK: void @kernel_single_struct_element_struct_arg(%struct.single_struct_element_struct_arg %arg1.coerce)
+// CHECK: void @kernel_single_struct_element_struct_arg(ptr addrspace(4) noundef readonly byref(%struct.single_struct_element_struct_arg) align 8 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_single_struct_element_struct_arg(%struct.inner %arg1.coerce)
 __kernel void kernel_single_struct_element_struct_arg(single_struct_element_struct_arg_t arg1) { }
 
-// CHECK: void @kernel_different_size_type_pair_arg(%struct.different_size_type_pair %arg1.coerce)
+// CHECK: void @kernel_different_size_type_pair_arg(ptr addrspace(4) noundef readonly byref(%struct.different_size_type_pair) align 8 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_different_size_type_pair_arg(i64 %arg1.coerce0, i32 %arg1.coerce1)
 __kernel void kernel_different_size_type_pair_arg(different_size_type_pair arg1) { }
 
 // CHECK: define{{.*}} void @func_f32_arg(float noundef %arg)
@@ -307,7 +315,7 @@ void func_single_struct_element_struct_arg(single_struct_element_struct_arg_t ar
 // CHECK: void @func_different_size_type_pair_arg(i64 %arg1.coerce0, i32 %arg1.coerce1)
 void func_different_size_type_pair_arg(different_size_type_pair arg1) { }
 
-// CHECK: void @func_flexible_array_arg(ptr addrspace(5) nocapture noundef readnone byval(%struct.flexible_array) align 4 %arg)
+// CHECK: void @func_flexible_array_arg(ptr addrspace(5) noundef readnone byval(%struct.flexible_array) align 4 captures(none) %arg)
 void func_flexible_array_arg(flexible_array arg) { }
 
 // CHECK: define{{.*}} float @func_f32_ret()
@@ -402,14 +410,14 @@ struct_arr16 func_ret_struct_arr16()
   return s;
 }
 
-// CHECK: define{{.*}} void @func_ret_struct_arr32(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.struct_arr32) align 4 initializes((0, 128)) %agg.result)
+// CHECK: define{{.*}} void @func_ret_struct_arr32(ptr addrspace(5) dead_on_unwind noalias writable writeonly sret(%struct.struct_arr32) align 4 captures(none) initializes((0, 128)) %agg.result)
 struct_arr32 func_ret_struct_arr32()
 {
   struct_arr32 s = { 0 };
   return s;
 }
 
-// CHECK: define{{.*}} void @func_ret_struct_arr33(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.struct_arr33) align 4 initializes((0, 132)) %agg.result)
+// CHECK: define{{.*}} void @func_ret_struct_arr33(ptr addrspace(5) dead_on_unwind noalias writable writeonly sret(%struct.struct_arr33) align 4 captures(none) initializes((0, 132)) %agg.result)
 struct_arr33 func_ret_struct_arr33()
 {
   struct_arr33 s = { 0 };
@@ -423,7 +431,7 @@ struct_char_arr32 func_ret_struct_char_arr32()
   return s;
 }
 
-// CHECK: define{{.*}} i32 @func_transparent_union_ret() local_unnamed_addr #1 {
+// CHECK: define{{.*}} i32 @func_transparent_union_ret() local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK: ret i32 0
 transparent_u func_transparent_union_ret()
 {
@@ -438,7 +446,7 @@ different_size_type_pair func_different_size_type_pair_ret()
   return s;
 }
 
-// CHECK: define{{.*}} void @func_flexible_array_ret(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.flexible_array) align 4 initializes((0, 4)) %agg.result)
+// CHECK: define{{.*}} void @func_flexible_array_ret(ptr addrspace(5) dead_on_unwind noalias writable writeonly sret(%struct.flexible_array) align 4 captures(none) initializes((0, 4)) %agg.result)
 flexible_array func_flexible_array_ret()
 {
   flexible_array s = { 0 };
@@ -448,11 +456,11 @@ flexible_array func_flexible_array_ret()
 // CHECK: define{{.*}} void @func_reg_state_lo(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, i32 noundef %arg3, i32 %s.coerce0, float %s.coerce1, i32 %s.coerce2)
 void func_reg_state_lo(int4 arg0, int4 arg1, int4 arg2, int arg3, struct_arg_t s) { }
 
-// CHECK: define{{.*}} void @func_reg_state_hi(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, i32 noundef %arg3, i32 noundef %arg4, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_arg) align 4 %{{.*}})
+// CHECK: define{{.*}} void @func_reg_state_hi(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, i32 noundef %arg3, i32 noundef %arg4, ptr addrspace(5) noundef readnone byref(%struct.struct_arg) align 4 captures(none) %{{.*}})
 void func_reg_state_hi(int4 arg0, int4 arg1, int4 arg2, int arg3, int arg4, struct_arg_t s) { }
 
 // XXX - Why don't the inner structs flatten?
-// CHECK: define{{.*}} void @func_reg_state_num_regs_nested_struct(<4 x i32> noundef %arg0, i32 noundef %arg1, i32 %arg2.coerce0, %struct.nested %arg2.coerce1, i32 %arg3.coerce0, %struct.nested %arg3.coerce1, ptr addrspace(5) nocapture noundef readnone byref(%struct.num_regs_nested_struct) align 8 %{{.*}})
+// CHECK: define{{.*}} void @func_reg_state_num_regs_nested_struct(<4 x i32> noundef %arg0, i32 noundef %arg1, i32 %arg2.coerce0, %struct.nested %arg2.coerce1, i32 %arg3.coerce0, %struct.nested %arg3.coerce1, ptr addrspace(5) noundef readnone byref(%struct.num_regs_nested_struct) align 8 captures(none) %{{.*}})
 void func_reg_state_num_regs_nested_struct(int4 arg0, int arg1, num_regs_nested_struct arg2, num_regs_nested_struct arg3, num_regs_nested_struct arg4) { }
 
 // CHECK: define{{.*}} void @func_double_nested_struct_arg(<4 x i32> noundef %arg0, i32 noundef %arg1, i32 %arg2.coerce0, %struct.double_nested %arg2.coerce1, i16 %arg2.coerce2)
@@ -467,7 +475,7 @@ double_nested_struct func_double_nested_struct_ret(int4 arg0, int arg1) {
 // CHECK: define{{.*}} void @func_large_struct_padding_arg_direct(i8 %arg.coerce0, i32 %arg.coerce1, i8 %arg.coerce2, i32 %arg.coerce3, i8 %arg.coerce4, i8 %arg.coerce5, i16 %arg.coerce6, i16 %arg.coerce7, [3 x i8] %arg.coerce8, i64 %arg.coerce9, i32 %arg.coerce10, i8 %arg.coerce11, i32 %arg.coerce12, i16 %arg.coerce13, i8 %arg.coerce14)
 void func_large_struct_padding_arg_direct(large_struct_padding arg) { }
 
-// CHECK: define{{.*}} void @func_large_struct_padding_arg_store(ptr addrspace(1) nocapture noundef writeonly initializes((0, 56)) %out, ptr addrspace(5) nocapture noundef readonly byref(%struct.large_struct_padding) align 8 %{{.*}})
+// CHECK: define{{.*}} void @func_large_struct_padding_arg_store(ptr addrspace(1) noundef writeonly captures(none) initializes((0, 56)) %out, ptr addrspace(5) noundef readonly byref(%struct.large_struct_padding) align 8 captures(none) %{{.*}})
 void func_large_struct_padding_arg_store(global large_struct_padding* out, large_struct_padding arg) {
   *out = arg;
 }
@@ -477,7 +485,7 @@ void v3i32_reg_count(int3 arg1, int3 arg2, int3 arg3, int3 arg4, struct_arg_t ar
 
 // Function signature from blender, nothing should be passed byval. The v3i32
 // should not count as 4 passed registers.
-// CHECK: define{{.*}} void @v3i32_pair_reg_count(ptr addrspace(5) nocapture noundef readnone %arg0, <3 x i32> %arg1.coerce0, <3 x i32> %arg1.coerce1, <3 x i32> noundef %arg2, <3 x i32> %arg3.coerce0, <3 x i32> %arg3.coerce1, <3 x i32> noundef %arg4, float noundef %arg5)
+// CHECK: define{{.*}} void @v3i32_pair_reg_count(ptr addrspace(5) noundef readnone captures(none) %arg0, <3 x i32> %arg1.coerce0, <3 x i32> %arg1.coerce1, <3 x i32> noundef %arg2, <3 x i32> %arg3.coerce0, <3 x i32> %arg3.coerce1, <3 x i32> noundef %arg4, float noundef %arg5)
 void v3i32_pair_reg_count(int3_pair *arg0, int3_pair arg1, int3 arg2, int3_pair arg3, int3 arg4, float arg5) { }
 
 // Each short4 should fit pack into 2 registers.
@@ -485,7 +493,7 @@ void v3i32_pair_reg_count(int3_pair *arg0, int3_pair arg1, int3 arg2, int3_pair 
 void v4i16_reg_count(short4 arg0, short4 arg1, short4 arg2, short4 arg3,
                      short4 arg4, short4 arg5, struct_4regs arg6) { }
 
-// CHECK: define{{.*}} void @v4i16_pair_reg_count_over(<4 x i16> noundef %arg0, <4 x i16> noundef %arg1, <4 x i16> noundef %arg2, <4 x i16> noundef %arg3, <4 x i16> noundef %arg4, <4 x i16> noundef %arg5, <4 x i16> noundef %arg6, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_4regs) align 4 %{{.*}})
+// CHECK: define{{.*}} void @v4i16_pair_reg_count_over(<4 x i16> noundef %arg0, <4 x i16> noundef %arg1, <4 x i16> noundef %arg2, <4 x i16> noundef %arg3, <4 x i16> noundef %arg4, <4 x i16> noundef %arg5, <4 x i16> noundef %arg6, ptr addrspace(5) noundef readnone byref(%struct.struct_4regs) align 4 captures(none) %{{.*}})
 void v4i16_pair_reg_count_over(short4 arg0, short4 arg1, short4 arg2, short4 arg3,
                                short4 arg4, short4 arg5, short4 arg6, struct_4regs arg7) { }
 
@@ -493,7 +501,7 @@ void v4i16_pair_reg_count_over(short4 arg0, short4 arg1, short4 arg2, short4 arg
 void v3i16_reg_count(short3 arg0, short3 arg1, short3 arg2, short3 arg3,
                      short3 arg4, short3 arg5, struct_4regs arg6) { }
 
-// CHECK: define{{.*}} void @v3i16_reg_count_over(<3 x i16> noundef %arg0, <3 x i16> noundef %arg1, <3 x i16> noundef %arg2, <3 x i16> noundef %arg3, <3 x i16> noundef %arg4, <3 x i16> noundef %arg5, <3 x i16> noundef %arg6, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_4regs) align 4 %{{.*}})
+// CHECK: define{{.*}} void @v3i16_reg_count_over(<3 x i16> noundef %arg0, <3 x i16> noundef %arg1, <3 x i16> noundef %arg2, <3 x i16> noundef %arg3, <3 x i16> noundef %arg4, <3 x i16> noundef %arg5, <3 x i16> noundef %arg6, ptr addrspace(5) noundef readnone byref(%struct.struct_4regs) align 4 captures(none) %{{.*}})
 void v3i16_reg_count_over(short3 arg0, short3 arg1, short3 arg2, short3 arg3,
                           short3 arg4, short3 arg5, short3 arg6, struct_4regs arg7) { }
 
@@ -503,7 +511,7 @@ void v2i16_reg_count(short2 arg0, short2 arg1, short2 arg2, short2 arg3,
                      short2 arg8, short2 arg9, short2 arg10, short2 arg11,
                      struct_4regs arg13) { }
 
-// CHECK: define{{.*}} void @v2i16_reg_count_over(<2 x i16> noundef %arg0, <2 x i16> noundef %arg1, <2 x i16> noundef %arg2, <2 x i16> noundef %arg3, <2 x i16> noundef %arg4, <2 x i16> noundef %arg5, <2 x i16> noundef %arg6, <2 x i16> noundef %arg7, <2 x i16> noundef %arg8, <2 x i16> noundef %arg9, <2 x i16> noundef %arg10, <2 x i16> noundef %arg11, <2 x i16> noundef %arg12, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_4regs) align 4 %{{.*}})
+// CHECK: define{{.*}} void @v2i16_reg_count_over(<2 x i16> noundef %arg0, <2 x i16> noundef %arg1, <2 x i16> noundef %arg2, <2 x i16> noundef %arg3, <2 x i16> noundef %arg4, <2 x i16> noundef %arg5, <2 x i16> noundef %arg6, <2 x i16> noundef %arg7, <2 x i16> noundef %arg8, <2 x i16> noundef %arg9, <2 x i16> noundef %arg10, <2 x i16> noundef %arg11, <2 x i16> noundef %arg12, ptr addrspace(5) noundef readnone byref(%struct.struct_4regs) align 4 captures(none) %{{.*}})
 void v2i16_reg_count_over(short2 arg0, short2 arg1, short2 arg2, short2 arg3,
                           short2 arg4, short2 arg5, short2 arg6, short2 arg7,
                           short2 arg8, short2 arg9, short2 arg10, short2 arg11,
@@ -513,7 +521,7 @@ void v2i16_reg_count_over(short2 arg0, short2 arg1, short2 arg2, short2 arg3,
 void v2i8_reg_count(char2 arg0, char2 arg1, char2 arg2, char2 arg3,
                     char2 arg4, char2 arg5, struct_4regs arg6) { }
 
-// CHECK: define{{.*}} void @v2i8_reg_count_over(<2 x i8> noundef %arg0, <2 x i8> noundef %arg1, <2 x i8> noundef %arg2, <2 x i8> noundef %arg3, <2 x i8> noundef %arg4, <2 x i8> noundef %arg5, i32 noundef %arg6, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_4regs) align 4 %{{.*}})
+// CHECK: define{{.*}} void @v2i8_reg_count_over(<2 x i8> noundef %arg0, <2 x i8> noundef %arg1, <2 x i8> noundef %arg2, <2 x i8> noundef %arg3, <2 x i8> noundef %arg4, <2 x i8> noundef %arg5, i32 noundef %arg6, ptr addrspace(5) noundef readnone byref(%struct.struct_4regs) align 4 captures(none) %{{.*}})
 void v2i8_reg_count_over(char2 arg0, char2 arg1, char2 arg2, char2 arg3,
                          char2 arg4, char2 arg5, int arg6, struct_4regs arg7) { }
 

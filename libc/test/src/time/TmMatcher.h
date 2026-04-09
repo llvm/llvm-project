@@ -9,8 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_TIME_TM_MATCHER_H
 #define LLVM_LIBC_TEST_SRC_TIME_TM_MATCHER_H
 
-#include <time.h>
-
+#include "hdr/types/struct_tm.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
@@ -26,14 +25,14 @@ public:
 
   bool match(::tm actualValue) {
     actual = actualValue;
-    return (actual.tm_sec == expected.tm_sec ||
-            actual.tm_min == expected.tm_min ||
-            actual.tm_hour == expected.tm_hour ||
-            actual.tm_mday == expected.tm_mday ||
-            actual.tm_mon == expected.tm_mon ||
-            actual.tm_year == expected.tm_year ||
-            actual.tm_wday == expected.tm_wday ||
-            actual.tm_yday == expected.tm_yday ||
+    return (actual.tm_sec == expected.tm_sec &&
+            actual.tm_min == expected.tm_min &&
+            actual.tm_hour == expected.tm_hour &&
+            actual.tm_mday == expected.tm_mday &&
+            actual.tm_mon == expected.tm_mon &&
+            actual.tm_year == expected.tm_year &&
+            actual.tm_wday == expected.tm_wday &&
+            actual.tm_yday == expected.tm_yday &&
             actual.tm_isdst == expected.tm_isdst);
   }
 

@@ -15,7 +15,7 @@ subroutine sb
   integer :: w, x, y, z
 
 !CHECK:   %[[Y_VAL:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
-!CHECK:   acc.atomic.update   %[[X_DECL]]#1 : !fir.ref<i32> {
+!CHECK:   acc.atomic.update   %[[X_DECL]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG_X:.*]]: i32):
 !CHECK:     %[[X_UPDATE_VAL:.*]] = arith.addi %[[ARG_X]], %[[Y_VAL]] : i32
 !CHECK:     acc.yield %[[X_UPDATE_VAL]] : i32
@@ -24,7 +24,7 @@ subroutine sb
     x = x + y
 
 !CHECK:   %[[Y_VAL:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
-!CHECK:   acc.atomic.update %[[X_DECL]]#1 : !fir.ref<i32> {
+!CHECK:   acc.atomic.update %[[X_DECL]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG_X:.*]]: i32):
 !CHECK:     %[[X_UPDATE_VAL:.*]] = arith.ori %[[ARG_X]], %[[Y_VAL]] : i32
 !CHECK:     acc.yield %[[X_UPDATE_VAL]] : i32
@@ -35,14 +35,11 @@ subroutine sb
 !CHECK:   %[[W_VAL:.*]] = fir.load %[[W_DECL]]#0 : !fir.ref<i32>
 !CHECK:   %[[X_VAL:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK:   %[[Y_VAL:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
-!CHECK:   acc.atomic.update %[[Z_DECL]]#1 : !fir.ref<i32> {
+!CHECK:   acc.atomic.update %[[Z_DECL]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG_Z:.*]]: i32):
-!CHECK:     %[[WX_CMP:.*]] = arith.cmpi slt, %[[W_VAL]], %[[X_VAL]] : i32
-!CHECK:     %[[WX_MIN:.*]] = arith.select %[[WX_CMP]], %[[W_VAL]], %[[X_VAL]] : i32
-!CHECK:     %[[WXY_CMP:.*]] = arith.cmpi slt, %[[WX_MIN]], %[[Y_VAL]] : i32
-!CHECK:     %[[WXY_MIN:.*]] = arith.select %[[WXY_CMP]], %[[WX_MIN]], %[[Y_VAL]] : i32
-!CHECK:     %[[WXYZ_CMP:.*]] = arith.cmpi slt, %[[WXY_MIN]], %[[ARG_Z]] : i32
-!CHECK:     %[[WXYZ_MIN:.*]] = arith.select %[[WXYZ_CMP]], %[[WXY_MIN]], %[[ARG_Z]] : i32
+!CHECK:     %[[WX_MIN:.*]] = arith.minsi %[[W_VAL]], %[[X_VAL]] : i32
+!CHECK:     %[[WXY_MIN:.*]] = arith.minsi %[[WX_MIN]], %[[Y_VAL]] : i32
+!CHECK:     %[[WXYZ_MIN:.*]] = arith.minsi %[[WXY_MIN]], %[[ARG_Z]] : i32
 !CHECK:     acc.yield %[[WXYZ_MIN]] : i32
 !CHECK:   }
   !$acc atomic update

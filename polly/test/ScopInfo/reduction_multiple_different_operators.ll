@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Should not be identified as reduction as there are different operations
 ; involved on sum (multiplication followed by addition)

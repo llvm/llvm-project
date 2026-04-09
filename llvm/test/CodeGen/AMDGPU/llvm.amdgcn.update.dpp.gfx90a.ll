@@ -1,8 +1,8 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx90a < %s | FileCheck --check-prefixes=GCN,GFX90A %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx90a < %s | FileCheck --check-prefixes=GCN,GFX90A %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx9-4-generic --amdhsa-code-object-version=6 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck --check-prefixes=GCN,GFX90A %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck --check-prefixes=GCN,GFX90A %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx9-4-generic --amdhsa-code-object-version=6 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
 
 ; DPP control value 337 is valid for 64-bit DPP on gfx942
 

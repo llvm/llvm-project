@@ -1,0 +1,24 @@
+// Test visualization of branch taken percentages
+
+// RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
+// RUN: llvm-cov show --show-branches=percent %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-showBranchPercentage.c
+
+// RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
+// RUN: llvm-cov show --show-branches=percent %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs -format html -o %t.html.dir
+
+// Test html output.
+// RUN: FileCheck -check-prefix=HTML -input-file=%t.html.dir/coverage/tmp/branch-showBranchPercentage.c.html %s
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}16.67%,{{.*}}83.33%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}20.00%,{{.*}}80.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}0.00%,{{.*}}100.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}0.00%,{{.*}}100.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}40.00%,{{.*}}60.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}80.00%,{{.*}}20.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}0.00%,{{.*}}100.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}80.00%,{{.*}}20.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}25.00%,{{.*}}75.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}16.67%,{{.*}}83.33%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}20.00%,{{.*}}80.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}20.00%,{{.*}}80.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}0.00%,{{.*}}100.00%]
+// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}60.00%,{{.*}}40.00%]

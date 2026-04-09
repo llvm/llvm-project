@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_IS_PARTITIONED_H
-#define _LIBCPP___ALGORITHM_IS_PARTITIONED_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_IS_PARTITIONED_H
+#define _LIBCPP___CXX03___ALGORITHM_IS_PARTITIONED_H
 
 #include <__cxx03/__config>
 
@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Predicate>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool
 is_partitioned(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
   for (; __first != __last; ++__first)
     if (!__pred(*__first))
@@ -34,4 +34,4 @@ is_partitioned(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_IS_PARTITIONED_H
+#endif // _LIBCPP___CXX03___ALGORITHM_IS_PARTITIONED_H

@@ -310,6 +310,7 @@ SECTIONS {
 .byte 0x12, 0x34
 
 .section .b,"aM",@progbits,1
+.p2align 3
 .byte 0x12
 
 # RUN: llvm-mc -n -filetype=obj -triple=x86_64 merge.s -o merge.o
@@ -317,10 +318,11 @@ SECTIONS {
 #--- spill-merge.lds
 ## SHF_MERGE sections are spilled according to the class refs of the first
 ## merged input section (the one giving the resulting section its name).
+## Spills take into account increases in section alignment due to merging.
 MEMORY {
   a : ORIGIN = 0, LENGTH = 1
-  b : ORIGIN = 1, LENGTH = 2
-  c : ORIGIN = 3, LENGTH = 2
+  b : ORIGIN = 1, LENGTH = 16
+  c : ORIGIN = 17, LENGTH = 16
 }
 
 SECTIONS {
@@ -332,12 +334,14 @@ SECTIONS {
 }
 
 # RUN: ld.lld -T spill-merge.lds merge.o -o spill-merge
-# RUN: llvm-readelf -S spill-merge | FileCheck %s --check-prefix=SPILL-MERGE
+# RUN: llvm-readelf -S -x .second spill-merge | FileCheck %s --check-prefix=SPILL-MERGE
 
-# SPILL-MERGE:      Name          Type     Address          Off    Size
+# SPILL-MERGE:      Name    Type     Address          Off    Size
 # SPILL-MERGE:      .first  PROGBITS 0000000000000000 000190 000000
-# SPILL-MERGE-NEXT: .second PROGBITS 0000000000000001 001001 000002
-# SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000003 001003 000000
+# SPILL-MERGE-NEXT: .second PROGBITS 0000000000000008 001008 000009
+# SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000018 001018 000000
+# SPILL-MERGE:      Hex dump of section '.second':
+# SPILL-MERGE-NEXT: 0x00000008 12000000 00000000 34 .
 
 #--- link-order.s
 .section .a,"a",@progbits
@@ -446,3 +450,103 @@ SECTIONS {
 
 # TO-DISCARD: error: section '.two_byte_section' cannot spill from/to /DISCARD/
 # TO-DISCARD-WARN: warning: section '.two_byte_section' cannot spill from/to /DISCARD/
+
+#--- same-mem-region.lds
+## Spills to the same memory region that overflowed do not consume address assignment passes.
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 0
+  b : ORIGIN = 0, LENGTH = 3
+  c : ORIGIN = 3, LENGTH = 3
+  d : ORIGIN = 6, LENGTH = 3
+}
+SECTIONS {
+  CLASS(class) { *(.one_byte_section .two_byte_section) }
+  .a00 : { CLASS(class) } >a AT>c
+  .a01 : { CLASS(class) } >a AT>d
+  .a02 : { CLASS(class) } >a AT>d
+  .a03 : { CLASS(class) } >a AT>d
+  .a04 : { CLASS(class) } >a AT>d
+  .a05 : { CLASS(class) } >a AT>d
+  .a06 : { CLASS(class) } >a AT>d
+  .a07 : { CLASS(class) } >a AT>d
+  .a08 : { CLASS(class) } >a AT>d
+  .a09 : { CLASS(class) } >a AT>d
+  .a10 : { CLASS(class) } >a AT>d
+  .a11 : { CLASS(class) } >a AT>d
+  .a12 : { CLASS(class) } >a AT>d
+  .a13 : { CLASS(class) } >a AT>d
+  .a14 : { CLASS(class) } >a AT>d
+  .a15 : { CLASS(class) } >a AT>d
+  .a16 : { CLASS(class) } >a AT>d
+  .a17 : { CLASS(class) } >a AT>d
+  .a18 : { CLASS(class) } >a AT>d
+  .a19 : { CLASS(class) } >a AT>d
+  .a20 : { CLASS(class) } >a AT>d
+  .a21 : { CLASS(class) } >a AT>d
+  .a22 : { CLASS(class) } >a AT>d
+  .a23 : { CLASS(class) } >a AT>d
+  .a24 : { CLASS(class) } >a AT>d
+  .a25 : { CLASS(class) } >a AT>d
+  .a26 : { CLASS(class) } >a AT>d
+  .a27 : { CLASS(class) } >a AT>d
+  .a28 : { CLASS(class) } >a AT>d
+  .a29 : { CLASS(class) } >a AT>d
+  .a30 : { CLASS(class) } >a AT>d
+  .b : { CLASS(class) } >b AT>d
+}
+
+# RUN: ld.lld -T same-mem-region.lds -o same-mem-region spill.o
+# RUN: llvm-readelf -S same-mem-region | FileCheck %s --check-prefix=SAME-MEM-REGION
+
+# SAME-MEM-REGION:      Name          Type     Address          Off    Size
+# SAME-MEM-REGION:      .b PROGBITS 0000000000000000 001000 000003
+
+#--- same-lma-region.lds
+## Spills to the same load region that overflowed do not consume address assignment passes.
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 0
+  b : ORIGIN = 0, LENGTH = 3
+  c : ORIGIN = 3, LENGTH = 3
+  d : ORIGIN = 6, LENGTH = 3
+}
+SECTIONS {
+  CLASS(class) { *(.one_byte_section .two_byte_section) }
+  .a00 : { CLASS(class) } >c AT>a
+  .a01 : { CLASS(class) } >d AT>a
+  .a02 : { CLASS(class) } >d AT>a
+  .a03 : { CLASS(class) } >d AT>a
+  .a04 : { CLASS(class) } >d AT>a
+  .a05 : { CLASS(class) } >d AT>a
+  .a06 : { CLASS(class) } >d AT>a
+  .a07 : { CLASS(class) } >d AT>a
+  .a08 : { CLASS(class) } >d AT>a
+  .a09 : { CLASS(class) } >d AT>a
+  .a10 : { CLASS(class) } >d AT>a
+  .a11 : { CLASS(class) } >d AT>a
+  .a12 : { CLASS(class) } >d AT>a
+  .a13 : { CLASS(class) } >d AT>a
+  .a14 : { CLASS(class) } >d AT>a
+  .a15 : { CLASS(class) } >d AT>a
+  .a16 : { CLASS(class) } >d AT>a
+  .a17 : { CLASS(class) } >d AT>a
+  .a18 : { CLASS(class) } >d AT>a
+  .a19 : { CLASS(class) } >d AT>a
+  .a20 : { CLASS(class) } >d AT>a
+  .a21 : { CLASS(class) } >d AT>a
+  .a22 : { CLASS(class) } >d AT>a
+  .a23 : { CLASS(class) } >d AT>a
+  .a24 : { CLASS(class) } >d AT>a
+  .a25 : { CLASS(class) } >d AT>a
+  .a26 : { CLASS(class) } >d AT>a
+  .a27 : { CLASS(class) } >d AT>a
+  .a28 : { CLASS(class) } >d AT>a
+  .a29 : { CLASS(class) } >d AT>a
+  .a30 : { CLASS(class) } >d AT>a
+  .b : { CLASS(class) } >d AT>b
+}
+
+# RUN: ld.lld -T same-lma-region.lds -o same-lma-region spill.o
+# RUN: llvm-readelf -S same-lma-region | FileCheck %s --check-prefix=SAME-LMA-REGION
+
+# SAME-LMA-REGION:      Name          Type     Address          Off    Size
+# SAME-LMA-REGION:      .b PROGBITS 0000000000000006 001006 000003

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_GEOMETRIC_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_GEOMETRIC_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_GEOMETRIC_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_GEOMETRIC_DISTRIBUTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__random/is_valid.h>
@@ -53,12 +53,7 @@ private:
 
 public:
   // constructors and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI geometric_distribution() : geometric_distribution(0.5) {}
-  _LIBCPP_HIDE_FROM_ABI explicit geometric_distribution(double __p) : __p_(__p) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit geometric_distribution(double __p = 0.5) : __p_(__p) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit geometric_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 
@@ -117,4 +112,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_GEOMETRIC_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_GEOMETRIC_DISTRIBUTION_H

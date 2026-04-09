@@ -7,10 +7,13 @@ Developer Guides
 Navigate to the links below for information on the respective topics:
 
 .. toctree::
+   :maxdepth: 1
 
+   building_docs
    code_style
    source_tree_layout
    entrypoints
+   implementing_a_function
    cmake_build_rules
    config_options
    clang_tidy_checks
@@ -19,3 +22,5 @@ Navigate to the links below for information on the respective topics:
    implementation_standard
    undefined_behavior
    printf_behavior
+   syscall_wrapper_refactor
+   modular_format

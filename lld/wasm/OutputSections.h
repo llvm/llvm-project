@@ -41,6 +41,7 @@ public:
   virtual void writeTo(uint8_t *buf) = 0;
   virtual void finalizeContents() = 0;
   virtual uint32_t getNumRelocations() const { return 0; }
+  virtual uint32_t getNumLiveRelocations() const { return getNumRelocations(); }
   virtual void writeRelocations(raw_ostream &os) const {}
 
   std::string header;

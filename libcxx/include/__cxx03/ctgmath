@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CTGMATH
-#define _LIBCPP_CTGMATH
+#ifndef _LIBCPP___CXX03_CTGMATH
+#define _LIBCPP___CXX03_CTGMATH
 
 /*
     ctgmath synopsis
@@ -25,4 +25,4 @@
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CTGMATH
+#endif // _LIBCPP___CXX03_CTGMATH

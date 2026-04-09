@@ -3,15 +3,17 @@ add_flang_library(CUFAttrs
   CUFAttr.cpp
 
   DEPENDS
-  MLIRIR
   CUFAttrsIncGen
   CUFOpsIncGen
-
-  LINK_LIBS
-  MLIRTargetLLVMIRExport
 
   LINK_COMPONENTS
   AsmParser
   AsmPrinter
   Remarks
+
+  MLIR_DEPS
+  MLIRIR
+
+  MLIR_LIBS
+  MLIRTargetLLVMIRExport
 )

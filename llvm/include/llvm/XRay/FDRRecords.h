@@ -13,6 +13,7 @@
 #ifndef LLVM_XRAY_FDRRECORDS_H
 #define LLVM_XRAY_FDRRECORDS_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
 
@@ -22,8 +23,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/XRay/XRayRecord.h"
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 class RecordVisitor;
 class RecordInitializer;
@@ -47,7 +47,7 @@ public:
     RK_Function,
   };
 
-  static StringRef kindToString(RecordKind K);
+  LLVM_ABI static StringRef kindToString(RecordKind K);
 
 private:
   const RecordKind T;
@@ -101,13 +101,13 @@ public:
 
   MetadataType metadataType() const { return MT; }
 
-  virtual ~MetadataRecord() = default;
+  ~MetadataRecord() override = default;
 };
 
 // What follows are specific Metadata record types which encapsulate the
 // information associated with specific metadata record types in an FDR mode
 // log.
-class BufferExtents : public MetadataRecord {
+class LLVM_ABI BufferExtents : public MetadataRecord {
   uint64_t Size = 0;
   friend class RecordInitializer;
 
@@ -130,7 +130,7 @@ public:
   }
 };
 
-class WallclockRecord : public MetadataRecord {
+class LLVM_ABI WallclockRecord : public MetadataRecord {
   uint64_t Seconds = 0;
   uint32_t Nanos = 0;
   friend class RecordInitializer;
@@ -155,7 +155,7 @@ public:
   }
 };
 
-class NewCPUIDRecord : public MetadataRecord {
+class LLVM_ABI NewCPUIDRecord : public MetadataRecord {
   uint16_t CPUId = 0;
   uint64_t TSC = 0;
   friend class RecordInitializer;
@@ -181,7 +181,7 @@ public:
   }
 };
 
-class TSCWrapRecord : public MetadataRecord {
+class LLVM_ABI TSCWrapRecord : public MetadataRecord {
   uint64_t BaseTSC = 0;
   friend class RecordInitializer;
 
@@ -203,7 +203,7 @@ public:
   }
 };
 
-class CustomEventRecord : public MetadataRecord {
+class LLVM_ABI CustomEventRecord : public MetadataRecord {
   int32_t Size = 0;
   uint64_t TSC = 0;
   uint16_t CPU = 0;
@@ -232,7 +232,7 @@ public:
   }
 };
 
-class CustomEventRecordV5 : public MetadataRecord {
+class LLVM_ABI CustomEventRecordV5 : public MetadataRecord {
   int32_t Size = 0;
   int32_t Delta = 0;
   std::string Data{};
@@ -259,7 +259,7 @@ public:
   }
 };
 
-class TypedEventRecord : public MetadataRecord {
+class LLVM_ABI TypedEventRecord : public MetadataRecord {
   int32_t Size = 0;
   int32_t Delta = 0;
   uint16_t EventType = 0;
@@ -288,7 +288,7 @@ public:
   }
 };
 
-class CallArgRecord : public MetadataRecord {
+class LLVM_ABI CallArgRecord : public MetadataRecord {
   uint64_t Arg = 0;
   friend class RecordInitializer;
 
@@ -310,7 +310,7 @@ public:
   }
 };
 
-class PIDRecord : public MetadataRecord {
+class LLVM_ABI PIDRecord : public MetadataRecord {
   int32_t PID = 0;
   friend class RecordInitializer;
 
@@ -333,7 +333,7 @@ public:
   }
 };
 
-class NewBufferRecord : public MetadataRecord {
+class LLVM_ABI NewBufferRecord : public MetadataRecord {
   int32_t TID = 0;
   friend class RecordInitializer;
 
@@ -356,7 +356,7 @@ public:
   }
 };
 
-class EndBufferRecord : public MetadataRecord {
+class LLVM_ABI EndBufferRecord : public MetadataRecord {
 public:
   EndBufferRecord()
       : MetadataRecord(RecordKind::RK_Metadata_EndOfBuffer,
@@ -369,7 +369,7 @@ public:
   }
 };
 
-class FunctionRecord : public Record {
+class LLVM_ABI FunctionRecord : public Record {
   RecordTypes Kind;
   int32_t FuncId = 0;
   uint32_t Delta = 0;
@@ -415,7 +415,7 @@ public:
   virtual Error visit(TypedEventRecord &) = 0;
 };
 
-class RecordInitializer : public RecordVisitor {
+class LLVM_ABI RecordInitializer : public RecordVisitor {
   DataExtractor &E;
   uint64_t &OffsetPtr;
   uint16_t Version;
@@ -443,7 +443,6 @@ public:
   Error visit(TypedEventRecord &) override;
 };
 
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
 
 #endif // LLVM_XRAY_FDRRECORDS_H

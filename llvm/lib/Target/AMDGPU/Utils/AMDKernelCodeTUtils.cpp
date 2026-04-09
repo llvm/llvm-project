@@ -12,15 +12,17 @@
 
 #include "AMDKernelCodeTUtils.h"
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/SIDefinesUtils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -40,49 +42,32 @@ using namespace llvm::AMDGPU;
 //     returns.
 #define GEN_HAS_MEMBER(member)                                                 \
   class HasMember##member {                                                    \
-  private:                                                                     \
-    struct KnownWithMember {                                                   \
-      int member;                                                              \
-    };                                                                         \
-    class AmbiguousDerived : public AMDGPUMCKernelCodeT,                       \
-                             public KnownWithMember {};                        \
     template <typename U>                                                      \
-    static constexpr std::false_type Test(decltype(U::member) *);              \
-    template <typename U> static constexpr std::true_type Test(...);           \
+    using check_member = decltype(std::declval<U>().member);                   \
                                                                                \
   public:                                                                      \
     static constexpr bool RESULT =                                             \
-        std::is_same_v<decltype(Test<AmbiguousDerived>(nullptr)),              \
-                       std::true_type>;                                        \
+        llvm::is_detected<check_member, AMDGPUMCKernelCodeT>::value;           \
   };                                                                           \
   class IsMCExpr##member {                                                     \
-    template <typename U,                                                      \
-              typename std::enable_if_t<                                       \
-                  HasMember##member::RESULT &&                                 \
-                      std::is_same_v<decltype(U::member), const MCExpr *>,     \
-                  U> * = nullptr>                                              \
-    static constexpr std::true_type HasMCExprType(decltype(U::member) *);      \
+    template <typename U>                                                      \
+    static constexpr auto HasMCExprType(int) -> std::bool_constant<            \
+        HasMember##member::RESULT &&                                           \
+        std::is_same_v<decltype(U::member), const MCExpr *>>;                  \
     template <typename U> static constexpr std::false_type HasMCExprType(...); \
                                                                                \
   public:                                                                      \
     static constexpr bool RESULT =                                             \
-        std::is_same_v<decltype(HasMCExprType<AMDGPUMCKernelCodeT>(nullptr)),  \
-                       std::true_type>;                                        \
+        decltype(HasMCExprType<AMDGPUMCKernelCodeT>(0))::value;                \
   };                                                                           \
   class GetMember##member {                                                    \
   public:                                                                      \
     static const MCExpr *Phony;                                                \
-    template <typename U, typename std::enable_if_t<IsMCExpr##member::RESULT,  \
-                                                    U> * = nullptr>            \
-    static const MCExpr *&Get(U &C) {                                          \
-      assert(IsMCExpr##member::RESULT &&                                       \
-             "Trying to retrieve member that does not exist.");                \
-      return C.member;                                                         \
-    }                                                                          \
-    template <typename U, typename std::enable_if_t<!IsMCExpr##member::RESULT, \
-                                                    U> * = nullptr>            \
-    static const MCExpr *&Get(U &C) {                                          \
-      return Phony;                                                            \
+    template <typename U> static const MCExpr *&Get(U &C) {                    \
+      if constexpr (IsMCExpr##member::RESULT)                                  \
+        return C.member;                                                       \
+      else                                                                     \
+        return Phony;                                                          \
     }                                                                          \
   };                                                                           \
   const MCExpr *GetMember##member::Phony = nullptr;
@@ -222,22 +207,17 @@ static int get_amd_kernel_code_t_FieldIndex(StringRef name) {
 
 class PrintField {
 public:
-  template <typename T, T AMDGPUMCKernelCodeT::*ptr,
-            typename std::enable_if_t<!std::is_integral_v<T>, T> * = nullptr>
+  template <typename T, T AMDGPUMCKernelCodeT::*ptr>
   static void printField(StringRef Name, const AMDGPUMCKernelCodeT &C,
                          raw_ostream &OS, MCContext &Ctx,
                          AMDGPUMCKernelCodeT::PrintHelper Helper) {
-    OS << Name << " = ";
-    const MCExpr *Value = C.*ptr;
-    Helper(Value, OS, Ctx.getAsmInfo());
-  }
-
-  template <typename T, T AMDGPUMCKernelCodeT::*ptr,
-            typename std::enable_if_t<std::is_integral_v<T>, T> * = nullptr>
-  static void printField(StringRef Name, const AMDGPUMCKernelCodeT &C,
-                         raw_ostream &OS, MCContext &,
-                         AMDGPUMCKernelCodeT::PrintHelper) {
-    OS << Name << " = " << (int)(C.*ptr);
+    if constexpr (!std::is_integral_v<T>) {
+      OS << Name << " = ";
+      const MCExpr *Value = C.*ptr;
+      Helper(Value, OS, Ctx.getAsmInfo());
+    } else {
+      OS << Name << " = " << (int)(C.*ptr);
+    }
   }
 };
 
@@ -405,13 +385,15 @@ void AMDGPUMCKernelCodeT::validate(const MCSubtargetInfo *STI, MCContext &Ctx) {
   if (!compute_pgm_resource1_registers->evaluateAsAbsolute(Value))
     return;
 
-  if (G_00B848_DX10_CLAMP(Value) && AMDGPU::isGFX12Plus(*STI)) {
-    Ctx.reportError({}, "enable_dx10_clamp=1 is not allowed on GFX12+");
+  if (G_00B848_DX10_CLAMP(Value) &&
+      !STI->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
+    Ctx.reportError({}, "enable_dx10_clamp=1 is not allowed on GFX1170+");
     return;
   }
 
-  if (G_00B848_IEEE_MODE(Value) && AMDGPU::isGFX12Plus(*STI)) {
-    Ctx.reportError({}, "enable_ieee_mode=1 is not allowed on GFX12+");
+  if (G_00B848_IEEE_MODE(Value) &&
+      !STI->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
+    Ctx.reportError({}, "enable_ieee_mode=1 is not allowed on GFX1170+");
     return;
   }
 
@@ -452,7 +434,7 @@ bool AMDGPUMCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
     return true;
   }
   auto Parser = getParserTable()[Idx];
-  return Parser ? Parser(*this, MCParser, Err) : false;
+  return Parser && Parser(*this, MCParser, Err);
 }
 
 void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx,

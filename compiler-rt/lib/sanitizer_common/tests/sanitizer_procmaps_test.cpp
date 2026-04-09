@@ -70,7 +70,7 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
         EXPECT_EQ(arch, kModuleArchI386);
       } else if (SANITIZER_WORDSIZE == 64) {
         EXPECT_TRUE(arch == kModuleArchX86_64 || arch == kModuleArchX86_64H ||
-                    arch == kModuleArchARM64);
+                    arch == kModuleArchARM64 || arch == kModuleArchARM64E);
       }
       const u8 *uuid = modules[i].uuid();
       u8 null_uuid[kModuleUUIDSize] = {0};

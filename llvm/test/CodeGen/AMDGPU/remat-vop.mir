@@ -278,16 +278,16 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_i32_f64_e64_undef
-    ; GCN: [[V_CVT_I32_F64_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %1:vreg_64, 0, 0, implicit $exec, implicit $mode
-    ; GCN-NEXT: [[V_CVT_I32_F64_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %1:vreg_64, 0, 0, implicit $exec, implicit $mode
-    ; GCN-NEXT: [[V_CVT_I32_F64_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %1:vreg_64, 0, 0, implicit $exec, implicit $mode
+    ; GCN: [[V_CVT_I32_F64_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %1:vreg_64_align2, 0, 0, implicit $exec, implicit $mode
+    ; GCN-NEXT: [[V_CVT_I32_F64_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %1:vreg_64_align2, 0, 0, implicit $exec, implicit $mode
+    ; GCN-NEXT: [[V_CVT_I32_F64_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %1:vreg_64_align2, 0, 0, implicit $exec, implicit $mode
     ; GCN-NEXT: S_NOP 0, implicit [[V_CVT_I32_F64_e64_]]
     ; GCN-NEXT: S_NOP 0, implicit [[V_CVT_I32_F64_e64_1]]
     ; GCN-NEXT: S_NOP 0, implicit [[V_CVT_I32_F64_e64_2]]
     ; GCN-NEXT: S_ENDPGM 0
-    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
-    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
-    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64_align2, 0, 0, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64_align2, 0, 0, implicit $exec, implicit $mode
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64_align2, 0, 0, implicit $exec, implicit $mode
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
     S_NOP 0, implicit %3

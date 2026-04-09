@@ -226,8 +226,7 @@ namespace LiteralReference {
     int n;
   };
 
-  // This creates a non-const temporary and binds a reference to it.
-  // CHECK: @[[TEMP:.*]] = internal global {{.*}} { i32 5 }, align 4
+  // CHECK: @[[TEMP:.*]] = internal constant {{.*}} { i32 5 }, align 4
   // CHECK: @_ZN16LiteralReference3litE ={{.*}} constant {{.*}} @[[TEMP]], align 8
   const Lit &lit = Lit();
 
@@ -637,6 +636,15 @@ const char *f() { return &X::p; }
 struct PR69979 {
   const char (&d)[9];
 } e {"12345678"};
+
+namespace GH147949 {
+  struct Coordinate {};
+  Coordinate Make();
+  void TestBody() {
+    // CHECK: call {{.*}} @_ZN8GH1479494MakeEv
+    const Coordinate x{Make()};
+  }
+}
 
 // VirtualMembers::TemplateClass::templateMethod() must be defined in this TU,
 // not just declared.

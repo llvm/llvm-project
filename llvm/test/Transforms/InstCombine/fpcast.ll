@@ -29,6 +29,50 @@ define half @test3(float %a) {
   ret half %c
 }
 
+define half @test3_fast(float %a) {
+; CHECK-LABEL: @test3_fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call fast half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call float @llvm.fabs.f32(float %a)
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test3_both_ninf(float %a) {
+; CHECK-LABEL: @test3_both_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call ninf half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call ninf float @llvm.fabs.f32(float %a)
+  %c = fptrunc ninf float %b to half
+  ret half %c
+}
+
+define half @test3_fabs_ninf(float %a) {
+; CHECK-LABEL: @test3_fabs_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call ninf float @llvm.fabs.f32(float %a)
+  %c = fptrunc float %b to half
+  ret half %c
+}
+
+define half @test3_fptrunc_ninf(float %a) {
+; CHECK-LABEL: @test3_fptrunc_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call ninf half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call float @llvm.fabs.f32(float %a)
+  %c = fptrunc ninf float %b to half
+  ret half %c
+}
+
 define half @fneg_fptrunc(float %a) {
 ; CHECK-LABEL: @fneg_fptrunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
@@ -75,8 +119,30 @@ define <2 x half> @unary_fneg_fptrunc_vec(<2 x float> %a) {
 
 define half @test4-fast(float %a) {
 ; CHECK-LABEL: @test4-fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast float [[A:%.*]] to half
 ; CHECK-NEXT:    [[C:%.*]] = fneg fast half [[TMP1]]
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = fsub fast float -0.0, %a
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test4-mixed-fast-1(float %a) {
+; CHECK-LABEL: @test4-mixed-fast-1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = fsub float -0.0, %a
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test4-mixed-fast-2(float %a) {
+; CHECK-LABEL: @test4-mixed-fast-2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = fsub fast float -0.0, %a
@@ -86,13 +152,68 @@ define half @test4-fast(float %a) {
 
 define half @test4_unary_fneg-fast(float %a) {
 ; CHECK-LABEL: @test4_unary_fneg-fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast float [[A:%.*]] to half
 ; CHECK-NEXT:    [[C:%.*]] = fneg fast half [[TMP1]]
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = fneg fast float %a
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test4_unary_fneg-mixed-fast-1(float %a) {
+; CHECK-LABEL: @test4_unary_fneg-mixed-fast-1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = fneg float %a
+  %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test4_unary_fneg-mixed-fast-2(float %a) {
+; CHECK-LABEL: @test4_unary_fneg-mixed-fast-2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = fneg fast float %a
   %c = fptrunc float %b to half
   ret half %c
+}
+
+define <2 x half> @test4_unary_fneg-vec-fast(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg fast <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg fast <2 x float> %a
+  %c = fptrunc fast <2 x float> %b to <2 x half>
+  ret <2 x half> %c
+}
+
+define <2 x half> @test4_unary_fneg-vec-mixed-fast-1(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-mixed-fast-1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg <2 x float> %a
+  %c = fptrunc fast <2 x float> %b to <2 x half>
+  ret <2 x half> %c
+}
+
+define <2 x half> @test4_unary_fneg-vec-mixed-fast-2(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-mixed-fast-2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg fast <2 x float> %a
+  %c = fptrunc <2 x float> %b to <2 x half>
+  ret <2 x half> %c
 }
 
 define half @test5(float %a, float %b, float %c) {
@@ -402,9 +523,7 @@ define <2 x i32> @fptosi_nonnorm_copysign_vec(<2 x float> %x) {
 
 define i32 @fptosi_nonnorm_fmul(float %x) {
 ; CHECK-LABEL: @fptosi_nonnorm_fmul(
-; CHECK-NEXT:    [[SEL:%.*]] = fmul float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[SEL]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 0
 ;
   %sel = fmul float %x, 0.000000e+00
   %ret = fptosi float %sel to i32
@@ -431,4 +550,40 @@ entry:
   %ret = fmul float %fp, 0.000000e+00
   %conv = fptosi float %ret to i32
   ret i32 %conv
+}
+
+define i32 @signbits_sitofp_fptosi_roundtrip(i32 %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip(
+; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 7
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %m = ashr i32 %x, 7
+  %f = sitofp i32 %m to float
+  %r = fptosi float %f to i32
+  ret i32 %r
+}
+
+define <4 x i32> @signbits_sitofp_fptosi_roundtrip_vec(<4 x i32> %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_vec(
+; CHECK-NEXT:    [[M:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 7)
+; CHECK-NEXT:    ret <4 x i32> [[M]]
+;
+  %m = ashr <4 x i32> %x, splat (i32 7)
+  %f = sitofp <4 x i32> %m to <4 x float>
+  %r = fptosi <4 x float> %f to <4 x i32>
+  ret <4 x i32> %r
+}
+
+; Negative: 26 significant bits, 25 mantissa > 24.
+define i32 @signbits_sitofp_fptosi_roundtrip_neg(i32 %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_neg(
+; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[F]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = ashr i32 %x, 6
+  %f = sitofp i32 %m to float
+  %r = fptosi float %f to i32
+  ret i32 %r
 }

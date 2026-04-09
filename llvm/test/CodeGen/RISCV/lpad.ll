@@ -279,7 +279,7 @@ define internal void @internal2() {
 }
 
 ; Check interrupt function does not need landing pad.
-define void @interrupt() "interrupt"="user" {
+define void @interrupt() "interrupt"="machine" {
 ; CHECK-LABEL: interrupt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mret
@@ -288,4 +288,75 @@ define void @interrupt() "interrupt"="user" {
 ; FIXED-ONE:       # %bb.0:
 ; FIXED-ONE-NEXT:    mret
   ret void
+}
+
+declare i32 @setjmp(ptr) returns_twice
+
+define i32 @test_returns_twice() {
+; RV32-LABEL: test_returns_twice:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lpad 0
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    call setjmp
+; RV32-NEXT:    lpad 0
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_returns_twice:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lpad 0
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    addi a0, sp, 4
+; RV64-NEXT:    call setjmp
+; RV64-NEXT:    lpad 0
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
+;
+; FIXED-ONE-RV32-LABEL: test_returns_twice:
+; FIXED-ONE-RV32:       # %bb.0:
+; FIXED-ONE-RV32-NEXT:    lpad 1
+; FIXED-ONE-RV32-NEXT:    addi sp, sp, -16
+; FIXED-ONE-RV32-NEXT:    .cfi_def_cfa_offset 16
+; FIXED-ONE-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; FIXED-ONE-RV32-NEXT:    .cfi_offset ra, -4
+; FIXED-ONE-RV32-NEXT:    addi a0, sp, 8
+; FIXED-ONE-RV32-NEXT:    call setjmp
+; FIXED-ONE-RV32-NEXT:    lpad 1
+; FIXED-ONE-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; FIXED-ONE-RV32-NEXT:    .cfi_restore ra
+; FIXED-ONE-RV32-NEXT:    addi sp, sp, 16
+; FIXED-ONE-RV32-NEXT:    .cfi_def_cfa_offset 0
+; FIXED-ONE-RV32-NEXT:    ret
+;
+; FIXED-ONE-RV64-LABEL: test_returns_twice:
+; FIXED-ONE-RV64:       # %bb.0:
+; FIXED-ONE-RV64-NEXT:    lpad 1
+; FIXED-ONE-RV64-NEXT:    addi sp, sp, -16
+; FIXED-ONE-RV64-NEXT:    .cfi_def_cfa_offset 16
+; FIXED-ONE-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; FIXED-ONE-RV64-NEXT:    .cfi_offset ra, -8
+; FIXED-ONE-RV64-NEXT:    addi a0, sp, 4
+; FIXED-ONE-RV64-NEXT:    call setjmp
+; FIXED-ONE-RV64-NEXT:    lpad 1
+; FIXED-ONE-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; FIXED-ONE-RV64-NEXT:    .cfi_restore ra
+; FIXED-ONE-RV64-NEXT:    addi sp, sp, 16
+; FIXED-ONE-RV64-NEXT:    .cfi_def_cfa_offset 0
+; FIXED-ONE-RV64-NEXT:    ret
+  %buf = alloca [1 x i32], align 4
+  %call = call i32 @setjmp(ptr %buf)
+  ret i32 %call
 }

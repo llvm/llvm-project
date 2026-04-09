@@ -190,7 +190,7 @@ define <4 x float> @test_mm_cmpge_ss(<4 x float> %a0, <4 x float> %a1) nounwind 
 ; AVX-LABEL: test_mm_cmpge_ss:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpless %xmm0, %xmm1, %xmm1 # encoding: [0xc5,0xf2,0xc2,0xc8,0x02]
-; AVX-NEXT:    vblendps $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x01]
+; AVX-NEXT:    vmovss %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cmp = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a1, <4 x float> %a0, i8 2)
@@ -232,7 +232,7 @@ define <4 x float> @test_mm_cmpgt_ss(<4 x float> %a0, <4 x float> %a1) nounwind 
 ; AVX-LABEL: test_mm_cmpgt_ss:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpltss %xmm0, %xmm1, %xmm1 # encoding: [0xc5,0xf2,0xc2,0xc8,0x01]
-; AVX-NEXT:    vblendps $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x01]
+; AVX-NEXT:    vmovss %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cmp = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a1, <4 x float> %a0, i8 1)
@@ -382,7 +382,7 @@ define <4 x float> @test_mm_cmpnge_ss(<4 x float> %a0, <4 x float> %a1) nounwind
 ; AVX-LABEL: test_mm_cmpnge_ss:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpnless %xmm0, %xmm1, %xmm1 # encoding: [0xc5,0xf2,0xc2,0xc8,0x06]
-; AVX-NEXT:    vblendps $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x01]
+; AVX-NEXT:    vmovss %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cmp = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a1, <4 x float> %a0, i8 6)
@@ -424,7 +424,7 @@ define <4 x float> @test_mm_cmpngt_ss(<4 x float> %a0, <4 x float> %a1) nounwind
 ; AVX-LABEL: test_mm_cmpngt_ss:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpnltss %xmm0, %xmm1, %xmm1 # encoding: [0xc5,0xf2,0xc2,0xc8,0x05]
-; AVX-NEXT:    vblendps $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x01]
+; AVX-NEXT:    vmovss %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cmp = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a1, <4 x float> %a0, i8 5)
@@ -1603,7 +1603,7 @@ define <4 x float> @test_mm_move_ss(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; AVX-LABEL: test_mm_move_ss:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x01]
+; AVX-NEXT:    vmovss %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
@@ -2219,7 +2219,7 @@ define <4 x float> @test_mm_set_ss(float %a0) nounwind {
 ; X86-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX1-NEXT:    # encoding: [0xc5,0xfa,0x10,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # encoding: [0xc5,0xf0,0x57,0xc9]
-; X86-AVX1-NEXT:    vblendps $1, %xmm0, %xmm1, %xmm0 # encoding: [0xc4,0xe3,0x71,0x0c,0xc0,0x01]
+; X86-AVX1-NEXT:    vmovss %xmm0, %xmm1, %xmm0 # encoding: [0xc5,0xf2,0x10,0xc0]
 ; X86-AVX1-NEXT:    # xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
@@ -2228,7 +2228,7 @@ define <4 x float> @test_mm_set_ss(float %a0) nounwind {
 ; X86-AVX512-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX512-NEXT:    # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # encoding: [0xc5,0xf0,0x57,0xc9]
-; X86-AVX512-NEXT:    vblendps $1, %xmm0, %xmm1, %xmm0 # encoding: [0xc4,0xe3,0x71,0x0c,0xc0,0x01]
+; X86-AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm0 # encoding: [0xc5,0xf2,0x10,0xc0]
 ; X86-AVX512-NEXT:    # xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
 ;
@@ -2243,7 +2243,7 @@ define <4 x float> @test_mm_set_ss(float %a0) nounwind {
 ; X64-AVX-LABEL: test_mm_set_ss:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # encoding: [0xc5,0xf0,0x57,0xc9]
-; X64-AVX-NEXT:    vblendps $1, %xmm0, %xmm1, %xmm0 # encoding: [0xc4,0xe3,0x71,0x0c,0xc0,0x01]
+; X64-AVX-NEXT:    vmovss %xmm0, %xmm1, %xmm0 # encoding: [0xc5,0xf2,0x10,0xc0]
 ; X64-AVX-NEXT:    # xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
   %res0  = insertelement <4 x float> undef, float %a0, i32 0

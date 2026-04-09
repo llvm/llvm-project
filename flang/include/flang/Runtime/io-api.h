@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Defines API between compiled code and I/O runtime library.
+// Defines the API of the I/O runtime support library for lowering.
 
 #ifndef FORTRAN_RUNTIME_IO_API_H_
 #define FORTRAN_RUNTIME_IO_API_H_
 
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/iostat-consts.h"
 #include "flang/Runtime/magic-numbers.h"
 #include <cinttypes>
 #include <cstddef>
@@ -50,9 +50,6 @@ constexpr InquiryKeywordHash HashInquiryKeyword(const char *p) {
   }
   return hash;
 }
-
-RT_API_ATTRS const char *InquiryKeywordHashDecode(
-    char *buffer, std::size_t, InquiryKeywordHash);
 
 extern "C" {
 
@@ -241,6 +238,8 @@ bool IODECL(SetRec)(Cookie, std::int64_t);
 bool IODECL(SetRound)(Cookie, const char *, std::size_t);
 // SIGN=PLUS, SUPPRESS, PROCESSOR_DEFINED
 bool IODECL(SetSign)(Cookie, const char *, std::size_t);
+// LEADING_ZERO=PRINT, PROCESSOR_DEFINED, SUPPRESS
+bool IODECL(SetLeadingZero)(Cookie, const char *, std::size_t);
 
 // Data item transfer for modes other than NAMELIST:
 // Any data object that can be passed as an actual argument without the
@@ -301,8 +300,8 @@ bool IODECL(InputDerivedType)(
 
 // Additional specifier interfaces for the connection-list of
 // on OPEN statement (only).  SetBlank(), SetDecimal(),
-// SetDelim(), GetIoMsg(), SetPad(), SetRound(), SetSign(),
-// & SetAsynchronous() are also acceptable for OPEN.
+// SetDelim(), GetIoMsg(), SetLeadingZero(), SetPad(), SetRound(),
+// SetSign(), & SetAsynchronous() are also acceptable for OPEN.
 // ACCESS=SEQUENTIAL, DIRECT, STREAM
 bool IODECL(SetAccess)(Cookie, const char *, std::size_t);
 // ACTION=READ, WRITE, or READWRITE
@@ -367,6 +366,9 @@ bool IODECL(InquireInteger64)(
 // rather than by terminating the image.
 enum Iostat IODECL(EndIoStatement)(Cookie);
 
+// Used for I/O from the offloading device.
+std::uint32_t IODECL(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes);
 } // extern "C"
 } // namespace Fortran::runtime::io
-#endif
+
+#endif /* FORTRAN_RUNTIME_IO_API_H_ */

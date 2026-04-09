@@ -88,7 +88,7 @@ void TemplFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float' <IntegralToFloating>
-  // CHECK-NEXT: CXXFunctionalCastExpr{{.*}}'typename InstTy::IntTy':'int' functional cast to typename struct InstTy::IntTy <NoOp>
+  // CHECK-NEXT: CXXFunctionalCastExpr{{.*}}'typename InstTy::IntTy':'int' functional cast to typename InstTy::IntTy <NoOp>
   // CHECK-NEXT: InitListExpr {{.*}}'typename InstTy::IntTy':'int'
   // CHECK-NEXT: ForStmt
   // CHECK: NullStmt
@@ -96,7 +96,7 @@ void TemplFunc() {
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}}serial loop
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <IntegralToBoolean>
-  // CHECK-NEXT: CXXFunctionalCastExpr{{.*}}'typename InstTy::IntTy':'int' functional cast to typename struct InstTy::IntTy <NoOp>
+  // CHECK-NEXT: CXXFunctionalCastExpr{{.*}}'typename InstTy::IntTy':'int' functional cast to typename InstTy::IntTy <NoOp>
   // CHECK-NEXT: InitListExpr {{.*}}'typename InstTy::IntTy':'int'
   // CHECK-NEXT: ForStmt
   // CHECK: NullStmt

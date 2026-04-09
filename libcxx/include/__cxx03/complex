@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_COMPLEX
-#define _LIBCPP_COMPLEX
+#ifndef _LIBCPP___CXX03_COMPLEX
+#define _LIBCPP___CXX03_COMPLEX
 
 /*
     complex synopsis
@@ -283,20 +283,16 @@ template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS complex;
 
 template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator*(const complex<_Tp>& __z, const complex<_Tp>& __w);
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> operator*(const complex<_Tp>& __z, const complex<_Tp>& __w);
 
 template <class _Tp, __enable_if_t<!is_floating_point<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator*(const complex<_Tp>& __z, const complex<_Tp>& __w);
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> operator*(const complex<_Tp>& __z, const complex<_Tp>& __w);
 
 template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator/(const complex<_Tp>& __x, const complex<_Tp>& __y);
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> operator/(const complex<_Tp>& __x, const complex<_Tp>& __y);
 
 template <class _Tp, __enable_if_t<!is_floating_point<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator/(const complex<_Tp>& __x, const complex<_Tp>& __y);
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> operator/(const complex<_Tp>& __x, const complex<_Tp>& __y);
 
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS complex {
@@ -308,85 +304,69 @@ private:
   value_type __im_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-  complex(const value_type& __re = value_type(), const value_type& __im = value_type())
+  _LIBCPP_HIDE_FROM_ABI complex(const value_type& __re = value_type(), const value_type& __im = value_type())
       : __re_(__re), __im_(__im) {}
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 complex(const complex<_Xp>& __c)
-      : __re_(__c.real()), __im_(__c.imag()) {}
+  _LIBCPP_HIDE_FROM_ABI complex(const complex<_Xp>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 value_type real() const { return __re_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 value_type imag() const { return __im_; }
+  _LIBCPP_HIDE_FROM_ABI value_type real() const { return __re_; }
+  _LIBCPP_HIDE_FROM_ABI value_type imag() const { return __im_; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void real(value_type __re) { __re_ = __re; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void imag(value_type __im) { __im_ = __im; }
+  _LIBCPP_HIDE_FROM_ABI void real(value_type __re) { __re_ = __re; }
+  _LIBCPP_HIDE_FROM_ABI void imag(value_type __im) { __im_ = __im; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator=(const value_type& __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator=(const value_type& __re) {
     __re_ = __re;
     __im_ = value_type();
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const value_type& __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator+=(const value_type& __re) {
     __re_ += __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const value_type& __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator-=(const value_type& __re) {
     __re_ -= __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const value_type& __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator*=(const value_type& __re) {
     __re_ *= __re;
     __im_ *= __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const value_type& __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator/=(const value_type& __re) {
     __re_ /= __re;
     __im_ /= __re;
     return *this;
   }
 
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator=(const complex<_Xp>& __c) {
     __re_ = __c.real();
     __im_ = __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator+=(const complex<_Xp>& __c) {
     __re_ += __c.real();
     __im_ += __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator-=(const complex<_Xp>& __c) {
     __re_ -= __c.real();
     __im_ -= __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator*=(const complex<_Xp>& __c) {
     *this = *this * complex(__c.real(), __c.imag());
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator/=(const complex<_Xp>& __c) {
     *this = *this / complex(__c.real(), __c.imag());
     return *this;
   }
-
-#if _LIBCPP_STD_VER >= 26
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
 };
 
 template <>
@@ -403,7 +383,7 @@ using __complex_t =
                     __conditional_t<is_same<_Tp, double>::value, _Complex double, _Complex long double> >;
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __complex_t<_Tp> __make_complex(_Tp __re, _Tp __im) {
+_LIBCPP_HIDE_FROM_ABI __complex_t<_Tp> __make_complex(_Tp __re, _Tp __im) {
 #if __has_builtin(__builtin_complex)
   return __builtin_complex(__re, __im);
 #else
@@ -419,93 +399,78 @@ class _LIBCPP_TEMPLATE_VIS complex<float> {
 public:
   typedef float value_type;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(float __re = 0.0f, float __im = 0.0f) : __re_(__re), __im_(__im) {}
+  _LIBCPP_HIDE_FROM_ABI complex(float __re = 0.0f, float __im = 0.0f) : __re_(__re), __im_(__im) {}
 
   template <class _Tag, __enable_if_t<_IsSame<_Tag, __from_builtin_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit complex(_Tag, _Complex float __v)
-      : __re_(__real__ __v), __im_(__imag__ __v) {}
+  _LIBCPP_HIDE_FROM_ABI explicit complex(_Tag, _Complex float __v) : __re_(__real__ __v), __im_(__imag__ __v) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit _LIBCPP_CONSTEXPR complex(const complex<double>& __c);
-  _LIBCPP_HIDE_FROM_ABI explicit _LIBCPP_CONSTEXPR complex(const complex<long double>& __c);
+  _LIBCPP_HIDE_FROM_ABI explicit complex(const complex<double>& __c);
+  _LIBCPP_HIDE_FROM_ABI explicit complex(const complex<long double>& __c);
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR float real() const { return __re_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR float imag() const { return __im_; }
+  _LIBCPP_HIDE_FROM_ABI float real() const { return __re_; }
+  _LIBCPP_HIDE_FROM_ABI float imag() const { return __im_; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void real(value_type __re) { __re_ = __re; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void imag(value_type __im) { __im_ = __im; }
+  _LIBCPP_HIDE_FROM_ABI void real(value_type __re) { __re_ = __re; }
+  _LIBCPP_HIDE_FROM_ABI void imag(value_type __im) { __im_ = __im; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Complex float __builtin() const { return std::__make_complex(__re_, __im_); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __builtin(_Complex float __f) {
+  _LIBCPP_HIDE_FROM_ABI _Complex float __builtin() const { return std::__make_complex(__re_, __im_); }
+  _LIBCPP_HIDE_FROM_ABI void __builtin(_Complex float __f) {
     __re_ = __real__ __f;
     __im_ = __imag__ __f;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator=(float __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator=(float __re) {
     __re_ = __re;
     __im_ = value_type();
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(float __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator+=(float __re) {
     __re_ += __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(float __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator-=(float __re) {
     __re_ -= __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(float __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator*=(float __re) {
     __re_ *= __re;
     __im_ *= __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(float __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator/=(float __re) {
     __re_ /= __re;
     __im_ /= __re;
     return *this;
   }
 
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator=(const complex<_Xp>& __c) {
     __re_ = __c.real();
     __im_ = __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator+=(const complex<_Xp>& __c) {
     __re_ += __c.real();
     __im_ += __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator-=(const complex<_Xp>& __c) {
     __re_ -= __c.real();
     __im_ -= __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator*=(const complex<_Xp>& __c) {
     *this = *this * complex(__c.real(), __c.imag());
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator/=(const complex<_Xp>& __c) {
     *this = *this / complex(__c.real(), __c.imag());
     return *this;
   }
-
-#if _LIBCPP_STD_VER >= 26
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
 };
 
 template <>
@@ -516,96 +481,79 @@ class _LIBCPP_TEMPLATE_VIS complex<double> {
 public:
   typedef double value_type;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(double __re = 0.0, double __im = 0.0) : __re_(__re), __im_(__im) {}
+  _LIBCPP_HIDE_FROM_ABI complex(double __re = 0.0, double __im = 0.0) : __re_(__re), __im_(__im) {}
 
   template <class _Tag, __enable_if_t<_IsSame<_Tag, __from_builtin_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit complex(_Tag, _Complex double __v)
-      : __re_(__real__ __v), __im_(__imag__ __v) {}
+  _LIBCPP_HIDE_FROM_ABI explicit complex(_Tag, _Complex double __v) : __re_(__real__ __v), __im_(__imag__ __v) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(const complex<float>& __c);
-  _LIBCPP_HIDE_FROM_ABI explicit _LIBCPP_CONSTEXPR complex(const complex<long double>& __c);
+  _LIBCPP_HIDE_FROM_ABI complex(const complex<float>& __c);
+  _LIBCPP_HIDE_FROM_ABI explicit complex(const complex<long double>& __c);
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR double real() const { return __re_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR double imag() const { return __im_; }
+  _LIBCPP_HIDE_FROM_ABI double real() const { return __re_; }
+  _LIBCPP_HIDE_FROM_ABI double imag() const { return __im_; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void real(value_type __re) { __re_ = __re; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void imag(value_type __im) { __im_ = __im; }
+  _LIBCPP_HIDE_FROM_ABI void real(value_type __re) { __re_ = __re; }
+  _LIBCPP_HIDE_FROM_ABI void imag(value_type __im) { __im_ = __im; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Complex double __builtin() const {
-    return std::__make_complex(__re_, __im_);
-  }
+  _LIBCPP_HIDE_FROM_ABI _Complex double __builtin() const { return std::__make_complex(__re_, __im_); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __builtin(_Complex double __f) {
+  _LIBCPP_HIDE_FROM_ABI void __builtin(_Complex double __f) {
     __re_ = __real__ __f;
     __im_ = __imag__ __f;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator=(double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator=(double __re) {
     __re_ = __re;
     __im_ = value_type();
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator+=(double __re) {
     __re_ += __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator-=(double __re) {
     __re_ -= __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator*=(double __re) {
     __re_ *= __re;
     __im_ *= __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator/=(double __re) {
     __re_ /= __re;
     __im_ /= __re;
     return *this;
   }
 
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator=(const complex<_Xp>& __c) {
     __re_ = __c.real();
     __im_ = __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator+=(const complex<_Xp>& __c) {
     __re_ += __c.real();
     __im_ += __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator-=(const complex<_Xp>& __c) {
     __re_ -= __c.real();
     __im_ -= __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator*=(const complex<_Xp>& __c) {
     *this = *this * complex(__c.real(), __c.imag());
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator/=(const complex<_Xp>& __c) {
     *this = *this / complex(__c.real(), __c.imag());
     return *this;
   }
-
-#if _LIBCPP_STD_VER >= 26
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
 };
 
 template <>
@@ -616,174 +564,144 @@ class _LIBCPP_TEMPLATE_VIS complex<long double> {
 public:
   typedef long double value_type;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(long double __re = 0.0L, long double __im = 0.0L)
-      : __re_(__re), __im_(__im) {}
+  _LIBCPP_HIDE_FROM_ABI complex(long double __re = 0.0L, long double __im = 0.0L) : __re_(__re), __im_(__im) {}
 
   template <class _Tag, __enable_if_t<_IsSame<_Tag, __from_builtin_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit complex(_Tag, _Complex long double __v)
-      : __re_(__real__ __v), __im_(__imag__ __v) {}
+  _LIBCPP_HIDE_FROM_ABI explicit complex(_Tag, _Complex long double __v) : __re_(__real__ __v), __im_(__imag__ __v) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(const complex<float>& __c);
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(const complex<double>& __c);
+  _LIBCPP_HIDE_FROM_ABI complex(const complex<float>& __c);
+  _LIBCPP_HIDE_FROM_ABI complex(const complex<double>& __c);
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR long double real() const { return __re_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR long double imag() const { return __im_; }
+  _LIBCPP_HIDE_FROM_ABI long double real() const { return __re_; }
+  _LIBCPP_HIDE_FROM_ABI long double imag() const { return __im_; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void real(value_type __re) { __re_ = __re; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void imag(value_type __im) { __im_ = __im; }
+  _LIBCPP_HIDE_FROM_ABI void real(value_type __re) { __re_ = __re; }
+  _LIBCPP_HIDE_FROM_ABI void imag(value_type __im) { __im_ = __im; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Complex long double __builtin() const {
-    return std::__make_complex(__re_, __im_);
-  }
+  _LIBCPP_HIDE_FROM_ABI _Complex long double __builtin() const { return std::__make_complex(__re_, __im_); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __builtin(_Complex long double __f) {
+  _LIBCPP_HIDE_FROM_ABI void __builtin(_Complex long double __f) {
     __re_ = __real__ __f;
     __im_ = __imag__ __f;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator=(long double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator=(long double __re) {
     __re_ = __re;
     __im_ = value_type();
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(long double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator+=(long double __re) {
     __re_ += __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(long double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator-=(long double __re) {
     __re_ -= __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(long double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator*=(long double __re) {
     __re_ *= __re;
     __im_ *= __re;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(long double __re) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator/=(long double __re) {
     __re_ /= __re;
     __im_ /= __re;
     return *this;
   }
 
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator=(const complex<_Xp>& __c) {
     __re_ = __c.real();
     __im_ = __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator+=(const complex<_Xp>& __c) {
     __re_ += __c.real();
     __im_ += __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator-=(const complex<_Xp>& __c) {
     __re_ -= __c.real();
     __im_ -= __c.imag();
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator*=(const complex<_Xp>& __c) {
     *this = *this * complex(__c.real(), __c.imag());
     return *this;
   }
   template <class _Xp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const complex<_Xp>& __c) {
+  _LIBCPP_HIDE_FROM_ABI complex& operator/=(const complex<_Xp>& __c) {
     *this = *this / complex(__c.real(), __c.imag());
     return *this;
   }
-
-#if _LIBCPP_STD_VER >= 26
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
 };
 
-inline _LIBCPP_CONSTEXPR complex<float>::complex(const complex<double>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
+inline complex<float>::complex(const complex<double>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_CONSTEXPR complex<float>::complex(const complex<long double>& __c)
-    : __re_(__c.real()), __im_(__c.imag()) {}
+inline complex<float>::complex(const complex<long double>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_CONSTEXPR complex<double>::complex(const complex<float>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
+inline complex<double>::complex(const complex<float>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_CONSTEXPR complex<double>::complex(const complex<long double>& __c)
-    : __re_(__c.real()), __im_(__c.imag()) {}
+inline complex<double>::complex(const complex<long double>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_CONSTEXPR complex<long double>::complex(const complex<float>& __c)
-    : __re_(__c.real()), __im_(__c.imag()) {}
+inline complex<long double>::complex(const complex<float>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_CONSTEXPR complex<long double>::complex(const complex<double>& __c)
-    : __re_(__c.real()), __im_(__c.imag()) {}
+inline complex<long double>::complex(const complex<double>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
 
 // 26.3.6 operators:
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator+(const complex<_Tp>& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator+(const complex<_Tp>& __x, const complex<_Tp>& __y) {
   complex<_Tp> __t(__x);
   __t += __y;
   return __t;
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator+(const complex<_Tp>& __x, const _Tp& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator+(const complex<_Tp>& __x, const _Tp& __y) {
   complex<_Tp> __t(__x);
   __t += __y;
   return __t;
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator+(const _Tp& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator+(const _Tp& __x, const complex<_Tp>& __y) {
   complex<_Tp> __t(__y);
   __t += __x;
   return __t;
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator-(const complex<_Tp>& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator-(const complex<_Tp>& __x, const complex<_Tp>& __y) {
   complex<_Tp> __t(__x);
   __t -= __y;
   return __t;
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator-(const complex<_Tp>& __x, const _Tp& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator-(const complex<_Tp>& __x, const _Tp& __y) {
   complex<_Tp> __t(__x);
   __t -= __y;
   return __t;
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator-(const _Tp& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator-(const _Tp& __x, const complex<_Tp>& __y) {
   complex<_Tp> __t(-__y);
   __t += __x;
   return __t;
 }
 
 template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator*(const complex<_Tp>& __lhs, const complex<_Tp>& __rhs) {
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> operator*(const complex<_Tp>& __lhs, const complex<_Tp>& __rhs) {
   return complex<_Tp>(__from_builtin_tag(), __lhs.__builtin() * __rhs.__builtin());
 }
 
 template <class _Tp, __enable_if_t<!is_floating_point<_Tp>::value, int> >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator*(const complex<_Tp>& __z, const complex<_Tp>& __w) {
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> operator*(const complex<_Tp>& __z, const complex<_Tp>& __w) {
   _Tp __a = __z.real();
   _Tp __b = __z.imag();
   _Tp __c = __w.real();
@@ -793,30 +711,26 @@ operator*(const complex<_Tp>& __z, const complex<_Tp>& __w) {
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator*(const complex<_Tp>& __x, const _Tp& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator*(const complex<_Tp>& __x, const _Tp& __y) {
   complex<_Tp> __t(__x);
   __t *= __y;
   return __t;
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator*(const _Tp& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator*(const _Tp& __x, const complex<_Tp>& __y) {
   complex<_Tp> __t(__y);
   __t *= __x;
   return __t;
 }
 
 template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator/(const complex<_Tp>& __lhs, const complex<_Tp>& __rhs) {
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> operator/(const complex<_Tp>& __lhs, const complex<_Tp>& __rhs) {
   return complex<_Tp>(__from_builtin_tag(), __lhs.__builtin() / __rhs.__builtin());
 }
 
 template <class _Tp, __enable_if_t<!is_floating_point<_Tp>::value, int> >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator/(const complex<_Tp>& __z, const complex<_Tp>& __w) {
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> operator/(const complex<_Tp>& __z, const complex<_Tp>& __w) {
   _Tp __a = __z.real();
   _Tp __b = __z.imag();
   _Tp __c = __w.real();
@@ -827,64 +741,56 @@ operator/(const complex<_Tp>& __z, const complex<_Tp>& __w) {
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator/(const complex<_Tp>& __x, const _Tp& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator/(const complex<_Tp>& __x, const _Tp& __y) {
   return complex<_Tp>(__x.real() / __y, __x.imag() / __y);
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
-operator/(const _Tp& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator/(const _Tp& __x, const complex<_Tp>& __y) {
   complex<_Tp> __t(__x);
   __t /= __y;
   return __t;
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp> operator+(const complex<_Tp>& __x) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator+(const complex<_Tp>& __x) {
   return __x;
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp> operator-(const complex<_Tp>& __x) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator-(const complex<_Tp>& __x) {
   return complex<_Tp>(-__x.real(), -__x.imag());
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator==(const complex<_Tp>& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI bool operator==(const complex<_Tp>& __x, const complex<_Tp>& __y) {
   return __x.real() == __y.real() && __x.imag() == __y.imag();
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator==(const complex<_Tp>& __x, const _Tp& __y) {
+inline _LIBCPP_HIDE_FROM_ABI bool operator==(const complex<_Tp>& __x, const _Tp& __y) {
   return __x.real() == __y && __x.imag() == 0;
 }
 
-#if _LIBCPP_STD_VER <= 17
-
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator==(const _Tp& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI bool operator==(const _Tp& __x, const complex<_Tp>& __y) {
   return __x == __y.real() && 0 == __y.imag();
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator!=(const complex<_Tp>& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const complex<_Tp>& __x, const complex<_Tp>& __y) {
   return !(__x == __y);
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator!=(const complex<_Tp>& __x, const _Tp& __y) {
+inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const complex<_Tp>& __x, const _Tp& __y) {
   return !(__x == __y);
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator!=(const _Tp& __x, const complex<_Tp>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const _Tp& __x, const complex<_Tp>& __y) {
   return !(__x == __y);
 }
-
-#endif
 
 // 26.3.7 values:
 
@@ -908,26 +814,24 @@ struct __libcpp_complex_overload_traits<_Tp, false, true> {
 // real
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp real(const complex<_Tp>& __c) {
+inline _LIBCPP_HIDE_FROM_ABI _Tp real(const complex<_Tp>& __c) {
   return __c.real();
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename __libcpp_complex_overload_traits<_Tp>::_ValueType
-real(_Tp __re) {
+inline _LIBCPP_HIDE_FROM_ABI typename __libcpp_complex_overload_traits<_Tp>::_ValueType real(_Tp __re) {
   return __re;
 }
 
 // imag
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp imag(const complex<_Tp>& __c) {
+inline _LIBCPP_HIDE_FROM_ABI _Tp imag(const complex<_Tp>& __c) {
   return __c.imag();
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename __libcpp_complex_overload_traits<_Tp>::_ValueType
-imag(_Tp) {
+inline _LIBCPP_HIDE_FROM_ABI typename __libcpp_complex_overload_traits<_Tp>::_ValueType imag(_Tp) {
   return 0;
 }
 
@@ -963,7 +867,7 @@ inline _LIBCPP_HIDE_FROM_ABI float arg(_Tp __re) {
 // norm
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp norm(const complex<_Tp>& __c) {
+inline _LIBCPP_HIDE_FROM_ABI _Tp norm(const complex<_Tp>& __c) {
   if (std::__constexpr_isinf(__c.real()))
     return std::abs(__c.real());
   if (std::__constexpr_isinf(__c.imag()))
@@ -972,8 +876,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp norm(const comple
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __libcpp_complex_overload_traits<_Tp>::_ValueType
-norm(_Tp __re) {
+inline _LIBCPP_HIDE_FROM_ABI typename __libcpp_complex_overload_traits<_Tp>::_ValueType norm(_Tp __re) {
   typedef typename __libcpp_complex_overload_traits<_Tp>::_ValueType _ValueType;
   return static_cast<_ValueType>(__re) * __re;
 }
@@ -981,13 +884,12 @@ norm(_Tp __re) {
 // conj
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp> conj(const complex<_Tp>& __c) {
+inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> conj(const complex<_Tp>& __c) {
   return complex<_Tp>(__c.real(), -__c.imag());
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
-conj(_Tp __re) {
+inline _LIBCPP_HIDE_FROM_ABI typename __libcpp_complex_overload_traits<_Tp>::_ComplexType conj(_Tp __re) {
   typedef typename __libcpp_complex_overload_traits<_Tp>::_ComplexType _ComplexType;
   return _ComplexType(__re);
 }
@@ -1383,98 +1285,14 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __x) {
 }
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
-#if _LIBCPP_STD_VER >= 26
-
-// [complex.tuple], tuple interface
-
-template <class _Tp>
-struct tuple_size<complex<_Tp>> : integral_constant<size_t, 2> {};
-
-template <size_t _Ip, class _Tp>
-struct tuple_element<_Ip, complex<_Tp>> {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  using type = _Tp;
-};
-
-template <size_t _Ip, class _Xp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>& __z) noexcept {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  if constexpr (_Ip == 0) {
-    return __z.__re_;
-  } else {
-    return __z.__im_;
-  }
-}
-
-template <size_t _Ip, class _Xp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&& __z) noexcept {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  if constexpr (_Ip == 0) {
-    return std::move(__z.__re_);
-  } else {
-    return std::move(__z.__im_);
-  }
-}
-
-template <size_t _Ip, class _Xp>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>& __z) noexcept {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  if constexpr (_Ip == 0) {
-    return __z.__re_;
-  } else {
-    return __z.__im_;
-  }
-}
-
-template <size_t _Ip, class _Xp>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&& __z) noexcept {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  if constexpr (_Ip == 0) {
-    return std::move(__z.__re_);
-  } else {
-    return std::move(__z.__im_);
-  }
-}
-
-#endif // _LIBCPP_STD_VER >= 26
-
-#if _LIBCPP_STD_VER >= 14
-// Literal suffix for complex number literals [complex.literals]
-inline namespace literals {
-inline namespace complex_literals {
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<long double> operator""il(long double __im) { return {0.0l, __im}; }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<long double> operator""il(unsigned long long __im) {
-  return {0.0l, static_cast<long double>(__im)};
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<double> operator""i(long double __im) {
-  return {0.0, static_cast<double>(__im)};
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<double> operator""i(unsigned long long __im) {
-  return {0.0, static_cast<double>(__im)};
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<float> operator""if(long double __im) {
-  return {0.0f, static_cast<float>(__im)};
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<float> operator""if(unsigned long long __im) {
-  return {0.0f, static_cast<float>(__im)};
-}
-} // namespace complex_literals
-} // namespace literals
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/iosfwd>
 #  include <__cxx03/stdexcept>
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_COMPLEX
+#endif // _LIBCPP___CXX03_COMPLEX

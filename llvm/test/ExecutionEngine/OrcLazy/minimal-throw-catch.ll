@@ -1,11 +1,7 @@
-; REQUIRES: x86_64-apple
+; REQUIRES: system-darwin && host-unwind-supports-jit
 ; RUN: lli -jit-kind=orc-lazy %s
 ;
 ; Basic correctness testing for eh-frame processing and registration.
-
-source_filename = "minimal-throw-catch.cpp"
-target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.14.0"
 
 @_ZTIi = external constant ptr
 

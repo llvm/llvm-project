@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon -verify-machineinstrs < %s
+; RUN: llc -O3 -mtriple=hexagon -verify-machineinstrs < %s
 ; REQUIRES: asserts
 ; Check for successful compilation.
 

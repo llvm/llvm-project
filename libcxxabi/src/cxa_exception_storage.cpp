@@ -56,7 +56,7 @@ extern "C" {
 namespace __cxxabiv1 {
 namespace {
     std::__libcpp_tls_key key_;
-    std::__libcpp_exec_once_flag flag_ = _LIBCPP_EXEC_ONCE_INITIALIZER;
+    constinit std::__libcpp_exec_once_flag flag_ = _LIBCPP_EXEC_ONCE_INITIALIZER;
 
     void _LIBCPP_TLS_DESTRUCTOR_CC destruct_(void *p) {
         __free_with_fallback(p);

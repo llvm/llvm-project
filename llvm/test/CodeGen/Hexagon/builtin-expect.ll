@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-block-placement < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-block-placement < %s | FileCheck %s
 
 ; Check that the branch to the block b10 is marked as taken (i.e. ":t").
 ; CHECK-LABEL: foo

@@ -33,7 +33,7 @@ define protected amdgpu_kernel void @test(ptr addrspace(1) nocapture %ptr.coerce
 ; GCN-NEXT:    global_store_byte v1, v0, s[0:1]
 ; GCN-NEXT:    s_endpgm
 ; CHECK-LABEL: define protected amdgpu_kernel void @test(
-; CHECK-SAME: ptr addrspace(1) nocapture [[PTR_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) captures(none) [[PTR_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i8 3, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !1, !noalias !4
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !6, !noalias !7

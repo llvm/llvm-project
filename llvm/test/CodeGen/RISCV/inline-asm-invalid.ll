@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=riscv32 < %s 2>&1 | FileCheck %s
-; RUN: not llc -mtriple=riscv64 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=riscv32 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK32
+; RUN: not llc -mtriple=riscv64 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK64
 
 define void @constraint_I() {
 ; CHECK: error: value out of range for constraint 'I'
@@ -60,5 +60,53 @@ define void @constraint_cr_fixed_vec() nounwind {
 define void @constraint_cr_scalable_vec() nounwind {
 ; CHECK: error: couldn't allocate input reg for constraint 'cr'
   tail call void asm "add a0, a0, $0", "^cr"(<vscale x 4 x i32> zeroinitializer)
+  ret void
+}
+
+define void @constraint_R_i32() nounwind {
+; CHECK32: error: couldn't allocate input reg for constraint 'R'
+  tail call void asm "add a0, a0, $0", "R"(i32 zeroinitializer)
+  ret void
+}
+
+define void @constraint_R_i64() nounwind {
+; CHECK64: error: couldn't allocate input reg for constraint 'R'
+  tail call void asm "add a0, a0, $0", "R"(i64 zeroinitializer)
+  ret void
+}
+
+define void @constraint_R_i128() nounwind {
+; CHECK32: error: couldn't allocate input reg for constraint 'R'
+  tail call void asm "add a0, a0, $0", "R"(i128 zeroinitializer)
+  ret void
+}
+
+define void @constraint_R_i256() nounwind {
+; CHECK: error: couldn't allocate input reg for constraint 'R'
+  tail call void asm "add a0, a0, $0", "R"(i256 zeroinitializer)
+  ret void
+}
+
+define void @constraint_cR_i32() nounwind {
+; CHECK32: error: couldn't allocate input reg for constraint 'cR'
+  tail call void asm "add a0, a0, $0", "^cR"(i32 zeroinitializer)
+  ret void
+}
+
+define void @constraint_cR_i64() nounwind {
+; CHECK64: error: couldn't allocate input reg for constraint 'cR'
+  tail call void asm "add a0, a0, $0", "^cR"(i64 zeroinitializer)
+  ret void
+}
+
+define void @constraint_cR_i128() nounwind {
+; CHECK32: error: couldn't allocate input reg for constraint 'cR'
+  tail call void asm "add a0, a0, $0", "^cR"(i128 zeroinitializer)
+  ret void
+}
+
+define void @constraint_cR_i256() nounwind {
+; CHECK: error: couldn't allocate input reg for constraint 'cR'
+  tail call void asm "add a0, a0, $0", "^cR"(i256 zeroinitializer)
   ret void
 }

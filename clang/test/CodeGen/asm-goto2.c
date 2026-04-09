@@ -6,7 +6,7 @@
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RET:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR1:[0-9]+]]
-// CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %z.split], !srcloc !2
+// CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label [[Z_SPLIT:%.*]]], !srcloc [[META2:![0-9]+]]
 // CHECK:       asm.fallthrough:
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[RET]], align 4
 // CHECK-NEXT:    store i32 42, ptr [[RET]], align 4
@@ -31,7 +31,7 @@ z:
 // CHECK-NEXT:    [[RET:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = callbr { i32, i32 } asm "", "=r,=r,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR1]]
-// CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %z.split], !srcloc !3
+// CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label [[Z_SPLIT:%.*]]], !srcloc [[META3:![0-9]+]]
 // CHECK:       asm.fallthrough:
 // CHECK-NEXT:    [[ASMRESULT:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
 // CHECK-NEXT:    [[ASMRESULT1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
@@ -62,14 +62,14 @@ z:
 // CHECK-NEXT:    [[RET:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = callbr { i32, i32 } asm "", "=r,=r,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR1]]
-// CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %z.split], !srcloc !4
+// CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label [[Z_SPLIT:%.*]]], !srcloc [[META4:![0-9]+]]
 // CHECK:       asm.fallthrough:
 // CHECK-NEXT:    [[ASMRESULT:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
 // CHECK-NEXT:    [[ASMRESULT1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
 // CHECK-NEXT:    store i32 [[ASMRESULT]], ptr [[RET]], align 4
 // CHECK-NEXT:    store i32 [[ASMRESULT1]], ptr [[B]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = callbr { i32, i32 } asm "", "=r,=r,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR1]]
-// CHECK-NEXT:    to label [[ASM_FALLTHROUGH4:%.*]] [label %z.split9], !srcloc !5
+// CHECK-NEXT:            to label [[ASM_FALLTHROUGH4:%.*]] [label [[Z_SPLIT9:%.*]]], !srcloc [[META5:![0-9]+]]
 // CHECK:       asm.fallthrough4:
 // CHECK-NEXT:    [[ASMRESULT5:%.*]] = extractvalue { i32, i32 } [[TMP1]], 0
 // CHECK-NEXT:    [[ASMRESULT6:%.*]] = extractvalue { i32, i32 } [[TMP1]], 1
@@ -105,7 +105,7 @@ z:
 // CHECK-NEXT:    [[OUT1_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[OUT1:%.*]], ptr [[OUT1_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR1]]
-// CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label [[LABEL_TRUE_SPLIT:%.*]], label %loop.split], !srcloc !6
+// CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label [[LABEL_TRUE_SPLIT:%.*]], label [[LOOP_SPLIT:%.*]]], !srcloc [[META6:![0-9]+]]
 // CHECK:       asm.fallthrough:
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[OUT1_ADDR]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
@@ -141,7 +141,7 @@ label_true:
 // CHECK-NEXT:    br label [[FOO:%.*]]
 // CHECK:       foo:
 // CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR1]]
-// CHECK-NEXT:    to label [[ASM_FALLTHROUGH:%.*]] [label %foo.split], !srcloc !7
+// CHECK-NEXT:            to label [[ASM_FALLTHROUGH:%.*]] [label [[FOO_SPLIT:%.*]]], !srcloc [[META7:![0-9]+]]
 // CHECK:       asm.fallthrough:
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[X]], align 4
 // CHECK-NEXT:    ret void

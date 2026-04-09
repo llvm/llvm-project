@@ -24,7 +24,7 @@
 // Must go after undef _FILE_OFFSET_BITS.
 #include "sanitizer_platform.h"
 
-#if SANITIZER_LINUX || SANITIZER_APPLE
+#if SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU
 // Must go after undef _FILE_OFFSET_BITS.
 #include "sanitizer_glibc_version.h"
 
@@ -52,7 +52,7 @@
 #include <time.h>
 #include <wchar.h>
 #include <regex.h>
-#if !SANITIZER_APPLE
+#if !SANITIZER_APPLE && !SANITIZER_HAIKU
 #include <utmp.h>
 #endif
 
@@ -61,7 +61,9 @@
 #endif
 
 #if !SANITIZER_ANDROID
+#if !SANITIZER_HAIKU
 #include <sys/mount.h>
+#endif
 #include <sys/timeb.h>
 #include <utmpx.h>
 #endif
@@ -74,6 +76,7 @@
 #include <sys/vt.h>
 #include <linux/cdrom.h>
 #include <linux/fd.h>
+#include <linux/filter.h>
 #if SANITIZER_ANDROID
 #include <linux/fs.h>
 #endif
@@ -96,7 +99,7 @@
 # include <sys/ptrace.h>
 #    if defined(__mips64) || defined(__aarch64__) || defined(__arm__) ||       \
         defined(__hexagon__) || defined(__loongarch__) || SANITIZER_RISCV64 || \
-        defined(__sparc__)
+        defined(__sparc__) || defined(__powerpc64__)
 #      include <asm/ptrace.h>
 #      ifdef __arm__
 typedef struct user_fpregs elf_fpregset_t;
@@ -111,8 +114,10 @@ typedef struct user_fpregs elf_fpregset_t;
 
 #if !SANITIZER_ANDROID
 #include <ifaddrs.h>
+#if !SANITIZER_HAIKU
 #include <sys/ucontext.h>
 #include <wordexp.h>
+#endif
 #endif
 
 #if SANITIZER_LINUX
@@ -163,7 +168,7 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <sys/vfs.h>
 #include <sys/epoll.h>
 #include <linux/capability.h>
-#else
+#elif !SANITIZER_HAIKU
 #include <fstab.h>
 #endif // SANITIZER_LINUX
 
@@ -171,6 +176,11 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <net/ethernet.h>
 #include <sys/filio.h>
 #include <sys/sockio.h>
+#endif
+
+#if SANITIZER_HAIKU
+#include <sys/sockio.h>
+#include <sys/ioctl.h>
 #endif
 
 // Include these after system headers to avoid name clashes and ambiguities.
@@ -217,7 +227,7 @@ namespace __sanitizer {
   unsigned struct_fstab_sz = sizeof(struct fstab);
 #endif  // SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
         // SANITIZER_APPLE
-#if !SANITIZER_ANDROID
+#if !SANITIZER_ANDROID && !SANITIZER_HAIKU
   unsigned struct_statfs_sz = sizeof(struct statfs);
   unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
 
@@ -296,9 +306,12 @@ namespace __sanitizer {
   unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
-#endif // SANITIZER_GLIBC
+#  elif SANITIZER_MUSL
+  // On musl, rlimit64 is an alias for rlimit.
+  unsigned struct_rlimit64_sz = sizeof(struct rlimit);
+#  endif  // SANITIZER_GLIBC
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_timex_sz = sizeof(struct timex);
   unsigned struct_msqid_ds_sz = sizeof(struct msqid_ds);
   unsigned struct_mq_attr_sz = sizeof(struct mq_attr);
@@ -324,7 +337,7 @@ namespace __sanitizer {
   int shmctl_shm_stat = (int)SHM_STAT;
 #endif
 
-#if !SANITIZER_APPLE && !SANITIZER_FREEBSD
+#if !SANITIZER_APPLE && !SANITIZER_FREEBSD && !SANITIZER_HAIKU
   unsigned struct_utmp_sz = sizeof(struct utmp);
 #endif
 #if !SANITIZER_ANDROID
@@ -356,9 +369,9 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   int glob_altdirfunc = GLOB_ALTDIRFUNC;
 #endif
 
-#  if !SANITIZER_ANDROID
+#  if !SANITIZER_ANDROID && !SANITIZER_HAIKU
   const int wordexp_wrde_dooffs = WRDE_DOOFFS;
-#  endif  // !SANITIZER_ANDROID
+#  endif  // !SANITIZER_ANDROID && !SANITIZER_HAIKU
 
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID &&                               \
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
@@ -485,9 +498,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_input_id_sz = sizeof(struct input_id);
   unsigned struct_mtpos_sz = sizeof(struct mtpos);
   unsigned struct_rtentry_sz = sizeof(struct rtentry);
-#if SANITIZER_GLIBC || SANITIZER_ANDROID
-  unsigned struct_termio_sz = sizeof(struct termio);
-#endif
   unsigned struct_vt_consize_sz = sizeof(struct vt_consize);
   unsigned struct_vt_sizes_sz = sizeof(struct vt_sizes);
   unsigned struct_vt_stat_sz = sizeof(struct vt_stat);
@@ -510,6 +520,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_seq_event_rec_sz = sizeof(struct seq_event_rec);
   unsigned struct_synth_info_sz = sizeof(struct synth_info);
   unsigned struct_vt_mode_sz = sizeof(struct vt_mode);
+  unsigned struct_sock_fprog_sz = sizeof(struct sock_fprog);
 #endif // SANITIZER_LINUX
 
 #if SANITIZER_GLIBC
@@ -537,24 +548,27 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 
   unsigned struct_audio_buf_info_sz = sizeof(struct audio_buf_info);
   unsigned struct_ppp_stats_sz = sizeof(struct ppp_stats);
-  unsigned struct_sock_fprog_sz = sizeof(struct sock_fprog);
 #  endif  // SANITIZER_GLIBC
 
-#  if !SANITIZER_ANDROID && !SANITIZER_APPLE
+#  if !SANITIZER_ANDROID && !SANITIZER_APPLE && !SANITIZER_HAIKU
   unsigned struct_sioc_sg_req_sz = sizeof(struct sioc_sg_req);
   unsigned struct_sioc_vif_req_sz = sizeof(struct sioc_vif_req);
 #endif
+
+  unsigned fpos_t_sz = sizeof(fpos_t);
 
   const unsigned long __sanitizer_bufsiz = BUFSIZ;
 
   const unsigned IOCTL_NOT_PRESENT = 0;
 
+  unsigned IOCTL_FIONBIO = FIONBIO;
+#if !SANITIZER_HAIKU
   unsigned IOCTL_FIOASYNC = FIOASYNC;
   unsigned IOCTL_FIOCLEX = FIOCLEX;
   unsigned IOCTL_FIOGETOWN = FIOGETOWN;
-  unsigned IOCTL_FIONBIO = FIONBIO;
   unsigned IOCTL_FIONCLEX = FIONCLEX;
   unsigned IOCTL_FIOSETOWN = FIOSETOWN;
+#endif
   unsigned IOCTL_SIOCADDMULTI = SIOCADDMULTI;
   unsigned IOCTL_SIOCATMARK = SIOCATMARK;
   unsigned IOCTL_SIOCDELMULTI = SIOCDELMULTI;
@@ -575,23 +589,27 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_SIOCSIFMTU = SIOCSIFMTU;
   unsigned IOCTL_SIOCSIFNETMASK = SIOCSIFNETMASK;
   unsigned IOCTL_SIOCSPGRP = SIOCSPGRP;
+
+#if !SANITIZER_HAIKU
   unsigned IOCTL_TIOCCONS = TIOCCONS;
-  unsigned IOCTL_TIOCEXCL = TIOCEXCL;
   unsigned IOCTL_TIOCGETD = TIOCGETD;
+  unsigned IOCTL_TIOCNOTTY = TIOCNOTTY;
+  unsigned IOCTL_TIOCPKT = TIOCPKT;
+  unsigned IOCTL_TIOCSETD = TIOCSETD;
+  unsigned IOCTL_TIOCSTI = TIOCSTI;
+#endif
+
+  unsigned IOCTL_TIOCEXCL = TIOCEXCL;
   unsigned IOCTL_TIOCGPGRP = TIOCGPGRP;
   unsigned IOCTL_TIOCGWINSZ = TIOCGWINSZ;
   unsigned IOCTL_TIOCMBIC = TIOCMBIC;
   unsigned IOCTL_TIOCMBIS = TIOCMBIS;
   unsigned IOCTL_TIOCMGET = TIOCMGET;
   unsigned IOCTL_TIOCMSET = TIOCMSET;
-  unsigned IOCTL_TIOCNOTTY = TIOCNOTTY;
   unsigned IOCTL_TIOCNXCL = TIOCNXCL;
   unsigned IOCTL_TIOCOUTQ = TIOCOUTQ;
-  unsigned IOCTL_TIOCPKT = TIOCPKT;
   unsigned IOCTL_TIOCSCTTY = TIOCSCTTY;
-  unsigned IOCTL_TIOCSETD = TIOCSETD;
   unsigned IOCTL_TIOCSPGRP = TIOCSPGRP;
-  unsigned IOCTL_TIOCSTI = TIOCSTI;
   unsigned IOCTL_TIOCSWINSZ = TIOCSWINSZ;
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned IOCTL_SIOCGETSGCNT = SIOCGETSGCNT;
@@ -765,16 +783,16 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_SOUND_PCM_WRITE_FILTER = SOUND_PCM_WRITE_FILTER;
 #endif // SOUND_VERSION
   unsigned IOCTL_TCFLSH = TCFLSH;
-  unsigned IOCTL_TCGETA = TCGETA;
+#    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
   unsigned IOCTL_TCGETS = TCGETS;
+#    endif
   unsigned IOCTL_TCSBRK = TCSBRK;
   unsigned IOCTL_TCSBRKP = TCSBRKP;
-  unsigned IOCTL_TCSETA = TCSETA;
-  unsigned IOCTL_TCSETAF = TCSETAF;
-  unsigned IOCTL_TCSETAW = TCSETAW;
+#    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
   unsigned IOCTL_TCSETS = TCSETS;
   unsigned IOCTL_TCSETSF = TCSETSF;
   unsigned IOCTL_TCSETSW = TCSETSW;
+#    endif
   unsigned IOCTL_TCXONC = TCXONC;
   unsigned IOCTL_TIOCGLCKTRMIOS = TIOCGLCKTRMIOS;
   unsigned IOCTL_TIOCGSOFTCAR = TIOCGSOFTCAR;
@@ -1091,7 +1109,7 @@ CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_len);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_level);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
 
-#if SANITIZER_LINUX && (__ANDROID_API__ >= 21 || __GLIBC_PREREQ (2, 14))
+#  if SANITIZER_LINUX && (SANITIZER_ANDROID || __GLIBC_PREREQ(2, 14))
 CHECK_TYPE_SIZE(mmsghdr);
 CHECK_SIZE_AND_OFFSET(mmsghdr, msg_hdr);
 CHECK_SIZE_AND_OFFSET(mmsghdr, msg_len);
@@ -1101,7 +1119,7 @@ COMPILER_CHECK(sizeof(__sanitizer_dirent) <= sizeof(dirent));
 CHECK_SIZE_AND_OFFSET(dirent, d_ino);
 #if SANITIZER_APPLE
 CHECK_SIZE_AND_OFFSET(dirent, d_seekoff);
-#elif SANITIZER_FREEBSD
+#elif SANITIZER_FREEBSD || SANITIZER_HAIKU
 // There is no 'd_off' field on FreeBSD.
 #else
 CHECK_SIZE_AND_OFFSET(dirent, d_off);
@@ -1117,7 +1135,9 @@ CHECK_SIZE_AND_OFFSET(dirent64, d_reclen);
 
 CHECK_TYPE_SIZE(ifconf);
 CHECK_SIZE_AND_OFFSET(ifconf, ifc_len);
+#if !SANITIZER_HAIKU
 CHECK_SIZE_AND_OFFSET(ifconf, ifc_ifcu);
+#endif
 
 CHECK_TYPE_SIZE(pollfd);
 CHECK_SIZE_AND_OFFSET(pollfd, fd);
@@ -1172,7 +1192,7 @@ CHECK_TYPE_SIZE(__kernel_loff_t);
 CHECK_TYPE_SIZE(__kernel_fd_set);
 #endif
 
-#if !SANITIZER_ANDROID
+#if !SANITIZER_ANDROID && !SANITIZER_HAIKU
 CHECK_TYPE_SIZE(wordexp_t);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_wordc);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_wordv);
@@ -1202,7 +1222,9 @@ CHECK_SIZE_AND_OFFSET(mntent, mnt_freq);
 CHECK_SIZE_AND_OFFSET(mntent, mnt_passno);
 #endif
 
+#if !SANITIZER_HAIKU
 CHECK_TYPE_SIZE(ether_addr);
+#endif
 
 #if SANITIZER_GLIBC || SANITIZER_FREEBSD
 CHECK_TYPE_SIZE(ipc_perm);
@@ -1240,7 +1262,7 @@ CHECK_TYPE_SIZE(clock_t);
 CHECK_TYPE_SIZE(clockid_t);
 #endif
 
-#if !SANITIZER_ANDROID
+#if !SANITIZER_ANDROID && !SANITIZER_HAIKU
 CHECK_TYPE_SIZE(ifaddrs);
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_next);
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_name);

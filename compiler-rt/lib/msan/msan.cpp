@@ -63,7 +63,7 @@ alignas(16) SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32
     __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
 
 SANITIZER_INTERFACE_ATTRIBUTE
-THREADLOCAL u64 __msan_va_arg_overflow_size_tls;
+THREADLOCAL uptr __msan_va_arg_overflow_size_tls;
 
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u32 __msan_origin_tls;
@@ -352,22 +352,68 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
 
 using namespace __msan;
 
-#define MSAN_MAYBE_WARNING(type, size)              \
-  void __msan_maybe_warning_##size(type s, u32 o) { \
-    GET_CALLER_PC_BP;                               \
-    if (UNLIKELY(s)) {                              \
-      PrintWarningWithOrigin(pc, bp, o);            \
-      if (__msan::flags()->halt_on_error) {         \
-        Printf("Exiting\n");                        \
-        Die();                                      \
-      }                                             \
-    }                                               \
+// N.B. Only [shadow, shadow+size) is defined. shadow is *not* a pointer into
+// an MSan shadow region.
+static void print_shadow_value(void *shadow, u64 size) {
+  Printf("Shadow value (%llu byte%s):", size, size == 1 ? "" : "s");
+  for (unsigned int i = 0; i < size; i++) {
+    if (i % 4 == 0)
+      Printf(" ");
+
+    unsigned char x = ((unsigned char *)shadow)[i];
+    Printf("%x%x", x >> 4, x & 0xf);
+  }
+  Printf("\n");
+  Printf(
+      "Caveat: the shadow value does not necessarily directly correspond to a "
+      "single user variable. The correspondence is stronger, but not always "
+      "perfect, when origin tracking is enabled.\n");
+  Printf("\n");
+}
+
+#define MSAN_MAYBE_WARNING(type, size)               \
+  void __msan_maybe_warning_##size(type s, u32 o) {  \
+    GET_CALLER_PC_BP;                                \
+                                                     \
+    if (UNLIKELY(s)) {                               \
+      if (Verbosity() >= 1)                          \
+        print_shadow_value((void *)(&s), sizeof(s)); \
+      PrintWarningWithOrigin(pc, bp, o);             \
+      if (__msan::flags()->halt_on_error) {          \
+        Printf("Exiting\n");                         \
+        Die();                                       \
+      }                                              \
+    }                                                \
   }
 
 MSAN_MAYBE_WARNING(u8, 1)
 MSAN_MAYBE_WARNING(u16, 2)
 MSAN_MAYBE_WARNING(u32, 4)
 MSAN_MAYBE_WARNING(u64, 8)
+
+// N.B. Only [shadow, shadow+size) is defined. shadow is *not* a pointer into
+// an MSan shadow region.
+void __msan_maybe_warning_N(void *shadow, u64 size, u32 o) {
+  GET_CALLER_PC_BP;
+
+  bool allZero = true;
+  for (unsigned int i = 0; i < size; i++) {
+    if (((char *)shadow)[i]) {
+      allZero = false;
+      break;
+    }
+  }
+
+  if (UNLIKELY(!allZero)) {
+    if (Verbosity() >= 1)
+      print_shadow_value(shadow, size);
+    PrintWarningWithOrigin(pc, bp, o);
+    if (__msan::flags()->halt_on_error) {
+      Printf("Exiting\n");
+      Die();
+    }
+  }
+}
 
 #define MSAN_MAYBE_STORE_ORIGIN(type, size)                       \
   void __msan_maybe_store_origin_##size(type s, void *p, u32 o) { \

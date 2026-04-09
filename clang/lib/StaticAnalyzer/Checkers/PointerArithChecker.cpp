@@ -58,7 +58,7 @@ class PointerArithChecker
 
   const BugType BT_pointerArith{this, "Dangerous pointer arithmetic"};
   const BugType BT_polyArray{this, "Dangerous pointer arithmetic"};
-  mutable llvm::SmallSet<IdentifierInfo *, 8> AllocFunctions;
+  mutable llvm::SmallPtrSet<IdentifierInfo *, 8> AllocFunctions;
 
 public:
   void checkPreStmt(const UnaryOperator *UOp, CheckerContext &C) const;
@@ -73,6 +73,22 @@ public:
 } // end namespace
 
 REGISTER_MAP_WITH_PROGRAMSTATE(RegionState, const MemRegion *, AllocKind)
+
+static bool isArrayPlacementNew(const CXXNewExpr *NE) {
+  return NE->isArray() && NE->getNumPlacementArgs() > 0;
+}
+
+static ProgramStateRef markSuperRegionReinterpreted(ProgramStateRef State,
+                                                    const MemRegion *Region) {
+  while (const auto *BaseRegion = dyn_cast<CXXBaseObjectRegion>(Region)) {
+    Region = BaseRegion->getSuperRegion();
+  }
+  if (const auto *ElemRegion = dyn_cast<ElementRegion>(Region)) {
+    State = State->set<RegionState>(ElemRegion->getSuperRegion(),
+                                    AllocKind::Reinterpreted);
+  }
+  return State;
+}
 
 void PointerArithChecker::checkDeadSymbols(SymbolReaper &SR,
                                            CheckerContext &C) const {
@@ -244,13 +260,23 @@ void PointerArithChecker::checkPostStmt(const CXXNewExpr *NE,
   const MemRegion *Region = AllocedVal.getAsRegion();
   if (!Region)
     return;
+
+  // For array placement-new, mark the original region as reinterpreted
+  if (isArrayPlacementNew(NE)) {
+    State = markSuperRegionReinterpreted(State, Region);
+  }
+
   State = State->set<RegionState>(Region, Kind);
   C.addTransition(State);
 }
 
 void PointerArithChecker::checkPostStmt(const CastExpr *CE,
                                         CheckerContext &C) const {
-  if (CE->getCastKind() != CastKind::CK_BitCast)
+  // Casts to `void*` happen, for instance, on placement new calls.
+  // We consider `void*` not to erase the type information about the underlying
+  // region.
+  if (CE->getCastKind() != CastKind::CK_BitCast ||
+      CE->getType()->isVoidPointerType())
     return;
 
   const Expr *CastedExpr = CE->getSubExpr();

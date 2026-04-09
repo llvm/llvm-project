@@ -25,16 +25,15 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/SmartPointerAccessorCaching.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <optional>
-#include <utility>
 
 namespace clang {
 namespace dataflow {
@@ -67,8 +66,7 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
       return N->isStdNamespace() ||
-             isFullyQualifiedNamespaceEqualTo(*N, "absl") ||
-             isFullyQualifiedNamespaceEqualTo(*N, "bsl");
+             isFullyQualifiedNamespaceEqualTo(*N, "absl");
     return false;
   }
 
@@ -77,6 +75,12 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr && (isFullyQualifiedNamespaceEqualTo(*N, "base") ||
                             isFullyQualifiedNamespaceEqualTo(*N, "folly"));
+  }
+
+  if (RD.getName() == "Optional_Base") {
+    const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
+    return N != nullptr &&
+           isFullyQualifiedNamespaceEqualTo(*N, "bslstl", "BloombergLP");
   }
 
   if (RD.getName() == "NullableValue") {
@@ -111,6 +115,18 @@ static bool isSupportedOptionalType(QualType Ty) {
   return Optional != nullptr;
 }
 
+static bool isAssertionResultType(QualType Type) {
+  if (Type.isNull())
+    return false;
+
+  if (auto *RD = Type->getAsRecordDecl())
+    if (RD->getName() == "AssertionResult")
+      if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD->getDeclContext()))
+        return isFullyQualifiedNamespaceEqualTo(*N, "testing");
+
+  return false;
+}
+
 namespace {
 
 using namespace ::clang::ast_matchers;
@@ -141,52 +157,31 @@ auto hasOptionalOrDerivedType() {
   return hasType(desugarsToOptionalOrDerivedType());
 }
 
-QualType getPublicType(const Expr *E) {
-  auto *Cast = dyn_cast<ImplicitCastExpr>(E->IgnoreParens());
-  if (Cast == nullptr || Cast->getCastKind() != CK_UncheckedDerivedToBase) {
-    QualType Ty = E->getType();
-    if (Ty->isPointerType())
-      return Ty->getPointeeType();
-    return Ty;
-  }
-
-  // Is the derived type that we're casting from the type of `*this`? In this
-  // special case, we can upcast to the base class even if the base is
-  // non-public.
-  bool CastingFromThis = isa<CXXThisExpr>(Cast->getSubExpr());
-
-  // Find the least-derived type in the path (i.e. the last entry in the list)
-  // that we can access.
-  const CXXBaseSpecifier *PublicBase = nullptr;
-  for (const CXXBaseSpecifier *Base : Cast->path()) {
-    if (Base->getAccessSpecifier() != AS_public && !CastingFromThis)
-      break;
-    PublicBase = Base;
-    CastingFromThis = false;
-  }
-
-  if (PublicBase != nullptr)
-    return PublicBase->getType();
-
-  // We didn't find any public type that we could cast to. There may be more
-  // casts in `getSubExpr()`, so recurse. (If there aren't any more casts, this
-  // will return the type of `getSubExpr()`.)
-  return getPublicType(Cast->getSubExpr());
+bool isDesugaredTypeOptional(QualType Ty) {
+  const Type &DesugaredTy = *Ty->getUnqualifiedDesugaredType();
+  return DesugaredTy.isRecordType() &&
+         hasOptionalClassName(*DesugaredTy.getAsCXXRecordDecl());
 }
 
-// Returns the least-derived type for the receiver of `MCE` that
-// `MCE.getImplicitObjectArgument()->IgnoreParentImpCasts()` can be downcast to.
-// Effectively, we upcast until we reach a non-public base class, unless that
-// base is a base of `*this`.
+bool isDesugaredTypeOptionalOrPointerToOptional(QualType Ty) {
+  if (Ty->isPointerType())
+    Ty = Ty->getPointeeType();
+  return isDesugaredTypeOptional(Ty);
+}
+
+// Returns true if `E` is intended to refer to an optional type, but may refer
+// to an internal base class of the optional type, and involve an
+// UncheckedDerivedToBase cast.
 //
 // This is needed to correctly match methods called on types derived from
-// `std::optional`.
+// `std::optional`, as methods may be defined in a private base class like
+// `std::__optional_storage_base`.
 //
 // Say we have a `struct Derived : public std::optional<int> {} d;` For a call
 // `d.has_value()`, the `getImplicitObjectArgument()` looks like this:
 //
 //   ImplicitCastExpr 'const std::__optional_storage_base<int>' lvalue
-//   |            <UncheckedDerivedToBase (optional -> __optional_storage_base)>
+//   |     <UncheckedDerivedToBase (optional -> ... -> __optional_storage_base)>
 //   `-DeclRefExpr 'Derived' lvalue Var 'd' 'Derived'
 //
 // The type of the implicit object argument is `__optional_storage_base`
@@ -197,31 +192,53 @@ QualType getPublicType(const Expr *E) {
 // calling a method on `optional`.
 //
 // Instead, starting with the most derived type, we need to follow the chain of
-// casts
-QualType getPublicReceiverType(const CXXMemberCallExpr &MCE) {
-  return getPublicType(MCE.getImplicitObjectArgument());
+// casts, until we reach a class that matches
+// `isDesugaredTypeOptionalOrPointerToOptional` (if at all).
+bool hasReceiverTypeDesugaringToOptional(const Expr *E) {
+  auto *Cast = dyn_cast<ImplicitCastExpr>(E->IgnoreParens());
+  if (Cast == nullptr || Cast->getCastKind() != CK_UncheckedDerivedToBase)
+    return isDesugaredTypeOptionalOrPointerToOptional(E->getType());
+
+  // Usually, the SubExpr is already an optional type, so check the SubExpr
+  // first before trying the cast path. The cast path helps in the case when the
+  // SubExpr is a derived class.
+  if (isDesugaredTypeOptionalOrPointerToOptional(Cast->getSubExpr()->getType()))
+    return true;
+
+  // See if we hit an optional type in the cast path, going from derived
+  // to base.
+  for (const CXXBaseSpecifier *Base : Cast->path()) {
+    if (isDesugaredTypeOptional(Base->getType()))
+      return true;
+  }
+
+  // We didn't find a optional in the cast path and the subexpr isn't an
+  // optional. It may be that the subexpression itself has more relevant
+  // implicit casts, so recurse and search further.
+  return hasReceiverTypeDesugaringToOptional(Cast->getSubExpr());
 }
 
-AST_MATCHER_P(CXXMemberCallExpr, publicReceiverType,
-              ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
-  return InnerMatcher.matches(getPublicReceiverType(Node), Finder, Builder);
+AST_MATCHER(CXXMemberCallExpr, hasOptionalReceiverType) {
+  return hasReceiverTypeDesugaringToOptional(Node.getImplicitObjectArgument());
+}
+
+AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
+  return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
 auto isOptionalMemberCallWithNameMatcher(
     ast_matchers::internal::Matcher<NamedDecl> matcher,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
-  return cxxMemberCallExpr(Ignorable ? on(expr(unless(*Ignorable)))
-                                     : anything(),
-                           publicReceiverType(desugarsToOptionalType()),
-                           callee(cxxMethodDecl(matcher)));
+  return cxxMemberCallExpr(
+      Ignorable ? on(expr(unless(*Ignorable))) : anything(),
+      callee(cxxMethodDecl(matcher)), hasOptionalReceiverType());
 }
 
 auto isOptionalOperatorCallWithName(
     llvm::StringRef operator_name,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   return cxxOperatorCallExpr(
-      hasOverloadedOperatorName(operator_name),
-      callee(cxxMethodDecl(ofClass(optionalClass()))),
+      hasOverloadedOperatorName(operator_name), hasOptionalOperatorObjectType(),
       Ignorable ? callExpr(unless(hasArgument(0, *Ignorable))) : callExpr());
 }
 
@@ -242,9 +259,9 @@ auto nulloptTypeDecl() {
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
 
 auto inPlaceClass() {
-  return recordDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
-                               "base::in_place_t", "folly::in_place_t",
-                               "bsl::in_place_t"));
+  return namedDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
+                              "base::in_place_t", "folly::in_place_t",
+                              "bsl::in_place_t"));
 }
 
 auto isOptionalNulloptConstructor() {
@@ -294,6 +311,25 @@ auto isStdForwardCall() {
   return callExpr(callee(functionDecl(hasName("std::forward"))),
                   argumentCountIs(1),
                   hasArgument(0, hasOptionalOrDerivedType()));
+}
+
+auto isAssertionResultOperatorBoolCall() {
+  return cxxMemberCallExpr(
+      on(expr(unless(cxxThisExpr()))),
+      callee(cxxMethodDecl(hasName("operator bool"),
+                           ofClass(hasName("testing::AssertionResult")))));
+}
+
+auto isAssertionResultConstructFromBoolCall() {
+  return cxxConstructExpr(
+      hasType(recordDecl(hasName("testing::AssertionResult"))),
+      hasArgument(0, hasType(booleanType())));
+}
+
+auto isAssertionResultConstructFromOptionalCall() {
+  return cxxConstructExpr(
+      hasType(recordDecl(hasName("testing::AssertionResult"))),
+      hasArgument(0, hasOptionalOrDerivedType()));
 }
 
 constexpr llvm::StringLiteral ValueOrCallID = "ValueOrCall";
@@ -382,6 +418,11 @@ StorageLocation &locForHasValue(const RecordStorageLocation &OptionalLoc) {
 
 StorageLocation &locForValue(const RecordStorageLocation &OptionalLoc) {
   return OptionalLoc.getSyntheticField("value");
+}
+
+StorageLocation &
+locForAssertResultSuccess(const RecordStorageLocation &AssertResultLoc) {
+  return AssertResultLoc.getSyntheticField("success");
 }
 
 /// Sets `HasValueVal` as the symbolic value that represents the "has_value"
@@ -549,66 +590,92 @@ void transferCallReturningOptional(const CallExpr *E,
   setHasValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
 }
 
-void handleConstMemberCall(const CallExpr *CE,
+// Returns true if the const accessor is handled by caching.
+// Returns false if we could not cache. We should perform default handling
+// in that case.
+bool handleConstMemberCall(const CallExpr *CE,
                            dataflow::RecordStorageLocation *RecordLoc,
                            const MatchFinder::MatchResult &Result,
                            LatticeTransferState &State) {
-  // If the const method returns an optional or reference to an optional.
-  if (RecordLoc != nullptr && isSupportedOptionalType(CE->getType())) {
-    StorageLocation *Loc =
-        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-            *RecordLoc, CE, State.Env, [&](StorageLocation &Loc) {
-              setHasValue(cast<RecordStorageLocation>(Loc),
-                          State.Env.makeAtomicBoolValue(), State.Env);
-            });
-    if (Loc == nullptr)
-      return;
-    if (CE->isGLValue()) {
-      // If the call to the const method returns a reference to an optional,
-      // link the call expression to the cached StorageLocation.
-      State.Env.setStorageLocation(*CE, *Loc);
-    } else {
-      // If the call to the const method returns an optional by value, we
-      // need to use CopyRecord to link the optional to the result object
-      // of the call expression.
-      auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
-      copyRecord(*cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
-    }
-    return;
-  }
+  if (RecordLoc == nullptr)
+    return false;
 
-  // Cache if the const method returns a boolean or pointer type.
-  // We may decide to cache other return types in the future.
-  if (RecordLoc != nullptr &&
-      (CE->getType()->isBooleanType() || CE->getType()->isPointerType())) {
+  // Cache if the const method returns a reference.
+  if (CE->isGLValue()) {
+    const FunctionDecl *DirectCallee = CE->getDirectCallee();
+    if (DirectCallee == nullptr)
+      return false;
+
+    // Initialize the optional's "has_value" property to true if the type is
+    // optional, otherwise no-op. If we want to support const ref to pointers or
+    // bools we should initialize their values here too.
+    auto Init = [&](StorageLocation &Loc) {
+      if (isSupportedOptionalType(CE->getType()))
+        setHasValue(cast<RecordStorageLocation>(Loc),
+                    State.Env.makeAtomicBoolValue(), State.Env);
+    };
+    StorageLocation &Loc =
+        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+            *RecordLoc, DirectCallee, State.Env, Init);
+
+    State.Env.setStorageLocation(*CE, Loc);
+    return true;
+  }
+  // PRValue cases:
+  if (CE->getType()->isBooleanType() || CE->getType()->isPointerType()) {
+    // If the const method returns a boolean or pointer type.
     Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(*RecordLoc, CE,
                                                                  State.Env);
     if (Val == nullptr)
-      return;
+      return false;
     State.Env.setValue(*CE, *Val);
-    return;
+    return true;
+  }
+  if (isSupportedOptionalType(CE->getType())) {
+    // If the const method returns an optional by value.
+    const FunctionDecl *DirectCallee = CE->getDirectCallee();
+    if (DirectCallee == nullptr)
+      return false;
+    StorageLocation &Loc =
+        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
+              setHasValue(cast<RecordStorageLocation>(Loc),
+                          State.Env.makeAtomicBoolValue(), State.Env);
+            });
+    // Use copyRecord to link the optional to the result object of the call
+    // expression.
+    auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
+    copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
+    return true;
   }
 
-  // Perform default handling if the call returns an optional
-  // but wasn't handled above (if RecordLoc is nullptr).
-  if (isSupportedOptionalType(CE->getType())) {
-    transferCallReturningOptional(CE, Result, State);
-  }
+  return false;
 }
 
-void transferValue_ConstMemberCall(const CXXMemberCallExpr *MCE,
-                                   const MatchFinder::MatchResult &Result,
-                                   LatticeTransferState &State) {
-  handleConstMemberCall(
+void handleConstMemberCallWithFallbacks(
+    const CallExpr *CE, dataflow::RecordStorageLocation *RecordLoc,
+    const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
+  if (handleConstMemberCall(CE, RecordLoc, Result, State))
+    return;
+  // Perform default handling if the call returns an optional, but wasn't
+  // handled by caching.
+  if (isSupportedOptionalType(CE->getType()))
+    transferCallReturningOptional(CE, Result, State);
+}
+
+void transferConstMemberCall(const CXXMemberCallExpr *MCE,
+                             const MatchFinder::MatchResult &Result,
+                             LatticeTransferState &State) {
+  handleConstMemberCallWithFallbacks(
       MCE, dataflow::getImplicitObjectLocation(*MCE, State.Env), Result, State);
 }
 
-void transferValue_ConstMemberOperatorCall(
-    const CXXOperatorCallExpr *OCE, const MatchFinder::MatchResult &Result,
-    LatticeTransferState &State) {
+void transferConstMemberOperatorCall(const CXXOperatorCallExpr *OCE,
+                                     const MatchFinder::MatchResult &Result,
+                                     LatticeTransferState &State) {
   auto *RecordLoc = cast_or_null<dataflow::RecordStorageLocation>(
       State.Env.getStorageLocation(*OCE->getArg(0)));
-  handleConstMemberCall(OCE, RecordLoc, Result, State);
+  handleConstMemberCallWithFallbacks(OCE, RecordLoc, Result, State);
 }
 
 void handleNonConstMemberCall(const CallExpr *CE,
@@ -855,6 +922,48 @@ void transferOptionalAndNulloptCmp(const clang::CXXOperatorCallExpr *CmpExpr,
   }
 }
 
+void transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
+                                             const MatchFinder::MatchResult &,
+                                             LatticeTransferState &State) {
+  auto *AssertResultLoc = getImplicitObjectLocation(*Expr, State.Env);
+  if (AssertResultLoc == nullptr)
+    return;
+
+  if (BoolValue *SuccessVal = State.Env.get<BoolValue>(
+          locForAssertResultSuccess(*AssertResultLoc))) {
+    State.Env.setValue(*Expr, *SuccessVal);
+  }
+}
+
+void transferAssertionResultConstructFromBoolCall(
+    const CXXConstructExpr *ConstructExpr, const MatchFinder::MatchResult &,
+    LatticeTransferState &State) {
+  assert(ConstructExpr->getNumArgs() > 0);
+  const Expr *Arg = ConstructExpr->getArg(0)->IgnoreImplicit();
+
+  if (BoolValue *SuccessVal = State.Env.get<BoolValue>(*Arg)) {
+    auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
+    State.Env.setValue(locForAssertResultSuccess(ResultLoc), *SuccessVal);
+  }
+}
+
+void transferAssertionResultConstructFromOptionalCall(
+    const CXXConstructExpr *ConstructExpr, const MatchFinder::MatchResult &,
+    LatticeTransferState &State) {
+  assert(ConstructExpr->getNumArgs() > 0);
+
+  const Expr *Arg = ConstructExpr->getArg(0)->IgnoreImplicit();
+  auto *OptionalLoc =
+      cast_or_null<RecordStorageLocation>(State.Env.getStorageLocation(*Arg));
+  if (OptionalLoc == nullptr)
+    return;
+
+  if (BoolValue *HasVal = getHasValue(State.Env, OptionalLoc)) {
+    auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
+    State.Env.setValue(locForAssertResultSuccess(ResultLoc), *HasVal);
+  }
+}
+
 std::optional<StatementMatcher>
 ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
   if (Options.IgnoreSmartPointerDereference) {
@@ -957,6 +1066,20 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
 
+      // NullableValue::makeValue, NullableValue::makeValueInplace
+      // Only NullableValue has these methods, but this
+      // will also pass for other types
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnyName("makeValue", "makeValueInplace")),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            if (RecordStorageLocation *Loc =
+                    getImplicitObjectLocation(*E, State.Env)) {
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
+            }
+          })
+
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("emplace")),
@@ -1031,11 +1154,62 @@ auto buildTransferMatchSwitch() {
             transferOptionalAndValueCmp(Cmp, Cmp->getArg(1), State.Env);
           })
 
+      // Smart-pointer-like operator* and operator-> calls that may look like
+      // const accessors (below) but need special handling to allow mixing
+      // the accessor calls.
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isSmartPointerLikeOperatorStar(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E,
+                dyn_cast_or_null<RecordStorageLocation>(
+                    getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
+                State, [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isSmartPointerLikeOperatorArrow(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E,
+                dyn_cast_or_null<RecordStorageLocation>(
+                    getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
+                State, [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeValueMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeGetMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [](StorageLocation &Loc) {});
+          })
+
+      // gtest
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isAssertionResultOperatorBoolCall(),
+                                        transferAssertionResultOperatorBoolCall)
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          isAssertionResultConstructFromBoolCall(),
+          transferAssertionResultConstructFromBoolCall)
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          isAssertionResultConstructFromOptionalCall(),
+          transferAssertionResultConstructFromOptionalCall)
       // const accessor calls
       .CaseOfCFGStmt<CXXMemberCallExpr>(isZeroParamConstMemberCall(),
-                                        transferValue_ConstMemberCall)
+                                        transferConstMemberCall)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(isZeroParamConstMemberOperatorCall(),
-                                          transferValue_ConstMemberOperatorCall)
+                                          transferConstMemberOperatorCall)
       // non-const member calls that may modify the state of an object.
       .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
                                         transferValue_NonConstMemberCall)
@@ -1050,8 +1224,8 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
-                                                     const Environment &Env) {
+llvm::SmallVector<UncheckedOptionalAccessDiagnostic>
+diagnoseUnwrapCall(const Expr *ObjectExpr, const Environment &Env) {
   if (auto *OptionalLoc = cast_or_null<RecordStorageLocation>(
           getLocBehindPossiblePointer(*ObjectExpr, Env))) {
     auto *Prop = Env.getValue(locForHasValue(*OptionalLoc));
@@ -1062,9 +1236,9 @@ llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
   }
 
   // Record that this unwrap is *not* provably safe.
-  // FIXME: include either the name of the optional (if applicable) or a source
-  // range of the access for easier interpretation of the result.
-  return {ObjectExpr->getBeginLoc()};
+  // FIXME: include the name of the optional (if applicable).
+  auto Range = CharSourceRange::getTokenRange(ObjectExpr->getSourceRange());
+  return {UncheckedOptionalAccessDiagnostic{Range}};
 }
 
 auto buildDiagnoseMatchSwitch(
@@ -1072,25 +1246,34 @@ auto buildDiagnoseMatchSwitch(
   // FIXME: Evaluate the efficiency of matchers. If using matchers results in a
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
-  auto IgnorableOptional = ignorableOptional(Options);
-  return CFGMatchSwitchBuilder<const Environment,
-                               llvm::SmallVector<SourceLocation>>()
-      // optional::value
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-          valueCall(IgnorableOptional),
-          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
-             const Environment &Env) {
-            return diagnoseUnwrapCall(E->getImplicitObjectArgument(), Env);
-          })
+  const auto IgnorableOptional = ignorableOptional(Options);
 
-      // optional::operator*, optional::operator->
-      .CaseOfCFGStmt<CallExpr>(valueOperatorCall(IgnorableOptional),
-                               [](const CallExpr *E,
+  auto DiagBuilder =
+      CFGMatchSwitchBuilder<
+          const Environment,
+          llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
+          // optional::operator*, optional::operator->
+          .CaseOfCFGStmt<CallExpr>(
+              valueOperatorCall(IgnorableOptional),
+              [](const CallExpr *E, const MatchFinder::MatchResult &,
+                 const Environment &Env) {
+                return diagnoseUnwrapCall(E->getArg(0), Env);
+              });
+
+  auto Builder = Options.IgnoreValueCalls
+                     ? std::move(DiagBuilder)
+                     : std::move(DiagBuilder)
+                           // optional::value
+                           .CaseOfCFGStmt<CXXMemberCallExpr>(
+                               valueCall(IgnorableOptional),
+                               [](const CXXMemberCallExpr *E,
                                   const MatchFinder::MatchResult &,
                                   const Environment &Env) {
-                                 return diagnoseUnwrapCall(E->getArg(0), Env);
-                               })
-      .Build();
+                                 return diagnoseUnwrapCall(
+                                     E->getImplicitObjectArgument(), Env);
+                               });
+
+  return std::move(Builder).Build();
 }
 
 } // namespace
@@ -1107,6 +1290,9 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
       TransferMatchSwitch(buildTransferMatchSwitch()) {
   Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
       [&Ctx](QualType Ty) -> llvm::StringMap<QualType> {
+        if (isAssertionResultType(Ty))
+          return {{"success", Ctx.BoolTy}};
+
         const CXXRecordDecl *Optional =
             getOptionalBaseClass(Ty->getAsCXXRecordDecl());
         if (Optional == nullptr)

@@ -17,9 +17,9 @@
 #include "msan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 
-DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
-DECLARE_REAL(void *, memcpy, void *dest, const void *src, uptr n)
-DECLARE_REAL(void *, memmove, void *dest, const void *src, uptr n)
+DECLARE_REAL(void *, memset, void *dest, int c, SIZE_T n)
+DECLARE_REAL(void *, memcpy, void *dest, const void *src, SIZE_T n)
+DECLARE_REAL(void *, memmove, void *dest, const void *src, SIZE_T n)
 
 namespace __msan {
 

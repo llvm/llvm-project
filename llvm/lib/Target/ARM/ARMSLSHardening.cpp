@@ -322,7 +322,7 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
 
   // Now copy the implicit operands from IndirectCall to BL and copy other
   // necessary info.
-  // However, both IndirectCall and BL instructions implictly use SP and
+  // However, both IndirectCall and BL instructions implicitly use SP and
   // implicitly define LR. Blindly copying implicit operands would result in SP
   // and LR operands to be present multiple times. While this may not be too
   // much of an issue, let's avoid that for cleanliness, by removing those
@@ -348,7 +348,7 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
   BL->removeOperand(SecondOpIdxToRemove);
   // Now copy over the implicit operands from the original IndirectCall
   BL->copyImplicitOps(MF, IndirectCall);
-  MF.moveCallSiteInfo(&IndirectCall, BL);
+  MF.moveAdditionalCallInfo(&IndirectCall, BL);
   // Also add the register called in the IndirectCall as being used in the
   // called thunk.
   BL->addOperand(MachineOperand::CreateReg(Reg, false /*isDef*/, true /*isImp*/,

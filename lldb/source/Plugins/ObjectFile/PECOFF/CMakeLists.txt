@@ -18,16 +18,16 @@ add_lldb_library(lldbPluginObjectFilePECOFF PLUGIN
   PECallFrameInfo.cpp
   WindowsMiniDump.cpp
 
+  LINK_COMPONENTS
+    BinaryFormat
+    Support
+    TargetParser
   LINK_LIBS
     lldbCore
     lldbHost
     lldbSymbol
     lldbTarget
     ${DBGHELP_LINK_FILES}
-  LINK_COMPONENTS
-    BinaryFormat
-    Support
-    TargetParser
   )
 
 add_dependencies(lldbPluginObjectFilePECOFF

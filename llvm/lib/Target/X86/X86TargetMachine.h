@@ -71,14 +71,21 @@ public:
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
-  Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
-                             raw_pwrite_stream *, CodeGenFileType,
-                             const CGPassBuilderOption &,
-                             PassInstrumentationCallbacks *) override;
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 
   bool isJIT() const { return IsJIT; }
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
+
+  bool canLowerCondLoop() const override { return true; }
 };
 
 } // end namespace llvm

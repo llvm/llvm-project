@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_IS_HEAP_UNTIL_H
-#define _LIBCPP___ALGORITHM_IS_HEAP_UNTIL_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_IS_HEAP_UNTIL_H
+#define _LIBCPP___CXX03___ALGORITHM_IS_HEAP_UNTIL_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
+_LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
 __is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare&& __comp) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __len      = __last - __first;
@@ -46,17 +46,17 @@ __is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last, _Co
 }
 
 template <class _RandomAccessIterator, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
 is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   return std::__is_heap_until(__first, __last, static_cast<__comp_ref_type<_Compare> >(__comp));
 }
 
 template <class _RandomAccessIterator>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
 is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   return std::__is_heap_until(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_IS_HEAP_UNTIL_H
+#endif // _LIBCPP___CXX03___ALGORITHM_IS_HEAP_UNTIL_H

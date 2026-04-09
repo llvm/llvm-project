@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_FDIM_H
-#define _LIBCPP___MATH_FDIM_H
+#ifndef _LIBCPP___CXX03___MATH_FDIM_H
+#define _LIBCPP___CXX03___MATH_FDIM_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -45,4 +45,4 @@ inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type fdim(_A1 __x, _A
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_FDIM_H
+#endif // _LIBCPP___CXX03___MATH_FDIM_H

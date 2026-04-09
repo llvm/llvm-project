@@ -81,11 +81,28 @@ mlirPassManagerRunOnOp(MlirPassManager passManager, MlirOperation op);
 MLIR_CAPI_EXPORTED void mlirPassManagerEnableIRPrinting(
     MlirPassManager passManager, bool printBeforeAll, bool printAfterAll,
     bool printModuleScope, bool printAfterOnlyOnChange,
-    bool printAfterOnlyOnFailure, MlirStringRef treePrintingPath);
+    bool printAfterOnlyOnFailure, MlirOpPrintingFlags flags,
+    MlirStringRef treePrintingPath);
 
 /// Enable / disable verify-each.
 MLIR_CAPI_EXPORTED void
 mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable);
+
+/// Enable pass timing.
+MLIR_CAPI_EXPORTED void
+mlirPassManagerEnableTiming(MlirPassManager passManager);
+
+/// Enumerated type of pass display modes.
+/// Mainly used in mlirPassManagerEnableStatistics.
+typedef enum {
+  MLIR_PASS_DISPLAY_MODE_LIST,
+  MLIR_PASS_DISPLAY_MODE_PIPELINE,
+} MlirPassDisplayMode;
+
+/// Enable pass statistics.
+MLIR_CAPI_EXPORTED void
+mlirPassManagerEnableStatistics(MlirPassManager passManager,
+                                MlirPassDisplayMode displayMode);
 
 /// Nest an OpPassManager under the top-level PassManager, the nested
 /// passmanager will only run on operations matching the provided name.

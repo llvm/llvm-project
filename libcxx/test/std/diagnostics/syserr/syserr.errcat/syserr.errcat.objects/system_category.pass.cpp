@@ -33,7 +33,12 @@ int main(int, char**) {
   {
     const std::error_category& e_cat1 = std::system_category();
     std::error_condition e_cond       = e_cat1.default_error_condition(5);
+#ifdef _WIN32
+    // Windows' system error 5 is ERROR_ACCESS_DENIED, which maps to generic code permission_denied.
+    LIBCPP_ASSERT(e_cond.value() == static_cast<int>(std::errc::permission_denied));
+#else
     LIBCPP_ASSERT(e_cond.value() == 5);
+#endif
     LIBCPP_ASSERT(e_cond.category() == std::generic_category());
     assert(e_cat1.equivalent(5, e_cond));
 
@@ -54,7 +59,7 @@ int main(int, char**) {
     // responds with an empty message, which we probably want to
     // treat as a failure code otherwise, but we can detect that
     // with the preprocessor.
-#if defined(_NEWLIB_VERSION)
+#if _LIBCPP_LIBC_NEWLIB
     const bool is_newlib = true;
 #else
     const bool is_newlib = false;

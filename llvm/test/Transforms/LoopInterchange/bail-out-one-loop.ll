@@ -15,7 +15,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i6
 ; CHECK-NOT: Delinearizing
 ; CHECK-NOT: Strides:
 ; CHECK-NOT: Terms:
-; CHECK: Loop doesn't contain minimum nesting level.
+; CHECK: Unsupported depth of loop nest 1, the supported range is [2, 10].
 
 define void @foo() {
 entry:

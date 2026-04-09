@@ -2,7 +2,7 @@
 // RUN: %clang --target=loongarch64 -S -emit-llvm %s -o - | FileCheck %s --check-prefix=LA64
 
 // LA32: "target-features"="+32bit"
-// LA64: "target-features"="+64bit,+d,+f,+lsx,+ual"
+// LA64: "target-features"="+64bit,+d,+f,+lsx,+relax,+ual"
 
 int foo(void) {
   return 3;

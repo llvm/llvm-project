@@ -53,3 +53,10 @@ struct TestNotNullTerm {
     strlen((char *)&x); // expected-warning{{Argument to string length function is not a null-terminated string}}
   }
 };
+
+void test_notcstring_tempobject() {
+  // FIXME: This warning from cstring.NotNullTerminated is a false positive.
+  // Handling of similar cases is not perfect in other cstring checkers.
+  // The fix would be a larger change in CStringChecker and affect multiple checkers.
+  strlen((char[]){'a', 0}); // expected-warning{{Argument to string length function is a C++ temp object of type char[2], which is not a null-terminated string}}
+}

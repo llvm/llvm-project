@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_CALLABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_CALLABLE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_CALLABLE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_CALLABLE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -29,4 +29,4 @@ struct __is_callable : decltype(std::__is_callable_helper<_Func, _Args...>(0)) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_CALLABLE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_CALLABLE_H

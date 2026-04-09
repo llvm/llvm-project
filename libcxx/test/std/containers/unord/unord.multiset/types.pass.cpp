@@ -32,39 +32,37 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_multiset<short> C;
-        static_assert((std::is_same<C::value_type, short>::value), "");
-        static_assert((std::is_same<C::key_type, short>::value), "");
-        static_assert((std::is_same<C::hasher, std::hash<C::key_type> >::value), "");
-        static_assert((std::is_same<C::key_equal, std::equal_to<C::key_type> >::value), "");
-        static_assert((std::is_same<C::allocator_type, std::allocator<C::value_type> >::value), "");
-        static_assert((std::is_same<C::reference, C::value_type&>::value), "");
-        static_assert((std::is_same<C::const_reference, const C::value_type&>::value), "");
-        static_assert((std::is_same<C::pointer, C::value_type*>::value), "");
-        static_assert((std::is_same<C::const_pointer, const C::value_type*>::value), "");
-        static_assert((std::is_same<C::size_type, std::size_t>::value), "");
-        static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
-    }
+int main(int, char**) {
+  {
+    typedef std::unordered_multiset<short> C;
+    static_assert((std::is_same<C::value_type, short>::value), "");
+    static_assert((std::is_same<C::key_type, short>::value), "");
+    static_assert((std::is_same<C::hasher, std::hash<C::key_type> >::value), "");
+    static_assert((std::is_same<C::key_equal, std::equal_to<C::key_type> >::value), "");
+    static_assert((std::is_same<C::allocator_type, std::allocator<C::value_type> >::value), "");
+    static_assert((std::is_same<C::reference, C::value_type&>::value), "");
+    static_assert((std::is_same<C::const_reference, const C::value_type&>::value), "");
+    static_assert((std::is_same<C::pointer, C::value_type*>::value), "");
+    static_assert((std::is_same<C::const_pointer, const C::value_type*>::value), "");
+    static_assert((std::is_same<C::size_type, std::size_t>::value), "");
+    static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef std::unordered_multiset<short, std::hash<short>,
-                                  std::equal_to<short>, min_allocator<short>> C;
-        static_assert((std::is_same<C::value_type, short>::value), "");
-        static_assert((std::is_same<C::key_type, short>::value), "");
-        static_assert((std::is_same<C::hasher, std::hash<C::key_type> >::value), "");
-        static_assert((std::is_same<C::key_equal, std::equal_to<C::key_type> >::value), "");
-        static_assert((std::is_same<C::allocator_type, min_allocator<C::value_type> >::value), "");
-        static_assert((std::is_same<C::reference, C::value_type&>::value), "");
-        static_assert((std::is_same<C::const_reference, const C::value_type&>::value), "");
-        static_assert((std::is_same<C::pointer, min_pointer<C::value_type>>::value), "");
-        static_assert((std::is_same<C::const_pointer, min_pointer<const C::value_type>>::value), "");
+  {
+    typedef std::unordered_multiset<short, std::hash<short>, std::equal_to<short>, min_allocator<short>> C;
+    static_assert((std::is_same<C::value_type, short>::value), "");
+    static_assert((std::is_same<C::key_type, short>::value), "");
+    static_assert((std::is_same<C::hasher, std::hash<C::key_type> >::value), "");
+    static_assert((std::is_same<C::key_equal, std::equal_to<C::key_type> >::value), "");
+    static_assert((std::is_same<C::allocator_type, min_allocator<C::value_type> >::value), "");
+    static_assert((std::is_same<C::reference, C::value_type&>::value), "");
+    static_assert((std::is_same<C::const_reference, const C::value_type&>::value), "");
+    static_assert((std::is_same<C::pointer, min_pointer<C::value_type>>::value), "");
+    static_assert((std::is_same<C::const_pointer, min_pointer<const C::value_type>>::value), "");
     //  min_allocator doesn't have a size_type, so one gets synthesized
-        static_assert((std::is_same<C::size_type, std::make_unsigned<C::difference_type>::type>::value), "");
-        static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
-    }
+    static_assert((std::is_same<C::size_type, std::make_unsigned<C::difference_type>::type>::value), "");
+    static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
+  }
 #endif
 
   return 0;

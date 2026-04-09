@@ -65,3 +65,50 @@ func.func @unknown(%arg0: memref<i32>) attributes {test.ptr = "func"} {
   "foo.op"() {test.ptr = "unknown"} : () -> ()
   return
 }
+
+// -----
+
+// An op writing to a non-addressable resource cannot modify or reference a
+// Value-based memory location -> NoModRef.
+// CHECK-LABEL: Testing : "nonaddressable_write"
+// CHECK-DAG: side_effect_op -> func.region0#0: NoModRef
+// CHECK-DAG: return -> func.region0#0: NoModRef
+func.func @nonaddressable_write(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource}], test.ptr = "side_effect_op"} : () -> i32
+  return {test.ptr = "return"}
+}
+
+// -----
+
+// An op writing to an addressable resource without an associated Value ->
+// MayAlias -> Mod.
+// CHECK-LABEL: Testing : "addressable_write"
+// CHECK-DAG: side_effect_op -> func.region0#0: Mod
+// CHECK-DAG: return -> func.region0#0: NoModRef
+func.func @addressable_write(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
+  "test.side_effect_op"() {effects = [{effect="write"}], test.ptr = "side_effect_op"} : () -> i32
+  return {test.ptr = "return"}
+}
+
+// -----
+
+// An op with no side effects does not mod-ref any memory.
+// CHECK-LABEL: Testing : "conditional_no_effects"
+// CHECK-DAG: conditional_side_effect_op -> func.region0#0: NoModRef
+// CHECK-DAG: return -> func.region0#0: NoModRef
+func.func @conditional_no_effects(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
+  "test.conditional_side_effect_op"() {has_effects = false, test.ptr = "conditional_side_effect_op"} : () -> i32
+  return {test.ptr = "return"}
+}
+
+// -----
+
+// An op with read/write/free/alloc effects on DefaultResource
+// may mod-ref any memory.
+// CHECK-LABEL: Testing : "conditional_all_effects"
+// CHECK-DAG: conditional_side_effect_op -> func.region0#0: ModRef
+// CHECK-DAG: return -> func.region0#0: NoModRef
+func.func @conditional_all_effects(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
+  "test.conditional_side_effect_op"() {has_effects = true, test.ptr = "conditional_side_effect_op"} : () -> i32
+  return {test.ptr = "return"}
+}

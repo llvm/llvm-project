@@ -1,3 +1,11 @@
+; Remove 'S' Scalar Dependencies #119345
+; Scalar dependencies are not handled correctly, so they were removed to avoid
+; miscompiles. The loop nest in this test case used to be interchanged, but it's
+; no longer triggering. XFAIL'ing this test to indicate that this test should
+; interchanged if scalar deps are handled correctly.
+;
+; XFAIL: *
+
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -verify-loop-lcssa -pass-remarks-output=%t -S
 ; RUN: FileCheck --input-file %t --check-prefix REMARK %s
 
@@ -177,7 +185,7 @@ for.end16:                                        ; preds = %for.exit
 }
 
 ; PHI node in inner latch with multiple predecessors.
-; REMARK: Interchanged
+; REMARK:      Interchanged
 ; REMARK-NEXT: lcssa_05
 
 define void @lcssa_05(ptr %ptr, i1 %arg) {
@@ -222,7 +230,7 @@ for.end16:                                        ; preds = %for.exit
   ret void
 }
 
-; REMARK: UnsupportedExitPHI
+; REMARK:      UnsupportedExitPHI
 ; REMARK-NEXT: lcssa_06
 
 define void @lcssa_06(ptr %ptr, ptr %ptr1, i1 %arg) {

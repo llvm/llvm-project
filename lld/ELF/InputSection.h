@@ -33,7 +33,7 @@ class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
 
-// Returned by InputSectionBase::relsOrRelas. At most one member is empty.
+// Returned by InputSectionBase::relsOrRelas. At least two members are empty.
 template <class ELFT> struct RelsOrRelas {
   Relocs<typename ELFT::Rel> rels;
   Relocs<typename ELFT::Rela> relas;
@@ -143,6 +143,16 @@ struct RelaxAux {
 // This corresponds to a section of an input file.
 class InputSectionBase : public SectionBase {
 public:
+  struct ObjMsg {
+    const InputSectionBase *sec;
+    uint64_t offset;
+  };
+  struct SrcMsg {
+    const InputSectionBase &sec;
+    const Symbol &sym;
+    uint64_t offset;
+  };
+
   template <class ELFT>
   InputSectionBase(ObjFile<ELFT> &file, const typename ELFT::Shdr &header,
                    StringRef name, Kind sectionKind);
@@ -247,13 +257,11 @@ public:
 
   // Returns a source location string. Used to construct an error message.
   std::string getLocation(uint64_t offset) const;
-  std::string getSrcMsg(const Symbol &sym, uint64_t offset) const;
-  std::string getObjMsg(uint64_t offset) const;
+  ObjMsg getObjMsg(uint64_t offset) const { return {this, offset}; }
+  SrcMsg getSrcMsg(const Symbol &sym, uint64_t offset) const {
+    return {*this, sym, offset};
+  }
 
-  // Each section knows how to relocate itself. These functions apply
-  // relocations, assuming that Buf points to this section's copy in
-  // the mmap'ed output buffer.
-  template <class ELFT> void relocate(Ctx &, uint8_t *buf, uint8_t *bufEnd);
   uint64_t getRelocTargetVA(Ctx &, const Relocation &r, uint64_t p) const;
 
   // The native ELF reloc data type is not very convenient to handle.
@@ -291,6 +299,7 @@ public:
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
     size_t s = content().size();
     assert(s % sizeof(T) == 0);
+    assert(reinterpret_cast<uintptr_t>(content().data()) % alignof(T) == 0);
     return llvm::ArrayRef<T>((const T *)content().data(), s / sizeof(T));
   }
 
@@ -317,6 +326,10 @@ struct SectionPiece {
 
 static_assert(sizeof(SectionPiece) == 16, "SectionPiece is too big");
 
+// Used by splitSections to pre-resolve section piece indexes. 32 bits of offset
+// supports section piece up to 4GB.
+constexpr unsigned mergeValueShift = 32;
+
 // This corresponds to a SHF_MERGE section of an input file.
 class MergeInputSection : public InputSectionBase {
 public:
@@ -330,7 +343,8 @@ public:
   void splitIntoPieces();
 
   // Translate an offset in the input section to an offset in the parent
-  // MergeSyntheticSection.
+  // MergeSyntheticSection. If the offset was pre-resolved by
+  // resolveSymbolPieces (upper bits non-zero), this is O(1).
   uint64_t getParentOffset(uint64_t offset) const;
 
   // Splittable sections are handled as a sequence of data
@@ -386,7 +400,7 @@ public:
                  StringRef name);
   static bool classof(const SectionBase *s) { return s->kind() == EHFrame; }
   template <class ELFT> void split();
-  template <class ELFT, class RelTy> void split(ArrayRef<RelTy> rels);
+  template <class ELFT, class RelTy> void preprocessRelocs(Relocs<RelTy> rels);
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
@@ -394,6 +408,10 @@ public:
 
   SyntheticSection *getParent() const;
   uint64_t getParentOffset(uint64_t offset) const;
+
+  // Preprocessed relocations in uniform format to avoid REL/RELA/CREL
+  // relocation format handling throughout the codebase.
+  SmallVector<Relocation, 0> rels;
 };
 
 // This is a section that is added directly to an output section
@@ -431,8 +449,12 @@ public:
 
   InputSectionBase *getRelocatedSection() const;
 
+  // Each section knows how to relocate itself. These functions apply
+  // relocations, assuming that `buf` points to this section's copy in
+  // the mmap'ed output buffer.
   template <class ELFT, class RelTy>
   void relocateNonAlloc(Ctx &, uint8_t *buf, Relocs<RelTy> rels);
+  template <class ELFT> void relocate(Ctx &, uint8_t *buf, uint8_t *bufEnd);
 
   // Points to the canonical section. If ICF folds two sections, repl pointer of
   // one section points to the other.
@@ -515,6 +537,10 @@ inline bool isDebugSection(const InputSectionBase &sec) {
 std::string toStr(elf::Ctx &, const elf::InputSectionBase *);
 const ELFSyncStream &operator<<(const ELFSyncStream &,
                                 const InputSectionBase *);
+const ELFSyncStream &operator<<(const ELFSyncStream &,
+                                InputSectionBase::ObjMsg &&);
+const ELFSyncStream &operator<<(const ELFSyncStream &,
+                                InputSectionBase::SrcMsg &&);
 } // namespace elf
 } // namespace lld
 

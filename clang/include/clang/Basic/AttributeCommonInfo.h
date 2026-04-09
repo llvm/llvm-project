@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H
 #define LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H
 
+#include "clang/Basic/AttributeScopeInfo.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 
@@ -21,6 +23,8 @@ namespace clang {
 
 class ASTRecordWriter;
 class IdentifierInfo;
+class LangOptions;
+class TargetInfo;
 
 class AttributeCommonInfo {
 public:
@@ -59,21 +63,27 @@ public:
     /// implicitly.
     AS_Implicit
   };
+
   enum Kind {
 #define PARSED_ATTR(NAME) AT_##NAME,
-#include "clang/Sema/AttrParsedAttrList.inc"
+#include "clang/Basic/AttrParsedAttrList.inc"
 #undef PARSED_ATTR
     NoSemaHandlerAttribute,
     IgnoredAttribute,
     UnknownAttribute,
   };
-  enum class Scope { NONE, CLANG, GNU, MSVC, OMP, HLSL, GSL, RISCV };
+  enum class Scope { NONE, CLANG, GNU, MSVC, OMP, HLSL, VK, GSL, RISCV };
+  enum class AttrArgsInfo {
+    None,
+    Optional,
+    Required,
+  };
 
 private:
   const IdentifierInfo *AttrName = nullptr;
-  const IdentifierInfo *ScopeName = nullptr;
+  AttributeScopeInfo AttrScope;
   SourceRange AttrRange;
-  const SourceLocation ScopeLoc;
+
   // Corresponds to the Kind enum.
   LLVM_PREFERRED_TYPE(Kind)
   unsigned AttrKind : 16;
@@ -139,11 +149,10 @@ public:
   };
 
   AttributeCommonInfo(const IdentifierInfo *AttrName,
-                      const IdentifierInfo *ScopeName, SourceRange AttrRange,
-                      SourceLocation ScopeLoc, Kind AttrKind, Form FormUsed)
-      : AttrName(AttrName), ScopeName(ScopeName), AttrRange(AttrRange),
-        ScopeLoc(ScopeLoc), AttrKind(AttrKind),
-        SyntaxUsed(FormUsed.getSyntax()),
+                      AttributeScopeInfo AttrScope, SourceRange AttrRange,
+                      Kind AttrKind, Form FormUsed)
+      : AttrName(AttrName), AttrScope(AttrScope), AttrRange(AttrRange),
+        AttrKind(AttrKind), SyntaxUsed(FormUsed.getSyntax()),
         SpellingIndex(FormUsed.getSpellingIndex()),
         IsAlignas(FormUsed.isAlignas()),
         IsRegularKeywordAttribute(FormUsed.isRegularKeywordAttribute()) {
@@ -151,22 +160,25 @@ public:
            "Invalid syntax!");
   }
 
-  AttributeCommonInfo(const IdentifierInfo *AttrName,
-                      const IdentifierInfo *ScopeName, SourceRange AttrRange,
-                      SourceLocation ScopeLoc, Form FormUsed)
+  AttributeCommonInfo(const IdentifierInfo *AttrName, AttributeScopeInfo Scope,
+                      SourceRange AttrRange, Form FormUsed)
       : AttributeCommonInfo(
-            AttrName, ScopeName, AttrRange, ScopeLoc,
-            getParsedKind(AttrName, ScopeName, FormUsed.getSyntax()),
+            AttrName, Scope, AttrRange,
+            getParsedKind(AttrName, Scope.getName(), FormUsed.getSyntax()),
             FormUsed) {}
 
   AttributeCommonInfo(const IdentifierInfo *AttrName, SourceRange AttrRange,
                       Form FormUsed)
-      : AttributeCommonInfo(AttrName, nullptr, AttrRange, SourceLocation(),
+      : AttributeCommonInfo(AttrName, AttributeScopeInfo(), AttrRange,
                             FormUsed) {}
 
   AttributeCommonInfo(SourceRange AttrRange, Kind K, Form FormUsed)
-      : AttributeCommonInfo(nullptr, nullptr, AttrRange, SourceLocation(), K,
+      : AttributeCommonInfo(nullptr, AttributeScopeInfo(), AttrRange, K,
                             FormUsed) {}
+
+  AttributeCommonInfo(SourceRange AttrRange, AttributeScopeInfo AttrScope,
+                      Kind K, Form FormUsed)
+      : AttributeCommonInfo(nullptr, AttrScope, AttrRange, K, FormUsed) {}
 
   AttributeCommonInfo(AttributeCommonInfo &&) = default;
   AttributeCommonInfo(const AttributeCommonInfo &) = default;
@@ -183,14 +195,28 @@ public:
   SourceRange getRange() const { return AttrRange; }
   void setRange(SourceRange R) { AttrRange = R; }
 
-  bool hasScope() const { return ScopeName; }
-  const IdentifierInfo *getScopeName() const { return ScopeName; }
-  SourceLocation getScopeLoc() const { return ScopeLoc; }
+  bool hasScope() const { return AttrScope.isValid(); }
+  bool isExplicitScope() const { return AttrScope.isExplicit(); }
+
+  const IdentifierInfo *getScopeName() const { return AttrScope.getName(); }
+  SourceLocation getScopeLoc() const { return AttrScope.getNameLoc(); }
 
   /// Gets the normalized full name, which consists of both scope and name and
   /// with surrounding underscores removed as appropriate (e.g.
   /// __gnu__::__attr__ will be normalized to gnu::attr).
   std::string getNormalizedFullName() const;
+  std::string getNormalizedFullName(StringRef ScopeName,
+                                    StringRef AttrName) const;
+  StringRef getNormalizedScopeName() const;
+  StringRef getNormalizedAttrName(StringRef ScopeName) const;
+
+  std::optional<StringRef> tryGetCorrectedScopeName(StringRef ScopeName) const;
+  std::optional<StringRef>
+  tryGetCorrectedAttrName(StringRef ScopeName, StringRef AttrName,
+                          const TargetInfo &Target,
+                          const LangOptions &LangOpts) const;
+
+  SourceRange getNormalizedRange() const;
 
   bool isDeclspecAttribute() const { return SyntaxUsed == AS_Declspec; }
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }
@@ -241,6 +267,8 @@ public:
   static Kind getParsedKind(const IdentifierInfo *Name,
                             const IdentifierInfo *Scope, Syntax SyntaxUsed);
 
+  static AttrArgsInfo getCXX11AttrArgsInfo(const IdentifierInfo *Name);
+
 private:
   /// Get an index into the attribute spelling list
   /// defined in Attr.td. This index is used by an attribute
@@ -267,6 +295,18 @@ inline bool doesKeywordAttributeTakeArgs(tok::TokenKind Kind) {
 #include "clang/Basic/RegularKeywordAttrInfo.inc"
 #undef KEYWORD_ATTRIBUTE
   }
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const AttributeCommonInfo *CI) {
+  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI),
+                  DiagnosticsEngine::ak_attr_info);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const AttributeCommonInfo &CI) {
+  return DB << &CI;
 }
 
 } // namespace clang

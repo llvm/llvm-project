@@ -12,5 +12,5 @@
 subroutine omp_subroutine()
 end subroutine omp_subroutine
 
-!FLANG-ERROR: error: OpenMP AMDGPU/NVPTX is only prepared to deal with device code.
+!FLANG-ERROR: error: OpenMP GPU is only prepared to deal with device code.
 !BBC-ERROR: FATAL: -fopenmp-is-gpu can only be set if -fopenmp-is-target-device is also set

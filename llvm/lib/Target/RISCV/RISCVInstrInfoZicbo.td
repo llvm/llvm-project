@@ -21,12 +21,6 @@ def simm12_lsb00000 : RISCVOp,
   let ParserMatchClass = SImmAsmOperand<12, "Lsb00000">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<12>";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return isShiftedInt<7, 5>(Imm);
-    return MCOp.isBareSymbolRef();
-  }];
   let OperandType = "OPERAND_SIMM12_LSB00000";
 }
 
@@ -43,10 +37,11 @@ class CBO_r<bits<12> optype, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 class Prefetch_ri<bits<5> optype, string opcodestr>
-    : RVInstS<0b110, OPC_OP_IMM, (outs), (ins GPR:$rs1, simm12_lsb00000:$imm12),
+    : RVInstS<0b110, OPC_OP_IMM, (outs), (ins GPRMem:$rs1, simm12_lsb00000:$imm12),
               opcodestr, "${imm12}(${rs1})"> {
   let Inst{11-7} = 0b00000;
   let rs2 = optype;
+  let Format = InstFormatOther; // this does not follow the normal S format.
 }
 
 //===----------------------------------------------------------------------===//
@@ -75,7 +70,7 @@ def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
 
 def AddrRegImmLsb00000 : ComplexPattern<iPTR, 2, "SelectAddrRegImmLsb00000">;
 
-let Predicates = [HasStdExtZicbop] in {
+let Predicates = [HasStdExtZicbop, NoVendorXMIPSCBOP] in {
   def : Pat<(prefetch (AddrRegImmLsb00000 (XLenVT GPR:$rs1), simm12_lsb00000:$imm12),
                       timm, timm, (i32 0)),
             (PREFETCH_I GPR:$rs1, simm12_lsb00000:$imm12)>;
@@ -85,4 +80,4 @@ let Predicates = [HasStdExtZicbop] in {
   def : Pat<(prefetch (AddrRegImmLsb00000 (XLenVT GPR:$rs1), simm12_lsb00000:$imm12),
                       (i32 1), timm, (i32 1)),
             (PREFETCH_W GPR:$rs1, simm12_lsb00000:$imm12)>;
-}
+} // Predicates = [HasStdExtZicbop, NoVendorXMIPSCBOP]

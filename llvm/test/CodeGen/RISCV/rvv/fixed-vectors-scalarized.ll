@@ -24,21 +24,21 @@ define <8 x float> @fpext_v8bf16(<8 x bfloat> %x) {
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a7
 ; CHECK-NEXT:    vmv.s.x v9, a6
-; CHECK-NEXT:    vmv.s.x v10, a5
-; CHECK-NEXT:    vmv.s.x v12, a4
-; CHECK-NEXT:    vmv.s.x v11, a3
+; CHECK-NEXT:    vmv.s.x v11, a5
+; CHECK-NEXT:    vmv.s.x v10, a4
+; CHECK-NEXT:    vmv.s.x v12, a3
 ; CHECK-NEXT:    vmv.s.x v13, a2
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.s.x v14, a1
-; CHECK-NEXT:    vslideup.vi v12, v10, 1
-; CHECK-NEXT:    vslideup.vi v13, v11, 1
+; CHECK-NEXT:    vslideup.vi v10, v11, 1
+; CHECK-NEXT:    vslideup.vi v13, v12, 1
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vslideup.vi v8, v14, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v12, v9, 2
+; CHECK-NEXT:    vslideup.vi v10, v9, 2
 ; CHECK-NEXT:    vslideup.vi v8, v13, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v12, 4
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
 ; CHECK-NEXT:    ret
   %y = fpext <8 x bfloat> %x to <8 x float>
   ret <8 x float> %y
@@ -66,21 +66,21 @@ define <8 x float> @fpext_v8f16(<8 x bfloat> %x) {
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a7
 ; CHECK-NEXT:    vmv.s.x v9, a6
-; CHECK-NEXT:    vmv.s.x v10, a5
-; CHECK-NEXT:    vmv.s.x v12, a4
-; CHECK-NEXT:    vmv.s.x v11, a3
+; CHECK-NEXT:    vmv.s.x v11, a5
+; CHECK-NEXT:    vmv.s.x v10, a4
+; CHECK-NEXT:    vmv.s.x v12, a3
 ; CHECK-NEXT:    vmv.s.x v13, a2
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.s.x v14, a1
-; CHECK-NEXT:    vslideup.vi v12, v10, 1
-; CHECK-NEXT:    vslideup.vi v13, v11, 1
+; CHECK-NEXT:    vslideup.vi v10, v11, 1
+; CHECK-NEXT:    vslideup.vi v13, v12, 1
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vslideup.vi v8, v14, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v12, v9, 2
+; CHECK-NEXT:    vslideup.vi v10, v9, 2
 ; CHECK-NEXT:    vslideup.vi v8, v13, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v12, 4
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
 ; CHECK-NEXT:    ret
   %y = fpext <8 x bfloat> %x to <8 x float>
   ret <8 x float> %y

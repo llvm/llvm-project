@@ -21,6 +21,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
@@ -29,8 +30,8 @@ namespace fuzzerop {
 
 /// @{
 /// Populate a small list of potentially interesting constants of a given type.
-void makeConstantsWithType(Type *T, std::vector<Constant *> &Cs);
-std::vector<Constant *> makeConstantsWithType(Type *T);
+LLVM_ABI void makeConstantsWithType(Type *T, std::vector<Constant *> &Cs);
+LLVM_ABI std::vector<Constant *> makeConstantsWithType(Type *T);
 /// @}
 
 /// A matcher/generator for finding suitable values for the next source in an
@@ -155,7 +156,8 @@ static inline SourcePred anyPtrType() {
     std::vector<Constant *> Result;
     // TODO: Should these point at something?
     for (Type *T : Ts)
-      Result.push_back(PoisonValue::get(PointerType::getUnqual(T)));
+      Result.push_back(
+          PoisonValue::get(PointerType::getUnqual(T->getContext())));
     return Result;
   };
   return {Pred, Make};
@@ -175,7 +177,8 @@ static inline SourcePred sizedPtrType() {
     // as the pointer type will always be the same.
     for (Type *T : Ts)
       if (T->isSized())
-        Result.push_back(PoisonValue::get(PointerType::getUnqual(T)));
+        Result.push_back(
+            PoisonValue::get(PointerType::getUnqual(T->getContext())));
 
     return Result;
   };

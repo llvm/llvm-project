@@ -1,4 +1,4 @@
-; RUN: llc -march=mips < %s | FileCheck %s
+; RUN: llc -mtriple=mips < %s | FileCheck %s
 
 ; CHECK: mul $2, $5, $4
 define i32 @mul1(i32 %a, i32 %b) nounwind readnone {

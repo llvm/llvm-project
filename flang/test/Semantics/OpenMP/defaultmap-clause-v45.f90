@@ -1,7 +1,7 @@
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=45 -Werror
 
 subroutine f00
-!WARNING: A variable-category modifier is required
+!WARNING: 'variable-category' modifier is required
   !$omp target defaultmap(tofrom)
   !$omp end target
 end

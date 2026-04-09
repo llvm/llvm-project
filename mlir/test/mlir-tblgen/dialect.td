@@ -62,9 +62,14 @@ def E_SpecialNSOp : Op<E_Dialect, "special_ns_op", []> {
 // DEF: ::E::SPECIAL_NS::SpecialNSOp definitions
 
 // DECL-LABEL: GET_OP_CLASSES
+// DECL: namespace a {
 // DECL: a::SomeOp declarations
+// DECL: namespace BNS {
 // DECL: BNS::SomeOp declarations
+// DECL: namespace C::CC {
 // DECL: ::C::CC::SomeOp declarations
 // DECL: DSomeOp declarations
+// DECL: namespace ENS {
 // DECL: ENS::SomeOp declarations
+// DECL: namespace E::SPECIAL_NS {
 // DECL: ::E::SPECIAL_NS::SpecialNSOp declarations

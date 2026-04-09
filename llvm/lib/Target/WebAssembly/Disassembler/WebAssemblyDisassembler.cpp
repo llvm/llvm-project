@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -25,7 +26,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 
@@ -37,9 +38,9 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 #include "WebAssemblyGenDisassemblerTables.inc"
 
-namespace {
 static constexpr int WebAssemblyInstructionTableSize = 256;
 
+namespace {
 class WebAssemblyDisassembler final : public MCDisassembler {
   std::unique_ptr<const MCInstrInfo> MCII;
 
@@ -65,7 +66,7 @@ static MCDisassembler *createWebAssemblyDisassembler(const Target &T,
   return new WebAssemblyDisassembler(STI, Ctx, std::move(MCII));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeWebAssemblyDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getTheWebAssemblyTarget32(),
@@ -170,10 +171,10 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
   // If this is a prefix byte, indirect to another table.
   if (WasmInst->ET == ET_Prefix) {
     WasmInst = nullptr;
-    // Linear search, so far only 2 entries.
-    for (auto PT = PrefixTable; PT->Table; PT++) {
-      if (PT->Prefix == Opc) {
-        WasmInst = PT->Table;
+    // Linear search, so far only 4 entries.
+    for (const auto &[Prefix, Table] : PrefixTable) {
+      if (Prefix == Opc) {
+        WasmInst = Table;
         break;
       }
     }
@@ -209,6 +210,34 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     case MCOI::OPERAND_IMMEDIATE: {
       if (!parseLEBImmediate(MI, Size, Bytes, false))
         return MCDisassembler::Fail;
+      if (OT == WebAssembly::OPERAND_P2ALIGN) {
+        // The byte that encodes P2align also encodes whether a memory index
+        // and/or ordering is present.
+        int64_t Val = MI.getOperand(MI.getNumOperands() - 1).getImm();
+        if (Val & wasm::WASM_MEMARG_HAS_MEM_ORDER) {
+          // Clear the order so we just have the alignment in this operand.
+          MI.getOperand(MI.getNumOperands() - 1)
+              .setImm(Val & ~wasm::WASM_MEMARG_HAS_MEM_ORDER);
+          if (Size >= Bytes.size())
+            return MCDisassembler::Fail;
+          uint8_t Order = Bytes[Size++];
+          // If we have a memory ordering, it must have been preceded by a
+          // MEMORDER operand which was added as a placeholder (because we are
+          // iterating in MI operand order which has mem order first, but this
+          // byte is encoded first).
+          assert(OPI > 0 &&
+                 OperandTable[WasmInst->OperandStart + OPI - 1] ==
+                     WebAssembly::OPERAND_MEMORDER &&
+                 "P2ALIGN with memory order not preceded by MEMORDER");
+          if (Order == wasm::WASM_MEM_ORDER_RMW_ACQ_REL ||
+              Order == wasm::WASM_MEM_ORDER_ACQ_REL)
+            MI.getOperand(MI.getNumOperands() - 2)
+                .setImm(wasm::WASM_MEM_ORDER_ACQ_REL);
+          else
+            MI.getOperand(MI.getNumOperands() - 2)
+                .setImm(wasm::WASM_MEM_ORDER_SEQ_CST);
+        }
+      }
       break;
     }
     // SLEB operands:
@@ -235,10 +264,10 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       } else {
         // We don't have access to the signature, so create a symbol without one
         MCSymbol *Sym = getContext().createTempSymbol("typeindex", true);
-        auto *WasmSym = cast<MCSymbolWasm>(Sym);
+        auto *WasmSym = static_cast<MCSymbolWasm *>(Sym);
         WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
         const MCExpr *Expr = MCSymbolRefExpr::create(
-            WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, getContext());
+            WasmSym, WebAssembly::S_TYPEINDEX, getContext());
         MI.addOperand(MCOperand::createExpr(Expr));
       }
       break;
@@ -258,6 +287,28 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     case WebAssembly::OPERAND_VEC_I8IMM: {
       if (!parseImmediate<uint8_t>(MI, Size, Bytes))
         return MCDisassembler::Fail;
+      break;
+    }
+    case WebAssembly::OPERAND_MEMORDER: {
+      uint8_t Val;
+      if (OPI + 1 < WasmInst->NumOperands &&
+          OperandTable[WasmInst->OperandStart + OPI + 1] ==
+              WebAssembly::OPERAND_P2ALIGN) {
+        // If we have P2ALIGN next, it will be encoded as part of the memarg,
+        // which has not been parsed yet. Default to SEQ_CST
+        // and we will update it when we parse P2ALIGN if necessary.
+        Val = wasm::WASM_MEM_ORDER_SEQ_CST;
+      } else {
+        // atomic.fence instructions have no p2align operand.
+        if (Size >= Bytes.size())
+          return MCDisassembler::Fail;
+        Val = Bytes[Size++];
+      }
+      if (Val == wasm::WASM_MEM_ORDER_RMW_ACQ_REL ||
+          Val == wasm::WASM_MEM_ORDER_ACQ_REL)
+        MI.addOperand(MCOperand::createImm(wasm::WASM_MEM_ORDER_ACQ_REL));
+      else
+        MI.addOperand(MCOperand::createImm(wasm::WASM_MEM_ORDER_SEQ_CST));
       break;
     }
     case WebAssembly::OPERAND_VEC_I16IMM: {

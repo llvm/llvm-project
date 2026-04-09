@@ -31,6 +31,7 @@ namespace llvm {
 //    implemented yet.
 class MCSectionXCOFF final : public MCSection {
   friend class MCContext;
+  friend class MCAsmInfoXCOFF;
 
   std::optional<XCOFF::CsectProperties> CsectProp;
   MCSymbolXCOFF *const QualName;
@@ -46,7 +47,7 @@ class MCSectionXCOFF final : public MCSection {
                  XCOFF::SymbolType ST, SectionKind K, MCSymbolXCOFF *QualName,
                  MCSymbol *Begin, StringRef SymbolTableName,
                  bool MultiSymbolsAllowed)
-      : MCSection(SV_XCOFF, Name, K.isText(),
+      : MCSection(Name, K.isText(),
                   /*IsVirtual=*/ST == XCOFF::XTY_CM && SMC != XCOFF::XMC_TD,
                   Begin),
         CsectProp(XCOFF::CsectProperties(SMC, ST)), QualName(QualName),
@@ -77,7 +78,7 @@ class MCSectionXCOFF final : public MCSection {
                  XCOFF::DwarfSectionSubtypeFlags DwarfSubtypeFlags,
                  MCSymbol *Begin, StringRef SymbolTableName,
                  bool MultiSymbolsAllowed)
-      : MCSection(SV_XCOFF, Name, K.isText(), /*IsVirtual=*/false, Begin),
+      : MCSection(Name, K.isText(), /*IsVirtual=*/false, Begin),
         QualName(QualName), SymbolTableName(SymbolTableName),
         DwarfSubtypeFlags(DwarfSubtypeFlags),
         MultiSymbolsAllowed(MultiSymbolsAllowed), Kind(K) {
@@ -95,10 +96,6 @@ class MCSectionXCOFF final : public MCSection {
 public:
   ~MCSectionXCOFF();
 
-  static bool classof(const MCSection *S) {
-    return S->getVariant() == SV_XCOFF;
-  }
-
   XCOFF::StorageMappingClass getMappingClass() const {
     assert(isCsect() && "Only csect section has mapping class property!");
     return CsectProp->MappingClass;
@@ -115,10 +112,6 @@ public:
   }
   MCSymbolXCOFF *getQualNameSymbol() const { return QualName; }
 
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
-  bool useCodeAlign() const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
   void setSymbolTableName(StringRef STN) { SymbolTableName = STN; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }

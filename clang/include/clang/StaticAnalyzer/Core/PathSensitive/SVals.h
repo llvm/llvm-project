@@ -17,6 +17,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -298,9 +299,12 @@ public:
 /// Value representing integer constant.
 class ConcreteInt : public NonLoc {
 public:
-  explicit ConcreteInt(const llvm::APSInt &V) : NonLoc(ConcreteIntKind, &V) {}
+  explicit ConcreteInt(APSIntPtr V) : NonLoc(ConcreteIntKind, V.get()) {}
 
-  const llvm::APSInt &getValue() const { return *castDataAs<llvm::APSInt>(); }
+  APSIntPtr getValue() const {
+    // This is safe because in the ctor we take a safe APSIntPtr.
+    return APSIntPtr::unsafeConstructor(castDataAs<llvm::APSInt>());
+  }
 
   static bool classof(SVal V) { return V.getKind() == ConcreteIntKind; }
 };
@@ -510,9 +514,12 @@ public:
 
 class ConcreteInt : public Loc {
 public:
-  explicit ConcreteInt(const llvm::APSInt &V) : Loc(ConcreteIntKind, &V) {}
+  explicit ConcreteInt(APSIntPtr V) : Loc(ConcreteIntKind, V.get()) {}
 
-  const llvm::APSInt &getValue() const { return *castDataAs<llvm::APSInt>(); }
+  APSIntPtr getValue() const {
+    // This is safe because in the ctor we take a safe APSIntPtr.
+    return APSIntPtr::unsafeConstructor(castDataAs<llvm::APSInt>());
+  }
 
   static bool classof(SVal V) { return V.getKind() == ConcreteIntKind; }
 };

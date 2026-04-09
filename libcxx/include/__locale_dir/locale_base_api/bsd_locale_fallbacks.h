@@ -14,8 +14,6 @@
 #define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 
 #include <locale.h>
-
-#include <__locale_dir/locale_guard.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +27,20 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+struct __locale_guard {
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t& __loc) : __old_loc_(::uselocale(__loc)) {}
+
+  _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
+    if (__old_loc_)
+      ::uselocale(__old_loc_);
+  }
+
+  locale_t __old_loc_;
+
+  __locale_guard(__locale_guard const&)            = delete;
+  __locale_guard& operator=(__locale_guard const&) = delete;
+};
 
 inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __libcpp_mb_cur_max_l(locale_t __l) {
   __locale_guard __current(__l);
@@ -109,16 +121,6 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __libcpp_asprintf_l(
   va_start(__va, __format);
   __locale_guard __current(__l);
   int __res = vasprintf(__s, __format, __va);
-  va_end(__va);
-  return __res;
-}
-
-inline _LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __libcpp_sscanf_l(
-    const char* __s, locale_t __l, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
-  __locale_guard __current(__l);
-  int __res = vsscanf(__s, __format, __va);
   va_end(__va);
   return __res;
 }

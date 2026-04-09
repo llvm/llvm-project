@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_
 
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -22,23 +23,16 @@ class ConversionTarget;
 class RewritePatternSet;
 class TypeConverter;
 
-void populateExpandCtlzPattern(RewritePatternSet &patterns);
-void populateExpandTanPattern(RewritePatternSet &patterns);
-void populateExpandSinhPattern(RewritePatternSet &patterns);
-void populateExpandCoshPattern(RewritePatternSet &patterns);
-void populateExpandTanhPattern(RewritePatternSet &patterns);
-void populateExpandAsinhPattern(RewritePatternSet &patterns);
-void populateExpandAcoshPattern(RewritePatternSet &patterns);
-void populateExpandAtanhPattern(RewritePatternSet &patterns);
-void populateExpandFmaFPattern(RewritePatternSet &patterns);
-void populateExpandFloorFPattern(RewritePatternSet &patterns);
-void populateExpandCeilFPattern(RewritePatternSet &patterns);
-void populateExpandExp2FPattern(RewritePatternSet &patterns);
-void populateExpandPowFPattern(RewritePatternSet &patterns);
-void populateExpandFPowIPattern(RewritePatternSet &patterns);
-void populateExpandRoundFPattern(RewritePatternSet &patterns);
-void populateExpandRoundEvenPattern(RewritePatternSet &patterns);
-void populateExpandRsqrtPattern(RewritePatternSet &patterns);
+namespace math {
+/// Adds patterns to expand math operations into other more fundamental
+/// operations. For example, hyperbolic functions are expanded into expressions
+/// using `exp`. If `opMnemonics` is empty then all available patterns will be
+/// added, otherwise only the patterns corresponding to ops in `opMnemonics`
+/// will be added to the set.
+void populateExpansionPatterns(RewritePatternSet &patterns,
+                               ArrayRef<StringRef> opMnemonics = {});
+} // namespace math
+
 void populateMathAlgebraicSimplificationPatterns(RewritePatternSet &patterns);
 
 struct MathPolynomialApproximationOptions {
@@ -48,7 +42,29 @@ struct MathPolynomialApproximationOptions {
 
 void populatePolynomialApproximateTanhPattern(RewritePatternSet &patterns);
 void populatePolynomialApproximateErfPattern(RewritePatternSet &patterns);
+void populatePolynomialApproximateErfcPattern(RewritePatternSet &patterns);
 
+// Adds patterns to convert to f32 around math functions for which `predicate`
+// returns true.
+void populateMathF32ExpansionPatterns(
+    RewritePatternSet &patterns, llvm::function_ref<bool(StringRef)> predicate,
+    PatternBenefit = 1);
+
+// Adds patterns to enable polynomial approximations for math functions for
+// which `predicate` returns true.
+void populateMathPolynomialApproximationPatterns(
+    RewritePatternSet &patterns, llvm::function_ref<bool(StringRef)> predicate,
+    PatternBenefit = 1);
+
+// Legacy. Calls both populateMathF32ExpansionPatterns and
+// populateMathPolynomialApproximationPatterns with predicates enabling a
+// certain set of math function rewrites, that probably can't be changed for
+// compatibility reasons. Notice that unlike
+// populateMathPolynomialApproximationPatterns(patterns, predicate), this
+// overload also calls populateMathF32ExpansionPatterns.
+// Prefer calling these functions directly:
+// * populateMathF32ExpansionPatterns(patterns, predicate)
+// * populateMathPolynomialApproximationPatterns(patterns, predicate)
 void populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options = {});

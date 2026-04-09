@@ -5,6 +5,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX,AVX256
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=znver4 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX512VBMI2
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=knl -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX512
 
 @a64 = common global [8 x i64] zeroinitializer, align 64
@@ -129,6 +130,14 @@ define void @fshl_v8i64() {
 ; AVX512-NEXT:    [[TMP4:%.*]] = call <8 x i64> @llvm.fshl.v8i64(<8 x i64> [[TMP1]], <8 x i64> [[TMP2]], <8 x i64> [[TMP3]])
 ; AVX512-NEXT:    store <8 x i64> [[TMP4]], ptr @d64, align 8
 ; AVX512-NEXT:    ret void
+;
+; AVX512VBMI2-LABEL: @fshl_v8i64(
+; AVX512VBMI2-NEXT:    [[TMP1:%.*]] = load <8 x i64>, ptr @a64, align 8
+; AVX512VBMI2-NEXT:    [[TMP2:%.*]] = load <8 x i64>, ptr @b64, align 8
+; AVX512VBMI2-NEXT:    [[TMP3:%.*]] = load <8 x i64>, ptr @c64, align 8
+; AVX512VBMI2-NEXT:    [[TMP4:%.*]] = call <8 x i64> @llvm.fshl.v8i64(<8 x i64> [[TMP1]], <8 x i64> [[TMP2]], <8 x i64> [[TMP3]])
+; AVX512VBMI2-NEXT:    store <8 x i64> [[TMP4]], ptr @d64, align 8
+; AVX512VBMI2-NEXT:    ret void
 ;
   %a0 = load i64, ptr @a64, align 8
   %a1 = load i64, ptr getelementptr inbounds ([8 x i64], ptr @a64, i32 0, i64 1), align 8
@@ -278,6 +287,14 @@ define void @fshl_v16i32() {
 ; AVX512-NEXT:    store <16 x i32> [[TMP4]], ptr @d32, align 4
 ; AVX512-NEXT:    ret void
 ;
+; AVX512VBMI2-LABEL: @fshl_v16i32(
+; AVX512VBMI2-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr @a32, align 4
+; AVX512VBMI2-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr @b32, align 4
+; AVX512VBMI2-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr @c32, align 4
+; AVX512VBMI2-NEXT:    [[TMP4:%.*]] = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> [[TMP1]], <16 x i32> [[TMP2]], <16 x i32> [[TMP3]])
+; AVX512VBMI2-NEXT:    store <16 x i32> [[TMP4]], ptr @d32, align 4
+; AVX512VBMI2-NEXT:    ret void
+;
   %a0  = load i32, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 0 ), align 4
   %a1  = load i32, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 1 ), align 4
   %a2  = load i32, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 2 ), align 4
@@ -405,6 +422,14 @@ define void @fshl_v32i16() {
 ; AVX512-NEXT:    [[TMP4:%.*]] = call <32 x i16> @llvm.fshl.v32i16(<32 x i16> [[TMP1]], <32 x i16> [[TMP2]], <32 x i16> [[TMP3]])
 ; AVX512-NEXT:    store <32 x i16> [[TMP4]], ptr @d16, align 2
 ; AVX512-NEXT:    ret void
+;
+; AVX512VBMI2-LABEL: @fshl_v32i16(
+; AVX512VBMI2-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @a16, align 2
+; AVX512VBMI2-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr @b16, align 2
+; AVX512VBMI2-NEXT:    [[TMP3:%.*]] = load <32 x i16>, ptr @c16, align 2
+; AVX512VBMI2-NEXT:    [[TMP4:%.*]] = call <32 x i16> @llvm.fshl.v32i16(<32 x i16> [[TMP1]], <32 x i16> [[TMP2]], <32 x i16> [[TMP3]])
+; AVX512VBMI2-NEXT:    store <32 x i16> [[TMP4]], ptr @d16, align 2
+; AVX512VBMI2-NEXT:    ret void
 ;
   %a0  = load i16, ptr getelementptr inbounds ([32 x i16], ptr @a16, i32 0, i64 0 ), align 2
   %a1  = load i16, ptr getelementptr inbounds ([32 x i16], ptr @a16, i32 0, i64 1 ), align 2
@@ -613,6 +638,14 @@ define void @fshl_v64i8() {
 ; AVX512-NEXT:    [[TMP4:%.*]] = call <64 x i8> @llvm.fshl.v64i8(<64 x i8> [[TMP1]], <64 x i8> [[TMP2]], <64 x i8> [[TMP3]])
 ; AVX512-NEXT:    store <64 x i8> [[TMP4]], ptr @d8, align 1
 ; AVX512-NEXT:    ret void
+;
+; AVX512VBMI2-LABEL: @fshl_v64i8(
+; AVX512VBMI2-NEXT:    [[TMP1:%.*]] = load <64 x i8>, ptr @a8, align 1
+; AVX512VBMI2-NEXT:    [[TMP2:%.*]] = load <64 x i8>, ptr @b8, align 1
+; AVX512VBMI2-NEXT:    [[TMP3:%.*]] = load <64 x i8>, ptr @c8, align 1
+; AVX512VBMI2-NEXT:    [[TMP4:%.*]] = call <64 x i8> @llvm.fshl.v64i8(<64 x i8> [[TMP1]], <64 x i8> [[TMP2]], <64 x i8> [[TMP3]])
+; AVX512VBMI2-NEXT:    store <64 x i8> [[TMP4]], ptr @d8, align 1
+; AVX512VBMI2-NEXT:    ret void
 ;
   %a0  = load i8, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 0 ), align 1
   %a1  = load i8, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 1 ), align 1

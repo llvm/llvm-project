@@ -7,7 +7,6 @@
 
 // V4: "-mcode-object-version=4"
 // V4: "-mllvm" "--amdhsa-code-object-version=4"
-// V4: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check bundle ID for code object version 5.
 
@@ -18,7 +17,6 @@
 
 // V5: "-mcode-object-version=5"
 // V5: "-mllvm" "--amdhsa-code-object-version=5"
-// V5: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check bundle ID for code object version 6.
 
@@ -27,19 +25,16 @@
 // RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=V6 %s
 
-// V6: warning: code object v6 is still in development and not ready for production use yet; use at your own risk
 // V6: "-mcode-object-version=6"
 // V6: "-mllvm" "--amdhsa-code-object-version=6"
-// V6: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx906"
-
 
 // Check bundle ID for code object version default
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   --offload-arch=gfx906 -nogpuinc -nogpulib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=VD %s
 
-// VD: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx906"
+// VD: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check invalid code object version option.
 
@@ -74,11 +69,4 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CC1 %s
 
 // CC1: "-cc1" {{.*}}"-mcode-object-version=5" {{.*}}"-mllvm" "--amdhsa-code-object-version=5"
-// CC1: "-cc1as" {{.*}}"-mllvm" "--amdhsa-code-object-version=5"
-
-// RUN: not %clang -### --target=x86_64-linux-gnu \
-// RUN:   -mcode-object-version=5 \
-// RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm -save-temps \
-// RUN:   %s 2>&1 | FileCheck -check-prefix=CC1NEG %s
-
-// CC1NEG-NOT: "-cc1as" {{.*}}"-mcode-object-version=5"
+// CC1: clang-linker-wrapper{{.*}}"--device-compiler=amdgcn-amd-amdhsa=-mcode-object-version=5"

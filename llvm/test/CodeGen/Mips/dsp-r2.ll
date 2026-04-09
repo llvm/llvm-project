@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mattr=+dspr2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -mattr=+dspr2 < %s | FileCheck %s
 
 define i64 @test__builtin_mips_dpa_w_ph1(i32 %i0, i32, i64 %a0, i32 %a1.coerce, i32 %a2.coerce) nounwind readnone {
 entry:

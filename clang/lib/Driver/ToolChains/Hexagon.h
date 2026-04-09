@@ -13,6 +13,9 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
+#include <optional>
+#include <string>
+
 namespace clang {
 namespace driver {
 namespace tools {
@@ -42,8 +45,8 @@ public:
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
 
-  virtual void RenderExtraToolArgs(const JobAction &JA,
-                                   llvm::opt::ArgStringList &CmdArgs) const;
+  void RenderExtraToolArgs(const JobAction &JA,
+                           llvm::opt::ArgStringList &CmdArgs) const;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
@@ -99,8 +102,12 @@ public:
   std::string getHexagonTargetDir(
       const std::string &InstalledDir,
       const SmallVectorImpl<std::string> &PrefixDirs) const;
+  SmallString<128> getEffectiveSysRoot() const;
+  void getBaseIncludeDir(llvm::SmallString<128> &) const;
+  void getLibraryDir(const llvm::opt::ArgList &Args,
+                     llvm::SmallString<128> &) const;
   void getHexagonLibraryPaths(const llvm::opt::ArgList &Args,
-      ToolChain::path_list &LibPaths) const;
+                              ToolChain::path_list &LibPaths) const;
 
   std::string getCompilerRTPath() const override;
 
@@ -110,6 +117,8 @@ public:
 
   static std::optional<unsigned>
   getSmallDataThreshold(const llvm::opt::ArgList &Args);
+  static std::optional<std::string>
+  GetHVXVersion(const llvm::opt::ArgList &Args);
 };
 
 } // end namespace toolchains

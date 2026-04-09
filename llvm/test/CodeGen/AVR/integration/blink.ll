@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mcpu=atmega328p | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mcpu=atmega328p | FileCheck %s
 
 ; This test checks a basic 'blinking led' program.
 ; It is written for the ATmega328P

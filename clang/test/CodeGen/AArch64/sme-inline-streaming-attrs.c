@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_NONE %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_COMPATIBLE %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_STREAMING %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -verify -DTEST_LOCALLY %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_NONE %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_COMPATIBLE %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_STREAMING %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_LOCALLY %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -10,6 +10,8 @@ __ai void inlined_fn(void) {}
 __ai void inlined_fn_streaming_compatible(void) __arm_streaming_compatible {}
 __ai void inlined_fn_streaming(void) __arm_streaming {}
 __ai __arm_locally_streaming void inlined_fn_local(void) {}
+__ai __arm_new("za") void inlined_fn_za(void) {}
+__ai __arm_new("zt0") void inlined_fn_zt0(void) {}
 
 #ifdef TEST_NONE
 void caller(void) {
@@ -17,6 +19,8 @@ void caller(void) {
     inlined_fn_streaming_compatible();
     inlined_fn_streaming(); // expected-error {{always_inline function 'inlined_fn_streaming' and its caller 'caller' have mismatching streaming attributes}}
     inlined_fn_local(); // expected-error {{always_inline function 'inlined_fn_local' and its caller 'caller' have mismatching streaming attributes}}
+    inlined_fn_za(); // expected-error {{always_inline function 'inlined_fn_za' has new za state}}
+    inlined_fn_zt0(); // expected-error {{always_inline function 'inlined_fn_zt0' has new zt0 state}}
 }
 #endif
 

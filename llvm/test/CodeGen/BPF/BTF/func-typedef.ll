@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 
 ; Source code:
 ;   typedef int _int;
@@ -9,7 +9,7 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
 ; Function Attrs: nounwind readnone
-define dso_local i32 @f(i32 returned %a) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @f(i32 returned %a) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %a, metadata !14, metadata !DIExpression()), !dbg !15
   ret i32 %a, !dbg !16
@@ -85,12 +85,8 @@ entry:
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   3092                    # Line 3 Col 20
 
-
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

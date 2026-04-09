@@ -1,0 +1,8 @@
+## Test that we handle mangled C symbol names correctly in the update script
+
+# RUN: cp %S/Inputs/c-symbol-mangling.c %t-generated.c && %update_cc_test_checks %t-generated.c
+# RUN: diff -u %S/Inputs/c-symbol-mangling.c.expected %t-generated.c
+
+## Check that re-running update_cc_test_checks doesn't change the output
+# RUN: %update_cc_test_checks %t-generated.c
+# RUN: diff -u %S/Inputs/c-symbol-mangling.c.expected %t-generated.c

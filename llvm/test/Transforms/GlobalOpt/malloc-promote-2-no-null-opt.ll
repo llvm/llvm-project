@@ -5,7 +5,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 @G = internal global ptr null
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr null
+; CHECK: @G = internal unnamed_addr global ptr null
 ;.
 define void @t() #0 {
 ; CHECK-LABEL: @t(
@@ -16,7 +16,7 @@ define void @t() #0 {
 ; CHECK-NEXT:    store i32 20, ptr [[GVE]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %malloccall = tail call ptr @malloc(i64 mul (i64 100, i64 4))
+  %malloccall = tail call ptr @malloc(i64 400)
   store ptr %malloccall, ptr @G
   %GV = load ptr, ptr @G
   %GVe = getelementptr i32, ptr %GV, i32 40

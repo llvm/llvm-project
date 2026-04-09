@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='loop(simple-loop-unswitch),instcombine,gvn' -verify-memoryssa -disable-output
+; RUN: opt < %s -passes='loop-mssa(simple-loop-unswitch),instcombine,gvn' -verify-memoryssa -disable-output
 ; PR2372
 target triple = "i386-pc-linux-gnu"
 

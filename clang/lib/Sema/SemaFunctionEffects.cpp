@@ -516,7 +516,7 @@ class Analyzer {
     CompleteFunctionAnalysis *completedAnalysisForDecl(const Decl *D) const {
       if (FuncAnalysisPtr AP = lookup(D);
           isa_and_nonnull<CompleteFunctionAnalysis *>(AP))
-        return AP.get<CompleteFunctionAnalysis *>();
+        return cast<CompleteFunctionAnalysis *>(AP);
       return nullptr;
     }
 
@@ -528,12 +528,10 @@ class Analyzer {
         OS << item.first << " " << CI.getNameForDiagnostic(SemaRef) << " : ";
         if (AP.isNull()) {
           OS << "null\n";
-        } else if (isa<CompleteFunctionAnalysis *>(AP)) {
-          auto *CFA = AP.get<CompleteFunctionAnalysis *>();
+        } else if (auto *CFA = dyn_cast<CompleteFunctionAnalysis *>(AP)) {
           OS << CFA << " ";
           CFA->dump(OS);
-        } else if (isa<PendingFunctionAnalysis *>(AP)) {
-          auto *PFA = AP.get<PendingFunctionAnalysis *>();
+        } else if (auto *PFA = dyn_cast<PendingFunctionAnalysis *>(AP)) {
           OS << PFA << " ";
           PFA->dump(SemaRef, OS);
         } else
@@ -569,7 +567,7 @@ public:
     while (!VerificationQueue.empty()) {
       const Decl *D = VerificationQueue.back();
       if (FuncAnalysisPtr AP = DeclAnalysis.lookup(D)) {
-        if (auto *Pending = AP.dyn_cast<PendingFunctionAnalysis *>()) {
+        if (auto *Pending = dyn_cast<PendingFunctionAnalysis *>(AP)) {
           // All children have been traversed; finish analysis.
           finishPendingAnalysis(D, Pending);
         }
@@ -989,10 +987,10 @@ private:
       // The target function may have implicit code paths beyond the
       // body: member and base destructors. Visit these first.
       if (auto *Dtor = dyn_cast<CXXDestructorDecl>(CurrentCaller.CDecl))
-        followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
+        followDestructor(Dtor->getParent(), Dtor);
 
       if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl)) {
-        TrailingRequiresClause = FD->getTrailingRequiresClause();
+        TrailingRequiresClause = FD->getTrailingRequiresClause().ConstraintExpr;
 
         // Note that FD->getType->getAs<FunctionProtoType>() can yield a
         // noexcept Expr which has been boiled down to a constant expression.
@@ -1097,9 +1095,8 @@ private:
       for (const FieldDecl *Field : Rec->fields())
         followTypeDtor(Field->getType(), DtorLoc);
 
-      if (const auto *Class = dyn_cast<CXXRecordDecl>(Rec))
-        for (const CXXBaseSpecifier &Base : Class->bases())
-          followTypeDtor(Base.getType(), DtorLoc);
+      for (const CXXBaseSpecifier &Base : Rec->bases())
+        followTypeDtor(Base.getType(), DtorLoc);
     }
 
     void followTypeDtor(QualType QT, SourceLocation CallSite) {
@@ -1210,8 +1207,16 @@ private:
         return true;
       }
 
-      // No Decl, just an Expr. Just check based on its type.
-      checkIndirectCall(Call, CalleeExpr->getType());
+      // No Decl, just an Expr. Just check based on its type. Bound member
+      // functions are a special expression type and need to be specially
+      // unpacked.
+      QualType CalleeExprQT = CalleeExpr->getType();
+      if (CalleeExpr->isBoundMemberFunction(Outer.S.getASTContext())) {
+        QualType QT = Expr::findBoundMemberType(CalleeExpr);
+        if (!QT.isNull())
+          CalleeExprQT = QT;
+      }
+      checkIndirectCall(Call, CalleeExprQT);
 
       return true;
     }
@@ -1273,7 +1278,15 @@ private:
       const CXXConstructorDecl *Ctor = Construct->getConstructor();
       CallableInfo CI(*Ctor);
       followCall(CI, Construct->getLocation());
+      return true;
+    }
 
+    bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *BTE) override {
+      const CXXDestructorDecl *Dtor = BTE->getTemporary()->getDestructor();
+      if (Dtor != nullptr) {
+        CallableInfo CI(*Dtor);
+        followCall(CI, BTE->getBeginLoc());
+      }
       return true;
     }
 
@@ -1285,6 +1298,14 @@ private:
       // should suffice.
       if (Statement != TrailingRequiresClause && Statement != NoexceptExpr)
         return DynamicRecursiveASTVisitor::TraverseStmt(Statement);
+      return true;
+    }
+
+    bool TraverseCXXRecordDecl(CXXRecordDecl *D) override {
+      // Completely skip local struct/class/union declarations since their
+      // methods would otherwise be incorrectly interpreted as part of the
+      // function we are currently traversing. The initial Sema pass will have
+      // already recorded any nonblocking methods needing analysis.
       return true;
     }
 
@@ -1354,11 +1375,15 @@ private:
       return true;
     }
 
-    bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
+    bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
+                                   bool TraverseQualifier) override {
       return true;
     }
 
-    bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override { return true; }
+    bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
+                                 bool TraverseQualifier) override {
+      return true;
+    }
 
     bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
       return true;
@@ -1376,10 +1401,10 @@ private:
 Analyzer::AnalysisMap::~AnalysisMap() {
   for (const auto &Item : *this) {
     FuncAnalysisPtr AP = Item.second;
-    if (isa<PendingFunctionAnalysis *>(AP))
-      delete AP.get<PendingFunctionAnalysis *>();
+    if (auto *PFA = dyn_cast<PendingFunctionAnalysis *>(AP))
+      delete PFA;
     else
-      delete AP.get<CompleteFunctionAnalysis *>();
+      delete cast<CompleteFunctionAnalysis *>(AP);
   }
 }
 

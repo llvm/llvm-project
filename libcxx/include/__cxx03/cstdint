@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CSTDINT
-#define _LIBCPP_CSTDINT
+#ifndef _LIBCPP___CXX03_CSTDINT
+#define _LIBCPP___CXX03_CSTDINT
 
 /*
     cstdint synopsis
@@ -144,7 +144,7 @@ Types:
 
 #include <__cxx03/stdint.h>
 
-#ifndef _LIBCPP_STDINT_H
+#ifndef _LIBCPP___CXX03_STDINT_H
 #   error <cstdint> tried including <stdint.h> but didn't find libc++'s <stdint.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -196,4 +196,4 @@ using ::uintmax_t _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CSTDINT
+#endif // _LIBCPP___CXX03_CSTDINT

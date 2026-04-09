@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MAX_ELEMENT_H
-#define _LIBCPP___ALGORITHM_MAX_ELEMENT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_MAX_ELEMENT_H
+#define _LIBCPP___CXX03___ALGORITHM_MAX_ELEMENT_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 __max_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
   static_assert(
       __has_forward_iterator_category<_ForwardIterator>::value, "std::max_element requires a ForwardIterator");
@@ -35,17 +35,17 @@ __max_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp
 }
 
 template <class _ForwardIterator, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 max_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
   return std::__max_element<__comp_ref_type<_Compare> >(__first, __last, __comp);
 }
 
 template <class _ForwardIterator>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 max_element(_ForwardIterator __first, _ForwardIterator __last) {
   return std::max_element(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_MAX_ELEMENT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_MAX_ELEMENT_H

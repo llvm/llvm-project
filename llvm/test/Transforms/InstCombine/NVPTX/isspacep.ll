@@ -25,7 +25,7 @@ declare i1 @llvm.nvvm.isspacep.local(ptr nocapture)
 
 define dso_local void @check_global(ptr nocapture noundef readnone %out, ptr nocapture noundef readnone %genp,
 ; CHECK-LABEL: define dso_local void @check_global(
-; CHECK-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr nocapture noundef readnone [[GENP:%.*]], ptr addrspace(1) [[GP:%.*]], ptr addrspace(3) [[SP:%.*]], ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[LP:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef readnone captures(none) [[GENP:%.*]], ptr addrspace(1) [[GP:%.*]], ptr addrspace(3) [[SP:%.*]], ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[LP:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEN0:%.*]] = tail call i1 @llvm.nvvm.isspacep.global(ptr [[GENP]])
 ; CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[GEN0]] to i8
@@ -88,7 +88,7 @@ entry:
 
 define dso_local void @check_shared(ptr nocapture noundef readnone %out, ptr nocapture noundef readnone %genp,
 ; CHECK-LABEL: define dso_local void @check_shared(
-; CHECK-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr nocapture noundef readnone [[GENP:%.*]], ptr addrspace(1) [[GP:%.*]], ptr addrspace(3) [[SP:%.*]], ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[LP:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef readnone captures(none) [[GENP:%.*]], ptr addrspace(1) [[GP:%.*]], ptr addrspace(3) [[SP:%.*]], ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[LP:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEN0:%.*]] = tail call i1 @llvm.nvvm.isspacep.shared(ptr [[GENP]])
 ; CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[GEN0]] to i8
@@ -151,7 +151,7 @@ entry:
 
 define dso_local void @check_const(ptr nocapture noundef readnone %out, ptr nocapture noundef readnone %genp,
 ; CHECK-LABEL: define dso_local void @check_const(
-; CHECK-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr nocapture noundef readnone [[GENP:%.*]], ptr addrspace(1) [[GP:%.*]], ptr addrspace(3) [[SP:%.*]], ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[LP:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef readnone captures(none) [[GENP:%.*]], ptr addrspace(1) [[GP:%.*]], ptr addrspace(3) [[SP:%.*]], ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[LP:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEN0:%.*]] = tail call i1 @llvm.nvvm.isspacep.const(ptr [[GENP]])
 ; CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[GEN0]] to i8
@@ -214,7 +214,7 @@ entry:
 
 define dso_local void @check_local(ptr nocapture noundef readnone %out, ptr nocapture noundef readnone %genp,
 ; CHECK-LABEL: define dso_local void @check_local(
-; CHECK-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr nocapture noundef readnone [[GENP:%.*]], ptr addrspace(1) [[GP:%.*]], ptr addrspace(3) [[SP:%.*]], ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[LP:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef readnone captures(none) [[GENP:%.*]], ptr addrspace(1) [[GP:%.*]], ptr addrspace(3) [[SP:%.*]], ptr addrspace(4) [[CP:%.*]], ptr addrspace(5) [[LP:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEN0:%.*]] = tail call i1 @llvm.nvvm.isspacep.local(ptr [[GENP]])
 ; CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[GEN0]] to i8

@@ -84,19 +84,19 @@ using atomic_uintmax_t = atomic<uintmax_t>;
 // C++20 atomic_{signed,unsigned}_lock_free: prefer the contention type most highly, then the largest lock-free type
 #if _LIBCPP_STD_VER >= 20
 #  if ATOMIC_LLONG_LOCK_FREE == 2
-using __largest_lock_free_type = long long;
+using __largest_lock_free_type _LIBCPP_NODEBUG = long long;
 #  elif ATOMIC_INT_LOCK_FREE == 2
-using __largest_lock_free_type = int;
+using __largest_lock_free_type _LIBCPP_NODEBUG = int;
 #  elif ATOMIC_SHORT_LOCK_FREE == 2
-using __largest_lock_free_type = short;
+using __largest_lock_free_type _LIBCPP_NODEBUG = short;
 #  elif ATOMIC_CHAR_LOCK_FREE == 2
-using __largest_lock_free_type = char;
+using __largest_lock_free_type _LIBCPP_NODEBUG = char;
 #  else
 #    define _LIBCPP_NO_LOCK_FREE_TYPES // There are no lockfree types (this can happen on unusual platforms)
 #  endif
 
 #  ifndef _LIBCPP_NO_LOCK_FREE_TYPES
-using __contention_t_or_largest =
+using __contention_t_or_largest _LIBCPP_NODEBUG =
     __conditional_t<__libcpp_is_always_lock_free<__cxx_contention_t>::__value,
                     __cxx_contention_t,
                     __largest_lock_free_type>;

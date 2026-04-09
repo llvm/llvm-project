@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=FUNC %s
 
 declare float @llvm.amdgcn.rsq.clamp.f32(float) #1
 declare double @llvm.amdgcn.rsq.clamp.f64(double) #1
@@ -39,7 +39,7 @@ define amdgpu_kernel void @rsq_clamp_f64(ptr addrspace(1) %out, double %src) #0 
 ; FUNC-LABEL: {{^}}rsq_clamp_undef_f32:
 ; SI-NOT: v_rsq_clamp_f32
 define amdgpu_kernel void @rsq_clamp_undef_f32(ptr addrspace(1) %out) #0 {
-  %rsq_clamp = call float @llvm.amdgcn.rsq.clamp.f32(float undef)
+  %rsq_clamp = call float @llvm.amdgcn.rsq.clamp.f32(float poison)
   store float %rsq_clamp, ptr addrspace(1) %out
   ret void
 }

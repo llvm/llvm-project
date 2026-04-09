@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel -mcpu=v1 -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v1 -show-mc-encoding | FileCheck %s
 
 %struct.bpf_map_def = type { i32, i32, i32, i32 }
 %struct.sk_buff = type opaque

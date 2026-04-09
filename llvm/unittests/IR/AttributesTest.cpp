@@ -263,19 +263,19 @@ TEST(Attributes, AttributeListPrinting) {
 
 TEST(Attributes, MismatchedABIAttrs) {
   const char *IRString = R"IR(
-    declare void @f1(i32* byval(i32))
+    declare void @f1(ptr byval(i32))
     define void @g() {
-      call void @f1(i32* null)
+      call void @f1(ptr null)
       ret void
     }
-    declare void @f2(i32* preallocated(i32))
+    declare void @f2(ptr preallocated(i32))
     define void @h() {
-      call void @f2(i32* null)
+      call void @f2(ptr null)
       ret void
     }
-    declare void @f3(i32* inalloca(i32))
+    declare void @f3(ptr inalloca(i32))
     define void @i() {
-      call void @f3(i32* null)
+      call void @f3(ptr null)
       ret void
     }
   )IR";
@@ -341,6 +341,36 @@ TEST(Attributes, ConstantRangeAttributeCAPI) {
     auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
         wrap(&C), Attribute::Range, NumBits, LowerWords, UpperWords));
     EXPECT_EQ(OutAttr, RangeAttr);
+  }
+}
+
+TEST(Attributes, DenormalFPEnvAttributeCAPI) {
+  LLVMContext C;
+  LLVMContextRef CtxC = wrap(&C);
+  {
+    LLVMAttributeRef CAttr = LLVMCreateDenormalFPEnvAttribute(
+        CtxC, LLVMDenormalModeKindIEEE, LLVMDenormalModeKindIEEE,
+        LLVMDenormalModeKindPreserveSign, LLVMDenormalModeKindPreserveSign);
+
+    Attribute OutAttr = unwrap(CAttr);
+
+    EXPECT_EQ(OutAttr.getDenormalFPEnv(),
+              DenormalFPEnv(DenormalMode::getIEEE(),
+                            DenormalMode::getPreserveSign()));
+  }
+
+  {
+    LLVMAttributeRef CAttr = LLVMCreateDenormalFPEnvAttribute(
+        CtxC, LLVMDenormalModeKindDynamic, LLVMDenormalModeKindPositiveZero,
+        LLVMDenormalModeKindPreserveSign, LLVMDenormalModeKindIEEE);
+
+    Attribute OutAttr = unwrap(CAttr);
+
+    EXPECT_EQ(
+        OutAttr.getDenormalFPEnv(),
+        DenormalFPEnv(
+            DenormalMode(DenormalMode::Dynamic, DenormalMode::PositiveZero),
+            DenormalMode(DenormalMode::PreserveSign, DenormalMode::IEEE)));
   }
 }
 
@@ -437,6 +467,14 @@ TEST(Attributes, SetIntersect) {
         break;
       case Attribute::Range:
         break;
+      case Attribute::Captures:
+        V0 = CaptureInfo(CaptureComponents::AddressIsNull,
+                         CaptureComponents::None)
+                 .toIntValue();
+        V1 = CaptureInfo(CaptureComponents::None,
+                         CaptureComponents::ReadProvenance)
+                 .toIntValue();
+        break;
       default:
         ASSERT_FALSE(true);
       }
@@ -515,6 +553,11 @@ TEST(Attributes, SetIntersect) {
       case Attribute::Range:
         ASSERT_EQ(Res->getAttribute(Kind).getRange(),
                   ConstantRange(APInt(32, 0), APInt(32, 20)));
+        break;
+      case Attribute::Captures:
+        ASSERT_EQ(Res->getCaptureInfo(),
+                  CaptureInfo(CaptureComponents::AddressIsNull,
+                              CaptureComponents::ReadProvenance));
         break;
       default:
         ASSERT_FALSE(true);

@@ -273,8 +273,8 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
 Constant* createIRTypedAddress(FunctionType &FT, ExecutorAddr Addr) {
   Constant *AddrIntVal =
     ConstantInt::get(Type::getInt64Ty(FT.getContext()), Addr.getValue());
-  Constant *AddrPtrVal =
-    ConstantExpr::getIntToPtr(AddrIntVal, PointerType::get(&FT, 0));
+  Constant *AddrPtrVal = ConstantExpr::getIntToPtr(
+      AddrIntVal, PointerType::get(FT.getContext(), 0));
   return AddrPtrVal;
 }
 
@@ -339,8 +339,7 @@ std::vector<GlobalValue *> SymbolLinkagePromoter::operator()(Module &M) {
 Function* cloneFunctionDecl(Module &Dst, const Function &F,
                             ValueToValueMapTy *VMap) {
   Function *NewF =
-    Function::Create(cast<FunctionType>(F.getValueType()),
-                     F.getLinkage(), F.getName(), &Dst);
+      Function::Create(F.getFunctionType(), F.getLinkage(), F.getName(), &Dst);
   NewF->copyAttributesFrom(&F);
 
   if (VMap) {

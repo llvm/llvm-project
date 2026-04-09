@@ -65,5 +65,5 @@ entry:
 declare i16 @llvm.convert.to.fp16.f64(double)
 declare i16 @llvm.convert.to.fp16.f80(x86_fp80)
 
-attributes #0 = { nounwind readnone "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "use-soft-float"="false" }
+attributes #1 = { nounwind readnone "use-soft-float"="false" }

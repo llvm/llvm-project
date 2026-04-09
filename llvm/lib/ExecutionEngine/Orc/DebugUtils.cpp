@@ -137,14 +137,6 @@ struct PrintSymbolMapElemsMatchingCLOpts {
 namespace llvm {
 namespace orc {
 
-raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtr &Sym) {
-  return OS << *Sym;
-}
-
-raw_ostream &operator<<(raw_ostream &OS, NonOwningSymbolStringPtr Sym) {
-  return OS << *Sym;
-}
-
 raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols) {
   return OS << printSequence(Symbols, '{', '}', PrintAll<SymbolStringPtr>());
 }

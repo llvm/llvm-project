@@ -13,7 +13,7 @@ BB:
   br label %CF243
 
 CF243:                                            ; preds = %CF243, %BB
-  br i1 undef, label %CF243, label %CF257
+  br i1 poison, label %CF243, label %CF257
 
 CF257:                                            ; preds = %CF243
   %Shuff144 = shufflevector <4 x i1> undef, <4 x i1> %Cmp45, <4 x i32> <i32 undef, i32 undef, i32 5, i32 undef>

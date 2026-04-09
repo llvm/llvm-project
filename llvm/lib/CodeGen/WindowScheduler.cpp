@@ -45,6 +45,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -95,7 +96,7 @@ cl::opt<unsigned> WindowDiffLimit(
 
 // WindowIILimit serves as an indicator of abnormal scheduling results and could
 // potentially be referenced by the derived target window scheduler.
-cl::opt<unsigned>
+static cl::opt<unsigned>
     WindowIILimit("window-ii-limit",
                   cl::desc("The upper limit of II in the window algorithm."),
                   cl::Hidden, cl::init(1000));
@@ -167,7 +168,7 @@ WindowScheduler::createMachineScheduler(bool OnlyBuildGraph) {
              ? new ScheduleDAGMI(
                    Context, std::make_unique<PostGenericScheduler>(Context),
                    true)
-             : Context->PassConfig->createMachineScheduler(Context);
+             : Context->TM->createMachineScheduler(Context);
 }
 
 bool WindowScheduler::initialize() {
@@ -282,8 +283,7 @@ void WindowScheduler::restoreMBB() {
     MI.eraseFromParent();
   }
   // Restore MBB to the state before window scheduling.
-  for (auto *MI : OriMIs)
-    MBB->push_back(MI);
+  llvm::append_range(*MBB, OriMIs);
   updateLiveIntervals();
 }
 
@@ -356,8 +356,8 @@ void WindowScheduler::generateTripleMBB() {
           // ==================================
           //          < Terminators >
           // ==================================
-          if (DefPairs.count(NewUse))
-            NewUse = DefPairs[NewUse];
+          if (auto It = DefPairs.find(NewUse); It != DefPairs.end())
+            NewUse = It->second;
           NewMI->substituteRegister(DefRegPair.first, NewUse, 0, *TRI);
         }
       // DefPairs is updated at last.
@@ -581,9 +581,10 @@ DenseMap<MachineInstr *, int> WindowScheduler::getIssueOrder(unsigned Offset,
   DenseMap<MachineInstr *, int> IssueOrder;
   int Id = 0;
   for (int Cycle = 0; Cycle < (int)II; ++Cycle) {
-    if (!CycleToMIs.count(Cycle))
+    auto It = CycleToMIs.find(Cycle);
+    if (It == CycleToMIs.end())
       continue;
-    for (auto *MI : CycleToMIs[Cycle])
+    for (auto *MI : It->second)
       IssueOrder[MI] = Id++;
   }
   return IssueOrder;
@@ -678,8 +679,7 @@ MachineInstr *WindowScheduler::getOriMI(MachineInstr *NewMI) {
 }
 
 unsigned WindowScheduler::getOriStage(MachineInstr *OriMI, unsigned Offset) {
-  assert(llvm::find(OriMIs, OriMI) != OriMIs.end() &&
-         "Cannot find OriMI in OriMIs!");
+  assert(llvm::is_contained(OriMIs, OriMI) && "Cannot find OriMI in OriMIs!");
   // If there is no instruction fold, all MI stages are 0.
   if (Offset == SchedPhiNum)
     return 0;

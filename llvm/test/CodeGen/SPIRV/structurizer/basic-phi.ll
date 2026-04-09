@@ -18,16 +18,16 @@ entry:
   %0 = call token @llvm.experimental.convergence.entry()
   br i1 true, label %left, label %right
 
-; CHECK:      %[[#left]] = OpLabel
-; CHECK-NEXT:              OpStore %[[#var]] %[[#int_0]]
-; CHECK-NEXT:              OpBranch %[[#merge]]
-left:
-  br label %end
-
 ; CHECK:      %[[#right]] = OpLabel
 ; CHECK-NEXT:               OpStore %[[#var]] %[[#int_1]]
 ; CHECK-NEXT:               OpBranch %[[#merge]]
 right:
+  br label %end
+
+; CHECK:      %[[#left]] = OpLabel
+; CHECK-NEXT:              OpStore %[[#var]] %[[#int_0]]
+; CHECK-NEXT:              OpBranch %[[#merge]]
+left:
   br label %end
 
 ; CHECK: %[[#merge]] = OpLabel

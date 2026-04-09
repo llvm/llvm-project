@@ -15,7 +15,6 @@ define i128 @fptosi_f16_to_i128(half %a) nounwind strictfp {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __extendhfsf2
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    call __fixsfti
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -48,7 +47,6 @@ define i128 @fptoui_f16_to_i128(half %a) nounwind strictfp {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __extendhfsf2
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    call __fixunssfti
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16

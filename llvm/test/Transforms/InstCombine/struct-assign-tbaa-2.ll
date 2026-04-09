@@ -11,10 +11,10 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounw
 define void @test1(ptr %a1, ptr %a2) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[A2:%.*]], i64 2
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[A2:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[A2]], align 2, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    store i16 [[TMP0]], ptr [[A1:%.*]], align 2, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds i8, ptr [[A1]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw i8, ptr [[A1]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[B]], align 2, !tbaa [[TBAA6:![0-9]+]]
 ; CHECK-NEXT:    store i16 [[TMP1]], ptr [[B2]], align 2, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    ret void
@@ -37,6 +37,8 @@ entry:
 !7 = !{!5, !5, i64 0, i64 2}
 !8 = !{!1, !4, i64 2, i64 2}
 
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META4:![0-9]+]], i64 0, i64 2}
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]], i64 4, !"_ZTS1T", [[META4]], i64 0, i64 2, [[META4]], i64 2, i64 2}

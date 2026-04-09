@@ -88,6 +88,57 @@ void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
   mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
 }
 
+static constexpr const char *atomicIgnoreDenormalModeName =
+    "fir.atomic_ignore_denormal_mode";
+
+void fir::setAtomicIgnoreDenormalMode(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicIgnoreDenormalModeName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicIgnoreDenormalModeName))
+      mod->removeAttr(atomicIgnoreDenormalModeName);
+  }
+}
+
+bool fir::getAtomicIgnoreDenormalMode(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicIgnoreDenormalModeName);
+}
+
+static constexpr const char *atomicFineGrainedMemoryName =
+    "fir.atomic_fine_grained_memory";
+
+void fir::setAtomicFineGrainedMemory(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicFineGrainedMemoryName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicFineGrainedMemoryName))
+      mod->removeAttr(atomicFineGrainedMemoryName);
+  }
+}
+
+bool fir::getAtomicFineGrainedMemory(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicFineGrainedMemoryName);
+}
+
+static constexpr const char *atomicRemoteMemoryName =
+    "fir.atomic_remote_memory";
+
+void fir::setAtomicRemoteMemory(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicRemoteMemoryName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(atomicRemoteMemoryName))
+      mod->removeAttr(atomicRemoteMemoryName);
+  }
+}
+
+bool fir::getAtomicRemoteMemory(mlir::ModuleOp mod) {
+  return mod->hasAttr(atomicRemoteMemoryName);
+}
+
 llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
   if (auto attr = mod->getAttrOfType<mlir::StringAttr>(tuneCpuName))
     return attr.getValue();
@@ -145,6 +196,40 @@ llvm::StringRef fir::getCommandline(mlir::ModuleOp mod) {
     return attr;
   return {};
 }
+
+static constexpr const char *relocationModelName = "fir.relocation_model";
+
+void fir::setRelocationModel(mlir::ModuleOp mod, llvm::Reloc::Model rm) {
+  auto *ctx = mod.getContext();
+  mod->setAttr(relocationModelName,
+               mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 32),
+                                      static_cast<unsigned>(rm)));
+}
+
+llvm::Reloc::Model fir::getRelocationModel(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::IntegerAttr>(relocationModelName)) {
+    auto val = attr.getInt();
+    if (val >= llvm::Reloc::Static && val <= llvm::Reloc::ROPI_RWPI)
+      return static_cast<llvm::Reloc::Model>(val);
+  }
+  // Default to PIC_ as the conservative choice, ie don't set globals as
+  // dso_local This also matches the default in CodeGenOptions.def.
+  return llvm::Reloc::PIC_;
+}
+
+static constexpr const char *isPIEName = "fir.is_pie";
+
+void fir::setIsPIE(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(isPIEName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(isPIEName))
+      mod->removeAttr(isPIEName);
+  }
+}
+
+bool fir::getIsPIE(mlir::ModuleOp mod) { return mod->hasAttr(isPIEName); }
 
 std::string fir::determineTargetTriple(llvm::StringRef triple) {
   // Treat "" or "default" as stand-ins for the default machine.

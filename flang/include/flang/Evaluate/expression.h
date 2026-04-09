@@ -21,11 +21,11 @@
 #include "formatting.h"
 #include "type.h"
 #include "variable.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Support/Fortran.h"
 #include <algorithm>
 #include <list>
 #include <tuple>
@@ -92,6 +92,7 @@ public:
 
   std::optional<DynamicType> GetType() const;
   int Rank() const;
+  int Corank() const;
   std::string AsFortran() const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -190,6 +191,7 @@ public:
       return rank;
     }
   }
+  static constexpr int Corank() { return 0; }
 
   bool operator==(const Operation &that) const {
     return operand_ == that.operand_;
@@ -209,10 +211,12 @@ template <typename TO, TypeCategory FROMCAT = TO::category>
 struct Convert : public Operation<Convert<TO, FROMCAT>, TO, SomeKind<FROMCAT>> {
   // Fortran doesn't have conversions between kinds of CHARACTER apart from
   // assignments, and in those the data must be convertible to/from 7-bit ASCII.
-  static_assert(((TO::category == TypeCategory::Integer ||
-                     TO::category == TypeCategory::Real) &&
-                    (FROMCAT == TypeCategory::Integer ||
-                        FROMCAT == TypeCategory::Real)) ||
+  static_assert(
+      ((TO::category == TypeCategory::Integer ||
+           TO::category == TypeCategory::Real ||
+           TO::category == TypeCategory::Unsigned) &&
+          (FROMCAT == TypeCategory::Integer || FROMCAT == TypeCategory::Real ||
+              FROMCAT == TypeCategory::Unsigned)) ||
       TO::category == FROMCAT);
   using Result = TO;
   using Operand = SomeKind<FROMCAT>;
@@ -386,6 +390,34 @@ struct LogicalOperation
   LogicalOperator logicalOperator;
 };
 
+// Fortran 2023 conditional expression: (cond ? val : cond ? val : ... : else)
+// All branches have the same type and rank (verified during semantic analysis).
+template <typename T> class ConditionalExpr {
+public:
+  using Result = T;
+  CLASS_BOILERPLATE(ConditionalExpr)
+  ConditionalExpr(Expr<LogicalResult> &&cond, Expr<Result> &&thenVal,
+      Expr<Result> &&elseVal)
+      : condition_{std::move(cond)}, thenValue_{std::move(thenVal)},
+        elseValue_{std::move(elseVal)} {}
+  bool operator==(const ConditionalExpr &) const;
+  Expr<LogicalResult> &condition() { return condition_.value(); }
+  const Expr<LogicalResult> &condition() const { return condition_.value(); }
+  Expr<Result> &thenValue() { return thenValue_.value(); }
+  const Expr<Result> &thenValue() const { return thenValue_.value(); }
+  Expr<Result> &elseValue() { return elseValue_.value(); }
+  const Expr<Result> &elseValue() const { return elseValue_.value(); }
+  int Rank() const { return thenValue().Rank(); }
+  std::optional<DynamicType> GetType() const { return thenValue().GetType(); }
+  static constexpr int Corank() { return 0; }
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+
+private:
+  common::CopyableIndirection<Expr<LogicalResult>> condition_;
+  common::CopyableIndirection<Expr<Result>> thenValue_;
+  common::CopyableIndirection<Expr<Result>> elseValue_;
+};
+
 // Array constructors
 template <typename RESULT> class ArrayConstructorValues;
 
@@ -393,6 +425,7 @@ struct ImpliedDoIndex {
   using Result = SubscriptInteger;
   bool operator==(const ImpliedDoIndex &) const;
   static constexpr int Rank() { return 0; }
+  static constexpr int Corank() { return 0; }
   parser::CharBlock name; // nested implied DOs must use distinct names
 };
 
@@ -439,6 +472,7 @@ public:
 
   bool operator==(const ArrayConstructorValues &) const;
   static constexpr int Rank() { return 1; }
+  static constexpr int Corank() { return 0; }
   template <typename A> common::NoLvalue<A> Push(A &&x) {
     values_.emplace_back(std::move(x));
   }
@@ -526,10 +560,11 @@ public:
 
 private:
   using Conversions = std::tuple<Convert<Result, TypeCategory::Integer>,
-      Convert<Result, TypeCategory::Real>>;
+      Convert<Result, TypeCategory::Real>,
+      Convert<Result, TypeCategory::Unsigned>>;
   using Operations = std::tuple<Parentheses<Result>, Negate<Result>,
       Add<Result>, Subtract<Result>, Multiply<Result>, Divide<Result>,
-      Power<Result>, Extremum<Result>>;
+      Power<Result>, Extremum<Result>, ConditionalExpr<Result>>;
   using Indices = std::conditional_t<KIND == ImpliedDoIndex::Result::kind,
       std::tuple<ImpliedDoIndex>, std::tuple<>>;
   using TypeParamInquiries =
@@ -548,6 +583,29 @@ public:
 };
 
 template <int KIND>
+class Expr<Type<TypeCategory::Unsigned, KIND>>
+    : public ExpressionBase<Type<TypeCategory::Unsigned, KIND>> {
+public:
+  using Result = Type<TypeCategory::Unsigned, KIND>;
+
+  EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
+
+private:
+  using Conversions = std::tuple<Convert<Result, TypeCategory::Integer>,
+      Convert<Result, TypeCategory::Real>,
+      Convert<Result, TypeCategory::Unsigned>>;
+  using Operations = std::tuple<Parentheses<Result>, Negate<Result>,
+      Add<Result>, Subtract<Result>, Multiply<Result>, Divide<Result>,
+      Power<Result>, Extremum<Result>, ConditionalExpr<Result>>;
+  using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
+      Designator<Result>, FunctionRef<Result>>;
+
+public:
+  common::TupleToVariant<common::CombineTuples<Operations, Conversions, Others>>
+      u;
+};
+
+template <int KIND>
 class Expr<Type<TypeCategory::Real, KIND>>
     : public ExpressionBase<Type<TypeCategory::Real, KIND>> {
 public:
@@ -560,10 +618,12 @@ private:
   // N.B. Real->Complex and Complex->Real conversions are done with CMPLX
   // and part access operations (resp.).
   using Conversions = std::variant<Convert<Result, TypeCategory::Integer>,
-      Convert<Result, TypeCategory::Real>>;
+      Convert<Result, TypeCategory::Real>,
+      Convert<Result, TypeCategory::Unsigned>>;
   using Operations = std::variant<ComplexComponent<KIND>, Parentheses<Result>,
       Negate<Result>, Add<Result>, Subtract<Result>, Multiply<Result>,
-      Divide<Result>, Power<Result>, RealToIntPower<Result>, Extremum<Result>>;
+      Divide<Result>, Power<Result>, RealToIntPower<Result>, Extremum<Result>,
+      ConditionalExpr<Result>>;
   using Others = std::variant<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -581,7 +641,7 @@ public:
   using Operations = std::variant<Parentheses<Result>, Negate<Result>,
       Convert<Result, TypeCategory::Complex>, Add<Result>, Subtract<Result>,
       Multiply<Result>, Divide<Result>, Power<Result>, RealToIntPower<Result>,
-      ComplexConstructor<KIND>>;
+      ComplexConstructor<KIND>, ConditionalExpr<Result>>;
   using Others = std::variant<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -590,6 +650,7 @@ public:
 };
 
 FOR_EACH_INTEGER_KIND(extern template class Expr, )
+FOR_EACH_UNSIGNED_KIND(extern template class Expr, )
 FOR_EACH_REAL_KIND(extern template class Expr, )
 FOR_EACH_COMPLEX_KIND(extern template class Expr, )
 
@@ -606,7 +667,7 @@ public:
 
   std::variant<Constant<Result>, ArrayConstructor<Result>, Designator<Result>,
       FunctionRef<Result>, Parentheses<Result>, Convert<Result>, Concat<KIND>,
-      Extremum<Result>, SetLength<KIND>>
+      Extremum<Result>, SetLength<KIND>, ConditionalExpr<Result>>
       u;
 };
 
@@ -629,7 +690,8 @@ public:
   static_assert(Operand::category == TypeCategory::Integer ||
       Operand::category == TypeCategory::Real ||
       Operand::category == TypeCategory::Complex ||
-      Operand::category == TypeCategory::Character);
+      Operand::category == TypeCategory::Character ||
+      Operand::category == TypeCategory::Unsigned);
   CLASS_BOILERPLATE(Relational)
   Relational(
       RelationalOperator r, const Expr<Operand> &a, const Expr<Operand> &b)
@@ -642,7 +704,7 @@ public:
 
 template <> class Relational<SomeType> {
   using DirectlyComparableTypes = common::CombineTuples<IntegerTypes, RealTypes,
-      ComplexTypes, CharacterTypes>;
+      ComplexTypes, CharacterTypes, UnsignedTypes>;
 
 public:
   using Result = LogicalResult;
@@ -651,11 +713,13 @@ public:
   int Rank() const {
     return common::visit([](const auto &x) { return x.Rank(); }, u);
   }
+  static constexpr int Corank() { return 0; }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const;
   common::MapTemplate<Relational, DirectlyComparableTypes> u;
 };
 
 FOR_EACH_INTEGER_KIND(extern template class Relational, )
+FOR_EACH_UNSIGNED_KIND(extern template class Relational, )
 FOR_EACH_REAL_KIND(extern template class Relational, )
 FOR_EACH_CHARACTER_KIND(extern template class Relational, )
 extern template class Relational<SomeType>;
@@ -675,7 +739,7 @@ public:
 
 private:
   using Operations = std::tuple<Convert<Result>, Parentheses<Result>, Not<KIND>,
-      LogicalOperation<KIND>>;
+      LogicalOperation<KIND>, ConditionalExpr<Result>>;
   using Relations = std::conditional_t<KIND == LogicalResult::kind,
       std::tuple<Relational<SomeType>>, std::tuple<>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
@@ -736,7 +800,8 @@ public:
   std::optional<Expr<SomeType>> Find(const Symbol &) const;
 
   StructureConstructor &Add(const semantics::Symbol &, Expr<SomeType> &&);
-  int Rank() const { return 0; }
+  static constexpr int Rank() { return 0; }
+  static constexpr int Corank() { return 0; }
   DynamicType GetType() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
@@ -752,7 +817,8 @@ public:
   using Result = SomeDerived;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   std::variant<Constant<Result>, ArrayConstructor<Result>, StructureConstructor,
-      Designator<Result>, FunctionRef<Result>, Parentheses<Result>>
+      Designator<Result>, FunctionRef<Result>, Parentheses<Result>,
+      ConditionalExpr<Result>>
       u;
 };
 
@@ -790,7 +856,8 @@ using BOZLiteralConstant = typename LargestReal::Scalar::Word;
 // Null pointers without MOLD= arguments are typed by context.
 struct NullPointer {
   constexpr bool operator==(const NullPointer &) const { return true; }
-  constexpr int Rank() const { return 0; }
+  static constexpr int Rank() { return 0; }
+  static constexpr int Corank() { return 0; }
 };
 
 // Procedure pointer targets are treated as if they were typeless.
@@ -886,11 +953,13 @@ FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructor, )
   FOR_EACH_INTRINSIC_KIND(template class Expr, ) \
   FOR_EACH_CATEGORY_TYPE(template class Expr, ) \
   FOR_EACH_INTEGER_KIND(template class Relational, ) \
+  FOR_EACH_UNSIGNED_KIND(template class Relational, ) \
   FOR_EACH_REAL_KIND(template class Relational, ) \
   FOR_EACH_CHARACTER_KIND(template class Relational, ) \
   template class Relational<SomeType>; \
   FOR_EACH_TYPE_AND_KIND(template class ExpressionBase, ) \
   FOR_EACH_INTRINSIC_KIND(template class ArrayConstructorValues, ) \
-  FOR_EACH_INTRINSIC_KIND(template class ArrayConstructor, )
+  FOR_EACH_INTRINSIC_KIND(template class ArrayConstructor, ) \
+  FOR_EACH_INTRINSIC_KIND(template class ConditionalExpr, )
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_EXPRESSION_H_

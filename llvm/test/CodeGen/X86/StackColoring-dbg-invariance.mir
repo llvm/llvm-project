@@ -55,7 +55,7 @@
   !9 = !DILocalVariable(name: "4", scope: !5, file: !1, line: 4, type: !10)
   !10 = !DIBasicType(name: "ty64", size: 64, encoding: DW_ATE_unsigned)
   !11 = !DILocation(line: 4, column: 1, scope: !5)
-  !12 = distinct !DISubprogram(name: "test_2", linkageName: "test_2", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+  !12 = distinct !DISubprogram(name: "test_2", linkageName: "test_2", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !7)
 
 ...
 ---

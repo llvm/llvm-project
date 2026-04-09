@@ -120,8 +120,8 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
     // expect unique exits
     return false;
   assert(CurLoop->contains(CondExitBlock) && "meaning of exit block");
-  auto *BI = dyn_cast<BranchInst>(CondExitBlock->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(CondExitBlock->getTerminator());
+  if (!BI)
     return false;
   // If condition is constant and false leads to ExitBlock then we always
   // execute the true branch.
@@ -152,7 +152,7 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   if (!SimpleCst)
     return false;
   if (ExitBlock == BI->getSuccessor(0))
-    return SimpleCst->isZeroValue();
+    return SimpleCst->isNullValue();
   assert(ExitBlock == BI->getSuccessor(1) && "implied by above");
   return SimpleCst->isAllOnesValue();
 }
@@ -275,7 +275,7 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
     // exit.  At the moment, we use a (cheap) hack for the common case where
     // the instruction of interest is the first one in the block.
     return !HeaderMayThrow ||
-           Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
+           &*Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
 
   // If there is a path from header to exit or latch that doesn't lead to our
   // instruction's block, return false.

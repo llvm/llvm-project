@@ -32,16 +32,23 @@ private:
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
 
+  /// Amount of bytes on stack consumed by the arguments being passed on
+  /// the stack
+  unsigned ArgumentStackSize = 0;
+
   /// FrameIndex of the spill slot when there is no scavenged register in
   /// insertIndirectBranch.
   int BranchRelaxationSpillFrameIndex = -1;
+
+  /// Incoming ByVal arguments
+  SmallVector<SDValue, 8> IncomingByValArgs;
 
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
 
   /// Pairs of `jr` instructions and corresponding JTI operands, used for the
   /// `annotate-tablejump` option.
-  SmallVector<std::pair<MachineInstr *, MachineOperand *>, 4> JumpInfos;
+  SmallVector<std::pair<MachineInstr *, int>, 4> JumpInfos;
 
 public:
   LoongArchMachineFunctionInfo(const Function &F,
@@ -63,6 +70,9 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
+  unsigned getArgumentStackSize() const { return ArgumentStackSize; }
+  void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
+
   int getBranchRelaxationSpillFrameIndex() {
     return BranchRelaxationSpillFrameIndex;
   }
@@ -70,20 +80,22 @@ public:
     BranchRelaxationSpillFrameIndex = Index;
   }
 
+  void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
+  SDValue getIncomingByValArgs(int Idx) { return IncomingByValArgs[Idx]; }
+  unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
+
   void addSExt32Register(Register Reg) { SExt32Registers.push_back(Reg); }
 
   bool isSExt32Register(Register Reg) const {
     return is_contained(SExt32Registers, Reg);
   }
 
-  void setJumpInfo(MachineInstr *JrMI, MachineOperand *JTIMO) {
-    JumpInfos.push_back(std::make_pair(JrMI, JTIMO));
+  void setJumpInfo(MachineInstr *JrMI, int JTIIdx) {
+    JumpInfos.push_back(std::make_pair(JrMI, JTIIdx));
   }
   unsigned getJumpInfoSize() { return JumpInfos.size(); }
   MachineInstr *getJumpInfoJrMI(unsigned Idx) { return JumpInfos[Idx].first; }
-  MachineOperand *getJumpInfoJTIMO(unsigned Idx) {
-    return JumpInfos[Idx].second;
-  }
+  int getJumpInfoJTIIndex(unsigned Idx) { return JumpInfos[Idx].second; }
 };
 
 } // end namespace llvm

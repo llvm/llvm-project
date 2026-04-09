@@ -81,18 +81,21 @@ using quetta = ratio <1'000'000'000'000'000'000'000'000'000'000, 1>; // Since C+
 }
 */
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <climits>
-#include <cstdint>
-#include <version>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/ratio>
+#else
+#  include <__config>
+#  include <__type_traits/integral_constant.h>
+#  include <climits>
+#  include <cstdint>
+#  include <version>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -226,7 +229,7 @@ public:
 };
 
 template <intmax_t _Num, intmax_t _Den = 1>
-class _LIBCPP_TEMPLATE_VIS ratio {
+class ratio {
   static_assert(__static_abs<_Num> >= 0, "ratio numerator is out of range");
   static_assert(_Den != 0, "ratio divide by 0");
   static_assert(__static_abs<_Den> > 0, "ratio denominator is out of range");
@@ -279,17 +282,17 @@ public:
                           __ll_mul<_R2::den / __gcd_n1_d2, _R1::den / __gcd_d1_n2>::value >::type type;
 };
 
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 using ratio_multiply = typename __ratio_multiply<_R1, _R2>::type;
 
-#else // _LIBCPP_CXX03_LANG
+#  else // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_multiply : public __ratio_multiply<_R1, _R2>::type {};
+struct ratio_multiply : public __ratio_multiply<_R1, _R2>::type {};
 
-#endif // _LIBCPP_CXX03_LANG
+#  endif // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct __ratio_divide {
@@ -305,17 +308,17 @@ public:
                           __ll_mul<_R2::num / __gcd_n1_n2, _R1::den / __gcd_d1_d2>::value >::type type;
 };
 
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 using ratio_divide = typename __ratio_divide<_R1, _R2>::type;
 
-#else // _LIBCPP_CXX03_LANG
+#  else // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_divide : public __ratio_divide<_R1, _R2>::type {};
+struct ratio_divide : public __ratio_divide<_R1, _R2>::type {};
 
-#endif // _LIBCPP_CXX03_LANG
+#  endif // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct __ratio_add {
@@ -334,17 +337,17 @@ public:
              _R2::den > >::type type;
 };
 
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 using ratio_add = typename __ratio_add<_R1, _R2>::type;
 
-#else // _LIBCPP_CXX03_LANG
+#  else // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_add : public __ratio_add<_R1, _R2>::type {};
+struct ratio_add : public __ratio_add<_R1, _R2>::type {};
 
-#endif // _LIBCPP_CXX03_LANG
+#  endif // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 struct __ratio_subtract {
@@ -363,28 +366,28 @@ public:
              _R2::den > >::type type;
 };
 
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
 using ratio_subtract = typename __ratio_subtract<_R1, _R2>::type;
 
-#else // _LIBCPP_CXX03_LANG
+#  else // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_subtract : public __ratio_subtract<_R1, _R2>::type {};
+struct ratio_subtract : public __ratio_subtract<_R1, _R2>::type {};
 
-#endif // _LIBCPP_CXX03_LANG
+#  endif // _LIBCPP_CXX03_LANG
 
 // ratio_equal
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_equal : _BoolConstant<(_R1::num == _R2::num && _R1::den == _R2::den)> {
+struct ratio_equal : _BoolConstant<(_R1::num == _R2::num && _R1::den == _R2::den)> {
   static_assert(__is_ratio_v<_R1>, "[ratio.general]/2 requires R1 to be a specialisation of the ratio template");
   static_assert(__is_ratio_v<_R2>, "[ratio.general]/2 requires R2 to be a specialisation of the ratio template");
 };
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_not_equal : _BoolConstant<!ratio_equal<_R1, _R2>::value> {
+struct ratio_not_equal : _BoolConstant<!ratio_equal<_R1, _R2>::value> {
   static_assert(__is_ratio_v<_R1>, "[ratio.general]/2 requires R1 to be a specialisation of the ratio template");
   static_assert(__is_ratio_v<_R2>, "[ratio.general]/2 requires R2 to be a specialisation of the ratio template");
 };
@@ -438,33 +441,33 @@ struct __ratio_less<_R1, _R2, -1LL, -1LL> {
 };
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_less : _BoolConstant<__ratio_less<_R1, _R2>::value> {
+struct ratio_less : _BoolConstant<__ratio_less<_R1, _R2>::value> {
   static_assert(__is_ratio_v<_R1>, "[ratio.general]/2 requires R1 to be a specialisation of the ratio template");
   static_assert(__is_ratio_v<_R2>, "[ratio.general]/2 requires R2 to be a specialisation of the ratio template");
 };
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_less_equal : _BoolConstant<!ratio_less<_R2, _R1>::value> {
+struct ratio_less_equal : _BoolConstant<!ratio_less<_R2, _R1>::value> {
   static_assert(__is_ratio_v<_R1>, "[ratio.general]/2 requires R1 to be a specialisation of the ratio template");
   static_assert(__is_ratio_v<_R2>, "[ratio.general]/2 requires R2 to be a specialisation of the ratio template");
 };
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_greater : _BoolConstant<ratio_less<_R2, _R1>::value> {
+struct ratio_greater : _BoolConstant<ratio_less<_R2, _R1>::value> {
   static_assert(__is_ratio_v<_R1>, "[ratio.general]/2 requires R1 to be a specialisation of the ratio template");
   static_assert(__is_ratio_v<_R2>, "[ratio.general]/2 requires R2 to be a specialisation of the ratio template");
 };
 
 template <class _R1, class _R2>
-struct _LIBCPP_TEMPLATE_VIS ratio_greater_equal : _BoolConstant<!ratio_less<_R1, _R2>::value> {
+struct ratio_greater_equal : _BoolConstant<!ratio_less<_R1, _R2>::value> {
   static_assert(__is_ratio_v<_R1>, "[ratio.general]/2 requires R1 to be a specialisation of the ratio template");
   static_assert(__is_ratio_v<_R2>, "[ratio.general]/2 requires R2 to be a specialisation of the ratio template");
 };
 
 template <class _R1, class _R2>
-using __ratio_gcd = ratio<__static_gcd<_R1::num, _R2::num>, __static_lcm<_R1::den, _R2::den> >;
+using __ratio_gcd _LIBCPP_NODEBUG = ratio<__static_gcd<_R1::num, _R2::num>, __static_lcm<_R1::den, _R2::den> >;
 
-#if _LIBCPP_STD_VER >= 17
+#  if _LIBCPP_STD_VER >= 17
 template <class _R1, class _R2>
 inline constexpr bool ratio_equal_v = ratio_equal<_R1, _R2>::value;
 
@@ -482,14 +485,15 @@ inline constexpr bool ratio_greater_v = ratio_greater<_R1, _R2>::value;
 
 template <class _R1, class _R2>
 inline constexpr bool ratio_greater_equal_v = ratio_greater_equal<_R1, _R2>::value;
-#endif
+#  endif
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <type_traits>
-#endif
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#    include <type_traits>
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_RATIO

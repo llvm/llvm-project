@@ -25,7 +25,7 @@ class InterleavedAccessPass : public PassInfoMixin<InterleavedAccessPass> {
   const TargetMachine *TM;
 
 public:
-  explicit InterleavedAccessPass(const TargetMachine *TM) : TM(TM) {}
+  explicit InterleavedAccessPass(const TargetMachine &TM) : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 

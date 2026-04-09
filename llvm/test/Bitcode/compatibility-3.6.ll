@@ -410,7 +410,7 @@ declare void @f.param.sret(i8* sret(i8))
 declare void @f.param.noalias(i8* noalias)
 ; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(i8* nocapture)
-; CHECK: declare void @f.param.nocapture(ptr nocapture)
+; CHECK: declare void @f.param.nocapture(ptr captures(none))
 declare void @f.param.nest(i8* nest)
 ; CHECK: declare void @f.param.nest(ptr nest)
 declare i8* @f.param.returned(i8* returned)
@@ -1112,7 +1112,7 @@ declare void @llvm.instrprof_increment(i8*, i64, i32, i32)
 !10 = !{!"rax"}
 define void @intrinsics.codegen() {
   call i8* @llvm.returnaddress(i32 1)
-  ; CHECK: call ptr @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call i8* @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
@@ -1140,7 +1140,7 @@ define void @intrinsics.codegen() {
   ; CHECK: call i64 @llvm.readcyclecounter()
 
   call void @llvm.clear_cache(i8* null, i8* null)
-  ; CHECK: call void @llvm.clear_cache(ptr null, ptr null)
+  ; CHECK: call void @llvm.clear_cache.p0(ptr null, ptr null)
 
   call void @llvm.instrprof_increment(i8* null, i64 0, i32 0, i32 0)
   ; CHECK: call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)

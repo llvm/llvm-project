@@ -16,6 +16,7 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
 
@@ -42,6 +43,15 @@ enum class AMDGCNLibraries : uint32_t {
   All = (LastLib << 1) - 1
 };
 
+/// Assembles ISA to an object code.
+FailureOr<SmallVector<char, 0>>
+assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
+            StringRef features, function_ref<InFlightDiagnostic()> emitError);
+
+FailureOr<SmallVector<char, 0>>
+linkObjectCode(ArrayRef<char> objectCode, StringRef lldPath,
+               function_ref<InFlightDiagnostic()> emitError);
+
 /// Base class for all ROCDL serializations from GPU modules into binary
 /// strings. By default this class serializes into LLVM bitcode.
 class SerializeGPUModuleBase : public LLVM::ModuleToObject {
@@ -61,8 +71,8 @@ public:
   /// Returns the ROCM toolkit path.
   StringRef getToolkitPath() const;
 
-  /// Returns the bitcode files to be loaded.
-  ArrayRef<std::string> getFileList() const;
+  /// Returns the LLVM bitcode libraries to be linked.
+  ArrayRef<Attribute> getLibrariesToLink() const;
 
   /// Appends standard ROCm device libraries to `fileList`.
   LogicalResult appendStandardLibs(AMDGCNLibraries libs);
@@ -89,16 +99,13 @@ protected:
                            StringRef abiVer);
 
   /// Compiles assembly to a binary.
-  virtual std::optional<SmallVector<char, 0>>
-  compileToBinary(const std::string &serializedISA);
+  virtual FailureOr<SmallVector<char, 0>>
+  compileToBinary(StringRef serializedISA);
 
   /// Default implementation of `ModuleToObject::moduleToObject`.
-  std::optional<SmallVector<char, 0>>
+  FailureOr<SmallVector<char, 0>>
   moduleToObjectImpl(const gpu::TargetOptions &targetOptions,
                      llvm::Module &llvmModule);
-
-  /// Returns the assembled ISA.
-  std::optional<SmallVector<char, 0>> assembleIsa(StringRef isa);
 
   /// ROCDL target attribute.
   ROCDLTargetAttr target;
@@ -107,7 +114,7 @@ protected:
   std::string toolkitPath;
 
   /// List of LLVM bitcode files to link to.
-  SmallVector<std::string> fileList;
+  SmallVector<Attribute> librariesToLink;
 
   /// AMD GCN libraries to use when linking, the default is using none.
   AMDGCNLibraries deviceLibs = AMDGCNLibraries::None;

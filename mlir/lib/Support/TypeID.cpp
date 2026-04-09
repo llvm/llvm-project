@@ -27,9 +27,6 @@ namespace {
 struct ImplicitTypeIDRegistry {
   /// Lookup or insert a TypeID for the given type name.
   TypeID lookupOrInsert(StringRef typeName) {
-    LLVM_DEBUG(llvm::dbgs() << "ImplicitTypeIDRegistry::lookupOrInsert("
-                            << typeName << ")\n");
-
     // Perform a heuristic check to see if this type is in an anonymous
     // namespace. String equality is not valid for anonymous types, so we try to
     // abort whenever we see them.
@@ -52,7 +49,7 @@ struct ImplicitTypeIDRegistry {
                    "`MLIR_DEFINE_EXPLICIT_TYPE_ID` or "
                    "`MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID`.\n";
       }
-      llvm::report_fatal_error(errorStr);
+      llvm::report_fatal_error(llvm::StringRef(errorStr));
     }
 #endif
 
@@ -80,7 +77,8 @@ struct ImplicitTypeIDRegistry {
 };
 } // end namespace
 
-TypeID detail::FallbackTypeIDResolver::registerImplicitTypeID(StringRef name) {
+LLVM_ALWAYS_EXPORT TypeID
+detail::FallbackTypeIDResolver::registerImplicitTypeID(StringRef name) {
   static ImplicitTypeIDRegistry registry;
   return registry.lookupOrInsert(name);
 }
@@ -89,4 +87,4 @@ TypeID detail::FallbackTypeIDResolver::registerImplicitTypeID(StringRef name) {
 // Builtin TypeIDs
 //===----------------------------------------------------------------------===//
 
-MLIR_DEFINE_EXPLICIT_TYPE_ID(void)
+MLIR_DEFINE_EXPLICIT_SELF_OWNING_TYPE_ID(void)

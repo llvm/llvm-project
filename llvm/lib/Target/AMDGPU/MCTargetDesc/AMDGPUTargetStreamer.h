@@ -62,14 +62,15 @@ public:
 
   virtual void EmitMCResourceInfo(
       const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
-      const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
-      const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
-      const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
-      const MCSymbol *HasIndirectCall) {};
+      const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
+      const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
+      const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
+      const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) {};
 
   virtual void EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
                                       const MCSymbol *MaxAGPR,
-                                      const MCSymbol *MaxSGPR) {};
+                                      const MCSymbol *MaxSGPR,
+                                      const MCSymbol *MaxNamedBarrier) {};
 
   /// \returns True on success, false on failure.
   virtual bool EmitISAVersion() { return true; }
@@ -95,12 +96,6 @@ public:
 
   /// \returns True on success, false on failure.
   virtual bool EmitCodeEnd(const MCSubtargetInfo &STI) { return true; }
-
-  /// \returns True on success, false on failure.
-  virtual bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
-                                        bool TrapEnabled) {
-    return true;
-  }
 
   virtual void
   EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
@@ -147,17 +142,16 @@ public:
 
   void emitAMDGPULDS(MCSymbol *Sym, unsigned Size, Align Alignment) override;
 
-  void EmitMCResourceInfo(const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
-                          const MCSymbol *NumExplicitSGPR,
-                          const MCSymbol *PrivateSegmentSize,
-                          const MCSymbol *UsesVCC,
-                          const MCSymbol *UsesFlatScratch,
-                          const MCSymbol *HasDynamicallySizedStack,
-                          const MCSymbol *HasRecursion,
-                          const MCSymbol *HasIndirectCall) override;
+  void EmitMCResourceInfo(
+      const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
+      const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
+      const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
+      const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
+      const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) override;
 
   void EmitMCResourceMaximums(const MCSymbol *MaxVGPR, const MCSymbol *MaxAGPR,
-                              const MCSymbol *MaxSGPR) override;
+                              const MCSymbol *MaxSGPR,
+                              const MCSymbol *MaxNamedBarrier) override;
 
   /// \returns True on success, false on failure.
   bool EmitISAVersion() override;
@@ -167,10 +161,6 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitCodeEnd(const MCSubtargetInfo &STI) override;
-
-  /// \returns True on success, false on failure.
-  bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
-                                bool TrapEnabled) override;
 
   void
   EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
@@ -224,10 +214,6 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitCodeEnd(const MCSubtargetInfo &STI) override;
-
-  /// \returns True on success, false on failure.
-  bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
-                                bool TrapEnabled) override;
 
   void
   EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,

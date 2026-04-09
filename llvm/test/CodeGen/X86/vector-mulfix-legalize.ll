@@ -85,14 +85,14 @@ define <4 x i16> @smulfixsat(<4 x i16> %a) {
 ; CHECK-NEXT:    movswl %dx, %edx
 ; CHECK-NEXT:    leal (,%rdx,4), %esi
 ; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    shrl $16, %edi
-; CHECK-NEXT:    shldw $1, %si, %di
+; CHECK-NEXT:    shrl $16, %esi
+; CHECK-NEXT:    shldw $1, %di, %si
 ; CHECK-NEXT:    sarl $14, %edx
 ; CHECK-NEXT:    cmpl $16384, %edx # imm = 0x4000
-; CHECK-NEXT:    cmovgel %eax, %edi
+; CHECK-NEXT:    cmovgel %eax, %esi
 ; CHECK-NEXT:    cmpl $-16384, %edx # imm = 0xC000
-; CHECK-NEXT:    cmovll %ecx, %edi
-; CHECK-NEXT:    pinsrw $3, %edi, %xmm1
+; CHECK-NEXT:    cmovll %ecx, %esi
+; CHECK-NEXT:    pinsrw $3, %esi, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t = call <4 x i16> @llvm.smul.fix.sat.v4i16(<4 x i16> <i16 1, i16 2, i16 3, i16 4>, <4 x i16> %a, i32 15)
@@ -106,19 +106,19 @@ define <4 x i16> @umulfixsat(<4 x i16> %a) {
 ; CHECK-NEXT:    pextrw $2, %xmm0, %eax
 ; CHECK-NEXT:    leal (%rax,%rax,2), %eax
 ; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl $16, %edx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shldw $1, %ax, %cx
-; CHECK-NEXT:    cmpl $32768, %edx # imm = 0x8000
+; CHECK-NEXT:    shrl $16, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shldw $1, %dx, %cx
+; CHECK-NEXT:    cmpl $32768, %eax # imm = 0x8000
 ; CHECK-NEXT:    movl $65535, %eax # imm = 0xFFFF
 ; CHECK-NEXT:    cmovael %eax, %ecx
 ; CHECK-NEXT:    pextrw $1, %xmm0, %edx
 ; CHECK-NEXT:    addl %edx, %edx
 ; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    shrl $16, %esi
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    shldw $1, %dx, %di
-; CHECK-NEXT:    cmpl $32768, %esi # imm = 0x8000
+; CHECK-NEXT:    shrl $16, %edx
+; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    shldw $1, %si, %di
+; CHECK-NEXT:    cmpl $32768, %edx # imm = 0x8000
 ; CHECK-NEXT:    cmovael %eax, %edi
 ; CHECK-NEXT:    movd %xmm0, %edx
 ; CHECK-NEXT:    xorl %esi, %esi
@@ -133,10 +133,10 @@ define <4 x i16> @umulfixsat(<4 x i16> %a) {
 ; CHECK-NEXT:    pextrw $3, %xmm0, %ecx
 ; CHECK-NEXT:    shll $2, %ecx
 ; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    shrl $16, %edx
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    shldw $1, %cx, %si
-; CHECK-NEXT:    cmpl $32768, %edx # imm = 0x8000
+; CHECK-NEXT:    shrl $16, %ecx
+; CHECK-NEXT:    movl %ecx, %esi
+; CHECK-NEXT:    shldw $1, %dx, %si
+; CHECK-NEXT:    cmpl $32768, %ecx # imm = 0x8000
 ; CHECK-NEXT:    cmovael %eax, %esi
 ; CHECK-NEXT:    pinsrw $3, %esi, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0

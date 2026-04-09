@@ -40,9 +40,9 @@ protected:
 
 FileSpec HostInfoWindows::m_program_filespec;
 
-void HostInfoWindows::Initialize(SharedLibraryDirectoryHelper *helper) {
+void HostInfoWindows::Initialize() {
   ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-  HostInfoBase::Initialize(helper);
+  HostInfoBase::Initialize();
 }
 
 void HostInfoWindows::Terminate() {

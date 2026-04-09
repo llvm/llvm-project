@@ -30,7 +30,7 @@ public:
   static lldb::ValueObjectSP Create(ValueObject &parent, ConstString name,
                                     const CompilerType &cast_type);
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 

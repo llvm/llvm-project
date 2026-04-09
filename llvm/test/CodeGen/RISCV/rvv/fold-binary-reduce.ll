@@ -18,7 +18,7 @@ entry:
 define i64 @reduce_add2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_add2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
@@ -266,8 +266,7 @@ define float @reduce_fadd3(float %x, <4 x float> %v, ptr %rdxptr) {
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fadd.s fa0, fa5, fa0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    ret
 entry:
   %rdx = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.0, <4 x float> %v)
@@ -325,25 +324,6 @@ entry:
   ret float %res
 }
 
-; Function Attrs: nofree nosync nounwind readnone willreturn
-declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>)
-declare i64 @llvm.vector.reduce.and.v4i64(<4 x i64>)
-declare i64 @llvm.vector.reduce.or.v4i64(<4 x i64>)
-declare i64 @llvm.vector.reduce.xor.v4i64(<4 x i64>)
-declare i64 @llvm.vector.reduce.umax.v4i64(<4 x i64>)
-declare i64 @llvm.vector.reduce.umin.v4i64(<4 x i64>)
-declare i64 @llvm.vector.reduce.smax.v4i64(<4 x i64>)
-declare i64 @llvm.vector.reduce.smin.v4i64(<4 x i64>)
-declare float @llvm.vector.reduce.fadd.v4f32(float, <4 x float>)
-declare float @llvm.vector.reduce.fmax.v4f32(<4 x float>)
-declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)
-declare i64 @llvm.umax.i64(i64, i64)
-declare i64 @llvm.umin.i64(i64, i64)
-declare i64 @llvm.smax.i64(i64, i64)
-declare i64 @llvm.smin.i64(i64, i64)
-declare float @llvm.maxnum.f32(float ,float)
-declare float @llvm.minnum.f32(float ,float)
-
 define void @crash(<2 x i32> %0) {
 ; CHECK-LABEL: crash:
 ; CHECK:       # %bb.0: # %entry
@@ -365,7 +345,6 @@ entry:
   store i8 %conv18.us, ptr null, align 1
   ret void
 }
-declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
 
 define i64 @op_then_reduce(<4 x i64> %v, <4 x i64> %v2) {
 ; CHECK-LABEL: op_then_reduce:
@@ -382,7 +361,6 @@ entry:
   %res = add i64 %rdx1, %rdx2
   ret i64 %res
 }
-
 
 define i64 @two_reduce_scalar_bypass(<4 x i64> %v, <4 x i64> %v2) {
 ; CHECK-LABEL: two_reduce_scalar_bypass:
