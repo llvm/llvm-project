@@ -3281,12 +3281,14 @@ public:
   bool hasExplicitTemplateArgs() const {
     if (!hasTemplateKWAndArgsInfo())
       return false;
+    if (getLAngleLoc().isValid())
+      return true;
     // FIXME: deduced function types can have "hidden" args and no <
     // investigate that further, but ultimately maybe we want to model concepts
     // reference with another kind of expression.
-    return (isConceptReference() || isVarDeclReference())
-               ? getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs
-               : getLAngleLoc().isValid();
+    if (isConceptReference() || isVarDeclReference())
+      return getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
+    return false;
   }
 
   bool isConceptReference() const {
