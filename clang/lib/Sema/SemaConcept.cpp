@@ -487,6 +487,11 @@ class ConstraintSatisfactionChecker {
   // right context.
   ConceptDecl *ParentConcept = nullptr;
 
+  // This is for TemplateInstantiator to not instantiate the same template
+  // parameter mapping many times, in order to improve substitution performance.
+  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+      CachedTemplateArgs;
+
 private:
   template <class Constraint>
   UnsignedOrNone getOuterPackIndex(const Constraint &C) const {
@@ -663,6 +668,9 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
       S, Constraint.getPackSubstitutionIndex()
              ? Constraint.getPackSubstitutionIndex()
              : PackSubstitutionIndex);
+
+  llvm::SaveAndRestore PushTemplateArgsCache(S.CurrentCachedTemplateArgs,
+                                             &CachedTemplateArgs);
 
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
@@ -2171,6 +2179,8 @@ bool SubstituteParameterMappings::substitute(
   // FIXME: The BaseLoc will be used as the location of the pack expansion,
   // which is wrong.
   TemplateArgumentListInfo SubstArgs;
+  llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
+      DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
           N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs))
     return true;
@@ -2239,6 +2249,8 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
   // pack. The SourceLocation is necessary for the instantiation location.
   // FIXME: The BaseLoc will be used as the location of the pack expansion,
   // which is wrong.
+  llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
+      DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       CSE->getTemplateArgsAsWritten();
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
