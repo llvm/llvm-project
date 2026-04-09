@@ -70,34 +70,48 @@ static_assert(!std::is_constructible_v<
 constexpr bool test() {
   // base is init correctly
   {
-    using R             = std::ranges::take_while_view<Range, bool (*)(int)>;
+    struct TestRng : std::ranges::view_base {
+      constexpr int* begin() const { return nullptr; }
+      constexpr Sent end() { return Sent{5}; }
+      constexpr ConstSent end() const { return ConstSent{5}; }
+    };
+
+    using R             = std::ranges::take_while_view<TestRng, bool (*)(int)>;
     using Sentinel      = std::ranges::sentinel_t<R>;
     using ConstSentinel = std::ranges::sentinel_t<const R>;
     static_assert(!std::same_as<Sentinel, ConstSentinel>);
 
-    Sentinel s1(Sent{5}, nullptr);
+    R r{TestRng{}, nullptr};
+    Sentinel s1 = r.end();
     ConstSentinel s2 = s1;
     assert(s2.base().i == 5);
   }
 
   // pred is init correctly
   {
+    struct TestRng : std::ranges::view_base {
+      constexpr int* begin() const { return nullptr; }
+      constexpr Sent end() { return Sent{0}; }
+      constexpr ConstSent end() const { return ConstSent{0}; }
+    };
+
     bool called = false;
     auto pred   = [&](int) {
       called = true;
       return false;
     };
 
-    using R             = std::ranges::take_while_view<Range, decltype(pred)>;
+    using R             = std::ranges::take_while_view<TestRng, decltype(pred)>;
     using Sentinel      = std::ranges::sentinel_t<R>;
     using ConstSentinel = std::ranges::sentinel_t<const R>;
     static_assert(!std::same_as<Sentinel, ConstSentinel>);
 
-    int i     = 10;
-    int* iter = &i;
-    Sentinel s1(Sent{0}, &pred);
+    R r{TestRng{}, pred};
+    Sentinel s1 = r.end();
     ConstSentinel s2 = s1;
 
+    int i     = 10;
+    int* iter = &i;
     [[maybe_unused]] bool b = iter == s2;
     assert(called);
   }
@@ -111,20 +125,25 @@ constexpr bool test() {
       constexpr bool operator==(int* iter) const { return i > *iter; }
     };
 
-    struct Rng : std::ranges::view_base {
-      int* begin() const;
-      Sent end();
-      MoveOnlyConvert end() const;
+    struct TestPred {
+      constexpr bool operator()(int) const { return false; }
     };
 
-    using R             = std::ranges::take_while_view<Rng, Pred>;
+    struct Rng : std::ranges::view_base {
+      constexpr int* begin() const { return nullptr; }
+      constexpr Sent end() { return Sent{0}; }
+      constexpr MoveOnlyConvert end() const { return MoveOnlyConvert(Sent{0}); }
+    };
+
+    using R             = std::ranges::take_while_view<Rng, TestPred>;
     using Sentinel      = std::ranges::sentinel_t<R>;
     using ConstSentinel = std::ranges::sentinel_t<const R>;
     static_assert(!std::same_as<Sentinel, ConstSentinel>);
 
-    Sentinel s1(Sent{5}, nullptr);
+    R r{Rng{}, TestPred{}};
+    Sentinel s1 = r.end();
     ConstSentinel s2 = s1;
-    assert(s2.base().i == 5);
+    assert(s2.base().i == 0);
   }
 
   return true;
