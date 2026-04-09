@@ -100,26 +100,37 @@ struct ReverseDominanceIterator {
   static constexpr auto makeIterable(Operation &range) {
     return llvm::reverse(ForwardIterator::makeIterable(range));
   }
-#if 0
+
   static auto makeIterable(Region &region) {
-    Block *null = nullptr;
-    llvm::PostOrderTraversal<Block *>::iterator sentinel;
-    if (SkipGraphRegion && !mayHaveSSADominance(region)) {
-      // Skip graph regions.
-      return llvm::make_pointee_range(
-          llvm::make_range(llvm::po_end(null), llvm::po_end(null)));
-    }
+    struct Traversal
+        : llvm::PostOrderTraversalBase<Traversal, llvm::GraphTraits<Block *>> {
+      SmallPtrSet<Block *, 16> Visited;
+
+      Traversal(Region *region) {
+        if (region)
+          this->init(&region->front());
+      }
+      bool insertEdge(std::optional<Block *>, Block *To) {
+        return Visited.insert(To).second;
+      }
+
+      using BaseT =
+          typename llvm::PostOrderTraversalBase<Traversal,
+                                                llvm::GraphTraits<Block *>>;
+      // Walk API expects Block references instead of pointers.
+      using iterator = llvm::pointee_iterator<typename BaseT::iterator>;
+      iterator begin() { return iterator(BaseT::begin()); }
+      iterator end() { return iterator(BaseT::end()); }
+    };
+
+    // Skip graph regions.
+    if ((SkipGraphRegion && !mayHaveSSADominance(region)) || region.empty())
+      return Traversal(nullptr);
 
     // Create post-order iterator. Blocks are enumerated according to their
     // successor relationship.
-    auto it = region.empty()
-                  ? llvm::make_range(llvm::po_end(null), llvm::po_end(null))
-                  : llvm::post_order(&region.front());
-
-    // Walk API expects Block references instead of pointers.
-    return llvm::make_pointee_range(it);
+    return Traversal(&region);
   }
-#endif
 };
 } // namespace mlir
 

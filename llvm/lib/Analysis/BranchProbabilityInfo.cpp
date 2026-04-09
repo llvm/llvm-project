@@ -1263,7 +1263,7 @@ void BPIConstruction::calculate(const Function &F, const LoopInfo &LoopI,
 
   // Walk the basic blocks in post-order so that we can build up state about
   // the successors of a block iteratively.
-  for (const auto *BB : post_order(&F)) {
+  for (const auto *BB : post_order(&F.getEntryBlock())) {
     LLVM_DEBUG(dbgs() << "Computing probabilities for " << BB->getName()
                       << "\n");
     // If there is no at least two successors, no sense to set probability.

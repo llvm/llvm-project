@@ -188,7 +188,8 @@ public:
 
 /// Traverse the blocks in a loop using a depth-first search.
 class LoopBlocksTraversal
-    : public PostOrderTraversalBase<LoopBlocksTraversal, Function *> {
+    : public PostOrderTraversalBase<LoopBlocksTraversal,
+                                    GraphTraits<Function *>> {
   LoopBlocksDFS &DFS;
   const LoopInfo *LI;
 

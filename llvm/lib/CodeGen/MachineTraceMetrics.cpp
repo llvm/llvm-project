@@ -487,7 +487,7 @@ struct LoopBounds {
 template <typename GraphT>
 class LoopBoundsPostOrderTraversal
     : public PostOrderTraversalBase<LoopBoundsPostOrderTraversal<GraphT>,
-                                    GraphT> {
+                                    GraphTraits<GraphT>> {
   LoopBounds &LB;
 
 public:

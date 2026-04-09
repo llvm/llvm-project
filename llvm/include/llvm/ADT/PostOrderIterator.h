@@ -19,78 +19,12 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
 #include <iterator>
 #include <optional>
-#include <set>
 #include <type_traits>
 #include <utility>
 
 namespace llvm {
-
-// The po_iterator_storage template provides access to the set of already
-// visited nodes during the po_iterator's depth-first traversal.
-//
-// The default implementation simply contains a set of visited nodes, while
-// the External=true version uses a reference to an external set.
-//
-// It is possible to prune the depth-first traversal in several ways:
-//
-// - When providing an external set that already contains some graph nodes,
-//   those nodes won't be visited again. This is useful for restarting a
-//   post-order traversal on a graph with nodes that aren't dominated by a
-//   single node.
-//
-// - By providing a custom SetType class, unwanted graph nodes can be excluded
-//   by having the insert() function return false. This could for example
-//   confine a CFG traversal to blocks in a specific loop.
-//
-// - Finally, by specializing the po_iterator_storage template itself, graph
-//   edges can be pruned by returning false in the insertEdge() function. This
-//   could be used to remove loop back-edges from the CFG seen by po_iterator.
-//
-// A specialized po_iterator_storage class can observe both the pre-order and
-// the post-order. The insertEdge() function is called in a pre-order, while
-// the finishPostorder() function is called just before the po_iterator moves
-// on to the next node.
-
-/// Default po_iterator_storage implementation with an internal set object.
-template<class SetType, bool External>
-class po_iterator_storage {
-  SetType Visited;
-
-public:
-  // Return true if edge destination should be visited.
-  template <typename NodeRef>
-  bool insertEdge(std::optional<NodeRef> From, NodeRef To) {
-    return Visited.insert(To).second;
-  }
-
-  // Called after all children of BB have been visited.
-  template <typename NodeRef> void finishPostorder(NodeRef BB) {}
-};
-
-/// Specialization of po_iterator_storage that references an external set.
-template<class SetType>
-class po_iterator_storage<SetType, true> {
-  SetType &Visited;
-
-public:
-  po_iterator_storage(SetType &VSet) : Visited(VSet) {}
-  po_iterator_storage(const po_iterator_storage &S) : Visited(S.Visited) {}
-
-  // Return true if edge destination should be visited, called with From = 0 for
-  // the root node.
-  // Graph edges can be pruned by specializing this function.
-  template <class NodeRef>
-  bool insertEdge(std::optional<NodeRef> From, NodeRef To) {
-    return Visited.insert(To).second;
-  }
-
-  // Called after all children of BB have been visited.
-  template <class NodeRef> void finishPostorder(NodeRef BB) {}
-};
-
 namespace po_detail {
 
 template <typename NodeRef> class NumberSet {
@@ -120,10 +54,10 @@ using DefaultSet =
 
 } // namespace po_detail
 
-template <typename DerivedT, typename GraphT> class PostOrderTraversalBase {
-  using GT = GraphTraits<GraphT>;
-  using NodeRef = typename GT::NodeRef;
-  using ChildItTy = typename GT::ChildIteratorType;
+template <typename DerivedT, typename GraphTraits>
+class PostOrderTraversalBase {
+  using NodeRef = typename GraphTraits::NodeRef;
+  using ChildItTy = typename GraphTraits::ChildIteratorType;
 
   /// Used to maintain the ordering.
   /// First element is basic block pointer, second is iterator for the next
@@ -155,13 +89,8 @@ public:
     bool operator==(const iterator &X) const { return V == X.V; }
     bool operator!=(const iterator &X) const { return !(*this == X); }
 
-    NodeRef operator*() const { return V; }
-
-    // This is a nonstandard operator-> that dereferences the pointer an extra
-    // time... so that you can actually call methods ON the BasicBlock, because
-    // the contained type is a pointer.  This allows BBIt->getTerminator() f.e.
-    //
-    NodeRef operator->() const { return **this; }
+    reference operator*() const { return V; }
+    pointer operator->() const { return &V; }
 
     iterator &operator++() { // Preincrement
       V = POT->next();
@@ -182,8 +111,8 @@ protected:
 
   void init(NodeRef Start) {
     if (derived()->insertEdge(std::optional<NodeRef>(), Start)) {
-      VisitStack.emplace_back(Start, GT::child_begin(Start),
-                              GT::child_end(Start));
+      VisitStack.emplace_back(Start, GraphTraits::child_begin(Start),
+                              GraphTraits::child_end(Start));
       traverseChild();
     }
   }
@@ -198,7 +127,8 @@ private:
       if (derived()->insertEdge(std::optional<NodeRef>(std::get<0>(Entry)),
                                 BB)) {
         // If the block is not visited...
-        VisitStack.emplace_back(BB, GT::child_begin(BB), GT::child_end(BB));
+        VisitStack.emplace_back(BB, GraphTraits::child_begin(BB),
+                                GraphTraits::child_end(BB));
       }
     }
   }
@@ -233,7 +163,7 @@ public:
 template <typename GraphT, typename SetType = po_detail::DefaultSet<GraphT>>
 class PostOrderTraversal
     : public PostOrderTraversalBase<PostOrderTraversal<GraphT, SetType>,
-                                    GraphT> {
+                                    GraphTraits<GraphT>> {
   using NodeRef = typename GraphTraits<GraphT>::NodeRef;
 
   SetType Visited;
@@ -241,10 +171,6 @@ class PostOrderTraversal
 public:
   PostOrderTraversal(const GraphT &G) {
     this->init(GraphTraits<GraphT>::getEntryNode(G));
-#if 0
-    if constexpr (GraphHasNodeNumbers<GraphT>)
-      Visited.reserve(GraphTraits<GraphT>::getMaxNumber(G));
-#endif
   }
 
   PostOrderTraversal(const GraphT &G, SetType &S) : Visited(S) {
@@ -253,101 +179,6 @@ public:
 
   bool insertEdge(std::optional<NodeRef> From, NodeRef To) {
     return Visited.insert(To).second;
-  }
-};
-
-template <class GraphT, class SetType = po_detail::DefaultSet<GraphT>,
-          bool ExtStorage = false, class GT = GraphTraits<GraphT>>
-class po_iterator : public po_iterator_storage<SetType, ExtStorage> {
-public:
-  // When External storage is used we are not multi-pass safe.
-  using iterator_category =
-      std::conditional_t<ExtStorage, std::input_iterator_tag,
-                         std::forward_iterator_tag>;
-  using value_type = typename GT::NodeRef;
-  using difference_type = std::ptrdiff_t;
-  using pointer = value_type *;
-  using reference = const value_type &;
-
-private:
-  using NodeRef = typename GT::NodeRef;
-  using ChildItTy = typename GT::ChildIteratorType;
-
-  /// Used to maintain the ordering.
-  /// First element is basic block pointer, second is iterator for the next
-  /// child to visit, third is the end iterator.
-  SmallVector<std::tuple<NodeRef, ChildItTy, ChildItTy>, 8> VisitStack;
-
-  po_iterator(NodeRef BB) {
-    this->insertEdge(std::optional<NodeRef>(), BB);
-    VisitStack.emplace_back(BB, GT::child_begin(BB), GT::child_end(BB));
-    traverseChild();
-  }
-
-  po_iterator() = default; // End is when stack is empty.
-
-  po_iterator(NodeRef BB, SetType &S)
-      : po_iterator_storage<SetType, ExtStorage>(S) {
-    if (this->insertEdge(std::optional<NodeRef>(), BB)) {
-      VisitStack.emplace_back(BB, GT::child_begin(BB), GT::child_end(BB));
-      traverseChild();
-    }
-  }
-
-  po_iterator(SetType &S)
-      : po_iterator_storage<SetType, ExtStorage>(S) {
-  } // End is when stack is empty.
-
-  void traverseChild() {
-    while (true) {
-      auto &Entry = VisitStack.back();
-      if (std::get<1>(Entry) == std::get<2>(Entry))
-        break;
-      NodeRef BB = *std::get<1>(Entry)++;
-      if (this->insertEdge(std::optional<NodeRef>(std::get<0>(Entry)), BB)) {
-        // If the block is not visited...
-        VisitStack.emplace_back(BB, GT::child_begin(BB), GT::child_end(BB));
-      }
-    }
-  }
-
-public:
-  // Provide static "constructors"...
-  static po_iterator begin(const GraphT &G) {
-    return po_iterator(GT::getEntryNode(G));
-  }
-  static po_iterator end(const GraphT &G) { return po_iterator(); }
-
-  static po_iterator begin(const GraphT &G, SetType &S) {
-    return po_iterator(GT::getEntryNode(G), S);
-  }
-  static po_iterator end(const GraphT &G, SetType &S) { return po_iterator(S); }
-
-  bool operator==(const po_iterator &x) const {
-    return VisitStack == x.VisitStack;
-  }
-  bool operator!=(const po_iterator &x) const { return !(*this == x); }
-
-  reference operator*() const { return std::get<0>(VisitStack.back()); }
-
-  // This is a nonstandard operator-> that dereferences the pointer an extra
-  // time... so that you can actually call methods ON the BasicBlock, because
-  // the contained type is a pointer.  This allows BBIt->getTerminator() f.e.
-  //
-  NodeRef operator->() const { return **this; }
-
-  po_iterator &operator++() { // Preincrement
-    this->finishPostorder(std::get<0>(VisitStack.back()));
-    VisitStack.pop_back();
-    if (!VisitStack.empty())
-      traverseChild();
-    return *this;
-  }
-
-  po_iterator operator++(int) { // Postincrement
-    po_iterator tmp = *this;
-    ++*this;
-    return tmp;
   }
 };
 
