@@ -28,6 +28,11 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=OUTPUT-PARENT-DIR-MISSING
 // OUTPUT-PARENT-DIR-MISSING: clang-ssaf-linker: error: failed to validate path '{{.*}}lu.json': Parent directory does not exist
 
+// Input is a directory, not a file.
+// RUN: not clang-ssaf-linker %S/Inputs -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INPUT-IS-DIR
+// INPUT-IS-DIR: clang-ssaf-linker: error: failed to validate path '{{.*}}Inputs': Path is not a file
+
 // Input summary does not exist.
 // RUN: not clang-ssaf-linker %S/Inputs/tu-nonexistent.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-INPUT-FILE

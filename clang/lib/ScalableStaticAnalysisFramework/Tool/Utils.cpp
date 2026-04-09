@@ -22,8 +22,7 @@
 #include <memory>
 #include <string>
 
-using namespace clang;
-using namespace ssaf;
+using namespace clang::ssaf;
 
 namespace fs = llvm::sys::fs;
 namespace path = llvm::sys::path;
@@ -103,50 +102,6 @@ SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
   return Result;
 }
 
-} // namespace
-
-llvm::StringRef ssaf::getToolName() { return ToolName; }
-
-[[noreturn]] void ssaf::fail(const char *Msg) {
-  llvm::WithColor::error(llvm::errs(), ToolName) << Msg << "\n";
-  llvm::sys::Process::Exit(1);
-}
-
-[[noreturn]] void ssaf::fail(llvm::Error Err) {
-  std::string Message = llvm::toString(std::move(Err));
-  ssaf::fail(Message.data());
-}
-
-void ssaf::loadPlugins(llvm::ArrayRef<std::string> Paths) {
-  for (const std::string &PluginPath : Paths) {
-    std::string ErrMsg;
-    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(PluginPath.c_str(),
-                                                          &ErrMsg)) {
-      fail(ErrorMessages::FailedToLoadPlugin, PluginPath, ErrMsg);
-    }
-  }
-}
-
-void ssaf::initTool(int argc, const char **argv, llvm::StringRef Version,
-                    llvm::cl::OptionCategory &Category,
-                    llvm::StringRef ToolHeading) {
-  // path::stem strips the .exe extension on Windows so ToolName is consistent.
-  ToolName = path::stem(argv[0]);
-
-  // Set tool version for the version printer.
-  ToolVersion = Version;
-
-  // Hide options unrelated to the tool from --help output.
-  llvm::cl::HideUnrelatedOptions(Category);
-
-  // Register a custom version printer for the --version flag.
-  llvm::cl::SetVersionPrinter(printVersion);
-
-  // Parse command-line arguments and exit with an error if they are invalid.
-  std::string Overview = (ToolHeading + "\n").str();
-  llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
-}
-
 SummaryFile fromPath(llvm::StringRef Path) {
   llvm::StringRef Extension = path::extension(Path);
   if (Extension.empty()) {
@@ -165,7 +120,52 @@ SummaryFile fromPath(llvm::StringRef Path) {
   return {Path.str(), Format};
 }
 
-SummaryFile SummaryFile::fromInputPath(llvm::StringRef Path) {
+} // namespace
+
+llvm::StringRef clang::ssaf::getToolName() { return ToolName; }
+
+[[noreturn]] void clang::ssaf::fail(const char *Msg) {
+  llvm::WithColor::error(llvm::errs(), ToolName) << Msg << "\n";
+  llvm::sys::Process::Exit(1);
+}
+
+[[noreturn]] void clang::ssaf::fail(llvm::Error Err) {
+  std::string Message = llvm::toString(std::move(Err));
+  clang::ssaf::fail(Message.data());
+}
+
+void clang::ssaf::loadPlugins(llvm::ArrayRef<std::string> Paths) {
+  for (const std::string &PluginPath : Paths) {
+    std::string ErrMsg;
+    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(PluginPath.c_str(),
+                                                          &ErrMsg)) {
+      fail(ErrorMessages::FailedToLoadPlugin, PluginPath, ErrMsg);
+    }
+  }
+}
+
+void clang::ssaf::initTool(int argc, const char **argv, llvm::StringRef Version,
+                           llvm::cl::OptionCategory &Category,
+                           llvm::StringRef ToolHeading) {
+  // path::stem strips the .exe extension on Windows so ToolName is consistent.
+  ToolName = path::stem(argv[0]);
+
+  // Set tool version for the version printer.
+  ToolVersion = Version;
+
+  // Hide options unrelated to the tool from --help output.
+  llvm::cl::HideUnrelatedOptions(Category);
+
+  // Register a custom version printer for the --version flag.
+  llvm::cl::SetVersionPrinter(printVersion);
+
+  // Parse command-line arguments and exit with an error if they are invalid.
+  std::string Overview = (ToolHeading + "\n").str();
+  llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
+}
+
+clang::ssaf::SummaryFile
+clang::ssaf::SummaryFile::fromInputPath(llvm::StringRef Path) {
   if (!fs::exists(Path)) {
     fail(ErrorMessages::CannotValidatePath, Path,
          ErrorMessages::PathDoesNotExist);
@@ -179,7 +179,8 @@ SummaryFile SummaryFile::fromInputPath(llvm::StringRef Path) {
   return fromPath(Path);
 }
 
-SummaryFile SummaryFile::fromOutputPath(llvm::StringRef Path) {
+clang::ssaf::SummaryFile
+clang::ssaf::SummaryFile::fromOutputPath(llvm::StringRef Path) {
   if (fs::exists(Path)) {
     fail(ErrorMessages::CannotValidatePath, Path,
          ErrorMessages::FileAlreadyExists);
