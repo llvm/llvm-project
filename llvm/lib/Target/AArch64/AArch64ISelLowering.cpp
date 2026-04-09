@@ -1922,6 +1922,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // NEON but are available in SVE.
     for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
                     MVT::v4i32, MVT::v1i64, MVT::v2i64}) {
+      setOperationAction(ISD::MASKED_SDIV, VT, Custom);
+      setOperationAction(ISD::MASKED_UDIV, VT, Custom);
       setOperationAction(ISD::SDIV, VT, Custom);
       setOperationAction(ISD::UDIV, VT, Custom);
       setOperationAction(ISD::MULHS, VT, Custom);
@@ -16792,7 +16794,7 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   assert((Opc == ISD::SDIV || Opc == ISD::UDIV) && "Expected a DIV opcode.");
   assert(VT.isScalableVector() && "Expected a scalable vector.");
-  bool Signed = Op.getOpcode() == ISD::SDIV;
+  bool Signed = Opc == ISD::SDIV;
 
   bool Negated;
   uint64_t SplatVal;
