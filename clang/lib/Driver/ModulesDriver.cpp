@@ -1223,7 +1223,7 @@ static SmallVector<JobNode *> createNodesForUnusedStdlibModuleJobs(
 }
 
 /// Creates a job for the Clang module described by \p MD.
-static std::unique_ptr<CC1Command>
+static std::unique_ptr<Command>
 createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
                                const deps::ModuleDeps &MD) {
   DerivedArgList &Args = C.getArgs();
@@ -1243,11 +1243,11 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   for (const auto &Arg : BuildArgs)
     JobArgs.push_back(TCArgs.MakeArgString(Arg));
 
-  return std::make_unique<CC1Command>(
-      *PA, ImportingJob.getCreator(), ResponseFileSupport::AtFileUTF8(),
-      C.getDriver().getClangProgramPath(), JobArgs,
-      /*Inputs=*/ArrayRef<InputInfo>{},
-      /*Outputs=*/ArrayRef<InputInfo>{});
+  return std::make_unique<Command>(*PA, ImportingJob.getCreator(),
+                                   ResponseFileSupport::AtFileUTF8(),
+                                   C.getDriver().getClangProgramPath(), JobArgs,
+                                   /*Inputs=*/ArrayRef<InputInfo>{},
+                                   /*Outputs=*/ArrayRef<InputInfo>{});
 }
 
 /// Creates a \c ClangModuleJobNode with associated job for each unique Clang

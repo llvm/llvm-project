@@ -27,10 +27,10 @@ entry:
   %cmp.4 = icmp eq i32 %size, 0, !dbg !10
   br i1 %cmp.4, label %for.end, label %for.body.preheader, !dbg !11
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body, !dbg !12
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv, !dbg !12
   %0 = load ptr, ptr %arrayidx, align 8, !dbg !12
@@ -42,10 +42,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %size, !dbg !11
   br i1 %exitcond, label %for.end.loopexit, label %for.body, !dbg !11, !llvm.loop !16
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end, !dbg !19
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void, !dbg !19
 }
 
@@ -54,7 +54,7 @@ entry:
   %cmp.4 = icmp eq i32 %size, 0, !dbg !20
   br i1 %cmp.4, label %for.end, label %for.body, !dbg !21
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv, !dbg !22
   %0 = load ptr, ptr %arrayidx, align 8, !dbg !22
@@ -66,7 +66,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %size, !dbg !21
   br i1 %exitcond, label %for.end, label %for.body, !dbg !21, !llvm.loop !26
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void, !dbg !27
 }
 

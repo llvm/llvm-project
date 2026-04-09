@@ -5,53 +5,37 @@ declare double @cbrt(double)
 declare float @cbrtf(float)
 
 declare double @pow(double, double)
-declare double @llvm.pow.f64(double, double)
 declare float @powf(float, float)
-declare float @llvm.pow.f32(float, float)
 
 declare double @sqrt(double)
 declare float @sqrtf(float)
 
 declare double @exp(double)
-declare double @llvm.exp.f64(double)
 declare float @expf(float)
-declare float @llvm.exp.f32(float)
 
 declare double @exp2(double)
-declare double @llvm.exp2.f64(double)
 declare float @exp2f(float)
-declare float @llvm.exp2.f32(float)
 
 declare double @expm1(double)
 declare float @expm1f(float)
 
 declare double @log(double)
-declare double @llvm.log.f64(double)
 declare float @logf(float)
-declare float @llvm.log.f32(float)
 
 declare double @log1p(double)
 declare float @log1pf(float)
 
 declare double @log10(double)
-declare double @llvm.log10.f64(double)
 declare float @log10f(float)
-declare float @llvm.log10.f32(float)
 
 declare double @log2(double)
-declare double @llvm.log2.f64(double)
 declare float @log2f(float)
-declare float @llvm.log2.f32(float)
 
 declare double @sin(double)
-declare double @llvm.sin.f64(double)
 declare float @sinf(float)
-declare float @llvm.sin.f32(float)
 
 declare double @cos(double)
-declare double @llvm.cos.f64(double)
 declare float @cosf(float)
-declare float @llvm.cos.f32(float)
 
 declare double @tan(double)
 declare float @tanf(float)
