@@ -102,7 +102,7 @@ SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
   return Result;
 }
 
-SummaryFile fromPath(llvm::StringRef Path) {
+FormatFile fromPath(llvm::StringRef Path) {
   llvm::StringRef Extension = path::extension(Path);
   if (Extension.empty()) {
     fail(ErrorMessages::CannotValidatePath, Path,
@@ -164,8 +164,8 @@ void clang::ssaf::initTool(int argc, const char **argv, llvm::StringRef Version,
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
 }
 
-clang::ssaf::SummaryFile
-clang::ssaf::SummaryFile::fromInputPath(llvm::StringRef Path) {
+clang::ssaf::FormatFile
+clang::ssaf::FormatFile::fromInputPath(llvm::StringRef Path) {
   if (!fs::exists(Path)) {
     fail(ErrorMessages::CannotValidatePath, Path,
          ErrorMessages::PathDoesNotExist);
@@ -179,8 +179,8 @@ clang::ssaf::SummaryFile::fromInputPath(llvm::StringRef Path) {
   return fromPath(Path);
 }
 
-clang::ssaf::SummaryFile
-clang::ssaf::SummaryFile::fromOutputPath(llvm::StringRef Path) {
+clang::ssaf::FormatFile
+clang::ssaf::FormatFile::fromOutputPath(llvm::StringRef Path) {
   if (fs::exists(Path)) {
     fail(ErrorMessages::CannotValidatePath, Path,
          ErrorMessages::FileAlreadyExists);

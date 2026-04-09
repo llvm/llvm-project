@@ -85,8 +85,8 @@ void info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
 //===----------------------------------------------------------------------===//
 
 struct LinkerInput {
-  std::vector<SummaryFile> InputFiles;
-  SummaryFile OutputFile;
+  std::vector<FormatFile> InputFiles;
+  FormatFile OutputFile;
   std::string LinkUnitName;
 };
 
@@ -101,7 +101,7 @@ LinkerInput validate(llvm::TimerGroup &TG) {
   {
     llvm::TimeRegion _(Time ? &TValidate : nullptr);
 
-    LI.OutputFile = SummaryFile::fromOutputPath(OutputPath);
+    LI.OutputFile = FormatFile::fromOutputPath(OutputPath);
     LI.LinkUnitName = path::stem(LI.OutputFile.Path).str();
   }
 
@@ -110,7 +110,7 @@ LinkerInput validate(llvm::TimerGroup &TG) {
   {
     llvm::TimeRegion _(Time ? &TValidate : nullptr);
     for (const auto &InputPath : InputPaths) {
-      LI.InputFiles.push_back(SummaryFile::fromInputPath(InputPath));
+      LI.InputFiles.push_back(FormatFile::fromInputPath(InputPath));
     }
   }
 

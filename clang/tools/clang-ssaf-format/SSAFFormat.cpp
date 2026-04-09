@@ -213,8 +213,8 @@ void listFormats() {
 //===----------------------------------------------------------------------===//
 
 struct FormatInput {
-  SummaryFile InputFile;
-  std::optional<SummaryFile> OutputFile;
+  FormatFile InputFile;
+  std::optional<FormatFile> OutputFile;
 };
 
 FormatInput validateInput() {
@@ -234,12 +234,12 @@ FormatInput validateInput() {
       fail("no input file specified");
     }
 
-    FI.InputFile = SummaryFile::fromInputPath(InputPath);
+    FI.InputFile = FormatFile::fromInputPath(InputPath);
   }
 
   // Validate the output path.
   if (!OutputPath.empty()) {
-    FI.OutputFile = SummaryFile::fromOutputPath(OutputPath);
+    FI.OutputFile = FormatFile::fromOutputPath(OutputPath);
   }
 
   return FI;
