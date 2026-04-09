@@ -50,7 +50,7 @@ static llvm::Expected<bool> *g_fcxx_modules_workaround [[maybe_unused]];
 #if LLDB_ENABLE_PYTHON_LIMITED_API
 // If defined, LLDB will be ABI-compatible with all Python 3 releases from the
 // specified one onward, and can use Limited API introduced up to that version.
-#define Py_LIMITED_API LLDB_MINIMUM_PYTHON_VERSION
+#define Py_LIMITED_API LLDB_MINIMUM_PYTHON_VERSION_HEX
 #endif
 
 // Include python for non windows machines
