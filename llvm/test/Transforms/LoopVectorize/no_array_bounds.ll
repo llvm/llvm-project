@@ -21,16 +21,16 @@ entry:
   %cmp25 = icmp sgt i32 %number, 0, !dbg !10
   br i1 %cmp25, label %for.body.preheader, label %for.end15, !dbg !10, !llvm.loop !12
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body, !dbg !14
 
-for.cond5.preheader:                              ; preds = %for.body
+for.cond5.preheader:
   br i1 %cmp25, label %for.body7.preheader, label %for.end15, !dbg !16, !llvm.loop !18
 
-for.body7.preheader:                              ; preds = %for.cond5.preheader
+for.body7.preheader:
   br label %for.body7, !dbg !20
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv27 = phi i64 [ %indvars.iv.next28, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv27, !dbg !14
   %0 = load i32, ptr %arrayidx, align 4, !dbg !14, !tbaa !22
@@ -44,7 +44,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond30 = icmp eq i32 %lftr.wideiv29, %number, !dbg !10
   br i1 %exitcond30, label %for.cond5.preheader, label %for.body, !dbg !10, !llvm.loop !12
 
-for.body7:                                        ; preds = %for.body7.preheader, %for.body7
+for.body7:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body7 ], [ 0, %for.body7.preheader ]
   %arrayidx9 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !20
   %2 = load i32, ptr %arrayidx9, align 4, !dbg !20, !tbaa !22
@@ -58,10 +58,10 @@ for.body7:                                        ; preds = %for.body7.preheader
   %exitcond = icmp eq i32 %lftr.wideiv, %number, !dbg !16
   br i1 %exitcond, label %for.end15.loopexit, label %for.body7, !dbg !16, !llvm.loop !18
 
-for.end15.loopexit:                               ; preds = %for.body7
+for.end15.loopexit:
   br label %for.end15
 
-for.end15:                                        ; preds = %for.end15.loopexit, %entry, %for.cond5.preheader
+for.end15:
   ret void, !dbg !26
 }
 

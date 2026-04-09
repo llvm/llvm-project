@@ -427,9 +427,6 @@ inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
 /// Get the rank from a !fir.box type.
 unsigned getBoxRank(mlir::Type boxTy);
 
-/// Return the inner type of the given type.
-mlir::Type unwrapInnerType(mlir::Type ty);
-
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
 

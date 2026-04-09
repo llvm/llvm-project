@@ -47,7 +47,6 @@ exit:
   ret void
 }
 
-declare double @llvm.fabs.f64(double) #0
 
 define void @loop_dependent_cond(ptr %src, ptr noalias %dst, i64 %N) {
 ; DEFAULT-LABEL: define void @loop_dependent_cond(
@@ -1166,7 +1165,7 @@ define double @test_cond_intrinsics(ptr %A, i1 %c) {
 entry:
   br label %loop.header
 
-loop.header:                                 ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 %c, label %then, label %loop.latch
 
@@ -1305,7 +1304,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 entry:
   br label %loop.header
 
-loop.header:                                    ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %gep.A = getelementptr i8, ptr %A, i64 %iv
   %l.1 = load i8, ptr %gep.A, align 1
@@ -1407,8 +1406,6 @@ exit:
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare double @llvm.pow.f64(double, double)
 
 attributes #1 = { "target-cpu"="neoverse-512tvb" }
 attributes #2 = { vscale_range(2,2) "target-cpu"="neoverse-512tvb" }

@@ -980,14 +980,15 @@ public:
     assert(
         TheLoop->isInnermost() &&
         "cost-model should not be used for outer loops (in VPlan-native path)");
-    // Pseudo probe needs to be duplicated for each unrolled iteration and
-    // vector lane so that profiled loop trip count can be accurately
-    // accumulated instead of being under counted.
-    if (isa<PseudoProbeInst>(I))
-      return false;
 
+    // If VF is scalar, then all instructions are trivially uniform.
     if (VF.isScalar())
       return true;
+
+    // Pseudo probes must be duplicated per vector lane so that the
+    // profiled loop trip count is not undercounted.
+    if (isa<PseudoProbeInst>(I))
+      return false;
 
     auto UniformsPerVF = Uniforms.find(VF);
     assert(UniformsPerVF != Uniforms.end() &&
@@ -3796,12 +3797,10 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     MaxVF =
         clampVFByMaxTripCount(MaxVF, MaxTripCount, UserIC, FoldTailByMasking);
 
-    if (MaxVectorElementCount != MaxVF) {
-      // Invalidate any widening decisions we might have made, in case the loop
-      // requires prediction (decided later), but we have already made some
-      // load/store widening decisions.
-      invalidateCostModelingDecisions();
-    }
+    assert((MaxVectorElementCount == MaxVF ||
+            (WideningDecisions.empty() && CallWideningDecisions.empty() &&
+             Uniforms.empty() && Scalars.empty())) &&
+           "No decisions should have been taken at this point");
   }
   return MaxVF;
 }
@@ -4376,6 +4375,16 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
   }
 
   if (EpilogueVectorizationForceVF > 1) {
+    if (EpilogueVectorizationForceVF >=
+        IC * estimateElementCount(MainLoopVF, CM.getVScaleForTuning())) {
+      // Note that the main loop leaves IC * MainLoopVF iterations iff a scalar
+      // epilogue is required, but then the epilogue loop also requires a scalar
+      // epilogue.
+      LLVM_DEBUG(dbgs() << "LEV: Forced epilogue VF results in dead epilogue "
+                           "vector loop, skipping vectorizing epilogue.\n");
+      return nullptr;
+    }
+
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
     ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
     if (hasPlanWithVF(ForcedEC)) {
@@ -6793,6 +6802,14 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       CM.collectInLoopReductions();
       if (CM.selectUserVectorizationFactor(UserVF)) {
         LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
+        ElementCount EpilogueUserVF =
+            ElementCount::getFixed(EpilogueVectorizationForceVF);
+        if (EpilogueUserVF.isVector() &&
+            ElementCount::isKnownLT(EpilogueUserVF, UserVF) &&
+            CM.selectUserVectorizationFactor(EpilogueUserVF)) {
+          // Build a separate plan for the forced epilogue VF.
+          buildVPlansWithVPRecipes(EpilogueUserVF, EpilogueUserVF);
+        }
         buildVPlansWithVPRecipes(UserVF, UserVF);
         LLVM_DEBUG(printPlans(dbgs()));
         return;
@@ -7180,8 +7197,23 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor::Disabled(), nullptr};
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
-  if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return {{*FirstPlan.vectorFactors().begin(), 0, 0}, &FirstPlan};
+  ElementCount UserVF = Hints.getWidth();
+  if (hasPlanWithVF(UserVF)) {
+    if (VPlans.size() == 1) {
+      assert(FirstPlan.getSingleVF() == UserVF &&
+             "UserVF must match single VF");
+      return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
+    }
+    if (EpilogueVectorizationForceVF > 1) {
+      assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
+      assert(VPlans[0]->getSingleVF() ==
+                 ElementCount::getFixed(EpilogueVectorizationForceVF) &&
+             "expected first plan to be for the forced epilogue VF");
+      assert(VPlans[1]->getSingleVF() == UserVF &&
+             "expected second plan to be for the forced UserVF");
+      return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
+    }
+  }
 
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
                     << (CM.CostKind == TTI::TCK_RecipThroughput
@@ -8369,9 +8401,13 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
                             ? AnyOfSelect->getOperand(2)
                             : AnyOfSelect->getOperand(1);
-      FinalReductionResult =
-          Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
-                               {Start, NewVal, NewExitingVPV}, ExitDL);
+      VPIRFlags OrFlags(RecurKind::Or, /*IsOrdered=*/false,
+                        /*IsInLoop=*/false, FastMathFlags());
+      auto *OrReduce =
+          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
+                               {NewExitingVPV}, OrFlags, ExitDL);
+      FinalReductionResult = Builder.createNaryOp(
+          VPInstruction::ComputeAnyOfResult, {Start, NewVal, OrReduce}, ExitDL);
     } else {
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlags());
@@ -8417,11 +8453,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
-      // Skip FindIV reduction chain recipes (ComputeReductionResult, icmp).
-      if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
-          match(U, m_CombineOr(
-                       m_VPInstruction<VPInstruction::ComputeReductionResult>(),
-                       m_VPInstruction<Instruction::ICmp>())))
+      // Skip ComputeReductionResult and FindIV reductions when they are not the
+      // final result.
+      if (match(U, m_VPInstruction<VPInstruction::ComputeReductionResult>()) ||
+          (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
+           match(U, m_VPInstruction<Instruction::ICmp>())))
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
 
@@ -8996,12 +9032,21 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
       // Find the reduction result by searching users of the phi or its backedge
       // value.
+      using namespace VPlanPatternMatch;
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
         if (!VPI)
           return false;
-        return VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-               VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+        if (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult)
+          return true;
+        // ComputeReductionResult is also considered, unless it is used for the
+        // Or reduction in AnyOf reductions and feeds a ComputeAnyOfReduction,
+        // in which case the latter will be considered instead.
+        if (VPI->getOpcode() != VPInstruction::ComputeReductionResult)
+          return false;
+        return !any_of(VPI->users(), [](VPUser *U) {
+          return match(U, m_VPInstruction<VPInstruction::ComputeAnyOfResult>());
+        });
       };
       auto *RdxResult = cast<VPInstruction>(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
@@ -9637,7 +9682,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (EpiPlan) {
     VPlan &BestEpiPlan = *EpiPlan;
     VPlan &BestMainPlan = BestPlan;
-    ElementCount EpilogueVF = *BestEpiPlan.vectorFactors().begin();
+    ElementCount EpilogueVF = BestEpiPlan.getSingleVF();
 
     // The first pass vectorizes the main loop and creates a scalar epilogue
     // to be vectorized by executing the plan (potentially with a different
