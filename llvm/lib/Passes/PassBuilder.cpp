@@ -1967,11 +1967,8 @@ PassBuilder::parsePipelineText(StringRef Text) {
 
 static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
                                          OptimizationLevel L) {
-  // This is consistent with old pass manager invoked via opt, but
-  // inconsistent with clang. Clang doesn't enable loop vectorization
-  // but does enable slp vectorization at Oz.
-  PTO.LoopVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-  PTO.SLPVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+  PTO.LoopVectorization = L.getSpeedupLevel() > 1;
+  PTO.SLPVectorization = L.getSpeedupLevel() > 1;
 }
 
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,

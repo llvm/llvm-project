@@ -117,10 +117,10 @@ entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !42
   br i1 %cmp28, label %for.body, label %for.cond.cleanup, !dbg !43
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void, !dbg !44
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !45
   %0 = load i8, ptr %arrayidx, align 1, !dbg !45, !tbaa !13

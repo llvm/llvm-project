@@ -57,14 +57,14 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds half, ptr %s, i64 %indvars.iv
   %0 = load half, ptr %arrayidx, align 2

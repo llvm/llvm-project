@@ -1753,8 +1753,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
       if (!typeDesc) {
         if (useInputType) {
-          mlir::Type innerType = fir::unwrapInnerType(inputType);
-          if (innerType && mlir::isa<fir::RecordType>(innerType)) {
+          mlir::Type innerType = fir::getFortranElementType(inputType);
+          if (mlir::isa<fir::RecordType>(innerType)) {
             auto recTy = mlir::dyn_cast<fir::RecordType>(innerType);
             typeDesc =
                 getTypeDescriptor(mod, rewriter, loc, recTy, this->options);

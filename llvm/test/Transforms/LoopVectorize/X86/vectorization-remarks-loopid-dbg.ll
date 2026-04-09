@@ -16,7 +16,7 @@ entry:
   store i32 0, ptr %diff, align 4, !tbaa !11
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %add8 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds [16 x i8], ptr %cb, i64 0, i64 %indvars.iv
@@ -31,7 +31,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 16
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !25
 
-for.end:                                          ; preds = %for.body
+for.end:
   store i32 %add, ptr %diff, align 4, !tbaa !11
   call void @ibar(ptr %diff) #2
   ret i32 0
