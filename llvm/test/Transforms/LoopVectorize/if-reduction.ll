@@ -15,9 +15,9 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ;   return sum;
 ; }
 
-define float @fcmp_0_fadd_select1(ptr noalias %x, i32 %N) nounwind readonly {
+define float @fcmp_0_fadd_select1(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define float @fcmp_0_fadd_select1(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -103,9 +103,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define double @fcmp_0_fadd_select2(ptr noalias %x, i32 %N) nounwind readonly {
+define double @fcmp_0_fadd_select2(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define double @fcmp_0_fadd_select2(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -192,9 +192,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_val_fadd_select1(ptr noalias %x, float %y, i32 %N) nounwind readonly {
+define float @fcmp_val_fadd_select1(ptr noalias %x, float %y, i32 %N) {
 ; CHECK-LABEL: define float @fcmp_val_fadd_select1(
-; CHECK-SAME: ptr noalias [[X:%.*]], float [[Y:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], float [[Y:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -283,9 +283,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define double @fcmp_val_fadd_select2(ptr noalias %x, double %y, i32 %N) nounwind readonly {
+define double @fcmp_val_fadd_select2(ptr noalias %x, double %y, i32 %N) {
 ; CHECK-LABEL: define double @fcmp_val_fadd_select2(
-; CHECK-SAME: ptr noalias [[X:%.*]], double [[Y:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], double [[Y:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -375,9 +375,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_array_elm_fadd_select1(ptr noalias %x, ptr noalias %y, i32 %N) nounwind readonly {
+define float @fcmp_array_elm_fadd_select1(ptr noalias %x, ptr noalias %y, i32 %N) {
 ; CHECK-LABEL: define float @fcmp_array_elm_fadd_select1(
-; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -471,9 +471,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define double @fcmp_array_elm_fadd_select2(ptr noalias %x, ptr noalias %y, i32 %N) nounwind readonly {
+define double @fcmp_array_elm_fadd_select2(ptr noalias %x, ptr noalias %y, i32 %N) {
 ; CHECK-LABEL: define double @fcmp_array_elm_fadd_select2(
-; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -565,9 +565,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_0_fsub_select1(ptr noalias %x, i32 %N) nounwind readonly {
+define float @fcmp_0_fsub_select1(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define float @fcmp_0_fsub_select1(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -651,9 +651,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_0_fsub_select1_novectorize(ptr noalias %x, i32 %N) nounwind readonly {
+define float @fcmp_0_fsub_select1_novectorize(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define float @fcmp_0_fsub_select1_novectorize(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -715,9 +715,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define double @fcmp_0_fsub_select2(ptr noalias %x, i32 %N) nounwind readonly {
+define double @fcmp_0_fsub_select2(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define double @fcmp_0_fsub_select2(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -802,9 +802,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define double @fcmp_0_fsub_select2_notvectorize(ptr noalias %x, i32 %N) nounwind readonly {
+define double @fcmp_0_fsub_select2_notvectorize(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define double @fcmp_0_fsub_select2_notvectorize(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -866,9 +866,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_0_fmult_select1(ptr noalias %x, i32 %N) nounwind readonly {
+define float @fcmp_0_fmult_select1(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define float @fcmp_0_fmult_select1(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -953,9 +953,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_0_fmult_select1_notvectorize(ptr noalias %x, i32 %N) nounwind readonly {
+define float @fcmp_0_fmult_select1_notvectorize(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define float @fcmp_0_fmult_select1_notvectorize(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -1017,9 +1017,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define double @fcmp_0_fmult_select2(ptr noalias %x, i32 %N) nounwind readonly {
+define double @fcmp_0_fmult_select2(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define double @fcmp_0_fmult_select2(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -1104,9 +1104,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define double @fcmp_0_fmult_select2_notvectorize(ptr noalias %x, i32 %N) nounwind readonly {
+define double @fcmp_0_fmult_select2_notvectorize(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define double @fcmp_0_fmult_select2_notvectorize(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -1173,9 +1173,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_multi(ptr nocapture readonly %a, i32 %n) nounwind readonly {
+define float @fcmp_multi(ptr nocapture %a, i32 %n) {
 ; CHECK-LABEL: define float @fcmp_multi(
-; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP10]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1295,9 +1295,9 @@ for.end:                                          ; preds = %for.inc, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_fadd_fsub(ptr nocapture readonly %a, i32 %n) nounwind readonly {
+define float @fcmp_fadd_fsub(ptr nocapture %a, i32 %n) {
 ; CHECK-LABEL: define float @fcmp_fadd_fsub(
-; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1414,9 +1414,9 @@ for.end:                                          ; preds = %for.inc, %entry
 ;   return sum;
 ; }
 
-define float @fcmp_fadd_fmul(ptr nocapture readonly %a, i32 %n) nounwind readonly {
+define float @fcmp_fadd_fmul(ptr nocapture %a, i32 %n) {
 ; CHECK-LABEL: define float @fcmp_fadd_fmul(
-; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1503,9 +1503,9 @@ for.end:                                          ; preds = %for.inc, %entry
 ;     return sum;
 ; }
 
-define float @fcmp_store_back(ptr nocapture %a, i32 %LEN) nounwind readonly {
+define float @fcmp_store_back(ptr nocapture %a, i32 %LEN) {
 ; CHECK-LABEL: define float @fcmp_store_back(
-; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1553,9 +1553,9 @@ for.end:                                          ; preds = %for.body, %entry
   ret float %sum.0.lcssa
 }
 
-define i64 @fcmp_0_add_select2(ptr noalias %x, i64 %N) nounwind readonly {
+define i64 @fcmp_0_add_select2(ptr noalias %x, i64 %N) {
 ; CHECK-LABEL: define i64 @fcmp_0_add_select2(
-; CHECK-SAME: ptr noalias [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -1628,9 +1628,9 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; FIXME: %indvars.iv.next is poison on first iteration due to sub nuw 0, 1.
-define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) nounwind readonly {
+define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define i32 @fcmp_0_sub_select1(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
@@ -1706,9 +1706,9 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %1
 }
 
-define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) nounwind readonly {
+define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) {
 ; CHECK-LABEL: define i32 @fcmp_0_mult_select1(
-; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]

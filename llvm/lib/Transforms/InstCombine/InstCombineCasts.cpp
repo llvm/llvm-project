@@ -1171,6 +1171,29 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
+  // trunc (select(icmp_ult(A, DestTy_umax+1), A, sext(icmp_sgt(A, 0)))) -->
+  // trunc (smin(smax(0, A), DestTy_umax))
+  if (SrcTy->isIntegerTy() && isPowerOf2_64(SrcTy->getPrimitiveSizeInBits()) &&
+      isPowerOf2_64(DestTy->getPrimitiveSizeInBits()) &&
+      match(Src, m_OneUse(m_Select(
+                     m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(A),
+                                             m_Constant(C))),
+                     m_Deferred(A),
+                     m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
+                         ICmpInst::ICMP_SGT, m_Deferred(A), m_Zero())))))))) {
+    APInt UpperBound = C->getUniqueInteger();
+    APInt TruncatedMax = APInt::getAllOnes(DestTy->getIntegerBitWidth());
+    TruncatedMax = TruncatedMax.zext(UpperBound.getBitWidth());
+    if (!UpperBound.isZero() && UpperBound - 1 == TruncatedMax) {
+      Value *SMax = Builder.CreateIntrinsic(Intrinsic::smax, {SrcTy},
+                                            {ConstantInt::get(SrcTy, 0), A});
+      Value *SMin = Builder.CreateIntrinsic(
+          Intrinsic::smin, {SrcTy},
+          {SMax, ConstantInt::get(SrcTy, TruncatedMax)});
+      return new TruncInst(SMin, DestTy);
+    }
+  }
+
   if (Instruction *I = foldVecTruncToExtElt(Trunc, *this))
     return I;
 

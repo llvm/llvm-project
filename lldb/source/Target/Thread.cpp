@@ -1538,15 +1538,16 @@ StackFrameListSP Thread::GetStackFrameList() {
           thread_descriptors.push_back(&descriptor);
       }
 
-      // Sort by priority (lower number = higher priority).
-      llvm::sort(thread_descriptors,
-                 [](const ScriptedFrameProviderDescriptor *a,
-                    const ScriptedFrameProviderDescriptor *b) {
-                   // nullopt (no priority) sorts last (UINT32_MAX).
-                   uint32_t priority_a = a->GetPriority().value_or(UINT32_MAX);
-                   uint32_t priority_b = b->GetPriority().value_or(UINT32_MAX);
-                   return priority_a < priority_b;
-                 });
+      // Stable sort by priority so equal-priority providers keep
+      // their registration (insertion) order.
+      llvm::stable_sort(
+          thread_descriptors, [](const ScriptedFrameProviderDescriptor *a,
+                                 const ScriptedFrameProviderDescriptor *b) {
+            // nullopt (no priority) sorts last (UINT32_MAX).
+            uint32_t priority_a = a->GetPriority().value_or(UINT32_MAX);
+            uint32_t priority_b = b->GetPriority().value_or(UINT32_MAX);
+            return priority_a < priority_b;
+          });
 
       // Load ALL matching providers in priority order.
       for (const auto *descriptor : thread_descriptors) {
@@ -1603,8 +1604,14 @@ Thread::GetFrameListByIdentifier(lldb::frame_list_id_t id) {
 
   auto it = m_frame_lists_by_id.find(id);
   if (it != m_frame_lists_by_id.end()) {
-    return it->second.lock();
+    auto sp = it->second.lock();
+    LLDB_LOG(GetLog(LLDBLog::Thread),
+             "GetFrameListByIdentifier({0}): found={1}, locked={2}", id, true,
+             sp != nullptr);
+    return sp;
   }
+  LLDB_LOG(GetLog(LLDBLog::Thread), "GetFrameListByIdentifier({0}): found={1}",
+           id, false);
   return nullptr;
 }
 
@@ -1624,12 +1631,19 @@ llvm::Error Thread::LoadScriptedFrameProvider(
     auto [last_desc, last_id] = m_provider_chain_ids.back();
     auto it = m_frame_providers.find(last_id);
     if (it == m_frame_providers.end())
-      return llvm::createStringError("Previous frame provider not found");
+      return llvm::createStringError("previous frame provider not found");
     SyntheticFrameProviderSP last_provider = it->second;
     StackFrameListSP last_provider_frames = last_provider->GetInputFrames();
     input_frames = std::make_shared<SyntheticStackFrameList>(
         *this, last_provider_frames, m_prev_frames_sp, true, last_provider,
         last_id);
+    // Register this intermediate frame list so 'bt --provider <id>' can
+    // show each provider's output independently.
+    m_frame_lists_by_id.insert({last_id, input_frames});
+    LLDB_LOG(GetLog(LLDBLog::Thread),
+             "Registered intermediate frame list for provider id={0}, "
+             "use_count={1}",
+             last_id, input_frames.use_count());
   }
 
   // Protect provider construction (__init__) from re-entrancy. If the
@@ -1644,12 +1658,8 @@ llvm::Error Thread::LoadScriptedFrameProvider(
   if (!provider_or_err)
     return provider_or_err.takeError();
 
-  if (m_next_provider_id == std::numeric_limits<lldb::frame_list_id_t>::max())
-    m_next_provider_id = 1;
-  else
-    m_next_provider_id++;
+  lldb::frame_list_id_t provider_id = descriptor.GetID();
 
-  lldb::frame_list_id_t provider_id = m_next_provider_id;
   m_frame_providers.insert({provider_id, *provider_or_err});
 
   // Add to the provider chain.
@@ -1682,7 +1692,7 @@ void Thread::ClearScriptedFrameProvider() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_frame_providers.clear();
   m_provider_chain_ids.clear();
-  m_next_provider_id = 1; // Reset counter.
+  m_frame_lists_by_id.clear();
   m_unwinder_frames_sp.reset();
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
@@ -1718,9 +1728,9 @@ void Thread::ClearStackFrames() {
   m_curr_frames_sp.reset();
   m_unwinder_frames_sp.reset();
 
-  // Clear the provider instances, but keep the chain configuration
-  // (m_provider_chain_ids and m_next_provider_id) so provider IDs
-  // remain stable across ClearStackFrames() calls.
+  // Clear the provider instances and reset the ID counter, but keep the
+  // chain configuration (m_provider_chain_ids) so providers are re-loaded
+  // with consistent IDs on the next GetStackFrameList() call.
   m_frame_providers.clear();
   m_frame_lists_by_id.clear();
   m_extended_info.reset();
@@ -1865,19 +1875,17 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   // Check if we got anything.
   if (candidates.empty()) {
     if (outside_function.empty()) {
-      return Status::FromErrorStringWithFormat(
-          "Cannot locate an address for %s:%i.", file.GetFilename().AsCString(),
-          line);
+      return Status::FromErrorStringWithFormatv(
+          "Cannot locate an address for {0}:{1}.", file.GetFilename(), line);
     } else if (outside_function.size() == 1) {
-      return Status::FromErrorStringWithFormat(
-          "%s:%i is outside the current function.",
-          file.GetFilename().AsCString(), line);
+      return Status::FromErrorStringWithFormatv(
+          "{0}:{1} is outside the current function.", file.GetFilename(), line);
     } else {
       StreamString sstr;
       DumpAddressList(sstr, outside_function, target);
-      return Status::FromErrorStringWithFormat(
-          "%s:%i has multiple candidate locations:\n%s",
-          file.GetFilename().AsCString(), line, sstr.GetData());
+      return Status::FromErrorStringWithFormatv(
+          "{0}:{1} has multiple candidate locations:\n{2}", file.GetFilename(),
+          line, sstr.GetData());
     }
   }
 
@@ -1885,9 +1893,10 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   Address dest = candidates[0];
   if (warnings && candidates.size() > 1) {
     StreamString sstr;
-    sstr.Printf("%s:%i appears multiple times in this function, selecting the "
-                "first location:\n",
-                file.GetFilename().AsCString(), line);
+    sstr.Format(
+        "{0}:{1} appears multiple times in this function, selecting the "
+        "first location:\n",
+        file.GetFilename(), line);
     DumpAddressList(sstr, candidates, target);
     *warnings = std::string(sstr.GetString());
   }
