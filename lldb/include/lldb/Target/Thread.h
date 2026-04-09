@@ -715,6 +715,9 @@ public:
   /// \param[in] step_over
   ///    \b true if we step over calls to functions, false if we step in.
   ///
+  /// \param[in] direction
+  ///    The direction in which a step will be taken.
+  ///
   /// \param[in] abort_other_plans
   ///    \b true if we discard the currently queued plans and replace them with
   ///    this one.
