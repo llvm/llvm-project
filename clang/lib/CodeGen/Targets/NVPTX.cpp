@@ -85,6 +85,7 @@ public:
   unsigned getDeviceKernelCallingConv() const override {
     return llvm::CallingConv::PTX_Kernel;
   }
+  bool supportsKernelLowering() const override { return true; }
 
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.

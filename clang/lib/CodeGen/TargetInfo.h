@@ -303,6 +303,12 @@ public:
   /// Get LLVM calling convention for device kernels.
   virtual unsigned getDeviceKernelCallingConv() const;
 
+  /// Whether this implementation of TargetInfo has customized handling for
+  /// lowering kernels for languages like OpenCL.  For targets which don't,
+  /// use a target-independent implementation which generates a simplified
+  /// signature that a runtime can easily call.
+  virtual bool supportsKernelLowering() const;
+
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.
   /// \param QT is the clang QualType of the null pointer.
