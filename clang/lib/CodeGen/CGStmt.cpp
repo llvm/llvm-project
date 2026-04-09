@@ -1647,6 +1647,9 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     switch (getEvaluationKind(RV->getType())) {
     case TEK_Scalar: {
       llvm::Value *Ret = EmitScalarExpr(RV);
+      // The call may have already emitted a return (e.g. musttail).
+      if (!HaveInsertPoint())
+        break;
       if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect) {
         EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
                           /*isInit*/ true);
