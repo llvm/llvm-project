@@ -2597,3 +2597,21 @@ func.func @test_hoist_absent(%arg0: !fir.ref<!fir.box<!fir.array<?xf32>>>) {
   }
   return
 }
+
+// -----
+// Test that fir.box_offset is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_box_offset(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>)
+// CHECK:           %[[OFF:.*]] = fir.box_offset %[[ARG0]] base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.llvm_ptr<!fir.ref<i32>>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[OFF]] to %[[ARG1]] : !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>
+func.func @test_hoist_box_offset(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>, %arg1: !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.box_offset %arg0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.llvm_ptr<!fir.ref<i32>>
+    fir.store %0 to %arg1 : !fir.ref<!fir.llvm_ptr<!fir.ref<i32>>>
+  }
+  return
+}

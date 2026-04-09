@@ -3605,7 +3605,7 @@ def fir_DeclareValueOp
   let hasVerifier = 1;
 }
 
-def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
+def fir_BoxOffsetOp : fir_Op<"box_offset", [Pure]> {
 
   let summary = "Get the address of a field in a fir.ref<fir.box>";
 
