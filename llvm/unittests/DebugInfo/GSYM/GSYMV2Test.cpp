@@ -174,8 +174,6 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
       EXPECT_GT(GD.FileOffset, 0u);
       FoundUUID = true;
       break;
-    case GlobalInfoType::NumTypes:
-      break;
     }
     if (FoundEndOfList)
       break;

@@ -89,7 +89,9 @@ GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
       checkMagicAndDetectVersionEndian(MemBuffer->getBuffer());
   if (!VersionEndianOrErr)
     return VersionEndianOrErr.takeError();
-  auto [Version, Endian] = *VersionEndianOrErr;
+  uint16_t Version;
+  llvm::endianness Endian;
+  std::tie(Version, Endian) = *VersionEndianOrErr;
   std::unique_ptr<GsymReader> GR;
   switch (Version) {
   case Header::getVersion():
@@ -133,55 +135,38 @@ llvm::Error GsymReader::parse() {
                              "AddrInfoOffsets section size mismatch");
 
   // Step 3: Parse each global data section.
-  // Starting from enum value 1, because 0 is EndOfList.
-  for (uint32_t I = 1; I < static_cast<uint32_t>(GlobalInfoType::NumTypes);
-       ++I) {
-    switch (static_cast<GlobalInfoType>(I)) {
-    case GlobalInfoType::AddrOffsets: {
-      auto Bytes = getGlobalData(GlobalInfoType::AddrOffsets);
-      if (!Bytes)
-        return Bytes.takeError();
-      if (auto Err = parseAddrOffsets(*Bytes))
-        return Err;
-      break;
-    }
-    case GlobalInfoType::AddrInfoOffsets: {
-      auto Bytes = getGlobalData(GlobalInfoType::AddrInfoOffsets);
-      if (!Bytes)
-        return Bytes.takeError();
-      if (auto Err = parseAddrInfoOffsets(*Bytes))
-        return Err;
-      break;
-    }
-    case GlobalInfoType::StringTable: {
-      auto Bytes = getGlobalData(GlobalInfoType::StringTable);
-      if (!Bytes)
-        return Bytes.takeError();
-      if (auto Err = parseStringTable(*Bytes))
-        return Err;
-      break;
-    }
-    case GlobalInfoType::FileTable: {
-      auto Bytes = getGlobalData(GlobalInfoType::FileTable);
-      if (!Bytes)
-        return Bytes.takeError();
-      if (auto Err = parseFileTable(*Bytes))
-        return Err;
-      break;
-    }
-    // No parsing needed
-    case GlobalInfoType::FunctionInfo:
-    case GlobalInfoType::UUID:
-    // Have to list these for the exclusive switch to compile
-    case GlobalInfoType::EndOfList:
-    case GlobalInfoType::NumTypes:
-      break;
-    }
-  }
+  llvm::Expected<StringRef> Bytes = getGlobalData(GlobalInfoType::AddrOffsets);
+  if (!Bytes)
+    return Bytes.takeError();
+  if (auto Err = parseAddrOffsets(*Bytes))
+    return Err;
+
+  Bytes = getGlobalData(GlobalInfoType::AddrInfoOffsets);
+  if (!Bytes)
+    return Bytes.takeError();
+  if (auto Err = setAddrInfoOffsetsData(*Bytes))
+    return Err;
+
+  Bytes = getGlobalData(GlobalInfoType::StringTable);
+  if (!Bytes)
+    return Bytes.takeError();
+  if (auto Err = setStringTableData(*Bytes))
+    return Err;
+
+  Bytes = getGlobalData(GlobalInfoType::FileTable);
+  if (!Bytes)
+    return Bytes.takeError();
+  if (auto Err = setFileTableData(*Bytes))
+    return Err;
+
   return Error::success();
 }
 
 llvm::Error GsymReader::parseGlobalDataEntries(uint64_t Offset) {
+  if (getVersion() < HeaderV2::getVersion())
+    return createStringError(std::errc::invalid_argument,
+                             "GlobalData section not supported in GSYM V1");
+
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
   const bool IsLittleEndian = (Endian == llvm::endianness::little);
@@ -260,19 +245,19 @@ llvm::Error GsymReader::parseAddrOffsets(StringRef Bytes) {
   return Error::success();
 }
 
-llvm::Error GsymReader::parseAddrInfoOffsets(StringRef Bytes) {
+llvm::Error GsymReader::setAddrInfoOffsetsData(StringRef Bytes) {
   const bool IsLittleEndian = (Endian == llvm::endianness::little);
   AddrInfoOffsetsData =
       DataExtractor(Bytes, IsLittleEndian, getAddressInfoOffsetSize());
   return Error::success();
 }
 
-llvm::Error GsymReader::parseStringTable(StringRef Bytes) {
+llvm::Error GsymReader::setStringTableData(StringRef Bytes) {
   StrTab.Data = Bytes;
   return Error::success();
 }
 
-llvm::Error GsymReader::parseFileTable(StringRef Bytes) {
+llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
   const bool IsLittleEndian = (Endian == llvm::endianness::little);
   const uint8_t StrpSize = getStringOffsetSize();
   DataExtractor Data(Bytes, IsLittleEndian, getAddressInfoOffsetSize());

@@ -46,8 +46,6 @@ static const char *getGlobalInfoTypeName(GlobalInfoType Type) {
     return "FunctionInfo";
   case GlobalInfoType::UUID:
     return "UUID";
-  case GlobalInfoType::NumTypes:
-    break;
   }
   return "Unknown";
 }

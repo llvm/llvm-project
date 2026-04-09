@@ -64,6 +64,9 @@ public:
   LLVM_ABI GsymReader(GsymReader &&RHS) = default;
   virtual ~GsymReader() = default;
 
+  /// Get the GSYM version for this reader.
+  virtual uint16_t getVersion() const = 0;
+
   /// Get the base address of this GSYM file.
   virtual uint64_t getBaseAddress() const = 0;
 
@@ -339,6 +342,9 @@ protected:
 
   /// Parse GlobalData entries starting at \p Offset into GlobalDataSections.
   ///
+  /// This should only be called by any GSYM version >= 2. If called by V1, an
+  /// error will be returned.
+  ///
   /// \param Offset The byte offset where GlobalData entries begin.
   /// \returns Error on failure.
   llvm::Error parseGlobalDataEntries(uint64_t Offset);
@@ -353,19 +359,19 @@ protected:
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error parseAddrInfoOffsets(StringRef Bytes);
+  llvm::Error setAddrInfoOffsetsData(StringRef Bytes);
 
   /// Parse string table section bytes into StrTab.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error parseStringTable(StringRef Bytes);
+  llvm::Error setStringTableData(StringRef Bytes);
 
   /// Parse file table section bytes into FileEntryData.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error parseFileTable(StringRef Bytes);
+  llvm::Error setFileTableData(StringRef Bytes);
 
   /// Get an appropriate address info offsets array.
   ///

@@ -32,6 +32,7 @@ public:
   ~GsymReaderV1() override = default;
 
   // Header accessors
+  uint16_t getVersion() const override { return Header::getVersion(); }
   uint64_t getBaseAddress() const override { return Hdr->BaseAddress; }
   uint64_t getNumAddresses() const override { return Hdr->NumAddresses; }
   uint8_t getAddressOffsetSize() const override { return Hdr->AddrOffSize; }
