@@ -1,0 +1,54 @@
+// Tests for clang-ssaf-format --type wpa that don't require the example plugin.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Read errors
+// ============================================================================
+
+// 'results' field is absent.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/missing-results.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-RESULTS
+// NO-RESULTS:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}missing-results.json'
+// NO-RESULTS-NEXT: failed to read WPA results from field 'results': expected JSON array
+
+// 'results' is an object, not an array.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/results-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=RESULTS-OBJ
+// RESULTS-OBJ:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}results-not-array.json'
+// RESULTS-OBJ-NEXT: failed to read WPA results from field 'results': expected JSON array
+
+// A result entry is a string, not an object.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/result-entry-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTRY-NOT-OBJ
+// ENTRY-NOT-OBJ:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}result-entry-not-object.json'
+// ENTRY-NOT-OBJ-NEXT: reading WPA results from field 'results'
+// ENTRY-NOT-OBJ-NEXT: failed to read WPA result entry from index '0': expected JSON object
+
+// 'analysis_name' field is absent.
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   %S/Inputs/result-entry-missing-analysis-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-NAME
+// NO-NAME:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}result-entry-missing-analysis-name.json'
+// NO-NAME-NEXT: reading WPA results from field 'results'
+// NO-NAME-NEXT: reading WPA result entry from index '0'
+// NO-NAME-NEXT: failed to read AnalysisName from field 'analysis_name': expected JSON string
+
+// 'analysis_name' is an integer, not a string.
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   %S/Inputs/result-entry-analysis-name-not-string.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAME-NOT-STR
+// NAME-NOT-STR:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}result-entry-analysis-name-not-string.json'
+// NAME-NOT-STR-NEXT: reading WPA results from field 'results'
+// NAME-NOT-STR-NEXT: reading WPA result entry from index '0'
+// NAME-NOT-STR-NEXT: failed to read AnalysisName from field 'analysis_name': expected JSON string
+
+// Analysis name is not registered (no plugin loaded).
+// RUN: not clang-ssaf-format --type wpa \
+// RUN:   %S/Inputs/result-entry-no-format-info.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-FORMAT-INFO
+// NO-FORMAT-INFO:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}result-entry-no-format-info.json'
+// NO-FORMAT-INFO-NEXT: reading WPA results from field 'results'
+// NO-FORMAT-INFO-NEXT: reading WPA result entry from index '0'
+// NO-FORMAT-INFO-NEXT: no support registered for analysis: AnalysisName(UnregisteredAnalysis)
