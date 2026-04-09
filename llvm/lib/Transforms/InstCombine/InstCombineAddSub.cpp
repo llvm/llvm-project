@@ -1616,8 +1616,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     const APInt *C;
     if (match(&I, m_c_BinOp(m_OneUse(m_Add(m_Value(A), m_APIntAllowPoison(C))),
                             m_Not(m_Value(B)))) ||
-        match(&I, m_c_BinOp(m_Add(m_Value(A), m_APIntAllowPoison(C)),
-                            m_OneUse(m_Not(m_Value(B))))) ||
+        (match(&I, m_c_BinOp(m_Add(m_Value(A), m_APIntAllowPoison(C)),
+                             m_OneUse(m_Not(m_Value(B))))) &&
+         *C == 1) ||
         match(&I, m_BinOp(m_OneUse(m_c_Add(m_Not(m_Value(B)), m_Value(A))),
                           m_APIntAllowPoison(C)))) {
       Value *Sub = Builder.CreateSub(A, B);
