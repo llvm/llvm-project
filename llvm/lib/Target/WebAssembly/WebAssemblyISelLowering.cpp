@@ -1830,13 +1830,11 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
 }
 
 static bool IsWebAssemblyGlobal(SDValue Op) {
+  if (Op->getOpcode() == WebAssemblyISD::Wrapper)
+    Op = Op->getOperand(0);
+
   if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op))
     return WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace());
-
-  if (Op->getOpcode() == WebAssemblyISD::Wrapper)
-    if (const GlobalAddressSDNode *GA =
-            dyn_cast<GlobalAddressSDNode>(Op->getOperand(0)))
-      return WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace());
 
   return false;
 }
@@ -3958,8 +3956,7 @@ static SDValue performShiftCombine(SDNode *N,
 
     APInt MulAmt = APInt::getOneBitSet(BitWidth, ShiftAmt.getZExtValue());
     MulConsts.push_back(DAG.getConstant(MulAmt, DL, FromVT.getScalarType(),
-                                        /*isTarget=*/false,
-                                        /*isOpaque=*/true));
+                                        /*isTarget=*/false, /*isOpaque=*/true));
   }
 
   SDValue NarrowConst = DAG.getBuildVector(FromVT, DL, MulConsts);
