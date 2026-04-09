@@ -1074,6 +1074,7 @@ namespace {
     const MultiLevelTemplateArgumentList &TemplateArgs;
     SourceLocation Loc;
     DeclarationName Entity;
+
     // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
     // Whether Substitution was Incomplete, that is, we tried to substitute in
@@ -2914,7 +2915,7 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
     }
   } else {
     NewTSI = SubstType(OldTSI, TemplateArgs, OldParm->getLocation(),
-                       OldParm->getDeclName());
+                       OldParm->getDeclName(), /*AllowDeducedTST=*/false);
   }
 
   if (!NewTSI)

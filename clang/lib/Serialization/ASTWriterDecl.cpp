@@ -1840,7 +1840,6 @@ void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
   // Record the number of friend type template parameter lists here
   // so as to simplify memory allocation during deserialization.
-  Record.push_back(D->NumTPLists);
   VisitDecl(D);
   bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
@@ -1848,8 +1847,6 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
     Record.AddDeclRef(D->getFriendDecl());
   else
     Record.AddTypeSourceInfo(D->getFriendType());
-  for (unsigned i = 0; i < D->NumTPLists; ++i)
-    Record.AddTemplateParameterList(D->getFriendTypeTemplateParameterList(i));
   Record.AddDeclRef(D->getNextFriend());
   Record.push_back(D->UnsupportedFriend);
   Record.AddSourceLocation(D->FriendLoc);
@@ -1859,15 +1856,18 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
-  Record.push_back(D->getNumTemplateParameters());
-  for (unsigned i = 0, e = D->getNumTemplateParameters(); i != e; ++i)
-    Record.AddTemplateParameterList(D->getTemplateParameterList(i));
+  Record.push_back(D->NumTPLists);
+  for (unsigned i = 0, e = D->NumTPLists; i != e; ++i)
+    Record.AddTemplateParameterList(D->getFriendTypeTemplateParameterList(i));
   Record.push_back(D->getFriendDecl() != nullptr);
   if (D->getFriendDecl())
     Record.AddDeclRef(D->getFriendDecl());
   else
     Record.AddTypeSourceInfo(D->getFriendType());
-  Record.AddSourceLocation(D->getFriendLoc());
+  Record.AddDeclRef(D->getNextFriend());
+  Record.push_back(D->UnsupportedFriend);
+  Record.AddSourceLocation(D->FriendLoc);
+  Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND_TEMPLATE;
 }
 
