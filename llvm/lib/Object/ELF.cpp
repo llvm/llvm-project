@@ -828,7 +828,11 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       ELFBBAddrMapAddressExtractor::create(Data, EF, Sec, RelaSec);
   if (!ExtractorOrErr)
     return ExtractorOrErr.takeError();
-  return decodeBBAddrMapPayload(*ExtractorOrErr, PGOAnalyses);
+  auto BBAddrMapsOrErr = decodeBBAddrMapPayload(*ExtractorOrErr, PGOAnalyses);
+  if (!BBAddrMapsOrErr)
+    return createError(toString(BBAddrMapsOrErr.takeError()) + " in " +
+                       describe(EF, Sec));
+  return BBAddrMapsOrErr;
 }
 
 template <class ELFT>
