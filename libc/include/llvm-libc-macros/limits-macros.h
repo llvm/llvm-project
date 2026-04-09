@@ -173,10 +173,6 @@
 #define ULLONG_MAX (LLONG_MAX * 2ULL + 1ULL)
 #endif // ULLONG_MAX
 
-#ifndef SEM_VALUE_MAX
-#define SEM_VALUE_MAX INT_MAX
-#endif // SEM_VALUE_MAX
-
 // *_MIN macros
 
 #ifndef SCHAR_MIN

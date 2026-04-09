@@ -472,15 +472,6 @@ add_header_macro(
 )
 
 add_header_macro(
-  semaphore
-  ../libc/include/semaphore.yaml
-  semaphore.h
-  DEPENDS
-    .llvm-libc-types.sem_t
-    .llvm_libc_common_h
-)
-
-add_header_macro(
   spawn
   ../libc/include/spawn.yaml
   spawn.h

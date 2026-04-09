@@ -7,13 +7,5 @@ add_libc_unittest(
   SRCS
     semaphore_test.cpp
   DEPENDS
-    libc.hdr.errno_macros
-    libc.include.limits
-    libc.include.semaphore
-    libc.src.errno.errno
-    libc.src.semaphore.sem_destroy
-    libc.src.semaphore.sem_getvalue
-    libc.src.semaphore.sem_init
-    libc.test.UnitTest.ErrnoCheckingTest
-    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.src.semaphore.posix_semaphore
 )

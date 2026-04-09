@@ -283,14 +283,6 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
-  sem_t
-  HDRS
-    sem_t.h
-  FULL_BUILD_DEPENDS
-    libc.include.llvm-libc-types.sem_t
-)
-
-add_proxy_header_library(
   pthread_barrier_t
   HDRS
     pthread_barrier_t.h
