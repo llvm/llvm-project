@@ -77,9 +77,7 @@ class TestFrameVarDILAssignment(TestBase):
             self.expect_var_path("p", value="0x0000000c")
             self.expect("frame variable 'p = 0'", substrs=["p = 0x00000000"])
         else:
-            self.expect(
-                "frame variable 'p = 1'", substrs=["p = 0x0000000000000001"]
-            )
+            self.expect("frame variable 'p = 1'", substrs=["p = 0x0000000000000001"])
             self.expect(
                 "frame variable 'p = (int*)12'", substrs=["p = 0x000000000000000c"]
             )
@@ -88,7 +86,7 @@ class TestFrameVarDILAssignment(TestBase):
                 "frame variable 'p = (int *)0'", substrs=["p = 0x0000000000000000"]
             )
 
-         # Just verify the result value prefix is an address.
+        # Just verify the result value prefix is an address.
         self.expect("frame variable 'p = farr'", substrs=["(int *) p = 0x0000"])
 
         # Assigning to a bool

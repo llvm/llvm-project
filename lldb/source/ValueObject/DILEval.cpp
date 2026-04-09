@@ -740,7 +740,7 @@ Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
 
   // Determine the appropriate type for the rhs.
   auto type_or_err = ArithmeticConversion(lhs, rhs, location,
-                                          /*is_assign=*/ true);
+                                          /*is_assign=*/true);
   if (!type_or_err)
     return type_or_err.takeError();
   CompilerType rhs_type = *type_or_err;
@@ -771,7 +771,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddAssign(
 
   // Determine the appropriate type for sum.
   auto type_or_err = ArithmeticConversion(lhs, sum, location,
-                                          /*is_assign=*/ true);
+                                          /*is_assign=*/true);
   if (!type_or_err)
     return type_or_err.takeError();
   CompilerType sum_type = *type_or_err;
@@ -802,7 +802,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubAssign(
 
   // Determine the appropriate type for diff.
   auto type_or_err = ArithmeticConversion(lhs, diff, location,
-                                          /*is_assign=*/ true);
+                                          /*is_assign=*/true);
   if (!type_or_err)
     return type_or_err.takeError();
   CompilerType diff_type = *type_or_err;
