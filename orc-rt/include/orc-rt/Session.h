@@ -432,7 +432,6 @@ private:
   };
 
   class NotificationService;
-  NotificationService &addNotificationService();
 
   void appendService(std::unique_ptr<Service> Srv);
 
