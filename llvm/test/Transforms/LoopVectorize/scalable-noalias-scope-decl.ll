@@ -30,7 +30,6 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 %struct.data = type { ptr, ptr }
 

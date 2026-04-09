@@ -70,4 +70,3 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-declare float @llvm.sqrt.f32(float) nounwind readnone

@@ -108,7 +108,6 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @exp_f32_intrin(
 ;CHECK: vexpf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.exp.f32(float) nounwind readnone
 define void @exp_f32_intrin(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -409,7 +408,6 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @tan_f32_intrinsic(
 ;CHECK: vtanf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.tan.f32(float) nounwind readnone
 define void @tan_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -459,7 +457,6 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @asin_f32_intrinsic(
 ;CHECK: vasinf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.asin.f32(float) nounwind readnone
 define void @asin_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -509,7 +506,6 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @acos_f32_intrinsic(
 ;CHECK: vacosf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.acos.f32(float) nounwind readnone
 define void @acos_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -559,7 +555,6 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @atan_f32_intrinsic(
 ;CHECK: vatanf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.atan.f32(float) nounwind readnone
 define void @atan_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -609,7 +604,6 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @sinh_f32_intrinsic(
 ;CHECK: vsinhf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.sinh.f32(float) nounwind readnone
 define void @sinh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -659,7 +653,6 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @cosh_f32_intrinsic(
 ;CHECK: vcoshf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.cosh.f32(float) nounwind readnone
 define void @cosh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -709,7 +702,6 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @tanh_f32_intrinsic(
 ;CHECK: vtanhf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.tanh.f32(float) nounwind readnone
 define void @tanh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0

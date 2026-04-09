@@ -1211,12 +1211,4 @@ for.body:                                         ; preds = %entry, %for.body
 ; Make sure any check-not directives are not triggered by function declarations.
 ; CHECK: declare
 
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
-declare float @llvm.minimum.f32(float, float)
-declare float @llvm.maximum.f32(float, float)
 

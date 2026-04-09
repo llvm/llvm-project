@@ -94,7 +94,6 @@ exit:                                 ; preds = %for.cond.cleanup3
   ret void, !dbg !23
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

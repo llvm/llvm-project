@@ -36,4 +36,3 @@ exit:                             ; preds = %exit
   ret void
 }
 
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) readnone, i16, i64, i32)

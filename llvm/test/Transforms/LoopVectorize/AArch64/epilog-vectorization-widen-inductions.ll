@@ -97,7 +97,6 @@ exit:
   ret void
 }
 
-declare void @llvm.assume(i1 noundef)
 
 define void @test_widen_induction(ptr %A, i64 %N) {
 ; CHECK-LABEL: @test_widen_induction(

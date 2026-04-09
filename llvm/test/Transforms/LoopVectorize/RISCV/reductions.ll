@@ -1253,7 +1253,6 @@ for.end:
   ret bfloat %muladd
 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
 
 attributes #0 = { "target-features"="+zfhmin,+zvfhmin"}
 attributes #1 = { "target-features"="+zfbfmin,+zvfbfmin"}

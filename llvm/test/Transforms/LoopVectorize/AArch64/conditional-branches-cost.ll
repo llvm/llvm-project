@@ -47,7 +47,6 @@ exit:
   ret void
 }
 
-declare double @llvm.fabs.f64(double) #0
 
 define void @loop_dependent_cond(ptr %src, ptr noalias %dst, i64 %N) {
 ; DEFAULT-LABEL: define void @loop_dependent_cond(
@@ -1407,8 +1406,6 @@ exit:
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
-declare double @llvm.pow.f64(double, double)
 
 attributes #1 = { "target-cpu"="neoverse-512tvb" }
 attributes #2 = { vscale_range(2,2) "target-cpu"="neoverse-512tvb" }

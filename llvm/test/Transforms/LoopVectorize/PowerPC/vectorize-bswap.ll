@@ -83,4 +83,3 @@ for.end:                                          ; preds = %for.cond.cleanup
   ret void
 }
 
-declare i32 @llvm.bswap.i32(i32)

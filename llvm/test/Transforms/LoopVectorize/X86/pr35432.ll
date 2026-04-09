@@ -175,10 +175,8 @@ for.end12:                                        ; preds = %for.cond.for.end12_
   ret i32 0
 }
 
-declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 declare i32 @goo(...) #2
 
 declare i32 @foo(...) #2
 
-declare void @llvm.lifetime.end.p0(ptr nocapture) #1

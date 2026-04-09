@@ -2,7 +2,6 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=x86_64 -mattr=+pclmul -S %s | FileCheck %s --check-prefix=WITH-PCLMUL
 ; RUN: opt -passes=loop-vectorize -mtriple=x86_64 -mattr=-pclmul -S %s | FileCheck %s --check-prefix=WITH-NO-PCLMUL
 
-declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
 
 define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n){
 ; WITH-PCLMUL-LABEL: define void @clmul_loop(

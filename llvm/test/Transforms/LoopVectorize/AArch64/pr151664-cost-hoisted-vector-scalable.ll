@@ -41,4 +41,3 @@ exit:                                              ; preds = %loop
   ret void
 }
 
-declare float @llvm.minimumnum.f32(float, float)

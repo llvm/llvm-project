@@ -62,7 +62,6 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-declare void @llvm.assume(i1)
 
 %struct.data = type { ptr, ptr }
 

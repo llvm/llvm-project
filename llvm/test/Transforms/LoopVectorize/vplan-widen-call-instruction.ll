@@ -4,7 +4,6 @@
 ; Test that VPlan native path is able to widen call intructions like
 ; llvm.sqrt.* intrincis calls.
 
-declare double @llvm.sqrt.f64(double %0)
 define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr noalias nocapture readonly %b.in, ptr noalias nocapture %c.out) {
 ; CHECK-LABEL: define void @widen_call_instruction(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[A_IN:%.*]], ptr noalias readonly captures(none) [[B_IN:%.*]], ptr noalias captures(none) [[C_OUT:%.*]]) {

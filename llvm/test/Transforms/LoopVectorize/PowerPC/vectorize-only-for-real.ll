@@ -42,12 +42,8 @@ for.body6:                                        ; preds = %for.body6, %for.con
   br i1 %exitcond, label %for.cond.cleanup5, label %for.body6
 }
 
-declare void @llvm.lifetime.start(ptr nocapture) #1
-declare void @llvm.lifetime.end(ptr nocapture) #1
 
-declare signext i32 @bar(ptr, ptr) #2
+declare signext i32 @bar(ptr, ptr)
 
 attributes #0 = { "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" }
-attributes #1 = { argmemonly }
-attributes #2 = { "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" }
 
