@@ -7061,7 +7061,6 @@ cc_library(
     hdrs = glob([
         "include/mlir/Dialect/SPIRV/IR/*.h",
     ]),
-    features = ["-parse_headers"],
     includes = ["include"],
     deps = [
         ":AlignmentAttrInterface",
