@@ -217,9 +217,6 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 declare double @foo(double)
 declare i64 @bar(ptr)
-declare double @llvm.sin.f64(double)
-declare float @llvm.sin.f32(float)
-declare float @llvm.sqrt.f32(float)
 
 declare <vscale x 2 x double> @foo_vec(<vscale x 2 x double>)
 declare <vscale x 2 x i64> @bar_vec(<vscale x 2 x ptr>)

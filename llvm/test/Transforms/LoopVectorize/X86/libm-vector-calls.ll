@@ -360,14 +360,8 @@ attributes #0 = { nounwind readnone }
 
 declare double @sin(double) #0
 declare float @sinf(float) #0
-declare double @llvm.sin.f64(double) #0
-declare float @llvm.sin.f32(float) #0
 declare double @cos(double) #0
 declare float @cosf(float) #0
-declare double @llvm.cos.f64(double) #0
-declare float @llvm.cos.f32(float) #0
 declare float @expf(float) #0
 declare float @powf(float, float) #0
-declare float @llvm.exp.f32(float) #0
 declare float @logf(float) #0
-declare float @llvm.pow.f32(float, float) #0

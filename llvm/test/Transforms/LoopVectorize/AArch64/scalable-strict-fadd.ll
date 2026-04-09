@@ -1647,7 +1647,6 @@ for.end:
   ret float %muladd
 }
 
-declare float @llvm.fmuladd.f32(float, float, float)
 
 attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !3, !6, !8}

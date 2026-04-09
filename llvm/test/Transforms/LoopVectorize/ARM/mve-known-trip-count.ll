@@ -472,7 +472,5 @@ while.end:                                        ; preds = %while.end.loopexit,
 }
 
 
-declare void @llvm.lifetime.start.p0(ptr)
-declare void @llvm.lifetime.end.p0(ptr)
 
 attributes #0 = { "target-features"="+mve.fp" }
