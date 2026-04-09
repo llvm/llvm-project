@@ -21,7 +21,10 @@ load(":tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
-    features = ["layering_check"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
 )
 
 licenses(["notice"])
@@ -1060,7 +1063,7 @@ cc_library(
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
         ":CAPITransformsHeaders",
-        "@pybind11",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -1073,7 +1076,7 @@ cc_library(
         ":CAPIDebug",
         ":CAPIIR",
         ":CAPITransforms",
-        "@pybind11",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -1141,6 +1144,7 @@ cc_library(
     hdrs = [":MLIRBindingsPythonCoreHeaders"],
     includes = ["lib/Bindings/Python"],
     deps = [
+        ":CAPIIRHeaders",
         ":MLIRBindingsPythonNanobindHeaders",
         "@nanobind",
     ],
@@ -1718,6 +1722,7 @@ cc_library(
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h",
         "lib/Conversion/LLVMCommon/MemRefDescriptor.h",
     ],
+    features = ["-parse_headers"],
     includes = ["include"],
     deps = [
         ":AMDGPUIncGen",
