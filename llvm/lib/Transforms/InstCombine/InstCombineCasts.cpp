@@ -2009,10 +2009,10 @@ static Type *getMinimumFPType(Value *V, Type *PreferredTy, InstCombiner &IC) {
     return FPExt->getOperand(0)->getType();
 
   Value *Src;
-  if (match(V, m_IToFP(m_Value(Src))))
-    if (IC.canBeCastedExactlyIntToFP(Src, PreferredTy, isa<SIToFPInst>(V),
-                                     cast<Instruction>(V)))
-      return PreferredTy;
+  if (match(V, m_IToFP(m_Value(Src))) &&
+      IC.canBeCastedExactlyIntToFP(Src, PreferredTy, isa<SIToFPInst>(V),
+                                   cast<Instruction>(V)))
+    return PreferredTy;
 
   bool PreferBFloat = PreferredTy->getScalarType()->isBFloatTy();
   // If this value is a constant, return the constant in the smallest FP type
