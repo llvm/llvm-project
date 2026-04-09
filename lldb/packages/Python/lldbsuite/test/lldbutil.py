@@ -1794,7 +1794,6 @@ def launch_exe_in_apple_simulator(
     device_uuid,
     exe_path,
     exe_args=[],
-    stderr_lines_to_read=0,
     stderr_patterns=[],
     log=None,
 ):
@@ -1818,18 +1817,21 @@ def launch_exe_in_apple_simulator(
     total_patterns = len(stderr_patterns)
     matches_found = 0
     matched_strings = [None] * total_patterns
-    for _ in range(0, stderr_lines_to_read):
-        stderr = sim_launcher.stderr.readline().decode("utf-8")
-        if not stderr:
-            continue
-        for i, pattern in enumerate(stderr_patterns):
-            if matched_strings[i] is not None:
+    if len(stderr_patterns) != 0:
+        while True:
+            stderr = sim_launcher.stderr.readline().decode("utf-8")
+            if not stderr:
                 continue
-            match = re.match(pattern, stderr)
-            if match:
-                matched_strings[i] = str(match.group(1))
-                matches_found += 1
-        if matches_found == total_patterns:
-            break
+            if log:
+                log(f"searching stderr line: {stderr}")
+            for i, pattern in enumerate(stderr_patterns):
+                if matched_strings[i] is not None:
+                    continue
+                match = re.match(pattern, stderr)
+                if match:
+                    matched_strings[i] = str(match.group(1))
+                    matches_found += 1
+            if matches_found == total_patterns:
+                break
 
     return exe_path, matched_strings
