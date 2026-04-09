@@ -112,9 +112,9 @@ Please follow the steps below if you only want to **build** lldb.
    ``dirname`` are available from your terminal.
 3. Install `make <https://sourceforge.net/projects/ezwinports/files/>`_ and
    verify that it's in your ``PATH``.
-4. Install `Python 3 <https://www.python.org/downloads/windows/>`_. Either using
-   the "Windows Installer" or "Python Install Manager". Make sure ``python`` is
-   added to your ``PATH``.
+4. Install `Python 3.11 <https://www.python.org/downloads/windows/>`_ or newer.
+   Either using the "Windows Installer" or "Python Install Manager". Make sure
+   ``python`` is added to your ``PATH``.
 
    .. note::
       Building LLDB in debug mode requires a debug version of Python (because
