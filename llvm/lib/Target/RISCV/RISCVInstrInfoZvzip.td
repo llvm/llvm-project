@@ -115,7 +115,7 @@ multiclass VPatVUnzipIntrinsic<string intrinsic_name,
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<wti>.Predicates,
+    let Predicates = !listconcat(GetVTypeMinimalPredicates<wti>.Predicates,
                                  [HasStdExtZvzip]) in {
       def : VPatUnaryNoMask<intrinsic_name, instruction_name, "V",
                             vti.Vector, wti.Vector, vti.Log2SEW,
@@ -130,8 +130,11 @@ multiclass VPatVUnzipIntrinsic<string intrinsic_name,
 defm : VPatVUnzipIntrinsic<"int_riscv_vunzipe", "PseudoVUNZIPE">;
 defm : VPatVUnzipIntrinsic<"int_riscv_vunzipo", "PseudoVUNZIPO">;
 defm : VPatBinaryV_VV<"int_riscv_vpaire", "PseudoVPAIRE", AllVectors,
-                      ExtraPreds = [HasStdExtZvzip]>;
+                      ExtraPreds = [HasStdExtZvzip],
+                      requireMinimal = true>;
 defm : VPatBinaryV_VV<"int_riscv_vpairo", "PseudoVPAIRO", AllVectors,
-                      ExtraPreds = [HasStdExtZvzip]>;
+                      ExtraPreds = [HasStdExtZvzip],
+                      requireMinimal = true>;
 defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors,
-                      ExtraPreds = [HasStdExtZvzip]>;
+                      ExtraPreds = [HasStdExtZvzip],
+                      requireMinimal = true>;

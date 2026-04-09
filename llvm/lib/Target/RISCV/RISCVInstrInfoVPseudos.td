@@ -4827,9 +4827,13 @@ multiclass VPatConversionRTZ<string intrinsic,
 
 multiclass VPatBinaryV_VV<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist, bit isSEWAware = 0,
-                          list<Predicate> ExtraPreds = []> {
+                          list<Predicate> ExtraPreds = [],
+                          bit requireMinimal = false> {
   foreach vti = vtilist in
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    let Predicates = !listconcat(ExtraPreds,
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<vti>.Predicates,
+                                     GetVTypePredicates<vti>.Predicates)) in
     defm : VPatBinary<intrinsic,
                       !if(isSEWAware,
                           instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
@@ -4975,13 +4979,18 @@ multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
 
 multiclass VPatBinaryW_VV<string intrinsic, string instruction,
                           list<VTypeInfoToWide> vtilist,
-                          list<Predicate> ExtraPreds = []> {
+                          list<Predicate> ExtraPreds = [],
+                          bit requireMinimal = false> {
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
     let Predicates = !listconcat(ExtraPreds,
-                                 GetVTypePredicates<Vti>.Predicates,
-                                 GetVTypePredicates<Wti>.Predicates) in
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<Vti>.Predicates,
+                                     GetVTypePredicates<Vti>.Predicates),
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<Wti>.Predicates,
+                                     GetVTypePredicates<Wti>.Predicates)) in
     defm : VPatBinary<intrinsic, instruction # "_VV_" # Vti.LMul.MX,
                       Wti.Vector, Vti.Vector, Vti.Vector, Vti.Mask,
                       Vti.Log2SEW, Wti.RegClass,
