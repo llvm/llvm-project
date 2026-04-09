@@ -961,6 +961,18 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       Result = Builder.createOverflowingOp(Opcode, {Result, Op}, WrapFlags, DL);
     return Result;
   }
+  case scUDivExpr: {
+    auto *UDiv = cast<SCEVUDivExpr>(S);
+    VPValue *LHS = tryToExpand(UDiv->getLHS());
+    if (!LHS)
+      return nullptr;
+    VPValue *RHS = tryToExpand(UDiv->getRHS());
+    if (!RHS)
+      return nullptr;
+    return Builder.createNaryOp(Instruction::UDiv, {LHS, RHS},
+                                VPIRFlags::getDefaultFlags(Instruction::UDiv),
+                                DL);
+  }
   default:
     return nullptr;
   }
