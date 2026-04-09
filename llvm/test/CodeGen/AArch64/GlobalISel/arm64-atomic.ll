@@ -2947,10 +2947,6 @@ define i16 @atomicrmw_add_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB37_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB37_5
@@ -3043,10 +3039,6 @@ define i16 @atomicrmw_xchg_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB38_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB38_5
@@ -3141,10 +3133,6 @@ define i16 @atomicrmw_sub_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB39_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB39_5
@@ -3243,10 +3231,6 @@ define i16 @atomicrmw_and_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB40_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB40_5
@@ -3345,10 +3329,6 @@ define i16 @atomicrmw_or_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB41_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB41_5
@@ -3443,10 +3423,6 @@ define i16 @atomicrmw_xor_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB42_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB42_5
@@ -3546,10 +3522,6 @@ define i16 @atomicrmw_min_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB43_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB43_5
@@ -3567,8 +3539,8 @@ define i16 @atomicrmw_min_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O0-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Spill
-; CHECK-OUTLINE-O0-NEXT:    ldrh w8, [x0]
-; CHECK-OUTLINE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Spill
+; CHECK-OUTLINE-O0-NEXT:    ldrh w0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    str w0, [sp, #28] ; 4-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    b LBB43_1
 ; CHECK-OUTLINE-O0-NEXT:  LBB43_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O0-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3585,11 +3557,7 @@ define i16 @atomicrmw_min_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O0-NEXT:    uxth w8, w8
 ; CHECK-OUTLINE-O0-NEXT:    subs w8, w8, w0, uxth
 ; CHECK-OUTLINE-O0-NEXT:    cset w8, eq
-; CHECK-OUTLINE-O0-NEXT:    fmov s0, w0
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-OUTLINE-O0-NEXT:    fmov w9, s0
-; CHECK-OUTLINE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
+; CHECK-OUTLINE-O0-NEXT:    str w0, [sp, #28] ; 4-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    tbz w8, #0, LBB43_1
 ; CHECK-OUTLINE-O0-NEXT:    b LBB43_2
 ; CHECK-OUTLINE-O0-NEXT:  LBB43_2: ; %atomicrmw.end
@@ -3674,10 +3642,6 @@ define i16 @atomicrmw_max_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB44_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB44_5
@@ -3695,8 +3659,8 @@ define i16 @atomicrmw_max_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O0-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Spill
-; CHECK-OUTLINE-O0-NEXT:    ldrh w8, [x0]
-; CHECK-OUTLINE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Spill
+; CHECK-OUTLINE-O0-NEXT:    ldrh w0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    str w0, [sp, #28] ; 4-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    b LBB44_1
 ; CHECK-OUTLINE-O0-NEXT:  LBB44_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O0-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3713,11 +3677,7 @@ define i16 @atomicrmw_max_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O0-NEXT:    uxth w8, w8
 ; CHECK-OUTLINE-O0-NEXT:    subs w8, w8, w0, uxth
 ; CHECK-OUTLINE-O0-NEXT:    cset w8, eq
-; CHECK-OUTLINE-O0-NEXT:    fmov s0, w0
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-OUTLINE-O0-NEXT:    fmov w9, s0
-; CHECK-OUTLINE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
+; CHECK-OUTLINE-O0-NEXT:    str w0, [sp, #28] ; 4-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    tbz w8, #0, LBB44_1
 ; CHECK-OUTLINE-O0-NEXT:    b LBB44_2
 ; CHECK-OUTLINE-O0-NEXT:  LBB44_2: ; %atomicrmw.end
@@ -3804,10 +3764,6 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB45_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB45_5
@@ -3825,8 +3781,8 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O0-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Spill
-; CHECK-OUTLINE-O0-NEXT:    ldrh w8, [x0]
-; CHECK-OUTLINE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Spill
+; CHECK-OUTLINE-O0-NEXT:    ldrh w0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    str w0, [sp, #28] ; 4-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    b LBB45_1
 ; CHECK-OUTLINE-O0-NEXT:  LBB45_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O0-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3843,11 +3799,7 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O0-NEXT:    uxth w8, w8
 ; CHECK-OUTLINE-O0-NEXT:    subs w8, w8, w0, uxth
 ; CHECK-OUTLINE-O0-NEXT:    cset w8, eq
-; CHECK-OUTLINE-O0-NEXT:    fmov s0, w0
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-OUTLINE-O0-NEXT:    fmov w9, s0
-; CHECK-OUTLINE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
+; CHECK-OUTLINE-O0-NEXT:    str w0, [sp, #28] ; 4-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    tbz w8, #0, LBB45_1
 ; CHECK-OUTLINE-O0-NEXT:    b LBB45_2
 ; CHECK-OUTLINE-O0-NEXT:  LBB45_2: ; %atomicrmw.end
@@ -3934,10 +3886,6 @@ define i16 @atomicrmw_umax_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
 ; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w9
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-NOLSE-O0-NEXT:    fmov w9, s0
 ; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB46_1
 ; CHECK-NOLSE-O0-NEXT:    b LBB46_5
@@ -3955,8 +3903,8 @@ define i16 @atomicrmw_umax_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O0-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Spill
-; CHECK-OUTLINE-O0-NEXT:    ldrh w8, [x0]
-; CHECK-OUTLINE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Spill
+; CHECK-OUTLINE-O0-NEXT:    ldrh w0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    str w0, [sp, #28] ; 4-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    b LBB46_1
 ; CHECK-OUTLINE-O0-NEXT:  LBB46_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O0-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3973,11 +3921,7 @@ define i16 @atomicrmw_umax_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O0-NEXT:    uxth w8, w8
 ; CHECK-OUTLINE-O0-NEXT:    subs w8, w8, w0, uxth
 ; CHECK-OUTLINE-O0-NEXT:    cset w8, eq
-; CHECK-OUTLINE-O0-NEXT:    fmov s0, w0
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $s0 killed $h0
-; CHECK-OUTLINE-O0-NEXT:    fmov w9, s0
-; CHECK-OUTLINE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Spill
+; CHECK-OUTLINE-O0-NEXT:    str w0, [sp, #28] ; 4-byte Spill
 ; CHECK-OUTLINE-O0-NEXT:    tbz w8, #0, LBB46_1
 ; CHECK-OUTLINE-O0-NEXT:    b LBB46_2
 ; CHECK-OUTLINE-O0-NEXT:  LBB46_2: ; %atomicrmw.end
@@ -6559,17 +6503,29 @@ define { ptr, i1 } @cmpxchg_ptr(ptr %ptr, ptr %desired, ptr %new) {
 }
 
 define internal double @bitcast_to_double(ptr %ptr) {
-; CHECK-NOLSE-LABEL: bitcast_to_double:
-; CHECK-NOLSE:       ; %bb.0:
-; CHECK-NOLSE-NEXT:    ldar x8, [x0]
-; CHECK-NOLSE-NEXT:    fmov d0, x8
-; CHECK-NOLSE-NEXT:    ret
+; CHECK-NOLSE-O1-LABEL: bitcast_to_double:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ldar x8, [x0]
+; CHECK-NOLSE-O1-NEXT:    fmov d0, x8
+; CHECK-NOLSE-O1-NEXT:    ret
 ;
-; CHECK-OUTLINE-LABEL: bitcast_to_double:
-; CHECK-OUTLINE:       ; %bb.0:
-; CHECK-OUTLINE-NEXT:    ldar x8, [x0]
-; CHECK-OUTLINE-NEXT:    fmov d0, x8
-; CHECK-OUTLINE-NEXT:    ret
+; CHECK-OUTLINE-O1-LABEL: bitcast_to_double:
+; CHECK-OUTLINE-O1:       ; %bb.0:
+; CHECK-OUTLINE-O1-NEXT:    ldar x8, [x0]
+; CHECK-OUTLINE-O1-NEXT:    fmov d0, x8
+; CHECK-OUTLINE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: bitcast_to_double:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    ldar x0, [x0]
+; CHECK-NOLSE-O0-NEXT:    fmov d0, x0
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-OUTLINE-O0-LABEL: bitcast_to_double:
+; CHECK-OUTLINE-O0:       ; %bb.0:
+; CHECK-OUTLINE-O0-NEXT:    ldar x0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    fmov d0, x0
+; CHECK-OUTLINE-O0-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: bitcast_to_double:
 ; CHECK-LSE-O1:       ; %bb.0:
@@ -6579,8 +6535,8 @@ define internal double @bitcast_to_double(ptr %ptr) {
 ;
 ; CHECK-LSE-O0-LABEL: bitcast_to_double:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    ldar x8, [x0]
-; CHECK-LSE-O0-NEXT:    fmov d0, x8
+; CHECK-LSE-O0-NEXT:    ldar x0, [x0]
+; CHECK-LSE-O0-NEXT:    fmov d0, x0
 ; CHECK-LSE-O0-NEXT:    ret
   %load = load atomic i64, ptr %ptr seq_cst, align 8
   %bitcast = bitcast i64 %load to double
@@ -6588,17 +6544,29 @@ define internal double @bitcast_to_double(ptr %ptr) {
 }
 
 define internal float @bitcast_to_float(ptr %ptr) {
-; CHECK-NOLSE-LABEL: bitcast_to_float:
-; CHECK-NOLSE:       ; %bb.0:
-; CHECK-NOLSE-NEXT:    ldar w8, [x0]
-; CHECK-NOLSE-NEXT:    fmov s0, w8
-; CHECK-NOLSE-NEXT:    ret
+; CHECK-NOLSE-O1-LABEL: bitcast_to_float:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ldar w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    fmov s0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
 ;
-; CHECK-OUTLINE-LABEL: bitcast_to_float:
-; CHECK-OUTLINE:       ; %bb.0:
-; CHECK-OUTLINE-NEXT:    ldar w8, [x0]
-; CHECK-OUTLINE-NEXT:    fmov s0, w8
-; CHECK-OUTLINE-NEXT:    ret
+; CHECK-OUTLINE-O1-LABEL: bitcast_to_float:
+; CHECK-OUTLINE-O1:       ; %bb.0:
+; CHECK-OUTLINE-O1-NEXT:    ldar w8, [x0]
+; CHECK-OUTLINE-O1-NEXT:    fmov s0, w8
+; CHECK-OUTLINE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: bitcast_to_float:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    ldar w0, [x0]
+; CHECK-NOLSE-O0-NEXT:    fmov s0, w0
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-OUTLINE-O0-LABEL: bitcast_to_float:
+; CHECK-OUTLINE-O0:       ; %bb.0:
+; CHECK-OUTLINE-O0-NEXT:    ldar w0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    fmov s0, w0
+; CHECK-OUTLINE-O0-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: bitcast_to_float:
 ; CHECK-LSE-O1:       ; %bb.0:
@@ -6608,8 +6576,8 @@ define internal float @bitcast_to_float(ptr %ptr) {
 ;
 ; CHECK-LSE-O0-LABEL: bitcast_to_float:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    ldar w8, [x0]
-; CHECK-LSE-O0-NEXT:    fmov s0, w8
+; CHECK-LSE-O0-NEXT:    ldar w0, [x0]
+; CHECK-LSE-O0-NEXT:    fmov s0, w0
 ; CHECK-LSE-O0-NEXT:    ret
   %load = load atomic i32, ptr %ptr seq_cst, align 8
   %bitcast = bitcast i32 %load to float
@@ -6617,19 +6585,33 @@ define internal float @bitcast_to_float(ptr %ptr) {
 }
 
 define internal half @bitcast_to_half(ptr %ptr) {
-; CHECK-NOLSE-LABEL: bitcast_to_half:
-; CHECK-NOLSE:       ; %bb.0:
-; CHECK-NOLSE-NEXT:    ldarh w8, [x0]
-; CHECK-NOLSE-NEXT:    fmov s0, w8
-; CHECK-NOLSE-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-NEXT:    ret
+; CHECK-NOLSE-O1-LABEL: bitcast_to_half:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ldarh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    fmov s0, w8
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-NOLSE-O1-NEXT:    ret
 ;
-; CHECK-OUTLINE-LABEL: bitcast_to_half:
-; CHECK-OUTLINE:       ; %bb.0:
-; CHECK-OUTLINE-NEXT:    ldarh w8, [x0]
-; CHECK-OUTLINE-NEXT:    fmov s0, w8
-; CHECK-OUTLINE-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-OUTLINE-NEXT:    ret
+; CHECK-OUTLINE-O1-LABEL: bitcast_to_half:
+; CHECK-OUTLINE-O1:       ; %bb.0:
+; CHECK-OUTLINE-O1-NEXT:    ldarh w8, [x0]
+; CHECK-OUTLINE-O1-NEXT:    fmov s0, w8
+; CHECK-OUTLINE-O1-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-OUTLINE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: bitcast_to_half:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    ldarh w0, [x0]
+; CHECK-NOLSE-O0-NEXT:    fmov s0, w0
+; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-OUTLINE-O0-LABEL: bitcast_to_half:
+; CHECK-OUTLINE-O0:       ; %bb.0:
+; CHECK-OUTLINE-O0-NEXT:    ldarh w0, [x0]
+; CHECK-OUTLINE-O0-NEXT:    fmov s0, w0
+; CHECK-OUTLINE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-OUTLINE-O0-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: bitcast_to_half:
 ; CHECK-LSE-O1:       ; %bb.0:
@@ -6640,8 +6622,8 @@ define internal half @bitcast_to_half(ptr %ptr) {
 ;
 ; CHECK-LSE-O0-LABEL: bitcast_to_half:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    ldarh w8, [x0]
-; CHECK-LSE-O0-NEXT:    fmov s0, w8
+; CHECK-LSE-O0-NEXT:    ldarh w0, [x0]
+; CHECK-LSE-O0-NEXT:    fmov s0, w0
 ; CHECK-LSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-LSE-O0-NEXT:    ret
   %load = load atomic i16, ptr %ptr seq_cst, align 8

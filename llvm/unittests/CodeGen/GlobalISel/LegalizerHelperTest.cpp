@@ -270,12 +270,12 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTLZ) {
   auto CheckStr = R"(
   CHECK: [[UNMERGE_LO:%[0-9]+]]:_(s32), [[UNMERGE_HI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %0:_(s64)
   CHECK: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UNMERGE_HI]]:_(s32), [[ZERO]]:_
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[UNMERGE_HI]]:_(s32), [[ZERO]]:_
   CHECK: [[CTLZ_LO:%[0-9]+]]:_(s32) = G_CTLZ [[UNMERGE_LO]]:_(s32)
   CHECK: [[THIRTYTWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ_LO]]:_, [[THIRTYTWO]]:_
   CHECK: [[CTLZ_HI:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UNMERGE_HI]]:_(s32)
-  CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(s1), [[ADD]]:_, [[CTLZ_HI]]:_
+  CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(i1), [[ADD]]:_, [[CTLZ_HI]]:_
   )";
 
   // Check
@@ -1100,8 +1100,8 @@ TEST_F(AArch64GISelMITest, NarrowUADDO) {
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[UADDO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
-  CHECK: [[UADDO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[UADDO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(i1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
+  CHECK: [[UADDO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(i1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
   CHECK: [[UADDO2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_UADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
   CHECK: [[UADDO:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UADDO0]]:_(s32), [[UADDO1]]:_(s32), [[UADDO2]]:_(s32)
   )";
@@ -1137,8 +1137,8 @@ TEST_F(AArch64GISelMITest, NarrowUSUBO) {
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[USUBO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
-  CHECK: [[USUBO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[USUBO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(i1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
+  CHECK: [[USUBO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(i1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
   CHECK: [[USUBO2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_USUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
   CHECK: [[USUBO:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[USUBO0]]:_(s32), [[USUBO1]]:_(s32), [[USUBO2]]:_(s32)
   )";
@@ -1174,8 +1174,8 @@ TEST_F(AArch64GISelMITest, NarrowSADDO) {
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[SADDO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
-  CHECK: [[SADDO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[SADDO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(i1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
+  CHECK: [[SADDO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(i1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
   CHECK: [[SADDO2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_SADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
   CHECK: [[SADDO:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[SADDO0]]:_(s32), [[SADDO1]]:_(s32), [[SADDO2]]:_(s32)
   )";
@@ -1211,8 +1211,8 @@ TEST_F(AArch64GISelMITest, NarrowSSUBO) {
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[SSUBO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
-  CHECK: [[SSUBO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[SSUBO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(i1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
+  CHECK: [[SSUBO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(i1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
   CHECK: [[SSUBO2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_SSUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
   CHECK: [[SSUBO:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[SSUBO0]]:_(s32), [[SSUBO1]]:_(s32), [[SSUBO2]]:_(s32)
   )";
@@ -1250,8 +1250,8 @@ TEST_F(AArch64GISelMITest, NarrowUADDE) {
   CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[UADDE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
-  CHECK: [[UADDE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[UADDE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(i1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
+  CHECK: [[UADDE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(i1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
   CHECK: [[UADDE2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_UADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
   CHECK: [[UADDE:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UADDE0]]:_(s32), [[UADDE1]]:_(s32), [[UADDE2]]:_(s32)
   )";
@@ -1289,8 +1289,8 @@ TEST_F(AArch64GISelMITest, NarrowUSUBE) {
   CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[USUBE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
-  CHECK: [[USUBE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[USUBE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(i1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
+  CHECK: [[USUBE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(i1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
   CHECK: [[USUBE2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_USUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
   CHECK: [[USUBE:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[USUBE0]]:_(s32), [[USUBE1]]:_(s32), [[USUBE2]]:_(s32)
   )";
@@ -1328,8 +1328,8 @@ TEST_F(AArch64GISelMITest, NarrowSADDE) {
   CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[SADDE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
-  CHECK: [[SADDE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[SADDE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(i1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
+  CHECK: [[SADDE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(i1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
   CHECK: [[SADDE2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_SADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
   CHECK: [[SADDE:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[SADDE0]]:_(s32), [[SADDE1]]:_(s32), [[SADDE2]]:_(s32)
   )";
@@ -1367,8 +1367,8 @@ TEST_F(AArch64GISelMITest, NarrowSSUBE) {
   CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[SSUBE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
-  CHECK: [[SSUBE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[SSUBE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(i1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
+  CHECK: [[SSUBE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(i1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
   CHECK: [[SSUBE2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_SSUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
   CHECK: [[SSUBE:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[SSUBE0]]:_(s32), [[SSUBE1]]:_(s32), [[SSUBE2]]:_(s32)
   )";
@@ -3446,8 +3446,8 @@ TEST_F(AArch64GISelMITest, LowerSelect) {
   // Declare your legalization info
   DefineLegalizerInfo(A, { getActionDefinitionsBuilder(G_SELECT).lower(); });
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
   auto Tst = B.buildTrunc(S1, Copies[0]);
   auto SrcA = B.buildTrunc(S32, Copies[1]);
   auto SrcB = B.buildTrunc(S32, Copies[2]);
@@ -3461,15 +3461,15 @@ TEST_F(AArch64GISelMITest, LowerSelect) {
             Helper.lower(*SELECT, 0, S32));
 
   auto CheckStr = R"(
-  CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC
-  CHECK: [[TRUE:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[FALSE:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[MSK:%[0-9]+]]:_(s32) = G_SEXT [[TST]]
-  CHECK: [[M:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  CHECK: [[NEGMSK:%[0-9]+]]:_(s32) = G_XOR [[MSK]]:_, [[M]]:_
-  CHECK: [[TVAL:%[0-9]+]]:_(s32) = G_AND [[TRUE]]:_, [[MSK]]:_
-  CHECK: [[FVAL:%[0-9]+]]:_(s32) = G_AND [[FALSE]]:_, [[NEGMSK]]:_
-  CHECK: [[RES:%[0-9]+]]:_(s32) = G_OR [[TVAL]]:_, [[FVAL]]:_
+  CHECK: [[TST:%[0-9]+]]:_(i1) = G_TRUNC
+  CHECK: [[TRUE:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[FALSE:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[MSK:%[0-9]+]]:_(i32) = G_SEXT [[TST]]
+  CHECK: [[M:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
+  CHECK: [[NEGMSK:%[0-9]+]]:_(i32) = G_XOR [[MSK]]:_, [[M]]:_
+  CHECK: [[TVAL:%[0-9]+]]:_(i32) = G_AND [[TRUE]]:_, [[MSK]]:_
+  CHECK: [[FVAL:%[0-9]+]]:_(i32) = G_AND [[FALSE]]:_, [[NEGMSK]]:_
+  CHECK: [[RES:%[0-9]+]]:_(i32) = G_OR [[TVAL]]:_, [[FVAL]]:_
   )";
 
   // Check
@@ -4102,9 +4102,9 @@ TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
 
   DefineLegalizerInfo(A, {});
 
-  LLT S96{LLT::scalar(96)};
-  LLT S64{LLT::scalar(64)};
-  LLT S48{LLT::scalar(48)};
+  LLT S96{LLT::integer(96)};
+  LLT S64{LLT::integer(64)};
+  LLT S48{LLT::integer(48)};
 
   auto Src = B.buildAnyExt(S96, Copies[0]);
   auto Unmerge = B.buildUnmerge(S48, Src);
@@ -4116,7 +4116,7 @@ TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
   // Perform Legalization
   B.setInsertPt(*EntryMBB, Unmerge->getIterator());
 
-  // This should create unmerges to a GCD type (S16), then remerge to S48
+  // This should create unmerges to a GCD type (i16), then remerge to i48
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.widenScalar(*Unmerge, 0, S64));
 
@@ -4124,14 +4124,14 @@ TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
   CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
   CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
   CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s96) = G_ANYEXT [[COPY0]]
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i96) = G_ANYEXT [[COPY0]]
   CHECK: [[ANYEXT1:%[0-9]+]]:_(s192) = G_ANYEXT [[ANYEXT]]
-  CHECK: [[UNMERGE:%[0-9]+]]:_(s64), [[UNMERGE1:%[0-9]+]]:_(s64), [[UNMERGE2:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT1]]
-  CHECK: [[UNMERGE3:%[0-9]+]]:_(s16), [[UNMERGE4:%[0-9]+]]:_(s16), [[UNMERGE5:%[0-9]+]]:_(s16), [[UNMERGE6:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE]]
-  CHECK: [[UNMERGE7:%[0-9]+]]:_(s16), [[UNMERGE8:%[0-9]+]]:_(s16), [[UNMERGE9:%[0-9]+]]:_(s16), [[UNMERGE10:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE1]]
-  CHECK: [[UNMERGE11:%[0-9]+]]:_(s16), [[UNMERGE12:%[0-9]+]]:_(s16), [[UNMERGE13:%[0-9]+]]:_(s16), [[UNMERGE14:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE2]]
-  CHECK: [[MERGE:%[0-9]+]]:_(s48) = G_MERGE_VALUES [[UNMERGE3]]:_(s16), [[UNMERGE4]]:_(s16), [[UNMERGE5]]:_(s16)
-  CHECK: [[MERGE1:%[0-9]+]]:_(s48) = G_MERGE_VALUES [[UNMERGE6]]:_(s16), [[UNMERGE7]]:_(s16), [[UNMERGE8]]:_(s16)
+  CHECK: [[UNMERGE:%[0-9]+]]:_(i64), [[UNMERGE1:%[0-9]+]]:_(i64), [[UNMERGE2:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT1]]
+  CHECK: [[UNMERGE3:%[0-9]+]]:_(i16), [[UNMERGE4:%[0-9]+]]:_(i16), [[UNMERGE5:%[0-9]+]]:_(i16), [[UNMERGE6:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[UNMERGE]]
+  CHECK: [[UNMERGE7:%[0-9]+]]:_(i16), [[UNMERGE8:%[0-9]+]]:_(i16), [[UNMERGE9:%[0-9]+]]:_(i16), [[UNMERGE10:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[UNMERGE1]]
+  CHECK: [[UNMERGE11:%[0-9]+]]:_(i16), [[UNMERGE12:%[0-9]+]]:_(i16), [[UNMERGE13:%[0-9]+]]:_(i16), [[UNMERGE14:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[UNMERGE2]]
+  CHECK: [[MERGE:%[0-9]+]]:_(i48) = G_MERGE_VALUES [[UNMERGE3]]:_(i16), [[UNMERGE4]]:_(i16), [[UNMERGE5]]:_(i16)
+  CHECK: [[MERGE1:%[0-9]+]]:_(i48) = G_MERGE_VALUES [[UNMERGE6]]:_(i16), [[UNMERGE7]]:_(i16), [[UNMERGE8]]:_(i16)
   )";
 
   // Check

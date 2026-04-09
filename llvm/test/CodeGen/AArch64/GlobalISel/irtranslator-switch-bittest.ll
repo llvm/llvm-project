@@ -15,7 +15,7 @@ define i32 @test_bittest(i16 %p) {
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i16)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(i32) = G_SUB [[ZEXT]], [[C3]]
-  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[SUB]](i32)
+  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(i64) = G_ZEXT [[SUB]](i32)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 59
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), [[SUB]](i32), [[C4]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.4
@@ -32,7 +32,7 @@ define i32 @test_bittest(i16 %p) {
   ; CHECK-NEXT:   successors: %bb.3(0x745d1746), %bb.4(0x0ba2e8ba)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i64) = G_SHL [[C5]], [[ZEXT1]](s64)
+  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i64) = G_SHL [[C5]], [[ZEXT1]](i64)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(i64) = G_CONSTANT i64 866239240827043840
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C6]]
   ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
@@ -84,7 +84,7 @@ define void @test_bittest_2_bt(i32 %p) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[SUB1:%[0-9]+]]:_(i32) = G_SUB [[COPY]], [[C2]]
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[SUB1]](i32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[SUB1]](i32)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 38
   ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), [[SUB1]](i32), [[C3]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP1]](i1), %bb.4
@@ -106,7 +106,7 @@ define void @test_bittest_2_bt(i32 %p) {
   ; CHECK-NEXT:   successors: %bb.3(0x71c71c72), %bb.4(0x0e38e38e)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(i64) = G_SHL [[C7]], [[ZEXT]](s64)
+  ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(i64) = G_SHL [[C7]], [[ZEXT]](i64)
   ; CHECK-NEXT:   [[C8:%[0-9]+]]:_(i64) = G_CONSTANT i64 365072220160
   ; CHECK-NEXT:   [[AND1:%[0-9]+]]:_(i64) = G_AND [[SHL1]], [[C8]]
   ; CHECK-NEXT:   [[C9:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
@@ -161,7 +161,7 @@ define i32 @test_bittest_single_bt_only_with_fallthrough(i16 %p) {
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i16)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(i32) = G_SUB [[ZEXT]], [[C2]]
-  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[SUB]](i32)
+  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(i64) = G_ZEXT [[SUB]](i32)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 59
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), [[SUB]](i32), [[C3]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
@@ -170,7 +170,7 @@ define i32 @test_bittest_single_bt_only_with_fallthrough(i16 %p) {
   ; CHECK-NEXT:   successors: %bb.3(0x745d1746), %bb.2(0x0ba2e8ba)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i64) = G_SHL [[C4]], [[ZEXT1]](s64)
+  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i64) = G_SHL [[C4]], [[ZEXT1]](i64)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i64) = G_CONSTANT i64 866239240827043840
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C5]]
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
@@ -282,7 +282,7 @@ define i32 @test_odd_type(i328 %p) {
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i328) = G_CONSTANT i328 0
   ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(i328) = G_SUB [[TRUNC]], [[C3]]
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s64) = G_TRUNC [[SUB]](i328)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i64) = G_TRUNC [[SUB]](i328)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i328) = G_CONSTANT i328 59
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), [[SUB]](i328), [[C4]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.4
@@ -299,7 +299,7 @@ define i32 @test_odd_type(i328 %p) {
   ; CHECK-NEXT:   successors: %bb.3(0x745d1746), %bb.4(0x0ba2e8ba)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i64) = G_SHL [[C5]], [[TRUNC1]](s64)
+  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i64) = G_SHL [[C5]], [[TRUNC1]](i64)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(i64) = G_CONSTANT i64 866239240827043840
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C6]]
   ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
@@ -344,7 +344,7 @@ define i32 @test_large_pow2_type(i256 %p) {
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i256) = G_CONSTANT i256 0
   ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(i256) = G_SUB [[MV]], [[C3]]
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[SUB]](i256)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i64) = G_TRUNC [[SUB]](i256)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i256) = G_CONSTANT i256 59
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), [[SUB]](i256), [[C4]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.4
@@ -361,7 +361,7 @@ define i32 @test_large_pow2_type(i256 %p) {
   ; CHECK-NEXT:   successors: %bb.3(0x745d1746), %bb.4(0x0ba2e8ba)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i64) = G_SHL [[C5]], [[TRUNC]](s64)
+  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i64) = G_SHL [[C5]], [[TRUNC]](i64)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(i64) = G_CONSTANT i64 866239240827043840
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C6]]
   ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(i64) = G_CONSTANT i64 0

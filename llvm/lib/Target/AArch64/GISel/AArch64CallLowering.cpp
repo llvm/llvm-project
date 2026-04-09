@@ -754,8 +754,7 @@ bool AArch64CallLowering::lowerFormalArguments(
       if (!Flags.isZExt() && !Flags.isSExt()) {
         // Lower i1 argument as i8, and insert AssertZExt + Trunc later.
         Register OrigReg = OrigArg.Regs[0];
-        Register WideReg =
-            MRI.createGenericVirtualRegister(LLT::integer(8));
+        Register WideReg = MRI.createGenericVirtualRegister(LLT::integer(8));
         OrigArg.Regs[0] = WideReg;
         BoolArgs.push_back({OrigReg, WideReg});
       }

@@ -363,8 +363,8 @@ body:             |
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 3
     ; CHECK-NEXT: [[IVEC3:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC2]], %d(s32), [[C3]](i64)
     ; CHECK-NEXT: %buildvec:_(<4 x s32>) = COPY [[IVEC3]](<4 x s32>)
-    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %shuf:_(<4 x s32>) = G_DUPLANE32 %buildvec, [[C4]](s64)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<4 x s32>) = G_DUPLANE32 %buildvec, [[C4]](i64)
     ; CHECK-NEXT: $q0 = COPY %shuf(<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lane:_(s32) = COPY $w0

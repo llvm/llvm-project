@@ -446,7 +446,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
            DstTy.getSizeInBits() < 32 &&
            "Expected a scalar smaller than 32 bits on a GPR.");
     Builder.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
-    Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    Register ExtReg = MRI.createGenericVirtualRegister(LLT::integer(32));
     Builder.buildTrunc(Dst, ExtReg);
 
     APInt Val = MI.getOperand(1).getCImm()->getValue().zext(32);
@@ -465,7 +465,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     APInt Bits = Imm.bitcastToAPInt();
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
     if (Bits.getBitWidth() < 32) {
-      Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      Register ExtReg = MRI.createGenericVirtualRegister(LLT::integer(32));
       Builder.buildConstant(ExtReg, Bits.zext(32));
       Builder.buildTrunc(Dst, ExtReg);
       MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
@@ -486,7 +486,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
         return applyDefaultMapping(OpdMapper);
 
       Builder.setInsertPt(*MI.getParent(), MI.getIterator());
-      auto Ext = Builder.buildAnyExt(LLT::scalar(32), Dst);
+      auto Ext = Builder.buildAnyExt(LLT::integer(32), Dst);
       MI.getOperand(0).setReg(Ext.getReg(0));
       MRI.setRegBank(Ext.getReg(0), AArch64::GPRRegBank);
     }
@@ -498,7 +498,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     if (MRI.getRegBank(Dst) == &AArch64::GPRRegBank && Ty.isScalar() &&
         Ty.getSizeInBits() < 32) {
       Builder.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
-      Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      Register ExtReg = MRI.createGenericVirtualRegister(LLT::integer(32));
       Builder.buildTrunc(Dst, ExtReg);
       MI.getOperand(0).setReg(ExtReg);
       MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
@@ -535,7 +535,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
 
     Register ConstReg =
-        Builder.buildAnyExt(LLT::scalar(32), MI.getOperand(1).getReg())
+        Builder.buildAnyExt(LLT::integer(32), MI.getOperand(1).getReg())
             .getReg(0);
     MRI.setRegBank(ConstReg, getRegBank(AArch64::GPRRegBankID));
     MI.getOperand(1).setReg(ConstReg);
@@ -947,12 +947,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
     TypeSize Size = DstTy.getSizeInBits();
-    bool DstIsGPR = !DstTy.isVector() && DstTy.getSizeInBits() <= 64 &&
-                    DstTy.getScalarType().isInteger() &&
-                    !(SrcTy.getSizeInBits() <= 16);
-    bool SrcIsGPR = !SrcTy.isVector() && SrcTy.getSizeInBits() <= 64 &&
-                    SrcTy.getScalarType().isInteger() &&
-                    !(SrcTy.getSizeInBits() <= 16);
+    bool DstIsGPR = !DstTy.isVector() && DstTy.getSizeInBits() <= 64;
+    bool SrcIsGPR = !SrcTy.isVector() && SrcTy.getSizeInBits() <= 64;
     const RegisterBank &DstRB =
         DstIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     const RegisterBank &SrcRB =
@@ -1253,17 +1249,14 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     break;
   }
-  case TargetOpcode::G_UNMERGE_VALUES:
+  case TargetOpcode::G_UNMERGE_VALUES: {
     // If the first operand belongs to a FPR register bank, then make sure that
     // we preserve that.
     if (OpRegBankIdx[0] != PMI_FirstGPR)
       break;
-    [[fallthrough]];
 
-  case TargetOpcode::G_MERGE_VALUES: {
     LLT SrcTy = MRI.getType(MI.getOperand(MI.getNumOperands()-1).getReg());
     // UNMERGE into scalars from a vector should always use FPR.
-    // MERGE into a vector should use FPR if the operands are already on FPR.
     // Likewise if any of the uses are FP instructions.
     if (SrcTy.isVector() || SrcTy == LLT::scalar(128) ||
         any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),

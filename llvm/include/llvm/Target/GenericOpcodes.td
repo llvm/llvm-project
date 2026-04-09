@@ -84,6 +84,7 @@ def G_TRUNC : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Truncate the signed operand to a signed result with saturation.
@@ -111,12 +112,14 @@ def G_IMPLICIT_DEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_PHI : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins variable_ops);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_FRAME_INDEX : GenericInstruction {
@@ -167,6 +170,7 @@ def G_CONSTANT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$imm);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Only supports scalar result types
@@ -174,6 +178,7 @@ def G_FCONSTANT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$imm);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_VASTART : GenericInstruction {
@@ -231,6 +236,7 @@ def G_BSWAP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
   let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_BITREVERSE : GenericInstruction {
@@ -1409,6 +1415,7 @@ def G_ATOMIC_CMPXCHG_WITH_SUCCESS : GenericInstruction {
   let hasSideEffects = false;
   let mayLoad = true;
   let mayStore = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
@@ -1419,6 +1426,7 @@ def G_ATOMIC_CMPXCHG : GenericInstruction {
   let hasSideEffects = false;
   let mayLoad = true;
   let mayStore = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
@@ -1429,6 +1437,7 @@ class G_ATOMICRMW_OP : GenericInstruction {
   let hasSideEffects = false;
   let mayLoad = true;
   let mayStore = true;
+  let GISelMatchGenericTypes = 1;
 }
 
 def G_ATOMICRMW_XCHG : G_ATOMICRMW_OP;

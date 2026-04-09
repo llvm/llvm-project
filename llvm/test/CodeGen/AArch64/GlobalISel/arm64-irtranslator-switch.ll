@@ -179,16 +179,16 @@ define i32 @jt_test(i32 %x) {
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[SUB:%[0-9]+]]:_(i32) = G_SUB [[COPY]], [[C4]]
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[SUB]](i32)
-  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[C]](i32)
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), [[ZEXT]](s64), [[ZEXT1]]
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[SUB]](i32)
+  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(i64) = G_ZEXT [[C]](i32)
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), [[ZEXT]](i64), [[ZEXT1]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.entry:
   ; CHECK-NEXT:   successors: %bb.3, %bb.4, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[JUMP_TABLE:%[0-9]+]]:_(p0) = G_JUMP_TABLE %jump-table.0
-  ; CHECK-NEXT:   G_BRJT [[JUMP_TABLE]](p0), %jump-table.0, [[ZEXT]](s64)
+  ; CHECK-NEXT:   G_BRJT [[JUMP_TABLE]](p0), %jump-table.0, [[ZEXT]](i64)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.sw.bb:
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = nsw G_ADD [[COPY]], [[C2]]

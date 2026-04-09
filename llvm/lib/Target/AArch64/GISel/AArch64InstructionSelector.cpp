@@ -2140,7 +2140,7 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     if (PtrSize != 32 && PtrSize != 64)
       return false;
     // Convert pointer typed constants to integers so TableGen can select.
-    MRI.setType(DefReg, LLT::scalar(PtrSize));
+    MRI.setType(DefReg, LLT::integer(PtrSize));
     return true;
   }
   case TargetOpcode::G_STORE: {

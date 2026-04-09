@@ -93,21 +93,25 @@ def G_DUPLANE8 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 def G_DUPLANE16 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 def G_DUPLANE32 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 def G_DUPLANE64 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a trn1 instruction. Produced post-legalization from

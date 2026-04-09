@@ -113,7 +113,7 @@ void applyExtractVecEltPairwiseAdd(
   // We want to generate two extracts of elements 0 and 1, and add them.
   LLT Ty = std::get<1>(MatchInfo);
   Register Src = std::get<2>(MatchInfo);
-  LLT s64 = LLT::scalar(64);
+  LLT s64 = LLT::integer(64);
   B.setInstrAndDebugLoc(MI);
   auto Elt0 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 0));
   auto Elt1 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 1));
@@ -329,11 +329,11 @@ void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   GStore &Store = cast<GStore>(MI);
   assert(MRI.getType(Store.getValueReg()).isVector() &&
          "Expected a vector store value");
-  LLT NewTy = LLT::scalar(64);
+  LLT NewTy = LLT::integer(64);
   Register PtrReg = Store.getPointerReg();
   auto Zero = B.buildConstant(NewTy, 0);
-  auto HighPtr = B.buildPtrAdd(MRI.getType(PtrReg), PtrReg,
-                               B.buildConstant(LLT::scalar(64), 8));
+  auto HighPtr =
+      B.buildPtrAdd(MRI.getType(PtrReg), PtrReg, B.buildConstant(NewTy, 8));
   auto &MF = *MI.getMF();
   auto *LowMMO = MF.getMachineMemOperand(&Store.getMMO(), 0, NewTy);
   auto *HighMMO = MF.getMachineMemOperand(&Store.getMMO(), 8, NewTy);
@@ -751,7 +751,8 @@ bool AArch64PostLegalizerCombiner::tryOptimizeConsecStores(
   for (auto &SInfo : Stores) {
     // Compute a new pointer with the new base ptr and adjusted offset.
     MIB.setInstrAndDebugLoc(*SInfo.St);
-    auto NewOff = MIB.buildConstant(LLT::scalar(64), SInfo.Offset - BaseOffset);
+    auto NewOff =
+        MIB.buildConstant(LLT::integer(64), SInfo.Offset - BaseOffset);
     auto NewPtr = MIB.buildPtrAdd(MRI.getType(SInfo.St->getPointerReg()),
                                   NewBase, NewOff);
     if (MIB.getObserver())
