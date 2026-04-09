@@ -2543,3 +2543,21 @@ func.func @test_hoist_string_lit(%arg0: !fir.ref<!fir.char<1,5>>) {
   }
   return
 }
+
+// -----
+// Test that fir.address_of is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_address_of(
+// CHECK-SAME:      %[[ARG0:.*]]: f32)
+// CHECK:           %[[ADDR:.*]] = fir.address_of(@_QMtestEglobal) : !fir.ref<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ARG0]] to %[[ADDR]] : !fir.ref<f32>
+fir.global @_QMtestEglobal : f32
+func.func @test_hoist_address_of(%arg0: f32) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.address_of(@_QMtestEglobal) : !fir.ref<f32>
+    fir.store %arg0 to %0 : !fir.ref<f32>
+  }
+  return
+}

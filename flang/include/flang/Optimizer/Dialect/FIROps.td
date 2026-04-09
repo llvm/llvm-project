@@ -2955,7 +2955,7 @@ def fir_CmpcOp : fir_Op<"cmpc",
 
 // Other misc. operations
 
-def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
+def fir_AddrOfOp : fir_OneResultOp<"address_of", [Pure]> {
   let summary = "convert a symbol to an SSA value";
 
   let description = [{
