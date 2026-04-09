@@ -2632,3 +2632,21 @@ func.func @test_hoist_assumed_size_extent(%arg0: !fir.ref<index>) {
   }
   return
 }
+
+// -----
+// Test that fir.is_assumed_size_extent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_is_assumed_size_extent(
+// CHECK-SAME:      %[[ARG0:.*]]: index,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i1>)
+// CHECK:           %[[RES:.*]] = fir.is_assumed_size_extent %[[ARG0]] : (index) -> i1
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[RES]] to %[[ARG1]] : !fir.ref<i1>
+func.func @test_hoist_is_assumed_size_extent(%arg0: index, %arg1: !fir.ref<i1>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+    %0 = fir.is_assumed_size_extent %arg0 : (index) -> i1
+    fir.store %0 to %arg1 : !fir.ref<i1>
+  }
+  return
+}

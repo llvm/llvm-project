@@ -1351,7 +1351,7 @@ def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [Pure
   let assemblyFormat = "attr-dict `:` type(results)";
 }
 
-def fir_IsAssumedSizeExtentOp : fir_SimpleOp<"is_assumed_size_extent", [NoMemoryEffect]> {
+def fir_IsAssumedSizeExtentOp : fir_SimpleOp<"is_assumed_size_extent", [Pure]> {
   let summary = "is value the assumed-size last extent sentinel";
 
   let description = [{
