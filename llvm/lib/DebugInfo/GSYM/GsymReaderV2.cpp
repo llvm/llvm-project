@@ -70,14 +70,10 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "\n";
 
   // Print UUID if present.
-  auto UUIDIt = GlobalDataSections.find(GlobalInfoType::UUID);
-  if (UUIDIt != GlobalDataSections.end()) {
-    const GlobalData &UUIDGD = UUIDIt->second;
-    const StringRef Buf = MemBuffer->getBuffer();
+  if (auto UUIDBytes = getOptionalGlobalData(GlobalInfoType::UUID)) {
     OS << "UUID:\n";
-    for (uint64_t I = 0; I < UUIDGD.FileSize; ++I)
-      OS << format_hex_no_prefix(
-          static_cast<uint8_t>(Buf[UUIDGD.FileOffset + I]), 2);
+    for (uint8_t Byte : *UUIDBytes)
+      OS << format_hex_no_prefix(Byte, 2);
     OS << "\n\n";
   }
 

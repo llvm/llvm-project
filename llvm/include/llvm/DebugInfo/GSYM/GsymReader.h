@@ -292,12 +292,21 @@ public:
   LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
-  /// Get the raw bytes for a GlobalData section as a StringRef.
+  /// Get the raw bytes for a required GlobalData section as a StringRef.
   ///
   /// \param Type The section type to retrieve.
   /// \returns The section data or an error if the section is missing or
   /// out of bounds.
-  LLVM_ABI llvm::Expected<StringRef> getGlobalData(GlobalInfoType Type) const;
+  LLVM_ABI llvm::Expected<StringRef>
+  getRequiredGlobalData(GlobalInfoType Type) const;
+
+  /// Get the raw bytes for an optional GlobalData section as a StringRef.
+  ///
+  /// \param Type The section type to retrieve.
+  /// \returns The section data, or std::nullopt if the section is not present
+  /// or out of bounds.
+  LLVM_ABI std::optional<StringRef>
+  getOptionalGlobalData(GlobalInfoType Type) const;
 
   /// Parse the GSYM data from the memory buffer.
   ///

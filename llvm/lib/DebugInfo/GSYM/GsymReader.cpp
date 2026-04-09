@@ -135,25 +135,25 @@ llvm::Error GsymReader::parse() {
                              "AddrInfoOffsets section size mismatch");
 
   // Step 3: Parse each global data section.
-  llvm::Expected<StringRef> Bytes = getGlobalData(GlobalInfoType::AddrOffsets);
+  llvm::Expected<StringRef> Bytes = getRequiredGlobalData(GlobalInfoType::AddrOffsets);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = parseAddrOffsets(*Bytes))
     return Err;
 
-  Bytes = getGlobalData(GlobalInfoType::AddrInfoOffsets);
+  Bytes = getRequiredGlobalData(GlobalInfoType::AddrInfoOffsets);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = setAddrInfoOffsetsData(*Bytes))
     return Err;
 
-  Bytes = getGlobalData(GlobalInfoType::StringTable);
+  Bytes = getRequiredGlobalData(GlobalInfoType::StringTable);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = setStringTableData(*Bytes))
     return Err;
 
-  Bytes = getGlobalData(GlobalInfoType::FileTable);
+  Bytes = getRequiredGlobalData(GlobalInfoType::FileTable);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = setFileTableData(*Bytes))
@@ -275,7 +275,8 @@ llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
   return Error::success();
 }
 
-llvm::Expected<StringRef> GsymReader::getGlobalData(GlobalInfoType Type) const {
+llvm::Expected<StringRef>
+GsymReader::getRequiredGlobalData(GlobalInfoType Type) const {
   auto It = GlobalDataSections.find(Type);
   if (It == GlobalDataSections.end())
     return createStringError(std::errc::invalid_argument,
@@ -290,6 +291,18 @@ llvm::Expected<StringRef> GsymReader::getGlobalData(GlobalInfoType Type) const {
                              ", bufsize=%" PRIu64 ")",
                              static_cast<uint32_t>(Type), GD.FileOffset,
                              GD.FileSize, static_cast<uint64_t>(Buf.size()));
+  return Buf.substr(GD.FileOffset, GD.FileSize);
+}
+
+std::optional<StringRef>
+GsymReader::getOptionalGlobalData(GlobalInfoType Type) const {
+  auto It = GlobalDataSections.find(Type);
+  if (It == GlobalDataSections.end())
+    return std::nullopt;
+  const GlobalData &GD = It->second;
+  StringRef Buf = MemBuffer->getBuffer();
+  if (GD.FileOffset + GD.FileSize > Buf.size())
+    return std::nullopt;
   return Buf.substr(GD.FileOffset, GD.FileSize);
 }
 
@@ -413,8 +426,9 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr)) {
     ExpectedData->setStringOffsetSize(getStringOffsetSize());
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
-  } else
+  } else {
     return ExpectedData.takeError();
+  }
 }
 
 llvm::Expected<FunctionInfo>
@@ -423,8 +437,9 @@ GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
   if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr)) {
     ExpectedData->setStringOffsetSize(getStringOffsetSize());
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
-  } else
+  } else {
     return ExpectedData.takeError();
+  }
 }
 
 llvm::Expected<LookupResult>
@@ -435,8 +450,9 @@ GsymReader::lookup(uint64_t Addr,
     ExpectedData->setStringOffsetSize(getStringOffsetSize());
     return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr,
                                 MergedFunctionsData);
-  } else
+  } else {
     return ExpectedData.takeError();
+  }
 }
 
 llvm::Expected<std::vector<LookupResult>>
