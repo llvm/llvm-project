@@ -5667,8 +5667,8 @@ protected:
     if (m_options.m_use_one_liner) {
       auto *hook = static_cast<Target::HookCommandLine *>(new_hook_sp.get());
       hook->SetActionFromStrings(m_options.m_one_liner);
-      result.AppendMessageWithFormat("Hook #%" PRIu64 " added.\n",
-                                     new_hook_sp->GetID());
+      result.AppendMessageWithFormatv("Hook #{0} added.\n",
+                                      new_hook_sp->GetID());
     } else if (!m_python_class_options.GetName().empty()) {
       auto *hook = static_cast<Target::HookScripted *>(new_hook_sp.get());
       Status callback_error =
@@ -5680,8 +5680,8 @@ protected:
         target.UndoCreateHook(new_hook_sp->GetID());
         return;
       }
-      result.AppendMessageWithFormat("Hook #%" PRIu64 " added.\n",
-                                     new_hook_sp->GetID());
+      result.AppendMessageWithFormatv("Hook #{0} added.\n",
+                                      new_hook_sp->GetID());
     } else {
       m_hook_sp = new_hook_sp;
       m_interpreter.GetLLDBCommandsFromIOHandler("> ",   // prompt
@@ -5713,6 +5713,10 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
     if (command.GetArgumentCount() == 0) {
+      if (!m_interpreter.Confirm("Delete all hooks?", true)) {
+        result.SetStatus(eReturnStatusFailed);
+        return;
+      }
       target.RemoveAllHooks();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;

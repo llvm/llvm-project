@@ -70,6 +70,7 @@ target hook list
 # CHECK:     Hook: 4
 
 # Delete all hooks.
+settings set auto-confirm true
 target hook delete
 target hook list
 # CHECK: (lldb) target hook list
