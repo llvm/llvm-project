@@ -517,15 +517,6 @@ std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
   return P;
 }
 
-/// Check if the Condition, which is a predicate of M, cannot be hoisted outside
-/// of (i.e., checked before) M.
-static bool cannotHoistCondition(const PredicateMatcher &Condition,
-                                 const Matcher &M) {
-  // The condition can't be hoisted if it is a C++ predicate that refers to
-  // operands and the operands are registered within the matcher.
-  return Condition.dependsOnOperands() && M.recordsOperand();
-}
-
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
   if (!Candidate.hasFirstCondition())
     return false;
@@ -534,7 +525,7 @@ bool GroupMatcher::addMatcher(Matcher &Candidate) {
   // hoisted into the GroupMatcher.
   const PredicateMatcher &Predicate = Candidate.getFirstCondition();
   if (!candidateConditionMatches(Predicate) ||
-      cannotHoistCondition(Predicate, Candidate))
+      !Predicate.canHoistOutsideOf(Candidate))
     return false;
 
   Matchers.push_back(&Candidate);
@@ -555,12 +546,12 @@ void GroupMatcher::finalize() {
     // Hoist the first condition if it is identical in all matchers in the group
     // and it can be hoisted in every matcher.
     const auto &FirstCondition = FirstRule.getFirstCondition();
-    if (cannotHoistCondition(FirstCondition, FirstRule))
+    if (!FirstCondition.canHoistOutsideOf(FirstRule))
       return;
     for (unsigned I = 1, E = Matchers.size(); I < E; ++I) {
       const auto &OtherFirstCondition = Matchers[I]->getFirstCondition();
       if (!OtherFirstCondition.isIdentical(FirstCondition) ||
-          cannotHoistCondition(OtherFirstCondition, *Matchers[I]))
+          !OtherFirstCondition.canHoistOutsideOf(*Matchers[I]))
         return;
     }
 
@@ -757,7 +748,7 @@ void SwitchMatcher::emit(MatchTable &Table) {
 //===- RuleMatcher --------------------------------------------------------===//
 
 RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
-    : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
+    : Matcher(Matcher::MK_Rule), SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
 
 uint64_t RuleMatcher::NextRuleID = 0;
 
@@ -1224,6 +1215,11 @@ void SameOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::Comment("OtherOpIdx")
         << MatchTable::ULEB128Value(OtherOM.getOpIdx())
         << MatchTable::LineBreak;
+}
+
+bool SameOperandMatcher::canHoistOutsideOf(const Matcher &M) const {
+  const auto *RM = dyn_cast<RuleMatcher>(&M);
+  return !RM || !RM->hasOperand(MatchingName);
 }
 
 //===- LLTOperandMatcher --------------------------------------------------===//
@@ -1839,8 +1835,8 @@ void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
   // First emit all instruction level predicates need to be verified before we
   // can verify operands.
   emitFilteredPredicateListOpcodes(
-      [](const PredicateMatcher &P) { return !P.dependsOnOperands(); }, Table,
-      Rule);
+      [](const PredicateMatcher &P) { return !P.dependsOnRecordedOperands(); },
+      Table, Rule);
 
   // Emit all operand constraints.
   for (const auto &Operand : Operands)
@@ -1849,8 +1845,8 @@ void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
   // All of the tablegen defined predicates should now be matched. Now emit
   // any custom predicates that rely on all generated checks.
   emitFilteredPredicateListOpcodes(
-      [](const PredicateMatcher &P) { return P.dependsOnOperands(); }, Table,
-      Rule);
+      [](const PredicateMatcher &P) { return P.dependsOnRecordedOperands(); },
+      Table, Rule);
 }
 
 bool InstructionMatcher::isHigherPriorityThan(InstructionMatcher &B) {

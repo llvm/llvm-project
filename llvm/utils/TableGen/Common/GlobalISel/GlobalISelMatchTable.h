@@ -306,7 +306,17 @@ inline MatchTable &operator<<(MatchTable &Table,
 //===- Matchers -----------------------------------------------------------===//
 class Matcher {
 public:
+  enum MatcherKind {
+    MK_Group,
+    MK_Switch,
+    MK_Rule,
+  };
+
+  Matcher(MatcherKind Kind) : Kind(Kind) {}
   virtual ~Matcher();
+
+  MatcherKind getKind() const { return Kind; }
+
   virtual void optimize();
   virtual void emit(MatchTable &Table) = 0;
 
@@ -317,6 +327,9 @@ public:
   /// Check recursively if the matcher records named operands for use in C++
   /// predicates.
   virtual bool recordsOperand() const = 0;
+
+private:
+  MatcherKind Kind;
 };
 
 class GroupMatcher final : public Matcher {
@@ -331,6 +344,10 @@ class GroupMatcher final : public Matcher {
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
 
 public:
+  GroupMatcher() : Matcher(MK_Group) {}
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Group; }
+
   /// Add a matcher to the collection of nested matchers if it meets the
   /// requirements, and return true. If it doesn't, do nothing and return false.
   ///
@@ -421,6 +438,10 @@ class SwitchMatcher : public Matcher {
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
 
 public:
+  SwitchMatcher() : Matcher(MK_Switch) {}
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Switch; }
+
   bool addMatcher(Matcher &Candidate);
 
   void finalize();
@@ -550,6 +571,8 @@ public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc);
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
+
+  static bool classof(const Matcher *M) { return M->getKind() == MK_Rule; }
 
   TempTypeIdx getNextTempTypeIdx() { return NextTempTypeIdx--; }
 
@@ -858,12 +881,16 @@ public:
 
   PredicateKind getKind() const { return Kind; }
 
-  bool dependsOnOperands() const {
+  bool dependsOnRecordedOperands() const {
     // Custom predicates really depend on the context pattern of the
     // instruction, not just the individual instruction. This therefore
     // implicitly depends on all other pattern constraints.
     return Kind == IPM_GenericPredicate;
   }
+
+  /// \param M A Matcher that contains this PredicateMatcher.
+  /// \returns true if this PredicateMatcher can be hoisted outside of \p M.
+  virtual bool canHoistOutsideOf(const Matcher &M) const { return true; }
 
   bool recordsOperand() const { return Kind == OPM_RecordNamedOperand; }
 
@@ -938,6 +965,8 @@ public:
            OrigOpIdx == cast<SameOperandMatcher>(&B)->OrigOpIdx &&
            MatchingName == cast<SameOperandMatcher>(&B)->MatchingName;
   }
+
+  virtual bool canHoistOutsideOf(const Matcher &M) const override;
 };
 
 /// Generates code to check that an operand is a particular LLT.
@@ -1698,6 +1727,14 @@ public:
   bool isIdentical(const PredicateMatcher &B) const override;
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override;
+
+  bool canHoistOutsideOf(const Matcher &M) const override {
+    // We can only hoist C++ code if the parent Matcher does not define any
+    // symbol that may be used by C++ code.
+    // TODO?: Could we be more precise, e.g. hoist if the Matcher records
+    // operands, but the operands aren't used by this bit of C++.
+    return !M.recordsOperand();
+  }
 };
 
 class MIFlagsInstructionPredicateMatcher : public InstructionPredicateMatcher {
