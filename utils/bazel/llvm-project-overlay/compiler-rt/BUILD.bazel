@@ -354,7 +354,6 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_aarch64_srcs",
     srcs = [":builtins_unfiltered_aarch64_srcs"],
-    textual_name = "builtins_aarch64_textual_srcs",
 )
 
 BUILTINS_ARM_VFP_SRCS_PATTERNS = [
@@ -415,7 +414,6 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_armv7_srcs",
     srcs = [":builtins_unfiltered_armv7_srcs"],
-    textual_name = "builtins_armv7_textual_srcs",
 )
 
 filegroup(
@@ -431,7 +429,6 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_aarch32_srcs",
     srcs = [":builtins_unfiltered_aarch32_srcs"],
-    textual_name = "builtins_aarch32_textual_srcs",
 )
 
 filegroup(
@@ -453,7 +450,6 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_ppc64_srcs",
     srcs = [":builtins_unfiltered_ppc64_srcs"],
-    textual_name = "builtins_ppc64_textual_srcs",
 )
 
 filegroup(
@@ -464,7 +460,6 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_ppc32_srcs",
     srcs = [":builtins_unfiltered_ppc32_srcs"],
-    textual_name = "builtins_ppc32_textual_srcs",
 )
 
 filegroup(
@@ -486,7 +481,6 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_riscv64_srcs",
     srcs = [":builtins_unfiltered_riscv64_srcs"],
-    textual_name = "builtins_riscv64_textual_srcs",
 )
 
 filegroup(
@@ -507,7 +501,6 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_riscv32_srcs",
     srcs = [":builtins_unfiltered_riscv32_srcs"],
-    textual_name = "builtins_riscv32_textual_srcs",
 )
 
 # Source files for the x86 architecture specific builtins (both 32-bit and
@@ -548,7 +541,6 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_x86_64_srcs",
     srcs = [":builtins_unfiltered_x86_64_srcs"],
-    textual_name = "builtins_x86_64_textual_srcs",
 )
 
 # Source files for the 32-bit-specific x86 architecture specific builtins.
@@ -582,5 +574,4 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_i386_srcs",
     srcs = [":builtins_unfiltered_i386_srcs"],
-    textual_name = "builtins_i386_textual_srcs",
 )

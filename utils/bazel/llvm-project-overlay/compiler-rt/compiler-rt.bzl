@@ -141,13 +141,15 @@ filtered_builtins_textual_srcs = rule(
     """,
 )
 
-def make_filtered_builtins_srcs_groups(name, textual_name, srcs):
+def make_filtered_builtins_srcs_groups(name, srcs):
     """Macro to expand both the non-textual and textual filtered srcs groups."""
+    if not name.endswith("_srcs"):
+        fail("This rule's name must end with _srcs")
     filtered_builtins_srcs(
         name = name,
         srcs = srcs,
     )
     filtered_builtins_textual_srcs(
-        name = textual_name,
+        name = name.removesuffix("_srcs") + "_textual_srcs",
         srcs = srcs,
     )
