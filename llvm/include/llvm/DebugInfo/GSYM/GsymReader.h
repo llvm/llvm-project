@@ -49,8 +49,8 @@ class GsymReader {
 protected:
   std::unique_ptr<MemoryBuffer> MemBuffer;
   llvm::endianness Endian;
-  /// Parsed GlobalData section descriptors, keyed by type. Populated by
-  /// parseHeaderAndGlobalDataDirectory().
+  /// Parsed GlobalData entries, keyed by type. Populated by
+  /// parseHeaderAndGlobalDataEntries().
   std::map<GlobalInfoType, GlobalData> GlobalDataSections;
   ArrayRef<uint8_t> AddrOffsets;
   std::vector<uint8_t> SwappedAddrOffsets;
@@ -316,7 +316,7 @@ protected:
   /// Parse the version-specific header and populate GlobalDataSections.
   ///
   /// \returns Error on failure.
-  virtual llvm::Error parseHeaderAndGlobalDataDirectory() = 0;
+  virtual llvm::Error parseHeaderAndGlobalDataEntries() = 0;
 
   /// Parse and validate the header from the beginning of the memory buffer.
   ///
@@ -364,19 +364,19 @@ protected:
   /// \returns Error on failure.
   llvm::Error parseAddrOffsets(StringRef Bytes);
 
-  /// Parse address info offsets section bytes into AddrInfoOffsetsData.
+  /// Set address info offsets section bytes into AddrInfoOffsetsData.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
   llvm::Error setAddrInfoOffsetsData(StringRef Bytes);
 
-  /// Parse string table section bytes into StrTab.
+  /// Set string table section bytes into StrTab.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
   llvm::Error setStringTableData(StringRef Bytes);
 
-  /// Parse file table section bytes into FileEntryData.
+  /// Set file table section bytes into FileEntryData.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.

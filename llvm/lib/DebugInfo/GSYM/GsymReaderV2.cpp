@@ -24,7 +24,7 @@ GsymReaderV2::GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer,
     : GsymReader(std::move(Buffer), Endian) {}
 
 /// For V2 file layout, see HeaderV2.h
-llvm::Error GsymReaderV2::parseHeaderAndGlobalDataDirectory() {
+llvm::Error GsymReaderV2::parseHeaderAndGlobalDataEntries() {
   if (auto Err = parseHeader(Hdr, SwappedHdr))
     return Err;
   return parseGlobalDataEntries(HeaderV2::getEncodedSize());
@@ -53,14 +53,14 @@ static const char *getGlobalInfoTypeName(GlobalInfoType Type) {
 void GsymReaderV2::dump(raw_ostream &OS) {
   OS << *Hdr << "\n";
 
-  // Print GlobalData directory sorted by file offset.
+  // Print GlobalData entries sorted by file offset.
   std::vector<GlobalData> Sections;
   for (const auto &[Type, GD] : GlobalDataSections)
     Sections.push_back(GD);
   llvm::sort(Sections, [](const GlobalData &A, const GlobalData &B) {
     return A.FileOffset < B.FileOffset;
   });
-  OS << "Global Data Directory:\n";
+  OS << "Global Data Sections:\n";
   OS << "TYPE            FILE OFFSET 64      FILE SIZE 64\n";
   OS << "=============== ==================  ==================\n";
   for (const auto &GD : Sections) {

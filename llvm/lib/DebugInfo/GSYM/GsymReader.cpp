@@ -111,7 +111,7 @@ GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
 
 llvm::Error GsymReader::parse() {
   // Step 1: Parse the version-specific header and populate GlobalDataSections.
-  if (auto Err = parseHeaderAndGlobalDataDirectory())
+  if (auto Err = parseHeaderAndGlobalDataEntries())
     return Err;
 
   // Step 2: Validate that all required sections are present and consistent.

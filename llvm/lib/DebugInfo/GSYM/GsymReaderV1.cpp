@@ -22,7 +22,7 @@ GsymReaderV1::GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer,
                            llvm::endianness Endian)
     : GsymReader(std::move(Buffer), Endian) {}
 
-llvm::Error GsymReaderV1::parseHeaderAndGlobalDataDirectory() {
+llvm::Error GsymReaderV1::parseHeaderAndGlobalDataEntries() {
   if (auto Err = parseHeader(Hdr, SwappedHdr))
     return Err;
 

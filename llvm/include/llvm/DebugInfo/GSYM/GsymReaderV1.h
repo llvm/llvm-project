@@ -25,7 +25,7 @@ class GsymReaderV1 : public GsymReader {
 
 protected:
   GsymReaderV1(std::unique_ptr<MemoryBuffer> Buffer, llvm::endianness Endian);
-  llvm::Error parseHeaderAndGlobalDataDirectory() override;
+  llvm::Error parseHeaderAndGlobalDataEntries() override;
 
 public:
   GsymReaderV1(GsymReaderV1 &&RHS) = default;
