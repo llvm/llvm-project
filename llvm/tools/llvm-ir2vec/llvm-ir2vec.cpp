@@ -161,7 +161,10 @@ static Error processModule(Module &M, raw_ostream &OS) {
           "You may need to set it using --ir2vec-vocab-path");
     }
 
-    if (Error Err = Tool.initializeVocabulary(VocabFile))
+    std::shared_ptr<Vocabulary> Vocab;
+    if (auto Err = ir2vec::loadVocabulary(VocabFile).moveInto(Vocab))
+      return Err;
+    if (auto Err = Tool.setVocabulary(std::move(Vocab)))
       return Err;
 
     if (!FunctionName.empty()) {

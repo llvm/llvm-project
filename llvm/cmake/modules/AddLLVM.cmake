@@ -803,7 +803,7 @@ function(llvm_add_library name)
         )
     endif()
 
-    if(NOT APPLE)
+    if(NOT APPLE OR LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN)
       if(ARG_SONAME)
         get_target_property(output_name ${name} OUTPUT_NAME)
         if(${output_name} STREQUAL "output_name-NOTFOUND")
