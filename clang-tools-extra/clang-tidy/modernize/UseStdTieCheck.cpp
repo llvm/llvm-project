@@ -20,7 +20,7 @@ void UseStdTieCheck::check(const MatchFinder::MatchResult &Result) {
   if (!MatchedDecl || !MatchedDecl->hasBody())
     return;
 
-  // 1. ESCÁNER SIMPLE: Buscamos todos los 'return' dentro de la función
+  // 1. SIMPLE SCANNER: Find all 'return' statements inside the function
   auto ReturnMatches =
       match(stmt(findAll(returnStmt(hasReturnValue(expr().bind("ret_val"))))),
             *MatchedDecl->getBody(), *Result.Context);
@@ -29,20 +29,19 @@ void UseStdTieCheck::check(const MatchFinder::MatchResult &Result) {
   std::vector<std::string> TieArgsRhs;
   std::string Autos = "";
 
-  // 2. EXTRAER VARIABLES DEL TEXTO
+  // 2. EXTRACT VARIABLES FROM TEXT
   for (const auto &Node : ReturnMatches) {
     const auto *RetVal = Node.getNodeAs<Expr>("ret_val");
     if (!RetVal)
       continue;
 
-    // Obtenemos el texto en bruto, ej: "lhs.n < rhs.n"
+    // Get the raw text, e.g., "lhs.n < rhs.n"
     std::string Text =
         Lexer::getSourceText(
             CharSourceRange::getTokenRange(RetVal->getSourceRange()),
             *Result.SourceManager, Result.Context->getLangOpts())
             .str();
-
-    // Buscamos dónde está el símbolo para partir la frase
+    // Find the operator symbol to split the expression
     size_t OpPos = Text.find('<');
     if (OpPos == std::string::npos)
       OpPos = Text.find('>');
@@ -50,16 +49,15 @@ void UseStdTieCheck::check(const MatchFinder::MatchResult &Result) {
     if (OpPos != std::string::npos) {
       std::string LhsSide = Text.substr(0, OpPos);
 
-      // Limpieza extrema: quitamos espacios y tabulaciones para que no rompa la
-      // compilación
+      // Cleanup: remove spaces and tabs to avoid compilation errors
       std::string CleanLhs = "";
       for (char c : LhsSide)
         if (c != ' ' && c != '\t' && c != '\n')
           CleanLhs += c;
 
-      // Si nos ha quedado "lhs.n" o "lhs.d()"
+      // If we successfully extracted the left-hand side pattern
       if (CleanLhs.rfind("lhs.", 0) == 0) {
-        std::string VarName = CleanLhs.substr(4); // Extrae "n", "s" o "d()"
+        std::string VarName = CleanLhs.substr(4);
 
         if (VarName.find("()") != std::string::npos) {
           std::string CleanName = VarName.substr(0, VarName.length() - 2);
@@ -77,17 +75,16 @@ void UseStdTieCheck::check(const MatchFinder::MatchResult &Result) {
     }
   }
 
-  // 3. LA REGLA DE ORO: Si no hemos extraído nada, abortamos ANTES de lanzar la
-  // advertencia
+  // 3. GOLDEN RULE: If no variables were extracted, abort before emitting the
+  // warning
   if (TieArgsLhs.empty())
     return;
 
-  // 4. Lanzamos la advertencia AHORA, porque sabemos que tenemos el parche
-  // asegurado
+  // 4. Emit the warning now, since we are sure we have a valid fix
   auto Diag = diag(MatchedDecl->getLocation(),
                    "use std::tie to implement lexicographical comparison");
 
-  // 5. Ensamblamos las variables dinámicas
+  // 5. Assemble the dynamic variables
   std::string LhsTuple = TieArgsLhs[0];
   std::string RhsTuple = TieArgsRhs[0];
   for (size_t i = 1; i < TieArgsLhs.size(); ++i) {
@@ -98,7 +95,7 @@ void UseStdTieCheck::check(const MatchFinder::MatchResult &Result) {
   std::string Symbol =
       (MatchedDecl->getNameAsString() == "operator<") ? "<" : ">";
 
-  // 6. Inyectamos el código perfecto
+  // 6. Inject the replacement code
   std::string Replacement = "{\n" + Autos + "    return std::tie(" + LhsTuple +
                             ") " + Symbol + " std::tie(" + RhsTuple +
                             ");\n"

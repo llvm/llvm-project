@@ -154,7 +154,7 @@ New checks
 - New :doc:`modernize-use-std-tie
   <clang-tidy/checks/modernize/use-std-tie>` check.
 
-  FIXME: Write a short description.
+  Replaces manual field-by-field lexicographical comparisons with ``std::tie``.
 
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
