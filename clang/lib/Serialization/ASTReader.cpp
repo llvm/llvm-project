@@ -5217,7 +5217,7 @@ ASTReader::ASTReadResult ASTReader::ReadASTCore(
       ExpectedModTime, ExpectedSignature, readASTFileSignature);
   ModuleFile *M = Result.getModule();
 
-  switch (Result.K) {
+  switch (Result.getKind()) {
   case AddModuleResult::AlreadyLoaded: {
     Diag(diag::remark_module_import)
         << M->ModuleName << M->FileName << (ImportedBy ? true : false)
@@ -5261,6 +5261,9 @@ ASTReader::ASTReadResult ASTReader::ReadASTCore(
     if (!Result.getSignatureError().empty())
       Diag(diag::note_ast_file_signature_failed) << Result.getSignatureError();
     return Failure;
+
+  case AddModuleResult::None:
+    llvm_unreachable("Unexpected value from adding module.");
   }
 
   assert(M && "Missing module file");

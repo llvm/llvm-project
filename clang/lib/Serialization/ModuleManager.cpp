@@ -138,8 +138,8 @@ AddModuleResult ModuleManager::addModule(
   }
 
   // Check whether we already loaded this module before.
-  // Note: `isModuleFileOutOfDate` and `checkSignature` are mutally exclusive in
-  // practice. If a signature is stored, it means size/mtime values have been
+  // Note: `isModuleFileOutOfDate` and `checkSignature` are mutually exclusive
+  // in practice. If a signature is stored, it means size/mtime values have been
   // zeroed out. If size/mtime are non-NULL, the signature is empty.
   if (ModuleFile *ModuleEntry = lookup(*FileKey)) {
     if (isModuleFileOutOfDate(ModuleEntry->Size, ModuleEntry->ModTime,

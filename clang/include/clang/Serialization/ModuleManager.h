@@ -46,6 +46,8 @@ namespace serialization {
 class AddModuleResult {
 public:
   enum Kind {
+    /// State at construction.
+    None,
     /// The module file had already been loaded.
     AlreadyLoaded,
     /// The module file was just loaded in response to this call.
@@ -55,7 +57,8 @@ public:
     /// The module file is out-of-date.
     OutOfDate
   };
-  Kind K;
+
+  Kind getKind() const { return K; };
 
   ModuleFile *getModule() const { return Module; }
 
@@ -87,6 +90,7 @@ public:
 private:
   friend class ModuleManager;
 
+  Kind K = None;
   ModuleFile *Module = nullptr;
   SmallVector<Change, 2> Changes;
   InputFilesValidation ValidationStatus = InputFilesValidation::NotStarted;

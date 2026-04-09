@@ -128,7 +128,7 @@ struct Change {
     ModTime,
     Content,
     None,
-  } Kind;
+  } Kind = None;
   std::optional<int64_t> Old = std::nullopt;
   std::optional<int64_t> New = std::nullopt;
 };
