@@ -180,6 +180,11 @@ add_header_macro(
     .llvm-libc-types.uint_ur_t
 )
 
+add_header(
+  syscall
+  HDR
+    syscall.h
+)
 
 add_header_macro(
   sysexits
