@@ -1039,7 +1039,6 @@ void CIRGenFunction::pushLifetimeExtendedCleanupToEHStack(
 }
 
 /// Destroys all the elements of the given array, beginning from last to first.
-/// The array cannot be zero-length.
 ///
 /// \param begin - a type* denoting the first element of the array
 /// \param numElements - the number of elements in the array
@@ -1057,33 +1056,33 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
   mlir::Type cirElementType = convertTypeForMem(elementType);
   cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
 
-  uint64_t size = 0;
+  auto regionBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+    mlir::BlockArgument arg =
+        b.getInsertionBlock()->addArgument(ptrToElmType, loc);
+    Address curAddr = Address(arg, cirElementType, elementAlign);
+    assert(!cir::MissingFeatures::dtorCleanups());
 
-  // Optimize for a constant array size.
+    // Perform the actual destruction there.
+    destroyer(*this, curAddr, elementType);
+
+    cir::YieldOp::create(b, loc);
+  };
+
+  // For a constant array size, use the static form of ArrayDtor.
   if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
+    uint64_t size = 0;
     if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>())
       size = constIntAttr.getUInt();
-  } else {
-    cgm.errorNYI(begin.getDefiningOp()->getLoc(),
-                 "emitArrayDestroy: dynamic-length array expression");
+    auto arrayTy = cir::ArrayType::get(cirElementType, size);
+    mlir::Value arrayOp = builder.createPtrBitcast(begin, arrayTy);
+    cir::ArrayDtor::create(builder, *currSrcLoc, arrayOp, regionBuilder);
+    return;
   }
 
-  auto arrayTy = cir::ArrayType::get(cirElementType, size);
-  mlir::Value arrayOp = builder.createPtrBitcast(begin, arrayTy);
-
-  // Emit the dtor call that will execute for every array element.
-  cir::ArrayDtor::create(
-      builder, *currSrcLoc, arrayOp,
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
-        Address curAddr = Address(arg, cirElementType, elementAlign);
-        assert(!cir::MissingFeatures::dtorCleanups());
-
-        // Perform the actual destruction there.
-        destroyer(*this, curAddr, elementType);
-
-        cir::YieldOp::create(builder, loc);
-      });
+  // For a dynamic array size (VLA), use the dynamic form of ArrayDtor.
+  mlir::Value elemBegin = builder.createPtrBitcast(begin, cirElementType);
+  cir::ArrayDtor::create(builder, *currSrcLoc, elemBegin, numElements,
+                         regionBuilder);
 }
 
 /// Immediately perform the destruction of the given object.
@@ -1104,24 +1103,20 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
   CharUnits elementAlign = addr.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
+  // If the array length is constant, we can check for zero at compile time.
   auto constantCount = length.getDefiningOp<cir::ConstantOp>();
-  if (!constantCount) {
-    assert(!cir::MissingFeatures::vlas());
-    cgm.errorNYI("emitDestroy: variable length array");
-    return;
+  if (constantCount) {
+    auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
+    if (constIntAttr && constIntAttr.getUInt() == 0)
+      return;
   }
-
-  auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
-  // If it's constant zero, we can just skip the entire thing.
-  if (constIntAttr && constIntAttr.getUInt() == 0)
-    return;
 
   mlir::Value begin = addr.getPointer();
   assert(!cir::MissingFeatures::useEHCleanupForArray());
   emitArrayDestroy(begin, length, type, elementAlign, destroyer);
 
   // If the array destroy didn't use the length op, we can erase it.
-  if (constantCount.use_empty())
+  if (constantCount && constantCount.use_empty())
     constantCount.erase();
 }
 
