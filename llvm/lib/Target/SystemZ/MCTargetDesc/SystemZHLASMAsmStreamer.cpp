@@ -369,7 +369,8 @@ void SystemZHLASMAsmStreamer::finishImpl() {
       continue;
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
     if (Sym.getCodeData() == GOFF::ESD_EXE_DATA) {
-      OS << Sym.getADA()->getExternalName() << " CATTR PART(" << Sym.getName() << ")";
+      OS << Sym.getADA()->getExternalName() << " CATTR PART(" << Sym.getName()
+         << ")";
       EmitEOL();
     } else {
       OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
