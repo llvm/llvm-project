@@ -35,6 +35,11 @@ void h() {
   // CHECK-FIXES-CLASSIC: const char* p2 = s.c_str();
   // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:20: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
 
+  const auto* auto_p2 = &s[0];
+  // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:25: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES-CLASSIC: const auto* auto_p2 = s.c_str();
+  // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:25: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+
   std::wstring w;
   f(&((&(w))->operator[]((z))));
   // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
@@ -56,6 +61,17 @@ void h() {
   // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:20: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
   // CHECK-FIXES-CLASSIC: const char* p3 = cs.c_str();
   // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:20: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+
+  const auto* auto_p3 = &cs[0];
+  // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:25: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES-CLASSIC: const auto* auto_p3 = cs.c_str();
+  // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:25: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+
+  auto char_lambda = [](std::string s) -> const char* {
+    return &s[0];
+    // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:12: warning: 'c_str' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+    // CHECK-FIXES-CLASSIC: return s.c_str();
+  };
 }
 
 template <typename T, typename U,

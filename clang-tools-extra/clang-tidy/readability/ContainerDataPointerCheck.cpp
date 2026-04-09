@@ -86,13 +86,51 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+static bool isContainerConst(const Expr* ContainerExpr) {
+  QualType ContainerType = ContainerExpr->getType();
+  if (ContainerType->isPointerType())
+    ContainerType = ContainerType->getPointeeType();
+  return ContainerType.isConstQualified();
+}
+
+static bool isConstPointer(const QualType Type) {
+  if (!Type->isPointerType())
+    return false;
+  return Type->getPointeeType().isConstQualified();
+}
+
+static bool shouldUseCStr(const MatchFinder::MatchResult &Result) {
+  const auto *CStrDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("c_str");
+  const auto *UO = Result.Nodes.getNodeAs<UnaryOperator>(AddressOfName);
+  const auto *CE = Result.Nodes.getNodeAs<Expr>(ContainerExprName);
+
+  if (!CStrDecl)
+    return false;
+
+  auto Parents = Result.Context->getParents(*UO);
+  if (Parents.empty())
+    return isContainerConst(CE);
+
+  if (const auto *VD = Parents[0].get<VarDecl>()) {
+    if (isConstPointer(VD->getType()))
+      return true;
+  } else if (const auto *Cast = Parents[0].get<CastExpr>()) {
+    if (isConstPointer(Cast->getType()))
+      return true;
+  } else if (const auto *RetStmt = Parents[0].get<ReturnStmt>()) {
+    const Expr* RetValue = RetStmt->getRetValue();
+    if (isConstPointer(RetValue->getType()))
+      return true;
+  }
+
+  return isContainerConst(CE);
+}
+
 void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *UO = Result.Nodes.getNodeAs<UnaryOperator>(AddressOfName);
   const auto *CE = Result.Nodes.getNodeAs<Expr>(ContainerExprName);
   const auto *DCE = Result.Nodes.getNodeAs<Expr>(DerefContainerExprName);
   const auto *ACE = Result.Nodes.getNodeAs<Expr>(AddrOfContainerExprName);
-
-  const auto *CStrDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("c_str");
 
   if (!UO || !CE)
     return;
@@ -102,33 +140,7 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else if (ACE)
     CE = ACE;
 
-  bool UseCStr = false;
-  if (CStrDecl) {
-    auto Parents = Result.Context->getParents(*UO);
-
-    if (!Parents.empty()) {
-      if (const auto *VD = Parents[0].get<VarDecl>()) {
-        const QualType VarType = VD->getType();
-        if (VarType->isPointerType()) {
-          const QualType PointeeType = VarType->getPointeeType();
-          UseCStr = PointeeType.isConstQualified();
-        }
-      } else if (const auto *Cast = Parents[0].get<CastExpr>()) {
-        const QualType CastType = Cast->getType();
-        if (CastType->isPointerType()) {
-          const QualType PointeeType = CastType->getPointeeType();
-          UseCStr = PointeeType.isConstQualified();
-        }
-      }
-    }
-
-    if (!UseCStr) {
-      QualType ContainerType = CE->getType();
-      if (ContainerType->isPointerType())
-        ContainerType = ContainerType->getPointeeType();
-      UseCStr = ContainerType.isConstQualified();
-    }
-  }
+  bool UseCStr = shouldUseCStr(Result);
 
   const SourceRange SrcRange = CE->getSourceRange();
 
