@@ -299,6 +299,12 @@ public:
   void shutdown(OnShutdownFn OnShutdown = {});
 
   /// Initiate session shutdown and block until complete.
+  ///
+  /// WARNING: Never call waitForShutdown from an on-detach or on-shutdown
+  ///          handler: this will cause a deadlock, since the Session can't
+  ///          shut down until all such handlers return. (The Session::shutdown
+  ///          method can be called from a handler to initiate shutdown,
+  ///          however).
   void waitForShutdown();
 
   /// Register a callback to be called when the Session detaches from the
