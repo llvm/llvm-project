@@ -296,6 +296,11 @@ public:
                                                   FileSpec module_spec,
                                                   const Target &target);
 
+  /// Returns true if the module's symbol file (e.g. a dSYM bundle) is
+  /// code-signed with a trusted signature. Used to decide whether to
+  /// auto-loaded scripts.
+  virtual bool IsSymbolFileTrusted(Module &module);
+
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.
   ///
@@ -1085,6 +1090,13 @@ protected:
       Stream &os,
       const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
       const FileSpec &original_fspec, const FileSpec &fspec);
+
+  /// Returns the \c LoadScriptFromSymFile of scripting resource associated
+  /// with the specified module \c FileSpec. If the load style wasn't explicitly
+  /// set for a module, returns the target-wide default.
+  static LoadScriptFromSymFile
+  GetScriptLoadStyleForModule(const FileSpec &module_fspec,
+                              const Target &target);
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;

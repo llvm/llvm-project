@@ -1016,7 +1016,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       if (const SectionAttr *sa = d->getAttr<SectionAttr>())
         gv.setSectionAttr(builder.getStringAttr(sa->getName()));
     }
-    gv.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(d));
+    gv.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(d).getValue());
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
@@ -1735,9 +1735,13 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       // Replace type
       getGlobalOp.getAddr().setType(
           cir::PointerType::get(newFn.getFunctionType()));
+    } else if (mlir::isa<cir::GlobalOp>(use.getUser())) {
+      // Function addresses in global initializers use GlobalViewAttrs typed to
+      // the initializer context (e.g. struct field type), not the FuncOp type,
+      // so no update is required when the no-proto FuncOp is replaced.
     } else {
-      errorNYI(use.getUser()->getLoc(),
-               "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use");
+      llvm_unreachable(
+          "replaceUsesOfNonProtoTypeWithRealFunction: unexpected use type");
     }
   }
 }
@@ -1970,16 +1974,18 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       emitGlobal(fd);
     break;
   }
+  case Decl::Export:
+    emitDeclContext(cast<ExportDecl>(decl));
+    break;
 
   case Decl::Var:
   case Decl::Decomposition:
   case Decl::VarTemplateSpecialization: {
-    auto *vd = cast<VarDecl>(decl);
-    if (isa<DecompositionDecl>(decl)) {
-      errorNYI(decl->getSourceRange(), "global variable decompositions");
-      break;
-    }
-    emitGlobal(vd);
+    emitGlobal(cast<VarDecl>(decl));
+    if (auto *decomp = dyn_cast<DecompositionDecl>(decl))
+      for (auto *binding : decomp->flat_bindings())
+        if (auto *holdingVar = binding->getHoldingVar())
+          emitGlobal(holdingVar);
     break;
   }
   case Decl::OpenACCRoutine:
@@ -2605,7 +2611,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // recompute it here. This is a minimal fix for now.
   if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
     const Decl *decl = globalDecl.getDecl();
-    func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
+    func.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(decl).getValue());
   }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.

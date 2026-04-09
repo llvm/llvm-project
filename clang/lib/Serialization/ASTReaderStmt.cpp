@@ -2529,10 +2529,6 @@ void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
-void ASTStmtReader::VisitOMPSplitDirective(OMPSplitDirective *D) {
-  VisitOMPCanonicalLoopNestTransformationDirective(D);
-}
-
 void ASTStmtReader::VisitOMPFuseDirective(OMPFuseDirective *D) {
   VisitOMPCanonicalLoopSequenceTransformationDirective(D);
 }
@@ -3688,13 +3684,6 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
              "Reverse directive has no clauses");
       S = OMPReverseDirective::CreateEmpty(Context, NumLoops);
-      break;
-    }
-
-    case STMT_OMP_SPLIT_DIRECTIVE: {
-      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
-      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
-      S = OMPSplitDirective::CreateEmpty(Context, NumClauses, NumLoops);
       break;
     }
 

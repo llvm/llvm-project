@@ -735,31 +735,22 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
 
-  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
-  mlir::Type elementType = arrayTy.getElementType();
-
-  // This might be a multi-dimensional array. Find the innermost element type.
+  // Peel any array types wrapped in the address element type down to the CIR
+  // type of a single constructed object.
+  mlir::Type elementType = arrayBase.getElementType();
   while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
     elementType = maybeArrayTy.getElementType();
   cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
-  // Optimize for a constant count.
-  if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
-    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
-      // Just skip out if the constant count is zero.
-      if (constIntAttr.getUInt() == 0)
-        return;
-
-      arrayTy = cir::ArrayType::get(elementType, constIntAttr.getUInt());
-      // Otherwise, emit the check.
-    }
-
-    if (constantCount.use_empty())
-      constantCount.erase();
-  } else {
-    // Otherwise, emit the check.
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXAggrConstructorCall: dynamic-length array expression");
+  bool useDynamicArrayCtor = true;
+  uint64_t constElementCount = 0;
+  if (auto constantOp = numElements.getDefiningOp<cir::ConstantOp>()) {
+    constElementCount = CIRGenFunction::getZExtIntValueFromConstOp(constantOp);
+    if (constElementCount == 0)
+      return;
+    if (constantOp.use_empty())
+      constantOp.erase();
+    useDynamicArrayCtor = false;
   }
 
   // Traditional LLVM codegen emits a loop here. CIR lowers to a loop as part of
@@ -775,6 +766,13 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
+  mlir::Location loc = *currSrcLoc;
+
+  mlir::Value dynamicElPtr;
+  if (useDynamicArrayCtor)
+    dynamicElPtr =
+        builder.createPtrBitcast(arrayBase.getPointer(), elementType);
+
   // C++ [class.temporary]p4:
   // There are two contexts in which temporaries are destroyed at a different
   // point than the end of the full-expression. The first context is when a
@@ -785,37 +783,51 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   {
     RunCleanupsScope scope(*this);
 
-    // Evaluate the constructor and its arguments in a regular
-    // partial-destroy cleanup.
-    if (getLangOpts().Exceptions &&
-        !ctor->getParent()->hasTrivialDestructor()) {
-      cgm.errorNYI(e->getSourceRange(), "partial array cleanups");
-    }
+    bool needsPartialArrayCleanup =
+        getLangOpts().Exceptions && !ctor->getParent()->hasTrivialDestructor();
 
-    // Emit the constructor call that will execute for every array element.
-    mlir::Value arrayOp =
-        builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-    cir::ArrayCtor::create(
-        builder, *currSrcLoc, arrayOp,
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          mlir::BlockArgument arg =
-              b.getInsertionBlock()->addArgument(ptrToElmType, loc);
-          Address curAddr = Address(arg, elementType, eltAlignment);
-          assert(!cir::MissingFeatures::sanitizers());
-          // Zero-initialize each element before invoking its constructor,
-          // matching CGClass::EmitCXXAggrConstructorCall which does per-element
-          // zero-init inside the array ctor loop.
-          if (zeroInitialize)
-            emitNullInitialization(loc, curAddr, type);
-          auto currAVS = AggValueSlot::forAddr(
-              curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
-              AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
-              AggValueSlot::IsNotZeroed);
-          emitCXXConstructorCall(ctor, Ctor_Complete,
-                                 /*ForVirtualBase=*/false,
-                                 /*Delegating=*/false, currAVS, e);
-          cir::YieldOp::create(b, loc);
-        });
+    auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
+      mlir::BlockArgument arg =
+          b.getInsertionBlock()->addArgument(ptrToElmType, l);
+      Address curAddr = Address(arg, elementType, eltAlignment);
+      assert(!cir::MissingFeatures::sanitizers());
+      if (zeroInitialize)
+        emitNullInitialization(l, curAddr, type);
+      auto currAVS = AggValueSlot::forAddr(
+          curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+          AggValueSlot::IsNotZeroed);
+      emitCXXConstructorCall(ctor, Ctor_Complete,
+                             /*ForVirtualBase=*/false,
+                             /*Delegating=*/false, currAVS, e);
+      cir::YieldOp::create(b, l);
+    };
+
+    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+        emitPartialDtorBody = nullptr;
+    auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
+      mlir::BlockArgument arg =
+          b.getInsertionBlock()->addArgument(ptrToElmType, l);
+      Address curAddr = Address(arg, elementType, eltAlignment);
+      emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
+                            /*forVirtualBase=*/false,
+                            /*delegating=*/false, curAddr, type);
+      cir::YieldOp::create(b, l);
+    };
+    if (needsPartialArrayCleanup)
+      emitPartialDtorBody = partialDtorBuilder;
+
+    if (useDynamicArrayCtor) {
+      cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
+                             emitCtorBody, emitPartialDtorBody);
+    } else {
+      cir::ArrayType arrayTy =
+          cir::ArrayType::get(elementType, constElementCount);
+      mlir::Value arrayOp =
+          builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+      cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
+                             emitPartialDtorBody);
+    }
   }
 }
 
