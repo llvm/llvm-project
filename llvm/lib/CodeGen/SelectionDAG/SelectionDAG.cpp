@@ -505,6 +505,21 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   }
 }
 
+ISD::NodeType ISD::getUnmaskedBinOpOpcode(unsigned MaskedOpc) {
+  switch (MaskedOpc) {
+  case ISD::MASKED_UDIV:
+    return ISD::UDIV;
+  case ISD::MASKED_SDIV:
+    return ISD::SDIV;
+  case ISD::MASKED_UREM:
+    return ISD::UREM;
+  case ISD::MASKED_SREM:
+    return ISD::SREM;
+  default:
+    llvm_unreachable("Expected masked binop opcode");
+  }
+}
+
 bool ISD::isVPOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -6057,6 +6072,12 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known.SignBit = false;
     break;
   }
+  case ISD::FNEG: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    Known.fneg();
+    break;
+  }
   case ISD::BUILD_VECTOR: {
     assert(!VT.isScalableVector());
     bool First = true;
@@ -6104,6 +6125,14 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                 InterestedClasses, Depth + 1);
     Known.fabs();
+    break;
+  }
+  case ISD::AssertNoFPClass: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    FPClassTest AssertedClasses =
+        static_cast<FPClassTest>(Op->getConstantOperandVal(1));
+    Known.KnownFPClasses &= ~AssertedClasses;
     break;
   }
   default:
