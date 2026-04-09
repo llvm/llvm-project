@@ -51,6 +51,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseStdFormatCheck.cpp
   UseStdNumbersCheck.cpp
   UseStdPrintCheck.cpp
+  UseStdTieCheck.cpp
   UseStringViewCheck.cpp
   UseStructuredBindingCheck.cpp
   UseTrailingReturnTypeCheck.cpp

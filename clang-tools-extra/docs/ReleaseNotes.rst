@@ -139,6 +139,11 @@ New checks
   Finds common idioms which can be replaced by standard functions from the
   ``<bit>`` C++20 header.
 
+- New :doc:`modernize-use-std-tie
+  <clang-tidy/checks/modernize/use-std-tie>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
