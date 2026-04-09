@@ -1753,8 +1753,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
       if (!typeDesc) {
         if (useInputType) {
-          mlir::Type innerType = fir::unwrapInnerType(inputType);
-          if (innerType && mlir::isa<fir::RecordType>(innerType)) {
+          mlir::Type innerType = fir::getFortranElementType(inputType);
+          if (mlir::isa<fir::RecordType>(innerType)) {
             auto recTy = mlir::dyn_cast<fir::RecordType>(innerType);
             typeDesc =
                 getTypeDescriptor(mod, rewriter, loc, recTy, this->options);
@@ -3391,6 +3391,18 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       g.setAlignment(*global.getAlignment());
 
     auto module = global->getParentOfType<mlir::ModuleOp>();
+
+    // Mimic shouldAssumeDSOLocal in clang, marking external definitions as
+    // dso_local if it is defined and is ELF, and either static or PIE.
+    bool isDefinition = global.isInitialized();
+    if (isDefinition && linkage == mlir::LLVM::Linkage::External &&
+        fir::getTargetTriple(module).isOSBinFormatELF()) {
+      llvm::Reloc::Model rm = fir::getRelocationModel(module);
+      bool isPIE = fir::getIsPIE(module);
+      if (rm == llvm::Reloc::Static || isPIE)
+        g.setDsoLocal(true);
+    }
+
     auto gpuMod = global->getParentOfType<mlir::gpu::GPUModuleOp>();
     // Add comdat if necessary
     if (fir::getTargetTriple(module).supportsCOMDAT() &&
