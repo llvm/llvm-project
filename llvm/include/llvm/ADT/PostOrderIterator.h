@@ -54,6 +54,19 @@ using DefaultSet =
 
 } // namespace po_detail
 
+/// CRTP base class for post-order traversal. Storage for visited nodes must be
+/// provided by the sub-class, which must implement insertEdge(). Due to CRTP
+/// limitations, the sub-class must call init() with the start node before
+/// traversing; not calling init results in an empty iterator.
+///
+/// Sub-classes can observe the post-order traversal with finishPostorder(),
+/// which is called before the iterator moves to the next node, and also the
+/// pre-order traversal with insertEdge().
+///
+/// Unwanted graph nodes (e.g. from a previous traversal) can be skipped by
+/// returning false from insertEdge().
+///
+/// This class only supports a single traversal of the graph.
 template <typename DerivedT, typename GraphTraits>
 class PostOrderTraversalBase {
   using NodeRef = typename GraphTraits::NodeRef;
@@ -109,6 +122,7 @@ protected:
 
   DerivedT *derived() { return static_cast<DerivedT *>(this); }
 
+  /// Initialize post-order traversal at given start node.
   void init(NodeRef Start) {
     if (derived()->insertEdge(std::optional<NodeRef>(), Start)) {
       VisitStack.emplace_back(Start, GraphTraits::child_begin(Start),
@@ -159,7 +173,23 @@ public:
   void finishPostorder(NodeRef) {}
 };
 
-/// Post-order traversal of a graph.
+/// Post-order traversal of a graph. Note: the traversal state is stored in this
+/// class, not in the iterators -- the lifetime of PostOrderTraversal must
+/// exceed the lifetime of the iterators. Special care must be taken with
+/// range-based for-loops in combination with LLVM ranges:
+///
+///   // Fine:
+///   for (BasicBlock *BB : post_order(F)) { ... }
+///
+///   // Problematic! Lifetime of PostOrderTraversal ends before the loop is
+///   // entered, because make_filter_range only stores the iterators but not
+///   // the range object itself.
+///   for (BasicBlock *BB : make_filter_range(post_order(F), ...)) { ... }
+///   // Fixed:
+///   auto POT = post_order(F);
+///   for (BasicBlock *BB : make_filter_range(POT, ...)) { ... }
+///
+/// This class only supports a single traversal of the graph.
 template <typename GraphT, typename SetType = po_detail::DefaultSet<GraphT>>
 class PostOrderTraversal
     : public PostOrderTraversalBase<PostOrderTraversal<GraphT, SetType>,
@@ -172,10 +202,15 @@ public:
   /// Default constructor for an empty traversal.
   PostOrderTraversal() = default;
 
+  /// Post-order traversal of the graph starting at the root node using an
+  /// internal storage.
   PostOrderTraversal(const GraphT &G) {
     this->init(GraphTraits<GraphT>::getEntryNode(G));
   }
 
+  /// Post-order traversal of the graph starting at the root node using an
+  /// external storage. This can be used to keep track of visited nodes after
+  /// the traversal and to skip nodes that are already contained in the set.
   PostOrderTraversal(const GraphT &G, SetType &S) : Visited(S) {
     this->init(GraphTraits<GraphT>::getEntryNode(G));
   }
@@ -187,6 +222,8 @@ public:
 
 // Provide global constructors that automatically figure out correct types...
 //
+/// Post-order traversal of a graph. Note: this returns a PostOrderTraversal,
+/// not an iterator range; \see PostOrderTraversal.
 template <class T> auto post_order(const T &G) {
   return PostOrderTraversal<T>(G);
 }
