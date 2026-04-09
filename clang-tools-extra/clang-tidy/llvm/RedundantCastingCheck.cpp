@@ -50,17 +50,15 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
       namespaceDecl(hasName("llvm"), hasDeclContext(translationUnitDecl())));
   auto AnyCastCalleeName =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
-            callee(expr(ignoringImpCasts(
-                declRefExpr(to(namedDecl(hasAnyName(CastFunctionNames),
-                                         IsInLLVMNamespace)),
-                            templateArgumentLocCountIs(1))
-                    .bind("callee")))));
-  auto AnyCastCalleeNameInUninstantiatedTemplate =
-      allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
-            callee(expr(ignoringImpCasts(
-                unresolvedLookupExpr(hasAnyUnresolvedName(CastFunctionNames),
-                                     templateArgumentLocCountIs(1))
-                    .bind("callee")))));
+            callee(expr(declRefExpr(to(namedDecl(hasAnyName(CastFunctionNames),
+                                                 IsInLLVMNamespace)),
+                                    templateArgumentLocCountIs(1))
+                            .bind("callee"))));
+  auto AnyCastCalleeNameInUninstantiatedTemplate = allOf(
+      unless(isMacroID()), unless(cxxMemberCallExpr()),
+      callee(expr(unresolvedLookupExpr(hasAnyUnresolvedName(CastFunctionNames),
+                                       templateArgumentLocCountIs(1))
+                      .bind("callee"))));
   Finder->addMatcher(
       callExpr(AnyCastCalleeName, argumentCountIs(1),
                optionally(
@@ -70,20 +68,18 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
 
   auto AnyIsaCalleeName =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
-            callee(expr(ignoringImpCasts(
-                declRefExpr(to(namedDecl(hasAnyName(IsaFunctionNames),
-                                         IsInLLVMNamespace)),
-                            hasAnyTemplateArgumentLoc(anything()))
-                    .bind("callee")))));
+            callee(expr(declRefExpr(to(namedDecl(hasAnyName(IsaFunctionNames),
+                                                 IsInLLVMNamespace)),
+                                    hasAnyTemplateArgumentLoc(anything()))
+                            .bind("callee"))));
   Finder->addMatcher(
       callExpr(AnyIsaCalleeName, argumentCountIs(1)).bind("call"), this);
 
-  auto AnyIsaCalleeNameInUninstantiatedTemplate =
-      allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
-            callee(expr(ignoringImpCasts(
-                unresolvedLookupExpr(hasAnyUnresolvedName(IsaFunctionNames),
-                                     hasAnyTemplateArgumentLoc(anything()))
-                    .bind("callee")))));
+  auto AnyIsaCalleeNameInUninstantiatedTemplate = allOf(
+      unless(isMacroID()), unless(cxxMemberCallExpr()),
+      callee(expr(unresolvedLookupExpr(hasAnyUnresolvedName(IsaFunctionNames),
+                                       hasAnyTemplateArgumentLoc(anything()))
+                      .bind("callee"))));
   Finder->addMatcher(
       callExpr(
           anyOf(AnyCastCalleeNameInUninstantiatedTemplate,
