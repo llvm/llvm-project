@@ -423,27 +423,22 @@ struct ErrorInvalidPointerPair : ErrorBase {
 };
 
 struct ErrorGeneric : ErrorBase {
+  enum class AccessType : u8 {
+    Read = 0,
+    Write = 1,
+    Assumption = 2,
+  };
+
   AddressDescription addr_description;
   uptr pc, bp, sp;
   uptr access_size;
   const char *bug_descr;
-  bool is_write;
+  AccessType access_type;
   u8 shadow_val;
 
   ErrorGeneric() = default;  // (*)
-  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr, bool is_write_,
-               uptr access_size_);
-  void Print();
-};
-
-struct ErrorAssumeDereferenceable : ErrorBase {
-  AddressDescription addr_description;
-  uptr pc, bp, sp;
-  uptr dereferenceable_size;
-
-  ErrorAssumeDereferenceable() = default;  // (*)
-  ErrorAssumeDereferenceable(u32 tid, uptr pc, uptr bp, uptr sp, uptr addr,
-                             uptr dereferenceable_size);
+  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
+               AccessType access_type_, uptr access_size_);
   void Print();
 };
 
@@ -473,7 +468,6 @@ struct ErrorAssumeDereferenceable : ErrorBase {
   macro(BadParamsToCopyContiguousContainerAnnotations)     \
   macro(ODRViolation)                                      \
   macro(InvalidPointerPair)                                \
-  macro(AssumeDereferenceable)                             \
   macro(Generic)
 // clang-format on
 

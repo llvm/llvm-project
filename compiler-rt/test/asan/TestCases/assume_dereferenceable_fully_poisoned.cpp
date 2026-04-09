@@ -5,10 +5,8 @@
 int main() {
   char *p = (char *)malloc(10);
   free(p);
-  // CHECK: AddressSanitizer: dereferencable-assumption-violation
-  // CHECK: ASSUMPTION of size 10
-  // CHECK-NEXT: range [0x{{.*}}, 0x{{.*}}) is NOT dereferenceable
-  // CHECK-NOT: is dereferenceable
+  // CHECK: AddressSanitizer: dereferenceable-assumption-violation
+  // CHECK: ASSUME of size 10
   __builtin_assume_dereferenceable(p, 10);
   return 0;
 }

@@ -3214,15 +3214,15 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       Value *Ptr = Bundle->Inputs[0];
       Value *Size = Bundle->Inputs[1];
 
-      InstrumentationIRBuilder IRB(AI);
-      Value *AddrLong = IRB.CreatePointerCast(Ptr, IntptrTy);
-      Value *SizeExt = IRB.CreateZExtOrTrunc(Size, IntptrTy);
-
-      // Skip if size is exactly 0.
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(SizeExt)) {
-        if (CI->isZero())
+      // Skip if size is exactly 0 without generating IR.
+      if (auto *CI = dyn_cast<ConstantInt>(Size)) {
+        if (CI->getValue().zextOrTrunc(IntptrTy->getIntegerBitWidth()).isZero())
           continue;
       }
+
+      IRBuilder<> IRB(AI);
+      Value *AddrLong = IRB.CreatePointerCast(Ptr, IntptrTy);
+      Value *SizeExt = IRB.CreateZExtOrTrunc(Size, IntptrTy);
 
       RTCI.createRuntimeCall(IRB, AsanAssumeDereferenceableCallback,
                              {AddrLong, SizeExt});

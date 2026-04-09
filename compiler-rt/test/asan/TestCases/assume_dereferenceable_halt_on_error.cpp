@@ -8,9 +8,9 @@
 int main() {
   char *p = (char *)malloc(10);
 
-  // CHECK: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR:0x[0-9a-fA-F]+]]
+  // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR:0x[0-9a-fA-F]+]]
 
-  // CHECK-RECOVER: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR:0x[0-9a-fA-F]+]]
+  // CHECK-RECOVER: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR:0x[0-9a-fA-F]+]]
   __builtin_assume_dereferenceable(p, 20);
   free(p);
 

@@ -538,7 +538,9 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
   (void)exp;
 
   ScopedInErrorReport in_report(fatal);
-  ErrorGeneric error(GetCurrentTidOrInvalid(), pc, bp, sp, addr, is_write,
+  ErrorGeneric error(GetCurrentTidOrInvalid(), pc, bp, sp, addr,
+                     is_write ? ErrorGeneric::AccessType::Write
+                              : ErrorGeneric::AccessType::Read,
                      access_size);
   in_report.ReportError(error);
 }
@@ -550,8 +552,10 @@ void ReportAssumeDereferenceableError(uptr pc, uptr bp, uptr sp, uptr addr,
   ENABLE_FRAME_POINTER;
 
   ScopedInErrorReport in_report(fatal);
-  ErrorAssumeDereferenceable error(GetCurrentTidOrInvalid(), pc, bp, sp, addr,
-                                   dereferenceable_size);
+  ErrorGeneric error(GetCurrentTidOrInvalid(), pc, bp, sp, addr,
+                     ErrorGeneric::AccessType::Assumption,
+                     dereferenceable_size);
+  error.bug_descr = "dereferenceable-assumption-violation";
   in_report.ReportError(error);
 }
 
@@ -612,7 +616,8 @@ uptr __asan_get_report_address() {
 
 int __asan_get_report_access_type() {
   if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return ScopedInErrorReport::CurrentError().Generic.is_write;
+    return static_cast<int>(
+        ScopedInErrorReport::CurrentError().Generic.access_type);
   return 0;
 }
 

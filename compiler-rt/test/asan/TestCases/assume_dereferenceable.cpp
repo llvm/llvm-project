@@ -7,10 +7,8 @@ void test_malloc_fully_oob() {
   char *p = (char *)malloc(10);
   fprintf(stderr, "test_malloc_fully_oob\n");
   // CHECK: test_malloc_fully_oob
-  // CHECK: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR1:0x[0-9a-fA-F]+]]
-  // CHECK: DEREFERENCABLE ASSUMPTION of size 20 at [[PTR1]] thread T0
-  // CHECK-NEXT: range [[[PTR1]], 0x{{.*}}) is dereferenceable
-  // CHECK-NEXT: range [0x{{.*}}, 0x{{.*}}) is NOT dereferenceable
+  // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR1:0x[0-9a-fA-F]+]]
+  // CHECK: ASSUME of size 20 at [[PTR1]] thread T0
   __builtin_assume_dereferenceable(p, 20);
   free(p);
 }
@@ -19,10 +17,8 @@ void test_malloc_partial_right() {
   char *p = (char *)malloc(10);
   fprintf(stderr, "test_malloc_partial_right\n");
   // CHECK: test_malloc_partial_right
-  // CHECK: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR2:0x[0-9a-fA-F]+]]
-  // CHECK: DEREFERENCABLE ASSUMPTION of size 10 at [[PTR2]] thread T0
-  // CHECK-NEXT: range [[[PTR2]], 0x{{.*}}) is dereferenceable
-  // CHECK-NEXT: range [0x{{.*}}, 0x{{.*}}) is NOT dereferenceable
+  // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR2:0x[0-9a-fA-F]+]]
+  // CHECK: ASSUME of size 10 at [[PTR2]] thread T0
   __builtin_assume_dereferenceable(p + 5, 10);
   free(p);
 }
@@ -31,10 +27,8 @@ void test_malloc_partial_left() {
   char *p = (char *)malloc(10);
   fprintf(stderr, "test_malloc_partial_left\n");
   // CHECK: test_malloc_partial_left
-  // CHECK: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR3:0x[0-9a-fA-F]+]]
-  // CHECK: DEREFERENCABLE ASSUMPTION of size 10 at [[PTR3]] thread T0
-  // CHECK-NEXT: range [[[PTR3]], 0x{{.*}}) is NOT dereferenceable
-  // CHECK-NEXT: range [0x{{.*}}, 0x{{.*}}) is dereferenceable
+  // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR3:0x[0-9a-fA-F]+]]
+  // CHECK: ASSUME of size 10 at [[PTR3]] thread T0
   __builtin_assume_dereferenceable(p - 5, 10);
   free(p);
 }
@@ -43,8 +37,8 @@ void test_stack_fully_oob(int i) {
   char p[10];
   fprintf(stderr, "test_stack_fully_oob\n");
   // CHECK: test_stack_fully_oob
-  // CHECK: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR4:0x[0-9a-fA-F]+]]
-  // CHECK: DEREFERENCABLE ASSUMPTION of size 100 at [[PTR4]] thread T0
+  // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR4:0x[0-9a-fA-F]+]]
+  // CHECK: ASSUME of size 100 at [[PTR4]] thread T0
   __builtin_assume_dereferenceable(p, 100);
 
   // This is here just to force ASan to emit instrumentation for poisoning
@@ -57,10 +51,8 @@ void test_stack_partial_right() {
   char p[10];
   fprintf(stderr, "test_stack_partial_right\n");
   // CHECK: test_stack_partial_right
-  // CHECK: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR5:0x[0-9a-fA-F]+]]
-  // CHECK: DEREFERENCABLE ASSUMPTION of size 10 at [[PTR5]] thread T0
-  // CHECK-NEXT: range [[[PTR5]], 0x{{.*}}) is dereferenceable
-  // CHECK-NEXT: range [0x{{.*}}, 0x{{.*}}) is NOT dereferenceable
+  // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR5:0x[0-9a-fA-F]+]]
+  // CHECK: ASSUME of size 10 at [[PTR5]] thread T0
   __builtin_assume_dereferenceable(p + 5, 10);
 }
 
@@ -68,10 +60,8 @@ void test_stack_partial_left() {
   char p[10];
   fprintf(stderr, "test_stack_partial_left\n");
   // CHECK: test_stack_partial_left
-  // CHECK: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR6:0x[0-9a-fA-F]+]]
-  // CHECK: DEREFERENCABLE ASSUMPTION of size 10 at [[PTR6]] thread T0
-  // CHECK-NEXT: range [[[PTR6]], 0x{{.*}}) is NOT dereferenceable
-  // CHECK-NEXT: range [0x{{.*}}, 0x{{.*}}) is dereferenceable
+  // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR6:0x[0-9a-fA-F]+]]
+  // CHECK: ASSUME of size 10 at [[PTR6]] thread T0
   __builtin_assume_dereferenceable(p - 5, 10);
 }
 
@@ -80,10 +70,8 @@ void test_malloc_completely_poisoned() {
   free(p);
   fprintf(stderr, "test_malloc_completely_poisoned\n");
   // CHECK: test_malloc_completely_poisoned
-  // CHECK: ERROR: AddressSanitizer: dereferencable-assumption-violation on address [[PTR7:0x[0-9a-fA-F]+]]
-  // CHECK: DEREFERENCABLE ASSUMPTION of size 10 at [[PTR7]] thread T0
-  // CHECK-NEXT: range [[[PTR7]], 0x{{.*}}) is NOT dereferenceable
-  // CHECK-NOT: is dereferenceable
+  // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR7:0x[0-9a-fA-F]+]]
+  // CHECK: ASSUME of size 10 at [[PTR7]] thread T0
   __builtin_assume_dereferenceable(p, 10);
 }
 
