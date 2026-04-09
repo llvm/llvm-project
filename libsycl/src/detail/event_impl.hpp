@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the EventImpl class, which
+/// implements sycl::event functionality.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_EVENT_IMPL
 #define _LIBSYCL_EVENT_IMPL
