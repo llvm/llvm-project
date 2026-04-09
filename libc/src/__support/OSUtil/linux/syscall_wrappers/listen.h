@@ -14,7 +14,7 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 
-#include <linux/net.h>   // For SYS_SOCKET socketcall number.
+#include <linux/net.h>   // For SYS_LISTEN socketcall number.
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
