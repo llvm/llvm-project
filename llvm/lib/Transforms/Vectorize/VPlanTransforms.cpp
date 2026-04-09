@@ -3690,10 +3690,11 @@ void VPlanTransforms::createInterleaveGroups(
     // Skip interleave groups where members don't have recipes. This can happen
     // when removeDeadRecipes removes recipes that are part of interleave groups
     // but have no users.
-    if (llvm::any_of(llvm::seq(0u, IG->getFactor()), [&](unsigned I) {
-          Instruction *Member = IG->getMember(I);
-          return Member && !RecipeBuilder.hasRecipe(Member);
-        }))
+    if (llvm::any_of(llvm::seq(IG->getFactor()),
+                     [IG, &RecipeBuilder](unsigned I) {
+                       Instruction *Member = IG->getMember(I);
+                       return Member && !RecipeBuilder.hasRecipe(Member);
+                     }))
       continue;
 
     auto *Start =
