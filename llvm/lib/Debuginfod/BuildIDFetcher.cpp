@@ -18,14 +18,12 @@
 
 using namespace llvm;
 
-std::optional<std::string>
+Expected<std::string>
 DebuginfodFetcher::fetch(ArrayRef<uint8_t> BuildID) const {
-  if (std::optional<std::string> Path = BuildIDFetcher::fetch(BuildID))
+  if (Expected<std::string> Path = BuildIDFetcher::fetch(BuildID))
     return std::move(*Path);
+  else
+    consumeError(Path.takeError());
 
-  Expected<std::string> PathOrErr = getCachedOrDownloadDebuginfo(BuildID);
-  if (PathOrErr)
-    return *PathOrErr;
-  consumeError(PathOrErr.takeError());
-  return std::nullopt;
+  return getCachedOrDownloadDebuginfo(BuildID);
 }
