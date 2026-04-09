@@ -2158,7 +2158,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   case OperationType::OverflowingBinOp:
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
            Opcode == Instruction::Mul || Opcode == Instruction::Shl ||
-           Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
+           Opcode == VPInstruction::CanonicalIVIncrementForPart ||
+           Opcode == VPInstruction::WideIVStep;
   case OperationType::Trunc:
     return Opcode == Instruction::Trunc;
   case OperationType::DisjointOp:

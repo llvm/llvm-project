@@ -4197,7 +4197,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         Flags = VPI->getFastMathFlags();
       } else {
         MulOpc = Instruction::Mul;
-        Flags = VPIRFlags::getDefaultFlags(MulOpc);
+        Flags = VPI->hasNoWrapFlags() ? VPI->getNoWrapFlags()
+                                      : VPIRFlags::getDefaultFlags(MulOpc);
       }
 
       VPInstruction *Mul = Builder.createNaryOp(
