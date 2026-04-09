@@ -336,16 +336,16 @@ TEST(FilterIteratorTest, Composition) {
   EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual);
 }
 
-TEST(FilterIteratorTest, ForwardIterator) {
-  struct ForwardIterator : iterator_adaptor_base<ForwardIterator, int *,
-                                                 std::forward_iterator_tag> {
-    ForwardIterator(int *It) : ForwardIterator::iterator_adaptor_base(It) {}
+TEST(FilterIteratorTest, InputIterator) {
+  struct InputIterator
+      : iterator_adaptor_base<InputIterator, int *, std::input_iterator_tag> {
+    InputIterator(int *It) : InputIterator::iterator_adaptor_base(It) {}
   };
 
   auto IsOdd = [](int N) { return N % 2 == 1; };
   int A[] = {0, 1, 2, 3, 4, 5, 6};
   auto Range = make_filter_range(
-      make_range(ForwardIterator(std::begin(A)), ForwardIterator(std::end(A))),
+      make_range(InputIterator(std::begin(A)), InputIterator(std::end(A))),
       IsOdd);
   SmallVector<int, 3> Actual(Range.begin(), Range.end());
   EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual);

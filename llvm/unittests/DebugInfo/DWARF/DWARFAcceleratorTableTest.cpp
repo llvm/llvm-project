@@ -106,18 +106,16 @@ TEST(DWARFDebugNames, BasicTestEntries) {
   DWARFDebugNames::NameTableEntry SecondEntry = NameIndex.getNameTableEntry(2);
   ASSERT_EQ(SecondEntry.getString(), StringRef("NameType2"));
 
-  SmallVector<DWARFDebugNames::Entry> FirstNameEntries;
-  llvm::copy(NameIndex.equal_range("NameType1"),
-             std::back_inserter(FirstNameEntries));
+  SmallVector<DWARFDebugNames::Entry> FirstNameEntries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("NameType1"));
   ASSERT_EQ(FirstNameEntries.size(), 2u);
   ASSERT_EQ(FirstNameEntries[0].getCUIndex(), 0u);
   ASSERT_EQ(FirstNameEntries[1].getCUIndex(), 0x2);
   ASSERT_EQ(FirstNameEntries[0].getDIEUnitOffset(), 0x0);
   ASSERT_EQ(FirstNameEntries[1].getDIEUnitOffset(), 0x2);
 
-  SmallVector<DWARFDebugNames::Entry> SecondNameEntries;
-  llvm::copy(NameIndex.equal_range("NameType2"),
-             std::back_inserter(SecondNameEntries));
+  SmallVector<DWARFDebugNames::Entry> SecondNameEntries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("NameType2"));
   ASSERT_EQ(SecondNameEntries.size(), 1u);
   ASSERT_EQ(SecondNameEntries[0].getCUIndex(), 0x1);
   ASSERT_EQ(SecondNameEntries[0].getDIEUnitOffset(), 0x1);
@@ -183,32 +181,32 @@ TEST(DWARFDebugNames, ParentEntries) {
   ASSERT_NE(DebugNames.begin(), DebugNames.end());
   const DWARFDebugNames::NameIndex &NameIndex = *DebugNames.begin();
 
-  SmallVector<DWARFDebugNames::Entry> Name1Entries;
-  llvm::copy(NameIndex.equal_range("Name1"), std::back_inserter(Name1Entries));
+  SmallVector<DWARFDebugNames::Entry> Name1Entries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("Name1"));
   ASSERT_EQ(Name1Entries.size(), 1u);
   Expected<std::optional<DWARFDebugNames::Entry>> Name1Parent =
       Name1Entries[0].getParentDIEEntry();
   ASSERT_THAT_EXPECTED(Name1Parent, Succeeded());
   ASSERT_EQ(*Name1Parent, std::nullopt); // Name1 has no parent
 
-  SmallVector<DWARFDebugNames::Entry> Name2Entries;
-  llvm::copy(NameIndex.equal_range("Name2"), std::back_inserter(Name2Entries));
+  SmallVector<DWARFDebugNames::Entry> Name2Entries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("Name2"));
   ASSERT_EQ(Name2Entries.size(), 1u);
   Expected<std::optional<DWARFDebugNames::Entry>> Name2Parent =
       Name2Entries[0].getParentDIEEntry();
   ASSERT_THAT_EXPECTED(Name2Parent, Succeeded());
   ASSERT_EQ((**Name2Parent).getDIEUnitOffset(), 0x0); // Name2 parent == Name1
 
-  SmallVector<DWARFDebugNames::Entry> Name3Entries;
-  llvm::copy(NameIndex.equal_range("Name3"), std::back_inserter(Name3Entries));
+  SmallVector<DWARFDebugNames::Entry> Name3Entries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("Name3"));
   ASSERT_EQ(Name3Entries.size(), 1u);
   Expected<std::optional<DWARFDebugNames::Entry>> Name3Parent =
       Name3Entries[0].getParentDIEEntry();
   ASSERT_THAT_EXPECTED(Name3Parent, Succeeded());
   ASSERT_EQ((**Name3Parent).getDIEUnitOffset(), 0x1); // Name3 parent == Name2
 
-  SmallVector<DWARFDebugNames::Entry> Name4Entries;
-  llvm::copy(NameIndex.equal_range("Name4"), std::back_inserter(Name4Entries));
+  SmallVector<DWARFDebugNames::Entry> Name4Entries =
+      to_vector_of<DWARFDebugNames::Entry>(NameIndex.equal_range("Name4"));
   ASSERT_EQ(Name4Entries.size(), 1u);
   ASSERT_FALSE(Name4Entries[0].hasParentInformation());
 }

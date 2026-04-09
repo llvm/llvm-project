@@ -3982,8 +3982,7 @@ public:
       // "stat"), but the ASTReader adds declarations to the end of the list
       // (so we need to see the struct "stat" before the function "stat").
       // Only emit declarations that aren't from a chained PCH, though.
-      SmallVector<NamedDecl *, 16> Decls;
-      llvm::copy(IdResolver->decls(II), std::back_inserter(Decls));
+      SmallVector<NamedDecl *, 16> Decls(IdResolver->decls(II));
       for (NamedDecl *D : llvm::reverse(Decls))
         LE.write<DeclID>((DeclID)Writer.getDeclID(
             getDeclForLocalLookup(PP.getLangOpts(), D)));

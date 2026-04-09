@@ -139,9 +139,8 @@ raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
 unsigned getNumRedundantPathComponents(ArrayRef<std::string> Paths) {
   // To start, set the number of redundant path components to the maximum
   // possible value.
-  SmallVector<StringRef, 8> FirstPathComponents;
-  std::copy(sys::path::begin(Paths[0]), sys::path::end(Paths[0]),
-            std::back_inserter(FirstPathComponents));
+  SmallVector<StringRef, 8> FirstPathComponents{sys::path::begin(Paths[0]),
+                                                sys::path::end(Paths[0])};
   unsigned NumRedundant = FirstPathComponents.size();
 
   for (unsigned I = 1, E = Paths.size(); NumRedundant > 0 && I < E; ++I) {
