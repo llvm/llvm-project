@@ -368,6 +368,15 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
         Phi->setOperand(1, Copy->getVPSingleValue());
       }
     }
+    if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
+      VPBuilder Builder(WideCanIV);
+      VPValue *VFxPart = Builder.createOverflowingOp(
+          Instruction::Mul, {&Plan.getVF(), getConstantInt(Part)},
+          {true, true});
+      Copy->setOperand(0, WideCanIV->getOperand(0));
+      Copy->addOperand(VFxPart);
+      continue;
+    }
     if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(Copy)) {
       // Materialize PartN offset for VectorEndPointer.
       VEPR->setOperand(0, R.getOperand(0));
@@ -381,11 +390,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Copy))
       addStartIndexForScalarSteps(ScalarIVSteps, Part, Plan, TypeInfo);
 
-    // Add operand indicating the part to generate code for, to recipes still
-    // requiring it.
-    if (isa<VPWidenCanonicalIVRecipe>(Copy))
-      Copy->addOperand(getConstantInt(Part));
-
     if (match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
       VPBuilder Builder(Copy);
@@ -397,6 +401,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
     // Materialize Part0 offset for VectorEndPointer.
     VEPR->materializeOffset();
+  }
+  if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
+    // Set Part0 step for WidenCanonicalIV.
+    WideCanIV->addOperand(getConstantInt(0));
   }
 }
 
