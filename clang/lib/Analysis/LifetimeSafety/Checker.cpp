@@ -244,6 +244,7 @@ public:
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
       const struct AssignmentQueryContext Context = {
           LoanPropagation, MovedLoans, LiveOrigins, FactMgr, ADC};
+      llvm::SmallVector<AssignmentPair> AssignmentList;
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
         if (Warning.InvalidatedByExpr) {
@@ -260,21 +261,20 @@ public:
           // Scope-based expiry (use-after-scope).
           const auto *StartBlock =
               ADC.getCFGStmtMap()->getBlock(UF->getUseExpr());
-          const auto AliasExprs =
-              getAliasList(Context, UF, LID, StartBlock, IssueExpr);
+          getAliasList(Context, AssignmentList, UF, LID, StartBlock, IssueExpr);
           SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                         AliasExprs, ExpiryLoc);
+                                         AssignmentList, ExpiryLoc);
         }
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
           const auto *StartBlock =
               ADC.getCFGStmtMap()->getBlock(RetEscape->getReturnExpr());
-          const auto AliasExprs =
-              getAliasList(Context, RetEscape, LID, StartBlock, IssueExpr);
-          SemaHelper->reportUseAfterReturn(IssueExpr,
-                                           RetEscape->getReturnExpr(),
-                                           MovedExpr, AliasExprs, ExpiryLoc);
+          getAliasList(Context, AssignmentList, RetEscape, LID, StartBlock,
+                       IssueExpr);
+          SemaHelper->reportUseAfterReturn(
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, AssignmentList,
+              ExpiryLoc);
         } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
           // Dangling field.
           const auto BlockID = FactMgr.getBlockID(Warning.ExpiryExpr).value();
@@ -285,11 +285,11 @@ public:
               break;
             }
           }
-          const auto AliasExprs =
-              getAliasList(Context, FieldEscape, LID, StartBlock, IssueExpr);
+          getAliasList(Context, AssignmentList, FieldEscape, LID, StartBlock,
+                       IssueExpr);
           SemaHelper->reportDanglingField(IssueExpr,
                                           FieldEscape->getFieldDecl(),
-                                          MovedExpr, AliasExprs, ExpiryLoc);
+                                          MovedExpr, AssignmentList, ExpiryLoc);
         } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
           // Global escape.
           const auto BlockID = FactMgr.getBlockID(Warning.ExpiryExpr).value();
@@ -300,10 +300,11 @@ public:
               break;
             }
           }
-          const auto AliasExprs =
-              getAliasList(Context, GlobalEscape, LID, StartBlock, IssueExpr);
+          getAliasList(Context, AssignmentList, GlobalEscape, LID, StartBlock,
+                       IssueExpr);
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, AliasExprs, ExpiryLoc);
+                                           MovedExpr, AssignmentList,
+                                           ExpiryLoc);
         } else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else

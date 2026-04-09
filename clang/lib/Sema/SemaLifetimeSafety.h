@@ -38,33 +38,38 @@ inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
                           D->getBeginLoc());
 }
 
-inline __attribute__((always_inline)) llvm::SmallString<32>
-FormatLHSValueDeclForSema(const ValueDecl *TargetValue) {
-  llvm::SmallString<32> Result;
+inline __attribute__((always_inline)) void
+FormatLHSValueDeclForSema(const ValueDecl *TargetValue,
+                          llvm::SmallVectorImpl<char> &LHSMsg) {
   if (TargetValue) {
-    Result += "variable '";
-    Result += TargetValue->getName();
-    Result += "'";
+    const llvm::StringRef PrefixStr = "variable '";
+    const llvm::StringRef TargetName = TargetValue->getName();
+    LHSMsg.append(PrefixStr.begin(), PrefixStr.end());
+    LHSMsg.append(TargetName.begin(), TargetName.end());
+    LHSMsg.push_back('\'');
   }
-  return Result;
 }
 
 inline void reportAssignmentImpl(Sema &S, LoanEntity IssueEntity,
                                  const ValueDecl *LHS, const Expr *RHS,
                                  const SourceLocation LHSExploc) {
-  const llvm::SmallString<32> IssueMsg = FormatLoanEntityForSema(IssueEntity);
-  const llvm::SmallVector<ExprPrintingResult> SrcMsgList =
-      FormatSrcExprForSema(RHS);
+  llvm::SmallString<32> IssueMsg;
+  llvm::SmallString<32> LHSMsg;
+  llvm::SmallVector<ExprPrintingResult> SrcMsgList;
+  FormatLoanEntityForSema(IssueEntity, IssueMsg);
+  FormatLHSValueDeclForSema(LHS, LHSMsg);
+  FormatSrcExprForSema(RHS, SrcMsgList);
+
   if (SrcMsgList.size() == 1 &&
       llvm::isa<DeclRefExpr>(SrcMsgList[0].CurrExpr)) {
     S.Diag(LHSExploc, diag::note_lifetime_safety_note_alias_chain)
-        << FormatLHSValueDeclForSema(LHS) << IssueMsg;
+        << LHSMsg << IssueMsg;
   } else {
     for (const auto &SrcMsg : llvm::reverse(SrcMsgList))
       S.Diag(RHS->getBeginLoc(), diag::note_lifetime_safety_note_alias_chain)
-          << SrcMsg.CurrExpr->getSourceRange() << SrcMsg.Value << IssueMsg;
+          << SrcMsg.CurrExpr->getSourceRange() << SrcMsg.Str << IssueMsg;
     S.Diag(LHSExploc, diag::note_lifetime_safety_note_alias_chain)
-        << FormatLHSValueDeclForSema(LHS) << IssueMsg;
+        << LHSMsg << IssueMsg;
   }
 }
 
@@ -90,10 +95,10 @@ class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
-  void reportUseAfterFree(
-      const Expr *IssueExpr, const Expr *UseExpr, const Expr *MovedExpr,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      SourceLocation FreeLoc) override {
+  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                          const Expr *MovedExpr,
+                          llvm::ArrayRef<AssignmentPair> AliasList,
+                          SourceLocation FreeLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
                      : diag::warn_lifetime_safety_use_after_scope)
@@ -103,18 +108,17 @@ public:
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
 
-    if (AliasList.has_value())
-      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
-        reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
+    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+      reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
 
-  void reportUseAfterReturn(
-      const Expr *IssueExpr, const Expr *ReturnExpr, const Expr *MovedExpr,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      SourceLocation ExpiryLoc) override {
+  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
+                            const Expr *MovedExpr,
+                            llvm::ArrayRef<AssignmentPair> AliasList,
+                            SourceLocation ExpiryLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
                      : diag::warn_lifetime_safety_return_stack_addr)
@@ -123,19 +127,18 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
 
-    if (AliasList.has_value())
-      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
-        reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
+    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+      reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
         << ReturnExpr->getSourceRange();
   }
 
-  void reportDanglingField(
-      const Expr *IssueExpr, const FieldDecl *DanglingField,
-      const Expr *MovedExpr,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      SourceLocation ExpiryLoc) override {
+  void reportDanglingField(const Expr *IssueExpr,
+                           const FieldDecl *DanglingField,
+                           const Expr *MovedExpr,
+                           llvm::ArrayRef<AssignmentPair> AliasList,
+                           SourceLocation ExpiryLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
                      : diag::warn_lifetime_safety_dangling_field)
@@ -144,20 +147,19 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
 
-    if (AliasList.has_value())
-      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
-        reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
+    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+      reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
   }
 
-  void reportDanglingGlobal(
-      const Expr *IssueExpr, const VarDecl *DanglingGlobal,
-      const Expr *MovedExpr,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      SourceLocation ExpiryLoc) override {
+  void reportDanglingGlobal(const Expr *IssueExpr,
+                            const VarDecl *DanglingGlobal,
+                            const Expr *MovedExpr,
+                            llvm::ArrayRef<AssignmentPair> AliasList,
+                            SourceLocation ExpiryLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
                      : diag::warn_lifetime_safety_dangling_global)
@@ -166,9 +168,8 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
 
-    if (AliasList.has_value())
-      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
-        reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
+    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+      reportAssignment(S, IssueExpr, AliasStmt.first, AliasStmt.second);
 
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
       S.Diag(DanglingGlobal->getLocation(),
@@ -232,10 +233,11 @@ public:
           << EscapeField->getSourceRange();
   }
 
-  void suggestLifetimeboundToImplicitThis(
-      SuggestionScope Scope, const CXXMethodDecl *MD,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      const Expr *EscapeExpr) override {
+  void
+  suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+                                     const CXXMethodDecl *MD,
+                                     llvm::ArrayRef<AssignmentPair> AliasList,
+                                     const Expr *EscapeExpr) override {
     unsigned DiagID = (Scope == SuggestionScope::CrossTU)
                           ? diag::warn_lifetime_safety_cross_tu_this_suggestion
                           : diag::warn_lifetime_safety_intra_tu_this_suggestion;
@@ -262,9 +264,8 @@ public:
         << FixItHint::CreateInsertion(InsertionPoint,
                                       " [[clang::lifetimebound]]");
 
-    if (AliasList.has_value())
-      for (const auto &AliasStmt : llvm::reverse(AliasList.value()))
-        reportAssignment(S, MD, AliasStmt.first, AliasStmt.second);
+    for (const AssignmentPair &AliasStmt : llvm::reverse(AliasList))
+      reportAssignment(S, MD, AliasStmt.first, AliasStmt.second);
 
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)

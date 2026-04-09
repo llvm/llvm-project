@@ -77,31 +77,28 @@ const MemberExpr *getFieldFromAssignmentExpr(const Expr *RHS,
 AliasAssignmentSearchResult getAliasListCore(
     const AssignmentQueryContext &Context, const CFGBlock *Block,
     const LoanID EndLoanID, OriginID *TargetOID,
-    const std::optional<OriginDestExpr> LastDestDecl = std::nullopt,
+    const std::optional<OriginDestExpr> LastDestExpr = std::nullopt,
     const std::optional<OriginID> LastOriginID = std::nullopt) {
-  std::optional<OriginID> CurrOrigin = std::nullopt;
-  std::optional<OriginDestExpr> DestDecl = LastDestDecl;
-  std::optional<const Expr *> SrcExpr = std::nullopt;
   llvm::SmallVector<AssignmentPair> AliasStmts;
-  const auto Facts = Context.FactMgr.getFacts(Block);
-  bool FetchLoan = false;
-  auto IssueOriginID = LastOriginID;
+  llvm::ArrayRef<const Fact *> Facts = Context.FactMgr.getFacts(Block);
+  std::optional<OriginID> IssueOriginID = LastOriginID;
+  std::optional<OriginDestExpr> DestExpr = LastDestExpr;
+  std::optional<OriginID> CurrOrigin = std::nullopt;
+  std::optional<const Expr *> SrcExpr = std::nullopt;
 
-  for (const auto &F : llvm::reverse(Facts)) {
+  for (const Fact *F : llvm::reverse(Facts)) {
     if (const auto *OFF = F->getAs<OriginFlowFact>()) {
-      if (IssueOriginID.has_value() &&
-          OFF->getDestOriginID() == IssueOriginID.value())
-        FetchLoan = true;
-
+      if (IssueOriginID && OFF->getDestOriginID() == IssueOriginID.value())
+        return {AliasStmts, true, DestExpr, IssueOriginID};
       if (OFF->getDestOriginID() == *TargetOID) {
-        const auto HeldLoans =
+        const LoanSet HeldLoans =
             Context.LoanPropagation.getLoans(OFF->getSrcOriginID(), OFF);
 
         if (HeldLoans.contains(EndLoanID)) {
-          const auto TargetOrigin =
+          const Origin TargetOrigin =
               Context.FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
 
-          if (!DestDecl.has_value()) {
+          if (!DestExpr.has_value()) {
             if (const ValueDecl *DVecl = TargetOrigin.getDecl();
                 DVecl && !DVecl->getLocation().isInvalid()) {
               if (llvm::isa<FieldDecl>(DVecl)) {
@@ -109,25 +106,25 @@ AliasAssignmentSearchResult getAliasListCore(
                                            .getOrigin(OFF->getSrcOriginID())
                                            .getExpr();
                 if (CurrExpr)
-                  DestDecl = getFieldFromAssignmentExpr(
+                  DestExpr = getFieldFromAssignmentExpr(
                       CurrExpr, Context.ADC.getParentMap());
               } else {
                 CurrOrigin = *TargetOID;
-                DestDecl = DVecl;
+                DestExpr = DVecl;
               }
             }
           } else {
             auto SExpr = GetPureSrcExpr(TargetOrigin.getExpr());
-            if (!SExpr.has_value()) {
+            if (!SExpr) {
               const auto SrcOrigin = Context.FactMgr.getOriginMgr().getOrigin(
                   OFF->getSrcOriginID());
               SExpr = GetPureSrcExpr(SrcOrigin.getExpr());
             }
 
-            if (SExpr.has_value()) {
-              AliasStmts.push_back({DestDecl.value(), SExpr.value()});
+            if (SExpr) {
+              AliasStmts.push_back({DestExpr.value(), SExpr.value()});
               SrcExpr = SExpr.value();
-              DestDecl = std::nullopt;
+              DestExpr = std::nullopt;
               CurrOrigin = std::nullopt;
             }
           }
@@ -135,33 +132,27 @@ AliasAssignmentSearchResult getAliasListCore(
         }
       }
     } else if (const auto *IF = F->getAs<IssueFact>()) {
-      if (IF->getLoanID() == EndLoanID) {
+      if (IF->getLoanID() == EndLoanID)
         IssueOriginID = IF->getOriginID();
-      }
     } else if (const auto *UF = F->getAs<UseFact>()) {
       if (CurrOrigin.has_value()) {
         for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
              Cur = Cur->peelOuterOrigin()) {
-          if (Cur->getOuterOriginID() == CurrOrigin.value() &&
-              UF->isWritten()) {
-            const auto UExpr = GetPureSrcExpr(UF->getUseExpr());
-            if (UExpr.has_value()) {
-              if (const auto *UDExpr =
-                      llvm::dyn_cast<DeclRefExpr>(UExpr.value())) {
-                DestDecl = UDExpr;
-                break;
-              }
+          if (Cur->getOuterOriginID() != CurrOrigin.value() || !UF->isWritten())
+            continue;
+          std::optional<const Expr *> UExpr = GetPureSrcExpr(UF->getUseExpr());
+          if (UExpr.has_value()) {
+            if (const auto *UDExpr =
+                    llvm::dyn_cast<DeclRefExpr>(UExpr.value())) {
+              DestExpr = UDExpr;
+              break;
             }
           }
         }
       }
     }
-
-    if (FetchLoan) {
-      return {AliasStmts, true, DestDecl, IssueOriginID};
-    }
   }
-  return {AliasStmts, false, DestDecl, IssueOriginID};
+  return {AliasStmts, false, DestExpr, IssueOriginID};
 }
 
 std::optional<llvm::SmallVector<AssignmentPair>>
@@ -229,152 +220,125 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
   return std::nullopt;
 }
 
-llvm::SmallString<32> FormatRHSValueDeclForSema(const ValueDecl *TargetValue) {
-  llvm::SmallString<32> Result;
+void FormatRHSValueDeclForSema(const ValueDecl *TargetValue,
+                               llvm::SmallVectorImpl<char> &IssueMsg) {
   if (TargetValue) {
-    Result += "'";
-    Result += TargetValue->getName();
-    Result += "'";
+    const StringRef TargetName = TargetValue->getName();
+    IssueMsg.push_back('\'');
+    IssueMsg.append(TargetName.begin(), TargetName.end());
+    IssueMsg.push_back('\'');
   }
-  return Result;
 }
 } // namespace
 
 namespace clang::lifetimes {
 
-llvm::SmallString<32> FormatLoanEntityForSema(LoanEntity IssueEntity) {
-  if (!IssueEntity)
-    return {};
+void FormatLoanEntityForSema(LoanEntity IssueEntity,
+                             llvm::SmallVectorImpl<char> &IssueMsg) {
+  llvm::StringRef Temp = "the temporary";
 
   if (const auto *IssueExpr = llvm::dyn_cast<const Expr *>(IssueEntity)) {
-    const auto *PureExpr = IssueExpr->IgnoreParenCasts();
-    if (!PureExpr)
-      return {};
-
-    if (const auto *IDeclExpr = llvm::dyn_cast<DeclRefExpr>(PureExpr))
-      return FormatRHSValueDeclForSema(IDeclExpr->getDecl());
-    return {"the temporary"};
+    if (const auto *IDeclExpr =
+            llvm::dyn_cast<DeclRefExpr>(IssueExpr->IgnoreParenCasts()))
+      FormatRHSValueDeclForSema(IDeclExpr->getDecl(), IssueMsg);
   }
+
   if (const auto *IssueParmDecl =
           llvm::dyn_cast<const ParmVarDecl *>(IssueEntity))
-    return FormatRHSValueDeclForSema(IssueParmDecl);
-  if (const auto *IssueCXXMD =
-          llvm::dyn_cast<const CXXMethodDecl *>(IssueEntity))
-    return FormatRHSValueDeclForSema(IssueCXXMD);
-
-  return {"the temporary"};
+    FormatRHSValueDeclForSema(IssueParmDecl, IssueMsg);
+  else if (const auto *IssueCXXMD =
+               llvm::dyn_cast<const CXXMethodDecl *>(IssueEntity))
+    FormatRHSValueDeclForSema(IssueCXXMD, IssueMsg);
+  else
+    IssueMsg.append(Temp.begin(), Temp.end());
 }
 
-llvm::SmallVector<ExprPrintingResult>
-FormatSrcExprForSema(const Expr *SrcExpr) {
+void FormatSrcExprForSema(
+    const Expr *SrcExpr,
+    llvm::SmallVectorImpl<ExprPrintingResult> &SrcMsgList) {
   if (!SrcExpr)
-    return {};
+    return;
   const auto *PureExpr = SrcExpr->IgnoreParenCasts();
   if (!PureExpr)
-    return {};
+    return;
+
+  const auto AppendSubExprIfNeeded = [&SrcMsgList](const Expr *SubExpr) {
+    if (SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
+      FormatSrcExprForSema(SubExpr, SrcMsgList);
+    }
+  };
 
   if (const auto *IOpCallExpr = llvm::dyn_cast<CXXOperatorCallExpr>(PureExpr);
-      IOpCallExpr && !IOpCallExpr->getExprLoc().isInvalid())
-    return {{{"expression"}, IOpCallExpr->getArg(0)}};
-  if (const auto *IDeclExpr = llvm::dyn_cast<DeclRefExpr>(PureExpr);
-      IDeclExpr && !IDeclExpr->getExprLoc().isInvalid())
-    return {{{}, IDeclExpr}};
-
-  if (const auto *ICXXCallExpr = llvm::dyn_cast<CXXMemberCallExpr>(PureExpr);
-      ICXXCallExpr && !ICXXCallExpr->getExprLoc().isInvalid()) {
-    llvm::SmallVector<ExprPrintingResult> Result;
+      IOpCallExpr && !IOpCallExpr->getExprLoc().isInvalid()) {
+    SrcMsgList.push_back({"expression", IOpCallExpr->getArg(0)});
+  } else if (const auto *IDeclExpr = llvm::dyn_cast<DeclRefExpr>(PureExpr);
+             IDeclExpr && !IDeclExpr->getExprLoc().isInvalid()) {
+    SrcMsgList.push_back({"", IDeclExpr});
+  } else if (const auto *ICXXCallExpr =
+                 llvm::dyn_cast<CXXMemberCallExpr>(PureExpr);
+             ICXXCallExpr && !ICXXCallExpr->getExprLoc().isInvalid()) {
     if (!ICXXCallExpr->getCallee()->getExprLoc().isInvalid())
-      Result.push_back({{"function call result"}, ICXXCallExpr});
-    if (const auto *SubExpr = ICXXCallExpr->getImplicitObjectArgument();
-        SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
-      Result.append(FormatSrcExprForSema(SubExpr));
-    }
-    return Result;
-  }
-  if (const auto *ICallExpr = llvm::dyn_cast<CallExpr>(PureExpr);
-      ICallExpr && !ICallExpr->getExprLoc().isInvalid()) {
-    llvm::SmallVector<ExprPrintingResult> Result;
+      SrcMsgList.push_back({"function call result", ICXXCallExpr});
+    AppendSubExprIfNeeded(ICXXCallExpr->getImplicitObjectArgument());
+  } else if (const auto *ICallExpr = llvm::dyn_cast<CallExpr>(PureExpr);
+             ICallExpr && !ICallExpr->getExprLoc().isInvalid()) {
     if (!ICallExpr->getCallee()->getExprLoc().isInvalid())
-      Result.push_back({{"function call result"}, ICallExpr});
-    if (const auto *SubExpr = ICallExpr->getCallee();
-        SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
-      Result.append(FormatSrcExprForSema(SubExpr));
-    }
-    return Result;
+      SrcMsgList.push_back({"function call result", ICallExpr});
+    AppendSubExprIfNeeded(ICallExpr->getCallee());
+  } else if (const auto *IMemberExpr = llvm::dyn_cast<MemberExpr>(PureExpr);
+             IMemberExpr && !IMemberExpr->getExprLoc().isInvalid()) {
+    SrcMsgList.push_back({"member access", IMemberExpr});
+    AppendSubExprIfNeeded(IMemberExpr->getBase());
+  } else if (const auto *ICCExpr = llvm::dyn_cast<CXXConstructExpr>(PureExpr);
+             ICCExpr && ICCExpr->getNumArgs() > 0) {
+    AppendSubExprIfNeeded(ICCExpr->getArg(0));
+  } else if (const auto *ITempExpr =
+                 llvm::dyn_cast<CXXBindTemporaryExpr>(PureExpr)) {
+    AppendSubExprIfNeeded(ITempExpr->getSubExpr());
   }
-  if (const auto *IMemberExpr = llvm::dyn_cast<MemberExpr>(PureExpr);
-      IMemberExpr && !IMemberExpr->getExprLoc().isInvalid()) {
-    llvm::SmallVector<ExprPrintingResult> Result;
-    Result.push_back({{"member access"}, IMemberExpr});
-    if (const auto *SubExpr = IMemberExpr->getBase();
-        SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
-      Result.append(FormatSrcExprForSema(SubExpr));
-    }
-    return Result;
-  }
-
-  if (const auto *ICCExpr = llvm::dyn_cast<CXXConstructExpr>(PureExpr)) {
-    if (ICCExpr->getNumArgs() > 0) {
-      if (const auto *SubExpr = ICCExpr->getArg(0);
-          SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
-        return FormatSrcExprForSema(SubExpr);
-      }
-    }
-  }
-  if (const auto *ITempExpr = llvm::dyn_cast<CXXBindTemporaryExpr>(PureExpr)) {
-    if (const auto *SubExpr = ITempExpr->getSubExpr();
-        SubExpr && !llvm::isa<DeclRefExpr>(SubExpr->IgnoreParenCasts())) {
-      return FormatSrcExprForSema(SubExpr);
-    }
-  }
-
-  return {};
 }
 } // namespace clang::lifetimes
 
 namespace clang::lifetimes::internal {
 
-std::optional<llvm::SmallVector<AssignmentPair>>
-getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
-             const LoanID End, const CFGBlock *StartBlock,
-             const Expr *IssueExpr) {
+void getAliasList(const AssignmentQueryContext &Context,
+                  llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
+                  const Fact *CausingFact, const LoanID End,
+                  const CFGBlock *StartBlock, const Expr *IssueExpr) {
   llvm::SmallVector<OriginID, 4> TargetOIDList;
 
-  if (const auto *UF = llvm::dyn_cast<UseFact>(CausingFact)) {
+  if (const auto *UF = llvm::dyn_cast<UseFact>(CausingFact))
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       TargetOIDList.push_back(Cur->getOuterOriginID());
-  } else if (const auto *RetEscapeF =
-                 llvm::dyn_cast<ReturnEscapeFact>(CausingFact)) {
+  else if (const auto *RetEscapeF =
+               llvm::dyn_cast<ReturnEscapeFact>(CausingFact))
     TargetOIDList.push_back(RetEscapeF->getEscapedOriginID());
-  } else if (const auto *FieldEscapeF =
-                 llvm::dyn_cast<FieldEscapeFact>(CausingFact)) {
+  else if (const auto *FieldEscapeF =
+               llvm::dyn_cast<FieldEscapeFact>(CausingFact))
     TargetOIDList.push_back(FieldEscapeF->getEscapedOriginID());
-  } else if (const auto *GlobalEscapeF =
-                 llvm::dyn_cast<GlobalEscapeFact>(CausingFact)) {
+  else if (const auto *GlobalEscapeF =
+               llvm::dyn_cast<GlobalEscapeFact>(CausingFact))
     TargetOIDList.push_back(GlobalEscapeF->getEscapedOriginID());
-  } else {
+  else
     llvm_unreachable("Without a corresponding Fact handler, assignment history "
                      "traceback will fail.");
-  }
 
   const CFGBlock *EndBlock =
       IssueExpr ? Context.ADC.getCFGStmtMap()->getBlock(IssueExpr) : nullptr;
 
-  for (auto TargetOID : TargetOIDList) {
+  for (OriginID TargetOID : TargetOIDList) {
     if (StartBlock == EndBlock) {
-      const AliasAssignmentSearchResult Result =
+      AliasAssignmentSearchResult Result =
           getAliasListCore(Context, StartBlock, End, &TargetOID);
       if (!Result.Payload.empty())
-        return Result.Payload;
+        AssignmentList = Result.Payload;
     } else {
-      const auto Result =
+      std::optional<llvm::SmallVector<AssignmentPair>> Result =
           getAliasListInMultiBlock(Context, StartBlock, End, &TargetOID);
-      if (Result.has_value())
-        return Result.value();
+      if (Result)
+        AssignmentList = Result.value();
     }
   }
-
-  return std::nullopt;
 }
 } // namespace clang::lifetimes::internal

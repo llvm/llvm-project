@@ -62,26 +62,28 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void reportUseAfterFree(
-      const Expr *IssueExpr, const Expr *UseExpr, const Expr *MovedExpr,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      SourceLocation FreeLoc) {}
+  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                                  const Expr *MovedExpr,
+                                  llvm::ArrayRef<AssignmentPair> AliasList,
+                                  SourceLocation FreeLoc) {}
 
-  virtual void reportUseAfterReturn(
-      const Expr *IssueExpr, const Expr *ReturnExpr, const Expr *MovedExpr,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      SourceLocation ExpiryLoc) {}
+  virtual void reportUseAfterReturn(const Expr *IssueExpr,
+                                    const Expr *ReturnExpr,
+                                    const Expr *MovedExpr,
+                                    llvm::ArrayRef<AssignmentPair> AliasList,
+                                    SourceLocation ExpiryLoc) {}
 
-  virtual void reportDanglingField(
-      const Expr *IssueExpr, const FieldDecl *Field, const Expr *MovedExpr,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      SourceLocation ExpiryLoc) {}
+  virtual void reportDanglingField(const Expr *IssueExpr,
+                                   const FieldDecl *Field,
+                                   const Expr *MovedExpr,
+                                   llvm::ArrayRef<AssignmentPair> AliasList,
+                                   SourceLocation ExpiryLoc) {}
 
-  virtual void reportDanglingGlobal(
-      const Expr *IssueExpr, const VarDecl *DanglingGlobal,
-      const Expr *MovedExpr,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      SourceLocation ExpiryLoc) {}
+  virtual void reportDanglingGlobal(const Expr *IssueExpr,
+                                    const VarDecl *DanglingGlobal,
+                                    const Expr *MovedExpr,
+                                    llvm::ArrayRef<AssignmentPair> AliasList,
+                                    SourceLocation ExpiryLoc) {}
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
@@ -114,8 +116,7 @@ public:
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(
       SuggestionScope Scope, const CXXMethodDecl *MD,
-      const std::optional<llvm::SmallVector<AssignmentPair>> AliasList,
-      const Expr *EscapeExpr) {}
+      llvm::ArrayRef<AssignmentPair> AliasList, const Expr *EscapeExpr) {}
 
   // Adds inferred lifetime bound attribute for implicit this to its
   // TypeSourceInfo.

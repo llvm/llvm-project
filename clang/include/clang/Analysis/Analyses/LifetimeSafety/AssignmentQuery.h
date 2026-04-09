@@ -33,12 +33,14 @@ using LoanEntity = llvm::PointerUnion<const Expr *, const ParmVarDecl *,
 using AssignmentPair = std::pair<OriginDestExpr, const Expr *>;
 
 struct ExprPrintingResult {
-  llvm::SmallString<32> Value;
+  llvm::StringRef Str;
   const Expr *CurrExpr;
 };
 
-llvm::SmallString<32> FormatLoanEntityForSema(LoanEntity IssueEntity);
-llvm::SmallVector<ExprPrintingResult> FormatSrcExprForSema(const Expr *SrcExpr);
+void FormatLoanEntityForSema(LoanEntity IssueEntity,
+                             llvm::SmallVectorImpl<char> &IssueMsg);
+void FormatSrcExprForSema(
+    const Expr *SrcExpr, llvm::SmallVectorImpl<ExprPrintingResult> &SrcMsgList);
 } // namespace clang::lifetimes
 
 namespace clang::lifetimes::internal {
@@ -62,10 +64,10 @@ struct AssignmentQueryContext {
 ///
 /// To help users understand the data flow, we track where the problematic
 /// address originated.
-std::optional<llvm::SmallVector<AssignmentPair>>
-getAliasList(const AssignmentQueryContext &Context, const Fact *CausingFact,
-             const LoanID End, const CFGBlock *StartBlock,
-             const Expr *IssueExpr);
+void getAliasList(const AssignmentQueryContext &Context,
+                  llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
+                  const Fact *CausingFact, const LoanID End,
+                  const CFGBlock *StartBlock, const Expr *IssueExpr);
 } // namespace clang::lifetimes::internal
 
 #endif
