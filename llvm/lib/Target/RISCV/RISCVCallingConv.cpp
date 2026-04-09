@@ -26,31 +26,29 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCState &State, bool IsRet);
 
 /// Used for assigning arguments with CallingConvention::GHC
-static CCAssignFn CC_RISCV_GHC_ARG;
+static CCAssignFn CC_RISCV_GHC;
 
 /// Used for assigning arguments with CallingConvention::Fast
-static CCAssignFn CC_RISCV_FastCC_ARG;
+static CCAssignFn CC_RISCV_FastCC;
 
-bool llvm::CC_RISCV_ARG(unsigned ValNo, MVT ValVT, MVT LocVT,
-                        CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                        Type *OrigTy, CCState &State) {
-
+bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
+                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                    Type *OrigTy, CCState &State) {
   if (State.getCallingConv() == CallingConv::GHC)
-    return CC_RISCV_GHC_ARG(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy,
-                            State);
+    return CC_RISCV_GHC(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State);
 
   if (State.getCallingConv() == CallingConv::Fast)
-    return CC_RISCV_FastCC_ARG(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy,
-                               State);
+    return CC_RISCV_FastCC(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy,
+                           State);
 
   // For all other cases, use the standard calling convention
   return CC_RISCV_Impl(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State,
                        /*IsRet=*/false);
 }
 
-bool llvm::CC_RISCV_RET(unsigned ValNo, MVT ValVT, MVT LocVT,
-                        CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                        Type *OrigTy, CCState &State) {
+bool llvm::RetCC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
+                       CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                       Type *OrigTy, CCState &State) {
   // Always use the standard calling convention.
   return CC_RISCV_Impl(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State,
                        /*IsRet=*/true);
@@ -664,10 +662,10 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 // FastCC has less than 1% performance improvement for some particular
 // benchmark. But theoretically, it may have benefit for some cases.
-static bool CC_RISCV_FastCC_ARG(unsigned ValNo, MVT ValVT, MVT LocVT,
-                                CCValAssign::LocInfo LocInfo,
-                                ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
-                                CCState &State) {
+static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   const MachineFunction &MF = State.getMachineFunction();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
@@ -785,10 +783,9 @@ static bool CC_RISCV_FastCC_ARG(unsigned ValNo, MVT ValVT, MVT LocVT,
   return true; // CC didn't match.
 }
 
-static bool CC_RISCV_GHC_ARG(unsigned ValNo, MVT ValVT, MVT LocVT,
-                             CCValAssign::LocInfo LocInfo,
-                             ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
-                             CCState &State) {
+static bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
+                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                         Type *OrigTy, CCState &State) {
   if (ArgFlags.isNest()) {
     report_fatal_error(
         "Attribute 'nest' is not supported in GHC calling convention");

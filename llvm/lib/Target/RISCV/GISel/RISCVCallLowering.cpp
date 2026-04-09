@@ -359,11 +359,19 @@ bool RISCVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     SmallVector<ArgInfo, 4> SplitRetInfos;
     splitToValueTypes(OrigRetInfo, SplitRetInfos, DL, CC);
 
-    OutgoingValueAssigner Assigner(CC_RISCV_RET);
+    OutgoingValueAssigner Assigner(RetCC_RISCV);
     RISCVOutgoingValueHandler Handler(MIRBuilder, MF.getRegInfo(), Ret);
-    if (!determineAndHandleAssignments(Handler, Assigner, SplitRetInfos,
-                                       MIRBuilder, CC, F.isVarArg()))
+
+    SmallVector<CCValAssign, 16> RetLocs;
+    CCState CCInfo(CC, F.isVarArg(), MF, RetLocs, F.getContext());
+    if (!determineAssignments(Assigner, SplitRetInfos, CCInfo) ||
+        !handleAssignments(Handler, SplitRetInfos, CCInfo, RetLocs, MIRBuilder))
       return false;
+
+    if (any_of(RetLocs, [](CCValAssign &VA) {
+          return VA.getLocVT().isScalableVector();
+        }))
+      MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
   }
 
   MIRBuilder.insertInstr(Ret);
@@ -374,11 +382,11 @@ bool RISCVCallLowering::canLowerReturn(MachineFunction &MF,
                                        CallingConv::ID CallConv,
                                        SmallVectorImpl<BaseArgInfo> &Outs,
                                        bool IsVarArg) const {
-  SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs,
+  SmallVector<CCValAssign, 16> RetLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RetLocs,
                  MF.getFunction().getContext());
 
-  return checkReturn(CCInfo, Outs, CC_RISCV_RET);
+  return checkReturn(CCInfo, Outs, RetCC_RISCV);
 }
 
 /// If there are varargs that were passed in a0-a7, the data in those registers
@@ -487,7 +495,7 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     ++Index;
   }
 
-  IncomingValueAssigner Assigner(CC_RISCV_ARG);
+  IncomingValueAssigner Assigner(CC_RISCV);
   RISCVFormalArgHandler Handler(MIRBuilder, MF.getRegInfo());
 
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -495,6 +503,10 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (!determineAssignments(Assigner, SplitArgInfos, CCInfo) ||
       !handleAssignments(Handler, SplitArgInfos, CCInfo, ArgLocs, MIRBuilder))
     return false;
+
+  if (any_of(ArgLocs,
+             [](CCValAssign &VA) { return VA.getLocVT().isScalableVector(); }))
+    MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
   if (F.isVarArg())
     saveVarArgRegisters(MIRBuilder, Handler, Assigner, CCInfo);
@@ -547,7 +559,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
-  OutgoingValueAssigner ArgAssigner(CC_RISCV_ARG);
+  OutgoingValueAssigner ArgAssigner(CC_RISCV);
   RISCVOutgoingValueHandler ArgHandler(MIRBuilder, MF.getRegInfo(), Call);
   if (!determineAndHandleAssignments(ArgHandler, ArgAssigner, SplitArgInfos,
                                      MIRBuilder, CC, Info.IsVarArg))
@@ -573,7 +585,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     SmallVector<ArgInfo, 4> SplitRetInfos;
     splitToValueTypes(Info.OrigRet, SplitRetInfos, DL, CC);
 
-    IncomingValueAssigner RetAssigner(CC_RISCV_RET);
+    IncomingValueAssigner RetAssigner(RetCC_RISCV);
     RISCVCallReturnHandler RetHandler(MIRBuilder, MF.getRegInfo(), Call);
     if (!determineAndHandleAssignments(RetHandler, RetAssigner, SplitRetInfos,
                                        MIRBuilder, CC, Info.IsVarArg))

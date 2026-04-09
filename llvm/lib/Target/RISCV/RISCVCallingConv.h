@@ -16,10 +16,10 @@
 namespace llvm {
 
 /// This is used for assigining arguments to locations when making calls.
-CCAssignFn CC_RISCV_ARG;
+CCAssignFn CC_RISCV;
 
 /// This is used for assigning return values to locations when making calls.
-CCAssignFn CC_RISCV_RET;
+CCAssignFn RetCC_RISCV;
 
 namespace RISCV {
 
