@@ -9,10 +9,10 @@ entry:
   %cmp7 = icmp sgt i32 %l, 0
   br i1 %cmp7, label %while.body.preheader, label %while.end
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %count.09 = phi i32 [ %add, %while.body ], [ 0, %while.body.preheader ]
   %ptr.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %ptr, %while.body.preheader ]
   %0 = load i8, ptr %ptr.addr.08, align 1
@@ -23,11 +23,11 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp = icmp ult ptr %incdec.ptr, %add.ptr
   br i1 %cmp, label %while.body, label %while.end.loopexit
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %add.lcssa = phi i32 [ %add, %while.body ]
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   %count.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %while.end.loopexit ]
   ret i32 %count.0.lcssa
 
@@ -43,10 +43,10 @@ entry:
   %cmp7 = icmp sgt i32 %l, 0
   br i1 %cmp7, label %while.body.preheader, label %while.end
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %count.09 = phi i16 [ %add, %while.body ], [ 0, %while.body.preheader ]
   %ptr.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %ptr, %while.body.preheader ]
   %0 = load i8, ptr %ptr.addr.08, align 1
@@ -57,11 +57,11 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp = icmp ult ptr %incdec.ptr, %add.ptr
   br i1 %cmp, label %while.body, label %while.end.loopexit
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %add.lcssa = phi i16 [ %add, %while.body ]
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   %count.0.lcssa = phi i16 [ 0, %entry ], [ %add.lcssa, %while.end.loopexit ]
   ret i16 %count.0.lcssa
 
@@ -77,10 +77,10 @@ entry:
   %cmp7 = icmp sgt i32 %l, 0
   br i1 %cmp7, label %while.body.preheader, label %while.end
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %count.09 = phi i32 [ %add, %while.body ], [ 0, %while.body.preheader ]
   %ptr.addr.16 = phi ptr [ %incdec.ptr, %while.body ], [ %ptr, %while.body.preheader ]
   %0 = load i16, ptr %ptr.addr.16, align 1
@@ -91,11 +91,11 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp = icmp ult ptr %incdec.ptr, %add.ptr
   br i1 %cmp, label %while.body, label %while.end.loopexit
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %add.lcssa = phi i32 [ %add, %while.body ]
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   %count.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %while.end.loopexit ]
   ret i32 %count.0.lcssa
 
@@ -111,10 +111,10 @@ entry:
   %cmp7 = icmp sgt i32 %l, 0
   br i1 %cmp7, label %while.body.preheader, label %while.end
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %count.09 = phi i64 [ %add, %while.body ], [ 0, %while.body.preheader ]
   %ptr.addr.16 = phi ptr [ %incdec.ptr, %while.body ], [ %ptr, %while.body.preheader ]
   %0 = load i16, ptr %ptr.addr.16, align 1
@@ -125,11 +125,11 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp = icmp ult ptr %incdec.ptr, %add.ptr
   br i1 %cmp, label %while.body, label %while.end.loopexit
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %add.lcssa = phi i64 [ %add, %while.body ]
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   %count.0.lcssa = phi i64 [ 0, %entry ], [ %add.lcssa, %while.end.loopexit ]
   ret i64 %count.0.lcssa
 

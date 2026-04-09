@@ -497,7 +497,10 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
   SmallVector<StringRef, 4> ReadFeatures(TargetOpts.FeaturesAsWritten.begin(),
                                          TargetOpts.FeaturesAsWritten.end());
   llvm::sort(ExistingFeatures);
+  ExistingFeatures.erase(llvm::unique(ExistingFeatures),
+                         ExistingFeatures.end());
   llvm::sort(ReadFeatures);
+  ReadFeatures.erase(llvm::unique(ReadFeatures), ReadFeatures.end());
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
