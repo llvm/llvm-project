@@ -1526,6 +1526,8 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
 /// Canonicalize a nested add/sub with a constant on the inner RHS by
 /// sinking the constant to the outer RHS.
 /// (X +/- C) +/- Y  ->  (X +/- Y) +/- C
+/// TODO:
+///   (C - X) +/- Y  ->  (Y -/+ X) + C
 static Instruction *
 canonicalizeNestedAddSubWithConstant(BinaryOperator &I,
                                      InstCombiner::BuilderTy &Builder) {
