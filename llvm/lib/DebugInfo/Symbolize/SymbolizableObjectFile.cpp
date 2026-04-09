@@ -273,9 +273,6 @@ object::SectionedAddress SymbolizableObjectFile::getWasmCodeDwarfOffset(
     object::SectionedAddress ModuleOffset) const {
   if (!Module->isWasm())
     return ModuleOffset;
-  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
-    ModuleOffset.SectionIndex =
-        getModuleSectionIndexForAddress(ModuleOffset.Address);
   for (const SectionRef &Sec : Module->sections()) {
     if (Sec.getIndex() == ModuleOffset.SectionIndex) {
       if (Sec.isText())
