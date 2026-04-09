@@ -93,7 +93,7 @@ define dso_local zeroext i32 @foo(ptr noundef %a) #0 {
 ; CHECK-NEXT:    [[ADD_1_7]] = add i32 [[TMP23]], [[SUM_11_1]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1_7]] = add nuw nsw i64 [[INDVARS_IV_1]], 8
 ; CHECK-NEXT:    [[EXITCOND_1_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_1_7]], 32
-; CHECK-NEXT:    br i1 [[EXITCOND_1_NOT_7]], label %[[FOR_BODY4_2:.*]], label %[[FOR_BODY4_1]], !llvm.loop [[LOOP7]]
+; CHECK-NEXT:    br i1 [[EXITCOND_1_NOT_7]], label %[[FOR_BODY4_2:.*]], label %[[FOR_BODY4_1]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[FOR_BODY4_2]]:
 ; CHECK-NEXT:    [[INDVARS_IV_2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_2_7:%.*]], %[[FOR_BODY4_2]] ], [ 0, %[[FOR_BODY4_1]] ]
 ; CHECK-NEXT:    [[SUM_11_2:%.*]] = phi i32 [ [[ADD_2_7:%.*]], %[[FOR_BODY4_2]] ], [ [[ADD_1_7]], %[[FOR_BODY4_1]] ]
@@ -139,7 +139,7 @@ define dso_local zeroext i32 @foo(ptr noundef %a) #0 {
 ; CHECK-NEXT:    [[ADD_2_7]] = add i32 [[MUL_2_7]], [[ADD_2_6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_2_7]] = add nuw nsw i64 [[INDVARS_IV_2]], 8
 ; CHECK-NEXT:    [[EXITCOND_2_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_2_7]], 32
-; CHECK-NEXT:    br i1 [[EXITCOND_2_NOT_7]], label %[[FOR_INC5_2:.*]], label %[[FOR_BODY4_2]], !llvm.loop [[LOOP7]]
+; CHECK-NEXT:    br i1 [[EXITCOND_2_NOT_7]], label %[[FOR_INC5_2:.*]], label %[[FOR_BODY4_2]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[FOR_INC5_2]]:
 ; CHECK-NEXT:    ret i32 [[ADD_2_7]]
 ;
@@ -218,4 +218,6 @@ attributes #2 = { argmemonly nocallback nofree nosync nounwind willreturn }
 ; CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]]}
 ; CHECK: [[META8]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META8]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META8]]}
 ;.

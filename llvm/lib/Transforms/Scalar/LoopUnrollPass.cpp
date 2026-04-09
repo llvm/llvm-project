@@ -772,6 +772,28 @@ static unsigned unrollCountPragmaValue(const Loop *L) {
   return 0;
 }
 
+static const char *LoopUnrollMaxTripCountMetadata =
+    "llvm.loop.unroll.max_trip_count";
+
+static std::optional<unsigned>
+getLoopUnrollMaxTripCountMetadata(const Loop *L) {
+  if (auto MaxTripCount =
+          getOptionalIntLoopAttribute(L, LoopUnrollMaxTripCountMetadata))
+    return static_cast<unsigned>(*MaxTripCount);
+  return std::nullopt;
+}
+
+static void setLoopUnrollMaxTripCountMetadata(Loop *L, unsigned MaxTripCount) {
+  addStringMetadataToLoop(L, LoopUnrollMaxTripCountMetadata, MaxTripCount);
+}
+
+static void eraseLoopUnrollMaxTripCountMetadata(Loop *L) {
+  if (getLoopUnrollMaxTripCountMetadata(L))
+    L->setLoopID(makePostTransformationMetadata(
+        L->getHeader()->getContext(), L->getLoopID(),
+        {LoopUnrollMaxTripCountMetadata}, {}));
+}
+
 UnrollPragmaInfo::UnrollPragmaInfo(const Loop *L)
     : UserUnrollCount(UnrollCount.getNumOccurrences() > 0),
       PragmaFullUnroll(hasUnrollFullPragma(L)),
@@ -780,6 +802,51 @@ UnrollPragmaInfo::UnrollPragmaInfo(const Loop *L)
       PragmaRuntimeUnrollDisable(hasRuntimeUnrollDisablePragma(L)),
       ExplicitUnroll(PragmaCount > 0 || PragmaFullUnroll ||
                      PragmaEnableUnroll || UserUnrollCount) {}
+
+// Preserve max trip count as metadata for sibling loops. The information can be
+// restored later when SCEV can't recompute it after unrolling the current loop.
+static void preserveSiblingMaxTripCounts(Loop *L, LoopInfo &LI,
+                                         ScalarEvolution &SE) {
+  SmallPtrSet<Loop *, 4> Visited;
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  for (BasicBlock *ExitingBlock : ExitingBlocks) {
+    for (BasicBlock *ExitSucc : successors(ExitingBlock)) {
+      if (L->contains(ExitSucc))
+        continue;
+
+      BasicBlock *CandidateBlock = ExitSucc;
+      for (unsigned Depth = 0; Depth != 4; ++Depth) {
+        Loop *CandidateLoop = LI.getLoopFor(CandidateBlock);
+        if (CandidateLoop && CandidateLoop->getHeader() == CandidateBlock) {
+          if (CandidateLoop != L &&
+              CandidateLoop->getParentLoop() == L->getParentLoop() &&
+              Visited.insert(CandidateLoop).second) {
+            unsigned MaxTripCount =
+                SE.getSmallConstantMaxTripCount(CandidateLoop);
+            if (MaxTripCount) {
+              const SCEV *MaxBackedgeTakenCount =
+                  SE.getConstantMaxBackedgeTakenCount(CandidateLoop);
+              if (!isa<SCEVCouldNotCompute>(MaxBackedgeTakenCount) &&
+                  SE.isLoopInvariant(MaxBackedgeTakenCount, L))
+                setLoopUnrollMaxTripCountMetadata(CandidateLoop, MaxTripCount);
+            }
+          }
+          break;
+        }
+
+        BasicBlock *NextBlock = CandidateBlock->getUniqueSuccessor();
+        if (!NextBlock || NextBlock == CandidateBlock)
+          break;
+        if (NextBlock->getUniquePredecessor() != CandidateBlock &&
+            !LI.isLoopHeader(NextBlock))
+          break;
+        CandidateBlock = NextBlock;
+      }
+    }
+  }
+}
 
 // Computes the boosting factor for complete unrolling.
 // If fully unrolling the loop would save a lot of RolledDynamicCost, it would
@@ -1377,8 +1444,12 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   bool MaxOrZero = false;
   if (!TripCount) {
     MaxTripCount = SE.getSmallConstantMaxTripCount(L);
+    if (!MaxTripCount)
+      MaxTripCount = getLoopUnrollMaxTripCountMetadata(L).value_or(0);
     MaxOrZero = SE.isBackedgeTakenCountMaxOrZero(L);
   }
+
+  eraseLoopUnrollMaxTripCountMetadata(L);
 
   // computeUnrollCount() decides whether it is beneficial to use upper bound to
   // fully unroll the loop.
@@ -1432,6 +1503,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // Save loop properties before it is transformed.
   MDNode *OrigLoopID = L->getLoopID();
   UnrollPragmaInfo PInfo(L);
+
+  preserveSiblingMaxTripCounts(L, *LI, SE);
 
   // Unroll the loop.
   Loop *RemainderLoop = nullptr;
