@@ -208,10 +208,25 @@ public:
     this->init(GraphTraits<GraphT>::getEntryNode(G));
   }
 
-  /// Post-order traversal of the graph starting at the root node using an
-  /// external storage. This can be used to keep track of visited nodes after
-  /// the traversal and to skip nodes that are already contained in the set.
-  PostOrderTraversal(const GraphT &G, SetType &S) : Visited(S) {
+  bool insertEdge(std::optional<NodeRef> From, NodeRef To) {
+    return Visited.insert(To).second;
+  }
+};
+
+/// Post-order traversal of the graph starting at the root node using an
+/// external storage. This can be used to keep track of visited nodes after the
+/// traversal and to skip nodes that are already contained in the set. See
+/// PostOrderTraversal for usage restrictions.
+template <typename GraphT, typename SetType>
+class PostOrderExtTraversal
+    : public PostOrderTraversalBase<PostOrderExtTraversal<GraphT, SetType>,
+                                    GraphTraits<GraphT>> {
+  using NodeRef = typename GraphTraits<GraphT>::NodeRef;
+
+  SetType &Visited;
+
+public:
+  PostOrderExtTraversal(const GraphT &G, SetType &S) : Visited(S) {
     this->init(GraphTraits<GraphT>::getEntryNode(G));
   }
 
@@ -228,11 +243,11 @@ template <class T> auto post_order(const T &G) {
   return PostOrderTraversal<T>(G);
 }
 template <class T, class SetType> auto post_order_ext(const T &G, SetType &S) {
-  return PostOrderTraversal<T, SetType &>(G, S);
+  return PostOrderExtTraversal<T, SetType>(G, S);
 }
 template <class T, class SetType>
 auto inverse_post_order_ext(const T &G, SetType &S) {
-  return PostOrderTraversal<Inverse<T>, SetType &>(G, S);
+  return PostOrderExtTraversal<Inverse<T>, SetType>(G, S);
 }
 
 //===--------------------------------------------------------------------===//
