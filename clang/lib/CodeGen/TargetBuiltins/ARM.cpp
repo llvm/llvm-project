@@ -5228,6 +5228,18 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Result;
   }
 
+  if (BuiltinID == AArch64::BI_CountTrailingZeros ||
+      BuiltinID == AArch64::BI_CountTrailingZeros64) {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+
+    Value *Result = Builder.CreateCall(F, {ArgValue, Builder.getInt1(false)});
+    if (BuiltinID == AArch64::BI_CountTrailingZeros64)
+      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+    return Result;
+  }
+
   if (BuiltinID == AArch64::BI__prefetch) {
     Value *Address = EmitScalarExpr(E->getArg(0));
     Value *RW = llvm::ConstantInt::get(Int32Ty, 0);
