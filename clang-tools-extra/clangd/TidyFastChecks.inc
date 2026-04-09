@@ -7,6 +7,8 @@
 #define SLOW(CHECK, DELTA)
 #endif
 
+// clang-format off
+
 FAST(abseil-cleanup-ctad, 1.0)
 FAST(abseil-duration-addition, 1.0)
 FAST(abseil-duration-comparison, 0.0)
@@ -498,6 +500,7 @@ FAST(readability-use-concise-preprocessor-directives, 0.0)
 FAST(readability-use-std-min-max, 1.0)
 FAST(zircon-temporary-objects, 0.0)
 
+// clang-format on
+
 #undef FAST
 #undef SLOW
-
