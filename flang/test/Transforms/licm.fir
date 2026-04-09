@@ -2580,3 +2580,20 @@ func.func @test_hoist_type_desc(%arg0: !fir.ref<i64>) {
   }
   return
 }
+
+// -----
+// Test that fir.absent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_absent(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.array<?xf32>>>)
+// CHECK:           %[[ABS:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ABS]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
+func.func @test_hoist_absent(%arg0: !fir.ref<!fir.box<!fir.array<?xf32>>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.absent !fir.box<!fir.array<?xf32>>
+    fir.store %0 to %arg0 : !fir.ref<!fir.box<!fir.array<?xf32>>>
+  }
+  return
+}

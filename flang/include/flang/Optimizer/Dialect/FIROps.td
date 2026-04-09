@@ -3444,7 +3444,7 @@ def fir_DTComponentOp : fir_Op<"dt_component", [HasParent<"TypeInfoOp">]> {
   let assemblyFormat = "$name (`lbs` $lower_bounds^)? (`init` $init_val^)? attr-dict";
 }
 
-def fir_AbsentOp : fir_OneResultOp<"absent", [NoMemoryEffect]> {
+def fir_AbsentOp : fir_OneResultOp<"absent", [Pure]> {
   let summary = "create value to be passed for absent optional function argument";
   let description = [{
     Given the type of a function argument, create a value that will signal that
