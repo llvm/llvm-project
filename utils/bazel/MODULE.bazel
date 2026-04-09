@@ -27,7 +27,6 @@ use_repo(
     "mpfr",
     "nanobind",
     "pfm",
-    "pybind11",
     "pyyaml",
     "robin_map",
     "vulkan_headers",
