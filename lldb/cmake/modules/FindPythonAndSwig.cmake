@@ -73,5 +73,5 @@ set(LLDB_RECOMMENDED_PYTHON "3.8")
 endif()
 if(PYTHONANDSWIG_FOUND AND "${Python3_VERSION}" VERSION_LESS "${LLDB_RECOMMENDED_PYTHON}")
   message(WARNING "Using Python ${Python3_VERSION}. ${LLDB_RECOMMENDED_PYTHON} "
-                  "is recommended and will be required from LLDB 21.")
+                  "is recommended and will be required from LLDB 23.")
 endif()
