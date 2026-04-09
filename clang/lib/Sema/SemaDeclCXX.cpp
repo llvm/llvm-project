@@ -18406,7 +18406,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     FakeDCScope.setEntity(DC);
     DCScope = &FakeDCScope;
   }
- 
+
   bool AddToScope = true;
   NamedDecl *ND = ActOnFunctionDeclarator(DCScope, D, DC, TInfo, Previous,
                                           TemplateParams, AddToScope);
