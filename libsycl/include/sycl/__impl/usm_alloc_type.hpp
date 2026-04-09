@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the alloc enumeration that defines
+/// This file contains the declaration of the alloc enumeration, which defines
 /// types of USM allocations.
 ///
 //===----------------------------------------------------------------------===//
