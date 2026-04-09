@@ -26,7 +26,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @example1() {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv
   %3 = load i32, ptr %2, align 4
@@ -40,7 +40,7 @@ define void @example1() {
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -59,7 +59,7 @@ define void @example1() {
 define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds i16, ptr %sb, i64 %indvars.iv
   %3 = load i16, ptr %2, align 2
@@ -71,7 +71,7 @@ define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, pt
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %6, label %1
 
-; <label>:6                                       ; preds = %1
+; <label>:
   ret void
 }
 

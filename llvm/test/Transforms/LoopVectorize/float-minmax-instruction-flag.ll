@@ -27,7 +27,7 @@ top:
   %t = load float, ptr %arg
   br label %loop
 
-loop:                                             ; preds = %loop, %top
+loop:
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
   %t3 = getelementptr float, ptr %arg, i64 %t1
@@ -38,7 +38,7 @@ loop:                                             ; preds = %loop, %top
   %t8 = icmp eq i64 %t7, 65537
   br i1 %t8, label %out, label %loop
 
-out:                                              ; preds = %loop
+out:
   ret float %t6
 }
 
@@ -67,7 +67,7 @@ top:
   %t = load float, ptr %arg
   br label %loop
 
-loop:                                             ; preds = %loop, %top
+loop:
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
   %t3 = getelementptr float, ptr %arg, i64 %t1
@@ -78,7 +78,7 @@ loop:                                             ; preds = %loop, %top
   %t8 = icmp eq i64 %t7, 65537
   br i1 %t8, label %out, label %loop
 
-out:                                              ; preds = %loop
+out:
   ret float %t6
 }
 
@@ -107,7 +107,7 @@ top:
   %t = load float, ptr %arg
   br label %loop
 
-loop:                                             ; preds = %loop, %top
+loop:
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
   %t3 = getelementptr float, ptr %arg, i64 %t1
@@ -118,7 +118,7 @@ loop:                                             ; preds = %loop, %top
   %t8 = icmp eq i64 %t7, 65537
   br i1 %t8, label %out, label %loop
 
-out:                                              ; preds = %loop
+out:
   ret float %t6
 }
 
@@ -147,7 +147,7 @@ top:
   %t = load float, ptr %arg
   br label %loop
 
-loop:                                             ; preds = %loop, %top
+loop:
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
   %t3 = getelementptr float, ptr %arg, i64 %t1
@@ -158,7 +158,7 @@ loop:                                             ; preds = %loop, %top
   %t8 = icmp eq i64 %t7, 65537
   br i1 %t8, label %out, label %loop
 
-out:                                              ; preds = %loop
+out:
   ret float %t6
 }
 

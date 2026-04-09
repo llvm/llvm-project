@@ -54,7 +54,7 @@ define i64 @select_icmp_nuw_nsw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rdx = phi i64 [ %cond, %for.body ], [ %ii, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -67,7 +67,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i64 %cond
 }
 
@@ -124,7 +124,7 @@ define i64 @select_icmp_nsw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rdx = phi i64 [ %cond, %for.body ], [ %ii, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -137,7 +137,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i64 %cond
 }
 
@@ -197,7 +197,7 @@ define i64 @select_icmp_nuw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rdx = phi i64 [ %cond, %for.body ], [ %ii, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -210,7 +210,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i64 %cond
 }
 
@@ -272,7 +272,7 @@ define i64 @select_icmp_noflag(ptr %a, ptr %b, i64 %ii, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rdx = phi i64 [ %cond, %for.body ], [ %ii, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -285,7 +285,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i64 %cond
 }
 ;.

@@ -45,7 +45,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -58,7 +58,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -114,7 +114,7 @@ entry:
   br label %for.body
 
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   tail call void @llvm.assume(i1 %maskcond)
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
@@ -127,7 +127,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -183,17 +183,17 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %if.end5
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end5 ]
   %cmp1 = icmp ult i64 %indvars.iv, 495616
   br i1 %cmp1, label %if.end5, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp2 = icmp ult i64 %indvars.iv, 991232
   tail call void @llvm.assume(i1 %cmp2)
   br label %if.end5
 
-if.end5:                                          ; preds = %for.body, %if.else
+if.end5:
   %x.0 = phi float [ 4.200000e+01, %if.else ], [ 2.300000e+01, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -204,7 +204,7 @@ if.end5:                                          ; preds = %for.body, %if.else
   %cmp = icmp eq i64 %indvars.iv.next, %n
   br i1 %cmp, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %if.end5, %entry
+for.cond.cleanup:
   ret void
 }
 

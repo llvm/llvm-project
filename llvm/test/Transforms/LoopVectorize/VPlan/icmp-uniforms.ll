@@ -164,7 +164,7 @@ define void @test(ptr %ptr) {
 entry:
   br label %loop
 
-loop:                       ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %cond0 = icmp ult i64 %iv, 13
   %s = select i1 %cond0, i32 10, i32 20

@@ -30,7 +30,7 @@ b0:
   %v14 = load ptr, ptr %v12, align 4, !tbaa !5
   br i1 %v8, label %b1, label %b2
 
-b1:                                               ; preds = %b1, %b0
+b1:
   %v15 = phi i32 [ 0, %b0 ], [ %v119, %b1 ]
   %v16 = add i32 %v5, %v15
   %v17 = icmp slt i32 %v16, 0
@@ -143,7 +143,7 @@ b1:                                               ; preds = %b1, %b0
   %v120 = icmp eq i32 %v119, 19
   br i1 %v120, label %b2, label %b1
 
-b2:                                               ; preds = %b1, %b0
+b2:
   call void @llvm.lifetime.end.p0(ptr nonnull %v0)
   ret void
 }

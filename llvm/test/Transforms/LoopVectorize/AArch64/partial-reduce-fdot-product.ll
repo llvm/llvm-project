@@ -52,7 +52,7 @@ define float @fdot_f16_f32(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -67,7 +67,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -119,7 +119,7 @@ define double @fdot_f16_f64(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -134,7 +134,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret double %add
 }
 
@@ -186,7 +186,7 @@ define double @fdot_f32_f64(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr float, ptr %a, i64 %iv
@@ -201,7 +201,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret double %add
 }
 
@@ -253,7 +253,7 @@ define float @fdot_f16_f32_interleave2(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -268,7 +268,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !2
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -303,7 +303,7 @@ define fp128 @not_fdot_f64_f128(ptr %a, ptr %b, fp128 %zero) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi fp128 [ %zero, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr double, ptr %a, i64 %iv
@@ -318,7 +318,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret fp128 %add
 }
 
@@ -352,7 +352,7 @@ define float @not_fdot_f16_f32_nosve(ptr %a, ptr %b) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -367,7 +367,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -401,7 +401,7 @@ define double @not_fdot_f32_f64_nosve(ptr %a, ptr %b) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr float, ptr %a, i64 %iv
@@ -416,7 +416,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret double %add
 }
 
@@ -451,7 +451,7 @@ define fp128 @not_fdot_f64_f128_nosve(ptr %a, ptr %b, fp128 %zero) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi fp128 [ %zero, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr double, ptr %a, i64 %iv
@@ -466,7 +466,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret fp128 %add
 }
 
@@ -506,7 +506,7 @@ define float @not_fdot_f16_f32_nofmf(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -521,7 +521,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -562,7 +562,7 @@ define float @not_fdot_f32_f32(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr float, ptr %a, i64 %iv
@@ -575,7 +575,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -616,7 +616,7 @@ define double @not_fdot_different_types(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -631,7 +631,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret double %add
 }
 
@@ -677,7 +677,7 @@ entry:
   %ext.b = fpext half %b to float
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds half, ptr %a, i64 %iv
@@ -689,7 +689,7 @@ for.body:                                         ; preds = %for.body, %entry
   %cmp.1 = icmp eq i64 %iv.next, %n
   br i1 %cmp.1, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                 ; preds = %for.body
+exit:
   %result = phi float [ %add, %for.body ]
   ret float %result
 }
@@ -731,7 +731,7 @@ define float @fdot_f16_f32_nocontract(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -746,7 +746,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -783,7 +783,7 @@ define float @extended_reduce_fadd(ptr %a) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -794,7 +794,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -830,7 +830,7 @@ define float @not_extended_reduce_fadd_no_fmf(ptr %a) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -841,7 +841,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -879,7 +879,7 @@ entry:
   %ext.a = fpext half %a to float
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %add = fadd reassoc contract float %ext.a, %accum
@@ -887,7 +887,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 

@@ -40,7 +40,7 @@ define i32 @main() #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [40000 x i8], ptr addrspace(1) @Y, i64 0, i64 %indvars.iv
   %0 = load i8, ptr addrspace(1) %arrayidx, align 1
@@ -52,7 +52,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 40000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 

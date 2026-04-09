@@ -134,7 +134,7 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 entry:
   br label %loop
 
-loop:                                             ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 19999, %entry ], [ %iv.next, %loop ]
   %rdx = phi i64 [ 331, %entry ], [ %spec.select, %loop ]
   %gep.a.iv = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -145,7 +145,7 @@ loop:                                             ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv, 0
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret i64 %spec.select
 }
 
@@ -395,7 +395,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 entry:
   br label %loop
 
-loop:                                             ; preds = %entry, %loop
+loop:
   %iv = phi i16 [ 12, %entry ], [ %iv.next, %loop ]
   %rdx = phi i16 [ 0, %entry ], [ %spec.select, %loop ]
   %gep.table.iv = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %iv
@@ -406,7 +406,7 @@ loop:                                             ; preds = %entry, %loop
   %exit.cond = icmp eq i16 %iv.next, 0
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   %spec.select.lcssa = phi i16 [ %spec.select, %loop ]
   ret i16 %spec.select.lcssa
 }
@@ -657,7 +657,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 entry:
   br label %loop
 
-loop:                                             ; preds = %entry, %loop
+loop:
   %iv = phi i16 [ 12, %entry ], [ %iv.next, %loop ]
   %rdx = phi i16 [ 0, %entry ], [ %spec.select, %loop ]
   %gep.table.iv = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %iv
@@ -668,7 +668,7 @@ loop:                                             ; preds = %entry, %loop
   %exit.cond = icmp eq i16 %iv.next, 0
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   %spec.select.lcssa = phi i16 [ %spec.select, %loop ]
   ret i16 %spec.select.lcssa
 }
@@ -807,7 +807,7 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 entry:
   br label %loop
 
-loop:                                             ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ 9223372036854775807, %entry ], [ %iv.next, %loop ]
   %rdx = phi i64 [ 331, %entry ], [ %spec.select, %loop ]
   %gep.a.iv = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -818,7 +818,7 @@ loop:                                             ; preds = %entry, %loop
   %exit.cond = icmp eq i64 %iv, 0
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret i64 %spec.select
 }
 
@@ -1366,7 +1366,7 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 entry:
   br label %loop
 
-loop:                                             ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ %n, %entry ]
   %rdx = phi i64 [ %cond, %loop ], [ %rdx.start, %entry ]
   %iv.next = add nsw i64 %iv, -1
@@ -1379,6 +1379,6 @@ loop:                                             ; preds = %entry, %loop
   %exit.cond = icmp ugt i64 %iv, 1
   br i1 %exit.cond, label %loop, label %exit
 
-exit:                                             ; preds = %loop
+exit:
   ret i64 %cond
 }

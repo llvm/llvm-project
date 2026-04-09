@@ -12,18 +12,18 @@ entry:
   %cmp.7 = icmp sgt i32 %n, 0, !dbg !3
   br i1 %cmp.7, label %for.body.preheader, label %for.cond.cleanup, !dbg !8
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body, !dbg !9
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %add.lcssa = phi double [ %add, %for.body ]
   br label %for.cond.cleanup, !dbg !10
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %a.0.lcssa = phi double [ 0.000000e+00, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ]
   ret double %a.0.lcssa, !dbg !10
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %a.08 = phi double [ %add, %for.body ], [ 0.000000e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %v, i64 %indvars.iv, !dbg !9
@@ -42,18 +42,18 @@ entry:
   %cmp.7 = icmp sgt i32 %n, 0, !dbg !19
   br i1 %cmp.7, label %for.body.preheader, label %for.cond.cleanup, !dbg !21
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body, !dbg !22
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %add.lcssa = phi double [ %add, %for.body ]
   br label %for.cond.cleanup, !dbg !23
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %a.0.lcssa = phi double [ 0.000000e+00, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ]
   ret double %a.0.lcssa, !dbg !23
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %a.08 = phi double [ %add, %for.body ], [ 0.000000e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %v, i64 %indvars.iv, !dbg !22

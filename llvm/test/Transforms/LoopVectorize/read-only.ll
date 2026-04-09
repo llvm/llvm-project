@@ -9,7 +9,7 @@ define i32 @read_only_func(ptr nocapture %A, ptr nocapture %B, i32 %n) readonly 
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %sum.02 = phi i32 [ %9, %.lr.ph ], [ 0, %0 ]
   %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -25,7 +25,7 @@ define i32 @read_only_func(ptr nocapture %A, ptr nocapture %B, i32 %n) readonly 
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   %sum.0.lcssa = phi i32 [ 0, %0 ], [ %9, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }
@@ -39,7 +39,7 @@ define i32 @read_only_func_volatile(ptr nocapture %A, ptr nocapture %B, i32 %n) 
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %sum.02 = phi i32 [ %9, %.lr.ph ], [ 0, %0 ]
   %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -55,7 +55,7 @@ define i32 @read_only_func_volatile(ptr nocapture %A, ptr nocapture %B, i32 %n) 
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   %sum.0.lcssa = phi i32 [ 0, %0 ], [ %9, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }

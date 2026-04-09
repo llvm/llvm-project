@@ -17,7 +17,7 @@ entry:
   store float 1.000000e+03, ptr %call3, align 4
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %idxprom = sext i32 %i.01 to i64
   %arrayidx = getelementptr inbounds float, ptr %call, i64 %idxprom
@@ -33,7 +33,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %inc, 1000
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   %2 = load float, ptr %call3, align 4
   %conv10 = fptosi float %2 to i32
   ret i32 %conv10

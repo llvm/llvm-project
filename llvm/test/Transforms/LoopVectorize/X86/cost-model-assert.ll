@@ -43,10 +43,10 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, ptr %p, ptr %pend) #0 {
 entry:
   br i1 %cond, label %if.then, label %Exit
 
-if.then:                                          ; preds = %entry
+if.then:
   br label %for.body68
 
-for.body68:                                       ; preds = %for.body68, %if.then
+for.body68:
   %p.359 = phi ptr [ %add.ptr86, %for.body68 ], [ null, %if.then ]
   %conv70 = zext i8 %x to i32
   %shl71 = shl nuw i32 %conv70, 24
@@ -64,10 +64,10 @@ for.body68:                                       ; preds = %for.body68, %if.the
   %cmp66 = icmp ult ptr %add.ptr86, %pend
   br i1 %cmp66, label %for.body68, label %sw.epilog
 
-sw.epilog:                                        ; preds = %for.body68
+sw.epilog:
   unreachable
 
-Exit:                                             ; preds = %entry
+Exit:
   ret void
 }
 

@@ -472,10 +472,10 @@ entry:
   %idxprom5 = sext i32 %j to i64
   br label %for.body
 
-  for.cond.cleanup:                                 ; preds = %for.body
+  for.cond.cleanup:
   ret i32 %add7
 
-  for.body:                                         ; preds = %for.body, %entry
+  for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.015 = phi i32 [ 0, %entry ], [ %add7, %for.body ]
   ; first consecutive load as vector load

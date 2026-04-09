@@ -51,11 +51,11 @@ define i32 @goo() {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %s.015 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %tmp1 = add nsw i64 %indvars.iv, 3
@@ -112,7 +112,7 @@ define void @hoo(i32 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [0 x i64], ptr @d, i64 0, i64 %indvars.iv
   %tmp = load i64, ptr %arrayidx, align 8
@@ -124,7 +124,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -187,7 +187,7 @@ define void @double_(ptr nocapture %A, i32 %n) {
   %1 = sext i32 %n to i64
   br label %2
 
-; <label>:2                                       ; preds = %2, %0
+; <label>:
   %indvars.iv = phi i64 [ %indvars.iv.next, %2 ], [ %1, %0 ]
   %3 = getelementptr inbounds double, ptr %A, i64 %indvars.iv
   %4 = load double, ptr %3, align 8
@@ -216,7 +216,7 @@ define void @double_(ptr nocapture %A, i32 %n) {
   %25 = icmp eq i32 %24, 0
   br i1 %25, label %26, label %2
 
-; <label>:26                                      ; preds = %2
+; <label>:
   ret void
 }
 
@@ -229,7 +229,7 @@ define ppc_fp128 @fp128_(ptr nocapture %n, ppc_fp128 %d) readonly {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %x.05 = phi ppc_fp128 [ %d, %entry ], [ %sub, %for.body ]
   %arrayidx = getelementptr inbounds ppc_fp128, ptr %n, i32 %i.06
@@ -239,7 +239,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %inc, 2048
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret ppc_fp128 %sub
 }
 
@@ -262,7 +262,7 @@ entry:
   %cmp26 = icmp eq i32 %shr, 0
   br i1 %cmp26, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %pIn.addr.029 = phi ptr [ %add.ptr, %while.body ], [ %pIn, %entry ]
   %pOut.addr.028 = phi ptr [ %add.ptr7, %while.body ], [ %pOut, %entry ]
   %blkCnt.027 = phi i32 [ %dec, %while.body ], [ %shr, %entry ]
@@ -280,6 +280,6 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp = icmp eq i32 %dec, 0
   br i1 %cmp, label %while.end, label %while.body
 
-while.end:                                        ; preds = %while.body, %entry
+while.end:
   ret void
 }

@@ -233,11 +233,11 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.lr.ph, label %for.end
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %fpinc = load float, ptr @fp_inc, align 4
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %for.body.lr.ph ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -248,10 +248,10 @@ for.body:                                         ; preds = %for.body, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -478,11 +478,11 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.lr.ph, label %for.end
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %fpinc = load float, ptr @fp_inc, align 4
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %for.body.lr.ph ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -493,10 +493,10 @@ for.body:                                         ; preds = %for.body, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -705,10 +705,10 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %x.06 = phi float [ %conv1, %for.body ], [ %init, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -719,10 +719,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -1055,11 +1055,11 @@ entry:
   %cmp9 = icmp sgt i32 %N, 0
   br i1 %cmp9, label %for.body.lr.ph, label %for.end
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %0 = load float, ptr @fp_inc, align 4
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %y.012 = phi float [ 0x3FB99999A0000000, %for.body.lr.ph ], [ %conv1, %for.body ]
   %x.011 = phi float [ %init, %for.body.lr.ph ], [ %add, %for.body ]
@@ -1281,10 +1281,10 @@ entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %x.06 = phi float [ %conv1, %for.body ], [ 1.000000e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -1295,10 +1295,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -2014,7 +2014,7 @@ define void @fp_iv_used_in_gep_fadd(float %init, ptr noalias nocapture %A, float
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %entry ], [ %add, %for.body ]
   %c = fptoui float %x.05 to i32
@@ -2321,7 +2321,7 @@ define void @fp_iv_used_in_gep_fsub(float %init, ptr noalias nocapture %A, float
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %entry ], [ %add, %for.body ]
   %c = fptoui float %x.05 to i32
@@ -2413,7 +2413,7 @@ define void @fp_iv_used_in_gep_fmul(float %init, ptr noalias nocapture %A, float
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi float [ %init, %entry ], [ %add, %for.body ]
   %c = fptoui float %x.05 to i32

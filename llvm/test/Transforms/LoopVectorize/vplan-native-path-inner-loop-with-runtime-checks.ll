@@ -121,7 +121,7 @@ outer.header:
   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
   br label %inner
 
-inner:                                        ; preds = %inner, %outer.header
+inner:
   %inner.iv = phi i64 [ %0, %outer.header ], [ %inner.iv.next, %inner ]
   %inner.iv.next = add i64 %inner.iv, 1
   %l = load double, ptr %src, align 8

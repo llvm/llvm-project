@@ -447,7 +447,7 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 entry:
   br label %loop
 
-loop:                                              ; preds = %bb3, %bb2
+loop:
   %red = phi i1 [ true, %entry ], [ %select, %loop ]
   %iv = phi ptr [ %start, %entry ], [ %iv.next, %loop ]
   %getelementptr5 = getelementptr inbounds i8, ptr %iv, i64 8

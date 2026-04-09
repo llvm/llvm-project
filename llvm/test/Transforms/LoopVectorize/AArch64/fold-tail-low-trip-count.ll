@@ -59,7 +59,7 @@ entry:
   %umin = call i32 @llvm.umin.i32(i32 %smax, i32 4)
   br label %loop
 
-loop:                                             ; preds = %loop, %entry
+loop:
   %ptr = phi ptr [ %dst, %entry ], [ %ptr.next, %loop ]
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %ptr.next = getelementptr i8, ptr %ptr, i64 1

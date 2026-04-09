@@ -545,7 +545,7 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 entry:
   br label %loop
 
-loop:                                             ; preds = %loop, %entry
+loop:
   %recur = phi i32 [ 0, %entry ], [ %recur.next, %loop ]
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %rem = srem i32 %recur, %x
@@ -559,7 +559,7 @@ loop:                                             ; preds = %loop, %entry
   %C = icmp sgt i32 %iv.next, %recur.next
   br i1 %C, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret void
 }
 

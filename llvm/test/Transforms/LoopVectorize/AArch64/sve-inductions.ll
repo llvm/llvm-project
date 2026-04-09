@@ -47,25 +47,25 @@ define void @cond_ind64(ptr noalias nocapture %a, ptr noalias nocapture readonly
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %i.08 = phi i64 [ %inc, %for.inc ], [ 0, %entry ]
   %and = and i64 %i.08, 1
   %tobool.not = icmp eq i64 %and, 0
   br i1 %tobool.not, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %i.08
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds i32, ptr %a, i64 %i.08
   store i32 %0, ptr %arrayidx1, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i64 %i.08, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                 ; preds = %for.inc
+exit:
   ret void
 }
 

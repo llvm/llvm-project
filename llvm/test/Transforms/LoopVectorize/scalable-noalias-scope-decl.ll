@@ -13,7 +13,7 @@ entry:
 ; CHECK-NOT: @llvm.experimental.noalias.scope.decl
 ; CHECK: ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -26,7 +26,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -51,7 +51,7 @@ entry:
   %maskcond4 = icmp eq i64 %ptrint2, 0
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
@@ -64,7 +64,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -86,17 +86,17 @@ define void @predicated_noalias_scope_decl(ptr noalias nocapture readonly %a, pt
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %if.end5
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end5 ]
   %cmp1 = icmp ult i64 %indvars.iv, 495616
   br i1 %cmp1, label %if.end5, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp2 = icmp ult i64 %indvars.iv, 991232
   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
   br label %if.end5
 
-if.end5:                                          ; preds = %for.body, %if.else
+if.end5:
   %x.0 = phi float [ 4.200000e+01, %if.else ], [ 2.300000e+01, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -107,7 +107,7 @@ if.end5:                                          ; preds = %for.body, %if.else
   %cmp = icmp eq i64 %indvars.iv.next, %n
   br i1 %cmp, label %for.cond.cleanup, label %for.body, !llvm.loop !5
 
-for.cond.cleanup:                                 ; preds = %if.end5
+for.cond.cleanup:
   ret void
 }
 

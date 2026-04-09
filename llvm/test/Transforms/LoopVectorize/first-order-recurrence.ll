@@ -2393,17 +2393,17 @@ entry:
   %cmp530 = icmp slt i32 0, %tc
   br label %for.body4
 
-for.body4:                                        ; preds = %cond.end, %entry
+for.body4:
   %indvars.iv = phi i32 [ 0, %entry ], [ %indvars.iv.next, %cond.end ]
   %cmp534 = phi i1 [ %cmp530, %entry ], [ %cmp5, %cond.end ]
   br i1 %cmp534, label %cond.true, label %cond.end
 
-cond.true:                                        ; preds = %for.body4
+cond.true:
   %arrayidx7 = getelementptr inbounds i32, ptr %in, i32 %indvars.iv
   %in.val = load i32, ptr %arrayidx7, align 4
   br label %cond.end
 
-cond.end:                                         ; preds = %for.body4, %cond.true
+cond.end:
   %cond = phi i32 [ %in.val, %cond.true ], [ 0, %for.body4 ]
   %arrayidx8 = getelementptr inbounds i32, ptr %out, i32 %indvars.iv
   store i32 %cond, ptr %arrayidx8, align 4
@@ -2412,7 +2412,7 @@ cond.end:                                         ; preds = %for.body4, %cond.tr
   %exitcond = icmp eq i32 %indvars.iv.next, %x
   br i1 %exitcond, label %for.end12.loopexit, label %for.body4
 
-for.end12.loopexit:                               ; preds = %cond.end
+for.end12.loopexit:
   ret void
 }
 
@@ -2813,11 +2813,11 @@ define i32 @sink_into_replication_region(i32 %y) {
 bb:
   br label %bb2
 
-  bb1:                                              ; preds = %bb2
+  bb1:
   %var = phi i32 [ %var6, %bb2 ]
   ret i32 %var
 
-  bb2:                                              ; preds = %bb2, %bb
+  bb2:
   %var3 = phi i32 [ %var8, %bb2 ], [ %y, %bb ]
   %var4 = phi i32 [ %var7, %bb2 ], [ 0, %bb ]
   %var5 = phi i32 [ %var6, %bb2 ], [ 0, %bb ]
@@ -3181,11 +3181,11 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 bb:
   br label %bb2
 
-  bb1:                                              ; preds = %bb2
+  bb1:
   %var = phi i32 [ %var6, %bb2 ]
   ret i32 %var
 
-  bb2:                                              ; preds = %bb2, %bb
+  bb2:
   %var3 = phi i32 [ %var8, %bb2 ], [ %y, %bb ]
   %iv = phi i32 [ %iv.next, %bb2 ], [ 0, %bb ]
   %var4 = phi i32 [ %var7, %bb2 ], [ 0, %bb ]

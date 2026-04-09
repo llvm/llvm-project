@@ -17,7 +17,7 @@ define void @func1x6(ptr nocapture %out, ptr nocapture %A, ptr nocapture %B, ptr
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.016 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.016
   %0 = load i32, ptr %arrayidx, align 4
@@ -39,7 +39,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %inc, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -51,7 +51,7 @@ define void @func2x6(ptr nocapture %out, ptr nocapture %out2, ptr nocapture %A, 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.037 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.037
   %0 = load i32, ptr %arrayidx, align 4
@@ -84,6 +84,6 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %inc, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }

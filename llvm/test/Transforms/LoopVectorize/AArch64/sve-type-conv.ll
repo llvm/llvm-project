@@ -10,7 +10,7 @@ define void @f16_to_f32(ptr noalias nocapture %dst, ptr noalias nocapture readon
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds half, ptr %src, i64 %i.07
   %0 = load half, ptr %arrayidx, align 2
@@ -21,7 +21,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -33,7 +33,7 @@ define void @f64_to_f32(ptr noalias nocapture %dst, ptr noalias nocapture readon
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds double, ptr %src, i64 %i.07
   %0 = load double, ptr %arrayidx, align 8
@@ -44,7 +44,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -56,7 +56,7 @@ define void @f16_to_s8(ptr noalias nocapture %dst, ptr noalias nocapture readonl
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds half, ptr %src, i64 %i.08
   %0 = load half, ptr %arrayidx, align 2
@@ -67,7 +67,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -79,7 +79,7 @@ define void @f32_to_u64(ptr noalias nocapture %dst, ptr noalias nocapture readon
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
   %0 = load float, ptr %arrayidx, align 4
@@ -90,7 +90,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -102,7 +102,7 @@ define void @s8_to_f32(ptr noalias nocapture %dst, ptr noalias nocapture readonl
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.07
   %0 = load i8, ptr %arrayidx, align 1
@@ -113,7 +113,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -125,7 +125,7 @@ define void @u16_to_f32(ptr noalias nocapture %dst, ptr noalias nocapture readon
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %src, i64 %i.07
   %0 = load i16, ptr %arrayidx, align 2
@@ -136,7 +136,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -148,7 +148,7 @@ define void @u64_to_f16(ptr noalias nocapture %dst, ptr noalias nocapture readon
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %src, i64 %i.08
   %0 = load i64, ptr %arrayidx, align 8
@@ -159,7 +159,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -171,7 +171,7 @@ define void @s64_to_f16(ptr noalias nocapture %dst, ptr noalias nocapture readon
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %src, i64 %i.08
   %0 = load i64, ptr %arrayidx, align 8
@@ -182,7 +182,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -194,7 +194,7 @@ define void @s8_to_s32(ptr noalias nocapture %dst, ptr noalias nocapture readonl
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.07
   %0 = load i8, ptr %arrayidx, align 1
@@ -205,7 +205,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -217,7 +217,7 @@ define void @u8_to_u16(ptr noalias nocapture %dst, ptr noalias nocapture readonl
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.07
   %0 = load i8, ptr %arrayidx, align 1
@@ -228,7 +228,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -240,7 +240,7 @@ define void @s64_to_s8(ptr noalias nocapture %dst, ptr noalias nocapture readonl
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %src, i64 %i.07
   %0 = load i64, ptr %arrayidx, align 8
@@ -251,7 +251,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 

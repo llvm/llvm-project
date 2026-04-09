@@ -625,7 +625,7 @@ entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %P, i64 %add) ]
   br label %loop
 
-loop:                                             ; preds = %mainloop, %loop.latch
+loop:
   %iv = phi i64 [ %iv.next, %loop.latch ], [ %iv.start, %entry ]
   %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
   %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
@@ -633,11 +633,11 @@ loop:                                             ; preds = %mainloop, %loop.lat
   %c.1 = icmp sge i32 %l.b, 0
   br i1 %c.1, label %loop.latch, label %loop.then
 
-loop.then:                                        ; preds = %loop
+loop.then:
   %l.a = load i32, ptr %gep.a, align 1
   br label %loop.latch
 
-loop.latch:                                       ; preds = %loop.then, %loop
+loop.latch:
   %merge = phi i32 [ %l.a, %loop.then ], [ %l.b, %loop ]
   %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
   store i32 %merge, ptr %gep.c, align 1
@@ -735,7 +735,7 @@ entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %P, i64 %add) ]
   br label %loop
 
-loop:                                             ; preds = %mainloop, %loop.latch
+loop:
   %iv = phi i64 [ %iv.next, %loop.latch ], [ %iv.start, %entry ]
   %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
   %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
@@ -743,11 +743,11 @@ loop:                                             ; preds = %mainloop, %loop.lat
   %c.1 = icmp sge i32 %l.b, 0
   br i1 %c.1, label %loop.latch, label %loop.then
 
-loop.then:                                        ; preds = %loop
+loop.then:
   %l.a = load i32, ptr %gep.a, align 1
   br label %loop.latch
 
-loop.latch:                                       ; preds = %loop.then, %loop
+loop.latch:
   %merge = phi i32 [ %l.a, %loop.then ], [ %l.b, %loop ]
   %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
   store i32 %merge, ptr %gep.c, align 1
