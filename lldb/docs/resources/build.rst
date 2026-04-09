@@ -52,19 +52,19 @@ disabled. When a dependency is set to ``On`` and can't be found it will cause a
 CMake configuration error.
 
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Feature           | Description                                                           | CMake Flag               |
+| Feature           | Description                                                  | CMake Flag               |
 +===================+==============================================================+==========================+
-| Editline          | Generic line editing, history, Emacs and Vi bindings                  | ``LLDB_ENABLE_LIBEDIT``  |
+| Editline          | Generic line editing, history, Emacs and Vi bindings         | ``LLDB_ENABLE_LIBEDIT``  |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Curses            | Text user interface                                                   | ``LLDB_ENABLE_CURSES``   |
+| Curses            | Text user interface                                          | ``LLDB_ENABLE_CURSES``   |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| LZMA              | Lossless data compression                                             | ``LLDB_ENABLE_LZMA``     |
+| LZMA              | Lossless data compression                                    | ``LLDB_ENABLE_LZMA``     |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Libxml2           | XML                                                                   | ``LLDB_ENABLE_LIBXML2``  |
+| Libxml2           | XML                                                          | ``LLDB_ENABLE_LIBXML2``  |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Python            | Python scripting. >= 3.8 is required (3.11 or later on Windows).      | ``LLDB_ENABLE_PYTHON``   |
+| Python            | Python scripting. 3.8 or later (3.11 or later on Windows).   | ``LLDB_ENABLE_PYTHON``   |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                         | ``LLDB_ENABLE_LUA``      |
+| Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
 +-------------------+--------------------------------------------------------------+--------------------------+
 
 Depending on your platform and package manager, one might run any of the
