@@ -114,6 +114,7 @@ public:
   Args GetAlwaysRunThreadNames() const;
   FollowForkMode GetFollowForkMode() const;
   bool TrackMemoryCacheChanges() const;
+  bool GetUseDelayedBreakpoints() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
@@ -2246,6 +2247,9 @@ public:
   // Process Breakpoints
   size_t GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site);
 
+  enum class BreakpointAction { Enable, Disable };
+
+protected:
   virtual Status EnableBreakpointSite(BreakpointSite *bp_site) {
     return Status::FromErrorStringWithFormatv(
         "error: {0} does not support enabling breakpoints", GetPluginName());
@@ -2255,6 +2259,14 @@ public:
     return Status::FromErrorStringWithFormatv(
         "error: {0} does not support disabling breakpoints", GetPluginName());
   }
+
+  virtual llvm::Error UpdateBreakpointSites(
+      const std::map<lldb::BreakpointSiteSP, BreakpointAction> &site_to_action);
+
+public:
+  Status ExecuteBreakpointSiteAction(BreakpointSite &site,
+                                     Process::BreakpointAction action,
+                                     bool force_now = false);
 
   // This is implemented completely using the lldb::Process API. Subclasses
   // don't need to implement this function unless the standard flow of read
@@ -2280,11 +2292,14 @@ public:
   lldb::break_id_t CreateBreakpointSite(const lldb::BreakpointLocationSP &owner,
                                         bool use_hardware);
 
-  Status DisableBreakpointSiteByID(lldb::user_id_t break_id);
+  Status DisableBreakpointSiteByID(lldb::user_id_t break_id,
+                                   bool force_now = false);
 
   Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
 
   bool IsBreakpointSiteEnabled(const BreakpointSite &site);
+
+  bool IsBreakpointSitePhysicallyEnabled(const BreakpointSite &site);
 
   // BreakpointLocations use RemoveConstituentFromBreakpointSite to remove
   // themselves from the constituent's list of this breakpoint sites.
@@ -3539,6 +3554,20 @@ protected:
   /// A repository for extra crash information, consulted in
   /// GetExtendedCrashInformation.
   StructuredData::DictionarySP m_crash_info_dict_sp;
+
+  struct DelayedBreakpointCache {
+    void Enqueue(lldb::BreakpointSiteSP site, BreakpointAction action);
+    void RemoveSite(lldb::BreakpointSiteSP site) {
+      m_site_to_action.erase(site);
+    }
+    void Clear() { m_site_to_action.clear(); }
+
+    std::map<lldb::BreakpointSiteSP, BreakpointAction> m_site_to_action;
+  };
+
+  DelayedBreakpointCache m_delayed_breakpoints;
+
+  llvm::Error FlushDelayedBreakpoints();
 
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;
