@@ -119,7 +119,7 @@ entry:
   %cmp.not6 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not6, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %blkCnt.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %entry ]
   %pSrc.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %entry ]
   %pDst.addr.07 = phi ptr [ %incdec.ptr3, %while.body ], [ %pDst, %entry ]
@@ -132,7 +132,7 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end, label %while.body
 
-while.end:                                        ; preds = %while.body, %entry
+while.end:
   ret void
 }
 
@@ -241,7 +241,7 @@ entry:
   %cmp.not6 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not6, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %blkCnt.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %entry ]
   %pSrc.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %entry ]
   %pDst.addr.07 = phi ptr [ %incdec.ptr3, %while.body ], [ %pDst, %entry ]
@@ -254,7 +254,7 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end, label %while.body
 
-while.end:                                        ; preds = %while.body, %entry
+while.end:
   ret void
 }
 

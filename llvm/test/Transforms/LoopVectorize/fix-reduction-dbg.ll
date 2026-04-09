@@ -33,19 +33,19 @@ entry:
   %cmp8 = icmp sgt i32 %count, 0, !dbg !10
   br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup, !dbg !10
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %count to i64
   br label %for.body, !dbg !11
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %add.lcssa = phi i32 [ %add, %for.body ], !dbg !12
   br label %for.cond.cleanup, !dbg !13
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %ret.0.lcssa = phi i32 [ %count, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ], !dbg !14
   ret i32 %ret.0.lcssa, !dbg !13
 
-for.body:                                         ; preds = %for.body, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %ret.09 = phi i32 [ %count, %for.body.preheader ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %bar, i64 %indvars.iv, !dbg !11
