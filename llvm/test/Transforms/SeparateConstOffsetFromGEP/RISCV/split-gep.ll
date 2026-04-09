@@ -299,8 +299,8 @@ define i64 @test_inbounds1(ptr %arr, i64 %x) {
 ; CHECK-NEXT:    [[MIN:%.*]] = tail call i64 @llvm.umin.i64(i64 [[X:%.*]], i64 4)
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[MIN]], -1
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[XOR]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [6 x i64], ptr [[ARR:%.*]], i64 0, i64 [[SHR]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 40
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [6 x i64], ptr [[ARR:%.*]], i64 0, i64 [[SHR]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 40
 ; CHECK-NEXT:    [[RES:%.*]] = load i64, ptr [[GEP2]], align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
