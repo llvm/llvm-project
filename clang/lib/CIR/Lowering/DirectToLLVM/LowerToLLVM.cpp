@@ -740,15 +740,21 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
     auto llvmDstTy = converter->convertType<mlir::LLVM::LLVMPointerType>(ptrTy);
     unsigned dstAddrSpace = llvmDstTy.getAddressSpace();
 
-    if (sourceAddrSpace != dstAddrSpace) {
-      return mlir::LLVM::AddrSpaceCastOp::create(rewriter, parentOp->getLoc(),
-                                                 llvmDstTy, addrOp);
-    }
+    if (sourceAddrSpace != dstAddrSpace)
+      addrOp = mlir::LLVM::AddrSpaceCastOp::create(rewriter, parentOp->getLoc(),
+                                                   llvmDstTy, addrOp);
 
     mlir::Type llvmEltTy =
         convertTypeForMemory(*converter, dataLayout, ptrTy.getPointee());
 
+    // No further cast needed if the pointee type already matches.
     if (llvmEltTy == sourceType)
+      return addrOp;
+
+    // With opaque pointers, the pointer type is already correct (either from
+    // the original AddressOfOp or after an addrspacecast) — skip the
+    // redundant bitcast.
+    if (addrOp.getType() == llvmDstTy)
       return addrOp;
 
     return mlir::LLVM::BitcastOp::create(rewriter, parentOp->getLoc(),
