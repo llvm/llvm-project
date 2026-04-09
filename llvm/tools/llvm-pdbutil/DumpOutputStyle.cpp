@@ -1905,6 +1905,11 @@ Error DumpOutputStyle::dumpSectionMap() {
 
 Error DumpOutputStyle::dumpDXContainer() {
   printHeader(P, "DirectX Container");
+  if (File.isObj()) {
+    printStreamNotValidForObj();
+    return Error::success();
+  }
+
   AutoIndent Indent(P);
   auto Dxc = getPdb().getDXContainerStream();
   if (!Dxc) {
