@@ -34,11 +34,8 @@ for.end:                                          ; preds = %for.body
   ret i32 0, !dbg !25
 }
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { readnone }
 
 !llvm.dbg.cu = !{!11}
 !llvm.module.flags = !{!14}

@@ -957,7 +957,6 @@ exit:
   ret void
 }
 
-declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }
 attributes #1 = { "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }

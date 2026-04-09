@@ -1320,7 +1320,6 @@ exit:                                             ; preds = %for.body
   ret i32 %1
 }
 
-declare i32 @llvm.smax.i32(i32, i32)
 
 ; Currently, this test-case is not supported.
 ; int multi_user_cmp_use_store_offset(float* a, int *b, long long n) {

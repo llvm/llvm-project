@@ -1210,6 +1210,7 @@ if(LLVM_LIBC_FULL_BUILD)
     # sys/socket.h entrypoints
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
+    libc.src.sys.socket.listen
     libc.src.sys.socket.socket
   )
 endif()

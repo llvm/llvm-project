@@ -517,8 +517,3 @@ end:                                 ; preds = %end, %entry
   ret void
 }
 
-declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
-declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
-declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32, <4 x i1>, <4 x i32>)
-declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>, <4 x ptr>, i32, <4 x i1>)
