@@ -36,8 +36,12 @@ public:
   uint64_t getBaseAddress() const override { return Hdr->BaseAddress; }
   uint64_t getNumAddresses() const override { return Hdr->NumAddresses; }
   uint8_t getAddressOffsetSize() const override { return Hdr->AddrOffSize; }
-  uint8_t getAddressInfoOffsetSize() const override { return 4; }
-  uint8_t getStringOffsetSize() const override { return 4; }
+  uint8_t getAddressInfoOffsetSize() const override {
+    return Header::getAddressInfoOffsetSize();
+  }
+  uint8_t getStringOffsetSize() const override {
+    return Header::getStringOffsetSize();
+  }
 
   using GsymReader::dump;
   LLVM_ABI void dump(raw_ostream &OS) override;
