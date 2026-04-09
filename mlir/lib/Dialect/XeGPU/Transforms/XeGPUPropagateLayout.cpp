@@ -948,7 +948,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
 void LayoutInfoPropagation::visitConvertLayoutOp(
     xegpu::ConvertLayoutOp convert, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-  xegpu::DistributeLayoutAttr anchorLayout = convert.getTargetLayoutAttr();
+  xegpu::DistributeLayoutAttr anchorLayout = convert.getInputLayoutAttr();
   LayoutInfo convertLayout(anchorLayout);
   // Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(convertLayout));
@@ -1543,7 +1543,7 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    // xegpu::setDistributeLayoutAttr(result, layout);
+    xegpu::setDistributeLayoutAttr(result, layout);
   }
   return success();
 }
@@ -1780,8 +1780,10 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
 
     return cast<xegpu::LayoutAttr>(layoutAttr);
   };
-
+  // dump the op before update
+  llvm::dbgs() << "Before layout propagation and conflict resolution:\n";
   Operation *op = target;
+  op->dump();
   auto walkResult = op->walk([&](mlir::Block *block) -> WalkResult {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
       LogicalResult r = success();
@@ -1804,6 +1806,10 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
     }
     return WalkResult::advance();
   });
+  // dump the op after update, print some headline
+  llvm::dbgs() << "After layout propagation and conflict resolution:\n";
+  op->dump();
+
   if (walkResult.wasInterrupted())
     return failure();
 
