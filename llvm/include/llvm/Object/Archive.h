@@ -479,7 +479,6 @@ public:
     char Magic[sizeof(ZOSArchiveMagic) - 1]; ///< ZOS archive magic string.
   };
 
-public:
   ZOSArchive(MemoryBufferRef Source, Error &Err);
 
 private:

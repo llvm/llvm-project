@@ -373,8 +373,8 @@ Expected<uint64_t> BigArchiveMemberHeader::getSize() const {
   return *SizeOrErr + alignTo(*NameLenOrErr, 2);
 }
 
-template <class T, std::size_t N>
-StringRef getFieldRawStringE2A(const T (&Field)[N], SmallString<64> &Dst) {
+template <std::size_t N>
+StringRef getFieldRawStringE2A(const char (&Field)[N], SmallString<64> &Dst) {
   StringRef Src = StringRef(Field, N);
   ConverterEBCDIC::convertToUTF8(Src, Dst);
   return Dst.str().rtrim(" ");
