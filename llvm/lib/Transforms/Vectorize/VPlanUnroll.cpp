@@ -423,7 +423,8 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
 
     // Add all VPValues for all parts to AnyOf, FirstActiveLaneMask and
-    // Compute*Result which combine all parts to compute the final value.
+    // ComputeReductionResult which combine all parts to compute the final
+    // value.
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||

@@ -212,9 +212,7 @@ exit:
 ; CHECK: [[LOC8]] = !DILocation(line: 650
 
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18, !27}

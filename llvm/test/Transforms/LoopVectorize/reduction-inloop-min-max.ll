@@ -126,7 +126,6 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %result.0.lcssa
 }
 
-declare i32 @llvm.smin.i32(i32, i32)
 
 define i32 @reduction_umax(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_umax
@@ -253,4 +252,3 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %result.0.lcssa
 }
 
-declare i32 @llvm.umax.i32(i32, i32)

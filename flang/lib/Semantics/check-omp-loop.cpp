@@ -688,6 +688,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
+  CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_linear);
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
     if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
