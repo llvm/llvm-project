@@ -169,6 +169,9 @@ class PostOrderTraversal
   SetType Visited;
 
 public:
+  /// Default constructor for an empty traversal.
+  PostOrderTraversal() = default;
+
   PostOrderTraversal(const GraphT &G) {
     this->init(GraphTraits<GraphT>::getEntryNode(G));
   }

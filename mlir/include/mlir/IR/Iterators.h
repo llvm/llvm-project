@@ -102,21 +102,10 @@ struct ReverseDominanceIterator {
   }
 
   static auto makeIterable(Region &region) {
-    struct Traversal
-        : llvm::PostOrderTraversalBase<Traversal, llvm::GraphTraits<Block *>> {
-      SmallPtrSet<Block *, 16> Visited;
+    struct Traversal : llvm::PostOrderTraversal<Region *> {
+      using BaseT = llvm::PostOrderTraversal<Region *>;
+      using BaseT::PostOrderTraversal; // Re-use constructors.
 
-      Traversal(Region *region) {
-        if (region)
-          this->init(&region->front());
-      }
-      bool insertEdge(std::optional<Block *>, Block *To) {
-        return Visited.insert(To).second;
-      }
-
-      using BaseT =
-          typename llvm::PostOrderTraversalBase<Traversal,
-                                                llvm::GraphTraits<Block *>>;
       // Walk API expects Block references instead of pointers.
       using iterator = llvm::pointee_iterator<typename BaseT::iterator>;
       iterator begin() { return iterator(BaseT::begin()); }
@@ -125,7 +114,7 @@ struct ReverseDominanceIterator {
 
     // Skip graph regions.
     if ((SkipGraphRegion && !mayHaveSSADominance(region)) || region.empty())
-      return Traversal(nullptr);
+      return Traversal();
 
     // Create post-order iterator. Blocks are enumerated according to their
     // successor relationship.

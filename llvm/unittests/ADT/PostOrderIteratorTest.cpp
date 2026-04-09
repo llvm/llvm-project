@@ -23,30 +23,22 @@ namespace {
 
 // Whether we're able to compile
 TEST(PostOrderIteratorTest, Compiles) {
-  using ExtSetTy = SmallPtrSet<void *, 4>;
-
-  // Tests that template specializations are kept up to date
-  void *Null = nullptr;
-  po_iterator_storage<std::set<void *>, false> PIS;
-  PIS.insertEdge(std::optional<void *>(), Null);
-  ExtSetTy Ext;
-  po_iterator_storage<ExtSetTy, true> PISExt(Ext);
-  PIS.insertEdge(std::optional<void *>(), Null);
-
-  // Test above, but going through po_iterator (which inherits from template
-  // base)
   Graph<6> G;
   using NodeType = Graph<6>::NodeType;
   NodeType *NullNode = nullptr;
+
   auto PI = post_order(G);
   PI.insertEdge(std::optional<NodeType *>(), NullNode);
+
+  using ExtSetTy = SmallPtrSet<void *, 4>;
+  ExtSetTy Ext;
   auto PIExt = post_order_ext(G, Ext);
   PIExt.insertEdge(std::optional<NodeType *>(), NullNode);
 }
 
-static_assert(
-    std::is_convertible_v<decltype(*std::declval<po_iterator<Graph<3>>>()),
-                          po_iterator<Graph<3>>::reference>);
+static_assert(std::is_convertible_v<
+              decltype(*post_order(std::declval<Graph<3>>()).begin()),
+              PostOrderTraversal<Graph<3>>::iterator::reference>);
 
 // Test post-order and reverse post-order traversals for simple graph type.
 TEST(PostOrderIteratorTest, PostOrderAndReversePostOrderTraverrsal) {
