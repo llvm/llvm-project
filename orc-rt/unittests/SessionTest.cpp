@@ -285,6 +285,13 @@ private:
   orc_rt_WrapperFunction Fn;
 };
 
+void waitForShutdown(Session &S) {
+  std::promise<void> P;
+  auto F = P.get_future();
+  S.shutdown([P = std::move(P)]() mutable { P.set_value(); });
+  F.get();
+}
+
 TEST(SessionTest, TrivialConstructionAndDestruction) {
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);
@@ -390,28 +397,29 @@ TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx;
   std::optional<size_t> ShutdownOpIdx;
-
   bool DispatcherShutDown = false;
   bool SessionShutdownComplete = false;
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(
-                Tasks,
-                [&]() {
-                  EXPECT_TRUE(ShutdownOpIdx);
-                  EXPECT_EQ(*ShutdownOpIdx, 1);
-                  EXPECT_TRUE(SessionShutdownComplete);
-                  DispatcherShutDown = true;
-                }),
-            noErrors);
-  S.addService(
-      std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
-  S.shutdown([&]() {
-    EXPECT_FALSE(DispatcherShutDown);
-    SessionShutdownComplete = true;
-  });
-  S.waitForShutdown();
+  {
+    std::deque<std::unique_ptr<Task>> Tasks;
+    Session S(mockExecutorProcessInfo(),
+              std::make_unique<EnqueueingDispatcher>(
+                  Tasks,
+                  [&]() {
+                    EXPECT_TRUE(ShutdownOpIdx);
+                    EXPECT_EQ(*ShutdownOpIdx, 1);
+                    EXPECT_TRUE(SessionShutdownComplete);
+                    DispatcherShutDown = true;
+                  }),
+              noErrors);
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+
+    S.shutdown([&]() {
+      EXPECT_FALSE(DispatcherShutDown);
+      SessionShutdownComplete = true;
+    });
+  }
 
   EXPECT_TRUE(SessionShutdownComplete);
 }
@@ -471,7 +479,7 @@ TEST(SessionTest, SyncCallManagedCodeVoidFn) {
     EXPECT_EQ(X, 42U);
   }
 
-  S.waitForShutdown();
+  waitForShutdown(S);
 
   {
     // Post-shutdown we expect token acquisition to fail, and
@@ -500,7 +508,7 @@ TEST(SessionTest, SyncCallManagedCodeNonVoidFn) {
     EXPECT_EQ(*Result, 42U);
   }
 
-  S.waitForShutdown();
+  waitForShutdown(S);
 
   {
     // Post-shutdown we expect token acquisition to fail, and
@@ -534,7 +542,7 @@ TEST(SessionTest, AsyncCallManagedCodeVoidFn) {
     EXPECT_EQ(X, 42U);
   }
 
-  S.waitForShutdown();
+  waitForShutdown(S);
 
   {
     // Post-shutdown we expect token acquisition to fail. Return should be
@@ -571,7 +579,7 @@ TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
     EXPECT_EQ(N, 42U);
   }
 
-  S.waitForShutdown();
+  waitForShutdown(S);
 
   {
     // Post-shutdown we expect token acquisition to fail. Return should be
@@ -677,8 +685,6 @@ TEST(ControllerAccessTest, Basics) {
   S.attach(CA, BootstrapInfo(S));
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
-
-  S.waitForShutdown();
 }
 
 static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
@@ -707,8 +713,6 @@ TEST(ControllerAccessTest, ValidCallToController) {
   EnqueueingDispatcher::runTasksFromFront(Tasks);
 
   EXPECT_EQ(Result, 42);
-
-  S.waitForShutdown();
 }
 
 TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
@@ -727,8 +731,6 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
       41, 1);
 
   EXPECT_EQ(toString(std::move(Err)), "no controller attached");
-
-  S.waitForShutdown();
 }
 
 TEST(ControllerAccessTest, CallToControllerAfterDetach) {
@@ -751,8 +753,6 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
       41, 1);
 
   EXPECT_EQ(toString(std::move(Err)), "no controller attached");
-
-  S.waitForShutdown();
 }
 
 TEST(ControllerAccessTest, CallFromController) {
@@ -771,8 +771,6 @@ TEST(ControllerAccessTest, CallFromController) {
   EnqueueingDispatcher::runTasksFromFront(Tasks);
 
   EXPECT_EQ(Result, 42);
-
-  S.waitForShutdown();
 }
 
 TEST(ControllerAccessTest, RedundantAsyncShutdown) {
@@ -780,8 +778,12 @@ TEST(ControllerAccessTest, RedundantAsyncShutdown) {
   std::deque<std::unique_ptr<Task>> Tasks;
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  S.waitForShutdown();
 
+  // Initiate shutdown here, and wait for the on-shutdown callbacks to start
+  // running.
+  waitForShutdown(S);
+
+  // Now try to add a new on-shutdown callback and verify that it runs.
   bool RedundantCallbackRan = false;
   S.shutdown([&]() { RedundantCallbackRan = true; });
   EXPECT_TRUE(RedundantCallbackRan);
@@ -814,6 +816,4 @@ TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
   S.attach(CA, std::move(BI));
 
   ASSERT_TRUE(OnConnectRan);
-
-  S.waitForShutdown();
 }
