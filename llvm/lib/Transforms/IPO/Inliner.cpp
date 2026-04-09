@@ -356,8 +356,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // devirtualized to call any target by replacing the indirectly called
       // function with a function pointer referenced by the caller. The indirect
       // call case is handled within InlineFunction.
-      bool TrackInlineHistory =
-          CalleeSCC->size() != 1 || CalleeSCC->getOuterRefSCC().size() != 1;
+      bool TrackInlineHistory = CalleeSCC->size() != 1 ||
+                                CalleeSCC->getOuterRefSCC().size() != 1 ||
+                                CalleeN->lookup(CalleeN) != nullptr;
 
       InlineResult IR = InlineFunction(
           *CB, IFI, /*MergeAttributes=*/true,

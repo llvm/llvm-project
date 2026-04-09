@@ -102,6 +102,9 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
 static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
+  case LoadCacheControl::USE_DEFAULT:
+    control = -1;
+    break;
   case LoadCacheControl::L1C_L2UC_L3UC:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3UC:
@@ -126,6 +129,9 @@ static int32_t getL1CacheControl(LoadCacheControl cc) {
 static int32_t getL1CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
+  case StoreCacheControl::USE_DEFAULT:
+    control = -1;
+    break;
   case StoreCacheControl::L1WT_L2UC_L3UC:
   case StoreCacheControl::L1WT_L2UC_L3WB:
   case StoreCacheControl::L1WT_L2WB_L3UC:
@@ -152,6 +158,9 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
 static int32_t getL3CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
+  case LoadCacheControl::USE_DEFAULT:
+    control = -1;
+    break;
   case LoadCacheControl::L1UC_L2UC_L3C:
   case LoadCacheControl::L1UC_L2C_L3C:
   case LoadCacheControl::L1C_L2UC_L3C:
@@ -172,6 +181,9 @@ static int32_t getL3CacheControl(LoadCacheControl cc) {
 static int32_t getL3CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
+  case StoreCacheControl::USE_DEFAULT:
+    control = -1;
+    break;
   case StoreCacheControl::L1UC_L2UC_L3WB:
   case StoreCacheControl::L1UC_L2WB_L3WB:
   case StoreCacheControl::L1WT_L2UC_L3WB:
@@ -246,6 +258,7 @@ static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   if (!getCacheControl(op))
     return {};
+
   constexpr int32_t decorationCacheControlArity{3};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
@@ -254,6 +267,19 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
                           std::is_same_v<OpType, LLVM::LoadOp> ||
                           std::is_same_v<OpType, BlockLoadOp> ||
                           std::is_same_v<OpType, PrefetchOp>;
+
+  // If the cache control is USE_DEFAULT, then we don’t emit any metadata.
+  // Assert that if one of the L1 or L3 cache control values is USE_DEFAULT
+  // (represented as -1), then both must be USE_DEFAULT; otherwise there is a
+  // bug.
+  assert(((getL1CacheControl<OpType>(op) == -1) ==
+          (getL3CacheControl<OpType>(op) == -1)) &&
+         "If one of L1 or L3 cache control is USE_DEFAULT, both must be "
+         "USE_DEFAULT");
+
+  if (getL1CacheControl<OpType>(op) == -1 &&
+      getL3CacheControl<OpType>(op) == -1)
+    return {};
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
       controlKey, 0, getL1CacheControl<OpType>(op)};
