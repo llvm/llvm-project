@@ -292,6 +292,7 @@ public:
     Kind = FT_PrefAlign;
     u.prefalign.End = &End;
     u.prefalign.PreferredAlign = PrefAlign;
+    u.prefalign.ComputedAlign = Align();
     u.prefalign.EmitNops = EmitNops;
     u.prefalign.Fill = Fill;
   }
