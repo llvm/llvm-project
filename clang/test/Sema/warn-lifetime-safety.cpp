@@ -2619,3 +2619,60 @@ struct Y : X {
   }
 };
 } // namespace base_class_fields
+
+namespace callable_wrappers {
+
+std::function<void()> direct_return() {
+  int x;
+  return [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}} \
+                              // expected-note {{returned here}}
+}
+
+std::function<void()> copy_function() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f2 = f;
+  return f2; // expected-note {{returned here}}
+}
+
+std::function<void()> reassign_safe_then_unsafe() {
+  static int safe = 1;
+  int local = 2;
+  std::function<void()> f = []() { (void)safe; };
+  f = [&local]() { (void)local; }; // expected-warning {{address of stack memory is returned later}}
+  return f; // expected-note {{returned here}}
+}
+
+std::function<void()> reassign_unsafe_then_safe() {
+  static int safe = 1;
+  int local = 2;
+  std::function<void()> f = [&local]() { (void)local; };
+  f = []() { (void)safe; };
+  return f;
+}
+
+std::function<void()> non_capturing_lambda() {
+  return []() {};
+}
+
+void free_function();
+
+std::function<void()> reassign_lambda_to_function_pointer() {
+  int local;
+  std::function<void()> f = [&local]() { (void)local; };
+  f = &free_function;
+  return f;
+}
+
+struct Functor { void operator()() const; };
+
+// FIXME: False positive.
+std::function<void()> reassign_lambda_to_functor() {
+  int local;
+  Functor c;
+  std::function<void()> f = [&local]() { (void)local; }; // expected-warning {{address of stack memory is returned later}}
+  f = c;
+  return f; // expected-note {{returned here}}
+}
+
+} // namespace callable_wrappers

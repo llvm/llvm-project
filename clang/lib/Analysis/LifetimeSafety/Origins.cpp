@@ -107,14 +107,13 @@ bool OriginManager::hasOrigins(QualType QT) const {
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
     return false;
-  // TODO: Limit to lambdas for now. This will be extended to user-defined
-  // structs with pointer-like fields.
-  if (!RD->isLambda())
-    return false;
-  for (const auto *FD : RD->fields())
-    if (hasOrigins(FD->getType()))
-      return true;
-  return false;
+  // Standard library callable wrappers (e.g., std::function) can propagate the
+  // stored lambda's origins.
+  if (isStdCallableWrapperType(RD))
+    return true;
+  // TODO: Extend origin tracking to user-defined structs that may carry
+  // origins.
+  return RD->isLambda();
 }
 
 /// Determines if an expression has origins that need to be tracked.

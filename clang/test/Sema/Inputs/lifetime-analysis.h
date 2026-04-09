@@ -268,4 +268,14 @@ struct true_type {
 template<class T> struct is_pointer : false_type {};
 template<class T> struct is_pointer<T*> : true_type {};
 template<class T> struct is_pointer<T* const> : true_type {};
+
+template<class> class function;
+template<class R, class... Args>
+class function<R(Args...)> {
+public:
+  template<class F> function(F) {}
+  template<class F> function& operator=(F) { return *this; }
+  ~function();
+};
+
 }

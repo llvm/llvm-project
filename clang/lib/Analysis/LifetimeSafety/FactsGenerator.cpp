@@ -190,12 +190,21 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     return;
   }
   // For defaulted (implicit or `= default`) copy/move constructors, propagate
-  // origins directly. User-defined copy/move constructors have opaque semantics
-  // and fall through to `handleFunctionCall`, where [[clang::lifetimebound]] is
-  // needed to propagate origins.
+  // origins directly. User-defined copy/move constructors are not handled here
+  // as they have opaque semantics.
   if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
       CCE->getConstructor()->isDefaulted() && CCE->getNumArgs() == 1 &&
       hasOrigins(CCE->getType())) {
+    const Expr *Arg = CCE->getArg(0);
+    if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
+      flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+      return;
+    }
+  }
+  // Standard library callable wrappers (e.g., std::function) propagate the
+  // stored lambda's origins.
+  if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
+      RD && isStdCallableWrapperType(RD) && CCE->getNumArgs() == 1) {
     const Expr *Arg = CCE->getArg(0);
     if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
       flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
@@ -400,6 +409,10 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
     } else
       markUseAsWrite(DRE_LHS);
   }
+  // RHS may not have tracked origins (e.g., assigning a non-lambda functor
+  // to a std::function). Skip the flow in that case.
+  if (!RHSList)
+    return;
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
@@ -490,6 +503,13 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     // Pointer-like types: assignment inherently propagates origins.
     QualType LHSTy = OCE->getArg(0)->getType();
     if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy)) {
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      return;
+    }
+    // Standard library callable wrappers (e.g., std::function) can propagate
+    // the stored lambda's origins.
+    if (const auto *RD = LHSTy->getAsCXXRecordDecl();
+        RD && isStdCallableWrapperType(RD)) {
       handleAssignment(OCE->getArg(0), OCE->getArg(1));
       return;
     }
