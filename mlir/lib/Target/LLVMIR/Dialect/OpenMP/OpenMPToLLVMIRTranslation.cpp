@@ -520,23 +520,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       return;
     }
 
-    // Multi-dimensional num_teams is only fully supported within target
-    // regions.
-    if (op.hasNumTeamsMultiDim()) {
-      Operation *parent = op.getOperation()->getParentOp();
-      bool insideTarget = false;
-      while (parent) {
-        if (isa<omp::TargetOp>(parent)) {
-          insideTarget = true;
-          break;
-        }
-        parent = parent->getParentOp();
-      }
-
-      if (!insideTarget)
-        result = todo(
-            "num_teams with multi-dimensional values outside target region");
-    }
+    if (op.hasNumTeamsMultiDim() &&
+        !isa_and_present<omp::TargetOp>(op->getParentOp()))
+      result =
+          todo("num_teams with multi-dimensional values outside target region");
   };
   auto checkNumThreads = [&todo](auto op, LogicalResult &result) {
     if (op.hasNumThreadsMultiDim())
@@ -8947,10 +8934,10 @@ static void extractHostEvalClauses(
     for (Operation *user : blockArg.getUsers()) {
       llvm::TypeSwitch<Operation *>(user)
           .Case([&](omp::TeamsOp teamsOp) {
-            if (teamsOp.getNumTeamsLower() == blockArg)
+            if (teamsOp.getNumTeamsLower() == blockArg) {
               numTeamsLower = hostEvalVar;
-            else if (llvm::is_contained(teamsOp.getNumTeamsUpperVars(),
-                                        blockArg)) {
+            } else if (llvm::is_contained(teamsOp.getNumTeamsUpperVars(),
+                                          blockArg)) {
               // Find which dimension this blockArg corresponds to
               for (auto [i, upperVar] :
                    llvm::enumerate(teamsOp.getNumTeamsUpperVars())) {
@@ -8962,10 +8949,11 @@ static void extractHostEvalClauses(
                 }
               }
             } else if (!teamsOp.getThreadLimitVars().empty() &&
-                       teamsOp.getThreadLimit(0) == blockArg)
+                       teamsOp.getThreadLimit(0) == blockArg) {
               threadLimit = hostEvalVar;
-            else
+            } else {
               llvm_unreachable("unsupported host_eval use");
+            }
           })
           .Case([&](omp::ParallelOp parallelOp) {
             if (!parallelOp.getNumThreadsVars().empty() &&
@@ -9108,21 +9096,28 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   // Handle clauses impacting the number of teams.
 
   int32_t minTeamsVal = 1;
-  llvm::SmallVector<int32_t, 3> maxTeamsVals(3, -1);
+  llvm::SmallVector<int32_t, 3> maxTeamsVals(
+      std::max(numTeamsUpperVars.size(), static_cast<size_t>(1)), -1);
   if (castOrGetParentOfType<omp::TeamsOp>(capturedOp)) {
     // TODO: Use `numTeamsLower` to initialize `minTeamsVal`. For now,
     // match clang and set min and max to the same value.
     if (!numTeamsUpperVars.empty()) {
-      // Handle multi-dimensional num_teams
       for (auto [i, upperVar] : llvm::enumerate(numTeamsUpperVars)) {
         if (upperVar) {
-          if (auto val = extractConstInteger(upperVar)) {
+          if (auto val = extractConstInteger(upperVar))
             maxTeamsVals[i] = *val;
-            if (i == 0)
-              minTeamsVal = *val;
-          }
         }
       }
+      // minTeamsVal is a single scalar and only meaningful for the
+      // unidimensional case. Per the spec, lower-bound may not be
+      // specified when the dims modifier is specified, and when unspecified
+      // it equals the upper bound. In the multidimensional case,
+      // maxTeamsVals should be used as both lower and upper bounds for each
+      // dimension.
+      if (maxTeamsVals[0] >= 0)
+        minTeamsVal = maxTeamsVals[0];
+    } else {
+      minTeamsVal = maxTeamsVals[0] = 0;
     }
   } else if (castOrGetParentOfType<omp::ParallelOp>(capturedOp,
                                                     /*immediateParent=*/true) ||
@@ -9197,10 +9192,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
 
   attrs.MinTeams = minTeamsVal;
-  // Always resize to 3 dimensions to match TargetKernelRuntimeAttrs
-  attrs.MaxTeams.resize(3, -1);
-  for (size_t i = 0; i < maxTeamsVals.size() && i < attrs.MaxTeams.size(); ++i)
-    attrs.MaxTeams[i] = maxTeamsVals[i];
+  attrs.MaxTeams = maxTeamsVals;
   attrs.MinThreads = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
@@ -9241,14 +9233,12 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
     attrs.MinTeams.front() = builder.CreateSExtOrTrunc(
         moduleTranslation.lookupValue(numTeamsLower), builder.getInt32Ty());
 
-  // Handle multi-dimensional num_teams upper bounds
-  attrs.MaxTeams.resize(3);
-  if (!numTeamsUpperVars.empty()) {
-    for (auto [i, upperVar] : llvm::enumerate(numTeamsUpperVars)) {
-      if (upperVar) {
-        attrs.MaxTeams[i] = builder.CreateSExtOrTrunc(
-            moduleTranslation.lookupValue(upperVar), builder.getInt32Ty());
-      }
+  attrs.MaxTeams.resize(
+      std::max(numTeamsUpperVars.size(), static_cast<size_t>(1)));
+  for (auto [i, upperVar] : llvm::enumerate(numTeamsUpperVars)) {
+    if (upperVar) {
+      attrs.MaxTeams[i] = builder.CreateSExtOrTrunc(
+          moduleTranslation.lookupValue(upperVar), builder.getInt32Ty());
     }
   }
 
