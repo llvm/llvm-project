@@ -285,6 +285,30 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_STEP_VECTOR: {
+    APInt Step = MI.getOperand(1).getCImm()->getValue();
+
+    if (Step.isPowerOf2())
+      Known.Zero.setLowBits(Step.logBase2());
+
+    if (!isUIntN(BitWidth, DstTy.getElementCount().getKnownMinValue()))
+      break;
+
+    const APInt MinNumElts =
+        APInt(BitWidth, DstTy.getElementCount().getKnownMinValue());
+    const Function &F = getMachineFunction().getFunction();
+    bool Overflow;
+    const APInt MaxNumElts = getVScaleRange(&F, BitWidth)
+                                 .getUnsignedMax()
+                                 .umul_ov(MinNumElts, Overflow);
+    if (Overflow)
+      break;
+    const APInt MaxValue = (MaxNumElts - 1).umul_ov(Step, Overflow);
+    if (Overflow)
+      break;
+    Known.Zero.setHighBits(MaxValue.countl_zero());
+    break;
+  }
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
