@@ -41,6 +41,9 @@ void SMEAttrs::validate() const {
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
+  // Note: 'aarch64_zt0_undef' was previously used (and subsequently removed).
+  // To avoid introducing any compatibility issues don't reuse
+  // 'aarch64_zt0_undef' for another purpose.
   Bitmask = 0;
   if (Attrs.hasFnAttr("aarch64_pstate_sm_enabled"))
     Bitmask |= SM_Enabled;
@@ -70,8 +73,6 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= encodeZT0State(StateValue::Preserved);
   if (Attrs.hasFnAttr("aarch64_new_zt0"))
     Bitmask |= encodeZT0State(StateValue::New);
-  if (false && Attrs.hasFnAttr("aarch64_zt0_undef"))
-    /* 'aarch64_zt0_undef' is deprecated. Do not reuse this attribute. */;
 }
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
