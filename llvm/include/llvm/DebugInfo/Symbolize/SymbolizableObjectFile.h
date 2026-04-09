@@ -79,7 +79,7 @@ private:
   /// file offset into its corresponding section-relative offset, but only if
   /// the address falls within a Wasm code section.
   object::SectionedAddress
-  getWasmCodeDwarfOffset(object::SectionedAddress ModuleOffset) const;
+  convertDwarfOffsetForWasm(object::SectionedAddress ModuleOffset) const;
 
   struct SymbolDesc {
     uint64_t Addr;
