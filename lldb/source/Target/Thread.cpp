@@ -372,14 +372,14 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   // from completed plan stack - m_stop_info_sp (trace stop reason is OK now) -
   // ask GetPrivateStopInfo to set stop info
 
-  bool have_valid_stop_info = m_stop_info_sp &&
-      m_stop_info_sp ->IsValid() &&
-      m_stop_info_stop_id == stop_id;
-  bool have_valid_completed_plan = completed_plan_sp && completed_plan_sp->PlanSucceeded();
+  bool have_valid_stop_info = m_stop_info_sp && m_stop_info_sp->IsValid() &&
+                              m_stop_info_stop_id == stop_id;
+  bool have_valid_completed_plan =
+      completed_plan_sp && completed_plan_sp->PlanSucceeded();
   bool plan_failed = completed_plan_sp && !completed_plan_sp->PlanSucceeded();
   bool plan_overrides_trace =
-    have_valid_stop_info && have_valid_completed_plan
-    && (m_stop_info_sp->GetStopReason() == eStopReasonTrace);
+      have_valid_stop_info && have_valid_completed_plan &&
+      (m_stop_info_sp->GetStopReason() == eStopReasonTrace);
 
   if (have_valid_stop_info && !plan_overrides_trace && !plan_failed) {
     return m_stop_info_sp;
@@ -415,8 +415,8 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo(bool calculate) {
       // 4) If this thread wasn't allowed to run the last time round.
       if (m_stop_info_sp) {
         if (m_stop_info_sp->IsValid() || IsStillAtLastBreakpointHit() ||
-            GetCurrentPlan()->IsVirtualStep()
-            || GetTemporaryResumeState() == eStateSuspended)
+            GetCurrentPlan()->IsVirtualStep() ||
+            GetTemporaryResumeState() == eStateSuspended)
           SetStopInfo(m_stop_info_sp);
         else
           m_stop_info_sp.reset();
@@ -1204,7 +1204,7 @@ bool Thread::CompletedPlanOverridesBreakpoint() const {
   return GetPlans().AnyCompletedPlans();
 }
 
-ThreadPlan *Thread::GetPreviousPlan(ThreadPlan *current_plan) const{
+ThreadPlan *Thread::GetPreviousPlan(ThreadPlan *current_plan) const {
   return GetPlans().GetPreviousPlan(current_plan);
 }
 
@@ -1294,10 +1294,11 @@ ThreadPlanSP Thread::QueueBasePlan(bool abort_other_plans) {
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepSingleInstruction(
-    bool step_over, bool abort_other_plans, bool stop_other_threads,
-    Status &status) {
+    bool step_over, lldb::RunDirection direction, bool abort_other_plans,
+    bool stop_other_threads, Status &status) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepInstruction(
-      *this, step_over, stop_other_threads, eVoteNoOpinion, eVoteNoOpinion));
+      *this, step_over, direction, stop_other_threads, eVoteNoOpinion,
+      eVoteNoOpinion));
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
@@ -2259,7 +2260,7 @@ Status Thread::StepIn(bool source_step,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(
-          false, abort_other_plans, run_mode, error);
+          false, eRunForward, abort_other_plans, run_mode, error);
     }
 
     new_plan_sp->SetIsControllingPlan(true);
@@ -2292,7 +2293,7 @@ Status Thread::StepOver(bool source_step,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, run_mode, error);
+          true, eRunForward, abort_other_plans, run_mode, error);
     }
 
     new_plan_sp->SetIsControllingPlan(true);
@@ -2331,22 +2332,6 @@ Status Thread::StepOut(uint32_t frame_idx) {
   return error;
 }
 
-#include "lldb/Target/ThreadPlanStepInstruction.h"
-
-class ThreadPlanStepBackInstruction : public ThreadPlanStepInstruction {
-public:
-  ThreadPlanStepBackInstruction(Thread &thread,
-                                                     bool step_over,
-                                                     bool stop_other_threads,
-                                                     Vote report_stop_vote,
-                                                     Vote report_run_vote)
-    : ThreadPlanStepInstruction(thread, step_over, stop_other_threads, report_stop_vote, report_run_vote) {}
-
-  lldb::RunDirection GetDirection() const override {
-    return lldb::RunDirection::eRunReverse;
-  }
-};
-
 Status Thread::StepBack() {
   Process *process = GetProcess().get();
   if (!StateIsStoppedState(process->GetState(), true)) {
@@ -2354,11 +2339,13 @@ Status Thread::StepBack() {
   }
 
   if (!process->SupportsReverseDirection()) {
-    return Status::FromErrorString("process does not support reverse execution");
+    return Status::FromErrorString(
+        "process does not support reverse execution");
   }
-  
-  ThreadPlanSP thread_plan_sp(new ThreadPlanStepBackInstruction(
-      *this, false, true, eVoteNoOpinion, eVoteNoOpinion));
+
+  Status error;
+  ThreadPlanSP thread_plan_sp(QueueThreadPlanForStepSingleInstruction(
+      false, eRunReverse, false, true, error));
   QueueThreadPlan(thread_plan_sp, false);
 
   thread_plan_sp->SetIsControllingPlan(true);
@@ -2424,7 +2411,9 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
     return ValueObjectConstResult::Create(&target,
                                           Status::FromError(data.takeError()));
 
-  DataExtractor data_extractor{data.get()->getBufferStart(), data.get()->getBufferSize(),
-    process_sp->GetByteOrder(), arch.GetAddressByteSize()};
-  return ValueObjectConstResult::Create(&target, type, ConstString("__lldb_siginfo"), data_extractor);
+  DataExtractor data_extractor{
+      data.get()->getBufferStart(), data.get()->getBufferSize(),
+      process_sp->GetByteOrder(), arch.GetAddressByteSize()};
+  return ValueObjectConstResult::Create(
+      &target, type, ConstString("__lldb_siginfo"), data_extractor);
 }

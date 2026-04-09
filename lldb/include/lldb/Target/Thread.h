@@ -730,8 +730,8 @@ public:
   ///     A shared pointer to the newly queued thread plan, or nullptr if the
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepSingleInstruction(
-      bool step_over, bool abort_other_plans, bool stop_other_threads,
-      Status &status);
+      bool step_over, lldb::RunDirection direction, bool abort_other_plans,
+      bool stop_other_threads, Status &status);
 
   /// Queues the plan used to step through an address range, stepping  over
   /// function calls.

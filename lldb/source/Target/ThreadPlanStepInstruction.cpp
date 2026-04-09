@@ -20,16 +20,14 @@ using namespace lldb_private;
 
 // ThreadPlanStepInstruction: Step over the current instruction
 
-ThreadPlanStepInstruction::ThreadPlanStepInstruction(Thread &thread,
-                                                     bool step_over,
-                                                     bool stop_other_threads,
-                                                     Vote report_stop_vote,
-                                                     Vote report_run_vote)
+ThreadPlanStepInstruction::ThreadPlanStepInstruction(
+    Thread &thread, bool step_over, lldb::RunDirection direction,
+    bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote)
     : ThreadPlan(ThreadPlan::eKindStepInstruction,
                  "Step over single instruction", thread, report_stop_vote,
                  report_run_vote),
       m_instruction_addr(0), m_stop_other_threads(stop_other_threads),
-      m_step_over(step_over) {
+      m_step_over(step_over), m_direction(direction) {
   m_takes_iteration_count = true;
   SetUpState();
 }
@@ -245,4 +243,8 @@ bool ThreadPlanStepInstruction::MischiefManaged() {
   } else {
     return false;
   }
+}
+
+lldb::RunDirection ThreadPlanStepInstruction::GetDirection() const {
+  return m_direction;
 }

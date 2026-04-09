@@ -228,5 +228,5 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   assert(first_insn->DoesBranch() && !second_insn->DoesBranch());
 
   return ThreadPlanSP(new ThreadPlanStepInstruction(
-      thread, false, false, eVoteNoOpinion, eVoteNoOpinion));
+      thread, false, eRunForward, false, eVoteNoOpinion, eVoteNoOpinion));
 }

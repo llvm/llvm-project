@@ -719,7 +719,8 @@ protected:
         }
       } else
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-            false, abort_other_plans, bool_stop_other_threads, new_plan_status);
+            false, eRunForward, abort_other_plans, bool_stop_other_threads,
+            new_plan_status);
     } else if (m_step_type == eStepTypeOver) {
       StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
 
@@ -732,13 +733,20 @@ protected:
             m_options.m_step_out_avoid_no_debug);
       else
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-            true, abort_other_plans, bool_stop_other_threads, new_plan_status);
+            true, eRunForward, abort_other_plans, bool_stop_other_threads,
+            new_plan_status);
     } else if (m_step_type == eStepTypeTrace) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          false, abort_other_plans, bool_stop_other_threads, new_plan_status);
+          false, eRunForward, abort_other_plans, bool_stop_other_threads,
+          new_plan_status);
+    } else if (m_step_type == eStepTypeTraceBack) {
+      new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
+          false, eRunReverse, abort_other_plans, bool_stop_other_threads,
+          new_plan_status);
     } else if (m_step_type == eStepTypeTraceOver) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, bool_stop_other_threads, new_plan_status);
+          true, eRunForward, abort_other_plans, bool_stop_other_threads,
+          new_plan_status);
     } else if (m_step_type == eStepTypeOut) {
       new_plan_sp = thread->QueueThreadPlanForStepOut(
           abort_other_plans, nullptr, false, bool_stop_other_threads, eVoteYes,
@@ -813,26 +821,6 @@ protected:
   ThreadStepScopeOptionGroup m_options;
   OptionGroupPythonClassWithDict m_class_options;
   OptionGroupOptions m_all_options;
-};
-
-// CommandObjectThreadStepBackInstruction
-
-class CommandObjectThreadStepBackInstruction : public CommandObjectParsed {
-  private:
-public:
-  CommandObjectThreadStepBackInstruction(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "process plugin packet step-back",
-                            "Step back one instruction.",
-                            nullptr) {}
-
-  ~CommandObjectThreadStepBackInstruction() override = default;
-
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    Process *process = m_exe_ctx.GetProcessPtr();
-    if (process) {
-        process->GetThreadList().GetSelectedThread()->StepBack();
-    }
-  }
 };
 
 // CommandObjectThreadContinue
@@ -2795,8 +2783,11 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                      nullptr, eStepTypeTrace)));
 
   LoadSubCommand("step-back-inst",
-                 CommandObjectSP(new CommandObjectThreadStepBackInstruction(
-                     interpreter)));
+                 CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
+                     interpreter, "thread step-back-inst",
+                     "Instruction level back step.  "
+                     "Defaults to current thread unless specified.",
+                     nullptr, eStepTypeTraceBack)));
 
   LoadSubCommand("step-inst-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(

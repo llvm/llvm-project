@@ -21,6 +21,7 @@ namespace lldb_private {
 enum StepType {
   eStepTypeNone,
   eStepTypeTrace,     ///< Single step one instruction.
+  eStepTypeTraceBack, ///< Single step back one instruction.
   eStepTypeTraceOver, ///< Single step one instruction, stepping over.
   eStepTypeInto,      ///< Single step into a specified context.
   eStepTypeOver,      ///< Single step over a specified context.
