@@ -7113,7 +7113,7 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // iterations skip directly to a merge block before the tile latch.
   BasicBlock *TileBodyBB = Builder.GetInsertBlock();
   Instruction *BodyTerm = TileBodyBB->getTerminator();
-  BasicBlock *BodySucc = cast<BranchInst>(BodyTerm)->getSuccessor(0);
+  BasicBlock *BodySucc = cast<UncondBrInst>(BodyTerm)->getSuccessor(0);
   BasicBlock *TileLatch = Result.back()->getLatch();
 
   BasicBlock *MergeBB =
