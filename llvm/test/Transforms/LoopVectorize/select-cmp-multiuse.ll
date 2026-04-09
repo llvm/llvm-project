@@ -1297,7 +1297,7 @@ define i32 @multi_user_cmp_max(ptr readonly %a, i64 noundef %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %all.0.off010 = phi i1 [ true, %entry ], [ %all.0.off0., %for.body ]
   %any.0.off09 = phi i1 [ false, %entry ], [ %.any.0.off0, %for.body ]
@@ -1312,7 +1312,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   %.any.0.off0.lcssa = phi i1 [ %.any.0.off0, %for.body ]
   %all.0.off0..lcssa = phi i1 [ %all.0.off0., %for.body ]
   %0 = select i1 %.any.0.off0.lcssa, i32 2, i32 3

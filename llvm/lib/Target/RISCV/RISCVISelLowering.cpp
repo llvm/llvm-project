@@ -821,7 +821,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasVendorXMIPSCBOP())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
-  else if (Subtarget.hasStdExtZicbop())
+  else
     setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
 
   if (Subtarget.hasStdExtZalrsc()) {

@@ -6072,6 +6072,12 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known.SignBit = false;
     break;
   }
+  case ISD::FNEG: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    Known.fneg();
+    break;
+  }
   case ISD::BUILD_VECTOR: {
     assert(!VT.isScalableVector());
     bool First = true;
@@ -6119,6 +6125,14 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                 InterestedClasses, Depth + 1);
     Known.fabs();
+    break;
+  }
+  case ISD::AssertNoFPClass: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    FPClassTest AssertedClasses =
+        static_cast<FPClassTest>(Op->getConstantOperandVal(1));
+    Known.KnownFPClasses &= ~AssertedClasses;
     break;
   }
   default:
