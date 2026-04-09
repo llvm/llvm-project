@@ -54,8 +54,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-branch-cond-combine"
 
-// N = -1 disables this pass.
-static cl::opt<int> MaxConsecutiveCondBranches(
+// N = 0 disables this pass.
+static cl::opt<unsigned> MaxConsecutiveCondBranches(
     "riscv-cbc-max-branch", cl::Hidden,
     cl::desc("A maximum of N consecutive conditional "
              "branches is allowed."),
@@ -402,7 +402,7 @@ bool RISCVConditionalBranchCombine::runOnMachineFunction(MachineFunction &MF) {
   if (!isProfitableToCombine())
     return false;
 
-  if (MaxConsecutiveCondBranches == -1)
+  if (MaxConsecutiveCondBranches == 0)
     return false;
 
   bool Changed = false;
