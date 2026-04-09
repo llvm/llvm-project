@@ -33,7 +33,10 @@
 //   COMMON_INTERCEPTOR_STRERROR
 //===----------------------------------------------------------------------===//
 
+#if SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
 #include <dlfcn.h>
+#endif
+
 #include <stdarg.h>
 
 #include "interception/interception.h"
