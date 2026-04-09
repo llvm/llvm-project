@@ -6542,9 +6542,9 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
 
   void *res = COMMON_INTERCEPTOR_DLOPEN(filename, flag);
   bool is_noload = false;
-#ifdef RTLD_NOLOAD
+#  ifdef RTLD_NOLOAD
   is_noload = (flag & RTLD_NOLOAD) != 0;
-#endif
+#  endif
   if (!is_noload) {
     Symbolizer::GetOrInit()->InvalidateModuleList();
     COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, res);
