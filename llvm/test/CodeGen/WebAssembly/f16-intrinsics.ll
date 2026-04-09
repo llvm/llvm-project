@@ -13,6 +13,16 @@ define float @ldf16_32(ptr %p) {
   ret float %v
 }
 
+; CHECK-LABEL: load_f16_cast:
+; CHECK:       f32.load_f16 $push0=, 0($0)
+; CHECK-NEXT:  return $pop0
+define float @load_f16_cast(ptr %p) {
+  %1 = load half, ptr %p, align 2
+  %2 = fpext half %1 to float
+  ret float %2
+}
+
+
 ; CHECK-LABEL: stf16_32:
 ; CHECK:       f32.store_f16 0($1), $0
 ; CHECK-NEXT:  return
@@ -27,6 +37,25 @@ define void @stf16_32(float %v, ptr %p) {
 define <8 x half> @splat_v8f16(float %x) {
   %v = call <8 x half> @llvm.wasm.splat.f16x8(float %x)
   ret <8 x half> %v
+}
+
+; CHECK-LABEL: load_splat_v8f16:
+; CHECK:       v128.load16_splat $push0=, 0($0)
+; CHECK-NEXT:  return $pop0
+define <8 x half> @load_splat_v8f16(ptr %p) {
+  %1 = load half, ptr %p, align 2
+  %2 = fpext half %1 to float
+  %3 = call <8 x half> @llvm.wasm.splat.f16x8(float %2)
+  ret <8 x half> %3
+}
+
+; CHECK-LABEL: store_trunc_f16:
+; CHECK:       f32.store_f16 0($1), $0
+; CHECK-NEXT:  return
+define void @store_trunc_f16(float %v, ptr %p) {
+  %1 = fptrunc float %v to half
+  store half %1, ptr %p, align 2
+  ret void
 }
 
 ; CHECK-LABEL: const_splat_v8f16:
