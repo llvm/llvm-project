@@ -671,51 +671,6 @@ getLinkageAttribute(Fortran::lower::AbstractConverter &converter,
   return builder.createInternalLinkage();
 }
 
-static void
-genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
-                            const Fortran::lower::pft::Variable &var,
-                            Fortran::lower::SymMap &symMap) {
-  mlir::Location loc = converter.getCurrentLocation();
-  const Fortran::semantics::Symbol &sym = var.getSymbol();
-  fir::ExtendedValue exv = converter.getSymbolExtendedValue(sym, &symMap);
-
-  if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
-    TODO(loc, "Coarray with an allocatable direct component and/or requiring "
-              "finalization.");
-
-  // Local coarray must have the SAVE and/or ALLOCATABLE attributes.
-  // SAVE (no ALLOCATABLE): never automatically deallocated or finalized
-  // (see 7.5.6.4) ALLOCATABLE (no SAVE): automatically deallocated and
-  // finalized at scope exit ALLOCATABLE and SAVE: Not deallocated at scope exit
-  // Local coarray must have the SAVE and/or ALLOCATABLE attributes:
-  // 1. SAVE (no ALLOCATABLE): never automatically deallocated or finalized
-  //    (see 7.5.6.4)
-  // 2. ALLOCATABLE (no SAVE): automatically deallocated and
-  //    finalized at scope exit
-  // 3. ALLOCATABLE and SAVE: Not deallocated at scope exit
-  //    (only via explicit DEALLOCATE or END TEAM)
-  if (Fortran::semantics::IsSaved(sym) ||
-      Fortran::semantics::IsFunctionResult(sym))
-    return;
-
-  if (Fortran::semantics::IsDummy(sym)) {
-    // PRIF provide prif_alias_destroy to delete an aliased descriptor
-    // for a coarray. This procedure does not deallocate or alter the
-    // orginal coarray but need to be called when we leave the scope
-    // for a dummy coarray argument.The MIF dialect will provide an
-    // operation to handle this case.
-    TODO(loc, "Cleanup aliased coarray created for a dummy argument.");
-  }
-
-  converter.getFctCtx().attachCleanup([&converter, loc, exv, sym]() {
-    if (auto mutBox = exv.getBoxOf<fir::MutableBoxValue>())
-      Fortran::lower::genDeallocateIfAllocated(converter, *mutBox, loc);
-    else
-      fir::emitFatalError(
-          loc, "Non-allocatable coarrays are never automatically deallocated");
-  });
-}
-
 /// Instantiate a global variable. If it hasn't already been processed, add
 /// the global to the ModuleOp as a new uniqued symbol and initialize it with
 /// the correct value. It will be referenced on demand using `fir.addr_of`.
@@ -729,6 +684,12 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = genLocation(converter, sym);
   mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   fir::GlobalOp global;
+
+  if (Fortran::evaluate::IsCoarray(sym))
+    if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
+      TODO(loc, "Coarray with an allocatable direct component and/or requiring "
+                "finalization.");
+
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
     // Emit only a declaration if the global does not exist.
@@ -748,9 +709,6 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::Value cast = builder.createConvert(loc, varAddrType, addrOf);
   Fortran::lower::StatementContext stmtCtx;
   mapSymbolAttributes(converter, var, symMap, stmtCtx, cast);
-
-  if (Fortran::evaluate::IsCoarray(sym))
-    genCleanupDeallocateCoarray(converter, var, symMap);
 }
 
 bool needCUDAAlloc(const Fortran::semantics::Symbol &sym) {
@@ -2537,8 +2495,9 @@ void Fortran::lower::mapSymbolAttributes(
   }
 
   if (Fortran::evaluate::IsCoarray(sym)) {
-    if (!Fortran::semantics::IsAllocatable(sym) &&
-        Fortran::semantics::IsSaved(sym) &&
+    assert(!Fortran::semantics::IsAllocatable(sym) &&
+           "must be a non-ALLOCATABLE coarray");
+    if (Fortran::semantics::IsSaved(sym) &&
         sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram)
       TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
     ;

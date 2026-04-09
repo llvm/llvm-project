@@ -439,6 +439,8 @@ def mif_AllocCoarrayOp
   let description = [{
     This operation allocates a coarray and provides the corresponding 
     coarray descriptor. This call is collective over the current team.
+    `lcobound` should be a rank-1 array of size equal to `corank`, and 
+    `ucobounds` should be a rank-1 array of size equal to `corank - 1`.
   }];
 
   let arguments = (ins StrAttr:$uniq_name,

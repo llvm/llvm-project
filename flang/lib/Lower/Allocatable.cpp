@@ -892,8 +892,7 @@ genDeallocate(fir::FirOpBuilder &builder,
               Fortran::lower::AbstractConverter &converter, mlir::Location loc,
               const fir::MutableBoxValue &box, ErrorManager &errorManager,
               mlir::Value declaredTypeDesc = {},
-              const Fortran::semantics::Symbol *symbol = nullptr,
-              const Fortran::lower::SomeExpr *allocExpr = nullptr) {
+              const Fortran::semantics::Symbol *symbol = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
   bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
   bool inlineDeallocation =
@@ -995,8 +994,6 @@ void Fortran::lower::genDeallocateStmt(
   for (const Fortran::parser::AllocateObject &allocateObject :
        std::get<std::list<Fortran::parser::AllocateObject>>(stmt.t)) {
     const Fortran::semantics::Symbol &symbol = unwrapSymbol(allocateObject);
-    const Fortran::lower::SomeExpr *allocExpr =
-        Fortran::semantics::GetExpr(allocateObject);
     fir::MutableBoxValue box =
         genMutableBoxValue(converter, loc, allocateObject);
     mlir::Value declaredTypeDesc = {};
@@ -1009,9 +1006,8 @@ void Fortran::lower::genDeallocateStmt(
               Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
         }
     }
-    mlir::Value beginOpValue =
-        genDeallocate(builder, converter, loc, box, errorManager,
-                      declaredTypeDesc, &symbol, allocExpr);
+    mlir::Value beginOpValue = genDeallocate(
+        builder, converter, loc, box, errorManager, declaredTypeDesc, &symbol);
     preDeallocationAction(converter, builder, beginOpValue, symbol);
   }
   builder.restoreInsertionPoint(insertPt);
