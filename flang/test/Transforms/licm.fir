@@ -2668,3 +2668,22 @@ func.func @test_hoist_no_reassoc(%arg0: f64, %arg1: !fir.ref<f64>) {
   }
   return
 }
+
+// -----
+// Test that hlfir.null is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_hlfir_null(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i64>)
+// CHECK:           %[[NULL:.*]] = hlfir.null !fir.ref<none>
+// CHECK:           %[[CVT:.*]] = fir.convert %[[NULL]] : (!fir.ref<none>) -> i64
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[CVT]] to %[[ARG0]] : !fir.ref<i64>
+func.func @test_hoist_hlfir_null(%arg0: !fir.ref<i64>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = hlfir.null !fir.ref<none>
+    %1 = fir.convert %0 : (!fir.ref<none>) -> i64
+    fir.store %1 to %arg0 : !fir.ref<i64>
+  }
+  return
+}
