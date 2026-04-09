@@ -603,6 +603,24 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
+KnownBits KnownBits::fshl(KnownBits LHS, KnownBits RHS, unsigned Amt) {
+  // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+  if (Amt == 0)
+    return LHS;
+  LHS <<= Amt;
+  RHS >>= LHS.getBitWidth() - Amt;
+  return LHS.unionWith(RHS);
+}
+
+KnownBits KnownBits::fshr(KnownBits LHS, KnownBits RHS, unsigned Amt) {
+  // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+  if (Amt == 0)
+    return RHS;
+  LHS <<= LHS.getBitWidth() - Amt;
+  RHS >>= Amt;
+  return LHS.unionWith(RHS);
+}
+
 KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   KnownBits Res =
       makeConstant(APIntOps::clmul(LHS.getMinValue(), RHS.getMinValue()));
