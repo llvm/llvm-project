@@ -62,13 +62,14 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    First_ = Block,
 // CHECK-NEXT:    Declaration,
 // CHECK-NEXT:    Delimited,
-// CHECK-NEXT:    Loop,
+// CHECK-NEXT:    LoopNest,
+// CHECK-NEXT:    LoopSeq,
 // CHECK-NEXT:    None,
 // CHECK-NEXT:    Separating,
 // CHECK-NEXT:    Last_ = Separating,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
+// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 7;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Category {
 // CHECK-NEXT:    Declarative,

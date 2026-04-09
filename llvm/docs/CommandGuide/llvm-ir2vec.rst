@@ -1,5 +1,5 @@
 llvm-ir2vec - IR2Vec and MIR2Vec Embedding Generation Tool
-===========================================================
+==========================================================
 
 .. program:: llvm-ir2vec
 

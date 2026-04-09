@@ -1,0 +1,55 @@
+## When --mattr and --mcpu are both empty, disassemble ELF with e_flags derived feature.
+# RUN: yaml2obj -DARCH_ARCHVERSION=EF_AVR_ARCH_AVR1 %s -o %t.avr1
+# RUN: llvm-objdump -d %t.avr1 | FileCheck %s --check-prefix=AVR1
+# RUN: yaml2obj -DARCH_ARCHVERSION=EF_AVR_ARCH_AVR3 %s -o %t.avr3
+# RUN: llvm-objdump -d %t.avr3 | FileCheck %s --check-prefix=ALL
+
+## The mask is being correctly applied before the version is determined.
+# RUN: yaml2obj -DARCH_ARCHVERSION='EF_AVR_ARCH_AVR3, EF_AVR_LINKRELAX_PREPARED' %s -o %t.multiflag
+# RUN: llvm-objdump -d %t.multiflag | FileCheck %s --check-prefix=ALL
+
+## If --mattr or --mcpu is specified, don't default to the file's e_flags derived feature.
+# RUN: llvm-objdump -d --mattr=+avr3 %t.avr1 | FileCheck %s --check-prefix=ALL
+# RUN: llvm-objdump -d --mcpu=avr3 %t.avr1 | FileCheck %s --check-prefix=ALL
+# RUN: llvm-objdump -d --mattr=+avr1 %t.avr3 | FileCheck %s --check-prefix=AVR1
+# RUN: llvm-objdump -d --mcpu=avr1 %t.avr3 | FileCheck %s --check-prefix=AVR1
+
+## If the file's e_flags doesn't representing an AVR version, default to "avr0".
+# RUN: yaml2obj -DARCH_ARCHVERSION=EF_AVR_LINKRELAX_PREPARED %s -o %t.noarchversion
+# RUN: llvm-objdump -d %t.noarchversion 2>&1 | FileCheck -DFILE=%t.noarchversion -DVERSION=0x0 %s --check-prefixes=AVR0,INVALIDARCHINFO
+
+## If file's e_flags is unrecognised, default to "avr0".
+# RUN: yaml2obj -DARCH_ARCHVERSION='EF_AVR_ARCH_AVR1, EF_AVR_ARCH_AVR6' %s -o %t.invalid
+# RUN: llvm-objdump -d %t.invalid 2>&1 | FileCheck -DFILE=%t.invalid -DVERSION=0x7 %s --check-prefixes=AVR0,INVALIDARCHINFO
+
+# AVR1:         <_start>:
+# AVR1-COUNT-2:  <unknown>
+# AVR1-NEXT:     lpm
+# AVR1-NEXT:     rjmp    .-2
+
+# ALL:      <_start>:
+# ALL-NEXT:   call    0x0
+# ALL-NEXT:   jmp     0x0
+# ALL-NEXT:   lpm
+# ALL-NEXT:   rjmp    .-2
+
+# INVALIDARCHINFO: warning: '[[FILE]]': unrecognised AVR version, [[VERSION]]: defaulting to avr0
+# AVR0:         <_start>:
+# AVR0-COUNT-3:   <unknown>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AVR
+  Flags:   [ [[ARCH_ARCHVERSION]] ]
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: 0E9400000C940000C895FFCF
+Symbols:
+  - Name:    _start
+    Section: .text
+    Binding: STB_GLOBAL

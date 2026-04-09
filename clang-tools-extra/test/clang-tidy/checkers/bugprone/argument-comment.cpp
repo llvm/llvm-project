@@ -117,12 +117,8 @@ void g() { f6(/*xxy=*/0, 0); }
 }
 
 
+#include <vector>
 namespace std {
-template <typename T>
-class vector {
-public:
-  void assign(int __n, const T &__val);
-};
 template<typename T>
 void swap(T& __a, T& __b);
 } // namespace std

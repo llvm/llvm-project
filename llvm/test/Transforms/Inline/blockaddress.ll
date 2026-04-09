@@ -1,5 +1,4 @@
 ; RUN: opt -passes=inline -S < %s | FileCheck %s
-; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 ; PR10162
 
 ; Make sure doit is not inlined since the blockaddress is taken

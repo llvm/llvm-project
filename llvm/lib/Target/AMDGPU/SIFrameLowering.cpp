@@ -12,6 +12,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SISpillUtils.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -139,8 +140,8 @@ static void buildPrologSpill(const GCNSubtarget &ST, const SIRegisterInfo &TRI,
                              MachineBasicBlock::iterator I, const DebugLoc &DL,
                              Register SpillReg, int FI, Register FrameReg,
                              int64_t DwordOff = 0) {
-  unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
-                                        : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+  unsigned Opc = ST.hasFlatScratchEnabled() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
+                                            : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
 
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -163,8 +164,8 @@ static void buildEpilogRestore(const GCNSubtarget &ST,
                                MachineBasicBlock::iterator I,
                                const DebugLoc &DL, Register SpillReg, int FI,
                                Register FrameReg, int64_t DwordOff = 0) {
-  unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
-                                        : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+  unsigned Opc = ST.hasFlatScratchEnabled() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
+                                            : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
 
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -591,7 +592,7 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
 }
 
 static unsigned getScratchScaleFactor(const GCNSubtarget &ST) {
-  return ST.enableFlatScratch() ? 1 : ST.getWavefrontSize();
+  return ST.hasFlatScratchEnabled() ? 1 : ST.getWavefrontSize();
 }
 
 void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
@@ -629,7 +630,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   // This will return `Register()` in cases where there are no actual
   // uses of the SRSRC.
   Register ScratchRsrcReg;
-  if (!ST.enableFlatScratch())
+  if (!ST.hasFlatScratchEnabled())
     ScratchRsrcReg = getEntryFunctionReservedScratchRsrcReg(MF);
 
   // Make the selected register live throughout the function.
@@ -724,14 +725,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         FrameInfo.getMaxAlign());
     MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
 
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
-        .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
-            AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 2));
-    // The MicroEngine ID is 0 for the graphics queue, and 1 or 2 for compute
-    // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
-    // SCC, so we need to check for 0 manually.
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(FPReg);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), FPReg).addImm(VGPRSize);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::GET_STACK_BASE), FPReg);
     if (requiresStackPointerReference(MF)) {
       Register SPReg = MFI->getStackPtrOffsetReg();
       assert(SPReg != AMDGPU::SP_REG);
@@ -755,10 +749,10 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   bool NeedsFlatScratchInit =
       MFI->getUserSGPRInfo().hasFlatScratchInit() &&
       (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
-       (!allStackObjectsAreDead(FrameInfo) && ST.enableFlatScratch()));
+       (!allStackObjectsAreDead(FrameInfo) && ST.hasFlatScratchEnabled()));
 
   if ((NeedsFlatScratchInit || ScratchRsrcReg) &&
-      PreloadedScratchWaveOffsetReg && !ST.flatScratchIsArchitected()) {
+      PreloadedScratchWaveOffsetReg && !ST.hasArchitectedFlatScratch()) {
     MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
     MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
   }
@@ -771,6 +765,17 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     emitEntryFunctionScratchRsrcRegSetup(MF, MBB, I, DL,
                                          PreloadedScratchRsrcReg,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
+  }
+
+  if (ST.hasWaitXcnt()) {
+    // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
+    // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
+    // insertion logic, which assumes multi-group mode by default.
+    unsigned RegEncoding =
+        AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+        .addImm(1)
+        .addImm(RegEncoding);
   }
 }
 
@@ -1212,22 +1217,14 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc DL;
 
-  if (FuncInfo->isChainFunction()) {
-    // Functions with the amdgpu_cs_chain[_preserve] CC don't receive a SP, but
-    // are free to set one up if they need it.
-    bool UseSP = requiresStackPointerReference(MF);
-    if (UseSP) {
-      assert(StackPtrReg != AMDGPU::SP_REG);
-
-      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B32), StackPtrReg)
-          .addImm(MFI.getStackSize() * getScratchScaleFactor(ST));
-    }
-  }
-
   bool HasFP = false;
   bool HasBP = false;
   uint32_t NumBytes = MFI.getStackSize();
   uint32_t RoundedSize = NumBytes;
+
+  // Chain functions never return, so there's no need to save and restore the FP
+  // or BP.
+  bool SavesStackRegs = !FuncInfo->isChainFunction();
 
   if (TRI.hasStackRealignment(MF))
     HasFP = true;
@@ -1235,10 +1232,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   Register FramePtrRegScratchCopy;
   if (!HasFP && !hasFP(MF)) {
     // Emit the CSR spill stores with SP base register.
-    emitCSRSpillStores(MF, MBB, MBBI, DL, LiveUnits,
-                       FuncInfo->isChainFunction() ? Register() : StackPtrReg,
+    emitCSRSpillStores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
                        FramePtrRegScratchCopy);
-  } else {
+  } else if (SavesStackRegs) {
     // CSR spill stores will use FP as base register.
     Register SGPRForFPSaveRestoreCopy =
         FuncInfo->getScratchSGPRCopyDstReg(FramePtrReg);
@@ -1323,17 +1319,17 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
   (void)FPSaved;
-  assert((!HasFP || FPSaved) &&
+  assert((!HasFP || FPSaved || !SavesStackRegs) &&
          "Needed to save FP but didn't save it anywhere");
 
   // If we allow spilling to AGPRs we may have saved FP but then spill
   // everything into AGPRs instead of the stack.
-  assert((HasFP || !FPSaved || EnableSpillVGPRToAGPR) &&
+  assert((HasFP || !FPSaved || !SavesStackRegs || EnableSpillVGPRToAGPR) &&
          "Saved FP but didn't need it");
 
   bool BPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(BasePtrReg);
   (void)BPSaved;
-  assert((!HasBP || BPSaved) &&
+  assert((!HasBP || BPSaved || !SavesStackRegs) &&
          "Needed to save BP but didn't save it anywhere");
 
   assert((HasBP || !BPSaved) && "Saved BP but didn't need it");
@@ -1348,6 +1344,10 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   if (FuncInfo->isEntryFunction())
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (FuncInfo->isChainFunction() && !MFI.hasTailCall())
     return;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -1367,7 +1367,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     MBBI = MBB.getFirstTerminator();
   }
 
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint32_t NumBytes = MFI.getStackSize();
   uint32_t RoundedSize = FuncInfo->isStackRealigned()
                              ? NumBytes + MFI.getMaxAlign().value()
@@ -1423,8 +1422,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       MIB.setMIFlag(MachineInstr::FrameDestroy);
   } else {
     // Insert the CSR spill restores with SP as the base register.
-    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits,
-                         FuncInfo->isChainFunction() ? Register() : StackPtrReg,
+    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
                          FramePtrRegScratchCopy);
   }
 }
@@ -1521,23 +1519,8 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
 
       MBB.sortUniqueLiveIns();
 
-      if (!SpillFIs.empty() && SeenDbgInstr) {
-        // FIXME: The dead frame indices are replaced with a null register from
-        // the debug value instructions. We should instead, update it with the
-        // correct register value. But not sure the register value alone is
-        for (MachineInstr &MI : MBB) {
-          if (MI.isDebugValue()) {
-            uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
-            if (MI.getOperand(StackOperandIdx).isFI() &&
-                !MFI.isFixedObjectIndex(
-                    MI.getOperand(StackOperandIdx).getIndex()) &&
-                SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
-              MI.getOperand(StackOperandIdx)
-                  .ChangeToRegister(Register(), false /*isDef*/);
-            }
-          }
-        }
-      }
+      if (!SpillFIs.empty() && SeenDbgInstr)
+        clearDebugInfoForSpillFIs(MFI, MBB, SpillFIs);
     }
   }
 
@@ -1652,6 +1635,11 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
     MFI->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 
+  // Chain functions don't return to the caller, so they don't need to preserve
+  // the FP and BP.
+  if (MFI->isChainFunction())
+    return;
+
   // hasFP only knows about stack objects that already exist. We're now
   // determining the stack slots that will be created, so we have to predict
   // them. Stack objects force FP usage with calls.
@@ -1742,8 +1730,7 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     assert(!NeedExecCopyReservedReg &&
            "Whole wave functions can use the reg mapped for their i1 argument");
 
-    // FIXME: Be more efficient!
-    unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+    unsigned NumArchVGPRs = ST.getAddressableNumArchVGPRs();
     for (MCRegister Reg :
          AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs))
       if (MF.getRegInfo().isPhysRegModified(Reg)) {
@@ -1833,9 +1820,7 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
 
 static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
                                        const GCNSubtarget &ST,
-                                       std::vector<CalleeSavedInfo> &CSI,
-                                       unsigned &MinCSFrameIndex,
-                                       unsigned &MaxCSFrameIndex) {
+                                       std::vector<CalleeSavedInfo> &CSI) {
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -1904,10 +1889,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
     int FrameIdx =
         MFI.CreateStackObject(BlockSize, TRI->getSpillAlign(*BlockRegClass),
                               /*isSpillSlot=*/true);
-    if ((unsigned)FrameIdx < MinCSFrameIndex)
-      MinCSFrameIndex = FrameIdx;
-    if ((unsigned)FrameIdx > MaxCSFrameIndex)
-      MaxCSFrameIndex = FrameIdx;
+    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     CSIt->setFrameIdx(FrameIdx);
     CSIt->setReg(RegBlock);
@@ -1917,8 +1899,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
 
 bool SIFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
-    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
-    unsigned &MaxCSFrameIndex) const {
+    std::vector<CalleeSavedInfo> &CSI) const {
   if (CSI.empty())
     return true; // Early exit if no callee saved registers are modified!
 
@@ -1926,12 +1907,12 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
   bool UseVGPRBlocks = ST.useVGPRBlockOpsForCSR();
 
   if (UseVGPRBlocks)
-    assignSlotsUsingVGPRBlocks(MF, ST, CSI, MinCSFrameIndex, MaxCSFrameIndex);
+    assignSlotsUsingVGPRBlocks(MF, ST, CSI);
 
-  return assignCalleeSavedSpillSlots(MF, TRI, CSI) || UseVGPRBlocks;
+  return assignCalleeSavedSpillSlotsImpl(MF, TRI, CSI) || UseVGPRBlocks;
 }
 
-bool SIFrameLowering::assignCalleeSavedSpillSlots(
+bool SIFrameLowering::assignCalleeSavedSpillSlotsImpl(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
   if (CSI.empty())
@@ -1988,7 +1969,7 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   // TODO: We could try sorting the objects to find a hole in the first bytes
   // rather than allocating as close to possible. This could save a lot of space
   // on frames with alignment requirements.
-  if (ST.enableFlatScratch()) {
+  if (ST.hasFlatScratchEnabled()) {
     if (TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                SIInstrFlags::FlatScratch))
       return false;
@@ -2157,11 +2138,10 @@ static bool frameTriviallyRequiresSP(const MachineFrameInfo &MFI) {
 bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  // For entry & chain functions we can use an immediate offset in most cases,
+  // For entry functions we can use an immediate offset in most cases,
   // so the presence of calls doesn't imply we need a distinct frame pointer.
   if (MFI.hasCalls() &&
-      !MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() &&
-      !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) {
+      !MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction()) {
     // All offsets are unsigned, so need to be addressed in the same direction
     // as stack growth.
 
@@ -2170,9 +2150,7 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return (frameTriviallyRequiresSP(MFI) &&
-          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
-         MFI.isFrameAddressTaken() ||
+  return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
          mayReserveScratchForCWSR(MF) ||
@@ -2191,21 +2169,18 @@ bool SIFrameLowering::mayReserveScratchForCWSR(
 // register. We may need to initialize the stack pointer depending on the frame
 // properties, which logically overlaps many of the cases where an ordinary
 // function would require an FP.
-// Also used for chain functions. While not technically entry functions, chain
-// functions may need to set up a stack pointer in some situations.
 bool SIFrameLowering::requiresStackPointerReference(
     const MachineFunction &MF) const {
   // Callable functions always require a stack pointer reference.
-  assert((MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() ||
-          MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) &&
-         "only expected to call this for entry points and chain functions");
+  assert(MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() &&
+         "only expected to call this for entry points functions");
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Entry points ordinarily don't need to initialize SP. We have to set it up
-  // for callees if there are any. Also note tail calls are impossible/don't
-  // make any sense for kernels.
-  if (MFI.hasCalls())
+  // for callees if there are any. Also note tail calls are only possible via
+  // the `llvm.amdgcn.cs.chain` intrinsic.
+  if (MFI.hasCalls() || MFI.hasTailCall())
     return true;
 
   // We still need to initialize the SP if we're doing anything weird that

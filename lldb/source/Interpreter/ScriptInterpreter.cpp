@@ -15,6 +15,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/ValueObject/ValueObject.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #endif
@@ -106,6 +107,13 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   return Status();
 }
 
+lldb::ThreadSP ScriptInterpreter::GetOpaqueTypeFromSBThread(
+    const lldb::SBThread &thread) const {
+  if (thread.m_opaque_sp)
+    return thread.m_opaque_sp->GetThreadSP();
+  return nullptr;
+}
+
 lldb::StackFrameSP
 ScriptInterpreter::GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const {
   if (frame.m_opaque_sp)
@@ -136,7 +144,7 @@ SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
   return {};
 }
 
-std::optional<MemoryRegionInfo>
+std::optional<lldb_private::MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
   if (!mem_region.m_opaque_up)
@@ -153,6 +161,15 @@ ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
 lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
     const lldb::SBFrameList &frame_list) const {
   return frame_list.m_opaque_sp;
+}
+
+lldb::ValueObjectSP
+ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
+  if (!value.m_opaque_sp)
+    return lldb::ValueObjectSP();
+
+  lldb_private::ValueLocker locker;
+  return locker.GetLockedSP(*value.m_opaque_sp);
 }
 
 lldb::ScriptLanguage
@@ -195,6 +212,31 @@ Status ScriptInterpreter::SetBreakpointCommandCallbackFunction(
 std::unique_ptr<ScriptInterpreterLocker>
 ScriptInterpreter::AcquireInterpreterLock() {
   return std::make_unique<ScriptInterpreterLocker>();
+}
+
+ScriptInterpreter::SanitizedScriptingModuleName
+ScriptInterpreter::GetSanitizedScriptingModuleName(llvm::StringRef name) {
+  std::string sanitized_name(name);
+  std::string conflicting_keyword;
+
+  // FIXME: for Python, don't allow certain characters in imported module
+  // filenames. Theoretically, different scripting languages may have
+  // different sets of forbidden tokens in filenames, and that should
+  // be dealt with by each ScriptInterpreter. For now, just replace dots
+  // with underscores. In order to support anything other than Python
+  // this will need to be reworked.
+  llvm::replace(sanitized_name, '.', '_');
+  llvm::replace(sanitized_name, ' ', '_');
+  llvm::replace(sanitized_name, '-', '_');
+  llvm::replace(sanitized_name, '+', 'x');
+
+  if (IsReservedWord(sanitized_name.c_str())) {
+    conflicting_keyword = sanitized_name;
+    sanitized_name.insert(sanitized_name.begin(), '_');
+  }
+
+  return ScriptInterpreter::SanitizedScriptingModuleName(
+      name.str(), std::move(sanitized_name), std::move(conflicting_keyword));
 }
 
 static void ReadThreadBytesReceived(void *baton, const void *src,

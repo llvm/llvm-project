@@ -4,24 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvfh,+experimental-zvfbfa \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 
-declare <vscale x 1 x half> @llvm.riscv.vfadd.nxv1f16.nxv1f16(
-  <vscale x 1 x half>,
-  <vscale x 1 x half>,
-  <vscale x 1 x half>,
-  iXLen, iXLen);
-
-declare <vscale x 1 x i32> @llvm.riscv.vadd.nxv1i32.nxv1i32(
-  <vscale x 1 x i32>,
-  <vscale x 1 x i32>,
-  <vscale x 1 x i32>,
-  iXLen);
-
-declare <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(
-  <vscale x 1 x bfloat>,
-  <vscale x 1 x bfloat>,
-  <vscale x 1 x bfloat>,
-  iXLen, iXLen);
-
 define <vscale x 1 x bfloat> @test_half_bf16(<vscale x 1 x bfloat> %0, <vscale x 1 x bfloat> %1, iXLen %2, <vscale x 1 x half> %3, <vscale x 1 x half> %4, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_half_bf16:
 ; CHECK:       # %bb.0: # %entry

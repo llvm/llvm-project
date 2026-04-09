@@ -4575,13 +4575,12 @@ define amdgpu_kernel void @global_load_v32i32(ptr addrspace(1) %out, ptr addrspa
 ; GCNX3-HSA-NEXT:    s_addc_u32 s1, s1, 0
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(7)
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[2:3], v[4:7]
-; GCNX3-HSA-NEXT:    s_nop 0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, s4
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, s8
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v7, s9
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(7)
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[6:7], v[8:11]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, s6
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, s4
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v7, s7
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v9, s1

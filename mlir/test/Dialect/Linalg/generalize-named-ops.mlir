@@ -1261,3 +1261,21 @@ func.func @contract_matmul_bcast_a_b(
       outs(%C: memref<3x7xf32>)
   return
 }
+
+// -----
+
+// Test that discardable (user-defined) attributes are preserved during
+// generalization.
+
+func.func @preserve_discardable_attrs(%A : tensor<16x8xf32>,
+                                            %B : tensor<8x32xf32>,
+                                            %C : tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.matmul {my_custom_attr = "preserved", another_attr = 42 : i64}
+                     ins(%A, %B: tensor<16x8xf32>, tensor<8x32xf32>)
+                     outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
+  return %0: tensor<16x32xf32>
+}
+
+// CHECK-LABEL: func @preserve_discardable_attrs
+// CHECK:         linalg.generic
+// CHECK-SAME:        attrs = {another_attr = 42 : i64, my_custom_attr = "preserved"}

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-detect-full-functions '-passes=cgscc(polly-inline),function(print<polly-function-scops>)' -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-detect-full-functions '-passes=cgscc(polly-inline),polly-custom<print-scops>' -disable-output < %s | FileCheck %s
 
 ; Check that we get the 2 nested loops by inlining `to_be_inlined` into
 ; `inline_site`.

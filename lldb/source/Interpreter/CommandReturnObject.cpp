@@ -8,7 +8,7 @@
 
 #include "lldb/Interpreter/CommandReturnObject.h"
 
-#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -66,42 +66,6 @@ void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
     error(GetErrorStream());
     DumpStringToStreamWithNewline(GetErrorStream(), s);
   }
-}
-
-void CommandReturnObject::AppendMessageWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  GetOutputStream() << sstrm.GetString();
-}
-
-void CommandReturnObject::AppendNoteWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  note(GetOutputStream()) << sstrm.GetString();
-}
-
-void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
-  if (!format)
-    return;
-  va_list args;
-  va_start(args, format);
-  StreamString sstrm;
-  sstrm.PrintfVarArg(format, args);
-  va_end(args);
-
-  warning(GetErrorStream()) << sstrm.GetString();
 }
 
 void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
@@ -171,15 +135,6 @@ std::string CommandReturnObject::GetErrorString(bool with_diagnostics) const {
 
 StructuredData::ObjectSP CommandReturnObject::GetErrorData() {
   return Serialize(m_diagnostics);
-}
-
-// Similar to AppendError, but do not prepend 'Status: ' to message, and don't
-// append "\n" to the end of it.
-
-void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
-  SetStatus(eReturnStatusFailed);
-  assert(!in_string.empty() && "Expected a non-empty error message");
-  GetErrorStream() << in_string;
 }
 
 void CommandReturnObject::SetStatus(ReturnStatus status) { m_status = status; }

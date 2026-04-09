@@ -126,7 +126,38 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  bool isOpLegal(Instruction *I) { return isa<StoreInst, IntrinsicInst>(I); }
+  bool isOpLegal(const Instruction *I) {
+    if (isa<IntrinsicInst>(I))
+      return true;
+
+    // Any store is a profitable sink (prevents flip-flopping)
+    if (isa<StoreInst>(I))
+      return true;
+
+    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      if (auto *VT = dyn_cast<FixedVectorType>(BO->getType())) {
+        if (const auto *IT = dyn_cast<IntegerType>(VT->getElementType())) {
+          unsigned EB = IT->getBitWidth();
+          unsigned EC = VT->getNumElements();
+          // Check for SDWA-compatible operation
+          if ((EB == 8 || EB == 16) && ST.hasSDWA() && EC * EB <= 32) {
+            switch (BO->getOpcode()) {
+            case Instruction::Add:
+            case Instruction::Sub:
+            case Instruction::And:
+            case Instruction::Or:
+            case Instruction::Xor:
+              return true;
+            default:
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
 
   bool isCoercionProfitable(Instruction *II) {
     SmallPtrSet<Instruction *, 4> CVisited;

@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCPPBreakpointLocations(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test(self):
         self.do_test(dict())

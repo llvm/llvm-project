@@ -14,6 +14,7 @@
 #include "LLVMContextImpl.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -37,8 +38,10 @@ static_assert(sizeof(GlobalValue) ==
                   sizeof(Constant) + 2 * sizeof(void *) + 2 * sizeof(unsigned),
               "unexpected GlobalValue size growth");
 
-// GlobalObject adds a comdat.
-static_assert(sizeof(GlobalObject) == sizeof(GlobalValue) + sizeof(void *),
+// GlobalObject adds a comdat and metadata index.
+static_assert(sizeof(GlobalObject) ==
+                  sizeof(GlobalValue) + sizeof(void *) +
+                      alignTo(sizeof(unsigned), alignof(void *)),
               "unexpected GlobalObject size growth");
 
 bool GlobalValue::isMaterializable() const {
@@ -102,7 +105,13 @@ void GlobalValue::eraseFromParent() {
   llvm_unreachable("not a global");
 }
 
-GlobalObject::~GlobalObject() { setComdat(nullptr); }
+GlobalObject::~GlobalObject() {
+  // Remove associated metadata from context.
+  if (hasMetadata())
+    clearMetadata();
+
+  setComdat(nullptr);
+}
 
 bool GlobalValue::isInterposable() const {
   if (isInterposableLinkage(getLinkage()))
@@ -388,6 +397,15 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
+bool GlobalObject::hasMetadataOtherThanDebugLoc() const {
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  getAllMetadata(MDs);
+  for (const auto &V : MDs)
+    if (V.first != LLVMContext::MD_dbg)
+      return true;
+  return false;
+}
+
 template <typename Operation>
 static const GlobalObject *
 findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,
@@ -546,6 +564,11 @@ void GlobalVariable::replaceInitializer(Constant *InitVal) {
   assert(InitVal && "Can't compute type of null initializer");
   ValueType = InitVal->getType();
   setInitializer(InitVal);
+}
+
+uint64_t GlobalVariable::getGlobalSize(const DataLayout &DL) const {
+  // We don't support scalable global variables.
+  return DL.getTypeAllocSize(getValueType()).getFixedValue();
 }
 
 /// Copy all additional attributes (those not needed to create a GlobalVariable)

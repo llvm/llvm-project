@@ -523,9 +523,7 @@ define <2 x i32> @fptosi_nonnorm_copysign_vec(<2 x float> %x) {
 
 define i32 @fptosi_nonnorm_fmul(float %x) {
 ; CHECK-LABEL: @fptosi_nonnorm_fmul(
-; CHECK-NEXT:    [[SEL:%.*]] = fmul float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[SEL]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 0
 ;
   %sel = fmul float %x, 0.000000e+00
   %ret = fptosi float %sel to i32
@@ -552,4 +550,40 @@ entry:
   %ret = fmul float %fp, 0.000000e+00
   %conv = fptosi float %ret to i32
   ret i32 %conv
+}
+
+define i32 @signbits_sitofp_fptosi_roundtrip(i32 %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip(
+; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 7
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %m = ashr i32 %x, 7
+  %f = sitofp i32 %m to float
+  %r = fptosi float %f to i32
+  ret i32 %r
+}
+
+define <4 x i32> @signbits_sitofp_fptosi_roundtrip_vec(<4 x i32> %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_vec(
+; CHECK-NEXT:    [[M:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 7)
+; CHECK-NEXT:    ret <4 x i32> [[M]]
+;
+  %m = ashr <4 x i32> %x, splat (i32 7)
+  %f = sitofp <4 x i32> %m to <4 x float>
+  %r = fptosi <4 x float> %f to <4 x i32>
+  ret <4 x i32> %r
+}
+
+; Negative: 26 significant bits, 25 mantissa > 24.
+define i32 @signbits_sitofp_fptosi_roundtrip_neg(i32 %x) {
+; CHECK-LABEL: @signbits_sitofp_fptosi_roundtrip_neg(
+; CHECK-NEXT:    [[M:%.*]] = ashr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[F]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = ashr i32 %x, 6
+  %f = sitofp i32 %m to float
+  %r = fptosi float %f to i32
+  ret i32 %r
 }

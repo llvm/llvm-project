@@ -16,7 +16,7 @@ define i64 @foo(ptr nocapture noundef readonly %a, i64 noundef %N, i64 noundef %
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.06 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rd.05 = phi i64 [ %add, %for.body ], [ %init, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %i.06
@@ -26,7 +26,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i64 %add
 }
 

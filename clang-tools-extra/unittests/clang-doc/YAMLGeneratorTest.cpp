@@ -22,15 +22,18 @@ static std::unique_ptr<Generator> getYAMLGenerator() {
   return std::move(G.get());
 }
 
-TEST(YAMLGeneratorTest, emitNamespaceYAML) {
+class YAMLGeneratorTest : public ClangDocContextTest {};
+
+TEST_F(YAMLGeneratorTest, emitNamespaceYAML) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Path = "path/to/A";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.Children.Namespaces.emplace_back(
-      EmptySID, "ChildNamespace", InfoType::IT_namespace,
-      "path::to::A::Namespace::ChildNamespace", "path/to/A/Namespace");
+  Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
+                         "path::to::A::Namespace::ChildNamespace",
+                         "path/to/A/Namespace");
+  I.Children.Namespaces.push_back(NewNamespace);
   I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
                                   "path::to::A::Namespace::ChildStruct",
                                   "path/to/A/Namespace");
@@ -44,7 +47,7 @@ TEST(YAMLGeneratorTest, emitNamespaceYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -77,7 +80,7 @@ ChildEnums:
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, emitRecordYAML) {
+TEST_F(YAMLGeneratorTest, emitRecordYAML) {
   RecordInfo I;
   I.Name = "r";
   I.Path = "path/to/A";
@@ -92,10 +95,10 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   // Member documentation.
   CommentInfo TopComment;
   TopComment.Kind = CommentKind::CK_FullComment;
-  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+  TopComment.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *Brief = TopComment.Children.back().get();
   Brief->Kind = CommentKind::CK_ParagraphComment;
-  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
   Brief->Children.back()->Kind = CommentKind::CK_TextComment;
   Brief->Children.back()->Name = "ParagraphComment";
   Brief->Children.back()->Text = "Value of the thing.";
@@ -124,7 +127,7 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -202,7 +205,7 @@ ChildEnums:
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, emitFunctionYAML) {
+TEST_F(YAMLGeneratorTest, emitFunctionYAML) {
   FunctionInfo I;
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -223,7 +226,7 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -267,7 +270,7 @@ ReturnType:
 // namespace A {
 // enum e { X };
 // }
-TEST(YAMLGeneratorTest, emitSimpleEnumYAML) {
+TEST_F(YAMLGeneratorTest, emitSimpleEnumYAML) {
   EnumInfo I;
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -282,7 +285,7 @@ TEST(YAMLGeneratorTest, emitSimpleEnumYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -308,7 +311,7 @@ Members:
 
 // Tests the equivalent of:
 // enum class e : short { X = FOO_BAR + 2 };
-TEST(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
+TEST_F(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
   EnumInfo I;
   I.Name = "e";
 
@@ -320,7 +323,7 @@ TEST(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -340,7 +343,7 @@ Members:
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, enumTypedefYAML) {
+TEST_F(YAMLGeneratorTest, enumTypedefYAML) {
   TypedefInfo I;
   I.Name = "MyUsing";
   I.Underlying = TypeInfo("int");
@@ -350,7 +353,7 @@ TEST(YAMLGeneratorTest, enumTypedefYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---
@@ -365,7 +368,7 @@ IsUsing:         true
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, emitCommentYAML) {
+TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   FunctionInfo I;
   I.Name = "f";
   I.DefLoc = Location(10, 10, "test.cpp");
@@ -377,102 +380,104 @@ TEST(YAMLGeneratorTest, emitCommentYAML) {
   CommentInfo Top;
   Top.Kind = CommentKind::CK_FullComment;
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *BlankLine = Top.Children.back().get();
   BlankLine->Kind = CommentKind::CK_ParagraphComment;
-  BlankLine->Children.emplace_back(std::make_unique<CommentInfo>());
+  BlankLine->Children.emplace_back(allocatePtr<CommentInfo>());
   BlankLine->Children.back()->Kind = CommentKind::CK_TextComment;
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *Brief = Top.Children.back().get();
   Brief->Kind = CommentKind::CK_ParagraphComment;
-  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
   Brief->Children.back()->Kind = CommentKind::CK_TextComment;
   Brief->Children.back()->Name = "ParagraphComment";
   Brief->Children.back()->Text = " Brief description.";
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *Extended = Top.Children.back().get();
   Extended->Kind = CommentKind::CK_ParagraphComment;
-  Extended->Children.emplace_back(std::make_unique<CommentInfo>());
+  Extended->Children.emplace_back(allocatePtr<CommentInfo>());
   Extended->Children.back()->Kind = CommentKind::CK_TextComment;
   Extended->Children.back()->Text = " Extended description that";
-  Extended->Children.emplace_back(std::make_unique<CommentInfo>());
+  Extended->Children.emplace_back(allocatePtr<CommentInfo>());
   Extended->Children.back()->Kind = CommentKind::CK_TextComment;
   Extended->Children.back()->Text = " continues onto the next line.";
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *HTML = Top.Children.back().get();
   HTML->Kind = CommentKind::CK_ParagraphComment;
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
+  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_TextComment;
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
+  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
   HTML->Children.back()->Name = "ul";
-  HTML->Children.back()->AttrKeys.emplace_back("class");
-  HTML->Children.back()->AttrValues.emplace_back("test");
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
+  {
+    llvm::SmallVector<StringRef, 1> Keys = {"class"};
+    HTML->Children.back()->AttrKeys =
+        allocateArray<StringRef>(Keys, TransientArena);
+
+    llvm::SmallVector<StringRef, 1> Values = {"test"};
+    HTML->Children.back()->AttrValues =
+        allocateArray<StringRef>(Values, TransientArena);
+  }
+  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
   HTML->Children.back()->Name = "li";
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
+  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_TextComment;
   HTML->Children.back()->Text = " Testing.";
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
+  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
   HTML->Children.back()->Kind = CommentKind::CK_HTMLEndTagComment;
   HTML->Children.back()->Name = "ul";
   HTML->Children.back()->SelfClosing = true;
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *Verbatim = Top.Children.back().get();
   Verbatim->Kind = CommentKind::CK_VerbatimBlockComment;
   Verbatim->Name = "verbatim";
   Verbatim->CloseName = "endverbatim";
-  Verbatim->Children.emplace_back(std::make_unique<CommentInfo>());
+  Verbatim->Children.emplace_back(allocatePtr<CommentInfo>());
   Verbatim->Children.back()->Kind = CommentKind::CK_VerbatimBlockLineComment;
   Verbatim->Children.back()->Text = " The description continues.";
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *ParamOut = Top.Children.back().get();
   ParamOut->Kind = CommentKind::CK_ParamCommandComment;
   ParamOut->Direction = "[out]";
   ParamOut->ParamName = "I";
   ParamOut->Explicit = true;
-  ParamOut->Children.emplace_back(std::make_unique<CommentInfo>());
+  ParamOut->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamOut->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamOut->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
+  ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamOut->Children.back()->Children.back()->Kind =
       CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
+  ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamOut->Children.back()->Children.back()->Kind =
       CommentKind::CK_TextComment;
   ParamOut->Children.back()->Children.back()->Text = " is a parameter.";
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *ParamIn = Top.Children.back().get();
   ParamIn->Kind = CommentKind::CK_ParamCommandComment;
   ParamIn->Direction = "[in]";
   ParamIn->ParamName = "J";
-  ParamIn->Children.emplace_back(std::make_unique<CommentInfo>());
+  ParamIn->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamIn->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamIn->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
+  ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
   ParamIn->Children.back()->Children.back()->Text = " is a parameter.";
-  ParamIn->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
+  ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *Return = Top.Children.back().get();
   Return->Kind = CommentKind::CK_BlockCommandComment;
   Return->Name = "return";
   Return->Explicit = true;
-  Return->Children.emplace_back(std::make_unique<CommentInfo>());
+  Return->Children.emplace_back(allocatePtr<CommentInfo>());
   Return->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  Return->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
+  Return->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   Return->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
   Return->Children.back()->Children.back()->Text = "void";
 
@@ -482,7 +487,7 @@ TEST(YAMLGeneratorTest, emitCommentYAML) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(---

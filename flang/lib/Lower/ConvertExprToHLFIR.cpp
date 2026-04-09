@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
@@ -36,6 +37,19 @@
 #include <optional>
 
 namespace {
+
+// This was modelled after isParenthesizedVariable()
+template <typename T>
+static bool isParenthesized(const Fortran::evaluate::Expr<T> &expr) {
+  using ExprVariant = decltype(Fortran::evaluate::Expr<T>::u);
+  using Parentheses = Fortran::evaluate::Parentheses<T>;
+  if constexpr (Fortran::common::HasMember<Parentheses, ExprVariant>) {
+    return std::get_if<Parentheses>(&expr.u) != nullptr;
+  } else {
+    return Fortran::common::visit(
+        [&](const auto &x) { return isParenthesized(x); }, expr.u);
+  }
+}
 
 /// Lower Designators to HLFIR.
 class HlfirDesignatorBuilder {
@@ -368,6 +382,8 @@ private:
 
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::Component &component) {
+    if (auto remapped = symMap.lookupComponentOverride(component))
+      return *remapped;
     if (Fortran::semantics::IsAllocatableOrPointer(component.GetLastSymbol()))
       return genWholeAllocatableOrPointerComponent(component);
     PartInfo partInfo;
@@ -477,6 +493,8 @@ private:
 
   fir::FortranVariableOpInterface genWholeAllocatableOrPointerComponent(
       const Fortran::evaluate::Component &component) {
+    if (auto remapped = symMap.lookupComponentOverride(component))
+      return *remapped;
     // Generate whole allocatable or pointer component reference. The
     // hlfir.designate result will be a pointer/allocatable.
     PartInfo partInfo;
@@ -539,7 +557,8 @@ private:
       // components need special care to deal with the array%array_comp(indices)
       // case.
       if (Fortran::semantics::IsAllocatableOrObjectPointer(
-              &component->GetLastSymbol()))
+              &component->GetLastSymbol()) ||
+          symMap.lookupComponentOverride(*component))
         baseType = visit(*component, partInfo);
       else
         baseType = hlfir::getFortranElementOrSequenceType(
@@ -682,6 +701,15 @@ private:
       partInfo.base = genWholeAllocatableOrPointerComponent(component);
       partInfo.base = hlfir::derefPointersAndAllocatables(loc, getBuilder(),
                                                           *partInfo.base);
+      hlfir::genLengthParameters(loc, getBuilder(), *partInfo.base,
+                                 partInfo.typeParams);
+      return partInfo.base->getElementOrSequenceType();
+    }
+    if (auto remapped = symMap.lookupComponentOverride(component)) {
+      // Do not generate field for the designate if the component
+      // is overridden, the override value is already addressing
+      // the component.
+      partInfo.base = *remapped;
       hlfir::genLengthParameters(loc, getBuilder(), *partInfo.base,
                                  partInfo.typeParams);
       return partInfo.base->getElementOrSequenceType();
@@ -1298,6 +1326,33 @@ struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
+    bool lhsIsLogical = mlir::isa<fir::LogicalType>(lhs.getType());
+    bool rhsIsLogical = mlir::isa<fir::LogicalType>(rhs.getType());
+    if (lhsIsLogical || rhsIsLogical) {
+      // Use fir logical ops when at least one operand is a Fortran LOGICAL.
+      // Ensure both operands have the same type.
+      mlir::Type resTy = lhsIsLogical ? lhs.getType() : rhs.getType();
+      mlir::Value lhsVal = builder.createConvert(loc, resTy, lhs);
+      mlir::Value rhsVal = builder.createConvert(loc, resTy, rhs);
+      switch (op.logicalOperator) {
+      case Fortran::evaluate::LogicalOperator::And:
+        return hlfir::EntityWithAttributes{
+            fir::LogicalAndOp::create(builder, loc, resTy, lhsVal, rhsVal)};
+      case Fortran::evaluate::LogicalOperator::Or:
+        return hlfir::EntityWithAttributes{
+            fir::LogicalOrOp::create(builder, loc, resTy, lhsVal, rhsVal)};
+      case Fortran::evaluate::LogicalOperator::Eqv:
+        return hlfir::EntityWithAttributes{
+            fir::EqvOp::create(builder, loc, resTy, lhsVal, rhsVal)};
+      case Fortran::evaluate::LogicalOperator::Neqv:
+        return hlfir::EntityWithAttributes{
+            fir::NeqvOp::create(builder, loc, resTy, lhsVal, rhsVal)};
+      case Fortran::evaluate::LogicalOperator::Not:
+        llvm_unreachable(".NOT. is not a binary operator");
+      }
+      llvm_unreachable("unhandled logical operation");
+    }
+    // Both operands are i1 (from arithmetic comparisons): use arith ops.
     mlir::Type i1Type = builder.getI1Type();
     mlir::Value i1Lhs = builder.createConvert(loc, i1Type, lhs);
     mlir::Value i1Rhs = builder.createConvert(loc, i1Type, rhs);
@@ -1315,7 +1370,6 @@ struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
       return hlfir::EntityWithAttributes{mlir::arith::CmpIOp::create(
           builder, loc, mlir::arith::CmpIPredicate::ne, i1Lhs, i1Rhs)};
     case Fortran::evaluate::LogicalOperator::Not:
-      // lib/evaluate expression for .NOT. is Fortran::evaluate::Not<KIND>.
       llvm_unreachable(".NOT. is not a binary operator");
     }
     llvm_unreachable("unhandled logical operation");
@@ -1689,12 +1743,27 @@ private:
     BinaryOp<D> binaryOp;
     auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
     auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
+
+    // "A op (...)" or "(...) op A" may need to have their reassoc flag
+    // turned off
+    const bool leftIsParens = isParenthesized(op.left());
+    const bool rightIsParens = isParenthesized(op.right());
+    const bool noReassoc =
+        getConverter().getLoweringOptions().getProtectParens() &&
+        (leftIsParens || rightIsParens);
     llvm::SmallVector<mlir::Value, 1> typeParams;
     if constexpr (R::category == Fortran::common::TypeCategory::Character) {
       binaryOp.genResultTypeParams(loc, builder, left, right, typeParams);
     }
-    if (rank == 0)
-      return binaryOp.gen(loc, builder, op.derived(), left, right);
+    if (rank == 0) {
+      auto fmfBackup = builder.getFastMathFlags();
+      if (noReassoc)
+        builder.setFastMathFlags(fmfBackup &
+                                 ~mlir::arith::FastMathFlags::reassoc);
+      auto res = binaryOp.gen(loc, builder, op.derived(), left, right);
+      builder.setFastMathFlags(fmfBackup);
+      return res;
+    }
 
     // Elemental expression.
     mlir::Type elementType =
@@ -1708,14 +1777,19 @@ private:
       assert(right.isArray() && "must have at least one array operand");
       shape = hlfir::genShape(loc, builder, right);
     }
-    auto genKernel = [&op, &left, &right, &binaryOp](
+    auto genKernel = [&op, &left, &right, &binaryOp, noReassoc](
                          mlir::Location l, fir::FirOpBuilder &b,
                          mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+      auto fmfBackup = b.getFastMathFlags();
+      if (noReassoc)
+        b.setFastMathFlags(fmfBackup & ~mlir::arith::FastMathFlags::reassoc);
       auto leftElement = hlfir::getElementAt(l, b, left, oneBasedIndices);
       auto rightElement = hlfir::getElementAt(l, b, right, oneBasedIndices);
       auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
       auto rightVal = hlfir::loadTrivialScalar(l, b, rightElement);
-      return binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
+      auto result = binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
+      b.setFastMathFlags(fmfBackup);
+      return result;
     };
     auto iofBackup = builder.getIntegerOverflowFlags();
     // nsw is never added to operations on vector subscripts
@@ -1738,6 +1812,12 @@ private:
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::TypeParamInquiry &) {
     TODO(getLoc(), "lowering type parameter inquiry to HLFIR");
+  }
+
+  template <typename T>
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::ConditionalExpr<T> &) {
+    TODO(getLoc(), "lowering conditional expression to HLFIR");
   }
 
   hlfir::EntityWithAttributes

@@ -142,7 +142,12 @@ static void appendCodeTemplates(const LLVMState &State,
         return;
 
       ET.fillMemoryOperands(Variant, ScratchMemoryRegister, 0);
-      Variant.getValueFor(DefOp) = MCOperand::createReg(ScratchMemoryRegister);
+
+      // Only force the def register to ScratchMemoryRegister if the target
+      // hasn't assigned a value yet.
+      MCOperand &DefVal = Variant.getValueFor(DefOp);
+      if (!DefVal.isValid())
+        DefVal = MCOperand::createReg(ScratchMemoryRegister);
 
       CodeTemplate CT;
       CT.Execution = ExecutionModeBit;

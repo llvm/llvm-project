@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDESORTER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDESORTER_H
 
 #include "../ClangTidyCheck.h"
 #include <optional>
@@ -73,4 +73,4 @@ template <> struct OptionEnumMapping<utils::IncludeSorter::IncludeStyle> {
   getEnumMapping();
 };
 } // namespace clang::tidy
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDESORTER_H

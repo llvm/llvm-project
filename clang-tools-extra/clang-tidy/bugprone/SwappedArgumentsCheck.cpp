@@ -70,7 +70,7 @@ static bool areArgumentsPotentiallySwapped(const QualType LTo,
   if (LTo == RFrom && REq)
     return true;
 
-  bool LEq = areTypesSemiEqual(LTo, RFrom);
+  const bool LEq = areTypesSemiEqual(LTo, RFrom);
   if (RTo == LFrom && LEq)
     return true;
 

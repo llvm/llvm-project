@@ -4,7 +4,6 @@
 ; Test that VPlan native path is able to widen call intructions like
 ; llvm.sqrt.* intrincis calls.
 
-declare double @llvm.sqrt.f64(double %0)
 define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr noalias nocapture readonly %b.in, ptr noalias nocapture %c.out) {
 ; CHECK-LABEL: define void @widen_call_instruction(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[A_IN:%.*]], ptr noalias readonly captures(none) [[B_IN:%.*]], ptr noalias captures(none) [[C_OUT:%.*]]) {
@@ -30,11 +29,10 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[FOR2_HEADER2]]
 ; CHECK:       [[VECTOR_LATCH]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x double> [ [[TMP3]], %[[FOR2_HEADER2]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[C_OUT]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP9]], <4 x ptr> align 8 [[TMP7]], <4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP3]], <4 x ptr> align 8 [[TMP7]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

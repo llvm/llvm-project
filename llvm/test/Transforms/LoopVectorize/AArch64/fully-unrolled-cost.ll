@@ -19,10 +19,10 @@ define i64 @test(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret i64 %add
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
   %sum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 %i.iv
@@ -50,11 +50,11 @@ define i64 @test_external_iv_user(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 16: 57
-; CHECK: LV: Selecting VF: vscale x 2
+; CHECK: LV: Selecting VF: 16
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
   %sum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %i.iv
@@ -69,7 +69,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %i.iv.next, 16
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret i64 %add
 }
 
@@ -92,10 +92,10 @@ define i64 @test_two_ivs(ptr %a, ptr %b, i64 %start) #0 {
 entry:
   br label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret i64 %add
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
   %sum = phi i64 [ 0, %entry ], [ %add, %for.body ]

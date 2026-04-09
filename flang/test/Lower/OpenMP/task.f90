@@ -212,7 +212,7 @@ subroutine task_firstprivate
   type mytype
   integer :: x
   end type mytype
- 
+
   !CHECK: %[[INT_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "int_var", uniq_name = "_QFtask_firstprivateEint_var"}
   !CHECK: %[[INT_VAR:.+]]:2 = hlfir.declare %[[INT_ALLOCA]] {uniq_name = "_QFtask_firstprivateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   !CHECK: %[[MYTYPE_ALLOCA:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}> {bindc_name = "mytype_var", uniq_name = "_QFtask_firstprivateEmytype_var"}

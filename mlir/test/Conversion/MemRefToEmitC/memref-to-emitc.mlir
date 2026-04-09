@@ -53,8 +53,18 @@ module @globals {
     // CHECK-NEXT: emitc.get_global @public_global : !emitc.array<3x7xf32>
     %0 = memref.get_global @public_global : memref<3x7xf32>
     // CHECK-NEXT: emitc.get_global @__constant_xi32 : !emitc.lvalue<i32>
-    // CHECK-NEXT: emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    // CHECK-NEXT: emitc.address_of %1 : !emitc.lvalue<i32>
     %1 = memref.get_global @__constant_xi32 : memref<i32>
     return
   }
+}
+
+// -----
+
+// CHECK-LABEL: rank0_globals
+module @rank0_globals {
+  memref.global @extern_global : memref<f32>
+  // CHECK-NEXT: emitc.global extern @extern_global : f32
+  memref.global @uninitialized_global : memref<f32> = uninitialized
+  // CHECK-NEXT: emitc.global extern @uninitialized_global : f32
 }

@@ -43,6 +43,17 @@ struct OpenACCPointerLikeModel
                mlir::TypedValue<mlir::acc::PointerLikeType> destination,
                mlir::TypedValue<mlir::acc::PointerLikeType> source,
                mlir::Type varType) const;
+
+  mlir::Value genLoad(mlir::Type pointer, mlir::OpBuilder &builder,
+                      mlir::Location loc,
+                      mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
+                      mlir::Type valueType) const;
+
+  bool genStore(mlir::Type pointer, mlir::OpBuilder &builder,
+                mlir::Location loc, mlir::Value valueToStore,
+                mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+  bool isDeviceData(mlir::Type pointer, mlir::Value var) const;
 };
 
 template <typename T>
@@ -69,15 +80,46 @@ struct OpenACCMappableModel
   mlir::acc::VariableTypeCategory getTypeCategory(mlir::Type type,
                                                   mlir::Value var) const;
 
+  mlir::acc::VariableInfoAttr
+  genPrivateVariableInfo(mlir::Type type,
+                         mlir::TypedValue<mlir::acc::MappableType> var) const;
+
   mlir::Value generatePrivateInit(mlir::Type type, mlir::OpBuilder &builder,
                                   mlir::Location loc,
                                   mlir::TypedValue<mlir::acc::MappableType> var,
                                   llvm::StringRef varName,
                                   mlir::ValueRange extents, mlir::Value initVal,
+                                  mlir::acc::VariableInfoAttr varInfo,
                                   bool &needsDestroy) const;
 
   bool generatePrivateDestroy(mlir::Type type, mlir::OpBuilder &builder,
-                              mlir::Location loc, mlir::Value privatized) const;
+                              mlir::Location loc, mlir::Value privatized,
+                              mlir::ValueRange bounds,
+                              mlir::acc::VariableInfoAttr varInfo) const;
+
+  bool generateCopy(mlir::Type type, mlir::OpBuilder &mlirBuilder,
+                    mlir::Location loc,
+                    mlir::TypedValue<mlir::acc::MappableType> source,
+                    mlir::TypedValue<mlir::acc::MappableType> dest,
+                    mlir::ValueRange bounds,
+                    mlir::acc::VariableInfoAttr varInfo) const;
+
+  bool generateCombiner(mlir::Type type, mlir::OpBuilder &mlirBuilder,
+                        mlir::Location loc,
+                        mlir::TypedValue<mlir::acc::MappableType> dest,
+                        mlir::TypedValue<mlir::acc::MappableType> source,
+                        mlir::ValueRange bounds,
+                        mlir::acc::ReductionOperator op,
+                        mlir::Attribute fastmathFlags) const;
+
+  bool isDeviceData(mlir::Type type, mlir::Value var) const;
+};
+
+struct OpenACCReducibleLogicalModel
+    : public mlir::acc::ReducibleType::ExternalModel<
+          OpenACCReducibleLogicalModel, fir::LogicalType> {
+  std::optional<mlir::arith::AtomicRMWKind>
+  getAtomicRMWKind(mlir::Type type, mlir::acc::ReductionOperator redOp) const;
 };
 
 } // namespace fir::acc

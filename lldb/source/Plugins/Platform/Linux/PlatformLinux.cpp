@@ -15,6 +15,7 @@
 #endif
 
 #include "Plugins/Process/Utility/LinuxSignals.h"
+#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
@@ -22,6 +23,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -220,6 +222,7 @@ void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
   m_trap_handlers.push_back(ConstString("__kernel_rt_sigreturn"));
   m_trap_handlers.push_back(ConstString("__restore_rt"));
+  m_trap_handlers.push_back(ConstString("__vdso_rt_sigreturn"));
 }
 
 static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
@@ -302,12 +305,92 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   return unwind_plan_sp;
 }
 
-lldb::UnwindPlanSP
-PlatformLinux::GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
-                                        ConstString name) {
+static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(ConstString name,
+                                                        uint32_t fp_flags) {
+  if (name != "__vdso_rt_sigreturn")
+    return {};
+
+  UnwindPlan::Row row;
+
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext struct:
+  //     - 8-byte long (uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte struct (uc_stack)
+  //     - 8-byte struct (uc_sigmask)
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/riscv/kernel/signal.c
+
+  constexpr size_t siginfo_size = 128;
+  constexpr size_t uc_flags_size = 8;
+  constexpr size_t uc_link_ptr_size = 8;
+  constexpr size_t uc_stack_size = 24;
+  constexpr size_t uc_sigmask_size = 8;
+  constexpr size_t padding_size = 128;
+
+  constexpr size_t offset = siginfo_size + uc_flags_size + uc_link_ptr_size +
+                            uc_stack_size + uc_sigmask_size + padding_size;
+
+  // In user_regs_struct GPRs are always 64-bit length
+  size_t gpr_size = 8;
+  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_riscv, offset);
+  for (uint32_t reg_num = gpr_first_riscv; reg_num < gpr_first_riscv + 32;
+       ++reg_num)
+    row.SetRegisterLocationToAtCFAPlusOffset(reg_num, reg_num * gpr_size,
+                                             false);
+
+  size_t fpr_size = 0;
+  switch (fp_flags) {
+  case ArchSpec::eRISCV_float_abi_soft:
+    fpr_size = 0;
+    break;
+  case ArchSpec::eRISCV_float_abi_single:
+    fpr_size = 4;
+    break;
+  case ArchSpec::eRISCV_float_abi_double:
+    fpr_size = 8;
+    break;
+  case ArchSpec::eRISCV_float_abi_quad:
+    fpr_size = 16;
+    break;
+  }
+
+  if (fpr_size != 0) {
+    for (uint32_t reg_num = fpr_first_riscv; reg_num < fpr_first_riscv + 32;
+         ++reg_num) {
+      size_t fpr_offset =
+          gpr_size * 32 + (reg_num - fpr_first_riscv) * fpr_size;
+      row.SetRegisterLocationToAtCFAPlusOffset(reg_num, fpr_offset, false);
+    }
+
+    size_t fpr_fcsr_offset = gpr_size * 32 + fpr_size * 32;
+    row.SetRegisterLocationToAtCFAPlusOffset(fpr_fcsr_riscv, fpr_fcsr_offset,
+                                             false);
+  }
+
+  UnwindPlanSP unwind_plan_sp = std::make_shared<UnwindPlan>(eRegisterKindLLDB);
+  unwind_plan_sp->AppendRow(std::move(row));
+  unwind_plan_sp->SetSourceName("RISC-V Linux sigcontext");
+  unwind_plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
+  unwind_plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+
+  return unwind_plan_sp;
+}
+
+lldb::UnwindPlanSP PlatformLinux::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                                           ConstString name) {
+  llvm::Triple triple = arch.GetTriple();
   if (triple.isAArch64())
     return GetAArch64TrapHandlerUnwindPlan(name);
-
+  if (triple.isRISCV()) {
+    uint32_t fp_flags = arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
+    return GetRISCVTrapHandlerUnwindPlan(name, fp_flags);
+  }
   return {};
 }
 
@@ -363,17 +446,15 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
   CompilerType &band_type = long_type;
 
   CompilerType sigval_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_sigval_t",
+      nullptr, OptionalClangModuleID(), "__lldb_sigval_t",
       llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigval_type);
-  ast->AddFieldToRecordType(sigval_type, "sival_int", int_type,
-                            lldb::eAccessPublic, 0);
-  ast->AddFieldToRecordType(sigval_type, "sival_ptr", voidp_type,
-                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(sigval_type, "sival_int", int_type, 0);
+  ast->AddFieldToRecordType(sigval_type, "sival_ptr", voidp_type, 0);
   ast->CompleteTagDeclarationDefinition(sigval_type);
 
   CompilerType sigfault_bounds_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
+      nullptr, OptionalClangModuleID(), "",
       llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigfault_bounds_type);
   ast->AddFieldToRecordType(
@@ -383,39 +464,32 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"_lower", voidp_type},
                                          {"_upper", voidp_type},
                                      }),
-      lldb::eAccessPublic, 0);
-  ast->AddFieldToRecordType(sigfault_bounds_type, "_pkey", uint_type,
-                            lldb::eAccessPublic, 0);
+      0);
+  ast->AddFieldToRecordType(sigfault_bounds_type, "_pkey", uint_type, 0);
   ast->CompleteTagDeclarationDefinition(sigfault_bounds_type);
 
   // siginfo_t
   CompilerType siginfo_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_siginfo_t",
+      nullptr, OptionalClangModuleID(), "__lldb_siginfo_t",
       llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(siginfo_type);
-  ast->AddFieldToRecordType(siginfo_type, "si_signo", int_type,
-                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_signo", int_type, 0);
 
   if (si_errno_then_code) {
-    ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type,
-                              lldb::eAccessPublic, 0);
-    ast->AddFieldToRecordType(siginfo_type, "si_code", int_type,
-                              lldb::eAccessPublic, 0);
+    ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type, 0);
+    ast->AddFieldToRecordType(siginfo_type, "si_code", int_type, 0);
   } else {
-    ast->AddFieldToRecordType(siginfo_type, "si_code", int_type,
-                              lldb::eAccessPublic, 0);
-    ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type,
-                              lldb::eAccessPublic, 0);
+    ast->AddFieldToRecordType(siginfo_type, "si_code", int_type, 0);
+    ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type, 0);
   }
 
   // the structure is padded on 64-bit arches to fix alignment
   if (triple.isArch64Bit())
-    ast->AddFieldToRecordType(siginfo_type, "__pad0", int_type,
-                              lldb::eAccessPublic, 0);
+    ast->AddFieldToRecordType(siginfo_type, "__pad0", int_type, 0);
 
   // union used to hold the signal data
   CompilerType union_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
+      nullptr, OptionalClangModuleID(), "",
       llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(union_type);
 
@@ -426,7 +500,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_pid", pid_type},
                                          {"si_uid", uid_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_timer",
@@ -436,7 +510,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_overrun", int_type},
                                          {"si_sigval", sigval_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_rt",
@@ -446,7 +520,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_uid", uid_type},
                                          {"si_sigval", sigval_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_sigchld",
@@ -458,7 +532,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_utime", clock_type},
                                          {"si_stime", clock_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_sigfault",
@@ -468,7 +542,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_addr_lsb", short_type},
                                          {"_bounds", sigfault_bounds_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_sigpoll",
@@ -477,7 +551,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_band", band_type},
                                          {"si_fd", int_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   // NB: SIGSYS is not present on ia64 but we don't seem to support that
   ast->AddFieldToRecordType(
@@ -488,11 +562,10 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"_syscall", int_type},
                                          {"_arch", uint_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->CompleteTagDeclarationDefinition(union_type);
-  ast->AddFieldToRecordType(siginfo_type, "_sifields", union_type,
-                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "_sifields", union_type, 0);
 
   ast->CompleteTagDeclarationDefinition(siginfo_type);
   return siginfo_type;

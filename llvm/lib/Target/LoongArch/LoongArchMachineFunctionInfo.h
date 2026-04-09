@@ -32,9 +32,16 @@ private:
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
 
+  /// Amount of bytes on stack consumed by the arguments being passed on
+  /// the stack
+  unsigned ArgumentStackSize = 0;
+
   /// FrameIndex of the spill slot when there is no scavenged register in
   /// insertIndirectBranch.
   int BranchRelaxationSpillFrameIndex = -1;
+
+  /// Incoming ByVal arguments
+  SmallVector<SDValue, 8> IncomingByValArgs;
 
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
@@ -63,12 +70,19 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
+  unsigned getArgumentStackSize() const { return ArgumentStackSize; }
+  void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
+
   int getBranchRelaxationSpillFrameIndex() {
     return BranchRelaxationSpillFrameIndex;
   }
   void setBranchRelaxationSpillFrameIndex(int Index) {
     BranchRelaxationSpillFrameIndex = Index;
   }
+
+  void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
+  SDValue getIncomingByValArgs(int Idx) { return IncomingByValArgs[Idx]; }
+  unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
 
   void addSExt32Register(Register Reg) { SExt32Registers.push_back(Reg); }
 

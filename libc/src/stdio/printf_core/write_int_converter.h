@@ -57,8 +57,10 @@ LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
     *reinterpret_cast<ptrdiff_t *>(to_conv.conv_val_ptr) = written;
     break;
   case LengthModifier::j:
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
   case LengthModifier::w:
   case LengthModifier::wf:
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
     *reinterpret_cast<uintmax_t *>(to_conv.conv_val_ptr) = written;
     break;
   }

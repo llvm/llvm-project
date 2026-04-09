@@ -1910,6 +1910,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first, const_it
         __bucket_list_[__next_chash] = __before_first;
         __chash                      = __next_chash;
       }
+    } else { // When __next is a nullptr we've fully erased the last bucket. Update the bucket list accordingly.
+      __bucket_list_[__chash] = nullptr;
     }
   }
 

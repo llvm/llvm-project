@@ -7,13 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Jobserver.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
 #include <memory>

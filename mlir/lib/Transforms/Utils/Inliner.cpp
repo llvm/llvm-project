@@ -613,8 +613,8 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
 
   LLVM_DEBUG({
     LDBG() << "* Inliner: Initial calls in SCC are: {";
-    for (unsigned i = 0, e = calls.size(); i < e; ++i)
-      LDBG() << "  " << i << ". " << calls[i].call << ",";
+    for (unsigned I = 0, E = calls.size(); I < E; ++I)
+      LDBG() << "  " << I << ". " << calls[I].call << ",";
     LDBG() << "}";
   });
 

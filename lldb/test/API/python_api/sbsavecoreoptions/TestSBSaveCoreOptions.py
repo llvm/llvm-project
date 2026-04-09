@@ -104,6 +104,24 @@ class SBSaveCoreOptionsAPICase(TestBase):
         thread_collection = options.GetThreadsToSave()
         self.assertEqual(thread_collection.GetSize(), 3)
         self.assertIn(middle_thread, thread_collection)
+        self.assertEqual(
+            thread_collection[0].GetThreadID(),
+            thread_collection.GetThreadAtIndex(0).GetThreadID(),
+        )
+        self.assertEqual(
+            thread_collection[1].GetThreadID(),
+            thread_collection.GetThreadAtIndex(1).GetThreadID(),
+        )
+        self.assertEqual(
+            thread_collection[-1].GetThreadID(),
+            thread_collection.GetThreadAtIndex(
+                thread_collection.GetSize() - 1
+            ).GetThreadID(),
+        )
+        with self.assertRaises(IndexError):
+            thread_collection[thread_collection.GetSize()]
+        with self.assertRaises(TypeError):
+            thread_collection["invalid"]
 
     def test_get_current_size_in_bytes(self):
         """

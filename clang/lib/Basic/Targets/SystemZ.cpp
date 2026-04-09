@@ -24,18 +24,23 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     clang::SystemZ::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsSystemZ.def"
-    ;
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsSystemZ.inc"
+#undef GET_BUILTIN_STR_TABLE
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsSystemZ.def"
-});
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsSystemZ.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsSystemZ.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumBuiltins);
 
 const char *const SystemZTargetInfo::GCCRegNames[] = {
     "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
@@ -205,11 +210,12 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
     Librel |= V.getSubminor().value_or(0);
     Str += llvm::utohexstr(Librel);
 
-    Builder.defineMacro("__TARGET_LIB__", Str.c_str());
+    Builder.defineMacro("__TARGET_LIB__", Str);
   }
 }
 
 llvm::SmallVector<Builtin::InfosShard>
 SystemZTargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinStrings, BuiltinInfos}};
+  return {{&BuiltinStrings, BuiltinInfos},
+          {&BuiltinStrings, PrefixedBuiltinInfos, "__builtin_s390_"}};
 }

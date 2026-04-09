@@ -38,6 +38,7 @@ public:
   Definition(const std::vector<std::string> &argNames, const TokenSequence &,
       std::size_t firstToken, std::size_t tokens, bool isVariadic = false);
   Definition(const std::string &predefined, AllSources &);
+  Definition(const TokenSequence &predefined);
 
   bool isFunctionLike() const { return isFunctionLike_; }
   std::size_t argumentCount() const { return argNames_.size(); }
@@ -48,8 +49,8 @@ public:
 
   bool set_isDisabled(bool disable);
 
-  TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &,
-      bool inIfExpression = false);
+  TokenSequence Apply(const std::vector<TokenSequence> &args,
+      const Prescanner &, bool inIfExpression = false) const;
 
   void Print(llvm::raw_ostream &out, const char *macroName = "") const;
 
@@ -94,7 +95,7 @@ public:
   // that result and try again.  All other Fortran preprocessors share this
   // behavior.
   std::optional<TokenSequence> MacroReplacement(const TokenSequence &,
-      Prescanner &,
+      const Prescanner &,
       std::optional<std::size_t> *partialFunctionLikeMacro = nullptr,
       bool inIfExpression = false);
 
@@ -108,7 +109,7 @@ private:
   enum class CanDeadElseAppear { No, Yes };
 
   CharBlock SaveTokenAsName(const CharBlock &);
-  TokenSequence ReplaceMacros(const TokenSequence &, Prescanner &,
+  TokenSequence ReplaceMacros(const TokenSequence &, const Prescanner &,
       std::optional<std::size_t> *partialFunctionLikeMacro = nullptr,
       bool inIfExpression = false);
   void SkipDisabledConditionalCode(

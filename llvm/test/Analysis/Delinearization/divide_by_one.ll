@@ -17,13 +17,15 @@ define void @test(ptr nocapture %dst, i32 %stride, i32 %bs) {
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}(-1 + ((1 + %bs) * %stride)),+,(-1 * %stride)}<%for.cond1.preheader>,+,1}<nw><%for.body3>
 ; CHECK-NEXT:  Base offset: %dst
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%stride] with elements of 1 bytes.
-; CHECK-NEXT:  ArrayRef[{(1 + %bs),+,-1}<nw><%for.cond1.preheader>][{-1,+,1}<nw><%for.body3>]
+; CHECK-NEXT:  ArrayRef[{(1 + %bs),+,-1}<nw><%for.cond1.preheader>][{-1,+,1}<%for.body3>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store i8 %0, ptr %arrayidx7, align 1
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}(%stride * %bs),+,(-1 * %stride)}<%for.cond1.preheader>,+,1}<nsw><%for.body3>
 ; CHECK-NEXT:  Base offset: %dst
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%stride] with elements of 1 bytes.
 ; CHECK-NEXT:  ArrayRef[{%bs,+,-1}<nsw><%for.cond1.preheader>][{0,+,1}<nuw><nsw><%for.body3>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   %cmp20 = icmp sgt i32 %bs, -1

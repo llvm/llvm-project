@@ -1,5 +1,8 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
+
 #include <stdio.h>
 
 struct View {

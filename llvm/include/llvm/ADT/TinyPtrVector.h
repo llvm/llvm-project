@@ -15,7 +15,6 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
-#include <type_traits>
 
 namespace llvm {
 

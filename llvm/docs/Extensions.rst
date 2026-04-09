@@ -28,6 +28,21 @@ hexadecimal format instead of decimal if desired.
   .section .data
   .float 0x1c2.2ap3
 
+``.prefalign`` directive
+------------------------
+
+The ``.prefalign`` directive sets the preferred alignment for a section,
+and enables the section's final alignment to be set in a way that is
+dependent on the section size (currently only supported with ELF).
+
+If the section size is less than the section's minimum alignment as
+determined using ``.align`` family directives, the section's alignment
+will be equal to its minimum alignment. Otherwise, if the section size is
+between the minimum alignment and the preferred alignment, the section's
+alignment will be equal to the power of 2 greater than or equal to the
+section size. Otherwise, the section's alignment will be equal to the
+preferred alignment.
+
 Machine-specific Assembly Syntax
 ================================
 
@@ -416,7 +431,13 @@ as offsets relative to prior addresses.
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
 
-Version 4 (newest): Capable of encoding basic block hashes. This feature is
+Version 5 (newest): Capable of encoding Post-Link CFG information, which
+provides basic block and edge frequencies obtained from a post-link tool like
+Propeller, reflecting the final binary layout. This feature is enabled by the 8th
+bit of the feature entry.
+The feature data will be two bytes long to accommodate future extensions.
+
+Version 4: Capable of encoding basic block hashes. This feature is
 enabled by the 7th bit of the feature byte.
 
 Example:
@@ -525,6 +546,13 @@ those bits are:
    taken from MBPI analysis. This value is the numerator for a fixed point ratio
    defined in ``llvm/Support/BranchProbability.h``. It indicates the probability
    that the block is followed by a given successor block during execution.
+
+#. Post-Link CFG - When enabled, the PGO Analysis Map will include CFG
+   information obtained from a post-link tool, such as Propeller. This feature
+   is enabled with the ``-pgo-analysis-map-emit-bb-sections-cfg`` flag. When
+   this option is active, the map will contain basic block and edge frequencies
+   from the basic block sections profile. This provides more accurate profiling
+   information that reflects the final binary layout.
 
 This extra data requires version 2 or above. This is necessary since successors
 of basic blocks won't know their index but will know their BB ID.
@@ -792,7 +820,7 @@ emission of Variable Length Arrays (VLAs).
 The Windows ARM Itanium ABI extends the base ABI by adding support for emitting
 a dynamic stack allocation.  When emitting a variable stack allocation, a call
 to ``__chkstk`` is emitted unconditionally to ensure that guard pages are setup
-properly.  The emission of this stack probe emission is handled similar to the
+properly.  The emission of this stack probe emission is handled similarly to the
 standard stack probe emission.
 
 The MSVC environment does not emit code for VLAs currently.
@@ -813,7 +841,7 @@ in the following fashion:
   sub sp, sp, x15, lsl #4
 
 However, this has the limitation of 256 MiB (±128MiB).  In order to accommodate
-larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow a 8GiB
+larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow an 8GiB
 (±4GiB) range via a slight deviation.  It will generate an indirect jump as
 follows:
 

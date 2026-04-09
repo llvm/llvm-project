@@ -376,7 +376,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     MDBuilder MDB(B.getContext());
     BranchWeights = MDB.createBranchWeights(1, Count - 1);
   }
-  BranchInst *RemainderLoopGuard =
+  CondBrInst *RemainderLoopGuard =
       B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit, BranchWeights);
   if (!OriginalLoopProb.isUnknown()) {
     setBranchProbability(RemainderLoopGuard,
@@ -454,7 +454,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
       // Subtle: NewIter can be 0 if we wrapped when computing the trip count,
       // thus we must compare the post-increment (wrapping) value.
       BasicBlock *FirstLoopBB = cast<BasicBlock>(VMap[Header]);
-      BranchInst *LatchBR = cast<BranchInst>(NewBB->getTerminator());
+      CondBrInst *LatchBR = cast<CondBrInst>(NewBB->getTerminator());
       IRBuilder<> Builder(LatchBR);
       PHINode *NewIdx =
           PHINode::Create(NewIter->getType(), 2, suffix + ".iter");
@@ -484,7 +484,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
         MDBuilder MDB(Builder.getContext());
         BranchWeights = MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
       }
-      BranchInst *RemainderLoopLatch =
+      CondBrInst *RemainderLoopLatch =
           Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot, BranchWeights);
       if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
         // Compute the total frequency of the original loop body from the
@@ -495,16 +495,13 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
           BranchProbability ProbReaching = BranchProbability::getOne();
           for (unsigned N = Count - 2; N >= 1; --N) {
             ProbReaching *= probOfNextInRemainder(OriginalLoopProb, N);
-            FreqRemIters += double(ProbReaching.getNumerator()) /
-                            ProbReaching.getDenominator();
+            FreqRemIters += ProbReaching.toDouble();
           }
         }
         // Solve for the loop probability that would produce that frequency.
         // Sum(i=0..inf)(Prob^i) = 1/(1-Prob) = FreqRemIters.
-        double ProbDouble = 1 - 1 / FreqRemIters;
-        BranchProbability Prob = BranchProbability::getBranchProbability(
-            std::round(ProbDouble * BranchProbability::getDenominator()),
-            BranchProbability::getDenominator());
+        BranchProbability Prob =
+            BranchProbability::getBranchProbability(1 - 1 / FreqRemIters);
         setBranchProbability(RemainderLoopLatch, Prob, /*ForFirstTarget=*/true);
       }
       NewIdx->addIncoming(Zero, InsertTop);
@@ -539,10 +536,10 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
   return NewLoop;
 }
 
-/// Returns true if we can profitably unroll the multi-exit loop L. Currently,
-/// we return true only if UnrollRuntimeMultiExit is set to true.
+/// Returns true if we can profitably unroll the multi-exit loop L.
 static bool canProfitablyRuntimeUnrollMultiExitLoop(
-    Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
+    Loop *L, const TargetTransformInfo *TTI,
+    SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
     bool UseEpilogRemainder) {
 
   // The main pain point with multi-exit loop unrolling is that once unrolled,
@@ -569,15 +566,34 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
   if (OtherExits.size() == 0)
     return true;
 
+  if (OtherExits.size() != 1)
+    return false;
+
+  // When UnrollRuntimeOtherExitPredictable is specified, we assume the other
+  // exit branch is predictable even if it has no deoptimize call.
+  if (UnrollRuntimeOtherExitPredictable)
+    return true;
+
   // The second heuristic is that L has one exit other than the latchexit and
-  // that exit is a deoptimize block. We know that deoptimize blocks are rarely
-  // taken, which also implies the branch leading to the deoptimize block is
-  // highly predictable. When UnrollRuntimeOtherExitPredictable is specified, we
-  // assume the other exit branch is predictable even if it has no deoptimize
-  // call.
-  return (OtherExits.size() == 1 &&
-          (UnrollRuntimeOtherExitPredictable ||
-           OtherExits[0]->getPostdominatingDeoptimizeCall()));
+  // that exit is highly unlikely.
+  if (TTI) {
+    BasicBlock *LatchBB = L->getLoopLatch();
+    assert(LatchBB && "Expected loop to have a latch");
+    BasicBlock *NonLatchExitingBlock =
+        (ExitingBlocks[0] == LatchBB) ? ExitingBlocks[1] : ExitingBlocks[0];
+    auto BranchProb =
+        llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
+    // If BranchProbability could not be extracted (returns unknown), then
+    // don't return and do the check for deopt block.
+    if (!BranchProb.isUnknown()) {
+      auto Threshold = TTI->getPredictableBranchThreshold().getCompl();
+      return BranchProb < Threshold;
+    }
+  }
+
+  // We know that deoptimize blocks are rarely taken, which also implies the
+  // branch leading to the deoptimize block is highly unlikely.
+  return OtherExits[0]->getPostdominatingDeoptimizeCall();
   // TODO: These can be fine-tuned further to consider code size or deopt states
   // that are captured by the deoptimize exit block.
   // Also, we can extend this to support more cases, if we actually
@@ -677,9 +693,9 @@ bool llvm::UnrollRuntimeLoopRemainder(
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *Header = L->getHeader();
 
-  BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
+  CondBrInst *LatchBR = dyn_cast<CondBrInst>(Latch->getTerminator());
 
-  if (!LatchBR || LatchBR->isUnconditional()) {
+  if (!LatchBR) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
     LLVM_DEBUG(
         dbgs()
@@ -718,8 +734,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
       // Otherwise perform multi-exit unrolling, if either the target indicates
       // it is profitable or the general profitability heuristics apply.
       if (!RuntimeUnrollMultiExit &&
-          !canProfitablyRuntimeUnrollMultiExitLoop(L, OtherExits, LatchExit,
-                                                   UseEpilogRemainder)) {
+          !canProfitablyRuntimeUnrollMultiExitLoop(
+              L, TTI, OtherExits, LatchExit, UseEpilogRemainder)) {
         LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
                              "multi-exit unrolling not enabled!\n");
         return false;
@@ -754,9 +770,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   }
 
   BasicBlock *PreHeader = L->getLoopPreheader();
-  BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
-  const DataLayout &DL = Header->getDataLayout();
-  SCEVExpander Expander(*SE, DL, "loop-unroll");
+  Instruction *PreHeaderBR = PreHeader->getTerminator();
+  SCEVExpander Expander(*SE, "loop-unroll");
   if (!AllowExpensiveTripCount &&
       Expander.isHighCostExpansion(TripCountSC, L, SCEVExpansionBudget, TTI,
                                    PreHeaderBR)) {
@@ -846,7 +861,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // in epilog case and around prolog remainder loop in prolog case.
   // Compute the number of extra iterations required, which is:
   //  extra iterations = run-time trip count % loop unroll factor
-  PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
+  PreHeaderBR = PreHeader->getTerminator();
   IRBuilder<> B(PreHeaderBR);
   Value *TripCount = Expander.expandCodeFor(TripCountSC, TripCountSC->getType(),
                                             PreHeaderBR);
@@ -887,7 +902,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     MDBuilder MDB(B.getContext());
     BranchWeights = MDB.createBranchWeights(EpilogHeaderWeights);
   }
-  BranchInst *UnrollingLoopGuard =
+  CondBrInst *UnrollingLoopGuard =
       B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop, BranchWeights);
   if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
     // The original loop's first iteration always happens.  Compute the
@@ -1035,7 +1050,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // thus we must compare the post-increment (wrapping) value.
     IRBuilder<> B2(NewPreHeader->getTerminator());
     Value *TestVal = B2.CreateSub(TripCount, ModVal, "unroll_iter");
-    BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
+    CondBrInst *LatchBR = cast<CondBrInst>(Latch->getTerminator());
     PHINode *NewIdx = PHINode::Create(TestVal->getType(), 2, "niter");
     NewIdx->insertBefore(Header->getFirstNonPHIIt());
     B2.SetInsertPoint(LatchBR);

@@ -30,10 +30,10 @@ void example(void) {
 // Then, memcpy `l` to the temporary stack space.
 // CHECK-O0-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp]], ptr align 8 %[[l]], i64 64, i1 false)
 // Finally, call using a pointer to the temporary stack space.
-// CHECK-O0-NEXT: call void @pass_large(ptr dead_on_return noundef %[[byvaltemp]])
+// CHECK-O0-NEXT: call void @pass_large(ptr noundef dead_on_return %[[byvaltemp]])
 // Now, do the same for the second call, using the second temporary alloca.
 // CHECK-O0-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp1]], ptr align 8 %[[l]], i64 64, i1 false)
-// CHECK-O0-NEXT: call void @pass_large(ptr dead_on_return noundef %[[byvaltemp1]])
+// CHECK-O0-NEXT: call void @pass_large(ptr noundef dead_on_return %[[byvaltemp1]])
 // CHECK-O0-NEXT: ret void
 //
 // At O3, we should have lifetime markers to help the optimizer re-use the temporary allocas.
@@ -58,7 +58,7 @@ void example(void) {
 // Then, memcpy `l` to the temporary stack space.
 // CHECK-O3-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp]], ptr align 8 %[[l]], i64 64, i1 false)
 // Finally, call using a pointer to the temporary stack space.
-// CHECK-O3-NEXT: call void @pass_large(ptr dead_on_return noundef %[[byvaltemp]])
+// CHECK-O3-NEXT: call void @pass_large(ptr noundef dead_on_return %[[byvaltemp]])
 //
 // The lifetime of the temporary used to pass a pointer to the struct ends here.
 // CHECK-O3-NEXT: call void @llvm.lifetime.end.p0(ptr %[[byvaltemp]])
@@ -66,7 +66,7 @@ void example(void) {
 // Now, do the same for the second call, using the second temporary alloca.
 // CHECK-O3-NEXT: call void @llvm.lifetime.start.p0(ptr %[[byvaltemp1]])
 // CHECK-O3-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[byvaltemp1]], ptr align 8 %[[l]], i64 64, i1 false)
-// CHECK-O3-NEXT: call void @pass_large(ptr dead_on_return noundef %[[byvaltemp1]])
+// CHECK-O3-NEXT: call void @pass_large(ptr noundef dead_on_return %[[byvaltemp1]])
 // CHECK-O3-NEXT: call void @llvm.lifetime.end.p0(ptr %[[byvaltemp1]])
 //
 // Mark the end of the lifetime of `l`.
@@ -88,12 +88,12 @@ void example_BitInt(void) {
 // CHECK-O0-NEXT:    [[LOADEDV:%.*]] = trunc i256 [[TMP0]] to i129
 // CHECK-O0-NEXT:    [[STOREDV:%.*]] = sext i129 [[LOADEDV]] to i256
 // CHECK-O0-NEXT:    store i256 [[STOREDV]], ptr [[INDIRECT_ARG_TEMP]], align 16
-// CHECK-O0-NEXT:    call void @pass_large_BitInt(ptr dead_on_return noundef [[INDIRECT_ARG_TEMP]])
+// CHECK-O0-NEXT:    call void @pass_large_BitInt(ptr noundef dead_on_return [[INDIRECT_ARG_TEMP]])
 // CHECK-O0-NEXT:    [[TMP1:%.*]] = load i256, ptr [[L]], align 16
 // CHECK-O0-NEXT:    [[LOADEDV1:%.*]] = trunc i256 [[TMP1]] to i129
 // CHECK-O0-NEXT:    [[STOREDV1:%.*]] = sext i129 [[LOADEDV1]] to i256
 // CHECK-O0-NEXT:    store i256 [[STOREDV1]], ptr [[INDIRECT_ARG_TEMP1]], align 16
-// CHECK-O0-NEXT:    call void @pass_large_BitInt(ptr dead_on_return noundef [[INDIRECT_ARG_TEMP1]])
+// CHECK-O0-NEXT:    call void @pass_large_BitInt(ptr noundef dead_on_return [[INDIRECT_ARG_TEMP1]])
 // CHECK-O0-NEXT:    ret void
 //
 // CHECK-O3-LABEL: define dso_local void @example_BitInt(
@@ -108,13 +108,13 @@ void example_BitInt(void) {
 // CHECK-O3-NEXT:    call void @llvm.lifetime.start.p0(ptr [[INDIRECT_ARG_TEMP]]) 
 // CHECK-O3-NEXT:    [[STOREDV:%.*]] = sext i129 [[LOADEDV]] to i256
 // CHECK-O3-NEXT:    store i256 [[STOREDV]], ptr [[INDIRECT_ARG_TEMP]], align 16, !tbaa [[TBAA6]]
-// CHECK-O3-NEXT:    call void @pass_large_BitInt(ptr dead_on_return noundef [[INDIRECT_ARG_TEMP]])
+// CHECK-O3-NEXT:    call void @pass_large_BitInt(ptr noundef dead_on_return [[INDIRECT_ARG_TEMP]])
 // CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(ptr [[INDIRECT_ARG_TEMP]]) 
 // CHECK-O3-NEXT:    [[TMP1:%.*]] = load i256, ptr [[L]], align 16, !tbaa [[TBAA6]]
 // CHECK-O3-NEXT:    [[LOADEDV1:%.*]] = trunc i256 [[TMP1]] to i129
 // CHECK-O3-NEXT:    call void @llvm.lifetime.start.p0(ptr [[INDIRECT_ARG_TEMP1]]) 
 // CHECK-O3-NEXT:    [[STOREDV1:%.*]] = sext i129 [[LOADEDV1]] to i256
 // CHECK-O3-NEXT:    store i256 [[STOREDV1]], ptr [[INDIRECT_ARG_TEMP1]], align 16, !tbaa [[TBAA6]]
-// CHECK-O3-NEXT:    call void @pass_large_BitInt(ptr dead_on_return noundef [[INDIRECT_ARG_TEMP1]])
+// CHECK-O3-NEXT:    call void @pass_large_BitInt(ptr noundef dead_on_return [[INDIRECT_ARG_TEMP1]])
 // CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(ptr [[INDIRECT_ARG_TEMP1]]) 
 // CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(ptr [[L]]) 
