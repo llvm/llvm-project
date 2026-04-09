@@ -43,8 +43,7 @@ for.body6:                                        ; preds = %for.body6, %for.con
 }
 
 
-declare signext i32 @bar(ptr, ptr) #2
+declare signext i32 @bar(ptr, ptr)
 
 attributes #0 = { "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" }
-attributes #2 = { "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" }
 
