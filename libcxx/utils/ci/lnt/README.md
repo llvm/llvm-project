@@ -22,10 +22,13 @@ libcxx/utils/ci/lnt/commit-watch --lnt-url http://localhost:8000 --test-suite li
     while read commit; do                                                                                       \
         libcxx/utils/ci/lnt/run-benchmarks                                                                      \
             --test-suite-commit abcdef09                                                                        \
-            --lnt-url http://localhost:8000                                                                     \
             --machine my-laptop                                                                                 \
-            --test-suite libcxx                                                                                 \
             --compiler clang++                                                                                  \
             --benchmark-commit ${commit}                                                                        \
+            --output results.json                                                                               \
+        && libcxx/utils/ci/lnt/submit-benchmarks                                                                \
+            --lnt-url http://localhost:8000                                                                     \
+            --test-suite libcxx                                                                                 \
+            results.json                                                                                        \
     done
 ```
