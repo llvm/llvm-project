@@ -52,11 +52,11 @@ Expected<DriverConfig>
 parseStripOptions(ArrayRef<const char *> ArgsArr,
                   llvm::function_ref<Error(Error)> ErrorCallback);
 
-// ParseExtractBundleEntryOptions returns the config and sets the input
-// arguments. If a help flag is set then ParseExtractBundleEntryOptions will
-// print the help messege and exit. ErrorCallback is used to handle recoverable
-// errors. An Error returned by the callback aborts the parsing and is then
-// returned by this function.
+// ParseExtractBundleEntryOptions sets the input arguments. If a help flag is
+// set then ParseExtractBundleEntryOptions will print the help messege and exit.
+// print the help messege and exit.  All functionality of the
+// llvm-extract-bundle-entry utility is performed in runExtractBundleEntry and
+// the Driver Config is not used.
 Error runExtractBundleEntry(SmallVector<StringRef, 256> args);
 Expected<SmallVector<StringRef, 256>>
 parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr);

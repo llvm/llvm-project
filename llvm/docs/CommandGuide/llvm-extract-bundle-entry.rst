@@ -11,7 +11,7 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-:program:`llvm-extract-offload-entry` is a tool thet takes a URI argument, and 
+:program:`llvm-extract-offload-entry` is a tool thet takes a URI argument and 
 generates a code object file by extracting an offload bundle entry specified
 by the URI given.
 
@@ -21,18 +21,17 @@ The URI syntax is defined as:
  <code_object_uri> ::== <file_uri> | <memory_uri>
  <file_uri>        ::== "file://"<extract_file><range_specifier>
  <memory_uri>      ::== "memory://"<process_id><range_specifier>
- <range_specifier> ::== [ "#" | "?" ]"offset="<number> "&size="<number>
+ <range_specifier> ::== [ "#" | "?" ]"offset="<number>"&size="<number>
  <extract_file>    ::== URI_ENCODED_OS_FILE_PATH
  <process_id>      ::== DECIMAL_NUMBER
  <number>          ::== DECIMAL_NUMBER
  
 The output is always written to a file, whose name is generated from the URI input given.
 
-
 OPTIONS
 -------
 
-The following options are either agnostic of the file format, or apply to
+The following options are either agnostic of the file format or apply to
 multiple file formats.
 
 .. option:: --help, -h

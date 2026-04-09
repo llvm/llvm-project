@@ -85,9 +85,11 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
         parseExtractBundleEntryOptions(Args);
     if (!ArgsOrErr)
       return ArgsOrErr.takeError();
-    Error Err = llvm::objcopy::runExtractBundleEntry(*ArgsOrErr);
-    if (Err)
+    if (Error Err = runExtractBundleEntry(*ArgsOrErr))
       return Err;
+
+    // The functionality of llvm-extract-bundle-entry is completely
+    // handled in runExtractBundleEntry, so we can exit(0) here.
     std::exit(0);
   }
   return parseObjcopyOptions(Args, reportWarning);
