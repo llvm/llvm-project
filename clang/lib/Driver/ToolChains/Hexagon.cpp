@@ -11,6 +11,8 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
+#include "clang/Driver/MultilibBuilder.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -344,6 +346,12 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
              !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib))
       CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crti.o"));
 
+    if (!HTC.getSelectedMultilibs().empty() &&
+        !HTC.getSelectedMultilibs().back().isDefault()) {
+      CmdArgs.push_back(
+          Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib" +
+                             HTC.getSelectedMultilibs().back().gccSuffix()));
+    }
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib"));
     Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
@@ -631,6 +639,34 @@ HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
   // support 'linux' we'll need to fix this up
   LibPaths.clear();
   getHexagonLibraryPaths(Args, LibPaths);
+
+  if (getTriple().isMusl()) {
+    Multilibs.push_back(Multilib());
+    Multilibs.push_back(MultilibBuilder("msan", {}, {})
+                            .flag("-fsanitize=memory")
+                            .makeMultilib());
+    Multilibs.push_back(MultilibBuilder("asan", {}, {})
+                            .flag("-fsanitize=address")
+                            .makeMultilib());
+
+    Multilib::flags_list Flags;
+    addMultilibFlag(getSanitizerArgs(Args).needsMsanRt(), "-fsanitize=memory",
+                    Flags);
+    addMultilibFlag(getSanitizerArgs(Args).needsAsanRt(), "-fsanitize=address",
+                    Flags);
+
+    if (Multilibs.select(D, Flags, SelectedMultilibs)) {
+      Multilib LastSelected = SelectedMultilibs.back();
+      SelectedMultilibs = {LastSelected};
+
+      if (!SelectedMultilibs.back().isDefault()) {
+        SmallString<128> SanLibPath(D.SysRoot);
+        llvm::sys::path::append(SanLibPath, "usr", "lib");
+        SanLibPath += SelectedMultilibs.back().gccSuffix();
+        LibPaths.insert(LibPaths.begin(), std::string(SanLibPath));
+      }
+    }
+  }
 }
 
 HexagonToolChain::~HexagonToolChain() {}

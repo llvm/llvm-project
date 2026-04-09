@@ -980,14 +980,15 @@ public:
     assert(
         TheLoop->isInnermost() &&
         "cost-model should not be used for outer loops (in VPlan-native path)");
-    // Pseudo probe needs to be duplicated for each unrolled iteration and
-    // vector lane so that profiled loop trip count can be accurately
-    // accumulated instead of being under counted.
-    if (isa<PseudoProbeInst>(I))
-      return false;
 
+    // If VF is scalar, then all instructions are trivially uniform.
     if (VF.isScalar())
       return true;
+
+    // Pseudo probes must be duplicated per vector lane so that the
+    // profiled loop trip count is not undercounted.
+    if (isa<PseudoProbeInst>(I))
+      return false;
 
     auto UniformsPerVF = Uniforms.find(VF);
     assert(UniformsPerVF != Uniforms.end() &&
@@ -3796,12 +3797,10 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     MaxVF =
         clampVFByMaxTripCount(MaxVF, MaxTripCount, UserIC, FoldTailByMasking);
 
-    if (MaxVectorElementCount != MaxVF) {
-      // Invalidate any widening decisions we might have made, in case the loop
-      // requires prediction (decided later), but we have already made some
-      // load/store widening decisions.
-      invalidateCostModelingDecisions();
-    }
+    assert((MaxVectorElementCount == MaxVF ||
+            (WideningDecisions.empty() && CallWideningDecisions.empty() &&
+             Uniforms.empty() && Scalars.empty())) &&
+           "No decisions should have been taken at this point");
   }
   return MaxVF;
 }
@@ -7181,7 +7180,7 @@ LoopVectorizationPlanner::computeBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return {{*FirstPlan.vectorFactors().begin(), 0, 0}, &FirstPlan};
+    return {{FirstPlan.getSingleVF(), 0, 0}, &FirstPlan};
 
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
                     << (CM.CostKind == TTI::TCK_RecipThroughput
@@ -8372,9 +8371,13 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
                             ? AnyOfSelect->getOperand(2)
                             : AnyOfSelect->getOperand(1);
-      FinalReductionResult =
-          Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
-                               {Start, NewVal, NewExitingVPV}, ExitDL);
+      VPIRFlags OrFlags(RecurKind::Or, /*IsOrdered=*/false,
+                        /*IsInLoop=*/false, FastMathFlags());
+      auto *OrReduce =
+          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
+                               {NewExitingVPV}, OrFlags, ExitDL);
+      FinalReductionResult = Builder.createNaryOp(
+          VPInstruction::ComputeAnyOfResult, {Start, NewVal, OrReduce}, ExitDL);
     } else {
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlags());
@@ -8420,11 +8423,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
-      // Skip FindIV reduction chain recipes (ComputeReductionResult, icmp).
-      if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
-          match(U, m_CombineOr(
-                       m_VPInstruction<VPInstruction::ComputeReductionResult>(),
-                       m_VPInstruction<Instruction::ICmp>())))
+      // Skip ComputeReductionResult and FindIV reductions when they are not the
+      // final result.
+      if (match(U, m_VPInstruction<VPInstruction::ComputeReductionResult>()) ||
+          (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
+           match(U, m_VPInstruction<Instruction::ICmp>())))
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
 
@@ -8999,12 +9002,21 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
       // Find the reduction result by searching users of the phi or its backedge
       // value.
+      using namespace VPlanPatternMatch;
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
         if (!VPI)
           return false;
-        return VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-               VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+        if (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult)
+          return true;
+        // ComputeReductionResult is also considered, unless it is used for the
+        // Or reduction in AnyOf reductions and feeds a ComputeAnyOfReduction,
+        // in which case the latter will be considered instead.
+        if (VPI->getOpcode() != VPInstruction::ComputeReductionResult)
+          return false;
+        return !any_of(VPI->users(), [](VPUser *U) {
+          return match(U, m_VPInstruction<VPInstruction::ComputeAnyOfResult>());
+        });
       };
       auto *RdxResult = cast<VPInstruction>(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
@@ -9640,7 +9652,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (EpiPlan) {
     VPlan &BestEpiPlan = *EpiPlan;
     VPlan &BestMainPlan = BestPlan;
-    ElementCount EpilogueVF = *BestEpiPlan.vectorFactors().begin();
+    ElementCount EpilogueVF = BestEpiPlan.getSingleVF();
 
     // The first pass vectorizes the main loop and creates a scalar epilogue
     // to be vectorized by executing the plan (potentially with a different

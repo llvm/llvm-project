@@ -62,9 +62,6 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-declare void @llvm.assume(i1) #0
-
-attributes #0 = { nounwind willreturn }
 
 %struct.data = type { ptr, ptr }
 

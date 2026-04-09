@@ -3429,6 +3429,28 @@ LogicalResult TaskloopContextOp::verifyRegions() {
            << "expected exactly 1 TaskloopWrapperOp directly nested in "
               "the region, but "
            << count << " were found";
+  TaskloopWrapperOp loopWrapperOp = getLoopOp();
+
+  auto loopNestOp = dyn_cast<LoopNestOp>(loopWrapperOp.getWrappedLoop());
+  // This will fail the verifier for TaskloopWrapperOp and print an error
+  // message there.
+  if (!loopNestOp)
+    return failure();
+
+  auto isDefinedInTaskloopContext = [&](Value value) {
+    // A region is considered an ancestor of itself
+    return region.isAncestor(value.getParentRegion());
+  };
+  auto hasTaskloopLocalBound = [&](OperandRange range) {
+    return llvm::any_of(range, isDefinedInTaskloopContext);
+  };
+
+  if (hasTaskloopLocalBound(loopNestOp.getLoopLowerBounds()) ||
+      hasTaskloopLocalBound(loopNestOp.getLoopUpperBounds()) ||
+      hasTaskloopLocalBound(loopNestOp.getLoopSteps())) {
+    return emitOpError() << "expects loop bounds and steps to be defined "
+                            "outside of the taskloop.context region";
+  }
 
   return success();
 }
