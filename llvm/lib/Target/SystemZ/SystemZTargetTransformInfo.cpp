@@ -570,14 +570,15 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
   // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput) {
-    if (CxtI && Ty && !Ty->isVectorTy() && isArithmeticFoldableRMW(CxtI))
-      return TTI::TCC_Free;
-
+  if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info, Args, CxtI);
-  }
-
+  // Supporting only i8 type immediate-to-memory arithmatic operation until
+  // backend start folding it for i32 type if constant only has bits in one
+  // single byte set.
+  if (CxtI && Ty && !Ty->isVectorTy() && Ty->isIntegerTy(8) &&
+      isArithmeticFoldableRMW(CxtI))
+    return TTI::TCC_Free;
   // TODO: return a good value for BB-VECTORIZER that includes the
   // immediate loads, which we do not want to count for the loop
   // vectorizer, since they are hopefully hoisted out of the loop. This
@@ -1365,15 +1366,13 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   assert(!Src->isVoidTy() && "Invalid type");
 
   // TODO: Handle other cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput) {
-    // TCK_RecipThroughput causes regressions in the SLP Vectorizer test
-    // non-power-2-subvector-extract.ll. It seems profit analysis does not
-    // favor vectorization by making scalar cost cheaper.
-    if (I && Opcode == Instruction::Store && !Src->isVectorTy()) {
-      if (isStoreFoldableRMW(I))
-        return TTI::TCC_Free;
-    }
+  if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
+
+  if (I && Opcode == Instruction::Store && !Src->isVectorTy() &&
+      Src->isIntegerTy(8)) {
+    if (isStoreFoldableRMW(I))
+      return TTI::TCC_Free;
   }
 
   if (!Src->isVectorTy() && Opcode == Instruction::Load && I != nullptr) {
