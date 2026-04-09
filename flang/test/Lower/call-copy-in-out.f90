@@ -68,7 +68,7 @@ subroutine test_intent_out(x)
   call bar_intent_out(x)
 end subroutine
 
-! Test copy-out is skipped for intent(in) arguments.
+! Test copy-out is skipped for intent(out) arguments.
 ! CHECK-LABEL: func.func @_QPtest_intent_in(
 subroutine test_intent_in(x)
   real :: x(:)
@@ -79,7 +79,8 @@ subroutine test_intent_in(x)
   end interface
 ! CHECK: hlfir.copy_in
 ! CHECK: fir.call @_QPbar_intent_in
-! CHECK: hlfir.copy_out %{{.*}}, %{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
+! CHECK: hlfir.copy_out
+! CHECK-SAME: %{{.*}}, %{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
   call bar_intent_in(x)
 end subroutine
 

@@ -13,7 +13,7 @@ program derived_temp_init
   y = t2(x)
 end
 
-! CHECK: %[[ALLOC:.*]] = fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
+! CHECK: %[[ALLOC:.*]] =  fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
 ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[ALLOC]] {{.*}}
 ! CHECK: %[[COOR:.*]] = fir.coordinate_of %[[x]]#0, i : (!fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<i32>
