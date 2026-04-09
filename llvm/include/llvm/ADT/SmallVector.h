@@ -891,9 +891,6 @@ public:
 
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
   iterator insert(iterator I, ItTy From, ItTy To) {
-    // TODO: support efficient insert with input iterators. This requires
-    // appending all elements and rotating them later to their correct position.
-
     // Convert iterator to elt# to avoid invalidating iterator when we reserve()
     size_t InsertElt = I - this->begin();
 
