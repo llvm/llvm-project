@@ -62,12 +62,10 @@ llvm::Error GsymReaderV1::parseHeaderAndGlobalDataEntries() {
   GlobalDataSections[GlobalInfoType::StringTable] = {
       GlobalInfoType::StringTable, Hdr->StrtabOffset, Hdr->StrtabSize};
 
-  // FunctionInfo: V1 uses absolute file offsets in AddrInfoOffsets (not
-  // relative to a FunctionInfo section start). FileOffset is set to 0 so that
-  // GsymReader::getAddressInfoOffset() works automatically. Correspondingly,
-  // FileSize is set to the length of the entire file for range checks.
+  // FunctionInfo: starts after the string table and extends to end of file.
+  const uint64_t FIOffset = Hdr->StrtabOffset + Hdr->StrtabSize;
   GlobalDataSections[GlobalInfoType::FunctionInfo] = {
-      GlobalInfoType::FunctionInfo, 0, Buf.size()};
+      GlobalInfoType::FunctionInfo, FIOffset, Buf.size() - FIOffset};
 
   return Error::success();
 }

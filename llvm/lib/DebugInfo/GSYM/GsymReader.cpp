@@ -304,10 +304,14 @@ GsymReader::getOptionalGlobalData(GlobalInfoType Type) const {
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   switch (getAddressOffsetSize()) {
-  case 1: return addressForIndex<uint8_t>(Index);
-  case 2: return addressForIndex<uint16_t>(Index);
-  case 4: return addressForIndex<uint32_t>(Index);
-  case 8: return addressForIndex<uint64_t>(Index);
+  case 1:
+    return addressForIndex<uint8_t>(Index);
+  case 2:
+    return addressForIndex<uint16_t>(Index);
+  case 4:
+    return addressForIndex<uint32_t>(Index);
+  case 8:
+    return addressForIndex<uint64_t>(Index);
   }
   return std::nullopt;
 }
@@ -316,14 +320,17 @@ std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
   if (Index >= getNumAddresses())
     return std::nullopt;
   uint64_t Offset = Index * getAddressInfoOffsetSize();
-  return AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetSize()) +
-         // The exitence of FunctionInfo in GlobalDataSections is guaranteed by
-         // step 2 in parse().
-         GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
+  uint64_t AddrInfoOffset =
+      AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetSize());
+  // V1 stores absolute file offsets in AddrInfoOffsets, so no base offset is
+  // needed. V2+ stores offsets relative to the FunctionInfo section start.
+  if (getVersion() != Header::getVersion())
+    AddrInfoOffset +=
+        GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
+  return AddrInfoOffset;
 }
 
-Expected<uint64_t>
-GsymReader::getAddressIndex(const uint64_t Addr) const {
+Expected<uint64_t> GsymReader::getAddressIndex(const uint64_t Addr) const {
   const uint64_t BaseAddr = getBaseAddress();
   if (Addr >= BaseAddr) {
     const uint64_t AddrOffset = Addr - BaseAddr;
@@ -351,7 +358,6 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
   }
   return createStringError(std::errc::invalid_argument,
                            "address 0x%" PRIx64 " is not in GSYM", Addr);
-
 }
 
 llvm::Expected<DataExtractor>
@@ -561,7 +567,7 @@ void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
 void GsymReader::dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent) {
   OS.indent(Indent);
   OS << "LineTable:\n";
-  for (auto &LE: LT) {
+  for (auto &LE : LT) {
     OS.indent(Indent);
     OS << "  " << HEX64(LE.Addr) << ' ';
     if (LE.File)
@@ -584,7 +590,7 @@ void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
     }
   }
   OS << '\n';
-  for (const auto &ChildII: II.Children)
+  for (const auto &ChildII : II.Children)
     dump(OS, ChildII, Indent + 2);
 }
 
