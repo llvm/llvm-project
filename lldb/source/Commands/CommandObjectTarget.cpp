@@ -1929,8 +1929,8 @@ protected:
         size_t num_matched =
             FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matched == 0) {
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "Unable to find an image that matches '{0}'.", arg_cstr);
         }
       }
       // Dump all the modules we found.
@@ -2067,8 +2067,8 @@ protected:
             }
           }
         } else
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "Unable to find an image that matches '{0}'.", arg_cstr);
       }
     }
 
@@ -2152,8 +2152,8 @@ protected:
           std::lock_guard<std::recursive_mutex> guard(
               Module::GetAllocationModuleCollectionMutex());
 
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "Unable to find an image that matches '{0}'.", arg_cstr);
         }
       }
     }
@@ -2285,8 +2285,8 @@ protected:
         std::lock_guard<std::recursive_mutex> guard(
             Module::GetAllocationModuleCollectionMutex());
 
-        result.AppendWarningWithFormat(
-            "Unable to find an image that matches '%s'.\n", arg.c_str());
+        result.AppendWarningWithFormatv(
+            "Unable to find an image that matches '{0}'.", arg.c_str());
         continue;
       }
 
@@ -2369,8 +2369,8 @@ protected:
             }
           }
         } else
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "Unable to find an image that matches '{0}'.", arg_cstr);
       }
     }
 
@@ -2437,8 +2437,8 @@ protected:
               num_dumped++;
           }
           if (num_dumped == 0)
-            result.AppendWarningWithFormat(
-                "No source filenames matched '%s'.\n", arg_cstr);
+            result.AppendWarningWithFormatv(
+                "No source filenames matched '{0}'.", arg_cstr);
           else
             total_num_dumped += num_dumped;
         }
@@ -2596,8 +2596,8 @@ protected:
               num_dumped++;
           }
         } else
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "Unable to find an image that matches '{0}'.", arg_cstr);
       }
     }
 
@@ -2645,9 +2645,8 @@ protected:
               } else if (type == "oso") {
                 DumpOsoFilesTable(strm, *files);
               } else {
-                result.AppendWarningWithFormat(
-                    "Found unsupported debug info type '%s'.\n",
-                    type.str().c_str());
+                result.AppendWarningWithFormatv(
+                    "Found unsupported debug info type '{0}'.", type);
               }
               return true;
             });
@@ -4123,8 +4122,8 @@ protected:
             }
           }
         } else
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "Unable to find an image that matches '{0}'.", arg_cstr);
       }
     }
 
@@ -5472,13 +5471,14 @@ protected:
       return;
     }
 
-    result.AppendMessageWithFormat("%zu frame provider(s) registered:\n\n",
-                                   descriptors.size());
+    Stream &strm = result.GetOutputStream();
+    strm << llvm::formatv("{0} frame provider(s) registered:\n\n",
+                          descriptors.size());
 
     for (const auto &entry : descriptors) {
       const ScriptedFrameProviderDescriptor &descriptor = entry.second;
-      descriptor.Dump(&result.GetOutputStream());
-      result.GetOutputStream().PutChar('\n');
+      descriptor.Dump(&strm);
+      strm.PutChar('\n');
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);

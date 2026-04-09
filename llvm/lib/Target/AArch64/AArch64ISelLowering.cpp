@@ -889,23 +889,25 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     auto V8Narrow = MVT::getVectorVT(ScalarVT, 8);
     setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
     setOperationPromotedToType(ISD::SETCC,         V8Narrow, MVT::v8f32);
+    setOperationPromotedToType(ISD::VECREDUCE_FADD, V8Narrow, MVT::v8f32);
+    setOperationPromotedToType(ISD::VECREDUCE_FMUL, V8Narrow, MVT::v8f32);
 
     setOperationAction(ISD::FABS,        V8Narrow, Legal);
-    setOperationAction(ISD::FADD,        V8Narrow, Legal);
-    setOperationAction(ISD::FCEIL,       V8Narrow, Legal);
+    setOperationAction(ISD::FADD,        V8Narrow, Expand);
+    setOperationAction(ISD::FCEIL,       V8Narrow, Expand);
     setOperationAction(ISD::FCOPYSIGN,   V8Narrow, Custom);
-    setOperationAction(ISD::FDIV,        V8Narrow, Legal);
-    setOperationAction(ISD::FFLOOR,      V8Narrow, Legal);
+    setOperationAction(ISD::FDIV,        V8Narrow, Expand);
+    setOperationAction(ISD::FFLOOR,      V8Narrow, Expand);
     setOperationAction(ISD::FMA,         V8Narrow, Expand);
-    setOperationAction(ISD::FMUL,        V8Narrow, Legal);
-    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Legal);
+    setOperationAction(ISD::FMUL,        V8Narrow, Expand);
+    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Expand);
     setOperationAction(ISD::FNEG,        V8Narrow, Legal);
-    setOperationAction(ISD::FROUND,      V8Narrow, Legal);
-    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Legal);
-    setOperationAction(ISD::FRINT,       V8Narrow, Legal);
+    setOperationAction(ISD::FROUND,      V8Narrow, Expand);
+    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Expand);
+    setOperationAction(ISD::FRINT,       V8Narrow, Expand);
     setOperationAction(ISD::FSQRT,       V8Narrow, Expand);
-    setOperationAction(ISD::FSUB,        V8Narrow, Legal);
-    setOperationAction(ISD::FTRUNC,      V8Narrow, Legal);
+    setOperationAction(ISD::FSUB,        V8Narrow, Expand);
+    setOperationAction(ISD::FTRUNC,      V8Narrow, Expand);
     setOperationAction(ISD::BR_CC,       V8Narrow, Expand);
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V8Narrow, Expand);
@@ -17299,6 +17301,10 @@ SDValue AArch64TargetLowering::LowerTRUNCATE(SDValue Op,
                                    !Subtarget->isNeonAvailable()))
     return LowerFixedLengthVectorTruncateToSVE(Op, DAG);
 
+  // We can select these directly.
+  if (VT.is64BitVector() && Op.getOperand(0).getValueType().is128BitVector())
+    return Op;
+
   return SDValue();
 }
 
@@ -31531,11 +31537,14 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
+    const Function *Caller = Base->getCaller();
     // Per-call SME attribute checks via SMECallAttrs are compile-time
     // expensive, avoid for non-SME targets. We do the checks even if the
     // target only has SVE, since streaming-mode changes might still be
     // required.
-    if (Subtarget->hasSME() || Subtarget->hasSVE()) {
+    if (Subtarget->hasSME() ||
+        Caller->hasFnAttribute("aarch64_pstate_sm_compatible") ||
+        Caller->hasFnAttribute("aarch64_za_state_agnostic")) {
       auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
       if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
           CallAttrs.requiresPreservingZT0() ||
