@@ -724,6 +724,21 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 } // End isCommutable = 1
 } // End Defs = [SCC]
 
+// f32 -> i16 saturated conversions. Required because those conversions
+// are kept legal for the V_CVT_PK_[IU]16_F32 packed patterns.
+class SOP_FPToUSatPat<dag lhs, int hi> : GCNPat<
+  lhs, (S_MIN_U32 (S_CVT_U32_F32 (f32 $src0)), (i32 hi))>;
+class SOP_FPToSSatPat<dag lhs, int hi, int lo> : GCNPat<
+  lhs, (S_MAX_I32 (S_MIN_I32 (S_CVT_I32_F32 (f32 $src0)), (i32 hi)),
+                  (i32 lo))>;
+
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
+  def : SOP_FPToUSatPat<(i16 (UniformBinFrag<fp_to_uint_sat> f32:$src0, i16)),
+                       0xffff>;
+  def : SOP_FPToSSatPat<(i16 (UniformBinFrag<fp_to_sint_sat> f32:$src0, i16)),
+                       0x7fff, 0xffff8000>;
+}
+
 let SubtargetPredicate = isGFX12Plus in {
   def S_ADD_U64 : SOP2_64<"s_add_u64">{
     let isCommutable = 1;

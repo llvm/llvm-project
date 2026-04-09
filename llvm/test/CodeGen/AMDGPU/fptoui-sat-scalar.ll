@@ -379,21 +379,12 @@ define i8 @test_s_unsigned_i8_f32(float inreg %f) nounwind {
 }
 
 define i16 @test_s_unsigned_i16_f32(float inreg %f) nounwind {
-; GFX7-ISEL-LABEL: test_s_unsigned_i16_f32:
-; GFX7-ISEL:       ; %bb.0:
-; GFX7-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-ISEL-NEXT:    v_cvt_u32_f32_e32 v0, s16
-; GFX7-ISEL-NEXT:    v_min_u32_e32 v0, 0xffff, v0
-; GFX7-ISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GI-LABEL: test_s_unsigned_i16_f32:
-; GFX7-GI:       ; %bb.0:
-; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v0, s16
-; GFX7-GI-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX7-GI-NEXT:    s_min_u32 s4, s4, 0xffff
-; GFX7-GI-NEXT:    v_mov_b32_e32 v0, s4
-; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: test_s_unsigned_i16_f32:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_u32_f32_e32 v0, s16
+; GFX7-NEXT:    v_min_u32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_s_unsigned_i16_f32:
 ; GFX9:       ; %bb.0:
@@ -1755,23 +1746,13 @@ define i8 @test_s_unsigned_i8_f16(half inreg %f) nounwind {
 }
 
 define i16 @test_s_unsigned_i16_f16(half inreg %f) nounwind {
-; GFX7-ISEL-LABEL: test_s_unsigned_i16_f16:
-; GFX7-ISEL:       ; %bb.0:
-; GFX7-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-ISEL-NEXT:    v_cvt_f32_f16_e32 v0, s16
-; GFX7-ISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX7-ISEL-NEXT:    v_min_u32_e32 v0, 0xffff, v0
-; GFX7-ISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GI-LABEL: test_s_unsigned_i16_f16:
-; GFX7-GI:       ; %bb.0:
-; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v0, s16
-; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX7-GI-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX7-GI-NEXT:    s_min_u32 s4, s4, 0xffff
-; GFX7-GI-NEXT:    v_mov_b32_e32 v0, s4
-; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: test_s_unsigned_i16_f16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, s16
+; GFX7-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX7-NEXT:    v_min_u32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_s_unsigned_i16_f16:
 ; GFX9:       ; %bb.0:
