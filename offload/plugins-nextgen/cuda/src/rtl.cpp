@@ -71,14 +71,6 @@ cuMemGetAllocationGranularity(size_t *granularity,
                               CUmemAllocationGranularity_flags option) {}
 #endif
 
-#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11020))
-// Forward declarations of asynchronous memory management functions. This is
-// necessary for older versions of CUDA.
-CUresult cuMemAllocAsync(CUdeviceptr *ptr, size_t, CUstream) { *ptr = 0; }
-
-CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
-#endif
-
 /// Class implementing the CUDA device images properties.
 struct CUDADeviceImageTy : public DeviceImageTy {
   /// Create the CUDA image with the id and the target image pointer.
