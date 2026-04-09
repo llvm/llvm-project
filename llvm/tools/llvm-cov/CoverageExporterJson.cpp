@@ -22,7 +22,7 @@
 //           -- Branch: dict => Describes a branch of the file with counters
 //         -- MCDC Records: array => List of MCDC records in the file
 //           -- MCDC Values: array => List of T/F covered condition values and
-//           list of executed test vectors
+//           list of test vectors with execution status
 //         -- Segments: array => List of Segments contained in the file
 //           -- Segment: dict => Describes a segment of the file with a counter
 //         -- Expansions: array => List of expansion records
@@ -121,11 +121,13 @@ json::Value renderCondState(const coverage::MCDCRecord::CondState CondState) {
   llvm_unreachable("Unknown llvm::coverage::MCDCRecord::CondState enum");
 }
 
-json::Array gatherTestVectors(coverage::MCDCRecord &Record) {
+json::Array gatherTestVectors(coverage::MCDCRecord &Record,
+                              const CoverageViewOptions &Options) {
   json::Array TestVectors;
   unsigned NumConditions = Record.getNumConditions();
-  for (unsigned tv = 0; tv < Record.getNumTestVectors(); tv++) {
+  const bool ShowNonExecutedVectors = Options.ShowMCDCNonExecutedVectors;
 
+  for (unsigned tv = 0; tv < Record.getNumTestVectors(); tv++) {
     json::Array TVConditions;
     for (unsigned c = 0; c < NumConditions; c++)
       TVConditions.push_back(renderCondState(Record.getTVCondition(tv, c)));
@@ -135,17 +137,31 @@ json::Array gatherTestVectors(coverage::MCDCRecord &Record) {
                       {"result", renderCondState(Record.getTVResult(tv))},
                       {"conditions", std::move(TVConditions)}}));
   }
+  if (ShowNonExecutedVectors) {
+    for (unsigned tv = 0; tv < Record.getNumNotExecutedTestVectors(); tv++) {
+      json::Array TVConditions;
+      for (unsigned c = 0; c < NumConditions; c++)
+        TVConditions.push_back(
+            renderCondState(Record.getNotExecutedTVCondition(tv, c)));
+
+      TestVectors.push_back(json::Object(
+          {{"executed", json::Value(false)},
+           {"result", renderCondState(Record.getNotExecutedTVResult(tv))},
+           {"conditions", std::move(TVConditions)}}));
+    }
+  }
   return TestVectors;
 }
 
-json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
+json::Array renderMCDCRecord(const coverage::MCDCRecord &Record,
+                             const CoverageViewOptions &Options) {
   const llvm::coverage::CounterMappingRegion &CMR = Record.getDecisionRegion();
   const auto [TrueDecisions, FalseDecisions] = Record.getDecisions();
   return json::Array(
       {CMR.LineStart, CMR.ColumnStart, CMR.LineEnd, CMR.ColumnEnd,
        TrueDecisions, FalseDecisions, CMR.FileID, CMR.ExpandedFileID,
        int64_t(CMR.Kind), gatherConditions(Record),
-       gatherTestVectors(const_cast<coverage::MCDCRecord &>(Record))});
+       gatherTestVectors(const_cast<coverage::MCDCRecord &>(Record), Options)});
 }
 
 json::Array renderRegions(ArrayRef<coverage::CountedRegion> Regions) {
@@ -163,10 +179,11 @@ json::Array renderBranchRegions(ArrayRef<coverage::CountedRegion> Regions) {
   return RegionArray;
 }
 
-json::Array renderMCDCRecords(ArrayRef<coverage::MCDCRecord> Records) {
+json::Array renderMCDCRecords(ArrayRef<coverage::MCDCRecord> Records,
+                              const CoverageViewOptions &Options) {
   json::Array RecordArray;
   for (auto &Record : Records)
-    RecordArray.push_back(renderMCDCRecord(Record));
+    RecordArray.push_back(renderMCDCRecord(Record, Options));
   return RecordArray;
 }
 
@@ -268,10 +285,11 @@ json::Array renderFileBranches(const coverage::CoverageData &FileCoverage) {
   return BranchArray;
 }
 
-json::Array renderFileMCDC(const coverage::CoverageData &FileCoverage) {
+json::Array renderFileMCDC(const coverage::CoverageData &FileCoverage,
+                           const CoverageViewOptions &Options) {
   json::Array MCDCRecordArray;
   for (const auto &Record : FileCoverage.getMCDCRecords())
-    MCDCRecordArray.push_back(renderMCDCRecord(Record));
+    MCDCRecordArray.push_back(renderMCDCRecord(Record, Options));
   return MCDCRecordArray;
 }
 
@@ -285,7 +303,7 @@ json::Object renderFile(const coverage::CoverageMapping &Coverage,
     auto FileCoverage = Coverage.getCoverageForFile(Filename);
     File["segments"] = renderFileSegments(FileCoverage);
     File["branches"] = renderFileBranches(FileCoverage);
-    File["mcdc_records"] = renderFileMCDC(FileCoverage);
+    File["mcdc_records"] = renderFileMCDC(FileCoverage, Options);
     if (!Options.SkipExpansions) {
       File["expansions"] = renderFileExpansions(Coverage, FileCoverage);
     }
@@ -325,16 +343,17 @@ json::Array renderFiles(const coverage::CoverageMapping &Coverage,
 }
 
 json::Array renderFunctions(
-    const iterator_range<coverage::FunctionRecordIterator> &Functions) {
+    const iterator_range<coverage::FunctionRecordIterator> &Functions,
+    const CoverageViewOptions &Options) {
   json::Array FunctionArray;
   for (const auto &F : Functions)
-    FunctionArray.push_back(
-        json::Object({{"name", F.Name},
-                      {"count", clamp_uint64_to_int64(F.ExecutionCount)},
-                      {"regions", renderRegions(F.CountedRegions)},
-                      {"branches", renderBranchRegions(F.CountedBranchRegions)},
-                      {"mcdc_records", renderMCDCRecords(F.MCDCRecords)},
-                      {"filenames", json::Array(F.Filenames)}}));
+    FunctionArray.push_back(json::Object(
+        {{"name", F.Name},
+         {"count", clamp_uint64_to_int64(F.ExecutionCount)},
+         {"regions", renderRegions(F.CountedRegions)},
+         {"branches", renderBranchRegions(F.CountedBranchRegions)},
+         {"mcdc_records", renderMCDCRecords(F.MCDCRecords, Options)},
+         {"filenames", json::Array(F.Filenames)}}));
   return FunctionArray;
 }
 
@@ -368,7 +387,8 @@ void CoverageExporterJson::renderRoot(ArrayRef<std::string> SourceFiles) {
       {{"files", std::move(Files)}, {"totals", renderSummary(Totals)}});
   // Skip functions-level information  if necessary.
   if (!Options.ExportSummaryOnly && !Options.SkipFunctions)
-    Export["functions"] = renderFunctions(Coverage.getCoveredFunctions());
+    Export["functions"] =
+        renderFunctions(Coverage.getCoveredFunctions(), Options);
 
   auto ExportArray = json::Array({std::move(Export)});
 
