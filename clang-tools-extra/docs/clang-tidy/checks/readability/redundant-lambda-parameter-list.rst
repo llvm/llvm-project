@@ -1,7 +1,7 @@
-.. title:: clang-tidy - readability-redundant-lambda-parentheses
+.. title:: clang-tidy - readability-redundant-lambda-parameter-list
 
-readability-redundant-lambda-parentheses
-========================================
+readability-redundant-lambda-parameter-list
+===========================================
 
 Finds lambda expressions with a redundant empty parameter list and removes it.
 

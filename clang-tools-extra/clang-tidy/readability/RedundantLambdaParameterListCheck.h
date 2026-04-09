@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTLAMBDAPARENTHESESCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTLAMBDAPARENTHESESCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTLAMBDAPARAMETERLISTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTLAMBDAPARAMETERLISTCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,10 +17,10 @@ namespace clang::tidy::readability {
 /// it.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-lambda-parentheses.html
-class RedundantLambdaParenthesesCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-lambda-parameter-list.html
+class RedundantLambdaParameterListCheck : public ClangTidyCheck {
 public:
-  RedundantLambdaParenthesesCheck(StringRef Name, ClangTidyContext *Context)
+  RedundantLambdaParameterListCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
 
   std::optional<TraversalKind> getCheckTraversalKind() const override {
@@ -36,4 +36,4 @@ public:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTLAMBDAPARENTHESESCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTLAMBDAPARAMETERLISTCHECK_H

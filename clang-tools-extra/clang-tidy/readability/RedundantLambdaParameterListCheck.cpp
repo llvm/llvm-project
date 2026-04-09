@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RedundantLambdaParenthesesCheck.h"
-#include "clang/Lex/Lexer.h"
+#include "RedundantLambdaParameterListCheck.h"
+#include "../utils/LexerUtils.h"
 
 using namespace clang::ast_matchers;
 
@@ -23,20 +23,17 @@ AST_MATCHER(LambdaExpr, hasRedundantParens) {
 
 } // namespace
 
-void RedundantLambdaParenthesesCheck::registerMatchers(MatchFinder *Finder) {
+void RedundantLambdaParameterListCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(lambdaExpr(hasRedundantParens()).bind("lambda"), this);
 }
 
-void RedundantLambdaParenthesesCheck::check(
+void RedundantLambdaParameterListCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
 
-  if (Lambda->getBeginLoc().isMacroID())
-    return;
-
   const LangOptions &LangOpts = getLangOpts();
 
-  const auto FTL = Lambda->getCallOperator()->getFunctionTypeLoc();
+  const FunctionTypeLoc FTL = Lambda->getCallOperator()->getFunctionTypeLoc();
   const SourceLocation LParenLoc = FTL.getLParenLoc();
   const SourceLocation RParenLoc = FTL.getRParenLoc();
 
@@ -45,21 +42,20 @@ void RedundantLambdaParenthesesCheck::check(
 
   // Ensure parens are truly empty (reject "(void)")
   const std::optional<Token> FirstInParens =
-      Lexer::findNextToken(LParenLoc, *Result.SourceManager, LangOpts);
+      utils::lexer::findNextTokenSkippingComments(
+          LParenLoc, *Result.SourceManager, LangOpts);
+
   if (!FirstInParens || FirstInParens->getLocation() != RParenLoc)
     return;
 
-  const std::optional<Token> NextTok =
-      Lexer::findNextToken(RParenLoc, *Result.SourceManager, LangOpts);
+  const std::optional<Token> NextAfterParenTok =
+      utils::lexer::findNextTokenSkippingComments(
+          RParenLoc, *Result.SourceManager, LangOpts);
 
-  if (!NextTok)
+  if (!NextAfterParenTok || NextAfterParenTok->is(tok::l_square))
     return;
 
-  // Attributes after '()' have different semantics depending on position.
-  if (NextTok->is(tok::l_square))
-    return;
-
-  if (!LangOpts.CPlusPlus23 && NextTok->isNot(tok::l_brace))
+  if (!LangOpts.CPlusPlus23 && NextAfterParenTok->isNot(tok::l_brace))
     return;
 
   diag(LParenLoc, "redundant empty parameter list in lambda expression")
