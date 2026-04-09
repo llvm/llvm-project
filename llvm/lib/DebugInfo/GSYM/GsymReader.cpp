@@ -281,25 +281,38 @@ llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
   return Error::success();
 }
 
+std::optional<GlobalData> GsymReader::getGlobalData(GlobalInfoType Type) const {
+  auto It = GlobalDataSections.find(Type);
+  if (It == GlobalDataSections.end())
+    return std::nullopt;
+  return It->second;
+}
+
 llvm::Expected<StringRef>
 GsymReader::getRequiredGlobalData(GlobalInfoType Type) const {
   if (auto Data = getOptionalGlobalData(Type))
     return *Data;
+  const char *TypeName = getNameForGlobalInfoType(Type).data();
+  std::optional<GlobalData> GD = getGlobalData(Type);
+  // We have a GlobalData entry but didn't get any bytes — the file may be
+  // truncated.
+  if (GD)
+    return createStringError(
+        std::errc::invalid_argument,
+        "missing bytes for %s, GSYM file might be truncated", TypeName);
   return createStringError(std::errc::invalid_argument,
-                           "missing required section type %u",
-                           static_cast<uint32_t>(Type));
+                           "missing required section type %s", TypeName);
 }
 
 std::optional<StringRef>
 GsymReader::getOptionalGlobalData(GlobalInfoType Type) const {
-  auto It = GlobalDataSections.find(Type);
-  if (It == GlobalDataSections.end())
+  std::optional<GlobalData> GD = getGlobalData(Type);
+  if (!GD)
     return std::nullopt;
-  const GlobalData &GD = It->second;
   StringRef Buf = MemBuffer->getBuffer();
-  if (GD.FileSize == 0 || GD.FileOffset + GD.FileSize > Buf.size())
+  if (GD->FileSize == 0 || GD->FileOffset + GD->FileSize > Buf.size())
     return std::nullopt;
-  return Buf.substr(GD.FileOffset, GD.FileSize);
+  return Buf.substr(GD->FileOffset, GD->FileSize);
 }
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {

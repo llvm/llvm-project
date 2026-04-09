@@ -292,6 +292,13 @@ public:
   LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
+  /// Get the GlobalData entry for a section type.
+  ///
+  /// \param Type The section type to retrieve.
+  /// \returns The GlobalData entry, or std::nullopt if the section is not
+  /// present.
+  LLVM_ABI std::optional<GlobalData> getGlobalData(GlobalInfoType Type) const;
+
   /// Get the raw bytes for a required GlobalData section as a StringRef.
   ///
   /// \param Type The section type to retrieve.

@@ -73,6 +73,26 @@ struct GlobalData {
                                                     uint64_t &Offset);
 };
 
+static StringRef getNameForGlobalInfoType(GlobalInfoType Type) {
+  switch (Type) {
+  case GlobalInfoType::EndOfList:
+    return "EndOfList";
+  case GlobalInfoType::AddrOffsets:
+    return "AddrOffsets";
+  case GlobalInfoType::AddrInfoOffsets:
+    return "AddrInfoOffsets";
+  case GlobalInfoType::StringTable:
+    return "StringTable";
+  case GlobalInfoType::FileTable:
+    return "FileTable";
+  case GlobalInfoType::FunctionInfo:
+    return "FunctionInfo";
+  case GlobalInfoType::UUID:
+    return "UUID";
+  }
+  return "Unknown";
+}
+
 } // namespace gsym
 } // namespace llvm
 

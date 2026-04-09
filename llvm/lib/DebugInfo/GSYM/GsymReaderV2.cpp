@@ -30,26 +30,6 @@ llvm::Error GsymReaderV2::parseHeaderAndGlobalDataEntries() {
   return parseGlobalDataEntries(HeaderV2::getEncodedSize());
 }
 
-static const char *getGlobalInfoTypeName(GlobalInfoType Type) {
-  switch (Type) {
-  case GlobalInfoType::EndOfList:
-    return "EndOfList";
-  case GlobalInfoType::AddrOffsets:
-    return "AddrOffsets";
-  case GlobalInfoType::AddrInfoOffsets:
-    return "AddrInfoOffsets";
-  case GlobalInfoType::StringTable:
-    return "StringTable";
-  case GlobalInfoType::FileTable:
-    return "FileTable";
-  case GlobalInfoType::FunctionInfo:
-    return "FunctionInfo";
-  case GlobalInfoType::UUID:
-    return "UUID";
-  }
-  return "Unknown";
-}
-
 void GsymReaderV2::dump(raw_ostream &OS) {
   OS << *Hdr << "\n";
 
@@ -64,7 +44,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "TYPE            FILE OFFSET 64      FILE SIZE 64\n";
   OS << "=============== ==================  ==================\n";
   for (const auto &GD : Sections) {
-    OS << format("%-15s ", getGlobalInfoTypeName(GD.Type))
+    OS << format("%-15s ", getNameForGlobalInfoType(GD.Type).data())
        << HEX64(GD.FileOffset) << "  " << HEX64(GD.FileSize) << "\n";
   }
   OS << "\n";
