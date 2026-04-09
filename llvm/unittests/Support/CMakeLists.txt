@@ -83,6 +83,7 @@ add_llvm_unittest(SupportTests
   ReverseIterationTest.cpp
   ReplaceFileTest.cpp
   RISCVAttributeParserTest.cpp
+  SandboxingFileSystemTest.cpp
   ScaledNumberTest.cpp
   ScopedPrinterTest.cpp
   SHA256.cpp
