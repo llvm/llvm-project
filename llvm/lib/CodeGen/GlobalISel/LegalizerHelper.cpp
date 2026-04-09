@@ -9011,7 +9011,7 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
 
   // Propagate any NaN of both operands
   if (!MI.getFlag(MachineInstr::FmNoNans) &&
-      (!VT->isKnownNeverNaN(Src0) || VT->isKnownNeverNaN(Src1))) {
+      (!VT->isKnownNeverNaN(Src0) || !VT->isKnownNeverNaN(Src1))) {
     auto IsOrdered = MIRBuilder.buildFCmp(CmpInst::FCMP_ORD, CmpTy, Src0, Src1);
 
     LLT ElementTy = Ty.isScalar() ? Ty : Ty.getElementType();
