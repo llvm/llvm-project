@@ -48,12 +48,12 @@ public:
   void setAddressSize(unsigned Size) { AddressSize = Size; }
 
   //------------------------------------------------------------------
-  /// Extract a pointer from \a *OffsetPtr.
+  /// Extract an address from \a *OffsetPtr.
   ///
-  /// Extract a single pointer from the data and update the offset
-  /// pointed to by \a OffsetPtr. The size of the extracted pointer
+  /// Extract a single address from the data and update the offset
+  /// pointed to by \a OffsetPtr. The size of the extracted address
   /// is \a getAddressSize(), so the address size has to be
-  /// set correctly prior to extracting any pointer values.
+  /// set correctly prior to extracting any address values.
   ///
   /// @param[in,out] OffsetPtr
   ///     A pointer to an offset within the data that will be advanced
@@ -63,22 +63,22 @@ public:
   ///     unmodified.
   ///
   /// @return
-  ///     The extracted pointer value as a 64 integer.
+  ///     The extracted address value as a 64 integer.
   uint64_t getAddress(uint64_t *OffsetPtr) const {
     return getUnsigned(OffsetPtr, AddressSize);
   }
 
-  /// Extract a pointer-sized unsigned integer from the location given by the
+  /// Extract an address-sized unsigned integer from the location given by the
   /// cursor. In case of an extraction error, or if the cursor is already in
   /// an error state, zero is returned.
   uint64_t getAddress(Cursor &C) const { return getUnsigned(C, AddressSize); }
 
-  /// Test the availability of enough bytes of data for a pointer from
-  /// \a Offset. The size of a pointer is \a getAddressSize().
+  /// Test the availability of enough bytes of data for an address from
+  /// \a Offset. The size of an address is \a getAddressSize().
   ///
   /// @return
   ///     \b true if \a Offset is a valid offset and there are enough
-  ///     bytes for a pointer available at that offset, \b false
+  ///     bytes for an address available at that offset, \b false
   ///     otherwise.
   bool isValidOffsetForAddress(uint64_t Offset) const {
     return isValidOffsetForDataOfSize(Offset, AddressSize);
