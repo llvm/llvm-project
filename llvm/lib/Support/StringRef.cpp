@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/edit_distance.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/xxhash.h"
 #include <bitset>
 
 using namespace llvm;
@@ -614,5 +615,12 @@ unsigned DenseMapInfo<StringRef, void>::getHashValue(StringRef Val) {
          "Cannot hash the empty key!");
   assert(Val.data() != getTombstoneKey().data() &&
          "Cannot hash the tombstone key!");
-  return (unsigned)(hash_value(Val));
+  auto hash = xxh3_64bits(Val);
+  // In LLVM_ENABLE_ABI_BREAKING_CHECKS builds, the seed is non-deterministic
+  // per process (address of a function in LLVMSupport) to prevent having users
+  // depend on the particular hash values.
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  hash ^= hashing::detail::get_execution_seed();
+#endif
+  return hash;
 }
