@@ -2641,6 +2641,34 @@ def int_experimental_vector_compress:
               [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
               [IntrNoMem]>;
 
+def int_masked_udiv:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrNoMem]>;
+
+def int_masked_sdiv:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrNoMem]>;
+
+def int_masked_urem:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrNoMem]>;
+
+def int_masked_srem:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrNoMem]>;
+
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
                               [IntrNoMem, IntrSpeculatable]>;
