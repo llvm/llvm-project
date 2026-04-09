@@ -256,7 +256,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
-  case OMPC_counts:
   case OMPC_permutation:
   case OMPC_allocator:
   case OMPC_collapse:
@@ -636,7 +635,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
-  case OMPC_counts:
   case OMPC_permutation:
   case OMPC_allocator:
   case OMPC_collapse:
@@ -817,8 +815,7 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
     OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
-         DKind == OMPD_split || DKind == OMPD_interchange ||
-         DKind == OMPD_stripe;
+         DKind == OMPD_interchange || DKind == OMPD_stripe;
 }
 
 bool clang::isOpenMPCanonicalLoopSequenceTransformationDirective(

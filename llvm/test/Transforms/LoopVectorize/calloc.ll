@@ -14,11 +14,11 @@ entry:
   %cmp29 = icmp eq i64 %shl, 0
   br i1 %cmp29, label %for.end, label %for.body.lr.ph
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %0 = shl i64 %length, 1
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %i.030 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %shr = lshr i64 %i.030, 1
   %arrayidx = getelementptr inbounds i8, ptr %bytes, i64 %shr
@@ -42,7 +42,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %exitcond = icmp eq i64 %inc, %0
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret ptr %call
 }
 

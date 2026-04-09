@@ -1,0 +1,207 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func dso_local @bad_static_array_ctor_with_num_elements(%p: !cir.ptr<!cir.array<!rec_S x 10>>, %n: !u64i) {
+    // expected-error@+1 {{'cir.array.ctor' op when 'num_elements' is present, 'addr' must be a pointer to a !cir.record type}}
+    cir.array.ctor %p, %n : !cir.ptr<!cir.array<!rec_S x 10>>, !u64i {
+    ^bb0(%e: !cir.ptr<!cir.array<!rec_S x 10>>):
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
+
+  // Static form: addr must be a pointer to an array type.
+  cir.func @bad_static_not_array_ctor(%p: !cir.ptr<!rec_S>) {
+    // expected-error@+1 {{'cir.array.ctor' op when 'num_elements' is absent, 'addr' must be a pointer to a !cir.array type}}
+    cir.array.ctor %p : !cir.ptr<!rec_S> {
+    ^bb0(%e: !cir.ptr<!rec_S>):
+      cir.call @_ZN1SC1Ev(%e) : (!cir.ptr<!rec_S>) -> ()
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func private @construct_int(!cir.ptr<!u8i>)
+
+  // Static form: addr must be a pointer to an array type.
+  cir.func @bad_static_array_not_record_ctor(%p: !cir.ptr<!cir.array<!u8i x 4>>) {
+    // expected-error@+1 {{'cir.array.ctor' op the block argument type must be a pointer to a !cir.record type}}
+    cir.array.ctor %p : !cir.ptr<!cir.array<!u8i x 4>> {
+    ^bb0(%e: !cir.ptr<!u8i>):
+      cir.call @construct_int(%e) : (!cir.ptr<!u8i>) -> ()
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_T = !cir.record<struct "T" padded {!u8i}>
+
+module {
+  cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
+
+  // Static form: block argument element type must match innermost array element.
+  cir.func @bad_static_element_mismatch_ctor(%p: !cir.ptr<!cir.array<!rec_S x 10>>) {
+    // expected-error@+1 {{'cir.array.ctor' op block argument pointee type must match the innermost array element type}}
+    cir.array.ctor %p : !cir.ptr<!cir.array<!rec_S x 10>> {
+    ^bb0(%e: !cir.ptr<!rec_T>):
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_T = !cir.record<struct "T" padded {!u8i}>
+
+module {
+  cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
+
+  // Dynamic form: addr type must match block argument type.
+  cir.func @bad_dynamic_type_mismatch_ctor(%p: !cir.ptr<!rec_T>, %n: !u64i) {
+    // expected-error@+1 {{'cir.array.ctor' op when 'num_elements' is present, 'addr' type must match the block argument type}}
+    cir.array.ctor %p, %n : !cir.ptr<!rec_T>, !u64i {
+    ^bb0(%e: !cir.ptr<!rec_S>):
+      cir.call @_ZN1SC1Ev(%e) : (!cir.ptr<!rec_S>) -> ()
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func dso_local @bad_static_array_dtor_with_num_elements(%p: !cir.ptr<!cir.array<!rec_S x 10>>, %n: !u64i) {
+    // expected-error@+1 {{'cir.array.dtor' op when 'num_elements' is present, 'addr' must be a pointer to a !cir.record type}}
+    cir.array.dtor %p, %n : !cir.ptr<!cir.array<!rec_S x 10>>, !u64i {
+    ^bb0(%e: !cir.ptr<!cir.array<!rec_S x 10>>):
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
+  // Static form: addr must be a pointer to an array type.
+  cir.func @bad_static_not_array_dtor(%p: !cir.ptr<!rec_S>) {
+    // expected-error@+1 {{'cir.array.dtor' op when 'num_elements' is absent, 'addr' must be a pointer to a !cir.array type}}
+    cir.array.dtor %p : !cir.ptr<!rec_S> {
+    ^bb0(%e: !cir.ptr<!rec_S>):
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func private @destroy_int(!cir.ptr<!u8i>)
+
+  // Static form: addr must be a pointer to an array type.
+  cir.func @bad_static_array_not_record_dtor(%p: !cir.ptr<!cir.array<!u8i x 4>>) {
+    // expected-error@+1 {{'cir.array.dtor' op the block argument type must be a pointer to a !cir.record type}}
+    cir.array.dtor %p : !cir.ptr<!cir.array<!u8i x 4>> {
+    ^bb0(%e: !cir.ptr<!u8i>):
+      cir.call @destroy_int(%e) : (!cir.ptr<!u8i>) -> ()
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_T = !cir.record<struct "T" padded {!u8i}>
+
+module {
+  cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
+  // Static form: addr must be a pointer to an array type.
+  cir.func @bad_static_dtor_not_array_ctor(%p: !cir.ptr<!cir.array<!rec_S x 10>>) {
+    // expected-error@+1 {{'cir.array.dtor' op block argument pointee type must match the innermost array element type}}
+    cir.array.dtor %p: !cir.ptr<!cir.array<!rec_S x 10>> {
+    ^bb0(%e: !cir.ptr<!rec_T>):
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_T = !cir.record<struct "T" padded {!u8i}>
+
+module {
+  cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
+
+  // Static form: block argument element type must match innermost array element.
+  cir.func @bad_static_element_mismatch_dtor(%p: !cir.ptr<!cir.array<!rec_S x 10>>) {
+    // expected-error@+1 {{'cir.array.dtor' op block argument pointee type must match the innermost array element type}}
+    cir.array.dtor %p : !cir.ptr<!cir.array<!rec_S x 10>> {
+    ^bb0(%e: !cir.ptr<!rec_T>):
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_T = !cir.record<struct "T" padded {!u8i}>
+
+module {
+  cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
+
+  // Dynamic form: addr type must match block argument type.
+  cir.func @bad_dynamic_type_mismatch_dtor(%p: !cir.ptr<!rec_T>, %n: !u64i) {
+    // expected-error@+1 {{'cir.array.dtor' op when 'num_elements' is present, 'addr' type must match the block argument type}}
+    cir.array.dtor %p, %n : !cir.ptr<!rec_T>, !u64i {
+    ^bb0(%e: !cir.ptr<!rec_S>):
+      cir.call @_ZN1SD1Ev(%e) : (!cir.ptr<!rec_S>) -> ()
+    }
+    cir.return
+  }
+}

@@ -242,9 +242,10 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
 }
 
 void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
-                                               ModuleKind Kind) {
-  First->visitModuleFile(Filename, Kind);
-  Second->visitModuleFile(Filename, Kind);
+                                               ModuleKind Kind,
+                                               bool DirectlyImported) {
+  First->visitModuleFile(Filename, Kind, DirectlyImported);
+  Second->visitModuleFile(Filename, Kind, DirectlyImported);
 }
 
 bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
@@ -496,7 +497,10 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
   SmallVector<StringRef, 4> ReadFeatures(TargetOpts.FeaturesAsWritten.begin(),
                                          TargetOpts.FeaturesAsWritten.end());
   llvm::sort(ExistingFeatures);
+  ExistingFeatures.erase(llvm::unique(ExistingFeatures),
+                         ExistingFeatures.end());
   llvm::sort(ReadFeatures);
+  ReadFeatures.erase(llvm::unique(ReadFeatures), ReadFeatures.end());
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
@@ -3308,7 +3312,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       }
 
       if (Listener)
-        Listener->visitModuleFile(F.FileName, F.Kind);
+        Listener->visitModuleFile(F.FileName, F.Kind, F.isDirectlyImported());
 
       if (Listener && Listener->needsInputFileVisitation()) {
         unsigned N = Listener->needsSystemInputFileVisitation() ? NumInputs
@@ -11437,11 +11441,6 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
-  case llvm::omp::OMPC_counts: {
-    unsigned NumCounts = Record.readInt();
-    C = OMPCountsClause::CreateEmpty(Context, NumCounts);
-    break;
-  }
   case llvm::omp::OMPC_permutation: {
     unsigned NumLoops = Record.readInt();
     C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
@@ -11851,16 +11850,6 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
-    E = Record.readSubExpr();
-  C->setLParenLoc(Record.readSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPCountsClause(OMPCountsClause *C) {
-  bool HasFill = Record.readBool();
-  if (HasFill)
-    C->setOmpFillIndex(Record.readInt());
-  C->setOmpFillLoc(Record.readSourceLocation());
-  for (Expr *&E : C->getCountsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }

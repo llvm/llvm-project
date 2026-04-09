@@ -7384,7 +7384,6 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   bool HadOneDivisor = false;
   bool AllDivisorsAreOnes = true;
   bool HadEvenDivisor = false;
-  bool NeedToApplyOffset = false;
   bool AllDivisorsArePowerOfTwo = true;
   SmallVector<SDValue, 16> PAmts, AAmts, KAmts, QAmts;
 
@@ -7425,9 +7424,6 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     APInt A = APInt::getSignedMaxValue(W).udiv(D0);
     A.clearLowBits(K);
 
-    // FIXME: Do we need this flag? Is A ever 0 other than when D is INT_MIN?
-    NeedToApplyOffset |= A != 0;
-
     // Q = floor((2 * A) / (2^K))
     APInt Q = (2 * A).udiv(APInt::getOneBitSet(W, K));
 
@@ -7444,8 +7440,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
       Q = APInt::getLowBitsSet(W, W - K);
     }
 
-    // If the divisor is 1 the result can be constant-folded. Likewise, we
-    // don't care about INT_MIN lanes, those can be set to undef if appropriate.
+    // If the divisor is 1 the result can be constant-folded.
     if (D.isOne()) {
       // Set P, A and K to a bogus values so we can try to splat them.
       P = 0;
@@ -7521,15 +7516,13 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   SDValue Op0 = DAG.getNode(ISD::MUL, DL, VT, N, PVal);
   Created.push_back(Op0.getNode());
 
-  if (NeedToApplyOffset) {
-    // We need ADD to do this.
-    if (!DCI.isBeforeLegalizeOps() && !isOperationLegalOrCustom(ISD::ADD, VT))
-      return SDValue();
+  // We need ADD to do this.
+  if (!DCI.isBeforeLegalizeOps() && !isOperationLegalOrCustom(ISD::ADD, VT))
+    return SDValue();
 
-    // (add (mul N, P), A)
-    Op0 = DAG.getNode(ISD::ADD, DL, VT, Op0, AVal);
-    Created.push_back(Op0.getNode());
-  }
+  // (add (mul N, P), A)
+  Op0 = DAG.getNode(ISD::ADD, DL, VT, Op0, AVal);
+  Created.push_back(Op0.getNode());
 
   // Rotate right only if any divisor was even. We avoid rotates for all-odd
   // divisors as a performance improvement, since rotating by 0 is a no-op.
@@ -8164,28 +8157,34 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     Divisor.lshrInPlace(TrailingZeros);
   }
 
-  // Look for the largest chunk width W such that (1 << W) % Divisor == 1.
-  unsigned BestChunkWidth = 0;
+  // Look for the largest chunk width W such that (1 << W) % Divisor == 1 or
+  // (1 << W) % Divisor == -1.
+  unsigned BestChunkWidth = 0, AltChunkWidth = 0;
   for (unsigned I = HBitWidth, E = HBitWidth / 2; I > E; --I) {
-    APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
-
-    if (!Mod.isOne())
+    // Skip HBitWidth-1, it doesn't have enough bits for carries.
+    if (I == HBitWidth - 1)
       continue;
 
-    // If best chunk is HBitWidth, we can use it and handle the carry out.
-    // Otherwise, ensure the sum won't overflow HiLoVT (HBitWidth).
-    // Summing N chunks adds ceil(log2(N)) extra carry bits to the width.
-    // Safety check: Base Chunk Width (I) + Carry Bits <= Register Width.
-    unsigned NumChunks = divideCeil(BitWidth, I);
-    if (I == HBitWidth || I + llvm::bit_width(NumChunks - 1) <= HBitWidth) {
+    APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
+
+    if (Mod.isOne()) {
       BestChunkWidth = I;
       break;
     }
+
+    // We have an alternate strategy for Remainder == Divisor - 1.
+    // FIXME: Support HBitWidth.
+    if (I != HBitWidth && Mod == Divisor - 1)
+      AltChunkWidth = I;
   }
 
-  // If we didn't find a chunk size, exit.
-  if (!BestChunkWidth)
-    return false;
+  bool Alternate = false;
+  if (!BestChunkWidth) {
+    if (!AltChunkWidth)
+      return false;
+    Alternate = true;
+    BestChunkWidth = AltChunkWidth;
+  }
 
   SDLoc dl(N);
 
@@ -8223,6 +8222,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   // If BestChunkWidth is HBitWidth add low and high half. If there is a carry
   // out, add that to the final sum.
   if (BestChunkWidth == HBitWidth) {
+    assert(!Alternate);
     // Shift LH:LL right if there were trailing zeros in the divisor.
     if (TrailingZeros) {
       LL = GetFSHR(LL, LH, TrailingZeros);
@@ -8272,10 +8272,33 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       // If we're on the last chunk, we don't need an AND.
       if (I + BestChunkWidth < BitWidth - TrailingZeros)
         Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
-      if (!Sum)
+      if (!Sum) {
         Sum = Chunk;
-      else
-        Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Chunk);
+      } else {
+        // For Alternate, we need to subtract odd chunks.
+        unsigned ChunkNum = I / BestChunkWidth;
+        unsigned Opc = (Alternate && (ChunkNum % 2) != 0) ? ISD::SUB : ISD::ADD;
+        Sum = DAG.getNode(Opc, dl, HiLoVT, Sum, Chunk);
+      }
+    }
+
+    // For Alternate, the sum may be negative, but we need a positive sum. We
+    // can increase it by a multiple of the divisor to make it positive. For 3
+    // chunks the largest negative value is -(2^BestChunkWidth - 1). For 4
+    // chunks, it's 2*-(2^BestChunkWidth - 1). We know that 2^BestChunkWidth + 1
+    // is a multiple of the divisor. Add that 1 or 2 times to make the sum
+    // positive.
+    if (Alternate) {
+      unsigned NumChunks = divideCeil(BitWidth - TrailingZeros, BestChunkWidth);
+      assert(NumChunks <= 4);
+
+      APInt Adjust = APInt::getOneBitSet(HBitWidth, BestChunkWidth);
+      Adjust.setBit(0);
+      // If there are 4 chunks, we need to adjust twice.
+      if (NumChunks == 4)
+        Adjust <<= 1;
+      Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum,
+                        DAG.getConstant(Adjust, dl, HiLoVT));
     }
   }
 
@@ -9189,7 +9212,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
 
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
-      !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS)) {
+      !DAG.isKnownNeverLogicalZero(RHS) && !DAG.isKnownNeverLogicalZero(LHS)) {
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                   DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
     SDValue TestZero =
@@ -9249,8 +9272,8 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   // either one for +0.0 vs -0.0.
   if ((Flags.hasNoNaNs() ||
        (DAG.isKnownNeverSNaN(LHS) && DAG.isKnownNeverSNaN(RHS))) &&
-      (Flags.hasNoSignedZeros() || DAG.isKnownNeverZeroFloat(LHS) ||
-       DAG.isKnownNeverZeroFloat(RHS))) {
+      (Flags.hasNoSignedZeros() || DAG.isKnownNeverLogicalZero(LHS) ||
+       DAG.isKnownNeverLogicalZero(RHS))) {
     unsigned IEEE2008Op = Opc == ISD::FMINIMUMNUM ? ISD::FMINNUM : ISD::FMAXNUM;
     if (isOperationLegalOrCustom(IEEE2008Op, VT))
       return DAG.getNode(IEEE2008Op, DL, VT, LHS, RHS, Flags);
@@ -9276,8 +9299,8 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   // TODO: We need quiet sNaN if strictfp.
 
   // Fixup signed zero behavior.
-  if (Flags.hasNoSignedZeros() || DAG.isKnownNeverZeroFloat(LHS) ||
-      DAG.isKnownNeverZeroFloat(RHS)) {
+  if (Flags.hasNoSignedZeros() || DAG.isKnownNeverLogicalZero(LHS) ||
+      DAG.isKnownNeverLogicalZero(RHS)) {
     return MinMax;
   }
   SDValue TestZero =
