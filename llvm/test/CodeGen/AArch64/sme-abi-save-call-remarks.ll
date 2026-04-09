@@ -93,7 +93,7 @@ if.end:
   br label %exit
 
 exit:
-  ; The remarks won'treport this call as the save is already needed due to
+  ; The remarks won't report this call as the save is already needed due to
   ; the call to `private_za_callee_*()` calls on both paths to this BB.
   call void @private_za_callee_c()
 

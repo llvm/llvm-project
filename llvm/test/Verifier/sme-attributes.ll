@@ -68,3 +68,8 @@ declare void @zt0_inout_out() "aarch64_inout_zt0" "aarch64_out_zt0";
 
 declare void @zt0_inout_agnostic() "aarch64_inout_zt0" "aarch64_za_state_agnostic";
 ; CHECK: Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', 'aarch64_inout_zt0', 'aarch64_preserves_zt0' and 'aarch64_za_state_agnostic' are mutually exclusive
+
+; Note: The 'aarch64_zt0_undef' currently has no semantic meaning.
+; It is reserved to avoid breaking compatibility with IR from older LLVM versions.
+declare void @zt0_undef_function() "aarch64_zt0_undef";
+; CHECK: Attribute 'aarch64_zt0_undef' can only be applied to a callsite.
