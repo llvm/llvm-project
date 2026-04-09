@@ -29,7 +29,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <optional>
 
 using namespace llvm;
@@ -271,11 +270,6 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
-  // If a user provided an explicit unroll pragma (with or without count),
-  // override expensive trip count checks
-  UnrollPragmaInfo PInfo(L);
-  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0)
-    UP.AllowExpensiveTripCount = true;
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,

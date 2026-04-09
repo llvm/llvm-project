@@ -1026,6 +1026,14 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
     UP.Runtime = false;
     return;
   }
+
+  // If a user provided an explicit unroll pragma (with or without count),
+  // enable runtime unrolling and override expensive trip count checks.
+  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0) {
+    UP.AllowExpensiveTripCount = true;
+    UP.Runtime = true;
+  }
+
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
   // 2nd priority is unroll count set by pragma.
@@ -1038,7 +1046,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
       UP.AllowExpensiveTripCount = true;
       UP.Force = true;
     }
-    UP.Runtime |= (PInfo.PragmaCount > 0);
     return;
   } else {
     if (PInfo.ExplicitUnroll && TripCount != 0) {
@@ -1170,9 +1177,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
         UP.AllowExpensiveTripCount = true;
     }
   }
-
-  UP.Runtime |= PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0 ||
-                PInfo.UserUnrollCount;
   if (!UP.Runtime) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Will not try to unroll loop with runtime trip count "
