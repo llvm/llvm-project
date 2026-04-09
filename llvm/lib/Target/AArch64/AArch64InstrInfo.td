@@ -3324,10 +3324,6 @@ def : InstAlias<"tst $src1, $src2$sh",
                 (ANDSXrs XZR, GPR64:$src1,
                          (logical_shifted_reg64 GPR64:$src2, logical_shift64:$sh)), 2>;
 
-def : Pat<(or (not GPR32:$Wm), (i32 imm:$x)),
-          (ORNWrr (MOVi32imm imm:$x), GPR32:$Wm)>;
-def : Pat<(or (not GPR64:$Xm), (i64 imm:$x)),
-          (ORNXrr (MOVi64imm imm:$x), GPR64:$Xm)>;
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
