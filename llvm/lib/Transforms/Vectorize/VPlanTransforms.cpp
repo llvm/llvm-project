@@ -5969,7 +5969,7 @@ struct ReductionExtend {
 /// operation.
 struct ExtendedReductionOperand {
   /// The recipe that consumes the extends.
-  VPWidenRecipe *ExtendsUser;
+  VPWidenRecipe *ExtendsUser = nullptr;
   /// Extend descriptions (inputs to getPartialReductionCost).
   ReductionExtend ExtendA, ExtendB;
 };
@@ -5980,7 +5980,7 @@ struct ExtendedReductionOperand {
 struct VPPartialReductionChain {
   /// The top-level binary operation that forms the reduction to a scalar
   /// after the loop body.
-  VPWidenRecipe *ReductionBinOp;
+  VPWidenRecipe *ReductionBinOp = nullptr;
   /// The user of the extends that is then reduced.
   ExtendedReductionOperand ExtendedOp;
   unsigned ScaleFactor;
