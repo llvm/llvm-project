@@ -261,15 +261,14 @@ vp_depth_first_shallow(const VPBlockBase *G) {
 
 /// Returns an iterator range to traverse the graph starting at \p G in
 /// post order. The iterator won't traverse through region blocks.
-inline iterator_range<
-    po_iterator<VPBlockShallowTraversalWrapper<VPBlockBase *>>>
+inline PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
 vp_post_order_shallow(VPBlockBase *G) {
   return post_order(VPBlockShallowTraversalWrapper<VPBlockBase *>(G));
 }
 
 /// Returns an iterator range to traverse the graph starting at \p G in
 /// post order while traversing through region blocks.
-inline iterator_range<po_iterator<VPBlockDeepTraversalWrapper<VPBlockBase *>>>
+inline PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>>
 vp_post_order_deep(VPBlockBase *G) {
   return post_order(VPBlockDeepTraversalWrapper<VPBlockBase *>(G));
 }

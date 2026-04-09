@@ -734,8 +734,9 @@ static bool isDeadRecipe(VPRecipeBase &R) {
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_post_order_deep(Plan.getEntry()))) {
+  PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
@@ -2707,8 +2708,9 @@ static void licm(VPlan &Plan) {
   // Sink recipes with no users inside the vector loop region if all users are
   // in the same exit block of the region.
   // TODO: Extend to sink recipes from inner loops.
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_post_order_shallow(LoopRegion->getEntry()))) {
+  PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> POT(
+      LoopRegion->getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
