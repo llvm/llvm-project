@@ -49,6 +49,8 @@ class JSONGenerator : public Generator {
   void serializeMDReference(const Reference &Ref, Object &ReferenceObj,
                             StringRef BasePath);
 
+  void serializeClassSpecializations(SymbolID ClassUSR, Object &ReferenceObj);
+
   // Convenience lambdas to pass to serializeArray.
   auto serializeInfoLambda() {
     return [this](const auto &Info, Object &Object) {
@@ -60,6 +62,8 @@ class JSONGenerator : public Generator {
       serializeReference(Ref, Object);
     };
   }
+
+  StringMap<OwnedPtr<Info>> *Infos = nullptr;
 
 public:
   static const char *Format;
@@ -433,6 +437,45 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
     generateContext(I, Obj);
 }
 
+static auto SerializeTemplateParam = [](const TemplateParamInfo &Param,
+                                        Object &JsonObj) {
+  JsonObj["Param"] = Param.Contents;
+};
+
+static void serializeTemplateSpecialization(TemplateInfo Template,
+                                            Object &TemplateObj) {
+  json::Value TemplateSpecializationVal = Object();
+  auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
+  TemplateSpecializationObj["SpecializationOf"] =
+      toHex(toStringRef(Template.Specialization->SpecializationOf));
+  if (!Template.Specialization->Params.empty()) {
+    bool VerticalDisplay =
+        Template.Specialization->Params.size() > getMaxParamWrapLimit();
+    serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
+                   "Parameters", SerializeTemplateParam, "SpecParamEnd",
+                   [VerticalDisplay](Object &JsonObj) {
+                     JsonObj["VerticalDisplay"] = VerticalDisplay;
+                   });
+  }
+  TemplateObj["Specialization"] = TemplateSpecializationVal;
+}
+
+void JSONGenerator::serializeClassSpecializations(SymbolID ClassUSR,
+                                                  Object &ReferenceObj) {
+  if (!Infos)
+    return;
+  auto ClassIt = Infos->find(toStringRef(toHex(ClassUSR)));
+  if (ClassIt == Infos->end())
+    return;
+  Info *Class = ClassIt->second.get();
+  if (!Class || Class->IT != InfoType::IT_record)
+    return;
+  RecordInfo *ClassInfo = static_cast<RecordInfo *>(Class);
+  if (!ClassInfo->Template || !ClassInfo->Template->Specialization)
+    return;
+  serializeTemplateSpecialization(ClassInfo->Template.value(), ReferenceObj);
+}
+
 void JSONGenerator::serializeReference(const Reference &Ref,
                                        Object &ReferenceObj) {
   insertNonEmpty("Path", Ref.Path, ReferenceObj);
@@ -478,9 +521,14 @@ void JSONGenerator::serializeCommonChildren(
   }
 
   if (!Children.Records.empty()) {
-    ReferenceFunc SerializeReferenceFunc = MDReferenceLambda
-                                               ? MDReferenceLambda.value()
+    ReferenceFunc BaseFunc = MDReferenceLambda ? MDReferenceLambda.value()
                                                : serializeReferenceLambda();
+
+    ReferenceFunc SerializeReferenceFunc =
+        [this, BaseFunc](const Reference &Ref, Object &Object) {
+          BaseFunc(Ref, Object);
+          serializeClassSpecializations(Ref.USR, Object);
+        };
     serializeArray(Children.Records, Obj, "Records", SerializeReferenceFunc);
     Obj["HasRecords"] = true;
   }
@@ -516,27 +564,9 @@ void JSONGenerator::serializeInfo(const ConstraintInfo &I, Object &Obj) {
 void JSONGenerator::serializeInfo(const TemplateInfo &Template, Object &Obj) {
   json::Value TemplateVal = Object();
   auto &TemplateObj = *TemplateVal.getAsObject();
-  auto SerializeTemplateParam = [](const TemplateParamInfo &Param,
-                                   Object &JsonObj) {
-    JsonObj["Param"] = Param.Contents;
-  };
 
-  if (Template.Specialization) {
-    json::Value TemplateSpecializationVal = Object();
-    auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
-    TemplateSpecializationObj["SpecializationOf"] =
-        toHex(toStringRef(Template.Specialization->SpecializationOf));
-    if (!Template.Specialization->Params.empty()) {
-      bool VerticalDisplay =
-          Template.Specialization->Params.size() > getMaxParamWrapLimit();
-      serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
-                     "Parameters", SerializeTemplateParam, "SpecParamEnd",
-                     [VerticalDisplay](Object &JsonObj) {
-                       JsonObj["VerticalDisplay"] = VerticalDisplay;
-                     });
-    }
-    TemplateObj["Specialization"] = TemplateSpecializationVal;
-  }
+  if (Template.Specialization)
+    serializeTemplateSpecialization(Template, TemplateObj);
 
   if (!Template.Params.empty()) {
     bool VerticalDisplay = Template.Params.size() > getMaxParamWrapLimit();
@@ -950,6 +980,7 @@ Error JSONGenerator::generateDocumentation(
     StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   this->CDCtx = &CDCtx;
+  this->Infos = &Infos;
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
