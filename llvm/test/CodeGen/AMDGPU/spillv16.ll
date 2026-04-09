@@ -578,55 +578,30 @@ define void @spill_2xi16_from_v2i16() {
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-TRUE16-LABEL: spill_2xi16_from_v2i16:
-; GFX1250-TRUE16:       ; %bb.0: ; %entry
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 offset:2 scope:SCOPE_SYS
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_clause 0x1 ; 4-byte Folded Spill
-; GFX1250-TRUE16-NEXT:    scratch_store_b32 off, v0, s32 offset:12 nv
-; GFX1250-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 scope:SCOPE_SYS
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_store_b32 off, v0, s32 offset:8 nv ; 4-byte Folded Spill
-; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-TRUE16-NEXT:    ;;#ASMSTART
-; GFX1250-TRUE16-NEXT:    ;;#ASMEND
-; GFX1250-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:12 th:TH_LOAD_LU nv ; 4-byte Folded Reload
-; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 scope:SCOPE_SYS
-; GFX1250-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:8 th:TH_LOAD_LU nv ; 4-byte Folded Reload
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 scope:SCOPE_SYS
-; GFX1250-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-FAKE16-LABEL: spill_2xi16_from_v2i16:
-; GFX1250-FAKE16:       ; %bb.0: ; %entry
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    scratch_load_u16 v0, off, s32 offset:2 scope:SCOPE_SYS
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_clause 0x1 ; 4-byte Folded Spill
-; GFX1250-FAKE16-NEXT:    scratch_store_b32 off, v0, s32 offset:8 nv
-; GFX1250-FAKE16-NEXT:    scratch_load_u16 v0, off, s32 scope:SCOPE_SYS
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    scratch_store_b32 off, v0, s32 offset:12 nv ; 4-byte Folded Spill
-; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-FAKE16-NEXT:    ;;#ASMSTART
-; GFX1250-FAKE16-NEXT:    ;;#ASMEND
-; GFX1250-FAKE16-NEXT:    scratch_load_b32 v0, off, s32 offset:8 th:TH_LOAD_LU nv ; 4-byte Folded Reload
-; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 scope:SCOPE_SYS
-; GFX1250-FAKE16-NEXT:    s_wait_storecnt 0x0
-; GFX1250-FAKE16-NEXT:    scratch_load_b32 v0, off, s32 offset:12 th:TH_LOAD_LU nv ; 4-byte Folded Reload
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    scratch_store_b16 off, v0, s32 scope:SCOPE_SYS
-; GFX1250-FAKE16-NEXT:    s_wait_storecnt 0x0
-; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: spill_2xi16_from_v2i16:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    scratch_load_u16 v0, off, s32 offset:2 scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_clause 0x1 ; 4-byte Folded Spill
+; GFX1250-NEXT:    scratch_store_b32 off, v0, s32 offset:8 nv
+; GFX1250-NEXT:    scratch_load_u16 v0, off, s32 scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_store_b32 off, v0, s32 offset:12 nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    ;;#ASMSTART
+; GFX1250-NEXT:    ;;#ASMEND
+; GFX1250-NEXT:    scratch_load_b32 v0, off, s32 offset:8 th:TH_LOAD_LU nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_store_b16 off, v0, s32 offset:2 scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    scratch_load_b32 v0, off, s32 offset:12 th:TH_LOAD_LU nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_store_b16 off, v0, s32 scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %alloca = alloca <2 x i16>, i32 2, align 1, addrspace(5)
 
@@ -716,21 +691,21 @@ define void @spill_2xi16_from_v2i16_one_free_reg() {
 ; GFX1250-TRUE16:       ; %bb.0: ; %entry
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_load_u16 v7, off, s32 offset:2 scope:SCOPE_SYS
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 offset:2 scope:SCOPE_SYS
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-TRUE16-NEXT:    scratch_store_b32 off, v0, s32 offset:8 nv ; 4-byte Folded Spill
 ; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250-TRUE16-NEXT:    scratch_load_u16 v7, off, s32 scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-TRUE16-NEXT:    ;;#ASMSTART
 ; GFX1250-TRUE16-NEXT:    ;;#ASMEND
-; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v7.l
+; GFX1250-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:8 th:TH_LOAD_LU nv ; 4-byte Folded Reload
+; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 scope:SCOPE_SYS
 ; GFX1250-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:8 th:TH_LOAD_LU nv ; 4-byte Folded Reload
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250-TRUE16-NEXT:    scratch_store_b16 off, v7, s32 scope:SCOPE_SYS
 ; GFX1250-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
