@@ -114,15 +114,29 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &Nodes = Result.Nodes;
   const auto *Call = Nodes.getNodeAs<CallExpr>("call");
 
-  llvm::SmallVector<CanQualType, 4> TargetTypes;
+  ArrayRef<TemplateArgumentLoc> TArgLocs;
   std::string FuncName;
   if (const auto *ResolvedCallee = Nodes.getNodeAs<DeclRefExpr>("callee")) {
+    TArgLocs = ResolvedCallee->template_arguments();
     const auto *F = cast<FunctionDecl>(ResolvedCallee->getDecl());
-    const auto *TArgs = F->getTemplateSpecializationArgs();
-    if (TArgs->size() != 2)
+    FuncName = F->getName();
+  } else if (const auto *UnresolvedCallee =
+                 Nodes.getNodeAs<UnresolvedLookupExpr>("callee")) {
+    const bool IsExplicitlyLLVM =
+        isLLVMNamespace(UnresolvedCallee->getQualifier());
+    const auto *CallerNS = Nodes.getNodeAs<NamedDecl>("llvm_ns");
+    if (!IsExplicitlyLLVM && !CallerNS)
       return;
 
-    const TemplateArgument TArg = TArgs->get(0);
+    TArgLocs = UnresolvedCallee->template_arguments();
+    FuncName = UnresolvedCallee->getName().getAsString();
+  } else {
+    llvm_unreachable("unexpected callee kind");
+  }
+
+  llvm::SmallVector<CanQualType, 4> TargetTypes;
+  for (const auto &TArgLoc : TArgLocs) {
+    const TemplateArgument TArg = TArgLoc.getArgument();
     if (TArg.getKind() == TemplateArgument::Type) {
       const CanQualType TargetTy =
           TArg.getAsType()->getCanonicalTypeUnqualified();
@@ -136,25 +150,6 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     } else {
       llvm_unreachable("unexpected template argument");
     }
-
-    FuncName = F->getName();
-  } else if (const auto *UnresolvedCallee =
-                 Nodes.getNodeAs<UnresolvedLookupExpr>("callee")) {
-    const bool IsExplicitlyLLVM =
-        isLLVMNamespace(UnresolvedCallee->getQualifier());
-    const auto *CallerNS = Nodes.getNodeAs<NamedDecl>("llvm_ns");
-    if (!IsExplicitlyLLVM && !CallerNS)
-      return;
-
-    for (const auto &TArgLoc : UnresolvedCallee->template_arguments()) {
-      const TemplateArgument TArg = TArgLoc.getArgument();
-      if (TArg.getKind() != TemplateArgument::Type)
-        return;
-      TargetTypes.emplace_back(TArg.getAsType()->getCanonicalTypeUnqualified());
-    }
-    FuncName = UnresolvedCallee->getName().getAsString();
-  } else {
-    llvm_unreachable("unexpected callee kind");
   }
 
   const auto *Arg = Call->getArg(0);
