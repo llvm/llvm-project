@@ -237,6 +237,12 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_3_1
 
+/**
+ * The function was introduced or changed in version 3.2 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_3.2"``.
+ */
+#define AMD_COMGR_VERSION_3_2
+
 /** @} */
 
 /**
@@ -2670,6 +2676,61 @@ amd_comgr_map_elf_virtual_address_to_code_object_offset(
     uint64_t *code_object_offset,
     uint64_t *slice_size,
     bool *nobits) AMD_COMGR_VERSION_2_7;
+
+/** @} */
+
+/**
+ * \defgroup hotswap HotSwap ISA Rewriting
+ * @{
+ *
+ * APIs for load-time GPU ISA binary rewriting and transpilation.
+ */
+
+/**
+ * @brief Rewrite a code object from one ISA to another.
+ *
+ * Rewrites GPU instructions in the ELF code object so that it can execute
+ * on a different target ISA. This includes both same-family stepping
+ * patches (e.g. B0 to A0) and cross-family transpilation.
+ * The input ELF is not modified; a new data object is created and returned.
+ *
+ * If no patches are needed, the output is a copy of the input.
+ *
+ * Currently supported transformations:
+ *   - GFX1250 B0 to A0
+ *
+ * Additional source/target ISA pairs may be added in future releases.
+ * Unsupported @p source_isa_name / @p target_isa_name combinations return
+ * @c AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT.
+ *
+ * @param[in] input A data object of kind @p AMD_COMGR_DATA_KIND_EXECUTABLE
+ *   containing the input ELF code object bytes.
+ * @param[in] source_isa_name A null terminated string that is the isa name
+ *   the code object was compiled for. The isa name is defined as the Code
+ *   Object Target Identification string, described at
+ *   https://llvm.org/docs/AMDGPUUsage.html#code-object-target-identification
+ * @param[in] target_isa_name A null terminated string that is the isa name
+ *   of the target GPU.
+ * @param[out] output A handle to a data object of kind @p
+ *   AMD_COMGR_DATA_KIND_EXECUTABLE containing the rewritten ELF. The caller
+ *   must release this handle using @c amd_comgr_release_data when done.
+ *   @p output is not modified on failure.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS Patching completed successfully.
+ * @retval ::AMD_COMGR_STATUS_ERROR An internal error occurred.
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p input is an invalid
+ *   data object, is not of kind @p AMD_COMGR_DATA_KIND_EXECUTABLE, does not
+ *   contain data bytes, or @p source_isa_name or @p target_isa_name is NULL,
+ *   or the source/target isa name combination is not supported.
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to allocate
+ *   the output data object.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_hotswap_rewrite(
+    amd_comgr_data_t input,
+    const char *source_isa_name,
+    const char *target_isa_name,
+    amd_comgr_data_t *output) AMD_COMGR_VERSION_3_2;
 
 /** @} */
 
