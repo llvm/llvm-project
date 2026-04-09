@@ -2506,3 +2506,23 @@ func.func @test_hoist_extract_value(%arg0: !fir.type<derived{f:f32}>, %arg1: !fi
   }
   return
 }
+
+// -----
+// Test that fir.insert_on_range is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_insert_on_range(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xi32>>)
+// CHECK:           %[[C1:.*]] = arith.constant 1 : i32
+// CHECK:           %[[ARR:.*]] = fir.zero_bits !fir.array<10xi32>
+// CHECK:           %[[INS:.*]] = fir.insert_on_range %[[ARR]], %[[C1]] from (0) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
+// CHECK:           fir.do_loop
+func.func @test_hoist_insert_on_range(%arg0: !fir.ref<!fir.array<10xi32>>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.zero_bits !fir.array<10xi32>
+    %1 = fir.insert_on_range %0, %c1_i32 from (0) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
+    fir.store %1 to %arg0 : !fir.ref<!fir.array<10xi32>>
+  }
+  return
+}

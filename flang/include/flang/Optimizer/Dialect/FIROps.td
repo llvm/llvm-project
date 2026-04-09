@@ -2231,7 +2231,7 @@ def fir_InsertValueOp : fir_OneResultOp<"insert_value", [Pure]> {
   let hasCanonicalizer = 1;
 }
 
-def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoMemoryEffect]> {
+def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [Pure]> {
   let summary = "insert sub-value into a range on an existing sequence";
 
   let description = [{
