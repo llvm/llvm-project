@@ -864,11 +864,10 @@ Sections:
 
   {
     SCOPED_TRACE("truncated section");
-    DoCheckFails(
-        TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-        "unable to read SHT_LLVM_BB_ADDR_MAP section with index 4: unable to "
-        "decode LEB128 at offset 0x0000000a: malformed uleb128, extends past "
-        "end in SHT_LLVM_BB_ADDR_MAP section with index 4");
+    DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
+                 "unable to read BB addr map section: unable to decode LEB128 "
+                 "at offset 0x0000000a: malformed uleb128, extends past end in "
+                 "SHT_LLVM_BB_ADDR_MAP section with index 4");
 
     // Check that we can read the other section's bb-address-maps which are
     // valid.
@@ -1486,9 +1485,9 @@ Sections:
   {
     SCOPED_TRACE("truncated section");
     DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-                 "unable to read SHT_LLVM_BB_ADDR_MAP section with index 6: "
-                 "unexpected end of data at offset 0xa while reading [0x4, "
-                 "0xc) in SHT_LLVM_BB_ADDR_MAP section with index 6");
+                 "unable to read BB addr map section: unexpected end of data "
+                 "at offset 0xa while reading [0x4, 0xc) in "
+                 "SHT_LLVM_BB_ADDR_MAP section with index 6");
     // Check that we can read the other section's bb-address-maps which are
     // valid.
     DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/2,
