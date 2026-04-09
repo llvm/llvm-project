@@ -39,6 +39,7 @@
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
+#include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/Function.h"
@@ -1558,19 +1559,6 @@ Module *Target::GetExecutableModulePointer() {
   return GetExecutableModule().get();
 }
 
-static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
-                                           Target *target) {
-  Status error;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error)) {
-    if (error.AsCString())
-      target->GetDebugger().GetAsyncErrorStream()->Printf(
-          "unable to load scripting data for module %s - error reported was "
-          "%s\n",
-          module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
-          error.AsCString());
-  }
-}
-
 void Target::ClearModules(bool delete_locations) {
   ModulesDidUnload(m_images, delete_locations);
   m_section_load_history.Clear();
@@ -1873,9 +1861,13 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
 
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
+    std::list<Status> errors;
+    module_list.LoadScriptingResourcesInTarget(this, errors);
+    for (const auto &err : errors)
+      GetDebugger().GetAsyncErrorStream()->PutCString(err.AsCString());
+
     for (size_t idx = 0; idx < num_images; ++idx) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
-      LoadScriptingResourceForModule(module_sp, this);
       LoadTypeSummariesForModule(module_sp);
       LoadFormattersForModule(module_sp);
     }
@@ -4422,6 +4414,12 @@ static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
         "warn",
         "Warn about debug scripts inside symbol files but do not load them.",
     },
+    {
+        eLoadScriptFromSymFileTrusted,
+        "trusted",
+        "Load debug scripts inside trusted symbol files, and warn about "
+        "scripts from untrusted symbol files.",
+    },
 };
 
 static constexpr OptionEnumValueElement g_load_cwd_lldbinit_values[] = {
@@ -5390,6 +5388,12 @@ LoadScriptFromSymFile TargetProperties::GetLoadScriptFromSymbolFile() const {
                g_target_properties[idx].default_uint_value));
 }
 
+void TargetProperties::SetLoadScriptFromSymbolFile(
+    LoadScriptFromSymFile load_style) {
+  const uint32_t idx = ePropertyLoadScriptFromSymbolFile;
+  SetPropertyAtIndex(idx, load_style);
+}
+
 LoadCWDlldbinitFile TargetProperties::GetLoadCWDlldbinitFile() const {
   const uint32_t idx = ePropertyLoadCWDlldbinitFile;
   return GetPropertyAtIndexAs<LoadCWDlldbinitFile>(
@@ -5572,6 +5576,33 @@ bool TargetProperties::GetEnableTrampolineSupport() const {
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   SetPropertyAtIndex(idx, debug);
+}
+
+std::optional<LoadScriptFromSymFile>
+TargetProperties::GetAutoLoadScriptsForModule(
+    llvm::StringRef module_name) const {
+  auto *dict = m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
+      ePropertyAutoLoadScriptsForModules);
+  if (!dict)
+    return std::nullopt;
+
+  OptionValueSP value_sp = dict->GetValueForKey(module_name);
+  if (!value_sp)
+    return std::nullopt;
+
+  return value_sp->GetValueAs<LoadScriptFromSymFile>();
+}
+
+void TargetProperties::SetAutoLoadScriptsForModule(
+    llvm::StringRef module_name, LoadScriptFromSymFile load_style) {
+  auto *dict = m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
+      ePropertyAutoLoadScriptsForModules);
+  if (!dict)
+    return;
+
+  dict->SetValueForKey(module_name,
+                       std::make_shared<OptionValueEnumeration>(
+                           g_load_script_from_sym_file_values, load_style));
 }
 
 // Target::TargetEventData

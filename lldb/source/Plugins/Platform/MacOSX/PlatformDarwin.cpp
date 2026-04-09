@@ -50,6 +50,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include <TargetConditionals.h>
 #endif
 
@@ -79,98 +80,6 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
   }
   return {};
 }
-
-namespace {
-/// Holds an lldb_private::Module name and a "sanitized" version
-/// of it for the purposes of loading a script of that name by
-/// the relevant ScriptInterpreter.
-///
-/// E.g., for Python the sanitized name can't include:
-/// * Special characters: '-', ' ', '.'
-/// * Python keywords
-class SanitizedScriptingModuleName {
-public:
-  SanitizedScriptingModuleName(llvm::StringRef name,
-                               ScriptInterpreter *script_interpreter)
-      : m_original_name(name), m_sanitized_name(name.str()) {
-    // FIXME: for Python, don't allow certain characters in imported module
-    // filenames. Theoretically, different scripting languages may have
-    // different sets of forbidden tokens in filenames, and that should
-    // be dealt with by each ScriptInterpreter. For now, just replace dots
-    // with underscores. In order to support anything other than Python
-    // this will need to be reworked.
-    llvm::replace(m_sanitized_name, '.', '_');
-    llvm::replace(m_sanitized_name, ' ', '_');
-    llvm::replace(m_sanitized_name, '-', '_');
-    llvm::replace(m_sanitized_name, '+', 'x');
-
-    if (script_interpreter &&
-        script_interpreter->IsReservedWord(m_sanitized_name.c_str())) {
-      m_conflicting_keyword = m_sanitized_name;
-      m_sanitized_name.insert(m_sanitized_name.begin(), '_');
-    }
-  }
-
-  /// Returns \c true if this name is a keyword in the associated scripting
-  /// language.
-  bool IsKeyword() const { return !m_conflicting_keyword.empty(); }
-
-  /// Returns \c true if the original name has been sanitized (i.e., required
-  /// changes).
-  bool RequiredSanitization() const {
-    return m_sanitized_name != m_original_name;
-  }
-
-  llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
-  llvm::StringRef GetOriginalName() const { return m_original_name; }
-  llvm::StringRef GetConflictingKeyword() const {
-    return m_conflicting_keyword;
-  }
-
-  /// If we did some replacements of reserved characters, and a
-  /// file with the untampered name exists, then warn the user
-  /// that the file as-is shall not be loaded.
-  void WarnIfInvalidUnsanitizedScriptExists(Stream &os,
-                                            const FileSpec &original_fspec,
-                                            const FileSpec &fspec) const {
-    if (!RequiredSanitization())
-      return;
-
-    // Path to unsanitized script name doesn't exist. Nothing to warn about.
-    if (!FileSystem::Instance().Exists(original_fspec))
-      return;
-
-    std::string reason_for_complaint =
-        IsKeyword() ? llvm::formatv("conflicts with the keyword '{0}'",
-                                    GetConflictingKeyword())
-                          .str()
-                    : "contains reserved characters";
-
-    if (FileSystem::Instance().Exists(fspec))
-       os.Format(
-            "debug script '{0}' cannot be loaded because '{1}' {2}. "
-            "Ignoring '{1}' and loading '{3}' instead.\n",
-            original_fspec.GetPath(), original_fspec.GetFilename(),
-            std::move(reason_for_complaint), fspec.GetFilename());
-    else
-      os.Format(
-            "debug script '{0}' cannot be loaded because '{1}' {2}. "
-            "If you intend to have this script loaded, please rename it to "
-            "'{3}' and retry.\n",
-            original_fspec.GetPath(), original_fspec.GetFilename(),
-            std::move(reason_for_complaint), fspec.GetFilename());
-  }
-
-private:
-  llvm::StringRef m_original_name;
-  std::string m_sanitized_name;
-
-  /// If the m_sanitized_name conflicts with a keyword for the ScriptInterpreter
-  /// language associated with this SanitizedScriptingModuleName, is set to the
-  /// conflicting keyword. Empty otherwise.
-  std::string m_conflicting_keyword;
-};
-} // namespace
 
 /// Destructor.
 ///
@@ -292,14 +201,22 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
-  FileSpecList file_list;
+
+  assert(target.GetDebugger().GetScriptInterpreter() &&
+         "Trying to locate scripting resources but no ScriptInterpreter is "
+         "available.");
+
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
   while (module_spec.GetFilename()) {
-    SanitizedScriptingModuleName sanitized_name(
-        module_spec.GetFilename().GetStringRef(),
-        target.GetDebugger().GetScriptInterpreter());
+    ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
+        target.GetDebugger()
+            .GetScriptInterpreter()
+            ->GetSanitizedScriptingModuleName(
+                module_spec.GetFilename().GetStringRef());
 
     StreamString path_string;
     StreamString original_path_string;
@@ -319,11 +236,13 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     FileSpec orig_script_fspec(original_path_string.GetString());
     FileSystem::Instance().Resolve(orig_script_fspec);
 
-    sanitized_name.WarnIfInvalidUnsanitizedScriptExists(
-        feedback_stream, orig_script_fspec, script_fspec);
+    WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
+                                         orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_list.Append(script_fspec);
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(script_fspec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
 
@@ -337,17 +256,19 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     module_spec.SetFilename(filename_no_extension);
   }
 
-  return file_list;
+  return file_specs;
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
   if (!target)
-    return {};
+    return empty;
 
   // For now only Python scripts supported for auto-loading.
   if (target->GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
-    return {};
+    return empty;
 
   // NB some extensions might be meaningful and should not be stripped -
   // "this.binary.file"
@@ -359,15 +280,15 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
   const FileSpec &module_spec = module.GetFileSpec();
 
   if (!module_spec)
-    return {};
+    return empty;
 
   SymbolFile *symfile = module.GetSymbolFile();
   if (!symfile)
-    return {};
+    return empty;
 
   ObjectFile *objfile = symfile->GetObjectFile();
   if (!objfile)
-    return {};
+    return empty;
 
   const FileSpec &symfile_spec = objfile->GetFileSpec();
   if (symfile_spec &&
@@ -377,7 +298,41 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
     return LocateExecutableScriptingResourcesFromDSYM(
         feedback_stream, module_spec, *target, symfile_spec);
 
-  return {};
+  return empty;
+}
+
+bool PlatformDarwin::IsSymbolFileTrusted(Module &module) {
+#if defined(__APPLE__)
+  SymbolFile *symfile = module.GetSymbolFile();
+  if (!symfile)
+    return false;
+
+  ObjectFile *objfile = symfile->GetObjectFile();
+  if (!objfile)
+    return false;
+
+  std::string symfile_path = objfile->GetFileSpec().GetPath();
+  llvm::StringRef path_ref(symfile_path);
+
+  // Find the .dSYM bundle root from the symfile path, which is typically
+  // .dSYM/Contents/Resources/DWARF/<name>.
+  auto pos = path_ref.find(".dSYM/");
+  if (pos == llvm::StringRef::npos)
+    return false;
+
+  FileSpec bundle_spec(path_ref.substr(0, pos + 5));
+
+  if (HostInfoMacOSX::IsBundleCodeSignTrusted(bundle_spec)) {
+    LLDB_LOG(GetLog(LLDBLog::Modules),
+             "dSYM bundle '{0}' has valid trusted code signature",
+             bundle_spec.GetPath());
+    return true;
+  }
+
+  return false;
+#else
+  return false;
+#endif
 }
 
 Status PlatformDarwin::ResolveSymbolFile(Target &target,
