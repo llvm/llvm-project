@@ -13,11 +13,9 @@ define double @test_reduction_costs() {
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
-; COMMON-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
-; COMMON-NEXT:    [[VEC_PHI1:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
-; COMMON-NEXT:    [[TMP0]] = call double @llvm.vector.reduce.fadd.v2f64(double [[VEC_PHI]], <2 x double> splat (double 3.000000e+00))
-; COMMON-NEXT:    [[TMP1]] = call double @llvm.vector.reduce.fadd.v2f64(double [[VEC_PHI1]], <2 x double> splat (double 9.000000e+00))
-; COMMON-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; COMMON-NEXT:    [[TMP0:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> splat (double 3.000000e+00))
+; COMMON-NEXT:    [[TMP1:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> splat (double 9.000000e+00))
+; COMMON-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; COMMON:       [[MIDDLE_BLOCK]]:
 ; COMMON-NEXT:    br label %[[EXIT:.*]]
 ; COMMON:       [[EXIT]]:
@@ -280,7 +278,7 @@ then.1:
   %or.cond = select i1 %c.4, i1 %c.3, i1 false
   br i1 %or.cond, label %then.2, label %else.1
 
-else.1:                             ; preds = %then.1
+else.1:
   store i64 0, ptr %dst.3, align 8
   br label %then.2
 
@@ -410,28 +408,28 @@ define void @loop_with_freeze_and_conditional_srem(ptr %dst, ptr %keyinfo, ptr %
 entry:
   br label %loop
 
-loop:                                             ; preds = %loop.latch, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %loaded = load i32, ptr %invariant.ptr, align 4
   %frozen = freeze i32 %loaded
   %cmp = icmp eq i32 %frozen, 0
   br i1 %cmp, label %if.zero, label %if.nonzero
 
-if.zero:                                          ; preds = %loop
+if.zero:
   store i32 0, ptr %keyinfo, align 4
   br label %loop.latch
 
-if.nonzero:                                       ; preds = %loop
+if.nonzero:
   %rem = srem i32 1, %divisor
   store i32 %rem, ptr %dst, align 4
   br label %loop.latch
 
-loop.latch:                                       ; preds = %if.nonzero, %if.zero
+loop.latch:
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv, 32
   br i1 %exitcond, label %exit, label %loop
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }
 
@@ -607,10 +605,8 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; COMMON:       [[PRED_STORE_IF]]:
-; COMMON-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; COMMON-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 0
-; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP3]]
-; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP4]], 1
+; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[INDEX]]
+; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP0]], 1
 ; COMMON-NEXT:    store i32 [[TMP6]], ptr [[TMP5]], align 4
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; COMMON:       [[PRED_STORE_CONTINUE]]:
@@ -914,5 +910,3 @@ exit:
 attributes #0 = { "target-features"="+neon,+sve" vscale_range(1,16) }
 attributes #1 = { "target-cpu"="neoverse-512tvb" }
 
-declare void @llvm.assume(i1 noundef)
-declare i64 @llvm.umin.i64(i64, i64)

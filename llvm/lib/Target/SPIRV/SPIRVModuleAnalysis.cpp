@@ -141,7 +141,7 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     MAI.MS[i].clear();
   MAI.RegisterAliasTable.clear();
   MAI.InstrsToDelete.clear();
-  MAI.FuncMap.clear();
+  MAI.GlobalObjMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.Reqs.clear();
@@ -182,6 +182,23 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     // Prevent Major part of OpenCL version to be 0
     MAI.SrcLangVersion =
         (std::max(1U, MajorNum) * 100 + MinorNum) * 1000 + RevNum;
+    // When opencl.cxx.version is also present, validate compatibility
+    // and use C++ for OpenCL as source language with the C++ version.
+    if (auto *CxxVerNode = M.getNamedMetadata("opencl.cxx.version")) {
+      assert(CxxVerNode->getNumOperands() > 0 && "Invalid SPIR");
+      auto *CxxMD = CxxVerNode->getOperand(0);
+      unsigned CxxVer =
+          (getMetadataUInt(CxxMD, 0) * 100 + getMetadataUInt(CxxMD, 1)) * 1000 +
+          getMetadataUInt(CxxMD, 2);
+      if ((MAI.SrcLangVersion == 200000 && CxxVer == 100000) ||
+          (MAI.SrcLangVersion == 300000 && CxxVer == 202100000)) {
+        MAI.SrcLang = SPIRV::SourceLanguage::CPP_for_OpenCL;
+        MAI.SrcLangVersion = CxxVer;
+      } else {
+        report_fatal_error(
+            "opencl cxx version is not compatible with opencl c version!");
+      }
+    }
   } else {
     // If there is no information about OpenCL version we are forced to generate
     // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
@@ -495,6 +512,8 @@ MCRegister SPIRVModuleAnalysis::handleVariable(
   MCRegister GReg = MAI.getNextIDRegister();
   It->second = GReg;
   MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+  if (const auto *GV = dyn_cast<GlobalVariable>(GObj))
+    MAI.GlobalObjMap[GV] = GReg;
   return GReg;
 }
 
@@ -562,7 +581,8 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
         const Function *ImportedFunc =
             F->getParent()->getFunction(getStringImm(MI, 2));
         Register Target = MI.getOperand(0).getReg();
-        MAI.FuncMap[ImportedFunc] = MAI.getRegisterAlias(MI.getMF(), Target);
+        MAI.GlobalObjMap[ImportedFunc] =
+            MAI.getRegisterAlias(MI.getMF(), Target);
       }
     }
   } else if (MI.getOpcode() == SPIRV::OpFunction) {
@@ -570,7 +590,7 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
     Register Reg = MI.defs().begin()->getReg();
     MCRegister GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
     assert(GlobalReg.isValid());
-    MAI.FuncMap[F] = GlobalReg;
+    MAI.GlobalObjMap[F] = GlobalReg;
   }
 }
 
@@ -872,7 +892,8 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
                       Capability::GroupNonUniformBallot,
                       Capability::GroupNonUniformClustered,
                       Capability::GroupNonUniformShuffle,
-                      Capability::GroupNonUniformShuffleRelative});
+                      Capability::GroupNonUniformShuffleRelative,
+                      Capability::GroupNonUniformQuad});
 
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
     addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
@@ -943,8 +964,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl, Capability::MinLod,
-                    Capability::ImageGatherExtended, Capability::Addresses,
-                    Capability::VulkanMemoryModelKHR});
+                    Capability::ImageQuery, Capability::ImageGatherExtended,
+                    Capability::Addresses, Capability::VulkanMemoryModelKHR});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1420,7 +1441,8 @@ void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
   SPIRV::RequirementHandler &Reqs = MAI.Reqs;
-  switch (MI.getOpcode()) {
+  unsigned Op = MI.getOpcode();
+  switch (Op) {
   case SPIRV::OpMemoryModel: {
     int64_t Addr = MI.getOperand(0).getImm();
     Reqs.getAndAddRequirements(SPIRV::OperandCategory::AddressingModelOperand,
@@ -1627,7 +1649,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicXor: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     const MachineInstr *InstrPtr = &MI;
-    if (MI.getOpcode() == SPIRV::OpAtomicStore) {
+    if (Op == SPIRV::OpAtomicStore) {
       assert(MI.getOperand(3).isReg());
       InstrPtr = MRI.getVRegDef(MI.getOperand(3).getReg());
       assert(InstrPtr && "Unexpected type instruction for OpAtomicStore");
@@ -1635,10 +1657,44 @@ void addInstrRequirements(const MachineInstr &MI,
     assert(InstrPtr->getOperand(1).isReg() && "Unexpected operand in atomic");
     Register TypeReg = InstrPtr->getOperand(1).getReg();
     SPIRVTypeInst TypeDef = MRI.getVRegDef(TypeReg);
+
     if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
       unsigned BitWidth = TypeDef->getOperand(1).getImm();
       if (BitWidth == 64)
         Reqs.addCapability(SPIRV::Capability::Int64Atomics);
+      else if (BitWidth == 16) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
+          report_fatal_error(
+              "16-bit integer atomic operations require the following SPIR-V "
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
+        switch (Op) {
+        case SPIRV::OpAtomicLoad:
+        case SPIRV::OpAtomicStore:
+        case SPIRV::OpAtomicExchange:
+        case SPIRV::OpAtomicCompareExchange:
+        case SPIRV::OpAtomicCompareExchangeWeak:
+          Reqs.addCapability(
+              SPIRV::Capability::AtomicInt16CompareExchangeINTEL);
+          break;
+        default:
+          Reqs.addCapability(SPIRV::Capability::Int16AtomicsINTEL);
+          break;
+        }
+      }
+    } else if (isBFloat16Type(TypeDef)) {
+      if (is_contained({SPIRV::OpAtomicLoad, SPIRV::OpAtomicStore,
+                        SPIRV::OpAtomicExchange},
+                       Op)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
+          report_fatal_error(
+              "The atomic bfloat16 instruction requires the following SPIR-V "
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
+        Reqs.addCapability(SPIRV::Capability::AtomicBFloat16LoadStoreINTEL);
+      }
     }
     break;
   }
@@ -1677,6 +1733,19 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpGroupNonUniformQuadSwap:
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformQuad);
+    break;
+  case SPIRV::OpImageQueryLod:
+    Reqs.addCapability(SPIRV::Capability::ImageQuery);
+    break;
+  case SPIRV::OpImageQuerySize:
+  case SPIRV::OpImageQuerySizeLod:
+  case SPIRV::OpImageQueryLevels:
+  case SPIRV::OpImageQuerySamples:
+    if (ST.isShader())
+      Reqs.addCapability(SPIRV::Capability::ImageQuery);
+    break;
   case SPIRV::OpImageQueryFormat: {
     Register ResultReg = MI.getOperand(0).getReg();
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -1998,8 +2067,7 @@ void addInstrRequirements(const MachineInstr &MI,
         {SPIRV::OpCooperativeMatrixStoreCheckedINTEL, 4},
         {SPIRV::OpCooperativeMatrixPrefetchINTEL, 4}};
 
-    const auto OpCode = MI.getOpcode();
-    const unsigned LayoutNum = LayoutToInstMap[OpCode];
+    const unsigned LayoutNum = LayoutToInstMap[Op];
     Register RegLayout = MI.getOperand(LayoutNum).getReg();
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     MachineInstr *MILayout = MRI.getUniqueVRegDef(RegLayout);
@@ -2017,12 +2085,12 @@ void addInstrRequirements(const MachineInstr &MI,
     }
 
     // Nothing to do.
-    if (OpCode == SPIRV::OpCooperativeMatrixLoadKHR ||
-        OpCode == SPIRV::OpCooperativeMatrixStoreKHR)
+    if (Op == SPIRV::OpCooperativeMatrixLoadKHR ||
+        Op == SPIRV::OpCooperativeMatrixStoreKHR)
       break;
 
     std::string InstName;
-    switch (OpCode) {
+    switch (Op) {
     case SPIRV::OpCooperativeMatrixPrefetchINTEL:
       InstName = "OpCooperativeMatrixPrefetchINTEL";
       break;
@@ -2041,7 +2109,7 @@ void addInstrRequirements(const MachineInstr &MI,
       report_fatal_error(ErrorMsg.c_str(), false);
     }
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
-    if (OpCode == SPIRV::OpCooperativeMatrixPrefetchINTEL) {
+    if (Op == SPIRV::OpCooperativeMatrixPrefetchINTEL) {
       Reqs.addCapability(SPIRV::Capability::CooperativeMatrixPrefetchINTEL);
       break;
     }
@@ -2086,17 +2154,17 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
     SPIRV::AddressingModel::AddressingModel AddrModel = MAI.Addr;
     SPIRVTypeInst TyDef = GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg());
-    if (MI.getOpcode() == SPIRV::OpConvertHandleToImageINTEL &&
+    if (Op == SPIRV::OpConvertHandleToImageINTEL &&
         TyDef->getOpcode() != SPIRV::OpTypeImage) {
       report_fatal_error("Incorrect return type for the instruction "
                          "OpConvertHandleToImageINTEL",
                          false);
-    } else if (MI.getOpcode() == SPIRV::OpConvertHandleToSamplerINTEL &&
+    } else if (Op == SPIRV::OpConvertHandleToSamplerINTEL &&
                TyDef->getOpcode() != SPIRV::OpTypeSampler) {
       report_fatal_error("Incorrect return type for the instruction "
                          "OpConvertHandleToSamplerINTEL",
                          false);
-    } else if (MI.getOpcode() == SPIRV::OpConvertHandleToSampledImageINTEL &&
+    } else if (Op == SPIRV::OpConvertHandleToSampledImageINTEL &&
                TyDef->getOpcode() != SPIRV::OpTypeSampledImage) {
       report_fatal_error("Incorrect return type for the instruction "
                          "OpConvertHandleToSampledImageINTEL",
@@ -2129,12 +2197,11 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_2d_block_io);
     Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockIOINTEL);
 
-    const auto OpCode = MI.getOpcode();
-    if (OpCode == SPIRV::OpSubgroup2DBlockLoadTransposeINTEL) {
+    if (Op == SPIRV::OpSubgroup2DBlockLoadTransposeINTEL) {
       Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransposeINTEL);
       break;
     }
-    if (OpCode == SPIRV::OpSubgroup2DBlockLoadTransformINTEL) {
+    if (Op == SPIRV::OpSubgroup2DBlockLoadTransformINTEL) {
       Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransformINTEL);
       break;
     }
@@ -2608,8 +2675,13 @@ static void handleMIFlagDecoration(
     buildOpDecorate(I.getOperand(0).getReg(), I, TII,
                     SPIRV::Decoration::NoUnsignedWrap, {});
   }
-  if (!TII.canUseFastMathFlags(
-          I, ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)))
+  // In Kernel environments, FPFastMathMode on OpExtInst is valid per core
+  // spec. For other instruction types, SPV_KHR_float_controls2 is required.
+  bool CanUseFM =
+      TII.canUseFastMathFlags(
+          I, ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) ||
+      (ST.isKernel() && I.getOpcode() == SPIRV::OpExtInst);
+  if (!CanUseFM)
     return;
 
   unsigned FMFlags = getFastMathFlags(I, ST);

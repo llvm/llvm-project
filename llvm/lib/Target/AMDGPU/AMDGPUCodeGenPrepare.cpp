@@ -208,7 +208,7 @@ public:
 
   bool canWidenScalarExtLoad(LoadInst &I) const;
 
-  Value *matchFractPat(IntrinsicInst &I);
+  Value *matchFractPat(Value &V);
   Value *applyFractPat(IRBuilder<> &Builder, Value *FractArg);
 
   bool canOptimizeWithRsq(FastMathFlags DivFMF, FastMathFlags SqrtFMF) const;
@@ -1595,10 +1595,10 @@ bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
   Value *TrueVal = I.getTrueValue();
   Value *FalseVal = I.getFalseValue();
   Value *CmpVal;
-  CmpPredicate Pred;
+  CmpPredicate IsNanPred;
 
   // Match fract pattern with nan check.
-  if (!match(Cond, m_FCmp(Pred, m_Value(CmpVal), m_NonNaN())))
+  if (!match(Cond, m_FCmp(IsNanPred, m_Value(CmpVal), m_NonNaN())))
     return false;
 
   FPMathOperator *FPOp = dyn_cast<FPMathOperator>(&I);
@@ -1608,18 +1608,44 @@ bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
   IRBuilder<> Builder(&I);
   Builder.setFastMathFlags(FPOp->getFastMathFlags());
 
-  auto *IITrue = dyn_cast<IntrinsicInst>(TrueVal);
-  auto *IIFalse = dyn_cast<IntrinsicInst>(FalseVal);
-
   Value *Fract = nullptr;
-  if (Pred == FCmpInst::FCMP_UNO && TrueVal == CmpVal && IIFalse &&
-      CmpVal == matchFractPat(*IIFalse)) {
+  if (IsNanPred == FCmpInst::FCMP_UNO && TrueVal == CmpVal &&
+      CmpVal == matchFractPat(*FalseVal)) {
     // isnan(x) ? x : fract(x)
     Fract = applyFractPat(Builder, CmpVal);
-  } else if (Pred == FCmpInst::FCMP_ORD && FalseVal == CmpVal && IITrue &&
-             CmpVal == matchFractPat(*IITrue)) {
-    // !isnan(x) ? fract(x) : x
-    Fract = applyFractPat(Builder, CmpVal);
+  } else if (IsNanPred == FCmpInst::FCMP_ORD && FalseVal == CmpVal) {
+    if (CmpVal == matchFractPat(*TrueVal)) {
+      // !isnan(x) ? fract(x) : x
+      Fract = applyFractPat(Builder, CmpVal);
+    } else {
+      // Match an intermediate clamp infinity to 0 pattern. i.e.
+      // !isnan(x) ? (!isinf(x) ? fract(x) : 0.0) : x
+      CmpPredicate PredInf;
+      Value *IfNotInf;
+
+      if (!match(TrueVal, m_Select(m_FCmp(PredInf, m_FAbs(m_Specific(CmpVal)),
+                                          m_PosInf()),
+                                   m_Value(IfNotInf), m_PosZeroFP())) ||
+          PredInf != FCmpInst::FCMP_UNE || CmpVal != matchFractPat(*IfNotInf))
+        return false;
+
+      SelectInst *ClampInfSelect = cast<SelectInst>(TrueVal);
+
+      // Insert before the fabs
+      Value *InsertPt =
+          cast<Instruction>(ClampInfSelect->getCondition())->getOperand(0);
+
+      Builder.SetInsertPoint(cast<Instruction>(InsertPt));
+      Value *NewFract = applyFractPat(Builder, CmpVal);
+      NewFract->takeName(TrueVal);
+
+      // Thread the new fract into the inf clamping sequence.
+      DeadVals.push_back(ClampInfSelect->getOperand(1));
+      ClampInfSelect->setOperand(1, NewFract);
+
+      // The outer select nan handling is also absorbed into the fract.
+      Fract = ClampInfSelect;
+    }
   } else
     return false;
 
@@ -2029,11 +2055,15 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
 ///
 /// If fract is a useful instruction for the subtarget. Does not account for the
 /// nan handling; the instruction has a nan check on the input value.
-Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
+Value *AMDGPUCodeGenPrepareImpl::matchFractPat(Value &V) {
   if (ST.hasFractBug())
     return nullptr;
 
-  Intrinsic::ID IID = I.getIntrinsicID();
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(&V);
+  if (!II)
+    return nullptr;
+
+  Intrinsic::ID IID = II->getIntrinsicID();
 
   // The value is only used in contexts where we know the input isn't a nan, so
   // any of the fmin variants are fine.
@@ -2041,24 +2071,22 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
       IID != Intrinsic::minimumnum)
     return nullptr;
 
-  Type *Ty = I.getType();
+  Type *Ty = V.getType();
   if (!isLegalFloatingTy(Ty->getScalarType()))
     return nullptr;
 
-  Value *Arg0 = I.getArgOperand(0);
-  Value *Arg1 = I.getArgOperand(1);
+  Value *Arg0 = II->getArgOperand(0);
+  Value *Arg1 = II->getArgOperand(1);
 
   const APFloat *C;
-  if (!match(Arg1, m_APFloat(C)))
+  if (!match(Arg1, m_APFloatAllowPoison(C)))
     return nullptr;
 
-  APFloat One(1.0);
-  bool LosesInfo;
-  One.convert(C->getSemantics(), APFloat::rmNearestTiesToEven, &LosesInfo);
+  APFloat OneNextDown = APFloat::getOne(C->getSemantics());
+  OneNextDown.next(true);
 
   // Match nextafter(1.0, -1)
-  One.next(true);
-  if (One != *C)
+  if (OneNextDown != *C)
     return nullptr;
 
   Value *FloorSrc;

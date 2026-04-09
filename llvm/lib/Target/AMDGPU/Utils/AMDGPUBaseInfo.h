@@ -11,6 +11,7 @@
 
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
@@ -1090,156 +1091,6 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
-enum InstCounterType {
-  LOAD_CNT = 0, // VMcnt prior to gfx12.
-  DS_CNT,       // LKGMcnt prior to gfx12.
-  EXP_CNT,      //
-  STORE_CNT,    // VScnt in gfx10/gfx11.
-  NUM_NORMAL_INST_CNTS,
-  SAMPLE_CNT = NUM_NORMAL_INST_CNTS, // gfx12+ only.
-  BVH_CNT,                           // gfx12+ only.
-  KM_CNT,                            // gfx12+ only.
-  X_CNT,                             // gfx1250.
-  NUM_EXTENDED_INST_CNTS,
-  VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
-  VM_VSRC,                          // gfx12+ expert mode only.
-  NUM_EXPERT_INST_CNTS,
-  NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
-};
-
-// Return an iterator over all counters between LOAD_CNT (the first counter)
-// and \c MaxCounter (exclusive, default value yields an enumeration over
-// all counters).
-iota_range<InstCounterType>
-inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS);
-
-} // namespace AMDGPU
-
-template <> struct enum_iteration_traits<AMDGPU::InstCounterType> {
-  static constexpr bool is_iterable = true;
-};
-
-namespace AMDGPU {
-
-/// Represents the counter values to wait for in an s_waitcnt instruction.
-///
-/// Large values (including the maximum possible integer) can be used to
-/// represent "don't care" waits.
-class Waitcnt {
-  unsigned LoadCnt = ~0u; // Corresponds to Vmcnt prior to gfx12.
-  unsigned ExpCnt = ~0u;
-  unsigned DsCnt = ~0u;     // Corresponds to LGKMcnt prior to gfx12.
-  unsigned StoreCnt = ~0u;  // Corresponds to VScnt on gfx10/gfx11.
-  unsigned SampleCnt = ~0u; // gfx12+ only.
-  unsigned BvhCnt = ~0u;    // gfx12+ only.
-  unsigned KmCnt = ~0u;     // gfx12+ only.
-  unsigned XCnt = ~0u;      // gfx1250.
-  unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
-  unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
-
-public:
-  unsigned get(InstCounterType T) const {
-    switch (T) {
-    case LOAD_CNT:
-      return LoadCnt;
-    case EXP_CNT:
-      return ExpCnt;
-    case DS_CNT:
-      return DsCnt;
-    case STORE_CNT:
-      return StoreCnt;
-    case SAMPLE_CNT:
-      return SampleCnt;
-    case BVH_CNT:
-      return BvhCnt;
-    case KM_CNT:
-      return KmCnt;
-    case X_CNT:
-      return XCnt;
-    case VA_VDST:
-      return VaVdst;
-    case VM_VSRC:
-      return VmVsrc;
-    default:
-      llvm_unreachable("bad InstCounterType");
-    }
-  }
-  void set(InstCounterType T, unsigned Val) {
-    switch (T) {
-    case LOAD_CNT:
-      LoadCnt = Val;
-      break;
-    case EXP_CNT:
-      ExpCnt = Val;
-      break;
-    case DS_CNT:
-      DsCnt = Val;
-      break;
-    case STORE_CNT:
-      StoreCnt = Val;
-      break;
-    case SAMPLE_CNT:
-      SampleCnt = Val;
-      break;
-    case BVH_CNT:
-      BvhCnt = Val;
-      break;
-    case KM_CNT:
-      KmCnt = Val;
-      break;
-    case X_CNT:
-      XCnt = Val;
-      break;
-    case VA_VDST:
-      VaVdst = Val;
-      break;
-    case VM_VSRC:
-      VmVsrc = Val;
-      break;
-    default:
-      llvm_unreachable("bad InstCounterType");
-    }
-  }
-
-  Waitcnt() = default;
-  // Pre-gfx12 constructor.
-  Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
-      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt) {}
-
-  // gfx12+ constructor.
-  Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
-          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
-          unsigned VaVdst, unsigned VmVsrc)
-      : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
-        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
-        VaVdst(VaVdst), VmVsrc(VmVsrc) {}
-
-  bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
-
-  bool hasWaitExceptStoreCnt() const {
-    return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u ||
-           VaVdst != ~0u || VmVsrc != ~0u;
-  }
-
-  bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
-
-  bool hasWaitDepctr() const { return VaVdst != ~0u || VmVsrc != ~0u; }
-
-  Waitcnt combined(const Waitcnt &Other) const {
-    // Does the right thing provided self and Other are either both pre-gfx12
-    // or both gfx12+.
-    return Waitcnt(
-        std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
-        std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
-        std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
-        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
-        std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
-  }
-
-  friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait);
-};
-
 /// Represents the hardware counter limits for different wait count types.
 struct HardwareLimits {
   unsigned LoadcntMax; // Corresponds to Vmcnt prior to gfx12.
@@ -1250,6 +1101,7 @@ struct HardwareLimits {
   unsigned BvhcntMax;    // gfx12+ only.
   unsigned KmcntMax;     // gfx12+ only.
   unsigned XcntMax;      // gfx1250.
+  unsigned AsyncMax;     // gfx1250.
   unsigned VaVdstMax;    // gfx12+ expert mode only.
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 
@@ -1283,6 +1135,15 @@ unsigned decodeExpcnt(const IsaVersion &Version, unsigned Waitcnt);
 /// \returns Decoded Lgkmcnt from given \p Waitcnt for given isa \p Version.
 unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 
+/// \returns Decoded Loadcnt from given \p Waitcnt for given isa \p Version.
+unsigned decodeLoadcnt(const IsaVersion &Version, unsigned Waitcnt);
+
+/// \returns Decoded Storecnt from given \p Waitcnt for given isa \p Version.
+unsigned decodeStorecnt(const IsaVersion &Version, unsigned Waitcnt);
+
+/// \returns Decoded Dscnt from given \p Waitcnt for given isa \p Version.
+unsigned decodeDscnt(const IsaVersion &Version, unsigned Waitcnt);
+
 /// Decodes Vmcnt, Expcnt and Lgkmcnt from given \p Waitcnt for given isa
 /// \p Version, and writes decoded values into \p Vmcnt, \p Expcnt and
 /// \p Lgkmcnt respectively. Should not be used on gfx12+, the instruction
@@ -1300,8 +1161,6 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 ///
 void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt, unsigned &Vmcnt,
                    unsigned &Expcnt, unsigned &Lgkmcnt);
-
-Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded);
 
 /// \returns \p Waitcnt with encoded \p Vmcnt for given isa \p Version.
 unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
@@ -1336,7 +1195,15 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 unsigned encodeWaitcnt(const IsaVersion &Version, unsigned Vmcnt,
                        unsigned Expcnt, unsigned Lgkmcnt);
 
-unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
+/// \returns Waitcnt with encoded \p Loadcnt and \p Dscnt for given isa \p
+/// Version.
+unsigned encodeLoadcntDscnt(const IsaVersion &Version, unsigned Loadcnt,
+                            unsigned Dscnt);
+
+/// \returns Waitcnt with encoded \p Storecnt and \p Dscnt for given isa \p
+/// Version.
+unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
+                             unsigned Dscnt);
 
 // The following methods are only meaningful on targets that support
 // S_WAIT_*CNT, introduced with gfx12.
@@ -1352,6 +1219,10 @@ unsigned getSamplecntBitMask(const IsaVersion &Version);
 /// \returns Bvhcnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support BVHcnt
 unsigned getBvhcntBitMask(const IsaVersion &Version);
+
+/// \returns Asynccnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support Asynccnt
+unsigned getAsynccntBitMask(const IsaVersion &Version);
 
 /// \returns Dscnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support DScnt
@@ -1370,27 +1241,6 @@ unsigned getXcntBitMask(const IsaVersion &Version);
 /// STOREcnt and VScnt are the same counter, the name used
 /// depends on the ISA version.
 unsigned getStorecntBitMask(const IsaVersion &Version);
-
-// The following are only meaningful on targets that support
-// S_WAIT_LOADCNT_DSCNT and S_WAIT_STORECNT_DSCNT.
-
-/// \returns Decoded Waitcnt structure from given \p LoadcntDscnt for given
-/// isa \p Version.
-Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt);
-
-/// \returns Decoded Waitcnt structure from given \p StorecntDscnt for given
-/// isa \p Version.
-Waitcnt decodeStorecntDscnt(const IsaVersion &Version, unsigned StorecntDscnt);
-
-/// \returns \p Loadcnt and \p Dscnt components of \p Decoded  encoded as an
-/// immediate that can be used with S_WAIT_LOADCNT_DSCNT for given isa
-/// \p Version.
-unsigned encodeLoadcntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
-
-/// \returns \p Storecnt and \p Dscnt components of \p Decoded  encoded as an
-/// immediate that can be used with S_WAIT_STORECNT_DSCNT for given isa
-/// \p Version.
-unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
 namespace Hwreg {
 

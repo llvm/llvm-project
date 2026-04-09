@@ -594,3 +594,16 @@ entry:
   %s = call <4 x i128> @llvm.ctlz(<4 x i128> %d, i1 false)
   ret <4 x i128> %s
 }
+
+define <8 x i4> @v8i4(<8 x i4> %a) {
+; CHECK-LABEL: v8i4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.8b, #15
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    movi v1.8b, #4
+; CHECK-NEXT:    clz v0.8b, v0.8b
+; CHECK-NEXT:    sub v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %r = call <8 x i4> @llvm.ctlz(<8 x i4> %a, i1 false)
+  ret <8 x i4> %r
+}

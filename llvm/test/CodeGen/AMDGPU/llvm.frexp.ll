@@ -1681,10 +1681,10 @@ define { double, i32 } @test_frexp_f64_i32(double %a) {
 ; GFX6-SDAG-LABEL: test_frexp_f64_i32:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX6-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v2, 0x7fffffff, v1
+; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0x7ff00000
 ; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[3:4], v[0:1]
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v2
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v3, v0, v3, vcc
 ; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v0, v[0:1]
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
@@ -1752,10 +1752,10 @@ define double @test_frexp_f64_i32_only_use_fract(double %a) {
 ; GFX6-SDAG-LABEL: test_frexp_f64_i32_only_use_fract:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX6-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v4, 0x7fffffff, v1
+; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0x7ff00000
 ; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[2:3], v[0:1]
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v4
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -1807,11 +1807,11 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
 ; GFX6-SDAG-LABEL: test_frexp_f64_i32_only_use_exp:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX6-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
-; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v2, v[0:1]
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v2, 0x7fffffff, v1
+; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0x7ff00000
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v0, v[0:1]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v2
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_frexp_f64_i32_only_use_exp:
@@ -1860,20 +1860,25 @@ define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) {
 ; GFX6-SDAG-LABEL: test_frexp_v2f64_v2i32:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX6-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
-; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v4, v[0:1]
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v5, v[2:3]
-; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[6:7], v[0:1]
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 s[4:5], |v[2:3]|, s[4:5]
-; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[8:9], v[2:3]
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v5, 0, v5, s[4:5]
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v7, vcc
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v2, v2, v8, s[4:5]
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v3, v3, v9, s[4:5]
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v6, 0x7fffffff, v1
+; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0x7ff00000
+; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[0:1]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v6
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v8, v0, v4, vcc
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v9, v1, v5, vcc
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v6, 0x7fffffff, v3
+; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[2:3]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], s4, v6
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v0, v[0:1]
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v1, v[2:3]
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v6, v2, v4, s[4:5]
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v7, v3, v5, s[4:5]
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e64 v5, 0, v1, s[4:5]
+; GFX6-SDAG-NEXT:    v_mov_b32_e32 v0, v8
+; GFX6-SDAG-NEXT:    v_mov_b32_e32 v1, v9
+; GFX6-SDAG-NEXT:    v_mov_b32_e32 v2, v6
+; GFX6-SDAG-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_frexp_v2f64_v2i32:
@@ -1956,14 +1961,15 @@ define <2 x double> @test_frexp_v2f64_v2i32_only_use_fract(<2 x double> %a) {
 ; GFX6-SDAG-LABEL: test_frexp_v2f64_v2i32_only_use_fract:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX6-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v6, 0x7fffffff, v1
+; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0x7ff00000
 ; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[0:1]
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v6
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v6, 0x7fffffff, v3
 ; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[2:3]
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, s[4:5]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v6
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -2023,14 +2029,15 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) {
 ; GFX6-SDAG-LABEL: test_frexp_v2f64_v2i32_only_use_exp:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX6-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
-; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v4, v[0:1]
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v1, v[2:3]
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
-; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, s[4:5]
-; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v4, 0x7fffffff, v1
+; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0x7ff00000
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v0, v[0:1]
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v4
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v3
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v2, v[2:3]
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX6-SDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v1
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_frexp_v2f64_v2i32_only_use_exp:

@@ -2700,13 +2700,7 @@ def fir_CallOp : fir_Op<"call",
     }
 
     /// Set the callee for this operation.
-    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      if (auto calling =
-          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(),
-                         llvm::cast<mlir::SymbolRefAttr>(callee));
-      setOperand(0, llvm::cast<mlir::Value>(callee));
-    }
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee);
   }];
 }
 
@@ -2851,6 +2845,77 @@ def fir_DivcOp : ComplexArithmeticOp<"divc",
     [DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
 // Pow is a builtin call and not a primitive
 
+// Logical operations
+
+class LogicalBinaryOp<string mnemonic, list<Trait> traits = []> :
+      fir_ArithmeticOp<mnemonic, !listconcat(traits, [Pure])>,
+      Arguments<(ins AnyLogicalOrIntegerLike:$lhs,
+                     AnyLogicalOrIntegerLike:$rhs)>;
+
+def fir_LogicalAndOp : LogicalBinaryOp<"logical_and", [Commutative]> {
+  let summary = "logical AND";
+
+  let description = [{
+    Logical AND of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.logical_and %a, %b : !fir.logical<4>
+      %s = fir.logical_and %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_LogicalOrOp : LogicalBinaryOp<"logical_or", [Commutative]> {
+  let summary = "logical OR";
+
+  let description = [{
+    Logical OR of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.logical_or %a, %b : !fir.logical<4>
+      %s = fir.logical_or %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_EqvOp : LogicalBinaryOp<"eqv", [Commutative]> {
+  let summary = "logical equivalence";
+
+  let description = [{
+    Logical equivalence (EQV) of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.eqv %a, %b : !fir.logical<4>
+      %s = fir.eqv %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_NeqvOp : LogicalBinaryOp<"neqv", [Commutative]> {
+  let summary = "logical non-equivalence";
+
+  let description = [{
+    Logical non-equivalence (NEQV / XOR) of two values of fir.logical or
+    integer type. Both operands and the result must have the same type.
+
+    ```
+      %r = fir.neqv %a, %b : !fir.logical<4>
+      %s = fir.neqv %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
 def fir_CmpcOp : fir_Op<"cmpc",
     [NoMemoryEffect, SameTypeOperands, SameOperandsAndResultShape,
     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
@@ -2979,6 +3044,34 @@ def fir_ConvertOp
     mlir::Speculation::Speculatability getSpeculatability();
   }];
   let hasCanonicalizer = 1;
+}
+
+def fir_BitcastOp : fir_SimpleOneResultOp<"bitcast", [Pure]> {
+  let summary = "bitcast between Fortran scalar types of the same bit size";
+
+  let description = [{
+    Reinterpret the bits of a value from one type to another. Both types must
+    have the same bit size. This is a pure bitwise reinterpretation: no value
+    normalization or conversion takes place, unlike `fir.convert`.
+
+    The supported types are integer, floating-point, `fir.logical`, and
+    singleton `fir.char` (i.e. `fir.char<K>` with length 1 for any kind K).
+    Pointer types are not allowed.
+
+    ```
+      %0 = fir.bitcast %v : (i32) -> !fir.logical<4>
+    ```
+  }];
+
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
+
+  let assemblyFormat = [{
+    $value attr-dict `:` functional-type($value, results)
+  }];
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,

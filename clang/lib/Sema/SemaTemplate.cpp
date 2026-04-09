@@ -519,8 +519,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    // Simple filter callback that, for keywords, only accepts the C++ *_cast
-    DefaultFilterCCC FilterCCC{};
+    QualifiedLookupValidatorCCC FilterCCC(!SS.isEmpty());
     FilterCCC.WantTypeSpecifiers = false;
     FilterCCC.WantExpressionKeywords = false;
     FilterCCC.WantRemainingKeywords = false;
@@ -1457,6 +1456,11 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
   if (T->isVariablyModifiedType()) {
     Diag(Loc, diag::err_variably_modified_nontype_template_param)
       << T;
+    return QualType();
+  }
+
+  if (T->isBlockPointerType()) {
+    Diag(Loc, diag::err_template_nontype_parm_bad_type) << T;
     return QualType();
   }
 
@@ -4751,20 +4755,10 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // Note that we do not instantiate a definition until we see an odr-use
   // in DoMarkVarDeclReferenced().
   // FIXME: LateAttrs et al.?
-  VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
-      Template, InstantiationPattern, PartialSpecArgs, CTAI.CanonicalConverted,
-      TemplateNameLoc /*, LateAttrs, StartingScope*/);
-  if (!Decl)
-    return true;
-  if (SetWrittenArgs)
-    Decl->setTemplateArgsAsWritten(TemplateArgs);
-
   if (AmbiguousPartialSpec) {
     // Partial ordering did not produce a clear winner. Complain.
-    Decl->setInvalidDecl();
     Diag(PointOfInstantiation, diag::err_partial_spec_ordering_ambiguous)
-        << Decl;
-
+        << Template;
     // Print the matching partial specializations.
     for (MatchResult P : Matched)
       Diag(P.Partial->getLocation(), diag::note_partial_spec_match)
@@ -4772,6 +4766,14 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
                                              *P.Args);
     return true;
   }
+
+  VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
+      Template, InstantiationPattern, PartialSpecArgs, CTAI.CanonicalConverted,
+      TemplateNameLoc /*, LateAttrs, StartingScope*/);
+  if (!Decl)
+    return true;
+  if (SetWrittenArgs)
+    Decl->setTemplateArgsAsWritten(TemplateArgs);
 
   if (VarTemplatePartialSpecializationDecl *D =
           dyn_cast<VarTemplatePartialSpecializationDecl>(InstantiationPattern))
@@ -5972,9 +5974,9 @@ bool Sema::CheckTemplateArgumentList(
                                                   CTAI.CanonicalConverted,
                                                   Params->getDepth()));
         }
-        ArgLoc =
-            TemplateArgumentLoc(TemplateArgument::CreatePackCopy(Context, Args),
-                                ArgLoc.getLocInfo());
+        ArgLoc = TemplateArgumentLoc(
+            TemplateArgument::CreatePackCopy(Context, Args),
+            TemplateArgumentLocInfo(Context, ArgLoc.getLocation()));
       } else {
         SaveAndRestore _1(CTAI.PartialOrdering, false);
         if (CheckTemplateArgument(*Param, ArgLoc, Template, TemplateLoc,

@@ -27,9 +27,12 @@ body:
 cleanup:
   %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
   %need.dyn.free = icmp ne ptr %mem, null
-  br i1 %need.dyn.free, label %dyn.free, label %suspend
+  br i1 %need.dyn.free, label %dyn.free, label %after.free
 dyn.free:
   call void @free(ptr %mem)
+  br label %after.free
+after.free:
+  call void @llvm.coro.dead(ptr %hdl)
   br label %suspend
 suspend:
   call void @llvm.coro.end(ptr %hdl, i1 false, token none)

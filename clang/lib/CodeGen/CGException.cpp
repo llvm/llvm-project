@@ -1325,11 +1325,8 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     // we follow the false destination for each of the cond branches to reach
     // the rethrow block.
     llvm::BasicBlock *RethrowBlock = WasmCatchStartBlock;
-    while (llvm::Instruction *TI = RethrowBlock->getTerminator()) {
-      auto *BI = cast<llvm::BranchInst>(TI);
-      assert(BI->isConditional());
-      RethrowBlock = BI->getSuccessor(1);
-    }
+    while (llvm::Instruction *TI = RethrowBlock->getTerminatorOrNull())
+      RethrowBlock = cast<llvm::CondBrInst>(TI)->getSuccessor(1);
     assert(RethrowBlock != WasmCatchStartBlock && RethrowBlock->empty());
     Builder.SetInsertPoint(RethrowBlock);
     llvm::Function *RethrowInCatchFn =
@@ -1714,8 +1711,7 @@ void CodeGenFunction::VolatilizeTryBlocks(
       }
     }
   }
-  const llvm::Instruction *TI = BB->getTerminator();
-  if (TI) {
+  if (const llvm::Instruction *TI = BB->getTerminatorOrNull()) {
     unsigned N = TI->getNumSuccessors();
     for (unsigned I = 0; I < N; I++)
       VolatilizeTryBlocks(TI->getSuccessor(I), V);

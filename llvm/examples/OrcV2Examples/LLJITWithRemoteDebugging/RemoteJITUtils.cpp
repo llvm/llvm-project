@@ -27,10 +27,10 @@ using namespace llvm;
 using namespace llvm::orc;
 
 Expected<std::unique_ptr<DefinitionGenerator>>
-loadDylib(ExecutionSession &ES, StringRef RemotePath) {
-  if (auto Handle = ES.getExecutorProcessControl().getDylibMgr().loadDylib(
-          RemotePath.data()))
-    return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, *Handle);
+loadDylib(ExecutionSession &ES, DylibManager &DylibMgr, StringRef RemotePath) {
+  if (auto Handle = DylibMgr.loadDylib(RemotePath.data()))
+    return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, DylibMgr,
+                                                              *Handle);
   else
     return Handle.takeError();
 }

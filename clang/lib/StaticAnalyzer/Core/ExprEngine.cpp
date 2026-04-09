@@ -1131,7 +1131,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
     removeDead(Pred, CleanedStates, currStmt,
                                     Pred->getLocationContext());
   } else
-    CleanedStates.Add(Pred);
+    CleanedStates.insert(Pred);
 
   // Visit the statement.
   ExplodedNodeSet Dst;
@@ -1190,7 +1190,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       // But we still need to stop tracking the object under construction.
       State = finishObjectConstruction(State, BMI, LC);
       PostStore PS(Init, LC, /*Loc*/ nullptr, /*tag*/ nullptr);
-      Tmp.Add(Engine.makeNode(PS, State, Pred));
+      Tmp.insert(Engine.makeNode(PS, State, Pred));
     } else {
       const ValueDecl *Field;
       if (BMI->isIndirectMemberInitializer()) {
@@ -1245,7 +1245,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
 
   ExplodedNodeSet Dst;
   for (ExplodedNode *Pred : Tmp)
-    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   // Enqueue the new nodes onto the work list.
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
@@ -1328,7 +1328,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
     const LocationContext *LCtx = Pred->getLocationContext();
     PostImplicitCall PP(NE->getOperatorNew(), NE->getBeginLoc(), LCtx,
                         getCFGElementRef());
-    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   }
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
@@ -1885,7 +1885,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // GNU __null is a pointer-width integer, not an actual pointer.
       ProgramStateRef state = Pred->getState();
       state = state->BindExpr(
-          S, Pred->getLocationContext(),
+          cast<Expr>(S), Pred->getLocationContext(),
           svalBuilder.makeIntValWithWidth(getContext().VoidPtrTy, 0));
       Bldr.generateNode(S, Pred, state);
       break;
@@ -2017,7 +2017,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const LocationContext *LCtx = Pred->getLocationContext();
       for (const auto I : PreVisit) {
         ProgramStateRef State = I->getState();
-        State = State->BindExpr(S, LCtx, *ConstantVal);
+        State = State->BindExpr(cast<Expr>(S), LCtx, *ConstantVal);
         if (IsTemporary)
           State = createTemporaryRegionIfNeeded(State, LCtx,
                                                 cast<Expr>(S),
@@ -2443,13 +2443,15 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const auto *PE = cast<PseudoObjectExpr>(S);
       if (const Expr *Result = PE->getResultExpr()) {
         SVal V = state->getSVal(Result, Pred->getLocationContext());
-        Bldr.generateNode(S, Pred,
-                          state->BindExpr(S, Pred->getLocationContext(), V));
+        Bldr.generateNode(
+            S, Pred,
+            state->BindExpr(cast<Expr>(S), Pred->getLocationContext(), V));
       }
       else
         Bldr.generateNode(S, Pred,
-                          state->BindExpr(S, Pred->getLocationContext(),
-                                                   UnknownVal()));
+                          state->BindExpr(cast<Expr>(S),
+                                          Pred->getLocationContext(),
+                                          UnknownVal()));
 
       Bldr.addNodes(Dst);
       break;
@@ -2464,8 +2466,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
       const Expr *E = OIE->getSubExpr();
       SVal V = state->getSVal(E, Pred->getLocationContext());
-      Bldr.generateNode(S, Pred,
-              state->BindExpr(S, Pred->getLocationContext(), V));
+      Bldr.generateNode(
+          S, Pred,
+          state->BindExpr(cast<Expr>(S), Pred->getLocationContext(), V));
       Bldr.addNodes(Dst);
       break;
     }
@@ -2478,7 +2481,7 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   const StackFrameContext *CallerSF = CalleeSF->getParent()->getStackFrame();
   assert(CalleeSF && CallerSF);
   ExplodedNode *BeforeProcessingCall = nullptr;
-  const Stmt *CE = CalleeSF->getCallSite();
+  const Expr *CE = CalleeSF->getCallSite();
 
   // Find the first node before we started processing the call expression.
   while (N) {
@@ -2515,9 +2518,16 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
       BeforeProcessingCall->getLocationContext(), CE, nullptr, &PT);
   // Add the special flag to GDM to signal retrying with no inlining.
   // Note, changing the state ensures that we are not going to cache out.
+  // NOTE: This stores the call site (CE) in the state trait, but the the
+  // actual pointer value is only checked by an assertion; for the analysis,
+  // only the presence or absence of this trait matters.
+  // TODO: If we are handling a destructor call, CE is nullpointer (because it
+  // ultimately comes from the `Origin` of a `CXXDestructorCall`), which is
+  // indistinguishable from the absence (default state) of this state trait.
+  // I don't think that this bad logic causes actually observable problems, but
+  // it would be nice to clean it up if somebody has time to do so.
   ProgramStateRef NewNodeState = BeforeProcessingCall->getState();
-  NewNodeState =
-    NewNodeState->set<ReplayWithoutInlining>(const_cast<Stmt *>(CE));
+  NewNodeState = NewNodeState->set<ReplayWithoutInlining>(CE);
 
   // Make the new node a successor of BeforeProcessingCall.
   bool IsNew = false;
@@ -2973,35 +2983,35 @@ void ExprEngine::processStaticInitializer(const DeclStmt *DS,
 
 /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a computed goto jump.
-void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &Builder,
+void ExprEngine::processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
+                                     const CFGBlock *Dispatch,
                                      ExplodedNode *Pred) {
   ProgramStateRef State = Pred->getState();
-  SVal V = State->getSVal(Builder.getTarget(), Builder.getLocationContext());
+  SVal V = State->getSVal(Tgt, getCurrLocationContext());
 
-  // Case 1: We know the computed label.
-  if (std::optional<loc::GotoLabel> LV = V.getAs<loc::GotoLabel>()) {
-    const LabelDecl *L = LV->getLabel();
-
-    for (const CFGBlock *Succ : Builder) {
-      if (cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
-        Builder.generateNode(Succ, State, Pred);
-        return;
-      }
-    }
-
-    llvm_unreachable("No block with label.");
-  }
-
-  // Case 2: The label is NULL (or some other constant), or Undefined.
-  if (isa<UndefinedVal, loc::ConcreteInt>(V)) {
-    // FIXME: Emit warnings when the jump target is undefined or numerical.
+  // We cannot dispatch anywhere if the label is undefined, NULL or some other
+  // concrete number.
+  // FIXME: Emit a warning in this situation.
+  if (isa<UndefinedVal, loc::ConcreteInt>(V))
     return;
-  }
 
-  // Case 3: We have no clue about the label.  Dispatch to all targets.
-  // FIXME: Implement dispatch for symbolic pointers.
-  for (const CFGBlock *Succ : Builder)
-    Builder.generateNode(Succ, State, Pred);
+  // If 'V' is the address of a concrete goto label (on this execution path),
+  // then only transition along the edge to that label.
+  // FIXME: Implement dispatch for symbolic pointers, utilizing information
+  // that they are equal or not equal to pointers to a certain goto label.
+  const LabelDecl *L = nullptr;
+  if (auto LV = V.getAs<loc::GotoLabel>())
+    L = LV->getLabel();
+
+  // Dispatch to the label 'L' or to all labels if 'L' is null.
+  for (const CFGBlock *Succ : Dispatch->succs()) {
+    if (!L || cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
+      // FIXME: If 'V' was a symbolic value, then record that on this execution
+      // path it is equal to the address of the label leading to 'Succ'.
+      BlockEdge BE(getCurrBlock(), Succ, Pred->getLocationContext());
+      Dst.insert(Engine.makeNode(BE, State, Pred));
+    }
+  }
 }
 
 void ExprEngine::processBeginOfFunction(ExplodedNode *Pred,
@@ -3082,9 +3092,23 @@ void ExprEngine::processEndOfFunction(ExplodedNode *Pred,
 ///  nodes by processing the 'effects' of a switch statement.
 void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
                                ExplodedNodeSet &Dst) {
+  const ASTContext &ACtx = getContext();
+  const LocationContext *LCtx = Pred->getLocationContext();
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Dst, *currBldrCtx);
+  // The block that is terminated by the switch statement.
+  const CFGBlock *SwitchBlock = getCurrBlock();
+  // Note that successors may be null if they are pruned as unreachable.
+  assert(SwitchBlock->succ_size() && "Switch must have at least one successor");
+  // The reversed iteration order is present since the beginning, when in 2008
+  // commit 80ebc1d1c95704b0ff0386b3a3cbc8b3ff960654 added support for handling
+  // switch statements. I don't see any advantage over regular forward
+  // iteration -- but switching the order would perturb the insertion order of
+  // the work list and therefore the analysis results.
+  llvm::iterator_range<CFGBlock::const_succ_reverse_iterator> CaseBlocks(
+      SwitchBlock->succ_rbegin() + 1, SwitchBlock->succ_rend());
+  const CFGBlock *DefaultBlock = *SwitchBlock->succ_rbegin();
+
   ExplodedNodeSet CheckersOutSet;
 
   getCheckerManager().runCheckersForBranchCondition(
@@ -3093,30 +3117,29 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
   for (ExplodedNode *Node : CheckersOutSet) {
     ProgramStateRef State = Node->getState();
 
-    SVal CondV = State->getSVal(Condition, Node->getLocationContext());
+    SVal CondV = State->getSVal(Condition, LCtx);
     if (CondV.isUndef()) {
       // This can only happen if core.uninitialized.Branch is disabled.
       continue;
     }
-
     std::optional<NonLoc> CondNL = CondV.getAs<NonLoc>();
 
-    for (const CFGBlock *Block : Builder) {
+    for (const CFGBlock *CaseBlock : CaseBlocks) {
       // Successor may be pruned out during CFG construction.
-      if (!Block)
+      if (!CaseBlock)
         continue;
 
-      const CaseStmt *Case = cast<CaseStmt>(Block->getLabel());
+      const CaseStmt *Case = cast<CaseStmt>(CaseBlock->getLabel());
 
       // Evaluate the LHS of the case value.
-      llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(getContext());
+      llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(ACtx);
       assert(V1.getBitWidth() ==
              getContext().getIntWidth(Condition->getType()));
 
       // Get the RHS of the case, if it exists.
       llvm::APSInt V2;
       if (const Expr *E = Case->getRHS())
-        V2 = E->EvaluateKnownConstInt(getContext());
+        V2 = E->EvaluateKnownConstInt(ACtx);
       else
         V2 = V1;
 
@@ -3131,8 +3154,10 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         StateMatching = State;
       }
 
-      if (StateMatching)
-        Builder.generateCaseStmtNode(Block, StateMatching, Node);
+      if (StateMatching) {
+        BlockEdge BE(SwitchBlock, CaseBlock, LCtx);
+        Dst.insert(Engine.makeNode(BE, StateMatching, Node));
+      }
 
       // If _not_ entering the current case is infeasible, then we are done
       // with processing the paths through the current Node.
@@ -3140,6 +3165,10 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         break;
     }
     if (!State)
+      continue;
+
+    // The default block may be null if it is "optimized out" by CFG creation.
+    if (!DefaultBlock)
       continue;
 
     // If we have switch(enum value), the default branch is not
@@ -3154,7 +3183,8 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
         continue;
     }
 
-    Builder.generateDefaultCaseNode(State, Node);
+    BlockEdge BE(SwitchBlock, DefaultBlock, LCtx);
+    Dst.insert(Engine.makeNode(BE, State, Node));
   }
 }
 

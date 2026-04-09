@@ -8,9 +8,15 @@ if (LLVM_ENABLE_HTTPLIB)
   set(imported_libs ${imported_libs} httplib::httplib)
 endif()
 
+# Use WinHTTP on Windows
+if (WIN32)
+  set(imported_libs ${imported_libs} winhttp.lib)
+endif()
+
 add_llvm_component_library(LLVMSupportHTTP
   HTTPClient.cpp
   HTTPServer.cpp
+  StreamedHTTPResponseHandler.cpp
 
   LINK_LIBS
   ${imported_libs}
