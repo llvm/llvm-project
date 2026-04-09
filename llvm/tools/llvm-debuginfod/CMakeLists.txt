@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Option
   Support
-  SupportHTTP
   )
 set(LLVM_TARGET_DEFINITIONS Opts.td)
 tablegen(LLVM Opts.inc -gen-opt-parser-defs)
@@ -15,6 +14,7 @@ add_llvm_tool(llvm-debuginfod
   GENERATE_DRIVER
   )
 
+target_link_libraries(llvm-debuginfod PRIVATE LLVMHTTP)
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   target_link_libraries(llvm-debuginfod PRIVATE LLVMDebuginfod)
 endif()

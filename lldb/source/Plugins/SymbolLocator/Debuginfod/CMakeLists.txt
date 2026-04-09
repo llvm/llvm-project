@@ -14,9 +14,7 @@ add_lldb_library(lldbPluginSymbolLocatorDebuginfod PLUGIN
     lldbHost
     lldbSymbol
     LLVMDebuginfod
-
-  LINK_COMPONENTS
-    SupportHTTP
+    LLVMHTTP
   )
 
 add_dependencies(lldbPluginSymbolLocatorDebuginfod

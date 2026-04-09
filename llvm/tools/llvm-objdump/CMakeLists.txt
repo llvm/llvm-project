@@ -12,7 +12,6 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
-  SupportHTTP
   Symbolize
   TargetParser
   )
@@ -41,6 +40,7 @@ add_llvm_tool(llvm-objdump
   GENERATE_DRIVER
   )
 
+target_link_libraries(llvm-objdump PRIVATE LLVMHTTP)
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   target_link_libraries(llvm-objdump PRIVATE LLVMDebuginfod)
 endif()

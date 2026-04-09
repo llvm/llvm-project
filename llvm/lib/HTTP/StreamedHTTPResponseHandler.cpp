@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/HTTP/StreamedHTTPResponseHandler.h"
+#include "llvm/HTTP/StreamedHTTPResponseHandler.h"
 
 namespace llvm {
 

@@ -12,7 +12,6 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
-  SupportHTTP
   Symbolize
   )
 
@@ -24,6 +23,7 @@ add_llvm_tool(llvm-symbolizer
   GENERATE_DRIVER
   )
 
+target_link_libraries(llvm-symbolizer PRIVATE LLVMHTTP)
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   target_link_libraries(llvm-symbolizer PRIVATE LLVMDebuginfod)
 endif()
