@@ -1011,20 +1011,19 @@ void MCAssembler::layoutSection(MCSection &Sec) {
 }
 
 unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
-  ++stats::RelaxationSteps;
+  uint64_t MaxIterations = 0;
   PendingErrors.clear();
 
   unsigned Res = 0;
   for (unsigned I = 0; I != FirstStable; ++I) {
-    // Assume each iteration finalizes at least one extra fragment. If the
-    // layout does not converge after N+1 iterations, bail out.
     auto &Sec = *Sections[I];
-    auto MaxIter = Sec.curFragList()->Tail->getLayoutOrder() + 1;
+    uint64_t Iters = 0;
     for (;;) {
       bool Changed = false;
       for (MCFragment &F : Sec)
         if (F.getKind() != MCFragment::FT_Data && relaxFragment(F))
           Changed = true;
+      ++Iters;
 
       if (!Changed)
         break;
@@ -1032,11 +1031,15 @@ unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
       // sections. Therefore, we must re-evaluate all sections.
       FirstStable = Sections.size();
       Res = I;
-      if (--MaxIter == 0)
+      // Assume each iteration finalizes at least one extra fragment. If the
+      // layout does not converge after N+1 iterations, bail out.
+      if (Iters > Sec.curFragList()->Tail->getLayoutOrder())
         break;
       layoutSection(Sec);
     }
+    MaxIterations = std::max(MaxIterations, Iters);
   }
+  stats::RelaxationSteps += MaxIterations;
   // The subsequent relaxOnce call only needs to visit Sections [0,Res) if no
   // change occurred.
   return Res;
