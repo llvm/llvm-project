@@ -1452,10 +1452,12 @@ cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
                                                 PatternRewriter &rewriter) {
   auto isRegionTrivial = [](Region &region) {
+    assert(!region.empty() && "CleanupScopeOp regions must not be empty");
     if (!region.hasOneBlock())
       return false;
-    Block &block = region.front();
-    return llvm::hasSingleElement(block) && isa<cir::YieldOp>(block.front());
+    Block &block = llvm::getSingleElement(region);
+    return llvm::hasSingleElement(block) &&
+           isa<cir::YieldOp>(llvm::getSingleElement(block));
   };
 
   Region &body = op.getBodyRegion();
