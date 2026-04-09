@@ -1449,6 +1449,43 @@ cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
   return ValueRange();
 }
 
+LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
+                                                PatternRewriter &rewriter) {
+  auto isRegionTrivial = [](Region &region) {
+    assert(!region.empty() && "CleanupScopeOp regions must not be empty");
+    if (!region.hasOneBlock())
+      return false;
+    Block &block = llvm::getSingleElement(region);
+    return llvm::hasSingleElement(block) &&
+           isa<cir::YieldOp>(llvm::getSingleElement(block));
+  };
+
+  Region &body = op.getBodyRegion();
+  Region &cleanup = op.getCleanupRegion();
+
+  // An EH-only cleanup scope with an empty body can never trigger its cleanup
+  // region — there are no operations in the body that could throw. Erase it.
+  if (op.getCleanupKind() == CleanupKind::EH && isRegionTrivial(body)) {
+    rewriter.eraseOp(op);
+    return success();
+  }
+
+  // A cleanup scope with a trivial cleanup region has no cleanup to perform.
+  // Inline the body into the parent block and erase the scope.
+  if (!isRegionTrivial(cleanup) || !body.hasOneBlock())
+    return failure();
+
+  Block &bodyBlock = body.front();
+  if (!isa<cir::YieldOp>(bodyBlock.getTerminator()))
+    return failure();
+
+  Operation *yield = bodyBlock.getTerminator();
+  rewriter.inlineBlockBefore(&bodyBlock, op);
+  rewriter.eraseOp(yield);
+  rewriter.eraseOp(op);
+  return success();
+}
+
 void cir::CleanupScopeOp::build(
     OpBuilder &builder, OperationState &result, CleanupKind cleanupKind,
     function_ref<void(OpBuilder &, Location)> bodyBuilder,
