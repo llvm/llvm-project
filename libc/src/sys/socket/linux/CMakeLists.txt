@@ -39,6 +39,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  listen
+  SRCS
+    listen.cpp
+  HDRS
+    ../listen.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   socketpair
   SRCS
     socketpair.cpp

@@ -10,6 +10,7 @@
 #include "hdr/types/struct_sockaddr_un.h"
 #include "src/sys/socket/bind.h"
 #include "src/sys/socket/connect.h"
+#include "src/sys/socket/listen.h"
 #include "src/sys/socket/socket.h"
 
 #include "src/stdio/remove.h"
@@ -60,7 +61,14 @@ TEST_F(LlvmLibcConnectTest, ConnectLocalSocket) {
       LIBC_NAMESPACE::connect(sock2,
                               reinterpret_cast<struct sockaddr *>(&my_addr),
                               sizeof(struct sockaddr_un)),
-      Fails(ECONNREFUSED)); // Because the other side is not listen()ing.
+      Fails(ECONNREFUSED)); // Because the other side is not listen()ing yet.
+
+  ASSERT_THAT(LIBC_NAMESPACE::listen(sock1, 1), Succeeds(0));
+
+  ASSERT_THAT(LIBC_NAMESPACE::connect(
+                  sock2, reinterpret_cast<struct sockaddr *>(&my_addr),
+                  sizeof(struct sockaddr_un)),
+              Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::close(sock1), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(sock2), Succeeds(0));
