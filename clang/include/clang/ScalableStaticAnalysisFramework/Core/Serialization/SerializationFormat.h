@@ -185,9 +185,9 @@ protected:
         /// ConcreteCodec to the global \c llvm::Registry<Codec>. \c static
         /// ensures the `Registry::Add` object lives for the entire program,
         /// keeping its codec and node alive in the registry's linked list.
-        [[maybe_unused]] static typename llvm::Registry<Codec>::template Add<
-            ConcreteCodec>
-            RegisterUsingCtorSideEffect(NameStr, "");
+        [[maybe_unused]] static
+            typename llvm::Registry<Codec>::template Add<ConcreteCodec>
+                RegisterUsingCtorSideEffect(NameStr, "");
       }
     };
 
