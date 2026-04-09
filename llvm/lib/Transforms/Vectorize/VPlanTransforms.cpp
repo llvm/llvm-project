@@ -5968,9 +5968,9 @@ struct ReductionExtend {
 /// ExtendB is optional. If ExtendB is present, ExtendsUser is a binary
 /// operation.
 struct ExtendedReductionOperand {
-  // The recipe that consumes the extends.
+  /// The recipe that consumes the extends.
   VPWidenRecipe *ExtendsUser;
-  // Extends descriptions (inputs to getPartialReductionCost).
+  /// Extend descriptions (inputs to getPartialReductionCost).
   ReductionExtend ExtendA, ExtendB;
 };
 
