@@ -247,43 +247,40 @@ public:
       NameGlobal->removeFromParent();
   }
 
-  bool hasNonUniformIndex(Value *Val, SmallPtrSet<Value *, 16> &Visited) {
-    if (isa<llvm::Constant>(Val))
-      return false;
-
-    // Avoid cycles (important for PHI nodes in loops)
-    if (!Visited.insert(Val).second)
-      return false;
-
-    // Base case: is this value itself a call to our intrinsic?
-    if (auto *CI = dyn_cast<CallInst>(Val))
-      if (CI->getIntrinsicID() == Intrinsic::dx_resource_nonuniformindex)
-        return true;
-
-    // If it's a PHI node, check ALL incoming values —
-    // taint from ANY predecessor counts
-    if (auto *Phi = dyn_cast<PHINode>(Val)) {
-      for (Value *Incoming : Phi->incoming_values())
-        if (hasNonUniformIndex(Incoming, Visited))
-          return true;
-      return false;
-    }
-
-    if (auto *Inst = dyn_cast<Instruction>(Val)) {
-      if (Inst->getNumOperands() > 0 && !Inst->isTerminator()) {
-        for (Value *Op : Inst->operands())
-          if (hasNonUniformIndex(Op, Visited))
-            return true;
-      }
-    }
-    return false;
-  }
-
   bool hasNonUniformIndex(Value *IndexOp) {
     SmallVector<Value *> WorkList;
     SmallPtrSet<Value *, 16> Visited;
 
-    return hasNonUniformIndex(IndexOp, Visited);
+    SmallVector<Value *, 16> Worklist;
+    Worklist.push_back(IndexOp);
+
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+
+      if (isa<llvm::Constant>(V))
+        continue;
+
+      if (!Visited.insert(V).second)
+        continue;
+
+      if (auto *CI = dyn_cast<CallInst>(V))
+        if (CI->getIntrinsicID() == Intrinsic::dx_resource_nonuniformindex)
+          return true;
+
+      // If it's a PHI node, check ALL incoming values —
+      // taint from ANY predecessor counts
+      if (auto *Phi = dyn_cast<PHINode>(V)) {
+        for (Value *Incoming : Phi->incoming_values())
+          Worklist.push_back(Incoming);
+        continue;
+      }
+
+      if (auto *Inst = dyn_cast<Instruction>(V))
+        if (Inst->getNumOperands() > 0 && !Inst->isTerminator())
+          for (Value *Op : Inst->operands())
+            Worklist.push_back(Op);
+    }
+    return false;
   }
 
   Error validateRawBufferElementIndex(Value *Resource, Value *ElementIndex) {
