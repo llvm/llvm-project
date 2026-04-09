@@ -208,3 +208,165 @@ define float @load_f32_from_f64() {
   %v = load float, ptr addrspace(1) @globalF64
   ret float %v
 }
+
+
+define i8 @load_i8_from_f32() {
+; CHECK-LABEL: load_i8_from_f32:
+; CHECK:         .functype load_i8_from_f32 () -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalF32
+; CHECK-NEXT:    i32.reinterpret_f32
+; CHECK-NEXT:    # fallthrough-return
+  %v = load i8, ptr addrspace(1) @globalF32
+  ret i8 %v
+}
+
+define i16 @load_i16_from_f32() {
+; CHECK-LABEL: load_i16_from_f32:
+; CHECK:         .functype load_i16_from_f32 () -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalF32
+; CHECK-NEXT:    i32.reinterpret_f32
+; CHECK-NEXT:    # fallthrough-return
+  %v = load i16, ptr addrspace(1) @globalF32
+  ret i16 %v
+}
+
+define i32 @load_i32_from_f32() {
+; CHECK-LABEL: load_i32_from_f32:
+; CHECK:         .functype load_i32_from_f32 () -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalF32
+; CHECK-NEXT:    i32.reinterpret_f32
+; CHECK-NEXT:    # fallthrough-return
+  %v = load i32, ptr addrspace(1) @globalF32
+  ret i32 %v
+}
+
+define i64 @load_i64_from_f32() {
+; CHECK-LABEL: load_i64_from_f32:
+; CHECK:         .functype load_i64_from_f32 () -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalF32
+; CHECK-NEXT:    i32.reinterpret_f32
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    # fallthrough-return
+  %v = load i64, ptr addrspace(1) @globalF32
+  ret i64 %v
+}
+
+define i8 @load_i8_from_f64() {
+; CHECK-LABEL: load_i8_from_f64:
+; CHECK:         .functype load_i8_from_f64 () -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalF64
+; CHECK-NEXT:    i64.reinterpret_f64
+; CHECK-NEXT:    i32.wrap_i64
+; CHECK-NEXT:    # fallthrough-return
+  %v = load i8, ptr addrspace(1) @globalF64
+  ret i8 %v
+}
+
+define i16 @load_i16_from_f64() {
+; CHECK-LABEL: load_i16_from_f64:
+; CHECK:         .functype load_i16_from_f64 () -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalF64
+; CHECK-NEXT:    i64.reinterpret_f64
+; CHECK-NEXT:    i32.wrap_i64
+; CHECK-NEXT:    # fallthrough-return
+  %v = load i16, ptr addrspace(1) @globalF64
+  ret i16 %v
+}
+
+define i32 @load_i32_from_f64() {
+; CHECK-LABEL: load_i32_from_f64:
+; CHECK:         .functype load_i32_from_f64 () -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalF64
+; CHECK-NEXT:    i64.reinterpret_f64
+; CHECK-NEXT:    i32.wrap_i64
+; CHECK-NEXT:    # fallthrough-return
+  %v = load i32, ptr addrspace(1) @globalF64
+  ret i32 %v
+}
+
+define i64 @load_i64_from_f64() {
+; CHECK-LABEL: load_i64_from_f64:
+; CHECK:         .functype load_i64_from_f64 () -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalF64
+; CHECK-NEXT:    i64.reinterpret_f64
+; CHECK-NEXT:    # fallthrough-return
+  %v = load i64, ptr addrspace(1) @globalF64
+  ret i64 %v
+}
+
+define float @load_f32_from_i8() {
+; CHECK-LABEL: load_f32_from_i8:
+; CHECK:         .functype load_f32_from_i8 () -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalI8
+; CHECK-NEXT:    f32.reinterpret_i32
+; CHECK-NEXT:    # fallthrough-return
+  %v = load float, ptr addrspace(1) @globalI8
+  ret float %v
+}
+
+define float @load_f32_from_i32() {
+; CHECK-LABEL: load_f32_from_i32:
+; CHECK:         .functype load_f32_from_i32 () -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    f32.reinterpret_i32
+; CHECK-NEXT:    # fallthrough-return
+  %v = load float, ptr addrspace(1) @globalI32
+  ret float %v
+}
+
+define float @load_f32_from_i64() {
+; CHECK-LABEL: load_f32_from_i64:
+; CHECK:         .functype load_f32_from_i64 () -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i32.wrap_i64
+; CHECK-NEXT:    f32.reinterpret_i32
+; CHECK-NEXT:    # fallthrough-return
+  %v = load float, ptr addrspace(1) @globalI64
+  ret float %v
+}
+
+define double @load_f64_from_i8() {
+; CHECK-LABEL: load_f64_from_i8:
+; CHECK:         .functype load_f64_from_i8 () -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalI8
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    f64.reinterpret_i64
+; CHECK-NEXT:    # fallthrough-return
+  %v = load double, ptr addrspace(1) @globalI8
+  ret double %v
+}
+
+define double @load_f64_from_i32() {
+; CHECK-LABEL: load_f64_from_i32:
+; CHECK:         .functype load_f64_from_i32 () -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    f64.reinterpret_i64
+; CHECK-NEXT:    # fallthrough-return
+  %v = load double, ptr addrspace(1) @globalI32
+  ret double %v
+}
+
+define double @load_f64_from_i64() {
+; CHECK-LABEL: load_f64_from_i64:
+; CHECK:         .functype load_f64_from_i64 () -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    f64.reinterpret_i64
+; CHECK-NEXT:    # fallthrough-return
+  %v = load double, ptr addrspace(1) @globalI64
+  ret double %v
+}

@@ -1928,8 +1928,11 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
     switch (ExtType) {
     case ISD::NON_EXTLOAD: {
       // A normal, non-extending load may try to load more or less than the
-      // underlying global, which is invalid. We lower this to a load of the
-      // global (i32 or i64) then truncate or extend as needed
+      // underlying global, which is invalid. Or it may try to load floats from
+      // integers or vice verse. We lower this to a load of the underylying
+      // global (i32, i64, f32, or f64), and then some combination of a
+      // reinterpret cast from float to integer, a truncate or extension, or a
+      // cast from integer to float as needed.
 
       // Modify the MMO to load the full global
       // This is assumed to be safe without copy/dup, as the original load will
@@ -1942,15 +1945,26 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
       SDValue GlobalGetNode = DAG.getMemIntrinsicNode(
           WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops, PromotedGT, MMO);
 
-      if (ResultType.bitsEq(PromotedGT)) {
-        return GlobalGetNode;
+      SDValue ValRes = GlobalGetNode;
+
+      if (ResultType.bitsEq(PromotedGT) &&
+          ResultType.isFloatingPoint() == PromotedGT.isFloatingPoint()) {
+        return ValRes;
       }
 
-      SDValue ValRes;
-      if (ResultType.isFloatingPoint())
-        ValRes = DAG.getFPExtendOrRound(GlobalGetNode, DL, ResultType);
+      if (!ResultType.isFloatingPoint() && PromotedGT.isFloatingPoint()) {
+        ValRes = DAG.getBitcast(PromotedGT.changeTypeToInteger(), ValRes);
+      }
+
+      if (ResultType.isFloatingPoint() && PromotedGT.isFloatingPoint())
+        ValRes = DAG.getFPExtendOrRound(ValRes, DL, ResultType);
       else
-        ValRes = DAG.getAnyExtOrTrunc(GlobalGetNode, DL, ResultType);
+        ValRes =
+            DAG.getAnyExtOrTrunc(ValRes, DL, ResultType.changeTypeToInteger());
+
+      if (ResultType.isFloatingPoint() && !PromotedGT.isFloatingPoint()) {
+        ValRes = DAG.getBitcast(ResultType, ValRes);
+      }
 
       return DAG.getMergeValues({ValRes, GlobalGetNode.getValue(1)}, DL);
     }
