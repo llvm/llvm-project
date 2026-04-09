@@ -539,26 +539,42 @@ static unsigned getNumVectorRegs(Type *Ty) {
   return ((WideBits % 128U) ? ((WideBits / 128U) + 1) : (WideBits / 128U));
 }
 
-static bool isArithmeticFoldableRMW(const Instruction *I) {
-  if (!I || !isa<BinaryOperator>(I) || !I->hasOneUse())
+static bool isFoldableRMW(const Instruction *I, Type *Ty) {
+  auto *BI = dyn_cast_or_null<BinaryOperator>(I);
+  if (!BI || !BI->hasOneUse())
     return false;
 
-  Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
+  unsigned Opcode = BI->getOpcode();
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  switch (Opcode) {
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+    if (BitWidth != 8)
+      return false;
+    break;
+  case Instruction::Add:
+  case Instruction::Sub:
+    if (BitWidth != 32 && BitWidth != 64)
+      return false;
+    break;
+  default:
+    return false;
+  }
+
+  Value *Op0 = BI->getOperand(0), *Op1 = BI->getOperand(1);
   if (!isa<ConstantInt>(Op0) && !isa<ConstantInt>(Op1))
     return false;
 
-  Value *V = nullptr;
-  unsigned Opcode = I->getOpcode();
-  if (Opcode == Instruction::And || Opcode == Instruction::Or ||
-      Opcode == Instruction::Xor || Opcode == Instruction::Add)
-    V = isa<ConstantInt>(Op0) ? Op1 : (isa<ConstantInt>(Op1) ? Op0 : nullptr);
-  else if (Opcode == Instruction::Sub && isa<ConstantInt>(Op1))
-    V = Op0;
-  if (!V)
+  Value *V =
+      (Opcode == Instruction::Sub) ? Op0 : (isa<ConstantInt>(Op0) ? Op1 : Op0);
+  if (Opcode == Instruction::Sub && !isa<ConstantInt>(Op1))
     return false;
 
   auto *LI = dyn_cast_or_null<LoadInst>(V);
-  auto *SI = dyn_cast<StoreInst>(*I->users().begin());
+  // Already checked BI hasOneUse.
+  auto *SI = dyn_cast<StoreInst>(BI->user_back());
 
   return LI && SI && !LI->isVolatile() && !SI->isVolatile() &&
          LI->hasOneUse() && LI->getPointerOperand() == SI->getPointerOperand();
@@ -573,11 +589,7 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info, Args, CxtI);
-  // Supporting only i8 type immediate-to-memory arithmatic operation until
-  // backend start folding it for i32 type if constant only has bits in one
-  // single byte set.
-  if (CxtI && Ty && !Ty->isVectorTy() && Ty->isIntegerTy(8) &&
-      isArithmeticFoldableRMW(CxtI))
+  if (CxtI && Ty && !Ty->isVectorTy() && isFoldableRMW(CxtI, Ty))
     return TTI::TCC_Free;
   // TODO: return a good value for BB-VECTORIZER that includes the
   // immediate loads, which we do not want to count for the loop
@@ -1328,35 +1340,6 @@ static bool isBswapIntrinsicCall(const Value *V) {
   return false;
 }
 
-static bool isStoreFoldableRMW(const Instruction *I) {
-  auto *SI = dyn_cast_or_null<StoreInst>(I);
-  if (!SI || SI->isVolatile())
-    return false;
-
-  auto *BI = dyn_cast<BinaryOperator>(SI->getValueOperand());
-  if (!BI || !BI->hasOneUse())
-    return false;
-
-  Value *Op0 = BI->getOperand(0), *Op1 = BI->getOperand(1);
-  if (!isa<ConstantInt>(Op0) && !isa<ConstantInt>(Op1))
-    return false;
-
-  unsigned Opcode = BI->getOpcode();
-  Value *V = nullptr;
-  if (Opcode == Instruction::And || Opcode == Instruction::Or ||
-      Opcode == Instruction::Xor || Opcode == Instruction::Add)
-    V = isa<ConstantInt>(Op0) ? Op1 : (isa<ConstantInt>(Op1) ? Op0 : nullptr);
-  else if (Opcode == Instruction::Sub && isa<ConstantInt>(Op1))
-    V = Op0;
-
-  if (!V)
-    return false;
-
-  auto *LI = dyn_cast_or_null<LoadInst>(V);
-  return LI && !LI->isVolatile() &&
-         LI->getPointerOperand() == SI->getPointerOperand();
-}
-
 InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 Align Alignment,
                                                 unsigned AddressSpace,
@@ -1369,9 +1352,8 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
 
-  if (I && Opcode == Instruction::Store && !Src->isVectorTy() &&
-      Src->isIntegerTy(8)) {
-    if (isStoreFoldableRMW(I))
+  if (I && Opcode == Instruction::Store && !Src->isVectorTy()) {
+    if (isFoldableRMW(dyn_cast<Instruction>(I->getOperand(0)), Src))
       return TTI::TCC_Free;
   }
 
