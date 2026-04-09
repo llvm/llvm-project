@@ -11024,6 +11024,10 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   SDValue LeftOp = ShiftOperand.getOperand(0);
   SDValue RightOp = ShiftOperand.getOperand(1);
 
+  if (LeftOp.getOpcode() != ISD::SIGN_EXTEND &&
+      LeftOp.getOpcode() != ISD::ZERO_EXTEND)
+    std::swap(LeftOp, RightOp);
+
   bool IsSignExt = LeftOp.getOpcode() == ISD::SIGN_EXTEND;
   bool IsZeroExt = LeftOp.getOpcode() == ISD::ZERO_EXTEND;
 
@@ -11056,18 +11060,17 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   }
 
   SDValue MulhRightOp;
-  if (ConstantSDNode *Constant = isConstOrConstSplat(RightOp)) {
-    unsigned ActiveBits = IsSignExt
-                              ? Constant->getAPIntValue().getSignificantBits()
-                              : Constant->getAPIntValue().getActiveBits();
-    if (ActiveBits > NarrowVTSize)
+  if (LeftOp.getOpcode() != RightOp.getOpcode()) {
+    if (IsZeroExt && ShiftOperand.hasOneUse() &&
+        DAG.computeKnownBits(RightOp).countMaxActiveBits() <= NarrowVTSize) {
+      MulhRightOp = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, RightOp);
+    } else if (IsSignExt && ShiftOperand.hasOneUse() &&
+               DAG.ComputeMaxSignificantBits(RightOp) <= NarrowVTSize) {
+      MulhRightOp = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, RightOp);
+    } else {
       return SDValue();
-    MulhRightOp = DAG.getConstant(
-        Constant->getAPIntValue().trunc(NarrowVT.getScalarSizeInBits()), DL,
-        NarrowVT);
+    }
   } else {
-    if (LeftOp.getOpcode() != RightOp.getOpcode())
-      return SDValue();
     // Check that the two extend nodes are the same type.
     if (NarrowVT != RightOp.getOperand(0).getValueType())
       return SDValue();
@@ -14179,11 +14182,12 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitSETCC(SDNode *N) {
-  // setcc is very commonly used as an argument to brcond. This pattern
-  // also lend itself to numerous combines and, as a result, it is desired
-  // we keep the argument to a brcond as a setcc as much as possible.
+  // setcc is very commonly used as an argument to brcond or cond_loop. This
+  // pattern also lend itself to numerous combines and, as a result, it is
+  // desired we keep the argument to a brcond as a setcc as much as possible.
   bool PreferSetCC =
-      N->hasOneUse() && N->user_begin()->getOpcode() == ISD::BRCOND;
+      N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::BRCOND ||
+                         N->user_begin()->getOpcode() == ISD::COND_LOOP);
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
@@ -26513,9 +26517,11 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
       // If the bitcast type isn't legal, it might be a trunc of a legal type;
       // look through the trunc so we can still do the transform:
       //   concat_vectors(trunc(scalar), undef) -> scalar_to_vector(scalar)
+      // However, this is only equivalent on little-endian targets.
       if (Scalar->getOpcode() == ISD::TRUNCATE &&
           !TLI.isTypeLegal(Scalar.getValueType()) &&
-          TLI.isTypeLegal(Scalar->getOperand(0).getValueType()))
+          TLI.isTypeLegal(Scalar->getOperand(0).getValueType()) &&
+          DAG.getDataLayout().isLittleEndian())
         Scalar = Scalar->getOperand(0);
 
       EVT SclTy = Scalar.getValueType();
