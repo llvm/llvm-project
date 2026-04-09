@@ -610,9 +610,7 @@ public:
   void Post(const parser::OpenMPSimpleStandaloneConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPLoopConstruct &);
-  void Post(const parser::OpenMPLoopConstruct &) {
-    PopContext();
-  }
+  void Post(const parser::OpenMPLoopConstruct &) { PopContext(); }
   void Post(const parser::OmpBeginLoopDirective &) {
     GetContext().withinConstruct = true;
   }
