@@ -2198,14 +2198,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vdups_laneq_f32:
   case NEON::BI__builtin_neon_vgetq_lane_f64:
   case NEON::BI__builtin_neon_vdupd_laneq_f64:
-  case NEON::BI__builtin_neon_vaddh_f16:
-  case NEON::BI__builtin_neon_vsubh_f16:
-  case NEON::BI__builtin_neon_vmulh_f16:
-  case NEON::BI__builtin_neon_vdivh_f16:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case NEON::BI__builtin_neon_vaddh_f16:
+    return builder.createFAdd(loc, ops[0], ops[1]);
+  case NEON::BI__builtin_neon_vsubh_f16:
+    return builder.createFSub(loc, ops[0], ops[1]);
+  case NEON::BI__builtin_neon_vmulh_f16:
+    return builder.createFMul(loc, ops[0], ops[1]);
+  case NEON::BI__builtin_neon_vdivh_f16:
+    return builder.createFDiv(loc, ops[0], ops[1]);
   case NEON::BI__builtin_neon_vfmah_f16:
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
     std::rotate(ops.begin(), ops.begin() + 1, ops.end());
