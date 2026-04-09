@@ -1632,15 +1632,14 @@ namespace {
           Cache && TemplateArgsHashValue) {
         llvm::FoldingSetNodeID ID = *TemplateArgsHashValue;
         ID.AddInteger(SemaRef.ArgPackSubstIndex.toInternalRepresentation());
+        // FIXME: We may have better performance if we profile Arg without
+        // sugars.
         Arg.Profile(ID, SemaRef.Context);
-        // FIXME: We should ideally only cache and restore TemplateArgument and
-        // rebuild the uncached TypeLoc separately in place. However this is
-        // nearly impossible given the current architecture of TreeTransform so
-        // that we have to lose TypeLoc fidelity in cases where TypeLocs are
-        // less critical, otherwise this might result in diagnostics pointing to
-        // arbitrary locations.
-        // We now only apply to concepts substitutions and their valid
-        // template arguments for performance reasons.
+        // FIXME: Ideally, we should only cache and restore the TemplateArgument
+        // and rebuild the uncached TypeLoc separately in place.
+        // We choose to accept loss of TypeLoc fidelity in cases where TypeLocs
+        // are less critical for performance trade-off: currently, this is only
+        // applied to concept substitutions and their valid template arguments.
         if (auto Iter = Cache->find(ID); Iter != Cache->end()) {
           Output = Iter->second;
           return false;
