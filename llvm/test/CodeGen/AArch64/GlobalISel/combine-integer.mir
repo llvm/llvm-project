@@ -573,7 +573,9 @@ body:             |
     %mul:_(s64) = G_MUL %max, %sub2
     $x0 = COPY %mul
     RET_ReallyLR implicit $x0
-
+    
+...
+---
 name:   AMinusZeroMinusB_BV
 body:             |
   bb.0:
