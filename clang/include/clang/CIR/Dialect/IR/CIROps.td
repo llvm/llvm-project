@@ -1298,6 +1298,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$cleanupBuilder)>
   ];
 
+  let hasCanonicalizeMethod = 1;
   let hasLLVMLowering = false;
 }
 

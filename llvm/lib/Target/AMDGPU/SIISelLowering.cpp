@@ -12056,8 +12056,38 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
                                       Op->getOperand(2), Chain),
                    0);
-  case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var: {
+    // Member count of 0 means to re-use a previous member count,
+    // which, if the named barrier is statically chosen, means we can use
+    // the immarg form. Otherwisee, fall through to constructiong M0 as for
+    // s_barrier_init.
+    SDValue CntOp = Op->getOperand(3);
+    auto *CntC = dyn_cast<ConstantSDNode>(CntOp);
+    if (CntC && CntC->isZero()) {
+      SDValue Chain = Op->getOperand(0);
+      SDValue BarOp = Op->getOperand(2);
+      SmallVector<SDValue, 2> Ops;
+
+      std::optional<uint64_t> BarVal;
+      if (auto *C = dyn_cast<ConstantSDNode>(BarOp))
+        BarVal = C->getZExtValue();
+      else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp))
+        if (auto Addr = AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(
+                *GA->getGlobal()))
+          BarVal = *Addr + GA->getOffset();
+
+      if (BarVal) {
+        unsigned BarID = (*BarVal >> 4) & 0x3F;
+        Ops.push_back(DAG.getTargetConstant(BarID, DL, MVT::i32));
+        Ops.push_back(Chain);
+        auto *NewMI = DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
+                                         Op->getVTList(), Ops);
+        return SDValue(NewMI, 0);
+      }
+    }
+    [[fallthrough]];
+  }
+  case Intrinsic::amdgcn_s_barrier_init: {
     // these two intrinsics have two operands: barrier pointer and member count
     SDValue Chain = Op->getOperand(0);
     SmallVector<SDValue, 2> Ops;

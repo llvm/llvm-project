@@ -1658,10 +1658,7 @@ llvm::Error Thread::LoadScriptedFrameProvider(
   if (!provider_or_err)
     return provider_or_err.takeError();
 
-  lldb::frame_list_id_t provider_id = m_next_provider_id++;
-  if (m_next_provider_id ==
-      0) // Wrapped past max; skip 0 (reserved for unwinder).
-    m_next_provider_id = 1;
+  lldb::frame_list_id_t provider_id = descriptor.GetID();
 
   m_frame_providers.insert({provider_id, *provider_or_err});
 
@@ -1696,7 +1693,6 @@ void Thread::ClearScriptedFrameProvider() {
   m_frame_providers.clear();
   m_provider_chain_ids.clear();
   m_frame_lists_by_id.clear();
-  m_next_provider_id = 1; // Reset counter.
   m_unwinder_frames_sp.reset();
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
@@ -1736,7 +1732,6 @@ void Thread::ClearStackFrames() {
   // chain configuration (m_provider_chain_ids) so providers are re-loaded
   // with consistent IDs on the next GetStackFrameList() call.
   m_frame_providers.clear();
-  m_next_provider_id = 1;
   m_frame_lists_by_id.clear();
   m_extended_info.reset();
   m_extended_info_fetched = false;

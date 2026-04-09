@@ -80,6 +80,8 @@ def XeVM_1DBlockElemType : AnyTypeOf<[I8, I16, I32, I64]>;
 //   ir - invalidated after read
 //===----------------------------------------------------------------------===//
 
+def LoadCacheControl_Use_Default
+    : I32EnumAttrCase<"USE_DEFAULT", 0, "Use_Default">;
 def LoadCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
 def LoadCacheControl_L1uc_L2uc_L3c
@@ -110,7 +112,8 @@ def LoadCacheControlInvalidateRead
 def XeVM_LoadCacheControl
     : I32EnumAttr<
           "LoadCacheControl", "XeVM load ops cache control",
-          [LoadCacheControl_L1uc_L2uc_L3uc, LoadCacheControl_L1uc_L2uc_L3c,
+          [LoadCacheControl_Use_Default,
+           LoadCacheControl_L1uc_L2uc_L3uc, LoadCacheControl_L1uc_L2uc_L3c,
            LoadCacheControl_L1uc_L2c_L3uc, LoadCacheControl_L1uc_L2c_L3c,
            LoadCacheControl_L1c_L2uc_L3uc, LoadCacheControl_L1c_L2uc_L3c,
            LoadCacheControl_L1c_L2c_L3uc, LoadCacheControl_L1c_L2c_L3c,
@@ -136,6 +139,9 @@ def XeVM_LoadCacheControlAttr
 //   s - streaming
 //===----------------------------------------------------------------------===//
 
+
+def StoreCacheControl_Use_Default
+    : I32EnumAttrCase<"USE_DEFAULT", 0, "Use_Default">;
 def StoreCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
 def StoreCacheControl_L1uc_L2uc_L3wb
@@ -170,7 +176,8 @@ def StoreCacheControl_L1wb_L2uc_L3wb
 def XeVM_StoreCacheControl
     : I32EnumAttr<
           "StoreCacheControl", "XeVM store ops cache control",
-          [StoreCacheControl_L1uc_L2uc_L3uc, StoreCacheControl_L1uc_L2uc_L3wb,
+          [StoreCacheControl_Use_Default,
+           StoreCacheControl_L1uc_L2uc_L3uc, StoreCacheControl_L1uc_L2uc_L3wb,
            StoreCacheControl_L1uc_L2wb_L3uc, StoreCacheControl_L1uc_L2wb_L3wb,
            StoreCacheControl_L1wt_L2uc_L3uc, StoreCacheControl_L1wt_L2uc_L3wb,
            StoreCacheControl_L1wt_L2wb_L3uc, StoreCacheControl_L1wt_L2wb_L3wb,
