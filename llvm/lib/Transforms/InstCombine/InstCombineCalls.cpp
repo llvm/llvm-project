@@ -4246,6 +4246,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat:
+    if (Instruction *I = foldItoFPtoI(*II))
+      return I;
+    break;
   case Intrinsic::frexp: {
     Value *X;
     // The first result is idempotent with the added complication of the struct

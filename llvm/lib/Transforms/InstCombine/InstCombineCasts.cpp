@@ -2333,11 +2333,14 @@ Instruction *InstCombinerImpl::visitFPExt(CastInst &FPExt) {
   return commonCastTransforms(FPExt);
 }
 
-/// fpto{s/u}i({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
+/// fpto{s/u}i[.sat]({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
 /// This is safe if the intermediate type has enough bits in its mantissa to
 /// accurately represent all values of X.  For example, this won't work with
 /// i64 -> float -> i64.
-Instruction *InstCombinerImpl::foldItoFPtoI(CastInst &FI) {
+template <typename FPToIntTy>
+Instruction *InstCombinerImpl::foldItoFPtoI(FPToIntTy &FI) {
+  constexpr bool IsSaturating = std::is_same_v<FPToIntTy, IntrinsicInst>;
+
   if (!isa<UIToFPInst>(FI.getOperand(0)) && !isa<SIToFPInst>(FI.getOperand(0)))
     return nullptr;
 
@@ -2345,7 +2348,13 @@ Instruction *InstCombinerImpl::foldItoFPtoI(CastInst &FI) {
   Value *X = OpI->getOperand(0);
   Type *XType = X->getType();
   Type *DestType = FI.getType();
-  bool IsOutputSigned = isa<FPToSIInst>(FI);
+  bool IsInputSigned = isa<SIToFPInst>(OpI);
+
+  bool IsOutputSigned;
+  if constexpr (IsSaturating)
+    IsOutputSigned = FI.getIntrinsicID() == Intrinsic::fptosi_sat;
+  else
+    IsOutputSigned = isa<FPToSIInst>(FI);
 
   // Since we can assume the conversion won't overflow, our decision as to
   // whether the input will fit in the float should depend on the minimum
@@ -2354,28 +2363,48 @@ Instruction *InstCombinerImpl::foldItoFPtoI(CastInst &FI) {
   // This means this is also safe for a signed input and unsigned output, since
   // a negative input would lead to undefined behavior.
   if (!isKnownExactCastIntToFP(*OpI)) {
-    // The first cast may not round exactly based on the source integer width
-    // and FP width, but the overflow UB rules can still allow this to fold.
-    // If the destination type is narrow, that means the intermediate FP value
-    // must be large enough to hold the source value exactly.
-    // For example, (uint8_t)((float)(uint32_t 16777217) is undefined behavior.
-    int OutputSize = (int)DestType->getScalarSizeInBits();
-    if (OutputSize > OpI->getType()->getFPMantissaWidth())
+    if constexpr (!IsSaturating) {
+      // The first cast may not round exactly based on the source integer width
+      // and FP width, but the overflow UB rules can still allow this to fold.
+      // If the destination type is narrow, that means the intermediate FP value
+      // must be large enough to hold the source value exactly.
+      //
+      // For example, (uint8_t)((float)(uint32_t 16777217) is UB.
+      int OutputSize = (int)DestType->getScalarSizeInBits();
+      if (OutputSize > OpI->getType()->getFPMantissaWidth())
+        return nullptr;
+    } else {
+      // Sat intrinsics produce a defined saturated value on overflow, so
+      // the UB-based shortcut is invalid. Require exactness.
+      return nullptr;
+    }
+  }
+
+  unsigned SrcWidth = XType->getScalarSizeInBits();
+  unsigned DestWidth = DestType->getScalarSizeInBits();
+
+  if constexpr (IsSaturating) {
+    // TODO: cross-sign and narrowing cases could be handled with range
+    //       analysis to prove the source fits in the destination.
+    if (IsInputSigned != IsOutputSigned || DestWidth < SrcWidth)
       return nullptr;
   }
 
-  if (DestType->getScalarSizeInBits() > XType->getScalarSizeInBits()) {
-    bool IsInputSigned = isa<SIToFPInst>(OpI);
+  if (DestWidth > SrcWidth) {
     if (IsInputSigned && IsOutputSigned)
       return new SExtInst(X, DestType);
     return new ZExtInst(X, DestType);
   }
-  if (DestType->getScalarSizeInBits() < XType->getScalarSizeInBits())
+  if (DestWidth < SrcWidth)
     return new TruncInst(X, DestType);
 
   assert(XType == DestType && "Unexpected types for int to FP to int casts");
   return replaceInstUsesWith(FI, X);
 }
+
+template Instruction *InstCombinerImpl::foldItoFPtoI<CastInst>(CastInst &);
+template Instruction *
+InstCombinerImpl::foldItoFPtoI<IntrinsicInst>(IntrinsicInst &);
 
 static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   // fpto{u/s}i non-norm --> 0
