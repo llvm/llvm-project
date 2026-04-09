@@ -732,10 +732,6 @@ private:
   /// otherwise return P.
   static const char *SkipEscapedNewLines(const char *P);
 
-  /// SkipHorizontalWhitespace - Skip the horizontak whitespace characters and
-  /// returns the advanced pointer.
-  static const char *SkipHorizontalWhitespace(const char *Ptr);
-
   /// getCharAndSizeSlowNoWarn - Same as getCharAndSizeSlow, but never emits a
   /// diagnostic.
   static SizedChar getCharAndSizeSlowNoWarn(const char *Ptr,
