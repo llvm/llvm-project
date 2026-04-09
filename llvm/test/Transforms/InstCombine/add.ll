@@ -8,9 +8,8 @@ declare void @use_i1(i1)
 ; fold (X + C) + (Y & ~C) -> X + (Y | C)
 define i32 @add_masked_overwrite_basic(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_basic(
-; CHECK-NEXT:    [[X:%.*]] = add i32 [[X1:%.*]], 1
-; CHECK-NEXT:    [[OR:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[OR]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %a = add i32 %x, 1
@@ -21,9 +20,8 @@ define i32 @add_masked_overwrite_basic(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_commuted(
-; CHECK-NEXT:    [[OR:%.*]] = add i32 [[X1:%.*]], 1
-; CHECK-NEXT:    [[X:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[OR]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %a = add i32 %x, 1
@@ -34,9 +32,8 @@ define i32 @add_masked_overwrite_commuted(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_preserve_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_preserve_nsw(
-; CHECK-NEXT:    [[X:%.*]] = add nsw i32 [[X1:%.*]], 1
-; CHECK-NEXT:    [[OR:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], [[OR]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %a = add nsw i32 %x, 1
@@ -47,9 +44,8 @@ define i32 @add_masked_overwrite_preserve_nsw(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_preserve_nuw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_preserve_nuw(
-; CHECK-NEXT:    [[X:%.*]] = add nuw i32 [[X1:%.*]], 1
-; CHECK-NEXT:    [[OR:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X]], [[OR]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X:%.*]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %a = add nuw i32 %x, 1
@@ -60,9 +56,8 @@ define i32 @add_masked_overwrite_preserve_nuw(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_preserve_nuw_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_preserve_nuw_nsw(
-; CHECK-NEXT:    [[X:%.*]] = add nuw nsw i32 [[X1:%.*]], 1
-; CHECK-NEXT:    [[OR:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], [[OR]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X:%.*]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %a = add nuw nsw i32 %x, 1
@@ -73,9 +68,8 @@ define i32 @add_masked_overwrite_preserve_nuw_nsw(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_do_not_preserve_outer_nsw_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_do_not_preserve_outer_nsw_only(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], [[M]]
+; CHECK-NEXT:    [[M:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A:%.*]], [[M]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %a = add i32 %x, 1
@@ -86,9 +80,8 @@ define i32 @add_masked_overwrite_do_not_preserve_outer_nsw_only(i32 %x, i32 %y) 
 
 define i32 @add_masked_overwrite_do_not_preserve_outer_nuw_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_do_not_preserve_outer_nuw_only(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], [[M]]
+; CHECK-NEXT:    [[M:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], [[M]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %a = add i32 %x, 1
@@ -99,9 +92,8 @@ define i32 @add_masked_overwrite_do_not_preserve_outer_nuw_only(i32 %x, i32 %y) 
 
 define i32 @add_masked_overwrite_do_not_preserve_inner_nsw_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_do_not_preserve_inner_nsw_only(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[A]], [[M]]
+; CHECK-NEXT:    [[M:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[A:%.*]], [[M]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nsw i32 %x, 1
@@ -112,9 +104,8 @@ define i32 @add_masked_overwrite_do_not_preserve_inner_nsw_only(i32 %x, i32 %y) 
 
 define i32 @add_masked_overwrite_do_not_preserve_inner_nuw_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_do_not_preserve_inner_nuw_only(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[A]], [[M]]
+; CHECK-NEXT:    [[M:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[A:%.*]], [[M]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw i32 %x, 1
@@ -125,9 +116,8 @@ define i32 @add_masked_overwrite_do_not_preserve_inner_nuw_only(i32 %x, i32 %y) 
 
 define i32 @add_masked_overwrite_commuted_preserve_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_commuted_preserve_nsw(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[M]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[M:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nsw i32 %x, 1
@@ -138,9 +128,8 @@ define i32 @add_masked_overwrite_commuted_preserve_nsw(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_commuted_preserve_nuw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_commuted_preserve_nuw(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[M]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[M:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw i32 %x, 1
@@ -151,9 +140,8 @@ define i32 @add_masked_overwrite_commuted_preserve_nuw(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_commuted_preserve_nuw_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_commuted_preserve_nuw_nsw(
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[M]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[M:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw nsw i32 %x, 1
@@ -164,9 +152,8 @@ define i32 @add_masked_overwrite_commuted_preserve_nuw_nsw(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_commuted_do_not_preserve_outer_nsw_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_commuted_do_not_preserve_outer_nsw_only(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[M]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[M:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 1
@@ -177,9 +164,8 @@ define i32 @add_masked_overwrite_commuted_do_not_preserve_outer_nsw_only(i32 %x,
 
 define i32 @add_masked_overwrite_commuted_do_not_preserve_outer_nuw_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_commuted_do_not_preserve_outer_nuw_only(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[M]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[M:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 1
@@ -190,9 +176,8 @@ define i32 @add_masked_overwrite_commuted_do_not_preserve_outer_nuw_only(i32 %x,
 
 define i32 @add_masked_overwrite_commuted_do_not_preserve_inner_nsw_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_commuted_do_not_preserve_inner_nsw_only(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[M]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[M:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nsw i32 %x, 1
@@ -203,9 +188,8 @@ define i32 @add_masked_overwrite_commuted_do_not_preserve_inner_nsw_only(i32 %x,
 
 define i32 @add_masked_overwrite_commuted_do_not_preserve_inner_nuw_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_commuted_do_not_preserve_inner_nuw_only(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[M]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[M:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw i32 %x, 1
@@ -217,10 +201,10 @@ define i32 @add_masked_overwrite_commuted_do_not_preserve_inner_nuw_only(i32 %x,
 ; only AndOp is multi-use -> fold is still OK
 define i32 @add_masked_overwrite_one_side_multiuse_and(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_one_side_multiuse_and(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[B:%.*]] = and i32 [[Y:%.*]], -2
 ; CHECK-NEXT:    call void @use(i32 [[B]])
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 1
@@ -233,9 +217,8 @@ define i32 @add_masked_overwrite_one_side_multiuse_and(i32 %x, i32 %y) {
 ; non-trivial constant: fold (X + 5) + (Y & ~5)
 define i32 @add_masked_overwrite_const_5(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_const_5(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[Y:%.*]], -6
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[Y:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 5
@@ -246,9 +229,8 @@ define i32 @add_masked_overwrite_const_5(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_const_5_preserve_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_const_5_preserve_nsw(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[Y:%.*]], -6
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[Y:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nsw i32 %x, 5
@@ -259,9 +241,8 @@ define i32 @add_masked_overwrite_const_5_preserve_nsw(i32 %x, i32 %y) {
 
 define i32 @add_masked_overwrite_const_5_preserve_nuw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_const_5_preserve_nuw(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[Y:%.*]], -6
-; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[Y:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw i32 %x, 5
@@ -284,9 +265,8 @@ define i32 @add_masked_overwrite_const_0(i32 %x, i32 %y) {
 
 define i8 @add_masked_overwrite_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_i8(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %x, 1
@@ -297,9 +277,8 @@ define i8 @add_masked_overwrite_i8(i8 %x, i8 %y) {
 
 define i8 @add_masked_overwrite_i8_preserve_nuw_nsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_i8_preserve_nuw_nsw(
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add nuw nsw i8 %x, 1
@@ -310,9 +289,8 @@ define i8 @add_masked_overwrite_i8_preserve_nuw_nsw(i8 %x, i8 %y) {
 
 define i64 @add_masked_overwrite_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_i64(
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = and i64 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i64 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %a = add i64 %x, 1
@@ -323,9 +301,8 @@ define i64 @add_masked_overwrite_i64(i64 %x, i64 %y) {
 
 define i64 @add_masked_overwrite_i64_preserve_nsw(i64 %x, i64 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_i64_preserve_nsw(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = and i64 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add nsw i64 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i64 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nsw i64 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %a = add nsw i64 %x, 1
@@ -336,9 +313,8 @@ define i64 @add_masked_overwrite_i64_preserve_nsw(i64 %x, i64 %y) {
 
 define i64 @add_masked_overwrite_i64_preserve_nuw(i64 %x, i64 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_i64_preserve_nuw(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = and i64 [[Y:%.*]], -2
-; CHECK-NEXT:    [[R:%.*]] = add nuw i64 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = or i64 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nuw i64 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %a = add nuw i64 %x, 1
@@ -383,9 +359,9 @@ define i32 @add_masked_overwrite_mask_mismatch(i32 %x, i32 %y) {
 define i32 @add_masked_overwrite_one_side_multiuse(i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_masked_overwrite_one_side_multiuse(
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[Y:%.*]], -2
 ; CHECK-NEXT:    call void @use(i32 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 1

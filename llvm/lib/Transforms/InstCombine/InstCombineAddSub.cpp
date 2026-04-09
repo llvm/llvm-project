@@ -1523,6 +1523,36 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   return nullptr;
 }
 
+static Instruction *
+foldAddWithMaskedOverwrite(BinaryOperator &Add,
+                           InstCombiner::BuilderTy &Builder) {
+  Value *LHS = Add.getOperand(0), *RHS = Add.getOperand(1);
+  Value *X, *Y;
+  const APInt *C, *Mask;
+
+  auto Match = [&](Value *AddOp, Value *AndOp) -> Instruction * {
+    if (!match(AddOp, m_c_Add(m_Value(X), m_APInt(C))) ||
+        !match(AndOp, m_c_And(m_Value(Y), m_APInt(Mask))) || *Mask != ~(*C))
+      return nullptr;
+
+    // Replacing one add with {or, add}. Avoid growth if both sides are shared.
+    if (!AddOp->hasOneUse() && !AndOp->hasOneUse())
+      return nullptr;
+
+
+    Value *NewOr =
+        Builder.CreateOr(Y, Constant::getIntegerValue(Add.getType(), *C));
+    Instruction *NewAdd = cast<Instruction>(Builder.CreateAdd(X, NewOr));
+    NewAdd->setHasNoSignedWrap(Add.hasNoSignedWrap());
+    NewAdd->setHasNoUnsignedWrap(Add.hasNoUnsignedWrap());
+    return NewAdd;
+  };
+
+  if (Instruction *I = Match(LHS, RHS))
+    return I;
+  return Match(RHS, LHS);
+}
+
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = simplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1602,6 +1632,10 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   if (Value *V = checkForNegativeOperand(I, Builder))
+    return replaceInstUsesWith(I, V);
+
+  // (X + C) + (Y & ~C) == X + (Y | C)
+  if (Value *V = foldAddWithMaskedOverwrite(I, Builder))
     return replaceInstUsesWith(I, V);
 
   // (A + 1) + ~B --> A - B
