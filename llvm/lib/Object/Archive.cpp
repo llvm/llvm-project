@@ -375,6 +375,7 @@ Expected<uint64_t> BigArchiveMemberHeader::getSize() const {
 
 template <std::size_t N>
 StringRef getFieldRawStringE2A(const char (&Field)[N], SmallString<64> &Dst) {
+  Dst.clear();
   StringRef Src = StringRef(Field, N);
   ConverterEBCDIC::convertToUTF8(Src, Dst);
   return Dst.str().rtrim(" ");
@@ -444,7 +445,6 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
     MemberName = RawMemberName;
 
   // LastModified
-  Dst.clear();
   StringRef LastModifiedSR = getFieldRawStringE2A(ArMemHdr->LastModified, Dst);
   if (LastModifiedSR.empty()) {
     *Err = malformedError("problem converting LastModified field in "
@@ -455,7 +455,6 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   LastModified.append(LastModifiedSR);
 
   // UID
-  Dst.clear();
   StringRef UIDSR = getFieldRawStringE2A(ArMemHdr->UID, Dst);
   if (UIDSR.empty()) {
     *Err = malformedError("problem converting UID field in "
@@ -466,7 +465,6 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   UID.append(UIDSR);
 
   // GID
-  Dst.clear();
   StringRef GIDSR = getFieldRawStringE2A(ArMemHdr->GID, Dst);
   if (GIDSR.empty()) {
     *Err = malformedError("problem converting GID field in "
@@ -477,7 +475,6 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   GID.append(GIDSR);
 
   // AccessMode
-  Dst.clear();
   StringRef AccessModeSR = getFieldRawStringE2A(ArMemHdr->AccessMode, Dst);
   if (AccessModeSR.empty()) {
     *Err = malformedError("problem converting AccessMode field in "
@@ -1174,6 +1171,12 @@ Expected<Archive::Child> Archive::Symbol::getMember() const {
     // is needed here.
     Offset = read64le(Offsets + SymbolIndex * 16 + 8);
   } else if (Parent->kind() == K_ZOS) {
+    // The contents of the symbol table member in order are:
+    // 1. The number of symbols, NS (4 byte integer).
+    // 2. NS pairs of integers (the first in each pair of integers is the offset 
+    //    to the header of the entry... the second being coded attributes). 
+    //    Length is NS*(4+4) bytes.
+    // 3. NS null terminated strings of corresponding symbol names.
     Offset = read32be(Offsets + SymbolIndex * 8);
   } else {
     // Skip offsets.
@@ -1608,9 +1611,9 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
   auto Increment = [&]() {
     ++I;
     if (Err)
-      return true;
+      return false;
     C = &*I;
-    return false;
+    return true;
   };
 
   Expected<StringRef> NameOrErr = C->getRawName();
@@ -1643,7 +1646,7 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
     SymbolTableBuf.append(ESymbolTable.data(), OffsetToENames);
     SymbolTableBuf.append(Dst.str());
     SymbolTable = StringRef(SymbolTableBuf.data(), SymbolTableBuf.size());
-    if (Increment())
+    if (!Increment())
       return;
     setFirstRegular(*C);
 

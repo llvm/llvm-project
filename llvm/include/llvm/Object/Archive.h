@@ -159,6 +159,16 @@ public:
 };
 
 // Define file member header of z/OS archive.
+// The fixed part of the member header (in EBCDIC) is:
+// struct ar_hdr {
+//   char ar_name[16]; /* blank terminated member name */
+//   char ar_date[12]; /* date (decimal) */
+//   char ar_uid[6];   /* user id (decimal) */
+//   char ar_gid[6];   /* group id (decimal) */
+//   char ar_mode[8];  /* access mode (octal) */
+//   char ar_size[10]; /* length in bytes (decimal) */
+//   char ar_fmag[2];  /* contains backtick (X'79'), followed by new line (X'15') */
+// };
 class ZOSArchiveMemberHeader : public ArchiveMemberHeader {
 public:
   ZOSArchiveMemberHeader(Archive const *Parent, const char *RawHeaderPtr,
