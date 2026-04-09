@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of helpers for libsycl vs liboffload
+/// This file contains the declaration of helpers for libsycl-to-liboffload
 /// communication and data conversion.
 ///
 //===----------------------------------------------------------------------===//

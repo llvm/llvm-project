@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the DeviceImpl class that implements
+/// This file contains the declaration of the DeviceImpl class, which implements
 /// sycl::device functionality.
 ///
 //===----------------------------------------------------------------------===//

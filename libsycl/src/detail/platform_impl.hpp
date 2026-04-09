@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the PlatformImpl class that implements
-/// sycl::platform functionality.
+/// This file contains the declaration of the PlatformImpl class, which
+/// implements sycl::platform functionality.
 ///
 //===----------------------------------------------------------------------===//
 

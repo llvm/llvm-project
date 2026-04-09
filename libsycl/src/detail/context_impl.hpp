@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the ContextImpl class that implements
-/// sycl::context functionality.
+/// This file contains the declaration of the ContextImpl class, which
+/// implements sycl::context functionality.
 ///
 //===----------------------------------------------------------------------===//
 

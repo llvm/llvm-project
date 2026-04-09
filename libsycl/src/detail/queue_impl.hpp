@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the QueueImpl class that implements
+/// This file contains the declaration of the QueueImpl class, which implements
 /// sycl::queue functionality.
 ///
 //===----------------------------------------------------------------------===//
