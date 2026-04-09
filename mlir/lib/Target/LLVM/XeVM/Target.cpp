@@ -39,15 +39,46 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
-#if MLIR_XEVM_OCLOC_AVAILABLE
-#include <ocloc_api.h>
-#endif // MLIR_XEVM_OCLOC_AVAILABLE
-
 #include <cstdint>
 #include <cstdlib>
 
 using namespace mlir;
 using namespace mlir::xevm;
+
+#if MLIR_XEVM_OCLOC_AVAILABLE
+// Intel compute runtime includes libocloc in the distribution, but
+// <ocloc_api.h> isn't included. Hence forward declarations for the ocloc
+// shared-library APIs is needed. These replace the inclusion of <ocloc_api.h>
+// so that the header is not a build-time requirement; the symbols are resolved
+// at link/load time via the ocloc shared library.
+extern "C" {
+
+// Return code indicating successful ocloc compilation.
+// Matches the OCLOC_SUCCESS enumerator in the real header (value 0).
+enum OclocErrorCode : int { OCLOC_SUCCESS = 0 };
+
+// Drives an in-process ocloc compilation.
+// argv / numArgs  – standard ocloc command-line arguments.
+// numSources      – number of in-memory source files (typically 1).
+// dataSources     – array of pointers to source byte buffers.
+// lenSources      – byte length of each source buffer.
+// nameSources     – file name associated with each source buffer.
+// numHeaders / dataHeaders / lenHeaders / nameHeaders – optional headers.
+// numOutputs / dataOutputs / lenOutputs / nameOutputs – [out] results.
+int oclocInvoke(unsigned numArgs, const char **argv, unsigned numSources,
+                const uint8_t **dataSources, const uint64_t *lenSources,
+                const char **nameSources, unsigned numHeaders,
+                const uint8_t **dataHeaders, const uint64_t *lenHeaders,
+                const char **nameHeaders, unsigned *numOutputs,
+                uint8_t ***dataOutputs, uint64_t **lenOutputs,
+                char ***nameOutputs);
+
+// Releases output buffers previously populated by oclocInvoke.
+int oclocFreeOutput(unsigned *numOutputs, uint8_t ***dataOutputs,
+                    uint64_t **lenOutputs, char ***nameOutputs);
+
+} // extern "C"
+#endif // MLIR_XEVM_OCLOC_AVAILABLE
 
 namespace {
 // XeVM implementation of the gpu:TargetAttrInterface.
@@ -137,7 +168,7 @@ SerializeGPUModuleBase::compileToBinaryViaLibocloc(StringRef asmStr,
 // Dump tool invocation commands.
 #define DEBUG_TYPE "serialize-to-binary"
   LLVM_DEBUG({
-    llvm::dbgs() << "Tool invocation for module: "
+    llvm::dbgs() << "libocloc invocation for module: "
                  << getGPUModuleOp().getNameAttr() << "\n";
     llvm::interleave(oclocArgs, llvm::dbgs(), " ");
     llvm::dbgs() << "\n";
@@ -170,7 +201,7 @@ SerializeGPUModuleBase::compileToBinaryViaLibocloc(StringRef asmStr,
                         &outputsNum, &outputs, &outputLengths, &outputNames);
 
   if (err != OCLOC_SUCCESS) {
-    emitError(loc) << "`oclocInvoke` failed, error code: " << err;
+    emitError(loc) << "libocloc: `oclocInvoke` failed, error code: " << err;
     // Emit any compiler log that ocloc produced.
     for (uint32_t i = 0; i < outputsNum; ++i) {
       if (llvm::StringRef(outputNames[i]).ends_with(".log"))
