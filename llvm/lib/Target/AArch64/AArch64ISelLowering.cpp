@@ -889,23 +889,25 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     auto V8Narrow = MVT::getVectorVT(ScalarVT, 8);
     setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
     setOperationPromotedToType(ISD::SETCC,         V8Narrow, MVT::v8f32);
+    setOperationPromotedToType(ISD::VECREDUCE_FADD, V8Narrow, MVT::v8f32);
+    setOperationPromotedToType(ISD::VECREDUCE_FMUL, V8Narrow, MVT::v8f32);
 
     setOperationAction(ISD::FABS,        V8Narrow, Legal);
-    setOperationAction(ISD::FADD,        V8Narrow, Legal);
-    setOperationAction(ISD::FCEIL,       V8Narrow, Legal);
+    setOperationAction(ISD::FADD,        V8Narrow, Expand);
+    setOperationAction(ISD::FCEIL,       V8Narrow, Expand);
     setOperationAction(ISD::FCOPYSIGN,   V8Narrow, Custom);
-    setOperationAction(ISD::FDIV,        V8Narrow, Legal);
-    setOperationAction(ISD::FFLOOR,      V8Narrow, Legal);
+    setOperationAction(ISD::FDIV,        V8Narrow, Expand);
+    setOperationAction(ISD::FFLOOR,      V8Narrow, Expand);
     setOperationAction(ISD::FMA,         V8Narrow, Expand);
-    setOperationAction(ISD::FMUL,        V8Narrow, Legal);
-    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Legal);
+    setOperationAction(ISD::FMUL,        V8Narrow, Expand);
+    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Expand);
     setOperationAction(ISD::FNEG,        V8Narrow, Legal);
-    setOperationAction(ISD::FROUND,      V8Narrow, Legal);
-    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Legal);
-    setOperationAction(ISD::FRINT,       V8Narrow, Legal);
+    setOperationAction(ISD::FROUND,      V8Narrow, Expand);
+    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Expand);
+    setOperationAction(ISD::FRINT,       V8Narrow, Expand);
     setOperationAction(ISD::FSQRT,       V8Narrow, Expand);
-    setOperationAction(ISD::FSUB,        V8Narrow, Legal);
-    setOperationAction(ISD::FTRUNC,      V8Narrow, Legal);
+    setOperationAction(ISD::FSUB,        V8Narrow, Expand);
+    setOperationAction(ISD::FTRUNC,      V8Narrow, Expand);
     setOperationAction(ISD::BR_CC,       V8Narrow, Expand);
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V8Narrow, Expand);
@@ -5944,6 +5946,72 @@ static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
   return 0;
 }
 
+// Transform mul<v2i64, splat(const)> into a SHL and ADD/SUB
+// (1) multiply-by-(power-of-2 +/- 1) into shift and add/sub.
+// mul x, (2^N + 1) --> add (shl x, N), x
+// mul x, (2^N - 1) --> sub (shl x, N), x
+// Examples: x * 33 --> (x << 5) + x
+//           x * 15 --> (x << 4) - x
+//           x * -33 --> -((x << 5) + x)
+//           x * -15 --> -((x << 4) - x) ; this reduces --> x - (x << 4)
+// (2) multiply-by-(power-of-2 +/- power-of-2) into shifts and add/sub.
+// mul x, (2^N + 2^M) --> (add (shl x, N), (shl x, M))
+// mul x, (2^N - 2^M) --> (sub (shl x, N), (shl x, M))
+// Examples: x * 0x8800 --> (x << 15) + (x << 11)
+//           x * 0xf800 --> (x << 16) - (x << 11)
+//           x * -0x8800 --> -((x << 15) + (x << 11))
+//           x * -0xf800 --> -((x << 16) - (x << 11)) ; (x << 11) - (x << 16)
+static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
+  const SDNode *Operand = N->getOperand(1).getNode();
+  APInt SplatValue;
+
+  // Not a constant splat so should just stay as a multiplication operation
+  if (!ISD::isConstantSplatVector(Operand, SplatValue) ||
+      !SplatValue.getBoolValue())
+    return SDValue();
+
+  bool IsNegative = SplatValue.isNegative();
+  SplatValue = SplatValue.abs();
+  // Placeholder for MathOp
+  unsigned MathOp = ISD::DELETED_NODE;
+  unsigned TZeros = SplatValue.countr_zero();
+
+  // Shift the splat value by all the zeros, this won't affect the parity
+  // this will help us find the first and second multiple to use.
+  SplatValue.lshrInPlace(TZeros);
+
+  if ((SplatValue - 1).isPowerOf2())
+    MathOp = ISD::ADD;
+  else if ((SplatValue + 1).isPowerOf2())
+    MathOp = ISD::SUB;
+
+  // If the constant is not (2^n + 1) or (2^n - 1), it would require
+  // more than one addition/subtraction. For v2i64, the cost of
+  // multiple vector adds/shifts often exceeds the cost of
+  // scalarization (moving to GPRs to use a single MUL).
+  if (MathOp != ISD::DELETED_NODE) {
+    SDLoc DL(N);
+    EVT VT = N->getValueType(0);
+    SDValue LHS = N->getOperand(0);
+
+    unsigned ShiftAmt = MathOp == ISD::ADD ? (SplatValue - 1).logBase2()
+                                           : (SplatValue + 1).logBase2();
+    ShiftAmt += TZeros;
+
+    SDValue Shl =
+        DAG.getNode(ISD::SHL, DL, VT, LHS, DAG.getConstant(ShiftAmt, DL, VT));
+
+    SDValue NewLHS = TZeros ? DAG.getNode(ISD::SHL, DL, VT, LHS,
+                                          DAG.getConstant(TZeros, DL, VT))
+                            : LHS;
+    SDValue Combined = DAG.getNode(MathOp, DL, VT, Shl, NewLHS);
+    if (IsNegative)
+      Combined = DAG.getNegative(Combined, DL, VT);
+    return Combined;
+  }
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
@@ -5990,7 +6058,10 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
       // legal.
       if (Subtarget->hasSVE())
         return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
-      // Fall through to expand this.  It is not legal.
+      // Try to optimize the mul to a shift left and add instead of scalarizing.
+      if (SDValue ShlAdd = convertMulToShlAdd(Op.getNode(), DAG))
+        return ShlAdd;
+      // Fall through to expanding as the mul is not legal.
       return SDValue();
     } else
       // Other vector multiplications are legal.
@@ -11641,9 +11712,50 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     assert((LHS.getValueType() == RHS.getValueType()) &&
            (LHS.getValueType() == MVT::i32 || LHS.getValueType() == MVT::i64));
 
+    // Normalize (LHS CC 1) -> (LHS NewCC 0) when LHS is known to be 0 or 1.
+    // This enables the CBZ/CBNZ matching below.
+    const ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
+    if (RHSC && RHSC->getZExtValue() == 1 && ProduceNonFlagSettingCondBr &&
+        // Don't do this when LHS is an overflow/carry result (resNo == 1)
+        // because we can fold cset + cmp #1 + b.cc into a direct
+        // flag-consuming branch, which CBZ/CBNZ would prevent.
+        LHS.getResNo() == 0 &&
+        // This is true only when we somehow know that it's either 0 or 1.
+        DAG.computeKnownBits(LHS).getMaxValue().ule(1)) {
+      // Output params unused; we only care whether it returns true.
+      bool CanNegate, MustBeFirst, PreferFirst;
+      // Also skip when LHS is a conjunction tree (AND/OR of SETCCs) --
+      // emitConjunction will lower it as a CCMP chain, which is better
+      // than materializing the boolean for CBZ.
+      if (!canEmitConjunction(DAG, LHS, CanNegate, MustBeFirst, PreferFirst,
+                              false)) {
+        ISD::CondCode NewCC = ISD::SETCC_INVALID;
+        switch (CC) {
+        // SETLT/SETGE are canonicalized away before reaching here, but
+        // handle them defensively.
+        case ISD::SETNE:
+        case ISD::SETULT:
+        case ISD::SETLT:
+          NewCC = ISD::SETEQ;
+          break;
+        case ISD::SETEQ:
+        case ISD::SETUGE:
+        case ISD::SETGE:
+          NewCC = ISD::SETNE;
+          break;
+        default:
+          break;
+        }
+        if (NewCC != ISD::SETCC_INVALID) {
+          CC = NewCC;
+          RHS = DAG.getConstant(0, DL, LHS.getValueType());
+          RHSC = cast<ConstantSDNode>(RHS);
+        }
+      }
+    }
+
     // If the RHS of the comparison is zero, we can potentially fold this
     // to a specialized branch.
-    const ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
     if (RHSC && RHSC->getZExtValue() == 0 && ProduceNonFlagSettingCondBr) {
       if (CC == ISD::SETEQ) {
         if (SDValue Result =
@@ -17189,6 +17301,10 @@ SDValue AArch64TargetLowering::LowerTRUNCATE(SDValue Op,
                                    !Subtarget->isNeonAvailable()))
     return LowerFixedLengthVectorTruncateToSVE(Op, DAG);
 
+  // We can select these directly.
+  if (VT.is64BitVector() && Op.getOperand(0).getValueType().is128BitVector())
+    return Op;
+
   return SDValue();
 }
 
@@ -20537,7 +20653,6 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     return Ext;
   if (SDValue Ext = performVectorExtCombine(N, DAG))
     return Ext;
-
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -24711,23 +24826,27 @@ static SDValue performExtendCombine(SDNode *N,
       N->getOperand(0)->getOpcode() == ISD::SETCC)
     return performSignExtendSetCCCombine(N, DCI, DAG);
 
-  // If we see (any_extend (bswap ...)) with bswap returning an i16, we know
-  // that the top half of the result register must be unused, due to the
-  // any_extend. This means that we can replace this pattern with (rev16
-  // (any_extend ...)). This saves a machine instruction compared to (lsr (rev
-  // ...)), which is what this pattern would otherwise be lowered to.
-  // Only apply this optimisation if any_extend in original pattern to i32 or
-  // i64, because this type will become the input type to REV16 in the new
-  // pattern, so must be a legitimate REV16 input type.
+  // If we see ({any,zero}_extend (bswap ...)) with bswap returning an i16, we
+  // can replace this pattern with (rev16 ({any,zero}_extend ...)). This saves
+  // a machine instruction compared to (lsr (rev ...)) or (and (rev16 ..)),
+  // which is what this pattern would otherwise be lowered to.
+  // For any_extend: the top half of the result is unused, so rev16 is correct.
+  // For zero_extend: rev16 preserves the zero upper half when the input is
+  // zero-extended (e.g. from LDRHHui), because it swaps bytes within each
+  // 16-bit half independently.
+  // Only apply this optimisation if extending to i32 or i64, because this type
+  // will become the input type to REV16 in the new pattern, so must be a
+  // legitimate REV16 input type.
   SDValue Bswap = N->getOperand(0);
-  if (N->getOpcode() == ISD::ANY_EXTEND && Bswap.getOpcode() == ISD::BSWAP &&
-      Bswap.getValueType() == MVT::i16 &&
+  if ((N->getOpcode() == ISD::ANY_EXTEND ||
+       N->getOpcode() == ISD::ZERO_EXTEND) &&
+      Bswap.getOpcode() == ISD::BSWAP && Bswap.getValueType() == MVT::i16 &&
       (N->getValueType(0) == MVT::i32 || N->getValueType(0) == MVT::i64)) {
     SDLoc DL(N);
-    SDValue NewAnyExtend = DAG.getNode(ISD::ANY_EXTEND, DL, N->getValueType(0),
-                                       Bswap->getOperand(0));
+    SDValue NewExtend = DAG.getNode(N->getOpcode(), DL, N->getValueType(0),
+                                    Bswap->getOperand(0));
     return DAG.getNode(AArch64ISD::REV16, SDLoc(N), N->getValueType(0),
-                       NewAnyExtend);
+                       NewExtend);
   }
 
   if (SDValue R = performExtendDuplaneTruncCombine(N, DAG))
@@ -31418,11 +31537,20 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
-    if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
-        CallAttrs.requiresPreservingZT0() ||
-        CallAttrs.requiresPreservingAllZAState())
-      return true;
+    const Function *Caller = Base->getCaller();
+    // Per-call SME attribute checks via SMECallAttrs are compile-time
+    // expensive, avoid for non-SME targets. We do the checks even if the
+    // target only has SVE, since streaming-mode changes might still be
+    // required.
+    if (Subtarget->hasSME() ||
+        Caller->hasFnAttribute("aarch64_pstate_sm_compatible") ||
+        Caller->hasFnAttribute("aarch64_za_state_agnostic")) {
+      auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
+      if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
+          CallAttrs.requiresPreservingZT0() ||
+          CallAttrs.requiresPreservingAllZAState())
+        return true;
+    }
   }
   return false;
 }

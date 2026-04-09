@@ -94,6 +94,6 @@ void TesttheTest() {
 // X64: define linkonce_odr dso_local void @"??_V?$RefCounted@UDrawingBuffer@@@@SAXPEAX@Z"(ptr noundef %p)
 // X86: define linkonce_odr dso_local void @"??_V?$RefCounted@UDrawingBuffer@@@@SAXPAX@Z"(ptr noundef %p)
 
-// X86: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_GNoExport@@UAEPAXI@Z"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %this, i32 noundef %should_call_delete)
-// X64: define linkonce_odr dso_local noundef ptr @"??_GNoExport@@UEAAPEAXI@Z"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %this, i32 noundef %should_call_delete)
+// X86: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_GNoExport@@UAEPAXI@Z"(ptr noundef nonnull align 4 dereferenceable(4) %this, i32 noundef %should_call_delete)
+// X64: define linkonce_odr dso_local noundef ptr @"??_GNoExport@@UEAAPEAXI@Z"(ptr noundef nonnull align 8 dereferenceable(8) %this, i32 noundef %should_call_delete)
 // CHECK-NOT: define {{.*}}_V{{.*}}NoExport

@@ -2322,8 +2322,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // bounds.
     Value *TaskLB = nullptr;
     Value *TaskUB = nullptr;
+    Value *TaskStep = nullptr;
     Value *LoadTaskLB = nullptr;
     Value *LoadTaskUB = nullptr;
+    Value *LoadTaskStep = nullptr;
     for (Instruction &I : *TaskloopAllocaBB) {
       if (I.getOpcode() == Instruction::GetElementPtr) {
         GetElementPtrInst &Gep = cast<GetElementPtrInst>(I);
@@ -2335,6 +2337,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
           case 1:
             TaskUB = &I;
             break;
+          case 2:
+            TaskStep = &I;
+            break;
           }
         }
       } else if (I.getOpcode() == Instruction::Load) {
@@ -2345,6 +2350,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
         } else if (Load.getPointerOperand() == TaskUB) {
           assert(TaskUB != nullptr && "Expected value for TaskUB");
           LoadTaskUB = &I;
+        } else if (Load.getPointerOperand() == TaskStep) {
+          assert(TaskStep != nullptr && "Expected value for TaskStep");
+          LoadTaskStep = &I;
         }
       }
     }
@@ -2353,8 +2361,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 
     assert(LoadTaskLB != nullptr && "Expected value for LoadTaskLB");
     assert(LoadTaskUB != nullptr && "Expected value for LoadTaskUB");
-    Value *TripCountMinusOne =
-        Builder.CreateSDiv(Builder.CreateSub(LoadTaskUB, LoadTaskLB), FakeStep);
+    assert(LoadTaskStep != nullptr && "Expected value for LoadTaskStep");
+    Value *TripCountMinusOne = Builder.CreateSDiv(
+        Builder.CreateSub(LoadTaskUB, LoadTaskLB), LoadTaskStep);
     Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One, "trip_cnt");
     Value *CastedTripCount = Builder.CreateIntCast(TripCount, IVTy, true);
     Value *CastedTaskLB = Builder.CreateIntCast(LoadTaskLB, IVTy, true);
@@ -4390,15 +4399,28 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
   Value *RL = Builder.CreatePointerBitCastOrAddrSpaceCast(ReductionList, PtrTy);
 
+  // NOTE: ReductionDataSize is passed as the reduce_data_size
+  // argument to __kmpc_nvptx_{parallel,teams}_reduce_nowait_v2, but
+  // the runtime implementations do not currently use it.  The teams
+  // runtime reads ReductionDataSize from KernelEnvironmentTy instead
+  // (set separately via TargetKernelDefaultAttrs).  It is computed
+  // here conservatively as max(element sizes) * N rather than the
+  // exact sum, which over-calculates the size for mixed reduction
+  // types but is harmless given the argument is unused.
+  // TODO: Consider dropping this computation if the runtime API is
+  // ever revised to remove the unused parameter.
   unsigned MaxDataSize = 0;
   SmallVector<Type *> ReductionTypeArgs;
   for (auto En : enumerate(ReductionInfos)) {
-    auto Size = M.getDataLayout().getTypeStoreSize(En.value().ElementType);
-    if (Size > MaxDataSize)
-      MaxDataSize = Size;
+    // Use ByRefElementType for by-ref reductions so that MaxDataSize matches
+    // the actual data size stored in the global reduction buffer, consistent
+    // with the ReductionsBufferTy struct used for GEP offsets below.
     Type *RedTypeArg = (!IsByRef.empty() && IsByRef[En.index()])
                            ? En.value().ByRefElementType
                            : En.value().ElementType;
+    auto Size = M.getDataLayout().getTypeStoreSize(RedTypeArg);
+    if (Size > MaxDataSize)
+      MaxDataSize = Size;
     ReductionTypeArgs.emplace_back(RedTypeArg);
   }
   Value *ReductionDataSize =
@@ -8365,14 +8387,41 @@ static void FixupDebugInfoForOutlinedFunction(
       DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
   };
 
+  SmallVector<DbgVariableRecord *, 4> DVRsToDelete;
+  auto MoveDebugRecordToCorrectBlock = [&](DbgVariableRecord *DVR) {
+    if (DVR->getNumVariableLocationOps() != 1u) {
+      DVR->setKillLocation();
+      return;
+    }
+    Value *Loc = DVR->getVariableLocationOp(0u);
+    BasicBlock *CurBB = DVR->getParent();
+    BasicBlock *RequiredBB = nullptr;
+
+    if (Instruction *LocInst = dyn_cast<Instruction>(Loc))
+      RequiredBB = LocInst->getParent();
+    else if (isa<llvm::Argument>(Loc))
+      RequiredBB = &DVR->getFunction()->getEntryBlock();
+
+    if (RequiredBB && RequiredBB != CurBB) {
+      assert(!RequiredBB->empty());
+      RequiredBB->insertDbgRecordBefore(DVR->clone(),
+                                        RequiredBB->back().getIterator());
+      DVRsToDelete.push_back(DVR);
+    }
+  };
+
   // The location and scope of variable intrinsics and records still point to
   // the parent function of the target region. Update them.
   for (Instruction &I : instructions(Func)) {
     assert(!isa<llvm::DbgVariableIntrinsic>(&I) &&
            "Unexpected debug intrinsic");
-    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
       UpdateDebugRecord(&DVR);
+      MoveDebugRecordToCorrectBlock(&DVR);
+    }
   }
+  for (auto *DVR : DVRsToDelete)
+    DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   // An extra argument is passed to the device. Create the debug data for it.
   if (OMPBuilder.Config.isTargetDevice()) {
     DICompileUnit *CU = NewSP->getUnit();

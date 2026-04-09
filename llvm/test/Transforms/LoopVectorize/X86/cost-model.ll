@@ -38,7 +38,7 @@ define void @cost_model_1() noinline {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = shl nsw i64 %indvars.iv, 1
   %arrayidx = getelementptr inbounds [2048 x i32], ptr @c, i64 0, i64 %0
@@ -56,7 +56,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -957,7 +957,6 @@ exit:
   ret void
 }
 
-declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }
 attributes #1 = { "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }

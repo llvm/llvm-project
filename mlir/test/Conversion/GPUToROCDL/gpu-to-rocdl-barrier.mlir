@@ -65,4 +65,16 @@ func.func @barrier_private_only() {
   gpu.barrier memfence [#gpu.address_space<private>]
   func.return
 }
+
+// GFX9-LABEL: func @barrier_constant_only
+// GFX12-LABEL: func @barrier_constant_only
+func.func @barrier_constant_only() {
+  // GFX9-NEXT: rocdl.s.barrier
+  // GFX12-NEXT: rocdl.s.barrier.signal id = -1
+  // GFX12-NEXT: rocdl.s.barrier.wait id = -1
+  // CHECK-NOT: llvm.fence
+  // Constant memory is read-only, no fencing needed
+  gpu.barrier memfence [#gpu.address_space<constant>]
+  func.return
+}
 }

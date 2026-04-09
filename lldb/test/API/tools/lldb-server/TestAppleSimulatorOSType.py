@@ -13,9 +13,6 @@ import re
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
-    # Number of stderr lines to read from the simctl output.
-    READ_LINES = 10
-
     def check_simulator_ostype(self, sdk, platform_name, arch=platform.machine()):
         # Get simulator
         deviceUDID = None
@@ -59,7 +56,6 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             deviceUDID,
             self.getBuildArtifact(exe_name),
             ["print-pid", "sleep:10"],
-            self.READ_LINES,
             [r"PID: (.*)"],
             self.trace,
         )

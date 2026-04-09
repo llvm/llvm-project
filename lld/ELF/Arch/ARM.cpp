@@ -1183,7 +1183,7 @@ void elf::addArmInputSectionMappingSymbols(Ctx &ctx) {
       if (!isArmMapSymbol(def) && !isDataMapSymbol(def) &&
           !isThumbMapSymbol(def))
         continue;
-      if (auto *sec = cast_if_present<InputSection>(def->section))
+      if (auto *sec = dyn_cast_if_present<InputSection>(def->section))
         if (sec->flags & SHF_EXECINSTR)
           sectionMap[sec].push_back(def);
     }

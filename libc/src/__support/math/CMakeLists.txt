@@ -716,6 +716,16 @@ add_header_library(
 )
 
 add_header_library(
+  cbrtbf16
+  HDRS
+    cbrtbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+    libc.src.__support.math.cbrtf
+)
+
+add_header_library(
   cbrtf
   HDRS
     cbrtf.h

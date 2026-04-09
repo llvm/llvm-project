@@ -25,11 +25,17 @@ run_benchmarks() {
     ${MONOREPO_DIR}/libcxx/utils/ci/lnt/run-benchmarks                                                          \
         --test-suite-commit 0eefb2682bf8c04954c46e91916b5164d8424702                                            \
         --git-repo ${MONOREPO_DIR}                                                                              \
-        --lnt-url http://lnt.llvm.org                                                                           \
-        --test-suite libcxx2                                                                                    \
         --machine apple-m5-clang21                                                                              \
         --compiler ${COMPILER}                                                                                  \
-        --benchmark-commit ${1}
+        --benchmark-commit ${1}                                                                                 \
+        --output benchmarks.json
+
+    ${MONOREPO_DIR}/libcxx/utils/ci/lnt/submit-benchmarks                                                       \
+        --lnt-url http://lnt.llvm.org                                                                           \
+        --test-suite libcxx2                                                                                    \
+        benchmarks.json
+
+    rm benchmarks.json
 }
 
 if [ ${#COMMITS[@]} -gt 0 ]; then
