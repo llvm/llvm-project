@@ -394,6 +394,8 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def _CountLeadingZeros64 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
 	def _CountOneBits        : AArch64NoPrefixTargetLibBuiltin<"unsigned int (msuint32_t)">;
 	def _CountOneBits64      : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
+	def _CountTrailingZeros  : AArch64NoPrefixTargetLibBuiltin<"unsigned int (msuint32_t)">;
+	def _CountTrailingZeros64: AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
 }
 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
