@@ -5667,6 +5667,14 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
            Sched.computeInstrLatency(*ST, *SCD);
   }
 
+  // Non-uniform vector constant stores require a constant pool load.
+  InstructionCost ConstMatCost = 0;
+  if (Opcode == Instruction::Store && OpInfo.isConstant() &&
+      !OpInfo.isUniform() && isa<FixedVectorType>(Ty))
+    ConstMatCost =
+        getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
+                        /*AddressSpace=*/0, CostKind);
+
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
       LT.second.is128BitVector() && Alignment < Align(16)) {
     // Unaligned stores are extremely inefficient. We don't split all
@@ -5676,31 +5684,31 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     // are 6 other instructions getting vectorized.
     const int AmortizationCost = 6;
 
-    return LT.first * 2 * AmortizationCost;
+    return ConstMatCost + LT.first * 2 * AmortizationCost;
   }
 
   // Opaque ptr or ptr vector types are i64s and can be lowered to STP/LDPs.
   if (Ty->isPtrOrPtrVectorTy())
-    return LT.first;
+    return ConstMatCost + LT.first;
 
   if (useNeonVector(Ty)) {
     // Check truncating stores and extending loads.
     if (Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
       // v4i8 types are lowered to scalar a load/store and sshll/xtn.
       if (VT == MVT::v4i8)
-        return 2;
+        return ConstMatCost + 2;
       // Otherwise we need to scalarize.
-      return cast<FixedVectorType>(Ty)->getNumElements() * 2;
+      return ConstMatCost + cast<FixedVectorType>(Ty)->getNumElements() * 2;
     }
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
     if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
         VT.getVectorNumElements() >= (128 / EltSize) || Alignment != Align(1))
-      return LT.first;
+      return ConstMatCost + LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
     if (VT.getVectorNumElements() == 3 && EltVT == MVT::i8)
-      return LT.first;
+      return ConstMatCost + LT.first;
 
     // Check non-power-of-2 loads/stores for legal vector element types with
     // NEON. Non-power-of-2 memory ops will get broken down to a set of
@@ -5722,10 +5730,10 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
       TypeWorklist.push_back(
           EVT::getVectorVT(C, EltVT, CurrNumElements - PrevPow2));
     }
-    return Cost;
+    return ConstMatCost + Cost;
   }
 
-  return LT.first;
+  return ConstMatCost + LT.first;
 }
 
 InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
