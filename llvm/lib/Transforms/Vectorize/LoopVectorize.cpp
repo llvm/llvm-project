@@ -980,14 +980,15 @@ public:
     assert(
         TheLoop->isInnermost() &&
         "cost-model should not be used for outer loops (in VPlan-native path)");
-    // Pseudo probe needs to be duplicated for each unrolled iteration and
-    // vector lane so that profiled loop trip count can be accurately
-    // accumulated instead of being under counted.
-    if (isa<PseudoProbeInst>(I))
-      return false;
 
+    // If VF is scalar, then all instructions are trivially uniform.
     if (VF.isScalar())
       return true;
+
+    // Pseudo probes must be duplicated per vector lane so that the
+    // profiled loop trip count is not undercounted.
+    if (isa<PseudoProbeInst>(I))
+      return false;
 
     auto UniformsPerVF = Uniforms.find(VF);
     assert(UniformsPerVF != Uniforms.end() &&
@@ -3796,12 +3797,10 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     MaxVF =
         clampVFByMaxTripCount(MaxVF, MaxTripCount, UserIC, FoldTailByMasking);
 
-    if (MaxVectorElementCount != MaxVF) {
-      // Invalidate any widening decisions we might have made, in case the loop
-      // requires prediction (decided later), but we have already made some
-      // load/store widening decisions.
-      invalidateCostModelingDecisions();
-    }
+    assert((MaxVectorElementCount == MaxVF ||
+            (WideningDecisions.empty() && CallWideningDecisions.empty() &&
+             Uniforms.empty() && Scalars.empty())) &&
+           "No decisions should have been taken at this point");
   }
   return MaxVF;
 }

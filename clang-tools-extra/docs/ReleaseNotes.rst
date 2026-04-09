@@ -125,6 +125,13 @@ New checks
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
 
+- New :doc:`llvm-redundant-casting
+  <clang-tidy/checks/llvm/redundant-casting>` check.
+
+  Points out uses of ``cast<>``, ``dyn_cast<>`` and their ``or_null`` variants
+  that are unnecessary because the argument already is of the target type, or a
+  derived type thereof.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
@@ -297,8 +304,12 @@ Changes in existing checks
   member pointers are correctly flagged as uninitialized.
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
-  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by fixing
-  a false positive for constrained template parameters.
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check:
+  
+  - Fixed false positive for constrained template parameters
+  
+  - Fixed false positive with ``std::forward`` in brace-init and paren-init
+    lambda captures such as ``[t{std::forward<T>(t)}]``.
 
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by fixing
