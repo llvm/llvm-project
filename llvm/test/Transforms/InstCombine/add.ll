@@ -5,6 +5,47 @@
 declare void @use(i8)
 declare void @use_i1(i1)
 
+; fold (X + C) + (Y & ~C) -> X + (Y | C)
+
+define i32 @add_masked_overwrite_basic(i32 %x, i32 %y) {
+; CHECK-LABEL: @add_masked_overwrite_basic(
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[X1:%.*]], 1
+; CHECK-NEXT:    [[OR:%.*]] = and i32 [[Y:%.*]], -2
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[OR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %a = add i32 %x, 1
+  %b = and i32 %y, -2
+  %r = add i32 %a, %b
+  ret i32 %r
+}
+
+define i32 @add_masked_overwrite_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @add_masked_overwrite_commuted(
+; CHECK-NEXT:    [[OR:%.*]] = add i32 [[X1:%.*]], 1
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[Y:%.*]], -2
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[OR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %a = add i32 %x, 1
+  %b = and i32 %y, -2
+  %r = add i32 %b, %a
+  ret i32 %r
+}
+
+define <4 x i32> @add_masked_overwrite_vec_splat(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @add_masked_overwrite_vec_splat(
+; CHECK-NEXT:    [[X:%.*]] = add <4 x i32> [[X1:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[OR:%.*]] = and <4 x i32> [[Y:%.*]], splat (i32 -2)
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[X]], [[OR]]
+; CHECK-NEXT:    ret <4 x i32> [[ADD]]
+;
+  %a = add <4 x i32> %x, splat (i32 1)
+  %b = and <4 x i32> %y, splat (i32 -2)
+  %r = add <4 x i32> %a, %b
+  ret <4 x i32> %r
+}
+
 define i32 @select_0_or_1_from_bool(i1 %x) {
 ; CHECK-LABEL: @select_0_or_1_from_bool(
 ; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
