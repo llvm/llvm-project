@@ -1039,7 +1039,6 @@ void CIRGenFunction::pushLifetimeExtendedCleanupToEHStack(
 }
 
 /// Destroys all the elements of the given array, beginning from last to first.
-/// The array cannot be zero-length if its length is constant.
 ///
 /// \param begin - a type* denoting the first element of the array
 /// \param numElements - the number of elements in the array
@@ -1058,7 +1057,8 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
   cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
 
   auto regionBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
-    auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
+    mlir::BlockArgument arg =
+        b.getInsertionBlock()->addArgument(ptrToElmType, loc);
     Address curAddr = Address(arg, cirElementType, elementAlign);
     assert(!cir::MissingFeatures::dtorCleanups());
 
