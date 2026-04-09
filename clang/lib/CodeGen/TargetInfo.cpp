@@ -113,6 +113,15 @@ TargetCodeGenInfo::getDependentLibraryOption(llvm::StringRef Lib,
 }
 
 unsigned TargetCodeGenInfo::getDeviceKernelCallingConv() const {
+  // Device kernels are called via an explicit runtime API with arguments,
+  // such as set with clSetKernelArg() for OpenCL, not as normal
+  // sub-functions.  This uses a modified version of the C calling convention
+  // which simplifies the treatment of non-scalar types.  (The rule adjustment
+  // hapens in CodeGenTypes::arrangeLLVMFunctionInfo.)
+  //
+  // Outside of OpenCL, kernels currently do not exist for CPU targets.
+  assert(getABIInfo().getContext().getLangOpts().OpenCL &&
+         "Kernel calling convention only defined for OpenCL");
   return llvm::CallingConv::C;
 }
 
