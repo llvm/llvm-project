@@ -629,6 +629,13 @@ public:
   ///     An error that describes anything that went wrong
   virtual Status StepOut(uint32_t frame_idx = 0);
 
+  /// Default implementation for stepping back one instruction.
+  ///
+  /// This function is designed to be used by commands where the
+  /// process is publicly stopped.
+  ///
+  virtual Status StepBack();
+
   /// Retrieves the per-thread data area.
   /// Most OSs maintain a per-thread pointer (e.g. the FS register on
   /// x64), which we return the value of here.

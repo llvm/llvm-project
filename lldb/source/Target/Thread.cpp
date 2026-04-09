@@ -2331,6 +2331,44 @@ Status Thread::StepOut(uint32_t frame_idx) {
   return error;
 }
 
+#include "lldb/Target/ThreadPlanStepInstruction.h"
+
+class ThreadPlanStepBackInstruction : public ThreadPlanStepInstruction {
+public:
+  ThreadPlanStepBackInstruction(Thread &thread,
+                                                     bool step_over,
+                                                     bool stop_other_threads,
+                                                     Vote report_stop_vote,
+                                                     Vote report_run_vote)
+    : ThreadPlanStepInstruction(thread, step_over, stop_other_threads, report_stop_vote, report_run_vote) {}
+
+  lldb::RunDirection GetDirection() const override {
+    return lldb::RunDirection::eRunReverse;
+  }
+};
+
+Status Thread::StepBack() {
+  Process *process = GetProcess().get();
+  if (!StateIsStoppedState(process->GetState(), true)) {
+    return Status::FromErrorString("process not stopped");
+  }
+
+  if (!process->SupportsReverseDirection()) {
+    return Status::FromErrorString("process does not support reverse execution");
+  }
+  
+  ThreadPlanSP thread_plan_sp(new ThreadPlanStepBackInstruction(
+      *this, false, true, eVoteNoOpinion, eVoteNoOpinion));
+  QueueThreadPlan(thread_plan_sp, false);
+
+  thread_plan_sp->SetIsControllingPlan(true);
+  thread_plan_sp->SetOkayToDiscard(false);
+
+  // Why do we need to set the current thread by ID here???
+  process->GetThreadList().SetSelectedThreadByID(GetID());
+  return process->Resume();
+}
+
 ValueObjectSP Thread::GetCurrentException() {
   if (auto frame_sp = GetStackFrameAtIndex(0))
     if (auto recognized_frame = frame_sp->GetRecognizedFrame())

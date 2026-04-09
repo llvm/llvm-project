@@ -3870,35 +3870,6 @@ void ProcessGDBRemote::StopAsyncThread() {
         __FUNCTION__);
 }
 
-#include "lldb/Target/ThreadPlanStepInstruction.h"
-
-class ThreadPlanStepBackInstruction : public ThreadPlanStepInstruction {
-public:
-  ThreadPlanStepBackInstruction(Thread &thread,
-                                                     bool step_over,
-                                                     bool stop_other_threads,
-                                                     Vote report_stop_vote,
-                                                     Vote report_run_vote)
-    : ThreadPlanStepInstruction(thread, step_over, stop_other_threads, report_stop_vote, report_run_vote) {}
-
-  lldb::RunDirection GetDirection() const override {
-    return lldb::RunDirection::eRunReverse;
-  }
-};
-
-Status ProcessGDBRemote::StepBack() {
-  ThreadSP thread = GetThreadList().GetSelectedThread();
-
-  ThreadPlanSP thread_plan_sp(new ThreadPlanStepBackInstruction(
-      *thread, false, true, eVoteNoOpinion, eVoteNoOpinion));
-  thread->QueueThreadPlan(thread_plan_sp, false);
-
-  thread_plan_sp->SetIsControllingPlan(true);
-  thread_plan_sp->SetOkayToDiscard(false);
-
-  return Resume();
-}
-
 thread_result_t ProcessGDBRemote::AsyncThread() {
   Log *log = GetLog(GDBRLog::Process);
   LLDB_LOGF(log, "ProcessGDBRemote::%s(pid = %" PRIu64 ") thread starting...",
@@ -5963,7 +5934,7 @@ public:
     ProcessGDBRemote *process =
         (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
     if (process) {
-        process->StepBack();
+        process->GetThreadList().GetSelectedThread()->StepBack();
     }
   }
 };
