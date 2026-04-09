@@ -728,9 +728,9 @@ not add contributor names to the source code.
 Also, don't commit patches authored by others unless they have submitted the
 patch to the project or you have been authorized to submit them on their behalf
 (you work together and your company authorized you to contribute the patches,
-etc.). The author should first submit them as a Github issue, to the relevant
-category on Discourse, or ideally as a Github Pull Request. If someone sends you
-a patch privately, encourage them to submit it as a Github PR first.
+etc.). The author should first submit them as a GitHub issue, to the relevant
+category on Discourse, or ideally as a GitHub Pull Request. If someone sends you
+a patch privately, encourage them to submit it as a GitHub PR first.
 
 Our previous version control system (subversion) did not distinguish between the
 author and the committer like git does. As such, older commits used a different
