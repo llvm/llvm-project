@@ -2,6 +2,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.arpa_inet
     libc.include.assert
     libc.include.complex
+    libc.include.cpio
     libc.include.ctype
     libc.include.dirent
     libc.include.dlfcn
