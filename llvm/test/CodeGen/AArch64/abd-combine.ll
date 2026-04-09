@@ -526,11 +526,7 @@ define <1 x i64> @recursive() {
 define <4 x i32> @abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: abd_select_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmgt v2.4h, v1.4h, v0.4h
-; CHECK-NEXT:    ssubl v3.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-NEXT:    sabdl v0.4s, v1.4h, v0.4h
 ; CHECK-NEXT:    ret
   %conv = sext <4 x i16> %a to <4 x i32>
   %conv1 = sext <4 x i16> %b to <4 x i32>
@@ -544,13 +540,9 @@ define <4 x i32> @abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_sext_add(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: abd_select_sext_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmgt v3.4h, v1.4h, v0.4h
-; CHECK-NEXT:    ssubl v4.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ssubl v0.4s, v1.4h, v0.4h
 ; CHECK-NEXT:    movi v2.4s, #19
-; CHECK-NEXT:    sshll v3.4s, v3.4h, #0
-; CHECK-NEXT:    bif v0.16b, v4.16b, v3.16b
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    sabal v2.4s, v1.4h, v0.4h
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %conv = sext <4 x i16> %a to <4 x i32>
   %conv1 = sext <4 x i16> %b to <4 x i32>
@@ -565,13 +557,9 @@ define <4 x i32> @abd_select_sext_add(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_zext_add(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: abd_select_zext_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmhi v3.4h, v1.4h, v0.4h
-; CHECK-NEXT:    usubl v4.4s, v0.4h, v1.4h
-; CHECK-NEXT:    usubl v0.4s, v1.4h, v0.4h
 ; CHECK-NEXT:    movi v2.4s, #19
-; CHECK-NEXT:    sshll v3.4s, v3.4h, #0
-; CHECK-NEXT:    bif v0.16b, v4.16b, v3.16b
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    uabal v2.4s, v1.4h, v0.4h
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %conv = zext <4 x i16> %a to <4 x i32>
   %conv1 = zext <4 x i16> %b to <4 x i32>
@@ -586,11 +574,8 @@ define <4 x i32> @abd_select_zext_add(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @neg_abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: neg_abd_select_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmgt v2.4h, v1.4h, v0.4h
-; CHECK-NEXT:    ssubl v3.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-NEXT:    bit v0.16b, v3.16b, v2.16b
+; CHECK-NEXT:    sabdl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    neg v0.4s, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %conv = sext <4 x i16> %a to <4 x i32>

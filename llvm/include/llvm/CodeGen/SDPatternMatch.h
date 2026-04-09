@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/KnownBits.h"
 
+#include <algorithm>
 #include <type_traits>
 
 namespace llvm {
@@ -1549,8 +1550,10 @@ inline auto m_IntrinsicWOChain(const OpndPreds &...Opnds) {
 
 struct SpecificNeg_match {
   SDValue V;
+  bool AllowTypeMismatch;
 
-  explicit SpecificNeg_match(SDValue V) : V(V) {}
+  explicit SpecificNeg_match(SDValue V, bool AllowTypeMismatch = false)
+      : V(V), AllowTypeMismatch(AllowTypeMismatch) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -1558,16 +1561,20 @@ struct SpecificNeg_match {
       return true;
 
     return ISD::matchBinaryPredicate(
-        V, N, [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
-          return LHS->getAPIntValue() == -RHS->getAPIntValue();
-        });
+        V, N,
+        [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
+          return APInt::isSameValue(LHS->getAPIntValue(), -RHS->getAPIntValue(),
+                                    /*SignedCompare=*/true);
+        },
+        /*AllowUndefs=*/false, AllowTypeMismatch);
   }
 };
 
 /// Match a negation of a specific value V, either as sub(0, V) or as
 /// constant(s) that are the negation of V's constant(s).
-inline SpecificNeg_match m_SpecificNeg(SDValue V) {
-  return SpecificNeg_match(V);
+inline SpecificNeg_match m_SpecificNeg(SDValue V,
+                                       bool AllowTypeMismatch = false) {
+  return SpecificNeg_match(V, AllowTypeMismatch);
 }
 
 template <typename... PatternTs> struct ReassociatableOpc_match {
