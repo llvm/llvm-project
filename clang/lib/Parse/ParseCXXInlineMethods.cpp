@@ -451,7 +451,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       FunctionDecl *Old;
       if (const auto *FunTmpl = dyn_cast<FunctionTemplateDecl>(LM.Method))
         Old =
-            cast<FunctionDecl>(FunTmpl->getTemplatedDecl())->getPreviousDecl();
+            FunTmpl->getTemplatedDecl()->getPreviousDecl();
       else
         Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();
       if (Old) {

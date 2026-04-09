@@ -10310,7 +10310,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         Pattern = Pattern->getInstantiatedFromMemberTemplate();
       }
 
-      auto *RD = cast<CXXRecordDecl>(Pattern->getTemplatedDecl());
+      auto *RD = Pattern->getTemplatedDecl();
       if (!(RD->getDefinition() && RD->isAggregate()))
         return;
       QualType Ty = Context.getCanonicalTagType(RD);
@@ -10452,7 +10452,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   case OR_No_Viable_Function: {
     CXXRecordDecl *Primary =
-        cast<ClassTemplateDecl>(Template)->getTemplatedDecl();
+        Template->getTemplatedDecl();
     bool Complete = isCompleteType(Kind.getLocation(),
                                    Context.getCanonicalTagType(Primary));
     Candidates.NoteCandidates(

@@ -119,7 +119,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     return FunTmpl->getTemplatedDecl()->getBody();
   else if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
     if (VD->isFileVarDecl()) {
-      return const_cast<Stmt *>(dyn_cast_or_null<Stmt>(VD->getInit()));
+      return const_cast<Expr *>(VD->getInit());
     }
   }
 

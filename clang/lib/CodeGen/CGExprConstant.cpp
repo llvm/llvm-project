@@ -2410,7 +2410,7 @@ ConstantLValueEmitter::VisitObjCCollectionElement(const Expr *E) {
 
   llvm::Type *DstTy = CGM.getTypes().ConvertType(DestTy);
   ConstantLValue LV = Visit(Elm);
-  llvm::Constant *ConstVal = cast<llvm::Constant>(LV.Value);
+  llvm::Constant *ConstVal = LV.Value;
   llvm::Constant *Val = llvm::ConstantExpr::getBitCast(ConstVal, DstTy);
   return Val;
 }

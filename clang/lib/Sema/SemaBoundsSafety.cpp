@@ -366,7 +366,7 @@ bool Sema::BoundsSafetyCheckInitialization(const InitializedEntity &Entity,
 
     if (!CheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
             *this, LHSType, RHSExpr, Action, SL,
-            dyn_cast_or_null<ValueDecl>(Entity.getDecl()),
+            Entity.getDecl(),
             /*ShowFullQualifiedAssigneeName=*/true)) {
       return false;
     }

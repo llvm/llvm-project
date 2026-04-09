@@ -75,7 +75,7 @@ const Expr *CXXForRangeStmt::getRangeInit() const {
 }
 
 VarDecl *CXXForRangeStmt::getLoopVariable() {
-  Decl *LV = cast<DeclStmt>(getLoopVarStmt())->getSingleDecl();
+  Decl *LV = getLoopVarStmt()->getSingleDecl();
   assert(LV && "No loop variable in CXXForRangeStmt");
   return cast<VarDecl>(LV);
 }

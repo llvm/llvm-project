@@ -238,7 +238,7 @@ void LambdaScopeInfo::visitPotentialCaptures(
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
       Callback(cast<ValueDecl>(DRE->getFoundDecl()), E);
     } else if (auto *ME = dyn_cast<MemberExpr>(E)) {
-      Callback(cast<ValueDecl>(ME->getMemberDecl()), E);
+      Callback(ME->getMemberDecl(), E);
     } else if (auto *FP = dyn_cast<FunctionParmPackExpr>(E)) {
       for (ValueDecl *VD : *FP)
         Callback(VD, E);

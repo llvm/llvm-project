@@ -4235,7 +4235,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       // requires the reassoc FMF flag.
       llvm::FastMathFlags FMF;
       FMF.setAllowReassoc();
-      cast<llvm::CallBase>(Reduce)->setFastMathFlags(FMF);
+      Reduce->setFastMathFlags(FMF);
     }
     return RValue::get(Reduce);
   }

@@ -74,8 +74,8 @@ usingFromDifferentCanonicalNamespace(const DeclContext *FromContext,
       return false;
     // Now check the names. If they match we have a different canonical
     // namespace with the same name.
-    if (cast<NamespaceDecl>(*FromIter)->getDeclName() ==
-        cast<NamespaceDecl>(*UseIter)->getDeclName())
+    if ((*FromIter)->getDeclName() ==
+        (*UseIter)->getDeclName())
       return true;
   }
   assert(FromIter == FromNamespaces.end() && UseIter == UseNamespaces.end());

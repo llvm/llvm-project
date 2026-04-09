@@ -4655,7 +4655,7 @@ void CXXNameMangler::mangleType(const DependentBitIntType *T) {
 }
 
 void CXXNameMangler::mangleType(const ArrayParameterType *T) {
-  mangleType(cast<ConstantArrayType>(T));
+  mangleType(T);
 }
 
 void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {

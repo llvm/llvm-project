@@ -3246,11 +3246,11 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
 }
 void MicrosoftCXXNameMangler::mangleType(const EnumType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  mangleType(T->getDecl());
 }
 void MicrosoftCXXNameMangler::mangleType(const RecordType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  mangleType(T->getDecl());
 }
 void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
   // MSVC chooses the tag kind of the definition if it exists, otherwise it
@@ -3347,7 +3347,7 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
 
 void MicrosoftCXXNameMangler::mangleType(const ArrayParameterType *T,
                                          Qualifiers, SourceRange) {
-  mangleArrayType(cast<ConstantArrayType>(T));
+  mangleArrayType(T);
 }
 
 // <type>                   ::= <pointer-to-member-type>

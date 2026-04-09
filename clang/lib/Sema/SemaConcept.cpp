@@ -1600,7 +1600,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   }();
   if (auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
-    ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
+    ContextScope.emplace(S, const_cast<CXXRecordDecl *>(RD),
                          /*NewThisContext=*/false);
   }
   EnterExpressionEvaluationContext UnevaluatedContext(

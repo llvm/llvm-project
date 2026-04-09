@@ -4782,7 +4782,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     if (SCS.Second == ICK_Derived_To_Base) {
       SmallVector<Expr*, 8> ConstructorArgs;
       if (CompleteConstructorCall(
-              cast<CXXConstructorDecl>(SCS.CopyConstructor), ToType, From,
+              SCS.CopyConstructor, ToType, From,
               /*FIXME:ConstructLoc*/ SourceLocation(), ConstructorArgs))
         return ExprError();
       return BuildCXXConstructExpr(

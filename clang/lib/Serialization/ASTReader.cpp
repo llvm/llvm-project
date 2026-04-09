@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Serialization/ASTReader.h"
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
 #include "TemplateArgumentHasher.h"
@@ -9674,7 +9675,7 @@ void ASTReader::ReadUnusedLocalTypedefNameCandidates(
 void ASTReader::ReadDeclsToCheckForDeferredDiags(
     llvm::SmallSetVector<Decl *, 4> &Decls) {
   for (auto I : DeclsToCheckForDeferredDiags) {
-    auto *D = dyn_cast_or_null<Decl>(GetDecl(I));
+    auto *D = GetDecl(I);
     if (D)
       Decls.insert(D);
   }
@@ -11268,9 +11269,9 @@ void ASTReader::FinishedDeserializing() {
           auto *FPT = Update.second->getType()->castAs<FunctionProtoType>();
           auto ESI = FPT->getExtProtoInfo().ExceptionSpec;
           if (auto *Listener = getContext().getASTMutationListener())
-            Listener->ResolvedExceptionSpec(cast<FunctionDecl>(Update.second));
+            Listener->ResolvedExceptionSpec(Update.second);
           for (auto *Redecl : Update.second->redecls())
-            getContext().adjustExceptionSpec(cast<FunctionDecl>(Redecl), ESI);
+            getContext().adjustExceptionSpec(Redecl, ESI);
         }
 
         auto DTUpdates = std::move(PendingDeducedTypeUpdates);

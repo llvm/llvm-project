@@ -297,7 +297,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
     setTLSMode(GV, D);
 
   setGVProperties(GV, &D);
-  getTargetCodeGenInfo().setTargetAttributes(cast<Decl>(&D), GV, *this);
+  getTargetCodeGenInfo().setTargetAttributes(&D, GV, *this);
 
   // Make sure the result is of the correct type.
   LangAS ExpectedAS = Ty.getAddressSpace();
@@ -1073,7 +1073,7 @@ static llvm::Constant *constStructWithPadding(CodeGenModule &CGM,
     if (constant->isNullValue())
       CurOp = llvm::Constant::getNullValue(STy->getElementType(i));
     else
-      CurOp = cast<llvm::Constant>(constant->getAggregateElement(i));
+      CurOp = constant->getAggregateElement(i);
     auto *NewOp = constWithPadding(CGM, isPattern, CurOp);
     if (CurOp != NewOp)
       NestedIntact = false;

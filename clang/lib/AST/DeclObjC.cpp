@@ -264,7 +264,7 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
   }
 
   if (ObjCPropertyDecl *PD =
-        ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(this), PropertyId,
+        ObjCPropertyDecl::findPropertyDecl(this, PropertyId,
                                            QueryKind))
     return PD;
 
@@ -386,7 +386,7 @@ ObjCPropertyDecl *ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
     LoadExternalDefinition();
 
   if (ObjCPropertyDecl *PD =
-      ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(this), PropertyId,
+      ObjCPropertyDecl::findPropertyDecl(this, PropertyId,
                                          QueryKind))
     return PD;
 

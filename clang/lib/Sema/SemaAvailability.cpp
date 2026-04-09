@@ -551,7 +551,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   case AR_Deprecated:
     // Suppress -Wdeprecated-declarations in implicit
     // functions.
-    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.getCurFunctionDecl());
+    if (const auto *FD = S.getCurFunctionDecl();
         FD && FD->isImplicit())
       return;
 

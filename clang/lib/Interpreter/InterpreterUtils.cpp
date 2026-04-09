@@ -82,7 +82,7 @@ NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
   else {
     const DeclContext *PrimaryWithin = nullptr;
     if (const auto *TD = dyn_cast<TagDecl>(Within))
-      PrimaryWithin = dyn_cast_if_present<DeclContext>(TD->getDefinition());
+      PrimaryWithin = TD->getDefinition();
     else
       PrimaryWithin = Within->getPrimaryContext();
 

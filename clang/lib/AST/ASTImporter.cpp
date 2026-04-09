@@ -8525,7 +8525,7 @@ ASTNodeImporter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
     return std::move(Err);
 
   if (!ToTemporaryExpr)
-    ToTemporaryExpr = cast<Expr>(ToMaterializedDecl->getTemporaryExpr());
+    ToTemporaryExpr = ToMaterializedDecl->getTemporaryExpr();
 
   auto *ToMTE = new (Importer.getToContext()) MaterializeTemporaryExpr(
       ToType, ToTemporaryExpr, E->isBoundToLvalueReference(),
@@ -8880,7 +8880,7 @@ ASTNodeImporter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   UnresolvedSet<8> ToDecls;
   for (auto *D : E->decls())
     if (auto ToDOrErr = import(D))
-      ToDecls.addDecl(cast<NamedDecl>(*ToDOrErr));
+      ToDecls.addDecl(*ToDOrErr);
     else
       return ToDOrErr.takeError();
 
@@ -9364,8 +9364,7 @@ Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,
   Error ImportErrors = Error::success();
   for (auto *FromOverriddenMethod : FromMethod->overridden_methods()) {
     if (auto ImportedOrErr = import(FromOverriddenMethod))
-      ToMethod->getCanonicalDecl()->addOverriddenMethod(cast<CXXMethodDecl>(
-          (*ImportedOrErr)->getCanonicalDecl()));
+      ToMethod->getCanonicalDecl()->addOverriddenMethod((*ImportedOrErr)->getCanonicalDecl());
     else
       ImportErrors =
           joinErrors(std::move(ImportErrors), ImportedOrErr.takeError());
@@ -10033,7 +10032,7 @@ Expected<DeclContext *> ASTImporter::ImportContext(DeclContext *FromDC) {
 }
 
 Expected<Expr *> ASTImporter::Import(Expr *FromE) {
-  if (ExpectedStmt ToSOrErr = Import(cast_or_null<Stmt>(FromE)))
+  if (ExpectedStmt ToSOrErr = Import(FromE))
     return cast_or_null<Expr>(*ToSOrErr);
   else
     return ToSOrErr.takeError();

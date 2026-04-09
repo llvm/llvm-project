@@ -154,7 +154,7 @@ ExprDependence clang::computeDependence(ExplicitCastExpr *E) {
   // dependent, but it may be deduced as a dependent type.
   ExprDependence D =
       toExprDependenceAsWritten(
-          cast<ExplicitCastExpr>(E)->getTypeAsWritten()->getDependence()) |
+          E->getTypeAsWritten()->getDependence()) |
       toExprDependenceForImpliedType(E->getType()->getDependence());
   if (auto *S = E->getSubExpr())
     D |= S->getDependence() & ~ExprDependence::Type;

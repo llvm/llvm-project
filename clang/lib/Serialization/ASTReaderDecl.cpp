@@ -1817,7 +1817,7 @@ void ASTDeclReader::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
   for (unsigned I = 0; I < D->NumParams; ++I)
     D->setParam(I, readDeclAs<ImplicitParamDecl>());
   D->setNothrow(Record.readInt() != 0);
-  D->setBody(cast_or_null<Stmt>(Record.readStmt()));
+  D->setBody(Record.readStmt());
 }
 
 void ASTDeclReader::VisitCapturedDecl(CapturedDecl *CD) {
@@ -2342,7 +2342,7 @@ void ASTDeclReader::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   VisitCXXMethodDecl(D);
 
   ASTContext &C = Reader.getContext();
-  CXXDestructorDecl *Canon = cast<CXXDestructorDecl>(D->getCanonicalDecl());
+  CXXDestructorDecl *Canon = D->getCanonicalDecl();
   if (auto *OperatorDelete = readDeclAs<FunctionDecl>()) {
     auto *ThisArg = Record.readExpr();
     // FIXME: Check consistency if we have an old and new operator delete.
@@ -3615,7 +3615,7 @@ void mergeInheritableAttributes(ASTReader &Reader, Decl *D, Decl *Previous) {
   const auto *IA = Previous->getAttr<MSInheritanceAttr>();
 
   if (IA && !D->hasAttr<MSInheritanceAttr>()) {
-    NewAttr = cast<InheritableAttr>(IA->clone(Context));
+    NewAttr = IA->clone(Context);
     NewAttr->setInherited(true);
     D->addAttr(NewAttr);
   }

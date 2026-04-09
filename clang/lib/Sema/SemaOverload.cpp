@@ -13890,7 +13890,7 @@ private:
       if (!S.getLangOpts().CPlusPlus ||
           candidateHasExactlyCorrectType(FunDecl)) {
         Matches.push_back(std::make_pair(
-            CurAccessFunPair, cast<FunctionDecl>(FunDecl->getCanonicalDecl())));
+            CurAccessFunPair, FunDecl->getCanonicalDecl()));
         FoundNonTemplateFunction = true;
         return true;
       }

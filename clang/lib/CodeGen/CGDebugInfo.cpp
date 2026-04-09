@@ -2702,7 +2702,7 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
         V = V->stripPointerCasts();
       }
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy, defaultParameter, cast_or_null<llvm::Constant>(V)));
+          TheCU, Name, TTy, defaultParameter, V));
     } break;
     case TemplateArgument::NullPtr: {
       QualType T = TA.getNullPtrType();
@@ -3268,7 +3268,7 @@ void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
 
 llvm::DIType *CGDebugInfo::CreateType(const RecordType *Ty) {
   RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
-  llvm::DIType *T = cast_or_null<llvm::DIType>(getTypeOrNull(QualType(Ty, 0)));
+  llvm::DIType *T = getTypeOrNull(QualType(Ty, 0));
   if (T || shouldOmitDefinition(DebugKind, DebugTypeExtRefs, RD,
                                 CGM.getLangOpts())) {
     if (!T)
@@ -4664,7 +4664,7 @@ CGDebugInfo::getGlobalVariableForwardDeclaration(const VarDecl *VD) {
       !VD->isExternallyVisible(), nullptr, TemplateParameters, Align);
   FwdDeclReplaceMap.emplace_back(
       std::piecewise_construct,
-      std::make_tuple(cast<VarDecl>(VD->getCanonicalDecl())),
+      std::make_tuple(VD->getCanonicalDecl()),
       std::make_tuple(static_cast<llvm::Metadata *>(GV)));
   return GV;
 }
@@ -4694,7 +4694,7 @@ llvm::DINode *CGDebugInfo::getDeclarationOrDefinition(const Decl *D) {
   if (IE != ImportedDeclCache.end()) {
     auto N = IE->second;
     if (auto *GVE = dyn_cast_or_null<llvm::DIImportedEntity>(N))
-      return cast<llvm::DINode>(GVE);
+      return GVE;
     return dyn_cast_or_null<llvm::DINode>(N);
   }
 

@@ -1012,7 +1012,7 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
         const TypedValueRegion *OrigR = Var.getOriginalRegion();
         if (const auto *VR = dyn_cast<VarRegion>(OrigR)) {
           if (VR->getDecl() == VD)
-            return cast<VarRegion>(Var.getCapturedRegion());
+            return Var.getCapturedRegion();
         }
       }
     }

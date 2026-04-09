@@ -2453,7 +2453,7 @@ void CodeGenFunction::EmitOMPInnerLoop(
   const SourceRange R = S.getSourceRange();
 
   // If attributes are attached, push to the basic block with them.
-  const auto &OMPED = cast<OMPExecutableDirective>(S);
+  const auto &OMPED = S;
   const CapturedStmt *ICS = OMPED.getInnermostCapturedStmt();
   const Stmt *SS = ICS->getCapturedStmt();
   const AttributedStmt *AS = dyn_cast_or_null<AttributedStmt>(SS);
@@ -2699,7 +2699,7 @@ void CodeGenFunction::EmitOMPLinearClause(
   llvm::DenseSet<const VarDecl *> SIMDLCVs;
   OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(D);
   if (isOpenMPSimdDirective(EKind)) {
-    const auto *LoopDirective = cast<OMPLoopDirective>(&D);
+    const auto *LoopDirective = &D;
     for (const Expr *C : LoopDirective->counters()) {
       SIMDLCVs.insert(
           cast<VarDecl>(cast<DeclRefExpr>(C)->getDecl())->getCanonicalDecl());

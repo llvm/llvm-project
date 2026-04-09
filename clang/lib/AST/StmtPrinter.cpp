@@ -2121,7 +2121,7 @@ void StmtPrinter::VisitCXXMemberCallExpr(CXXMemberCallExpr *Node) {
     PrintExpr(Node->getImplicitObjectArgument());
     return;
   }
-  VisitCallExpr(cast<CallExpr>(Node));
+  VisitCallExpr(Node);
 }
 
 void StmtPrinter::VisitCUDAKernelCallExpr(CUDAKernelCallExpr *Node) {

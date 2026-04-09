@@ -2876,7 +2876,7 @@ public:
   }
 
   bool VisitFunctionDecl(FunctionDecl *Node) override {
-    if (cast<DeclContext>(Node)->isDependentContext())
+    if (Node->isDependentContext())
       return true; // Not to analyze dependent decl
     // `FunctionDecl->hasBody()` returns true if the function has a body
     // somewhere defined.  But we want to know if this `Node` has a body
@@ -2887,14 +2887,14 @@ public:
   }
 
   bool VisitBlockDecl(BlockDecl *Node) override {
-    if (cast<DeclContext>(Node)->isDependentContext())
+    if (Node->isDependentContext())
       return true; // Not to analyze dependent decl
     Callback(Node);
     return true;
   }
 
   bool VisitObjCMethodDecl(ObjCMethodDecl *Node) override {
-    if (cast<DeclContext>(Node)->isDependentContext())
+    if (Node->isDependentContext())
       return true; // Not to analyze dependent decl
     if (Node->hasBody())
       Callback(Node);

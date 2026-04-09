@@ -2433,7 +2433,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
     SVal RetVal = ExprNode->getSVal(E);
 
     // Handle cases where a reference is returned and then immediately used.
-    if (cast<Expr>(E)->isGLValue())
+    if (E->isGLValue())
       if (std::optional<Loc> LValue = RetVal.getAs<Loc>())
         RetVal = State->getSVal(*LValue);
 

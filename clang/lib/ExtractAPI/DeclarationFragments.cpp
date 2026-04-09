@@ -1239,7 +1239,7 @@ DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
       .append(">", DeclarationFragments::FragmentKind::Text)
       .appendSpace()
       .append(DeclarationFragmentsBuilder::getFragmentsForCXXClass(
-          cast<CXXRecordDecl>(Decl)))
+          Decl))
       .pop_back() // there is an extra semicolon now
       .append("<", DeclarationFragments::FragmentKind::Text)
       .append(getFragmentsForTemplateArguments(
@@ -1262,7 +1262,7 @@ DeclarationFragmentsBuilder::getFragmentsForClassTemplatePartialSpecialization(
       .append(">", DeclarationFragments::FragmentKind::Text)
       .appendSpace()
       .append(DeclarationFragmentsBuilder::getFragmentsForCXXClass(
-          cast<CXXRecordDecl>(Decl)))
+          Decl))
       .pop_back() // there is an extra semicolon now
       .append("<", DeclarationFragments::FragmentKind::Text)
       .append(getFragmentsForTemplateArguments(
