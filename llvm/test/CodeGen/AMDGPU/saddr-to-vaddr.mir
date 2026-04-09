@@ -27,6 +27,7 @@ body:             |
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 8, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[COPY]]
     ; GFX1250-NEXT: S_ENDPGM 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD_SADDR]]
     ;
     ; GFX942-LABEL: name: zero_vaddr_reuse
@@ -68,14 +69,13 @@ body:             |
     ; GFX1250-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX1250-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
     ; GFX1250-NEXT: [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[COPY1]], implicit $exec
-    ; GFX1250-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM]]
-    ; GFX1250-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY2]].sub0
-    ; GFX1250-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]].sub1
-    ; GFX1250-NEXT: undef %5.sub0:vreg_64_align2, $vcc_lo = V_ADD_CO_U32_e64 [[COPY3]], [[COPY1]], 0, implicit $exec
-    ; GFX1250-NEXT: %5.sub1:vreg_64_align2, dead $vcc_lo = V_ADDC_U32_e64 [[COPY4]], [[V_ASHRREV_I32_e64_]], killed $vcc_lo, 0, implicit $exec
-    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD %5, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: undef [[COPY2:%[0-9]+]].sub0:vreg_64_align2 = COPY [[COPY1]]
+    ; GFX1250-NEXT: [[COPY2:%[0-9]+]].sub1:vreg_64_align2 = COPY [[V_ASHRREV_I32_e64_]]
+    ; GFX1250-NEXT: [[V_ADD_U64_e64_:%[0-9]+]]:vreg_64_align2 = V_ADD_U64_e64 [[S_LOAD_DWORDX2_IMM]], [[COPY2]], 0, implicit $exec
+    ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[V_ADD_U64_e64_]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 8, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM1]], [[COPY]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[V_ADD_U64_e64_]]
     ; GFX1250-NEXT: S_ENDPGM 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD_SADDR]]
     ;
     ; GFX942-LABEL: name: nonzero_vaddr_reuse
@@ -118,6 +118,7 @@ body:             |
     ; GFX1250-NEXT: GLOBAL_STORE_DWORD [[COPY1]], [[COPY]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 8, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[COPY]], [[S_LOAD_DWORDX2_IMM1]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[COPY1]]
     ; GFX1250-NEXT: S_ENDPGM 0
     ;
     ; GFX942-LABEL: name: store_reuse
@@ -180,8 +181,8 @@ body:             |
     S_ENDPGM 0, implicit %2, implicit %4
 ...
 
-# 18 loads with the same preferred SGPR pair — triggers FlushGroup/KILL
-# insertion at the AddrLivenessGroupSize boundary (default 16).
+# 18 loads with the same preferred SGPR pair — exercises per-load KILL
+# placement at SAddrKillDistance (default 16) instructions after each load.
 ---
 name:            flush_group_kill
 tracksRegLiveness: true
@@ -250,41 +251,57 @@ body:             |
     ; GFX1250-NEXT: [[COPY5:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM5]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD5:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY5]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM6:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 48, 0 :: (dereferenceable invariant load (s64))
+    ; GFX1250-NEXT: KILL killed [[COPY]]
     ; GFX1250-NEXT: [[COPY6:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM6]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD6:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY6]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[COPY1]]
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM7:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 56, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[COPY7:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM7]]
+    ; GFX1250-NEXT: KILL killed [[COPY2]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD7:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY7]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM8:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 64, 0 :: (dereferenceable invariant load (s64))
+    ; GFX1250-NEXT: KILL killed [[COPY3]]
     ; GFX1250-NEXT: [[COPY8:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM8]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD8:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY8]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[COPY4]]
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM9:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 72, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[COPY9:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM9]]
+    ; GFX1250-NEXT: KILL killed [[COPY5]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD9:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY9]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM10:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 80, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[COPY10:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM10]]
+    ; GFX1250-NEXT: KILL killed [[COPY6]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD10:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY10]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM11:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 88, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[COPY11:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM11]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD11:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY11]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[COPY7]]
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM12:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 96, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[COPY12:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM12]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD12:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY12]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[COPY8]]
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM13:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 104, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[COPY13:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM13]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD13:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY13]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM14:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 112, 0 :: (dereferenceable invariant load (s64))
+    ; GFX1250-NEXT: KILL killed [[COPY9]]
     ; GFX1250-NEXT: [[COPY14:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM14]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD14:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY14]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM15:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 120, 0 :: (dereferenceable invariant load (s64))
+    ; GFX1250-NEXT: KILL killed [[COPY10]]
     ; GFX1250-NEXT: [[COPY15:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM15]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD15:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY15]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
-    ; GFX1250-NEXT: KILL [[COPY]], [[COPY1]], [[COPY2]], [[COPY3]], [[COPY4]], [[COPY5]], [[COPY6]], [[COPY7]], [[COPY8]], [[COPY9]], [[COPY10]], [[COPY11]], [[COPY12]], [[COPY13]], [[COPY14]], [[COPY15]]
+    ; GFX1250-NEXT: KILL killed [[COPY11]]
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM16:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 128, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[COPY16:%[0-9]+]]:vreg_64_align2 = COPY [[S_LOAD_DWORDX2_IMM16]]
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD16:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY16]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[COPY12]]
     ; GFX1250-NEXT: [[S_LOAD_DWORDX2_IMM17:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 136, 0 :: (dereferenceable invariant load (s64))
     ; GFX1250-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM17]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX1250-NEXT: KILL killed [[COPY13]]
+    ; GFX1250-NEXT: KILL killed [[COPY14]]
+    ; GFX1250-NEXT: KILL killed [[COPY15]]
+    ; GFX1250-NEXT: KILL killed [[COPY16]]
     ; GFX1250-NEXT: S_ENDPGM 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD1]], implicit [[GLOBAL_LOAD_DWORD2]], implicit [[GLOBAL_LOAD_DWORD3]], implicit [[GLOBAL_LOAD_DWORD4]], implicit [[GLOBAL_LOAD_DWORD5]], implicit [[GLOBAL_LOAD_DWORD6]], implicit [[GLOBAL_LOAD_DWORD7]], implicit [[GLOBAL_LOAD_DWORD8]], implicit [[GLOBAL_LOAD_DWORD9]], implicit [[GLOBAL_LOAD_DWORD10]], implicit [[GLOBAL_LOAD_DWORD11]], implicit [[GLOBAL_LOAD_DWORD12]], implicit [[GLOBAL_LOAD_DWORD13]], implicit [[GLOBAL_LOAD_DWORD14]], implicit [[GLOBAL_LOAD_DWORD15]], implicit [[GLOBAL_LOAD_DWORD16]], implicit [[GLOBAL_LOAD_DWORD_SADDR]]
     ;
     ; GFX942-LABEL: name: flush_group_kill

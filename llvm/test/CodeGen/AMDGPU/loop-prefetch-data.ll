@@ -242,7 +242,8 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX1250-NEXT:    s_add_co_i32 s6, s6, -1
 ; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
 ; GFX1250-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX1250-NEXT:    ; kill: killed $vgpr6_vgpr7 killed $vgpr8_vgpr9
+; GFX1250-NEXT:    ; kill: killed $vgpr6_vgpr7
+; GFX1250-NEXT:    ; kill: killed $vgpr8_vgpr9
 ; GFX1250-NEXT:    global_load_b128 v[2:5], v[6:7], off offset:-176
 ; GFX1250-NEXT:    global_prefetch_b8 v[8:9], off scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0

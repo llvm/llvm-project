@@ -159,6 +159,7 @@ define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrsp
 ; SDAG-NEXT:    v_mov_b32_e32 v1, s8
 ; SDAG-NEXT:    s_add_co_i32 s6, s6, 1
 ; SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 4
+; SDAG-NEXT:    ; kill: killed $vgpr2_vgpr3
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v[2:3], off offset:4 nv
 ; SDAG-NEXT:    v_mov_b32_e32 v1, s7
 ; SDAG-NEXT:    ; asyncmark
@@ -336,13 +337,11 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; SDAG-NEXT:  .LBB2_1: ; %loop_body
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    s_add_co_i32 s12, s9, 8
-; SDAG-NEXT:    s_wait_xcnt 0x2
+; SDAG-NEXT:    s_wait_xcnt 0x0
 ; SDAG-NEXT:    v_mov_b64_e32 v[8:9], s[4:5]
-; SDAG-NEXT:    s_wait_xcnt 0x1
 ; SDAG-NEXT:    v_mov_b64_e32 v[10:11], s[0:1]
 ; SDAG-NEXT:    v_mov_b64_e32 v[12:13], s[4:5]
 ; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    s_wait_xcnt 0x0
 ; SDAG-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v14, s12
 ; SDAG-NEXT:    v_mov_b32_e32 v7, v2
 ; SDAG-NEXT:    global_load_b32 v2, v[8:9], off
@@ -352,20 +351,24 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; SDAG-NEXT:    v_mov_b32_e32 v14, s9
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    ; wait_asyncmark(2)
+; SDAG-NEXT:    ; kill: killed $vgpr8_vgpr9
+; SDAG-NEXT:    s_wait_xcnt 0x1
 ; SDAG-NEXT:    s_wait_asynccnt 0x2
+; SDAG-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
 ; SDAG-NEXT:    s_add_co_i32 s8, s8, 1
-; SDAG-NEXT:    s_add_co_i32 s9, s9, 4
 ; SDAG-NEXT:    ds_load_b32 v14, v14
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v0
+; SDAG-NEXT:    s_add_co_i32 s9, s9, 4
 ; SDAG-NEXT:    s_cmp_lt_i32 s8, s11
 ; SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 4
 ; SDAG-NEXT:    s_add_nc_u64 s[4:5], s[4:5], 4
-; SDAG-NEXT:    s_wait_dscnt 0x0
-; SDAG-NEXT:    v_add_nc_u32_e32 v16, v15, v14
-; SDAG-NEXT:    v_mov_b64_e32 v[14:15], s[6:7]
 ; SDAG-NEXT:    s_add_nc_u64 s[6:7], s[6:7], 4
-; SDAG-NEXT:    ; kill: killed $vgpr8_vgpr9 killed $vgpr10_vgpr11 killed $vgpr12_vgpr13 killed $vgpr14_vgpr15
-; SDAG-NEXT:    global_store_b32 v[14:15], v16, off
+; SDAG-NEXT:    ; kill: killed $vgpr10_vgpr11
+; SDAG-NEXT:    ; kill: killed $vgpr12_vgpr13
+; SDAG-NEXT:    ; kill: killed $vgpr8_vgpr9
+; SDAG-NEXT:    s_wait_dscnt 0x0
+; SDAG-NEXT:    v_add_nc_u32_e32 v14, v15, v14
+; SDAG-NEXT:    global_store_b32 v[8:9], v14, off
 ; SDAG-NEXT:    s_cbranch_scc1 .LBB2_1
 ; SDAG-NEXT:  ; %bb.2: ; %epilog
 ; SDAG-NEXT:    s_add_co_i32 s0, s11, -2
