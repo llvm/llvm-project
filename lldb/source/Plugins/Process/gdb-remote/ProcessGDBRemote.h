@@ -255,6 +255,8 @@ public:
 
   llvm::Expected<bool> SaveCore(llvm::StringRef outfile) override;
 
+  Status StepBack();
+
 protected:
   friend class ThreadGDBRemote;
   friend class GDBRemoteCommunicationClient;
