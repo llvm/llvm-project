@@ -1396,3 +1396,6 @@ func.func @negative_op_mmt4d(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
 
 // NAMED-NOT: linalg.mmt4d
 // NAMED: linalg.generic
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
