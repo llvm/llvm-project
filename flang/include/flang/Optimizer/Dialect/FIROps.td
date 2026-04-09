@@ -3085,7 +3085,7 @@ def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
   let convertFromStorage = "mlir::cast<mlir::Type>($_self.getValue())";
 }
 
-def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
+def fir_TypeDescOp : fir_OneResultOp<"type_desc", [Pure]> {
   let summary = "get type descriptor for a given type";
   let description = [{
     Generates a constant object that is an abstract type descriptor of the
