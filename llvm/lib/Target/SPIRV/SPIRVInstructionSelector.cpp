@@ -1632,9 +1632,9 @@ bool SPIRVInstructionSelector::selectPopCount64Overflow(
 
   MachineIRBuilder MIRBuilder(I);
   SPIRVTypeInst BaseType = GR.retrieveScalarOrVectorIntType(ResType);
-  SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
-  SPIRVTypeInst I32x2Type =
-      GR.getOrCreateSPIRVVectorType(I32Type, 2, MIRBuilder, false);
+  SPIRVTypeInst I64Type = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
+  SPIRVTypeInst I64x2Type =
+      GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder, false);
   SPIRVTypeInst Vec2ResType =
       GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder, false);
 
@@ -1646,12 +1646,12 @@ bool SPIRVInstructionSelector::selectPopCount64Overflow(
     // This register holds the firstbitX result for each of the i64x2 vectors
     // extracted from SrcReg
     Register PopCountResult =
-        MRI->createVirtualRegister(GR.getRegClass(I32x2Type));
+        MRI->createVirtualRegister(GR.getRegClass(I64x2Type));
 
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpVectorShuffle))
                    .addDef(PopCountResult)
-                   .addUse(GR.getSPIRVTypeID(I32x2Type))
+                   .addUse(GR.getSPIRVTypeID(I64x2Type))
                    .addUse(SrcReg)
                    .addUse(SrcReg)
                    .addImm(CurrentComponent)
@@ -1671,11 +1671,11 @@ bool SPIRVInstructionSelector::selectPopCount64Overflow(
   // On odd component counts we need to handle one more component
   if (CurrentComponent != ComponentCount) {
     bool ZeroAsNull = !STI.isShader();
-    Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I32Type));
+    Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I64Type));
     Register ConstIntLastIdx = GR.getOrCreateConstInt(
         ComponentCount - 1, I, BaseType, TII, ZeroAsNull);
 
-    if (!selectOpWithSrcs(FinalElemReg, I32Type, I, {SrcReg, ConstIntLastIdx},
+    if (!selectOpWithSrcs(FinalElemReg, I64Type, I, {SrcReg, ConstIntLastIdx},
                           SPIRV::OpVectorExtractDynamic))
       return false;
 
@@ -1706,6 +1706,8 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
   bool ZeroAsNull = !STI.isShader();
 
   MachineIRBuilder MIRBuilder(I);
+  bool IsSigned = GR.isScalarOrVectorSigned(ResType);
+
   SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
   SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
       I32Type, 2 * ComponentCount, MIRBuilder, false);
