@@ -666,6 +666,19 @@ void CIRRecordLowering::insertPadding() {
   llvm::stable_sort(members);
 }
 
+static cir::ArgPassingKind
+convertRecordArgPassingKind(RecordArgPassingKind kind) {
+  switch (kind) {
+  case RecordArgPassingKind::CanPassInRegs:
+    return cir::ArgPassingKind::CanPassInRegs;
+  case RecordArgPassingKind::CannotPassInRegs:
+    return cir::ArgPassingKind::CannotPassInRegs;
+  case RecordArgPassingKind::CanNeverPassInRegs:
+    return cir::ArgPassingKind::CanNeverPassInRegs;
+  }
+  llvm_unreachable("unknown RecordArgPassingKind");
+}
+
 std::unique_ptr<CIRGenRecordLayout>
 CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   CIRRecordLowering lowering(*this, rd, /*packed=*/false);
@@ -703,18 +716,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // Queue ABI metadata for the module-level cir.record_layouts attribute.
   if (ty->getName()) {
     mlir::MLIRContext *mlirCtx = ty->getContext();
-    auto apk = cir::ArgPassingKind::CannotPassInRegs;
-    switch (rd->getArgPassingRestrictions()) {
-    case RecordArgPassingKind::CanPassInRegs:
-      apk = cir::ArgPassingKind::CanPassInRegs;
-      break;
-    case RecordArgPassingKind::CannotPassInRegs:
-      apk = cir::ArgPassingKind::CannotPassInRegs;
-      break;
-    case RecordArgPassingKind::CanNeverPassInRegs:
-      apk = cir::ArgPassingKind::CanNeverPassInRegs;
-      break;
-    }
+    cir::ArgPassingKind apk =
+        convertRecordArgPassingKind(rd->getArgPassingRestrictions());
 
     bool hasTrivialDestructor = true;
     if (auto *cxxRD = dyn_cast<CXXRecordDecl>(rd))
