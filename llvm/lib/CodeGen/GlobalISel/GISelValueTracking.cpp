@@ -560,6 +560,40 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.One = Known.One.rotr(Amt);
     break;
   }
+  case TargetOpcode::G_FSHL:
+  case TargetOpcode::G_FSHR: {
+    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(3).getReg());
+    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    if (!MaybeAmtOp)
+      break;
+
+    unsigned Amt = MaybeAmtOp->urem(BitWidth);
+
+    // For fshl, 0-shift returns the 1st arg.
+    // For fshr, 0-shift returns the 2nd arg.
+    if (Amt == 0) {
+      computeKnownBitsImpl(
+          MI.getOperand(Opcode == TargetOpcode::G_FSHL ? 1 : 2).getReg(), Known,
+          DemandedElts, Depth + 1);
+      break;
+    }
+
+    // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+    // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    if (Opcode == TargetOpcode::G_FSHL) {
+      Known <<= Amt;
+      Known2 >>= BitWidth - Amt;
+    } else {
+      Known <<= BitWidth - Amt;
+      Known2 >>= Amt;
+    }
+    Known = Known.unionWith(Known2);
+    break;
+  }
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_PTRTOINT:
     if (DstTy.isVector())
