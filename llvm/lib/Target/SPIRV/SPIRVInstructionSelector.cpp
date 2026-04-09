@@ -2085,10 +2085,10 @@ bool SPIRVInstructionSelector::selectStackSave(Register ResVReg,
 
 bool SPIRVInstructionSelector::selectStackRestore(MachineInstr &I) const {
   if (!STI.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array))
-    report_fatal_error("llvm.stackrestore intrinsic: this instruction "
-                       "requires the following "
-                       "SPIR-V extension: SPV_INTEL_variable_length_array",
-                       false);
+    report_fatal_error(
+        "llvm.stackrestore intrinsic: this instruction requires the following "
+        "SPIR-V extension: SPV_INTEL_variable_length_array",
+        false);
   if (!I.getOperand(0).isReg())
     return false;
   MachineBasicBlock &BB = *I.getParent();
@@ -2222,8 +2222,8 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   Register ScopeReg = buildI32Constant(Scope, I);
 
   Register Ptr = I.getOperand(1).getReg();
-  // TODO: Changed as it's implemented in the translator. See
-  // test/atomicrmw.ll auto ScSem =
+  // TODO: Changed as it's implemented in the translator. See test/atomicrmw.ll
+  // auto ScSem =
   // getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr));
   AtomicOrdering AO = MemOp->getSuccessOrdering();
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
@@ -2526,9 +2526,8 @@ SPIRVInstructionSelector::buildConstGenericPtr(MachineInstr &I, Register SrcPtr,
 // In SPIR-V address space casting can only happen to and from the Generic
 // storage class. We can also only cast Workgroup, CrossWorkgroup, or Function
 // pointers to and from Generic pointers. As such, we can convert e.g. from
-// Workgroup to Function by going via a Generic pointer as an intermediary.
-// All other combinations can only be done by a bitcast, and are probably not
-// safe.
+// Workgroup to Function by going via a Generic pointer as an intermediary. All
+// other combinations can only be done by a bitcast, and are probably not safe.
 bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
                                                    SPIRVTypeInst ResType,
                                                    MachineInstr &I) const {
@@ -2547,10 +2546,10 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   SPIRV::StorageClass::StorageClass DstSC = GR.getPointerStorageClass(ResType);
 
   if (isASCastInGVar(MRI, ResVReg)) {
-    // AddrSpaceCast uses within OpVariable and OpConstantComposite
-    // instructions are expressed by OpSpecConstantOp with an Opcode.
-    // TODO: maybe insert a check whether the Kernel capability was declared
-    // and so PtrCastToGeneric/GenericCastToPtr are available.
+    // AddrSpaceCast uses within OpVariable and OpConstantComposite instructions
+    // are expressed by OpSpecConstantOp with an Opcode.
+    // TODO: maybe insert a check whether the Kernel capability was declared and
+    // so PtrCastToGeneric/GenericCastToPtr are available.
     unsigned SpecOpcode =
         DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC)
             ? static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric)
@@ -2611,8 +2610,8 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
     return true;
   }
 
-  // Check if instructions from the SPV_INTEL_usm_storage_classes extension
-  // may be applied
+  // Check if instructions from the SPV_INTEL_usm_storage_classes extension may
+  // be applied
   if (isUSMStorageClass(SrcSC) && DstSC == SPIRV::StorageClass::CrossWorkgroup)
     return selectUnOp(ResVReg, ResType, I,
                       SPIRV::OpPtrCastToCrossWorkgroupINTEL);
@@ -3579,8 +3578,7 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
     return selectBitreverseNative(ResVReg, ResType, I, OpReg);
 
   // Expansion bitreverse using bit manipulation operations
-  // Algo:
-  // https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
+  // Algo: https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
   const unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
   // TODO: add support for any bit width and bitwidth more than 64.
   if (BitWidth > 64 || !isPowerOf2_32(BitWidth))
@@ -3647,8 +3645,8 @@ bool SPIRVInstructionSelector::selectFreeze(Register ResVReg,
   // There is no way to implement `freeze` correctly without support on SPIR-V
   // standard side, but we may at least address a simple (static) case when
   // undef/poison value presence is obvious. The main benefit of even
-  // incomplete `freeze` support is preventing of translation from crashing
-  // due to lack of support on legalization and instruction selection steps.
+  // incomplete `freeze` support is preventing of translation from crashing due
+  // to lack of support on legalization and instruction selection steps.
   if (!I.getOperand(0).isReg() || !I.getOperand(1).isReg())
     return false;
   Register OpReg = I.getOperand(1).getReg();
@@ -4055,8 +4053,7 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
                                           unsigned Opcode) const {
   Register SrcReg = I.getOperand(1).getReg();
   // We can convert bool value directly to float type without OpConvert*ToF,
-  // however the translator generates OpSelect+OpConvert*ToF, so we do the
-  // same.
+  // however the translator generates OpSelect+OpConvert*ToF, so we do the same.
   if (GR.isScalarOrVectorOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool)) {
     unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
     SPIRVTypeInst TmpType = GR.getOrCreateSPIRVIntegerType(BitWidth, I, TII);
@@ -4297,9 +4294,9 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
                                          MachineInstr &I) const {
   const bool IsGEPInBounds = I.getOperand(2).getImm();
 
-  // OpAccessChain could be used for OpenCL, but the SPIRV-LLVM Translator
-  // only relies on PtrAccessChain, so we'll try not to deviate. For Vulkan
-  // however, we have to use Op[InBounds]AccessChain.
+  // OpAccessChain could be used for OpenCL, but the SPIRV-LLVM Translator only
+  // relies on PtrAccessChain, so we'll try not to deviate. For Vulkan however,
+  // we have to use Op[InBounds]AccessChain.
   const unsigned Opcode = STI.isLogicalSPIRV()
                               ? (IsGEPInBounds ? SPIRV::OpInBoundsAccessChain
                                                : SPIRV::OpAccessChain)
@@ -4340,9 +4337,8 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
         OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
         OpDefine->getOpcode() == TargetOpcode::G_INTTOPTR ||
         GR.isAggregateType(OpType)) {
-      // The case of G_ADDRSPACE_CAST inside spv_const_composite() is
-      // processed by selectAddrSpaceCast(), and G_INTTOPTR is processed by
-      // selectUnOp()
+      // The case of G_ADDRSPACE_CAST inside spv_const_composite() is processed
+      // by selectAddrSpaceCast(), and G_INTTOPTR is processed by selectUnOp()
       CompositeArgs.push_back(OpReg);
       continue;
     }
@@ -4373,14 +4369,13 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
 bool SPIRVInstructionSelector::selectDerivativeInst(
     Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
     const unsigned DPdOpCode) const {
-  // TODO: This should check specifically for Fragment Execution Model, but
-  // STI doesn't provide that information yet. See #167562
+  // TODO: This should check specifically for Fragment Execution Model, but STI
+  // doesn't provide that information yet. See #167562
   errorIfInstrOutsideShader(I);
 
   // If the arg/result types are half then we need to wrap the instr in
   // conversions to float
-  // This case occurs because a half arg/result is legal in HLSL but not
-  // spirv.
+  // This case occurs because a half arg/result is legal in HLSL but not spirv.
   Register SrcReg = I.getOperand(2).getReg();
   SPIRVTypeInst SrcType = GR.getSPIRVTypeForVReg(SrcReg);
   unsigned BitWidth = std::min(GR.getScalarOrVectorBitWidth(SrcType),
@@ -4459,8 +4454,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     if (!selectGlobalValue(GVarVReg, *MI, Init))
       return false;
     // We violate SSA form by inserting OpVariable and still having a gMIR
-    // instruction %vreg = G_GLOBAL_VALUE @gvar. We need to fix this by
-    // erasing the duplicated definition.
+    // instruction %vreg = G_GLOBAL_VALUE @gvar. We need to fix this by erasing
+    // the duplicated definition.
     if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
       GR.invalidateMachineInstr(MI);
       MI->eraseFromParent();
@@ -4654,8 +4649,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // The HLSL SV_GroupId semantic is lowered to
     // llvm.spv.group.id intrinsic in LLVM IR for SPIR-V backend.
     //
-    // In SPIR-V backend, llvm.spv.group.id is now translated to a
-    // `WorkgroupId` builtin variable
+    // In SPIR-V backend, llvm.spv.group.id is now translated to a `WorkgroupId`
+    // builtin variable
     return loadVec3BuiltinInputID(SPIRV::BuiltIn::WorkgroupId, ResVReg, ResType,
                                   I);
   case Intrinsic::spv_flattened_thread_id_in_group:
@@ -4663,8 +4658,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // llvm.spv.flattened.thread.id.in.group() intrinsic in LLVM IR for SPIR-V
     // backend.
     //
-    // In SPIR-V backend, llvm.spv.flattened.thread.id.in.group is translated
-    // to a `LocalInvocationIndex` builtin variable
+    // In SPIR-V backend, llvm.spv.flattened.thread.id.in.group is translated to
+    // a `LocalInvocationIndex` builtin variable
     return loadBuiltinInputID(SPIRV::BuiltIn::LocalInvocationIndex, ResVReg,
                               ResType, I);
   case Intrinsic::spv_workgroup_size:
@@ -4850,9 +4845,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
     return selectExtInst(ResVReg, ResType, I, CL::radians, GL::Radians);
-  // Discard intrinsics which we do not expect to actually represent code
-  // after lowering or intrinsics which are not implemented but should not
-  // crash when found in a customer's LLVM IR input.
+  // Discard intrinsics which we do not expect to actually represent code after
+  // lowering or intrinsics which are not implemented but should not crash when
+  // found in a customer's LLVM IR input.
   case Intrinsic::instrprof_increment:
   case Intrinsic::instrprof_increment_step:
   case Intrinsic::instrprof_value_profile:
@@ -4968,8 +4963,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
 bool SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
                                                        SPIRVTypeInst ResType,
                                                        MachineInstr &I) const {
-  // The images need to be loaded in the same basic block as their use. We
-  // defer loading the image to the intrinsic that uses it.
+  // The images need to be loaded in the same basic block as their use. We defer
+  // loading the image to the intrinsic that uses it.
   if (ResType->getOpcode() == SPIRV::OpTypeImage)
     return true;
 
@@ -5016,9 +5011,9 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
   Register CounterHandleReg = Intr.getOperand(2).getReg();
   Register IncrReg = Intr.getOperand(3).getReg();
 
-  // The counter handle is a pointer to the counter variable (which is a
-  // struct containing an i32). We need to get a pointer to that i32 member to
-  // do the atomic operation.
+  // The counter handle is a pointer to the counter variable (which is a struct
+  // containing an i32). We need to get a pointer to that i32 member to do the
+  // atomic operation.
 #ifndef NDEBUG
   SPIRVTypeInst CounterVarType = GR.getSPIRVTypeForVReg(CounterHandleReg);
   SPIRVTypeInst CounterVarPointeeType = GR.getPointeeType(CounterVarType);
