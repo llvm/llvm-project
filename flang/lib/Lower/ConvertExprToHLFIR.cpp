@@ -1874,7 +1874,7 @@ private:
     buildConditionalIfChain(
         condExpr, [&](const Fortran::evaluate::Expr<T> &expr) {
           hlfir::Entity entity{gen(expr)};
-          entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+          entity = hlfir::loadTrivialScalar(loc, builder, entity);
           hlfir::AssignOp::create(builder, loc, entity, temp);
         });
     return temp;
@@ -1950,31 +1950,28 @@ private:
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
     const int rank{condExpr.Rank()};
-
+    mlir::Type resultType{Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr))};
+    if (fir::isPolymorphicType(resultType))
+      TODO(getLoc(), "polymorphic conditional expression");
+    if (fir::isRecordWithTypeParameters(
+            hlfir::getFortranElementType(resultType)))
+      TODO(getLoc(), "conditional expression with length-parameterized "
+                     "derived type");
     // Arrays: handle early to avoid unnecessary type checks.
     // Per F2023 10.1.4(7), the shape is determined by the chosen branch.
     if (rank != 0) {
-      mlir::Type condResultType{Fortran::lower::translateSomeExprToFIRType(
-          converter, toEvExpr(condExpr))};
-      if (auto boxTy = mlir::dyn_cast<fir::BoxType>(condResultType))
-        condResultType = fir::unwrapRefType(boxTy.getEleTy());
+      const mlir::Type condResultType{
+          hlfir::getFortranElementOrSequenceType(resultType)};
       return hlfir::EntityWithAttributes{
           genAllocatableConditional(condExpr, condResultType, ".cond.array")};
     }
     // CHARACTER scalars require special handling for type parameters.
     if constexpr (T::category == Fortran::common::TypeCategory::Character) {
-      if (auto result = genCharacterConditional(condExpr)) {
+      if (auto result = genCharacterConditional(condExpr))
         return *result;
-      }
     }
     // Scalar types (INTEGER, REAL, COMPLEX, LOGICAL, UNSIGNED, Derived).
-    mlir::Type resultType{Fortran::lower::translateSomeExprToFIRType(
-        converter, toEvExpr(condExpr))};
-    if constexpr (T::category != Fortran::common::TypeCategory::Derived) {
-      if (auto boxTy = mlir::dyn_cast<fir::BoxType>(resultType)) {
-        resultType = fir::unwrapRefType(boxTy.getEleTy());
-      }
-    }
     return hlfir::EntityWithAttributes{genScalarConditional(
         condExpr, hlfir::getFortranElementType(resultType), {})};
   }

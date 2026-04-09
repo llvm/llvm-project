@@ -18,9 +18,11 @@ subroutine test_scalar_integer(flag, x, y)
   ! CHECK: %[[FLAG_LOAD:.*]] = fir.load %[[FLAG_DECL]]#0
   ! CHECK: %[[FLAG_CONV:.*]] = fir.convert %[[FLAG_LOAD]] : (!fir.logical<4>) -> i1
   ! CHECK: fir.if %[[FLAG_CONV]] {
-  ! CHECK:   hlfir.assign %[[X_DECL]]#0 to %[[TEMP_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>
+  ! CHECK:   %[[X_LOAD:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %[[X_LOAD]] to %[[TEMP_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign %[[Y_DECL]]#0 to %[[TEMP_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>
+  ! CHECK:   %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %[[Y_LOAD]] to %[[TEMP_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK: }
   ! CHECK: %[[LOAD:.*]] = fir.load %[[TEMP_DECL]]#0
   ! CHECK: hlfir.assign %[[LOAD]] to %{{.*}} : i32, !fir.ref<i32>
@@ -34,9 +36,9 @@ subroutine test_scalar_real(flag, x, y)
   ! CHECK: %[[TEMP:.*]] = fir.alloca f32 {bindc_name = ".cond.scalar"
   ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] {uniq_name = ".cond.result"}
   ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : !fir.ref<f32>, !fir.ref<f32>
+  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : f32, !fir.ref<f32>
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : !fir.ref<f32>, !fir.ref<f32>
+  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : f32, !fir.ref<f32>
   ! CHECK: }
 end subroutine
 
@@ -48,9 +50,9 @@ subroutine test_scalar_complex(flag, x, y)
   ! CHECK: %[[TEMP:.*]] = fir.alloca complex<f32> {bindc_name = ".cond.scalar"
   ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] {uniq_name = ".cond.result"}
   ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : !fir.ref<complex<f32>>, !fir.ref<complex<f32>>
+  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : complex<f32>, !fir.ref<complex<f32>>
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : !fir.ref<complex<f32>>, !fir.ref<complex<f32>>
+  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : complex<f32>, !fir.ref<complex<f32>>
   ! CHECK: }
 end subroutine
 
