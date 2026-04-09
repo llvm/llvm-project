@@ -857,11 +857,7 @@ define <4 x i32> @abdu_const_poison(<4 x i8> %x) {
 define <4 x i32> @abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_sext:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v2.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    ssubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    sabdl v0.4s, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_sext:
@@ -884,11 +880,7 @@ define <4 x i32> @abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_sext_sge(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_sext_sge:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmge v2.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    ssubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    sabdl v0.4s, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_sext_sge:
@@ -911,11 +903,8 @@ define <4 x i32> @abd_select_sext_sge(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_sext_slt(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_sext_slt:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v2.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ssubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    sabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_sext_slt:
@@ -938,11 +927,8 @@ define <4 x i32> @abd_select_sext_slt(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_sext_sle(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_sext_sle:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmge v2.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ssubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    sabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_sext_sle:
@@ -965,11 +951,7 @@ define <4 x i32> @abd_select_sext_sle(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_zext_ugt(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_zext_ugt:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmhi v2.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    usubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    usubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    uabdl v0.4s, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_zext_ugt:
@@ -992,11 +974,7 @@ define <4 x i32> @abd_select_zext_ugt(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_zext_uge(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_zext_uge:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmhs v2.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    usubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    usubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    uabdl v0.4s, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_zext_uge:
@@ -1019,11 +997,8 @@ define <4 x i32> @abd_select_zext_uge(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_zext_ult(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_zext_ult:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmhi v2.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    usubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    usubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    uabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_zext_ult:
@@ -1046,11 +1021,8 @@ define <4 x i32> @abd_select_zext_ult(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_zext_ule(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_zext_ule:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmhs v2.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    usubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    usubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    uabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_zext_ule:
@@ -1179,13 +1151,9 @@ define <4 x i32> @abd_select_sext_zext(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_sext_add(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_sext_add:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v3.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    ssubl v4.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ssubl v0.4s, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    movi v2.4s, #19
-; CHECK-SD-NEXT:    sshll v3.4s, v3.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v4.16b, v3.16b
-; CHECK-SD-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    sabal v2.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_sext_add:
@@ -1211,13 +1179,9 @@ define <4 x i32> @abd_select_sext_add(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @abd_select_zext_add(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: abd_select_zext_add:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmhi v3.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    usubl v4.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    usubl v0.4s, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    movi v2.4s, #19
-; CHECK-SD-NEXT:    sshll v3.4s, v3.4h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v4.16b, v3.16b
-; CHECK-SD-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    uabal v2.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: abd_select_zext_add:
@@ -1243,11 +1207,8 @@ define <4 x i32> @abd_select_zext_add(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @neg_abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: neg_abd_select_sext:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v2.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    ssubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bit v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    sabdl v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: neg_abd_select_sext:
@@ -1270,11 +1231,8 @@ define <4 x i32> @neg_abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @neg_abd_select_zext(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: neg_abd_select_zext:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmhi v2.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    usubl v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    usubl v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    bit v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    uabdl v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: neg_abd_select_zext:
