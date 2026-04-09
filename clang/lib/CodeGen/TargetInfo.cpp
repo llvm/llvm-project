@@ -116,9 +116,7 @@ unsigned TargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::C;
 }
 
-bool TargetCodeGenInfo::supportsKernelLowering() const {
-  return false;
-}
+bool TargetCodeGenInfo::supportsKernelLowering() const { return false; }
 
 void TargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
