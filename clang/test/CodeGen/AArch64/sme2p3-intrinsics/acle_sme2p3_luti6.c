@@ -29,7 +29,7 @@
 //
 svint16x4_t test_svluti6_lane_s16_x4(svint16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return SVE_ACLE_FUNC(svluti6_lane,_s16,_x4,)(table, indices, 1);
+  return SVE_ACLE_FUNC(svluti6_lane,_s16_x4,,)(table, indices, 1);
 }
 
 // CHECK-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_svluti6_lane_u16_x4(
@@ -46,7 +46,7 @@ svint16x4_t test_svluti6_lane_s16_x4(svint16x2_t table, svuint8x2_t indices)
 //
 svuint16x4_t test_svluti6_lane_u16_x4(svuint16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return SVE_ACLE_FUNC(svluti6_lane,_u16,_x4,)(table, indices, 0);
+  return SVE_ACLE_FUNC(svluti6_lane,_u16_x4,,)(table, indices, 0);
 }
 
 // CHECK-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @test_svluti6_lane_f16_x4(
@@ -63,7 +63,7 @@ svuint16x4_t test_svluti6_lane_u16_x4(svuint16x2_t table, svuint8x2_t indices)
 //
 svfloat16x4_t test_svluti6_lane_f16_x4(svfloat16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return SVE_ACLE_FUNC(svluti6_lane,_f16,_x4,)(table, indices, 1);
+  return SVE_ACLE_FUNC(svluti6_lane,_f16_x4,,)(table, indices, 1);
 }
 
 // CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_svluti6_lane_bf16_x4(
@@ -80,7 +80,7 @@ svfloat16x4_t test_svluti6_lane_f16_x4(svfloat16x2_t table, svuint8x2_t indices)
 //
 svbfloat16x4_t test_svluti6_lane_bf16_x4(svbfloat16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return SVE_ACLE_FUNC(svluti6_lane,_bf16,_x4,)(table, indices, 0);
+  return SVE_ACLE_FUNC(svluti6_lane,_bf16_x4,,)(table, indices, 0);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svluti6_zt_s8(
