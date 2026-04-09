@@ -3292,10 +3292,10 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
     if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware)) {
       if (error_no != UINT8_MAX)
         return llvm::createStringErrorV(
-            "error: {0} sending the breakpoint request", error_no);
+            "error sending the breakpoint request: {0}", error_no);
       return llvm::createStringError("error sending the breakpoint request");
     }
-    LLDB_LOGF(log, "Software breakpoints are unsupported");
+    LLDB_LOG(log, "Software breakpoints are unsupported");
   }
 
   if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
@@ -3310,14 +3310,14 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
     if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
       if (error_no != UINT8_MAX)
         return llvm::createStringErrorV(
-            "error: {0} sending the hardware breakpoint request "
+            "error sending the hardware breakpoint request: {0} "
             "(hardware breakpoint resources might be exhausted or unavailable)",
             error_no);
       return llvm::createStringError(
           "error sending the hardware breakpoint request "
           "(hardware breakpoint resources might be exhausted or unavailable)");
     }
-    LLDB_LOGF(log, "Hardware breakpoints are unsupported");
+    LLDB_LOG(log, "Hardware breakpoints are unsupported");
   }
 
   if (bp_site.HardwareRequired())
