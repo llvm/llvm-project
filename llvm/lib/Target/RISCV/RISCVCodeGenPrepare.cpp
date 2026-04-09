@@ -265,7 +265,8 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
 }
 
 // Partially expand a vector_reduce_mul wider than M1 to reduce the
-// number of vsetvlis required when VLEN is exactly known.
+// number of vsetvlis required when VLEN is exactly known, and
+// reducing register pressure in all cases.
 bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
   if (II.getIntrinsicID() != Intrinsic::vector_reduce_mul)
     return false;
