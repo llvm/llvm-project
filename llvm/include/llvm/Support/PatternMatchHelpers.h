@@ -36,13 +36,13 @@ template <typename... Ty> struct match_combine_and { // NOLINT
   }
 };
 
-/// Combine two pattern matchers matching any of Ps patterns.
+/// Combine pattern matchers matching any of Ps patterns.
 template <typename... Ty>
 inline match_combine_or<Ty...> m_CombineOr(const Ty &...Ps) { // NOLINT
   return {Ps...};
 }
 
-/// Combine two pattern matchers matching all of Ps patterns.
+/// Combine pattern matchers matching all of Ps patterns.
 template <typename... Ty>
 inline match_combine_and<Ty...> m_CombineAnd(const Ty &...Ps) { // NOLINT
   return {Ps...};
@@ -66,4 +66,4 @@ inline auto m_Isa(const SubPattern &P) { // NOLINT
 }
 } // namespace llvm::PatternMatchHelpers
 
-#endif
+#endif // LLVM_SUPPORT_PATTERNMATCHHELPERS_H
