@@ -81,7 +81,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 
@@ -98,6 +97,11 @@ class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
 class Value;
+
+template <typename T> class GenericSSAContext;
+using SSAContext = GenericSSAContext<Function>;
+template <typename T> class GenericUniformityInfo;
+using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
 class NaryReassociatePass : public OptionalPassInfoMixin<NaryReassociatePass> {
 public:
