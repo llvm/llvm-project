@@ -2918,8 +2918,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
     if (!DeadBlock->getPredecessors().empty() ||
         !Visited.insert(DeadBlock).second)
       continue;
-    for (VPBlockBase *Succ :
-         to_vector(DeadBlock->successors())) {
+    for (VPBlockBase *Succ : to_vector(DeadBlock->successors())) {
       if (auto *SuccBB = dyn_cast<VPBasicBlock>(Succ))
         for (VPRecipeBase &R : SuccBB->phis())
           cast<VPPhiAccessors>(&R)->removeIncomingValueFor(DeadBlock);
