@@ -396,6 +396,10 @@ private:
                            ArrayRef<LayoutInfoLattice *> operands,
                            ArrayRef<const LayoutInfoLattice *> results);
 
+  void visitConvertLayoutOp(xegpu::ConvertLayoutOp convertLayout,
+                            ArrayRef<LayoutInfoLattice *> operands,
+                            ArrayRef<const LayoutInfoLattice *> results);
+
   bool hasParamsOfLayoutKind(xegpu::DistributeLayoutAttr anchorLayout);
 
 public:
@@ -482,6 +486,9 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](xegpu::StoreMatrixOp storeMatrixOp) {
         visitStoreMatrixOp(storeMatrixOp, operands, results);
+      })
+      .Case([&](xegpu::ConvertLayoutOp convertLayoutOp) {
+        visitConvertLayoutOp(convertLayoutOp, operands, results);
       })
       // All other ops.
       .Default([&](Operation *op) {
@@ -936,6 +943,17 @@ void LayoutInfoPropagation::visitLoadNdOp(
   propagateIfChanged(operands[0], operands[0]->meet(loadLayout));
 }
 
+/// Propagate the layout of the value to the tensor descriptor operand in
+/// ConvertLayoutOp.
+void LayoutInfoPropagation::visitConvertLayoutOp(
+    xegpu::ConvertLayoutOp convert, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  xegpu::DistributeLayoutAttr anchorLayout = convert.getTargetLayoutAttr();
+  LayoutInfo convertLayout(anchorLayout);
+  // Propagate the new layout to the tensor descriptor operand.
+  propagateIfChanged(operands[0], operands[0]->meet(convertLayout));
+}
+
 /// For vector::TransposeOp, the layout of the result is transposed and
 /// propagated to the operand.
 void LayoutInfoPropagation::visitTransposeOp(
@@ -1346,10 +1364,26 @@ LogicalResult ResolveLayoutConflicts::run() {
     // as anchor op for the reduction op's layout.
     if (isa<vector::MultiDimReductionOp>(op) || isa<vector::ReductionOp>(op)) {
       for (OpResult result : op->getResults()) {
-        if (result.getType().isIntOrFloat() || result.use_empty()) {
+        if (result.getType().isIntOrFloat()) {
           auto res = assignResultLayout(result);
           if (failed(res)) {
             DBGS() << "Failed to resolve vector consumer for multi-reduction "
+                   << *op << "\n";
+            return WalkResult::interrupt();
+          }
+        }
+      }
+    }
+    if (isa<RegionBranchOpInterface>(op)) {
+      auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op);
+      unsigned numResults = regionBranchOp->getNumResults();
+      for (unsigned i = 0; i < numResults; ++i) {
+        OpResult result = regionBranchOp->getResult(i);
+        if (result.use_empty()) {
+          auto res = assignResultLayout(result);
+          if (failed(res)) {
+            DBGS() << "Failed to resolve vector consumer for loop/switch "
+                      "result with no use: "
                    << *op << "\n";
             return WalkResult::interrupt();
           }
@@ -1369,6 +1403,8 @@ LogicalResult ResolveLayoutConflicts::run() {
         }
       }
       // Handle conflicts in vector operands.
+      LLVM_DEBUG(DBGS() << "Handling vector operand #" << operand.getOperandNumber()
+                        << ": " << operand.get() << " in operation: " << *op << "\n");
       if (isa<VectorType>(operandType)) {
         auto res = resolveVectorConsumer(operand);
         if (failed(res)) {
@@ -1507,7 +1543,7 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    xegpu::setDistributeLayoutAttr(result, layout);
+    // xegpu::setDistributeLayoutAttr(result, layout);
   }
   return success();
 }
@@ -1537,7 +1573,8 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
 static LogicalResult
 updateControlFlowOps(mlir::OpBuilder &builder,
                      mlir::RegionBranchTerminatorOpInterface terminator,
-                     GetLayoutFnTy getLayoutOfValue) {
+                     GetLayoutFnTy getLayoutOfValue,
+                     xegpu::LayoutKind layoutKind) {
   LLVM_DEBUG(DBGS() << "updateControlFlowOps: processing terminator: "
                     << *terminator << "\n");
   // Only process if the terminator is inside a region branch op.
@@ -1570,6 +1607,12 @@ updateControlFlowOps(mlir::OpBuilder &builder,
             DBGS() << "    skipping: not a TensorDescType or VectorType\n");
         continue;
       }
+
+      // debug print successorInput and successorOperand
+      LLVM_DEBUG(DBGS() << "    successor input: " << successorInput << "\n");
+      LLVM_DEBUG(DBGS() << "    successor operand: " << successorOperand->get()
+                        << "\n");
+
       xegpu::DistributeLayoutAttr successorInputLayout =
           getLayoutOfValue(successorInput);
       xegpu::DistributeLayoutAttr successorOperandLayout =
@@ -1601,6 +1644,15 @@ updateControlFlowOps(mlir::OpBuilder &builder,
       }
       // Get tensor descriptor type with the layout.
       if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType)) {
+        // if (successorInputLayout != successorOperandLayout) {
+        //   LLVM_DEBUG(DBGS()
+        //              << "    FAILURE: Conflicting layouts for region "
+        //                 "argument and operand forwarded as the argument: "
+        //              << successorInputLayout << " vs " <<
+        //              successorOperandLayout
+        //              << "\n");
+        //   return failure();
+        // }
         auto newTdescTy = xegpu::TensorDescType::get(
             tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
             tdescTy.getEncoding(), successorOperandLayout);
@@ -1609,6 +1661,22 @@ updateControlFlowOps(mlir::OpBuilder &builder,
         successorInput.setType(newTdescTy);
         continue;
       }
+
+      // if (auto vectorTy = dyn_cast<VectorType>(inputType)) {
+      //   SmallVector<int64_t> vectorShape(vectorTy.getShape().begin(),
+      //                                    vectorTy.getShape().end());
+      //   if (!successorInputLayout.isCompatibleWith(successorOperandLayout,
+      //                                              vectorShape, layoutKind))
+      //                                              {
+      //     LLVM_DEBUG(DBGS()
+      //                << "    FAILURE: Conflicting layouts for region "
+      //                   "argument and operand forwarded as the argument: "
+      //                << successorInputLayout << " vs " <<
+      //                successorOperandLayout
+      //                << "\n");
+      //     return failure();
+      //   }
+      // }
       // If the type is a vector type and this region argument is an OpResult,
       // set the layout attribute on the OpResult.
       if (auto result = dyn_cast<OpResult>(successorInput)) {
@@ -1720,7 +1788,7 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
       TypeSwitch<Operation *>(&op)
           .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
             r = updateControlFlowOps(builder, branchTermOp,
-                                     getXeGPULayoutForValue);
+                                     getXeGPULayoutForValue, layoutKind);
           })
           .Case([&](mlir::FunctionOpInterface funcOp) {
             r = updateFunctionOpInterface(builder, funcOp,
@@ -1748,6 +1816,17 @@ LogicalResult xegpu::resolveLayoutConflicts(Operation *target) {
 }
 
 void XeGPUPropagateLayoutPass::runOnOperation() {
+  // Remove layout attributes from SCF ops
+  getOperation()->walk([](Operation *op) {
+    SmallVector<StringAttr> attrsToRemove;
+    for (auto namedAttr : op->getDiscardableAttrs()) {
+      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+        attrsToRemove.push_back(namedAttr.getName());
+    }
+    for (auto attrName : attrsToRemove)
+      op->removeDiscardableAttr(attrName);
+  });
+
   xegpu::LayoutKind layoutKind;
   if (this->layoutKind == "lane") {
     layoutKind = xegpu::LayoutKind::Lane;
