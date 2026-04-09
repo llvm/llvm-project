@@ -18674,7 +18674,8 @@ static Function *getStructuredLoadFunction(Module *M, unsigned Factor,
                                              Intrinsic::aarch64_neon_ld3,
                                              Intrinsic::aarch64_neon_ld4};
   if (Scalable)
-    return Intrinsic::getOrInsertDeclaration(M, SVELoads[Factor - 2], {LDVTy});
+    return Intrinsic::getOrInsertDeclaration(M, SVELoads[Factor - 2],
+                                             {LDVTy, PtrTy});
 
   return Intrinsic::getOrInsertDeclaration(M, NEONLoads[Factor - 2],
                                            {LDVTy, PtrTy});
@@ -18691,7 +18692,8 @@ static Function *getStructuredStoreFunction(Module *M, unsigned Factor,
                                               Intrinsic::aarch64_neon_st3,
                                               Intrinsic::aarch64_neon_st4};
   if (Scalable)
-    return Intrinsic::getOrInsertDeclaration(M, SVEStores[Factor - 2], {STVTy});
+    return Intrinsic::getOrInsertDeclaration(M, SVEStores[Factor - 2],
+                                             {STVTy, PtrTy});
 
   return Intrinsic::getOrInsertDeclaration(M, NEONStores[Factor - 2],
                                            {STVTy, PtrTy});
@@ -31537,11 +31539,14 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
+    const Function *Caller = Base->getCaller();
     // Per-call SME attribute checks via SMECallAttrs are compile-time
     // expensive, avoid for non-SME targets. We do the checks even if the
     // target only has SVE, since streaming-mode changes might still be
     // required.
-    if (Subtarget->hasSME() || Subtarget->hasSVE()) {
+    if (Subtarget->hasSME() ||
+        Caller->hasFnAttribute("aarch64_pstate_sm_compatible") ||
+        Caller->hasFnAttribute("aarch64_za_state_agnostic")) {
       auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
       if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
           CallAttrs.requiresPreservingZT0() ||

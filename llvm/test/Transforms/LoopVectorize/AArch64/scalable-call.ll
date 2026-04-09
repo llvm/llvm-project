@@ -14,7 +14,7 @@ entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %b, i64 %iv
   %0 = load double, ptr %arrayidx, align 8
@@ -26,7 +26,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -38,7 +38,7 @@ entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %0 = call double @foo(double 10.0) #0
   %sub = fsub double %0, 1.000000e+00
@@ -48,7 +48,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -111,7 +111,7 @@ define void @vec_sin_no_mapping(ptr noalias nocapture %dst, ptr noalias nocaptur
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
   %0 = load float, ptr %arrayidx, align 4, !dbg !11
@@ -122,7 +122,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 
@@ -139,7 +139,7 @@ define void @vec_sin_no_mapping_ite(ptr noalias nocapture %dst, ptr noalias noca
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %if.end
+for.body:
   %i.07 = phi i64 [ %inc, %if.end ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
   %0 = load float, ptr %arrayidx, align 4, !dbg !11
@@ -160,7 +160,7 @@ if.end:
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 
@@ -175,7 +175,7 @@ define void @vec_sin_fixed_mapping(ptr noalias nocapture %dst, ptr noalias nocap
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
   %0 = load float, ptr %arrayidx, align 4, !dbg !11
@@ -186,7 +186,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 
@@ -199,7 +199,7 @@ define void @vec_sqrt_no_mapping(ptr noalias nocapture %dst, ptr noalias nocaptu
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
   %0 = load float, ptr %arrayidx, align 4
@@ -210,16 +210,13 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 
 
 declare double @foo(double)
 declare i64 @bar(ptr)
-declare double @llvm.sin.f64(double)
-declare float @llvm.sin.f32(float)
-declare float @llvm.sqrt.f32(float)
 
 declare <vscale x 2 x double> @foo_vec(<vscale x 2 x double>)
 declare <vscale x 2 x i64> @bar_vec(<vscale x 2 x ptr>)
