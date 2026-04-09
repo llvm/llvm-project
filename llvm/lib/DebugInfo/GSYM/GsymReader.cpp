@@ -135,7 +135,8 @@ llvm::Error GsymReader::parse() {
                              "AddrInfoOffsets section size mismatch");
 
   // Step 3: Parse each global data section.
-  llvm::Expected<StringRef> Bytes = getRequiredGlobalData(GlobalInfoType::AddrOffsets);
+  llvm::Expected<StringRef> Bytes =
+      getRequiredGlobalData(GlobalInfoType::AddrOffsets);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = parseAddrOffsets(*Bytes))
