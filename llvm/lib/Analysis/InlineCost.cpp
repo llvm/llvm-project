@@ -1319,6 +1319,7 @@ private:
     if (IsIndirectCall) {
       InlineParams IndirectCallParams = {/* DefaultThreshold*/ 0,
                                          /*HintThreshold*/ {},
+                                         /*OptSizeHintThreshold*/ {},
                                          /*ColdThreshold*/ {},
                                          /*OptSizeThreshold*/ {},
                                          /*OptMinSizeThreshold*/ {},
@@ -2130,8 +2131,11 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // Adjust the threshold based on inlinehint attribute and profile based
   // hotness information if the caller does not have MinSize attribute.
   if (!Caller->hasMinSize()) {
+    std::optional<int> HintThreshold = Caller->hasOptSize()
+                                           ? Params.OptSizeHintThreshold
+                                           : Params.HintThreshold;
     if (Callee.hasFnAttribute(Attribute::InlineHint))
-      Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+      Threshold = MaxIfValid(Threshold, HintThreshold);
 
     // FIXME: After switching to the new passmanager, simplify the logic below
     // by checking only the callsite hotness/coldness as we will reliably
@@ -2165,7 +2169,7 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
         // If callsite hotness can not be determined, we may still know
         // that the callee is hot and treat it as a weaker hint for threshold
         // increase.
-        Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+        Threshold = MaxIfValid(Threshold, HintThreshold);
       } else if (PSI->isFunctionEntryCold(&Callee)) {
         LLVM_DEBUG(dbgs() << "Cold callee.\n");
         // Do not apply bonuses for a cold callee including the
@@ -3148,6 +3152,7 @@ std::optional<int> llvm::getInliningCostEstimate(
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
   const InlineParams Params = {/* DefaultThreshold*/ 0,
                                /*HintThreshold*/ {},
+                               /*OptSizeHintThreshold*/ {},
                                /*ColdThreshold*/ {},
                                /*OptSizeThreshold*/ {},
                                /*OptMinSizeThreshold*/ {},
@@ -3387,6 +3392,8 @@ InlineParams llvm::getInlineParams(int Threshold) {
 
   // Set the HintThreshold knob from the -inlinehint-threshold.
   Params.HintThreshold = HintThreshold;
+  // Use same threshold for optsize by default.
+  Params.OptSizeHintThreshold = HintThreshold;
 
   // Set the HotCallSiteThreshold knob from the -hot-callsite-threshold.
   Params.HotCallSiteThreshold = HotCallSiteThreshold;
