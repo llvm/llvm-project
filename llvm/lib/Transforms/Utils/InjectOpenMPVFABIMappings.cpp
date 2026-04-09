@@ -56,8 +56,10 @@ STATISTIC(NumCompUsedAdded,
           "Number of `@llvm.compiler.used` operands that have been added.");
 
 // Convert `_ZGV` attrs into `vector-function-abi-variant` and emit
-// vector declarations.
-static void injectMappingsForFunction(Function &F) {
+// vector declarations. Returns true if the function was modified.
+static bool
+injectMappingsForFunction(Function &F,
+                          SmallVectorImpl<GlobalValue *> &NewDecls) {
   Module *M = F.getParent();
   FunctionType *ScalarFTy = F.getFunctionType();
 
@@ -72,10 +74,20 @@ static void injectMappingsForFunction(Function &F) {
     MangledNames.push_back(Key.str());
   }
   if (MangledNames.empty())
-    return;
+    return false;
+
+  // Preserve any pre-existing vector-function-abi-variant mappings.
+  SmallVector<std::string, 8> Mappings;
+  StringRef Existing =
+      F.getFnAttribute(VFABI::MappingsAttrName).getValueAsString();
+  if (!Existing.empty()) {
+    SmallVector<StringRef, 8> ExistingPieces;
+    Existing.split(ExistingPieces, ',');
+    for (const auto &P : ExistingPieces)
+      Mappings.push_back(P.str());
+  }
 
   // Build VFABI mapping strings and vector declarations.
-  SmallVector<std::string, 8> Mappings;
   for (const std::string &Name : MangledNames) {
     std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(Name, ScalarFTy);
     if (!Info)
@@ -124,12 +136,7 @@ static void injectMappingsForFunction(Function &F) {
                         << Info->VectorName << "` of type " << *VecFTy << "\n");
       ++NumVFDeclAdded;
 
-      // Make function declaration (without a body) "sticky" in the IR by
-      // listing it in the @llvm.compiler.used intrinsic.
-      appendToCompilerUsed(*M, {VecFunc});
-      LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Adding `" << Info->VectorName
-                        << "` to `@llvm.compiler.used`.\n");
-      ++NumCompUsedAdded;
+      NewDecls.push_back(VecFunc);
     }
 
     // Remove "_ZGV...".
@@ -147,12 +154,29 @@ static void injectMappingsForFunction(Function &F) {
                       << "`\n");
     ++NumFunctionsInjected;
   }
+
+  return true;
 }
 
 PreservedAnalyses InjectOpenMPVFABIMappings::run(Module &M,
                                                  ModuleAnalysisManager &AM) {
+  bool Changed = false;
+  SmallVector<GlobalValue *, 8> NewDecls;
   for (Function &F : M)
-    injectMappingsForFunction(F);
-  // Only IR attributes are added; all analyses remain valid.
-  return PreservedAnalyses::all();
+    Changed |= injectMappingsForFunction(F, NewDecls);
+
+  // Batch-add all new declarations to @llvm.compiler.used.
+  if (!NewDecls.empty()) {
+    appendToCompilerUsed(M, NewDecls);
+    NumCompUsedAdded += NewDecls.size();
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Added " << NewDecls.size()
+                      << " declarations to `@llvm.compiler.used`.\n");
+  }
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

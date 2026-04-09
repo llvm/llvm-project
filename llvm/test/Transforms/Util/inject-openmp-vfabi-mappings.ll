@@ -57,10 +57,10 @@ declare void @no_zgv(double) #9
 ; CHECK-DAG: attributes #9 = { noinline }
 
 ;; Pre-existing vector-function-abi-variant with additional _ZGV attr:
-;; the new _ZGV attr is processed and the existing mapping is overwritten.
+;; existing mappings are preserved and the new mapping is appended.
 declare void @already_has(double) #10
 ; CHECK-DAG: declare aarch64_vector_pcs void @_ZGVnN2v_already_has_extra(<2 x double>)
-; CHECK-DAG: attributes #10 = {{{.*}}"vector-function-abi-variant"="_ZGVnN2v_already_has_extra(_ZGVnN2v_already_has_extra)"{{.*}}}
+; CHECK-DAG: attributes #10 = {{{.*}}"vector-function-abi-variant"="_ZGVnN2v_already_has(_ZGVnN2v_already_has),_ZGVnN2v_already_has_extra(_ZGVnN2v_already_has_extra)"{{.*}}}
 
 ;; Malformed _ZGV attr: demangling fails, attr is kept; valid _ZGV is processed.
 declare void @malformed(double) #11

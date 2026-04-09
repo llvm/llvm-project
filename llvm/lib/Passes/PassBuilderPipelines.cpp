@@ -2257,6 +2257,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
       OpenMPOptCGSCCPass(ThinOrFullLTOPhase::FullLTOPostLink)));
 
+  // Enable LoopVectorize for OpenMP declare simd.
+  if (EnableOpenMPVFABIMappings)
+    MPM.addPass(InjectOpenMPVFABIMappings());
+
   invokePeepholeEPCallbacks(MainFPM, Level);
   MainFPM.addPass(JumpThreadingPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(MainFPM),
