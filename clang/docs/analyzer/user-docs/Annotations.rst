@@ -174,11 +174,20 @@ If a project uses custom functions for dynamic memory management (that e.g. act 
 Attribute 'ownership_returns' (Clang-specific)
 ----------------------------------------------
 
-Use this attribute to mark functions that return dynamically allocated memory. Takes a single argument, the type of the allocation (e.g. ``malloc`` or ``new``).
+Use this attribute to mark functions that return dynamically allocated memory.
+The first argument is the type of the allocation (e.g. ``malloc``, ``new``, or any other identifier).
+An optional second argument is the 1-based index of the function parameter that specifies the allocation size in bytes.
+The referenced parameter must have an integral type.
+
+This attribute may appear at most once per function declaration.
 
 .. code-block:: c
 
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  // Without size parameter:
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
+
+  // With size parameter (parameter 1 is the allocation size in bytes):
+  void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
 
 Attribute 'ownership_takes' (Clang-specific)
 --------------------------------------------
