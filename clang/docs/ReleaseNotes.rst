@@ -360,6 +360,12 @@ Improvements to Clang's diagnostics
 
 - Clang now emits an error when implicitly casting a complex type to a built-in vector type. (#GH186805)
 
+- Added ``-Wnonportable-include-path-separator`` (off by default) to catch
+  #include directives that use backslashes as a path separator. The warning
+  includes a FixIt to change all the backslashes to forward slashes, so that the
+  code can automatically be made portable to other host platforms that don't
+  support backslashes.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -399,6 +405,7 @@ Bug Fixes in This Version
   to "lambda" instead of "block". (#GH188661)
 - Fixed a crash on _BitInt(N) arrays where 129 ≤ N ≤ 192 due to incorrect array filler lowering. (#GH189643)
 - Fixed the behavior in C23 of ``auto``, by emitting an error when an array type is specified for a ``char *``. (#GH162694)
+- Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -420,6 +427,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed an alias template CTAD crash.
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
@@ -468,6 +476,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when explicitly casting a complex type to or from an atomic complex type. (#GH172208)
 - Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
 - Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
+- Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
 
 OpenACC Specific Changes
 ------------------------
@@ -624,6 +633,7 @@ OpenMP Support
 
 Improvements
 ^^^^^^^^^^^^
+- Improved substitution performance in concept checking. (#GH172266)
 
 Additional Information
 ======================

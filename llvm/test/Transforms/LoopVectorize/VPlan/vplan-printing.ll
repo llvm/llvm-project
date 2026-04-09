@@ -467,8 +467,6 @@ exit:
   ret void
 }
 
-declare float @llvm.sqrt.f32(float) nounwind readnone
-declare float @llvm.fmuladd.f32(float, float, float)
 
 define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-LABEL: VPlan for loop in 'print_expand_scev'

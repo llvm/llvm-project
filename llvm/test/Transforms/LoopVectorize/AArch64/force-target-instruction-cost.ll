@@ -910,5 +910,3 @@ exit:
 attributes #0 = { "target-features"="+neon,+sve" vscale_range(1,16) }
 attributes #1 = { "target-cpu"="neoverse-512tvb" }
 
-declare void @llvm.assume(i1 noundef)
-declare i64 @llvm.umin.i64(i64, i64)
