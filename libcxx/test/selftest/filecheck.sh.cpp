@@ -1,4 +1,4 @@
-//===-- C standard library header poll.h ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_POLL_H
-#define LLVM_LIBC_POLL_H
+// REQUIRES: has-filecheck
 
-#include "__llvm-libc-common.h"
-#include "llvm-libc-macros/poll-macros.h"
+// Make sure that we can use FileCheck to write tests when the `has-filecheck`
+// Lit feature is defined.
 
-%%public_api()
-
-#endif // LLVM_LIBC_POLL_H
+// RUN: echo "hello world" | FileCheck %s
+// CHECK: hello world

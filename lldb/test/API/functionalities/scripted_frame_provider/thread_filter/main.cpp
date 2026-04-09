@@ -1,4 +1,5 @@
 #include <atomic>
+#include <chrono>
 #include <thread>
 #include <vector>
 
@@ -11,6 +12,8 @@ void thread_work() {
   --g_barrier;
   while (g_barrier.load() > 0)
     ;
+  std::this_thread::sleep_for(
+      std::chrono::seconds(1)); // avoid timeout on Windows
   while (g_spin) // break in thread
     std::this_thread::yield();
 }
