@@ -293,8 +293,7 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
   SmallVector<int, 32> ShuffleMask(VF);
   for (unsigned LiveElts = VF; LiveElts > M1VF; LiveElts /= 2) {
     unsigned Half = LiveElts / 2;
-    for (unsigned j = 0; j < Half; ++j)
-      ShuffleMask[j] = Half + j;
+    std::iota(ShuffleMask.begin(), ShuffleMask.begin() + Half, Half);
     std::fill(ShuffleMask.begin() + Half, ShuffleMask.end(), -1);
     Value *Shuf = Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
     TmpVec = Builder.CreateMul(TmpVec, Shuf, "bin.rdx");
