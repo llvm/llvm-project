@@ -2452,3 +2452,20 @@ func.func @test_hoist_complex_constant(%arg0: !fir.ref<complex<f32>>) {
   }
   return
 }
+
+// -----
+// Test that fir.zero_bits is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_zero_bits(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.ptr<f32>>)
+// CHECK:           %[[ZERO:.*]] = fir.zero_bits !fir.ptr<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[ZERO]] to %[[ARG0]] : !fir.ref<!fir.ptr<f32>>
+func.func @test_hoist_zero_bits(%arg0: !fir.ref<!fir.ptr<f32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.zero_bits !fir.ptr<f32>
+    fir.store %0 to %arg0 : !fir.ref<!fir.ptr<f32>>
+  }
+  return
+}

@@ -549,7 +549,7 @@ def fir_UndefOp : fir_OneResultOp<"undefined", [Pure]> {
   let hasVerifier = 0;
 }
 
-def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoMemoryEffect]> {
+def fir_ZeroOp : fir_OneResultOp<"zero_bits", [Pure]> {
   let summary = "explicit polymorphic zero value of some type";
   let description = [{
     Constructs an ssa-value of the specified type with a value of zero for all
