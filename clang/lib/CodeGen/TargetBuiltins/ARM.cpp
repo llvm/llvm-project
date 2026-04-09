@@ -4666,14 +4666,36 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     auto *OrderC = cast<ConstantInt>(EmitScalarExpr(E->getArg(2)));
     auto *PolicyC = cast<ConstantInt>(EmitScalarExpr(E->getArg(3)));
 
-    // Compute pointee bit-width from arg0 and create as i32 constant
     QualType ValQT =
         E->getArg(0)->getType()->castAs<PointerType>()->getPointeeType();
     unsigned SizeBits = getContext().getTypeSize(ValQT);
-    auto *SizeC = llvm::ConstantInt::get(Int32Ty, SizeBits);
+    auto *StoreTy = Builder.getIntNTy(SizeBits);
+    Value *StoreBits;
+    if (ValQT->isIntegerType()) {
+      StoreBits = Builder.CreateIntCast(StoreValue, StoreTy,
+                                        ValQT->isSignedIntegerType());
+    } else if (ValQT->isPointerType()) {
+      StoreBits = Builder.CreatePtrToInt(StoreValue, StoreTy);
+    } else {
+      assert(ValQT->isRealFloatingType() &&
+             "unexpected type for stshh atomic store");
+      StoreBits = Builder.CreateBitCast(StoreValue, StoreTy);
+    }
 
-    Value *StoreValue64 = Builder.CreateIntCast(StoreValue, Int64Ty,
-                                                ValQT->isSignedIntegerType());
+    Value *StoreValue64 = Builder.CreateZExt(StoreBits, Int64Ty);
+
+    switch (OrderC->getZExtValue()) {
+    case 0:
+      break;
+    case 3:
+      Builder.CreateFence(llvm::AtomicOrdering::Release);
+      break;
+    case 5:
+      Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
+      break;
+    default:
+      llvm_unreachable("unexpected memory order for stshh atomic store");
+    }
 
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
                                    {StoreAddr->getType()});
@@ -4683,7 +4705,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(
         F, {StoreAddr, StoreValue64,
             ConstantInt::get(Int32Ty, OrderC->getZExtValue()),
-            ConstantInt::get(Int32Ty, PolicyC->getZExtValue()), SizeC});
+            ConstantInt::get(Int32Ty, PolicyC->getZExtValue()),
+            ConstantInt::get(Int32Ty, SizeBits)});
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||

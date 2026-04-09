@@ -72,6 +72,19 @@ define void @test_keep_release_i32(ptr %p, i64 %v) {
   ret void
 }
 
+define void @test_keep_release_f32(ptr %p, float %v) {
+; CHECK-LABEL: test_keep_release_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlr w8, [x0]
+; CHECK-NEXT:    ret
+  %bits = bitcast float %v to i32
+  %ext = zext i32 %bits to i64
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %ext, i32 3, i32 0, i32 32)
+  ret void
+}
+
 define void @test_keep_release_i64(ptr %p, i64 %v) {
 ; CHECK-LABEL: test_keep_release_i64:
 ; CHECK:       // %bb.0:

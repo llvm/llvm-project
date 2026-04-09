@@ -30,6 +30,7 @@ void test_u8(unsigned char *p, unsigned char v) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[V_ADDR]], align 2
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i64
+// CHECK-NEXT:    fence release
 // CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0(ptr [[TMP0]], i64 [[TMP2]], i32 3, i32 1, i32 16)
 // CHECK-NEXT:    ret void
 //
@@ -47,6 +48,7 @@ void test_u16(unsigned short *p, unsigned short v) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    fence seq_cst
 // CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0(ptr [[TMP0]], i64 [[TMP2]], i32 5, i32 0, i32 32)
 // CHECK-NEXT:    ret void
 //
@@ -67,5 +69,41 @@ void test_u32(unsigned int *p, unsigned int v) {
 // CHECK-NEXT:    ret void
 //
 void test_u64(unsigned long *p, unsigned long v) {
+  __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 1);
+}
+
+// CHECK-LABEL: define dso_local void @test_f32(
+// CHECK-SAME: ptr noundef [[P:%.*]], float noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store float [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[TMP1]] to i32
+// CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+// CHECK-NEXT:    fence release
+// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0(ptr [[TMP0]], i64 [[TMP3]], i32 3, i32 0, i32 32)
+// CHECK-NEXT:    ret void
+//
+void test_f32(float *p, float v) {
+  __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELEASE, 0);
+}
+
+// CHECK-LABEL: define dso_local void @test_ptr(
+// CHECK-SAME: ptr noundef [[P:%.*]], ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
+// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0(ptr [[TMP0]], i64 [[TMP2]], i32 0, i32 1, i32 64)
+// CHECK-NEXT:    ret void
+//
+void test_ptr(void **p, void *v) {
   __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 1);
 }

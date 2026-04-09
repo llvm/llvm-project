@@ -17,20 +17,28 @@ void test_const_pointer(const unsigned int *p, unsigned int v) {
   // expected-error@-1 {{address argument to atomic builtin cannot be const-qualified}}
 }
 
-void test_non_integer_pointer(float *p, float v) {
+void test_float_ok(float *p, float v) {
   __builtin_arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
-  // expected-error@-1 {{address argument to '__arm_atomic_store_with_stshh' must be a pointer to an 8,16,32, or 64-bit integer type}}
+}
+
+void test_pointer_ok(void **p, void *v) {
+  __builtin_arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
+}
+
+struct IncompleteType;
+void test_invalid_struct_pointer(struct IncompleteType *p, int v) {
+  __builtin_arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
+  // expected-error@-1 {{address argument to '__arm_atomic_store_with_stshh' must be a pointer to an 8,16,32, or 64-bit integer, floating-point, or pointer type}}
 }
 
 void test_invalid_bit_width(__int128 *p, __int128 v) {
   __builtin_arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
-  // expected-error@-1 {{address argument to '__arm_atomic_store_with_stshh' must be a pointer to an 8,16,32, or 64-bit integer type}}
+  // expected-error@-1 {{address argument to '__arm_atomic_store_with_stshh' must be a pointer to an 8,16,32, or 64-bit integer, floating-point, or pointer type}}
 }
 
-struct IncompleteType;
 void test_incomplete_pointee(struct IncompleteType *p, int v) {
   __builtin_arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
-  // expected-error@-1 {{address argument to '__arm_atomic_store_with_stshh' must be a pointer to an 8,16,32, or 64-bit integer type}}
+  // expected-error@-1 {{address argument to '__arm_atomic_store_with_stshh' must be a pointer to an 8,16,32, or 64-bit integer, floating-point, or pointer type}}
 }
 
 void test_invalid_memory_order(unsigned int *p, unsigned int v) {

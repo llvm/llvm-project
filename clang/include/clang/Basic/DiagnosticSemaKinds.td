@@ -9600,7 +9600,7 @@ def err_atomic_builtin_pointer_size : Error<
   "type (%0 invalid)">;
 def err_arm_atomic_store_with_stshh_bad_type : Error<
   "address argument to '__arm_atomic_store_with_stshh' must be a pointer to an "
-  "8,16,32, or 64-bit integer type (%0 invalid)">;
+  "8,16,32, or 64-bit integer, floating-point, or pointer type (%0 invalid)">;
 def err_arm_atomic_store_with_stshh_bad_value_type : Error<
   "value argument to '__arm_atomic_store_with_stshh' must be %0; got %1">;
 def err_arm_atomic_store_with_stshh_bad_order : Error<
