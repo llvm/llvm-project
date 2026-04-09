@@ -665,9 +665,9 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 // FastCC has less than 1% performance improvement for some particular
 // benchmark. But theoretically, it may have benefit for some cases.
 static bool CC_RISCV_FastCC_ARG(unsigned ValNo, MVT ValVT, MVT LocVT,
-                               CCValAssign::LocInfo LocInfo,
-                               ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
-                               CCState &State) {
+                                CCValAssign::LocInfo LocInfo,
+                                ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                CCState &State) {
   const MachineFunction &MF = State.getMachineFunction();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
