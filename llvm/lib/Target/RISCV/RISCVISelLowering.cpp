@@ -20326,10 +20326,12 @@ static SDValue foldSelectToUSATI(SDNode *N, SelectionDAG &DAG,
                                               m_SpecificCondCode(ISD::SETGT)))))
     return SDValue();
 
-  // FalseSrc may have been optimized from a truncate of a truncate. There may
-  // still be a truncate on Src. Look through it so we can compare them.
+  // It's possible that the input to the setccs is also a truncate, in that
+  // case the input to the truncate on the select's false operand may be the
+  // same as the input to this setcc truncate. We need to look through the
+  // setcc truncate to make sure CmpSrc and FalseSrc come from the same value.
   SDValue CmpSrc = Src;
-  if (CmpSrc.getOpcode() == ISD::TRUNCATE)
+  if (CmpSrc != FalseSrc && CmpSrc.getOpcode() == ISD::TRUNCATE)
     CmpSrc = CmpSrc.getOperand(0);
 
   if (CmpSrc != FalseSrc)
