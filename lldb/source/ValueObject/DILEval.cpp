@@ -750,6 +750,18 @@ Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
   if (rhs_type.GetTypeName(false) != "<invalid>")
     rhs = rhs->Cast(rhs_type);
 
+  // Pointer checks. Should only allow assigning pointer types to pointer
+  // variables.
+  bool lhs_is_pointer = lhs->GetCompilerType().IsPointerType();
+  bool rhs_is_pointer = rhs->GetCompilerType().IsPointerType();
+  if ((lhs_is_pointer && !rhs_is_pointer)
+      || (!lhs_is_pointer && rhs_is_pointer)) {
+    std::string errMsg =
+        "Invalid assignment: Can only assign pointers to pointers";
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                location);
+  }
+
   Status status;
   lhs->SetValueFromInteger(rhs, status, m_allow_var_updates);
   if (status.Success())
@@ -781,6 +793,18 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddAssign(
   if (sum_type.GetTypeName(false) != "<invalid>")
     sum = sum->Cast(sum_type);
 
+  // Pointer checks. Should only allow assigning pointer types to pointer
+  // variables.
+  bool lhs_is_pointer = lhs->GetCompilerType().IsPointerType();
+  bool rhs_is_pointer = sum->GetCompilerType().IsPointerType();
+  if ((lhs_is_pointer && !rhs_is_pointer)
+      || (!lhs_is_pointer && rhs_is_pointer)) {
+    std::string errMsg =
+        "Invalid assignment: Can only assign pointers to pointers";
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                location);
+  }
+
   Status status;
   lhs->SetValueFromInteger(sum, status, m_allow_var_updates);
   if (status.Success())
@@ -811,6 +835,18 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubAssign(
   // as is.
   if (diff_type.GetTypeName(false) != "<invalid>")
     diff = diff->Cast(diff_type);
+
+  // Pointer checks. Should only allow assigning pointer types to pointer
+  // variables.
+  bool lhs_is_pointer = lhs->GetCompilerType().IsPointerType();
+  bool rhs_is_pointer = diff->GetCompilerType().IsPointerType();
+  if ((lhs_is_pointer && !rhs_is_pointer)
+      || (!lhs_is_pointer && rhs_is_pointer)) {
+    std::string errMsg =
+        "Invalid assignment: Can only assign pointers to pointers";
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                location);
+  }
 
   Status status;
   lhs->SetValueFromInteger(diff, status, m_allow_var_updates);

@@ -29,3 +29,20 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect("frame variable 'f -= -2.0f'", substrs=["2.5"])
         self.expect("frame variable 'f -= -2.5f'", substrs=["5"])
         self.expect("frame variable 'f -= eTwo'", substrs=["4"])
+
+        Is32Bit = False
+        if self.target().GetAddressByteSize() == 4:
+            Is32Bit = True
+
+        self.expect(
+            "frame variable 'i -= p'", # Try assigning pointer to int.
+            error = True,
+            substrs = ["invalid operands to binary expression"],
+        )
+
+        if Is32Bit:
+            self.expect("frame variable 'p'", substrs=["p = 0x0000000a"])
+            self.expect("frame variable 'p -= 2'", substrs=["p = 0x00000002"])
+        else:
+            self.expect("frame variable 'p'", substrs=["p = 0x000000000000000a"])
+            self.expect("frame variable 'p -= 2'", substrs=["p = 0x0000000000000002"])
