@@ -665,14 +665,50 @@ InsertionPoint AllocMemConversion::findAllocaInsertionPoint(
   }
 
   if (lastOperand) {
-    // there were value operands to the allocmem so insert after the last one
+    // There were value operands to the allocmem so insert after the last one
     LLVM_DEBUG(llvm::dbgs()
                << "--Placing after last operand: " << *lastOperand << "\n");
+    // Check we aren't moving across a stackrestore scope boundary.
+    // The last operand may have been defined in an earlier stacksave/
+    // stackrestore scope. Placing the alloca at the operand's location would
+    // put it in the wrong scope, causing it to get reclaimed before its
+    // actual use.
+    //
+    // To start, we find the ancestor of oldAlloc that resides in lastOperand's
+    // block. If oldAlloc is in the same block, this is oldAlloc itself.
+    // If oldAlloc is nested in a region, this is the enclosing op in
+    // lastOperand's block. If no such ancestor exists (e.g. the blocks are
+    // siblings), conservatively fall back to the allocmem's own location.
+    mlir::Operation *target = oldAlloc.getOperation();
+    while (target && target->getBlock() != lastOperand->getBlock())
+      target = target->getParentOp();
+    if (!target) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "--Cannot find allocmem ancestor in lastOperand's "
+                    "block, falling back to allocmem location\n");
+      return checkReturn(oldAlloc.getOperation());
+    }
+
+    // Walk from lastOperand to target in the same block, checking for
+    // stackrestore ops. We do not descend into regions of intervening
+    // operations; a stackrestore inside a region is expected to be paired
+    // with its own stacksave and does not affect the enclosing scope.
+    for (mlir::Operation *op = lastOperand->getNextNode(); op && op != target;
+         op = op->getNextNode()) {
+      if (mlir::isa<mlir::LLVM::StackRestoreOp>(op)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "--stackrestore found between lastOperand and "
+                      "allocmem, falling back to allocmem location\n");
+        return checkReturn(oldAlloc.getOperation());
+      }
+    }
+
     // check we aren't moving out of an omp region
     auto lastOpOmpRegion =
         lastOperand->getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
     if (lastOpOmpRegion == oldOmpRegion)
       return checkReturn(lastOperand);
+
     // Presumably this happened because the operands became ready before the
     // start of this openmp region. (lastOpOmpRegion != oldOmpRegion) should
     // imply that oldOmpRegion comes after lastOpOmpRegion.

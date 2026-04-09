@@ -430,7 +430,6 @@ folly::coro::Task<void> yield1() {
 // yield_value + await(yield)
 // CIR: %[[YIELD_TASK:.*]] = cir.call @_Z5yieldv(){{.*}}
 // CIR: cir.store{{.*}} %[[YIELD_TASK]], %[[T_ADDR]]
-// CIR: cir.copy %[[T_ADDR]] to %[[AWAITER_COPY_ADDR]]
 // CIR: %[[AWAITER:.*]] = cir.load{{.*}} %[[AWAITER_COPY_ADDR]]
 // CIR: %[[YIELD_SUSP:.*]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type11yield_valueES2_(%[[PROMISE]], %[[AWAITER]]){{.*}}
 // CIR: cir.store{{.*}} %[[YIELD_SUSP]], %[[SUSP1]]

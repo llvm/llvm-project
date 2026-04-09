@@ -5,6 +5,6 @@ name: test_low_level_type_is_single_s_p
 body: |
   bb.0:
     liveins: $q0
-    ; CHECK: [[@LINE+1]]:15: expected integers after 's'/'p' type character
+    ; CHECK: [[@LINE+1]]:15: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
     %0:_(<2 x p>) = COPY $q0
 ...

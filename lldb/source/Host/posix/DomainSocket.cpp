@@ -227,7 +227,7 @@ DomainSocket::FromBoundNativeSocket(NativeSocket sockfd, bool should_close) {
   if (getsockname(sockfd, (struct sockaddr *)&addr, &addr_len) == -1)
     return llvm::createStringError("not a socket or error occurred");
   if (addr.sun_family != AF_UNIX)
-    return llvm::createStringError("Bad socket type");
+    return llvm::createStringError("bad socket type");
 #ifdef __linux__
   if (addr_len > offsetof(struct sockaddr_un, sun_path) &&
       addr.sun_path[0] == '\0')

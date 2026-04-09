@@ -611,3 +611,27 @@ namespace PR37250 {
   const V v;
   const S s{v};
 }
+
+namespace PR155416 {
+  struct S;
+
+  struct S {
+    int a;
+  };
+
+  struct C : S {
+    C() : S{0} {}
+  };
+
+  template<typename T>
+  struct St;
+
+  template<typename T>
+  struct St{
+    T a;
+  };
+
+  struct Ct : St<int> {
+    Ct() : St{0} {}
+  };
+}
