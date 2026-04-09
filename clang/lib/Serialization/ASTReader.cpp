@@ -2873,7 +2873,9 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     Overridden = false;
   }
 
-  auto File = FileMgr.getOptionalFileRef(*Filename, /*OpenFile=*/false);
+  auto File = FileMgr.getOptionalFileRef(*Filename, /*OpenFile=*/false,
+                                         /*CacheFailure=*/true,
+                                         /*IsText=*/false);
 
   // For an overridden file, create a virtual file with the stored
   // size/timestamp.
@@ -2932,7 +2934,12 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     if (StoredContentHash == 0)
       return OriginalChange;
 
-    auto MemBuffOrError = FileMgr.getBufferForFile(*File);
+    auto MemBuffOrError =
+        FileMgr.getBufferForFile(*File,
+                                 /*IsVolatile=*/false,
+                                 /*RequiresNullTerminator=*/false,
+                                 /*MaybeLimit=*/std::nullopt,
+                                 /*IsText=*/false);
     if (!MemBuffOrError) {
       if (!Complain)
         return OriginalChange;
@@ -5948,13 +5955,21 @@ bool ASTReader::readASTFileControlBlock(
 
     // FIXME: This allows use of the VFS; we do not allow use of the
     // VFS when actually loading a module.
-    auto Entry =
-        Filename == "-" ? FileMgr.getSTDIN() : FileMgr.getFileRef(Filename);
+    auto Entry = Filename == "-" ? FileMgr.getSTDIN()
+                                 : FileMgr.getFileRef(Filename,
+                                                      /*OpenFile=*/false,
+                                                      /*CacheFailure=*/true,
+                                                      /*IsText=*/false);
     if (!Entry) {
       llvm::consumeError(Entry.takeError());
       return true;
     }
-    auto BufferOrErr = FileMgr.getBufferForFile(*Entry);
+    auto BufferOrErr =
+        FileMgr.getBufferForFile(*Entry,
+                                 /*IsVolatile=*/false,
+                                 /*RequiresNullTerminator=*/false,
+                                 /*MaybeLimit=*/std::nullopt,
+                                 /*IsText=*/false);
     if (!BufferOrErr)
       return true;
     OwnedBuffer = std::move(*BufferOrErr);
