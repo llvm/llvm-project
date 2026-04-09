@@ -952,6 +952,7 @@ cc_test(
         "//llvm:MCAApplication",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:X86CodeGen",
         "//llvm:X86UtilsAndDesc",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
