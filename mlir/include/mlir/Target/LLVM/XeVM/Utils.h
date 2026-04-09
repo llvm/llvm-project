@@ -61,10 +61,10 @@ protected:
 
   /// Compiles to native code using the `ocloc` shared library API, in-process,
   /// without temporary files. Only available when the library is linked in.
-#if MLIR_XEVM_OCLOC_AVAILABLE
+#if MLIR_XEVM_OCLOC_LIB_AVAILABLE
   FailureOr<SmallVector<char, 0>>
   compileToBinaryViaLibocloc(StringRef asmStr, StringRef inputFormat);
-#endif // MLIR_XEVM_OCLOC_AVAILABLE
+#endif // MLIR_XEVM_OCLOC_LIB_AVAILABLE
 
   /// GPU compilation target options.
   gpu::TargetOptions targetOptions;

@@ -241,12 +241,12 @@ if (OCLOC_FOUND)
   target_link_libraries(MLIRXeVMTarget PRIVATE "${OCLOC_LIBRARY}")
   target_compile_definitions(obj.MLIRXeVMTarget
     PRIVATE
-    MLIR_XEVM_OCLOC_AVAILABLE=1
+    MLIR_XEVM_OCLOC_LIB_AVAILABLE=1
   )
 else()
   target_compile_definitions(obj.MLIRXeVMTarget
     PRIVATE
-    MLIR_XEVM_OCLOC_AVAILABLE=0
+    MLIR_XEVM_OCLOC_LIB_AVAILABLE=0
   )
   message(WARNING "ocloc not found, MLIRXeVMTarget will not be able to use ocloc for native binary compilation.")
 endif()
