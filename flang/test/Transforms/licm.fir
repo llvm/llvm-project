@@ -2469,3 +2469,22 @@ func.func @test_hoist_zero_bits(%arg0: !fir.ref<!fir.ptr<f32>>) {
   }
   return
 }
+
+// -----
+// Test that fir.emboxchar is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_emboxchar(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.char<1>>,
+// CHECK-SAME:      %[[ARG1:.*]]: i32,
+// CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<!fir.boxchar<1>>)
+// CHECK:           %[[BC:.*]] = fir.emboxchar %[[ARG0]], %[[ARG1]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[BC]] to %[[ARG2]] : !fir.ref<!fir.boxchar<1>>
+func.func @test_hoist_emboxchar(%arg0: !fir.ref<!fir.char<1>>, %arg1: i32, %arg2: !fir.ref<!fir.boxchar<1>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg3 = %c1 to %c10 step %c1 {
+    %0 = fir.emboxchar %arg0, %arg1 : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
+    fir.store %0 to %arg2 : !fir.ref<!fir.boxchar<1>>
+  }
+  return
+}

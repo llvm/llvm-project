@@ -1030,7 +1030,7 @@ def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
   let hasVerifier = 1;
 }
 
-def fir_EmboxCharOp : fir_Op<"emboxchar", [NoMemoryEffect]> {
+def fir_EmboxCharOp : fir_Op<"emboxchar", [Pure]> {
   let summary = "boxes a given CHARACTER reference and its LEN parameter";
 
   let description = [{
