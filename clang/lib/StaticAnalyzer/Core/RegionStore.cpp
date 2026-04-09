@@ -2571,8 +2571,7 @@ RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
   // have installed a more precise default value at offset 0. Still allow
   // implicit defaults for scalars and pointers so regular zero-initialization
   // continues to work, e.g. for `new int[10]{}`.
-  if ((T->isStructureOrClassType() || T->isArrayType() || T->isUnionType()) &&
-      B.getDefaultBinding(R).has_value()) {
+  if (T->isAggregateType() && B.getDefaultBinding(R).has_value()) {
     return B;
   }
 
