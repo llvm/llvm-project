@@ -5975,7 +5975,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Currently this code path still relies on code re-using SCEVs expanded
   // directly to IR instructions.
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
-    VPlanTransforms::expandSCEVsToVPInstructions(BestVPlan, *PSE.getSE());
+    VPlanTransforms::expandSCEVsToVPInstructions(BestVPlan, *PSE.getSE(), DT);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::simplifyKnownEVL(BestVPlan, BestVF, PSE);

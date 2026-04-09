@@ -465,8 +465,10 @@ struct VPlanTransforms {
 
   /// Try to expand VPExpandSCEVRecipes in \p Plan's entry block to
   /// VPInstructions. Recipes that cannot be expanded (like casts, min/max) are
-  /// kept for later IR-level expansion.
-  static void expandSCEVsToVPInstructions(VPlan &Plan, ScalarEvolution &SE);
+  /// kept for later IR-level expansion. When a DominatorTree \p DT is provided,
+  /// existing IR values that dominate the entry block may be reused.
+  static void expandSCEVsToVPInstructions(VPlan &Plan, ScalarEvolution &SE,
+                                          DominatorTree *DT = nullptr);
 
   /// Expand remaining VPExpandSCEVRecipes in \p Plan's entry block using
   /// SCEVExpander. Each VPExpandSCEVRecipe is replaced with a live-in wrapping

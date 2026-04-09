@@ -13,6 +13,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
@@ -190,6 +191,7 @@ class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
   DebugLoc DL;
+  DominatorTree *DT;
 
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
@@ -197,8 +199,9 @@ class VPSCEVExpander {
   VPValue *tryToReuseIRValue(const SCEV *S);
 
 public:
-  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL = {})
-      : Builder(Builder), SE(SE), DL(DL) {}
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL = {},
+                 DominatorTree *DT = nullptr)
+      : Builder(Builder), SE(SE), DL(DL), DT(DT) {}
 
   /// Try to expand \p S into recipes and live-ins using the builder. Returns
   /// nullptr if \p S cannot be expanded yet.
