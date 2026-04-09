@@ -25,7 +25,7 @@ backend EventImpl::getBackend() const noexcept {
 
 void EventImpl::wait() {
   // MOffloadEvent == nullptr when the event is default constructed. Default
-  // constructed event is immediately ready.
+  // constructed event is immediately completed.
   if (!MOffloadEvent)
     return;
 

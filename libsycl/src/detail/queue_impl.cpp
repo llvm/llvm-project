@@ -20,7 +20,7 @@ QueueImpl::QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
     : MIsInorder(false), MAsyncHandler(asyncHandler), MPropList(propList),
       MDevice(deviceImpl),
       MContext(MDevice.getPlatformImpl().getDefaultContext()) {
-  callAndThrow(olCreateQueue, MDevice.getHandle(), &MOffloadQueue);
+  callAndThrow(olCreateQueue, MDevice.getOLHandle(), &MOffloadQueue);
 }
 
 QueueImpl::~QueueImpl() {

@@ -35,12 +35,10 @@ class QueueImpl;
 class _LIBSYCL_EXPORT queue {
 public:
   queue(const queue &rhs) = default;
-
   queue(queue &&rhs) = default;
-
   queue &operator=(const queue &rhs) = default;
-
   queue &operator=(queue &&rhs) = default;
+  ~queue() = default;
 
   friend bool operator==(const queue &lhs, const queue &rhs) {
     return lhs.impl == rhs.impl;
