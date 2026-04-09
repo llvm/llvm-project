@@ -4795,7 +4795,7 @@ public:
   /// Returns the single VF of the plan, asserting that the plan has exactly
   /// one VF.
   ElementCount getSingleVF() const {
-    assert(size(VFs) == 1 && "expected plan with single VF");
+    assert(VFs.size() == 1 && "expected plan with single VF");
     return VFs[0];
   }
 

@@ -1639,8 +1639,15 @@ the Clang Static Analyzer makes sure that allocating functions annotated with
 ``malloc`` are treated like they used the standard ``malloc()``, and can be
 safely deallocated with the standard ``free()``.
 
-* Use ``ownership_returns`` to mark a function as an allocating function. Takes
-  1 parameter to denote the allocation type.
+* Use ``ownership_returns`` to mark a function as an allocating function.
+  It takes 1 or 2 parameters.
+  The first parameter is a user-provided identifier representing the "kind" of the allocation.
+  This is basically what is enforced when checking the deallocation.
+  The second parameter is optional.
+  It represents the index of the parameter that represents the allocation size in bytes (counting from 1).
+  The referenced parameter must have some integral type.
+  This attribute may appear at most once per declaration.
+  If forward declarations have this attribute, those must have the same parameters.
 * Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
   parameters: the allocation type, and the index of the parameter that is being
   deallocated (counting from 1).
@@ -1660,7 +1667,10 @@ Example:
 
   // Denotes that my_malloc will return with a dynamically allocated piece of
   // memory using malloc().
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
+
+  // 'sz' (parameter 1) is the allocation size.
+  void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
 
   // Denotes that my_free will deallocate its parameter using free().
   void __attribute((ownership_takes(malloc, 1))) my_free(void *);

@@ -233,7 +233,7 @@ Changes in existing checks
   C++ files because suggested ``reinterpret_cast`` is not available in pure C.
 
 - Improved :doc:`bugprone-derived-method-shadowing-base-method
-  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by 
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by
   correctly ignoring function templates.
 
 - Improved :doc:`bugprone-exception-escape
@@ -264,7 +264,7 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
   user-defined type and by removing detection of the compiler generated ``std``
-  namespace extensions. 
+  namespace extensions.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
@@ -486,9 +486,13 @@ Changes in existing checks
     to ``bool`` in C.
 
 - Improved :doc:`readability-non-const-parameter
-  <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
-  positives on parameters used in dependent expressions (e.g. inside generic
-  lambdas).
+  <clang-tidy/checks/readability/non-const-parameter>` check:
+
+  - Avoid false positives on parameters used in dependent expressions
+    (e.g. inside generic lambdas).
+
+  - Fixed a false positive in array subscript expressions where the types are
+    not yet resolved.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

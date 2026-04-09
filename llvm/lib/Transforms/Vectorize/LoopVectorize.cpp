@@ -4377,7 +4377,7 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
   if (EpilogueVectorizationForceVF > 1) {
     if (EpilogueVectorizationForceVF >=
         IC * estimateElementCount(MainLoopVF, CM.getVScaleForTuning())) {
-      // Note that the main loop leave IC * MainLoopVF iterations iff a scalar
+      // Note that the main loop leaves IC * MainLoopVF iterations iff a scalar
       // epilogue is required, but then the epilogue loop also requires a scalar
       // epilogue.
       LLVM_DEBUG(dbgs() << "LEV: Forced epilogue VF results in dead epilogue "
