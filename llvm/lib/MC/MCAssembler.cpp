@@ -804,7 +804,7 @@ void MCAssembler::relaxPrefAlign(MCFragment &F) {
   uint64_t RawStart = F.Offset + F.getFixedSize();
   const MCSymbol &End = F.getPrefAlignEnd();
   if (!End.getFragment() || End.getFragment()->getParent() != F.getParent()) {
-    recordError(SMLoc(), "end symbol '" + End.getName() +
+    recordError(SMLoc(), ".prefalign end symbol '" + End.getName() +
                              "' must be in the current section");
     return;
   }
@@ -827,6 +827,9 @@ void MCAssembler::relaxPrefAlign(MCFragment &F) {
   F.VarContentEnd = F.VarContentStart + NewPadSize;
   if (F.VarContentEnd > F.getParent()->ContentStorage.size())
     F.getParent()->ContentStorage.resize(F.VarContentEnd);
+  // Update the maximum alignment on the current section if necessary, similar
+  // to MCObjectStreamer::emitValueToAlignment.
+  F.getParent()->ensureMinAlignment(NewAlign);
 }
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFragment &F,

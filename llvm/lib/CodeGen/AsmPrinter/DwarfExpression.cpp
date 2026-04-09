@@ -723,6 +723,12 @@ bool DwarfExpression::addExpression(
       emitUnsigned(Op->getArg(0));
       emitSigned(Op->getArg(1));
       break;
+    case dwarf::DW_OP_LLVM_implicit_pointer:
+      // Handled in DwarfCompileUnit::emitImplicitPointerLocation for
+      // Loc::Single variables. If we reach here, the variable has a
+      // location list or other unsupported path. Drop the
+      // location rather than crashing.
+      return false;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }

@@ -13,6 +13,7 @@ Implementation Status
    dirent
    endian
    errno
+   fcntl
    fenv
    float
    glob
@@ -32,6 +33,7 @@ Implementation Status
    strings
    sys/mman
    sys/resource
+   sys/socket
    sys/stat
    sys/statvfs
    sys/time

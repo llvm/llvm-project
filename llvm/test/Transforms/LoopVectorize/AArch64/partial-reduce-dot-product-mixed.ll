@@ -86,7 +86,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -101,7 +101,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -186,7 +186,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -201,7 +201,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -281,7 +281,7 @@ define i32 @sudot_neon(ptr %a, ptr %b) #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -296,7 +296,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 
@@ -376,7 +376,7 @@ define i32 @usdot_neon(ptr %a, ptr %b) #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -391,7 +391,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 

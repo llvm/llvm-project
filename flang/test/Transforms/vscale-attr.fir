@@ -9,11 +9,11 @@
 // RUN: not fir-opt --vscale-attr="vscale-min=16 vscale-max=8" %s 2>&1 | FileCheck %s --check-prefix=VSCALE-MIN-GREATER
 
 
-// CHECK-DEFAULT: attributes {vscale_range = #llvm.vscale_range<minRange = 1 : i32, maxRange = 0 : i32>}
-// CHECK-MIN: attributes {vscale_range = #llvm.vscale_range<minRange = 4 : i32, maxRange = 0 : i32>}
-// CHECK-MAX: attributes {vscale_range = #llvm.vscale_range<minRange = 1 : i32, maxRange = 16 : i32>}
-// CHECK-BOTH: attributes {vscale_range = #llvm.vscale_range<minRange = 8 : i32, maxRange = 16 : i32>}
-// CHECK-EQUAL: attributes {vscale_range = #llvm.vscale_range<minRange = 8 : i32, maxRange = 8 : i32>}
+// CHECK-DEFAULT: attributes {llvm.vscale_range = #llvm.vscale_range<minRange = 1 : i32, maxRange = 0 : i32>}
+// CHECK-MIN: attributes {llvm.vscale_range = #llvm.vscale_range<minRange = 4 : i32, maxRange = 0 : i32>}
+// CHECK-MAX: attributes {llvm.vscale_range = #llvm.vscale_range<minRange = 1 : i32, maxRange = 16 : i32>}
+// CHECK-BOTH: attributes {llvm.vscale_range = #llvm.vscale_range<minRange = 8 : i32, maxRange = 16 : i32>}
+// CHECK-EQUAL: attributes {llvm.vscale_range = #llvm.vscale_range<minRange = 8 : i32, maxRange = 8 : i32>}
 
 // VSCALE-MIN-0:      VScaleAttr: vscaleMin has to be a power-of-two greater than 0
 // VSCALE-MIN-NO-PO2: VScaleAttr: vscaleMin has to be a power-of-two greater than 0

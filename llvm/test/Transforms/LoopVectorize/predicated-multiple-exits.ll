@@ -729,20 +729,22 @@ define i32 @diamond_exit_poison_from_speculated_branch() {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[VECTOR_EARLY_EXIT_CHECK:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[LOOP_END:.*]]
+; CHECK:       [[LOOP_END]]:
+; CHECK-NEXT:    br label %[[LOOP_END1:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT_CHECK]]:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> splat (i1 true), i1 false)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> zeroinitializer, i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT_1]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> <i32 10, i32 11, i32 1, i32 2>, i64 [[FIRST_ACTIVE_LANE]]
-; CHECK-NEXT:    br label %[[LOOP_END]]
+; CHECK-NEXT:    br label %[[LOOP_END1]]
 ; CHECK:       [[VECTOR_EARLY_EXIT_0]]:
 ; CHECK-NEXT:    br label %[[UNREACHABLE_EXIT:.*]]
 ; CHECK:       [[UNREACHABLE_EXIT]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[LOOP_END]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP3]], %[[VECTOR_EARLY_EXIT_1]] ], [ -1, %[[MIDDLE_BLOCK]] ]
+; CHECK:       [[LOOP_END1]]:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP3]], %[[VECTOR_EARLY_EXIT_1]] ], [ -1, %[[LOOP_END]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -797,20 +799,22 @@ define i32 @diamond_exit_poison_cond_second() {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[VECTOR_EARLY_EXIT_CHECK:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[LOOP_END:.*]]
+; CHECK:       [[LOOP_END]]:
+; CHECK-NEXT:    br label %[[LOOP_END1:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT_CHECK]]:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> <i1 true, i1 false, i1 false, i1 false>, i1 false)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> zeroinitializer, i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT_1]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> <i32 10, i32 11, i32 12, i32 13>, i64 [[FIRST_ACTIVE_LANE]]
-; CHECK-NEXT:    br label %[[LOOP_END]]
+; CHECK-NEXT:    br label %[[LOOP_END1]]
 ; CHECK:       [[VECTOR_EARLY_EXIT_0]]:
 ; CHECK-NEXT:    br label %[[UNREACHABLE_EXIT:.*]]
 ; CHECK:       [[UNREACHABLE_EXIT]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[LOOP_END]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP3]], %[[VECTOR_EARLY_EXIT_1]] ], [ -1, %[[MIDDLE_BLOCK]] ]
+; CHECK:       [[LOOP_END1]]:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP3]], %[[VECTOR_EARLY_EXIT_1]] ], [ -1, %[[LOOP_END]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -847,4 +851,3 @@ loop.end:
   ret i32 %retval
 }
 
-declare void @llvm.trap()

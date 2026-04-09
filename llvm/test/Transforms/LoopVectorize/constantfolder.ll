@@ -22,7 +22,7 @@ define void @const_fold_ptradd(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -62,7 +62,7 @@ define void @const_fold_inbounds_ptradd(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -103,7 +103,7 @@ define void @const_fold_select(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -143,7 +143,7 @@ define void @const_fold_add_sub_mul_ashr_lshr(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -187,7 +187,7 @@ define void @const_fold_and_or_xor(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -229,7 +229,7 @@ define void @const_fold_cmp_zext(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -270,7 +270,7 @@ define void @const_fold_trunc(ptr %dst, i64 %d) {
 entry:
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -401,9 +401,8 @@ define void @unused_live_ins_in_preheader(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP2]]
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[DST]], i32 [[INDEX]]
+; CHECK-NEXT:    store i32 [[INDEX]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1

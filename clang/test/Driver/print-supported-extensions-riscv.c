@@ -170,6 +170,7 @@
 // CHECK-NEXT:     xandesvpackfph       5.0       'XAndesVPackFPH' (Andes Vector Packed FP16 Extension)
 // CHECK-NEXT:     xandesvsinth         5.0       'XAndesVSIntH' (Andes Vector Small INT Handling Extension)
 // CHECK-NEXT:     xandesvsintload      5.0       'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)
+// CHECK-NEXT:     xcheriot             1.0       'XCheriot' (CHERIoT extension)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
 // CHECK-NEXT:     xcvbi                1.0       'XCVbi' (CORE-V Immediate Branching)
 // CHECK-NEXT:     xcvbitmanip          1.0       'XCVbitmanip' (CORE-V Bit Manipulation)
@@ -241,7 +242,7 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     p                    0.20      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     p                    0.21      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     y                    0.96      'Y' ('Base Y' (CHERI))
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)

@@ -27,6 +27,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
@@ -91,6 +92,47 @@ enum class SIAtomicAddrSpace {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
+#ifndef NDEBUG
+static StringRef toString(SIAtomicScope S) {
+  switch (S) {
+  case SIAtomicScope::NONE:
+    return "none";
+  case SIAtomicScope::SINGLETHREAD:
+    return "singlethread";
+  case SIAtomicScope::WAVEFRONT:
+    return "wavefront";
+  case SIAtomicScope::WORKGROUP:
+    return "workgroup";
+  case SIAtomicScope::CLUSTER:
+    return "cluster";
+  case SIAtomicScope::AGENT:
+    return "agent";
+  case SIAtomicScope::SYSTEM:
+    return "system";
+  }
+  llvm_unreachable("unknown atomic scope");
+}
+
+static raw_ostream &operator<<(raw_ostream &OS, SIAtomicAddrSpace AS) {
+  if (AS == SIAtomicAddrSpace::NONE) {
+    OS << "none";
+    return OS;
+  }
+  ListSeparator LS("|");
+  if ((AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE)
+    OS << LS << "global";
+  if ((AS & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE)
+    OS << LS << "lds";
+  if ((AS & SIAtomicAddrSpace::SCRATCH) != SIAtomicAddrSpace::NONE)
+    OS << LS << "scratch";
+  if ((AS & SIAtomicAddrSpace::GDS) != SIAtomicAddrSpace::NONE)
+    OS << LS << "gds";
+  if ((AS & SIAtomicAddrSpace::OTHER) != SIAtomicAddrSpace::NONE)
+    OS << LS << "other";
+  return OS;
+}
+#endif
+
 class SIMemOpInfo final {
 private:
 
@@ -117,7 +159,8 @@ private:
       bool IsCrossAddressSpaceOrdering = true,
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
-      bool IsLastUse = false, bool IsCooperative = false)
+      bool IsLastUse = false, bool IsCooperative = false,
+      bool CanDemoteWorkgroupToWavefront = false)
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
@@ -165,6 +208,17 @@ private:
     // AGENT scope as a conservatively correct alternative.
     if (this->Scope == SIAtomicScope::CLUSTER && !ST.hasClusters())
       this->Scope = SIAtomicScope::AGENT;
+
+    // When max flat work-group size is at most the wavefront size, the
+    // work-group fits in a single wave, so LLVM workgroup scope matches
+    // wavefront scope. Demote workgroup → wavefront here for fences and for
+    // atomics with ordering stronger than monotonic.
+    if (CanDemoteWorkgroupToWavefront &&
+        this->Scope == SIAtomicScope::WORKGROUP &&
+        (llvm::isStrongerThan(this->Ordering, AtomicOrdering::Monotonic) ||
+         llvm::isStrongerThan(this->FailureOrdering,
+                              AtomicOrdering::Monotonic)))
+      this->Scope = SIAtomicScope::WAVEFRONT;
   }
 
 public:
@@ -235,6 +289,7 @@ class SIMemOpAccess final {
 private:
   const AMDGPUMachineModuleInfo *MMI = nullptr;
   const GCNSubtarget &ST;
+  const bool CanDemoteWorkgroupToWavefront;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
@@ -258,7 +313,8 @@ private:
 public:
   /// Construct class to support accessing the machine memory operands
   /// of instructions in the machine function \p MF.
-  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST);
+  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST,
+                const Function &F);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
@@ -737,9 +793,13 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
   return SIAtomicAddrSpace::OTHER;
 }
 
+// TODO: Consider moving single-wave workgroup->wavefront scope relaxation to an
+// IR pass (and extending it to other scoped operations), so middle-end
+// optimizations see wavefront scope earlier.
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
-                             const GCNSubtarget &ST)
-    : MMI(&MMI_), ST(ST) {}
+                             const GCNSubtarget &ST, const Function &F)
+    : MMI(&MMI_), ST(ST),
+      CanDemoteWorkgroupToWavefront(ST.isSingleWavefrontWorkgroup(F)) {}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
@@ -809,7 +869,8 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   }
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
-                     IsNonTemporal, IsLastUse, IsCooperative);
+                     IsNonTemporal, IsLastUse, IsCooperative,
+                     CanDemoteWorkgroupToWavefront);
 }
 
 std::optional<SIMemOpInfo>
@@ -878,7 +939,8 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
 
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
-                     AtomicOrdering::NotAtomic);
+                     AtomicOrdering::NotAtomic, false, false, false, false,
+                     CanDemoteWorkgroupToWavefront);
 }
 
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
@@ -2234,9 +2296,15 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                    MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && !MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding load: " << *MI);
+
   bool Changed = false;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Monotonic ||
         Order == AtomicOrdering::Acquire ||
@@ -2285,11 +2353,17 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                     MachineBasicBlock::iterator &MI) {
   assert(!MI->mayLoad() && MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding store: " << *MI);
+
   bool Changed = false;
   // FIXME: Necessary hack because iterator can lose track of the store.
   MachineInstr &StoreMI = *MI;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     if (MOI.getOrdering() == AtomicOrdering::Monotonic ||
         MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent) {
@@ -2330,12 +2404,17 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
                                           MachineBasicBlock::iterator &MI) {
   assert(MI->getOpcode() == AMDGPU::ATOMIC_FENCE);
 
+  LLVM_DEBUG(dbgs() << "Expanding atomic fence: " << *MI);
+
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
   const SIAtomicAddrSpace OrderingAddrSpace = MOI.getOrderingAddrSpace();
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << OrderingAddrSpace << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Acquire) {
       // Acquire fences only need to wait on the previous atomic they pair with.
@@ -2380,10 +2459,18 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
   MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding atomic cmpxchg/rmw: " << *MI);
+
   bool Changed = false;
   MachineInstr &RMWMI = *MI;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", failure-ordering="
+                      << toIRString(MOI.getFailureOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Monotonic ||
         Order == AtomicOrdering::Acquire || Order == AtomicOrdering::Release ||
@@ -2429,6 +2516,8 @@ bool SIMemoryLegalizer::expandLDSDMA(const SIMemOpInfo &MOI,
                                      MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding LDS DMA: " << *MI);
+
   // The volatility or nontemporal-ness of the operation is a
   // function of the global memory, not the LDS.
   SIMemOp OpKind =
@@ -2464,7 +2553,8 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
   bool Changed = false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST);
+  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST,
+                    MF.getFunction());
   CC = SICacheControl::create(ST);
 
   for (auto &MBB : MF) {

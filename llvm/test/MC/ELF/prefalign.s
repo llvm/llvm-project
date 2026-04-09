@@ -117,11 +117,11 @@ clc
 ## body=20, pref=8 => ComputedAlign=8, padding=7 zero bytes.
 # OBJ: .text.f6          PROGBITS        0000000000000000 {{[0-9a-f]+}} 00001c 00  AX  0   0  8
 # HEX-NEXT: Contents of section .text.f6:
-# HEX-NEXT:  0000 01000000 00000000 f8f8f8f8 f8f8f8f8 ................
+# HEX-NEXT:  0000 01030303 03030303 f8f8f8f8 f8f8f8f8 ................
 # HEX-NEXT:  0010 f8f8f8f8 f8f8f8f8 f8f8f8f8 ............
 .section .text.f6,"ax",@progbits
 .byte 1
-.prefalign 3, .Lf6_end, 0
+.prefalign 3, .Lf6_end, 3
 .rept 20
 clc
 .endr

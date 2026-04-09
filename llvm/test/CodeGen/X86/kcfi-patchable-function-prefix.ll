@@ -1,12 +1,13 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s
 
-; CHECK:          .prefalign 4
+; CHECK:          .prefalign 4, .Lfunc_end0, nop
 ; CHECK-LABEL:    __cfi_f1:
 ; CHECK-COUNT-11:   nop
 ; CHECK-NEXT:       movl $12345678, %eax
 ; CHECK-LABEL:    .Lcfi_func_end0:
 ; CHECK-NEXT:     .size   __cfi_f1, .Lcfi_func_end0-__cfi_f1
 ; CHECK-LABEL:    f1:
+; CHECK:          .Lfunc_end0:
 define void @f1(ptr noundef %x) !kcfi_type !1 {
 ; CHECK:            addl -4(%r{{..}}), %r10d
   call void %x() [ "kcfi"(i32 12345678) ]

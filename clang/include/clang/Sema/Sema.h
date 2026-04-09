@@ -968,6 +968,10 @@ public:
   /// Load weak undeclared identifiers from the external source.
   void LoadExternalWeakUndeclaredIdentifiers();
 
+  /// Load #pragma redefine_extname'd undeclared identifiers from the external
+  /// source.
+  void LoadExternalExtnameUndeclaredIdentifiers();
+
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
   /// unit because its type has no linkage and it's not extern "C".
@@ -4862,7 +4866,16 @@ public:
 
     /// The availability attribute for a specific platform was inferred from
     /// an availability attribute for another platform.
-    AP_InferredFromOtherPlatform = 2
+    AP_InferredFromOtherPlatform = 2,
+
+    /// The availability attribute was inferred from an 'anyAppleOS'
+    /// availability attribute.
+    AP_InferredFromAnyAppleOS = 3,
+
+    /// The availability attribute was inferred from an 'anyAppleOS'
+    /// availability attribute that was applied using '#pragma clang attribute'.
+    /// This has the lowest priority.
+    AP_PragmaClangAttribute_InferredFromAnyAppleOS = 4
   };
 
   /// Describes the reason a calling convention specification was ignored, used
@@ -4982,7 +4995,8 @@ public:
                         VersionTuple Obsoleted, bool IsUnavailable,
                         StringRef Message, bool IsStrict, StringRef Replacement,
                         AvailabilityMergeKind AMK, int Priority,
-                        const IdentifierInfo *IIEnvironment);
+                        const IdentifierInfo *IIEnvironment,
+                        VersionTuple OrigAnyAppleOSVersion = {});
 
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -9921,9 +9935,10 @@ public:
 
   /// Is the module scope we are an implementation unit?
   bool currentModuleIsImplementation() const {
-    return ModuleScopes.empty()
-               ? false
-               : ModuleScopes.back().Module->isModuleImplementation();
+    if (ModuleScopes.empty())
+      return false;
+    const Module *M = ModuleScopes.back().Module;
+    return M->isModuleImplementation() || M->isModulePartitionImplementation();
   }
 
   // When loading a non-modular PCH files, this is used to restore module
@@ -15090,6 +15105,13 @@ public:
   llvm::DenseMap<llvm::FoldingSetNodeID,
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
+
+  /// Cache the instantiation results of template parameter mappings within
+  /// concepts. Substituting into normalized concepts can be extremely expensive
+  /// due to the redundancy of template parameters. This cache is intended for
+  /// use by TemplateInstantiator to avoid redundant semantic checking.
+  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+      *CurrentCachedTemplateArgs = nullptr;
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were

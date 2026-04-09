@@ -102,8 +102,10 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   if (!RequiresModuleLink && !IsLibModule) {
     ze_module_properties_t Properties = {ZE_STRUCTURE_TYPE_MODULE_PROPERTIES,
                                          nullptr, 0};
-    CALL_ZE_RET_ERROR(zeModuleGetProperties, Module, &Properties);
-    RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
+    ze_result_t RC;
+    CALL_ZE(RC, zeModuleGetProperties, Module, &Properties);
+    if (RC == ZE_RESULT_SUCCESS)
+      RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
   }
   // For now, assume the first module contains libraries, globals.
   if (Modules.empty())
@@ -554,8 +556,8 @@ Expected<void *> L0ProgramTy::getSymbolDeviceAddr(const char *CName) const {
     if (RC == ZE_RESULT_SUCCESS && DevicePtr)
       return DevicePtr;
   }
-  return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                       "Symbol '%s' not found on device", CName);
+  return Plugin::error(ErrorCode::NOT_FOUND, "symbol '%s' not found on device",
+                       CName);
 }
 
 Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,
