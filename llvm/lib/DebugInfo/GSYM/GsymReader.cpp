@@ -180,6 +180,11 @@ llvm::Error GsymReader::parseGlobalDataEntries(uint64_t Offset) {
     if (GD.Type == GlobalInfoType::EndOfList)
       return Error::success();
 
+    if (GD.FileSize == 0)
+      return createStringError(std::errc::invalid_argument,
+                               "GlobalData section type %u has zero size",
+                               static_cast<uint32_t>(GD.Type));
+
     if (GD.FileOffset + GD.FileSize > BufSize)
       return createStringError(
           std::errc::invalid_argument,
@@ -277,21 +282,11 @@ llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
 
 llvm::Expected<StringRef>
 GsymReader::getRequiredGlobalData(GlobalInfoType Type) const {
-  auto It = GlobalDataSections.find(Type);
-  if (It == GlobalDataSections.end())
-    return createStringError(std::errc::invalid_argument,
-                             "missing required section type %u",
-                             static_cast<uint32_t>(Type));
-  const GlobalData &GD = It->second;
-  StringRef Buf = MemBuffer->getBuffer();
-  if (GD.FileOffset + GD.FileSize > Buf.size())
-    return createStringError(std::errc::invalid_argument,
-                             "GlobalData section type %u extends beyond buffer "
-                             "(offset=%" PRIu64 ", size=%" PRIu64
-                             ", bufsize=%" PRIu64 ")",
-                             static_cast<uint32_t>(Type), GD.FileOffset,
-                             GD.FileSize, static_cast<uint64_t>(Buf.size()));
-  return Buf.substr(GD.FileOffset, GD.FileSize);
+  if (auto Data = getOptionalGlobalData(Type))
+    return *Data;
+  return createStringError(std::errc::invalid_argument,
+                           "missing required section type %u",
+                           static_cast<uint32_t>(Type));
 }
 
 std::optional<StringRef>
@@ -301,8 +296,11 @@ GsymReader::getOptionalGlobalData(GlobalInfoType Type) const {
     return std::nullopt;
   const GlobalData &GD = It->second;
   StringRef Buf = MemBuffer->getBuffer();
-  if (GD.FileOffset + GD.FileSize > Buf.size())
-    return std::nullopt;
+  // It should already be checked in parseGlobalDataEntries() that the file
+  // offset and size are valid
+  assert(GD.FileSize != 0 && "Global data section has zero size");
+  assert(GD.FileOffset + GD.FileSize <= Buf.size() &&
+         "Global data section is beyond buffer's bounds");
   return Buf.substr(GD.FileOffset, GD.FileSize);
 }
 
