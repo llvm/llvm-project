@@ -102,15 +102,15 @@
 ; CHECK: [[p16_bitcount:%.+]] = OpBitCount [[i32x3_t]] [[p16_conversion_in]]
 ; CHECK: %[[#]] = OpUConvert [[i16x3_t]] [[p16_bitcount]]
 
-@g1 = addrspace(1) global i8 undef, align 4
-@g2 = addrspace(1) global i16 undef, align 4
-@g3 = addrspace(1) global i32 undef, align 4
-@g4 = addrspace(1) global i64 undef, align 8
-@g5 = addrspace(1) global <2 x i32> undef, align 4
-@g6 = addrspace(1) global <2 x i64> undef, align 8
-@g7 = addrspace(1) global <3 x i64> undef, align 8
-@g8 = addrspace(1) global <4 x i64> undef, align 8
-@g9 = addrspace(1) global <3 x i16> undef, align 4
+@g1 = addrspace(1) global i8  0, align 4
+@g2 = addrspace(1) global i16 0, align 4
+@g3 = addrspace(1) global i32 0, align 4
+@g4 = addrspace(1) global i64 0, align 8
+@g5 = addrspace(1) global <2 x i32> zeroinitializer, align 4
+@g6 = addrspace(1) global <2 x i64> zeroinitializer, align 8
+@g7 = addrspace(1) global <3 x i64> zeroinitializer, align 8
+@g8 = addrspace(1) global <4 x i64> zeroinitializer, align 8
+@g9 = addrspace(1) global <3 x i16> zeroinitializer, align 4
 
 
 define dso_local spir_kernel void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32, <2 x i64> %x2i64, <3 x i64> %x3i64, <4 x i64> %x4i64, <3 x i16> %x3i16) local_unnamed_addr {
