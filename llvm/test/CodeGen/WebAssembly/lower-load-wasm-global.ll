@@ -192,7 +192,9 @@ define double @load_f64_from_f32() {
 ; CHECK:         .functype load_f64_from_f32 () -> (f64)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get globalF32
-; CHECK-NEXT:    f64.promote_f32
+; CHECK-NEXT:    i32.reinterpret_f32
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    f64.reinterpret_i64
 ; CHECK-NEXT:    # fallthrough-return
   %v = load double, ptr addrspace(1) @globalF32
   ret double %v
@@ -203,7 +205,9 @@ define float @load_f32_from_f64() {
 ; CHECK:         .functype load_f32_from_f64 () -> (f32)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get globalF64
-; CHECK-NEXT:    f32.demote_f64
+; CHECK-NEXT:    i64.reinterpret_f64
+; CHECK-NEXT:    i32.wrap_i64
+; CHECK-NEXT:    f32.reinterpret_i32
 ; CHECK-NEXT:    # fallthrough-return
   %v = load float, ptr addrspace(1) @globalF64
   ret float %v

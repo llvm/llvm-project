@@ -1931,7 +1931,7 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
       // underlying global, which is invalid. Or it may try to load floats from
       // integers or vice verse. We lower this to a load of the underylying
       // global (i32, i64, f32, or f64), and then some combination of a
-      // reinterpret cast from float to integer, a truncate or extension, or a
+      // reinterpret cast from float to integer, a truncate or extension, and a
       // cast from integer to float as needed.
 
       // Modify the MMO to load the full global
@@ -1948,23 +1948,17 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
       SDValue ValRes = GlobalGetNode;
 
       if (ResultType.bitsEq(PromotedGT) &&
-          ResultType.isFloatingPoint() == PromotedGT.isFloatingPoint()) {
+          ResultType.isFloatingPoint() == PromotedGT.isFloatingPoint())
         return ValRes;
-      }
 
-      if (!ResultType.isFloatingPoint() && PromotedGT.isFloatingPoint()) {
+      if (PromotedGT.isFloatingPoint())
         ValRes = DAG.getBitcast(PromotedGT.changeTypeToInteger(), ValRes);
-      }
 
-      if (ResultType.isFloatingPoint() && PromotedGT.isFloatingPoint())
-        ValRes = DAG.getFPExtendOrRound(ValRes, DL, ResultType);
-      else
-        ValRes =
-            DAG.getAnyExtOrTrunc(ValRes, DL, ResultType.changeTypeToInteger());
+      ValRes =
+          DAG.getAnyExtOrTrunc(ValRes, DL, ResultType.changeTypeToInteger());
 
-      if (ResultType.isFloatingPoint() && !PromotedGT.isFloatingPoint()) {
+      if (ResultType.isFloatingPoint())
         ValRes = DAG.getBitcast(ResultType, ValRes);
-      }
 
       return DAG.getMergeValues({ValRes, GlobalGetNode.getValue(1)}, DL);
     }
