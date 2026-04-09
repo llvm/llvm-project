@@ -592,15 +592,12 @@ struct SgToWiMultiDimReduction
     } else if (isReductionLaneLocal(op)) {
       // For lane-local reduction, lower to a sequence of vector.reduction ops
       // over 1D slices extracted from the distributed source vector. This is
-      // required so we dont have 2D source vectors at xegpu-linearize. The
-      // setLayout parameter is to make lowerToVectorReductions generic for both
-      // the old and the new pass. It will be removed once we deprecate the old
-      // pass.
+      // required so we dont have 2D source vectors at xegpu-linearize.
       auto reductionDim = reductionDims[0];
       result = xegpu::lowerToVectorReductions(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
-          reductionDim, op.getLoc(), rewriter, /*setLayout=*/false);
+          reductionDim, op.getLoc(), rewriter);
     } else {
       auto reductionDim = reductionDims[0];
       VectorType sourceType = op.getSourceVectorType();

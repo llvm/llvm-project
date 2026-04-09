@@ -671,8 +671,7 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
                                      TypedValue<VectorType> acc,
                                      vector::CombiningKind kind,
                                      int64_t reductionDim, Location loc,
-                                     PatternRewriter &rewriter,
-                                     bool setLayout) {
+                                     PatternRewriter &rewriter) {
   VectorType sourceType = src.getType();
   int64_t sourceRank = sourceType.getRank();
   // Expecting at least a 2D source vector. Leading dimensions (all except the
@@ -691,13 +690,14 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
-  xegpu::DistributeLayoutAttr srcLayout, accLayout;
-  if (setLayout) {
-    srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
-    accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
-    // Reduction result should have the same layout as the accumulator.
-    xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
-  }
+  // TODO: Remove these get/setTemporaryLayout calls after we deprecate the old
+  // pass.
+  xegpu::DistributeLayoutAttr srcLayout =
+      xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
+  xegpu::DistributeLayoutAttr accLayout =
+      xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
+  // Reduction result should have the same layout as the accumulator.
+  xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
   int64_t accRank = acc.getType().getRank();
@@ -718,8 +718,7 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
                                               sliceSizes, strides);
-    if (setLayout)
-      xegpu::setTemporaryLayout(extractOp->getOpResult(0), srcLayout);
+    xegpu::setTemporaryLayout(extractOp->getOpResult(0), srcLayout);
 
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
 
@@ -728,10 +727,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
 
-    if (setLayout) {
-      xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
-      xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
-    }
+    xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
+    xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
     // Extract and reduction results in scalars, so no result layout is needed.
     // Build multi-dim index into acc (sourceRank-1 dims, i.e. source shape with
     // the reduction dim removed). Leading unit dims get index 0.
@@ -742,8 +739,7 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
         rewriter, loc, kind, slice.getResult(), accExtract);
     reductionResult = vector::InsertOp::create(rewriter, loc, reduction,
                                                reductionResult, accIdx);
-    if (setLayout)
-      xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+    xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
   }
   return reductionResult;
 }
