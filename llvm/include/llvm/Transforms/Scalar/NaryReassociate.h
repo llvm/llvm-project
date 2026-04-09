@@ -106,7 +106,7 @@ public:
   // Glue for old PM.
   bool runImpl(Function &F, AssumptionCache *AC_, DominatorTree *DT_,
                ScalarEvolution *SE_, TargetLibraryInfo *TLI_,
-               TargetTransformInfo *TTI_, UniformityInfo *UI_ = nullptr);
+               TargetTransformInfo *TTI_, UniformityInfo *UI_);
 
 private:
   // Runs only one iteration of the dominator-based algorithm. See the header
