@@ -815,6 +815,26 @@ protected:
   OptionGroupOptions m_all_options;
 };
 
+// CommandObjectThreadStepBackInstruction
+
+class CommandObjectThreadStepBackInstruction : public CommandObjectParsed {
+  private:
+public:
+  CommandObjectThreadStepBackInstruction(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "process plugin packet step-back",
+                            "Step back one instruction.",
+                            nullptr) {}
+
+  ~CommandObjectThreadStepBackInstruction() override = default;
+
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (process) {
+        process->GetThreadList().GetSelectedThread()->StepBack();
+    }
+  }
+};
+
 // CommandObjectThreadContinue
 
 class CommandObjectThreadContinue : public CommandObjectParsed {
@@ -2773,6 +2793,10 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                      "Instruction level single step, stepping into calls.  "
                      "Defaults to current thread unless specified.",
                      nullptr, eStepTypeTrace)));
+
+  LoadSubCommand("step-back-inst",
+                 CommandObjectSP(new CommandObjectThreadStepBackInstruction(
+                     interpreter)));
 
   LoadSubCommand("step-inst-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(

@@ -5920,25 +5920,6 @@ public:
   }
 };
 
-class CommandObjectProcessGDBRemotePacketStepBack : public CommandObjectParsed {
-  private:
-public:
-  CommandObjectProcessGDBRemotePacketStepBack(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "process plugin packet step-back",
-                            "Step back one instruction",
-                            nullptr) {}
-
-  ~CommandObjectProcessGDBRemotePacketStepBack() override = default;
-
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    ProcessGDBRemote *process =
-        (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
-    if (process) {
-        process->GetThreadList().GetSelectedThread()->StepBack();
-    }
-  }
-};
-
 class CommandObjectProcessGDBRemotePacketMonitor : public CommandObjectRaw {
 private:
 public:
@@ -5998,9 +5979,6 @@ public:
     LoadSubCommand(
         "send", CommandObjectSP(
                     new CommandObjectProcessGDBRemotePacketSend(interpreter)));
-    LoadSubCommand(
-        "step-back", CommandObjectSP(
-                    new CommandObjectProcessGDBRemotePacketStepBack(interpreter)));
     LoadSubCommand(
         "monitor",
         CommandObjectSP(
