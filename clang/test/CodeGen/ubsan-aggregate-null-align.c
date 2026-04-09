@@ -18,7 +18,7 @@ extern "C" {
 // SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
 // SHARED: icmp ne ptr [[SRC]], null
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_assign_plain_arr_idx(struct Small *dest, struct Small arr[4]) {
   *dest = arr[0];
@@ -28,7 +28,7 @@ __attribute__((noinline)) void test_assign_plain_arr_idx(struct Small *dest, str
 // SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
 // SHARED: icmp ne ptr [[SRC]], null
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_init_plain_arr_idx(struct Small arr[4]) {
   struct Small a = arr[0];
@@ -38,14 +38,16 @@ __attribute__((noinline)) void test_init_plain_arr_idx(struct Small arr[4]) {
 // SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
 // SHARED: icmp ne ptr [[SRC]], null
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_init_list_plain_arr_idx(struct Small arr[4]) {
   struct Small a[] = {arr[0]};
 }
 
+// Two ubsan calls: one for destination (c), one for source (arr[0])
 // SHARED-LABEL: define {{[^@]*}}@test_nested_member_plain_arr_idx
-// SHARED: __ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_nested_member_plain_arr_idx(struct Container *c, struct Small arr[4]) {
   c->inner = arr[0];
@@ -56,7 +58,7 @@ __attribute__((noinline)) void test_nested_member_plain_arr_idx(struct Container
 // SHARED-LABEL: define {{[^@]*}}@test_assign_plain_deref_ptr
 // SHARED: [[SRC:%.*]] = load ptr, ptr %ap.addr
 // SHARED: icmp ne ptr [[SRC]], null
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_assign_plain_deref_ptr(struct Small *dest, struct Small *ap) {
   *dest = *ap;
@@ -65,7 +67,7 @@ __attribute__((noinline)) void test_assign_plain_deref_ptr(struct Small *dest, s
 // SHARED-LABEL: define {{[^@]*}}@test_init_plain_deref_ptr
 // SHARED: [[SRC:%.*]] = load ptr, ptr %ap.addr
 // SHARED: icmp ne ptr [[SRC]], null
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_init_plain_deref_ptr(struct Small *ap) {
   struct Small a = *ap;
@@ -74,14 +76,16 @@ __attribute__((noinline)) void test_init_plain_deref_ptr(struct Small *ap) {
 // SHARED-LABEL: define {{[^@]*}}@test_init_list_plain_deref_ptr
 // SHARED: [[SRC:%.*]] = load ptr, ptr %ap.addr
 // SHARED: icmp ne ptr [[SRC]], null
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_init_list_plain_deref_ptr(struct Small *ap) {
   struct Small a[] = {*ap};
 }
 
+// Two ubsan calls: one for destination (c), one for source (*ap)
 // SHARED-LABEL: define {{[^@]*}}@test_nested_member_plain_deref_ptr
-// SHARED: __ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_nested_member_plain_deref_ptr(struct Container *c, struct Small *ap) {
   c->inner = *ap;
@@ -91,7 +95,7 @@ __attribute__((noinline)) void test_nested_member_plain_deref_ptr(struct Contain
 
 // SHARED-LABEL: define {{[^@]*}}@test_misaligned_access
 // SHARED: icmp ne ptr
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy
 __attribute__((noinline)) void test_misaligned_access(struct Small *dest, char *buf) {
   struct Small *p = (struct Small *)(buf + 1);  // Misaligned
@@ -101,8 +105,8 @@ __attribute__((noinline)) void test_misaligned_access(struct Small *dest, char *
 // Array bounds: out-of-bounds on local array
 
 // SHARED-LABEL: define {{[^@]*}}@test_local_array_oob
-// SHARED: call void @__ubsan_handle_out_of_bounds
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_out_of_bounds_abort(
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_local_array_oob(struct Small *dest) {
   struct Small arr[4];
@@ -114,9 +118,9 @@ __attribute__((noinline)) void test_local_array_oob(struct Small *dest) {
 // SHARED-LABEL: define {{[^@]*}}@test_past_the_end_arr_idx
 // SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 4
-// SHARED-NOT: __ubsan_handle_out_of_bounds
+// SHARED-NOT: call void @__ubsan_handle_out_of_bounds_abort(
 // SHARED: icmp ne ptr [[SRC]], null
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_past_the_end_arr_idx(struct Small *dest, struct Small arr[4]) {
   *dest = arr[4];
@@ -125,9 +129,9 @@ __attribute__((noinline)) void test_past_the_end_arr_idx(struct Small *dest, str
 // SHARED-LABEL: define {{[^@]*}}@test_past_the_end_init
 // SHARED: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // SHARED: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 4
-// SHARED-NOT: __ubsan_handle_out_of_bounds
+// SHARED-NOT: call void @__ubsan_handle_out_of_bounds_abort(
 // SHARED: icmp ne ptr [[SRC]], null
-// SHARED: call void @__ubsan_handle_type_mismatch
+// SHARED: call void @__ubsan_handle_type_mismatch_v1_abort(
 // SHARED: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_past_the_end_init(struct Small arr[4]) {
   struct Small a = arr[4];
@@ -144,7 +148,7 @@ __attribute__((noinline)) void test_past_the_end_init(struct Small arr[4]) {
 // C-LABEL: define {{[^@]*}}@test_assign_atomic_deref_ptr
 // C: [[SRC:%.*]] = load ptr, ptr %ap.addr
 // C: icmp ne ptr [[SRC]], null
-// C: call void @__ubsan_handle_type_mismatch
+// C: call void @__ubsan_handle_type_mismatch_v1_abort(
 // C: load atomic i32, ptr [[SRC]] seq_cst
 __attribute__((noinline)) void test_assign_atomic_deref_ptr(struct Small *dest, _Atomic(struct Small) *ap) {
   *dest = *ap;
@@ -162,7 +166,7 @@ extern "C" {
 // CXX: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // CXX: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
 // CXX: icmp ne ptr [[SRC]], null
-// CXX: call void @__ubsan_handle_type_mismatch
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort(
 // CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_init_direct_plain_arr_idx(struct Small arr[4]) {
   struct Small a(arr[0]);
@@ -172,7 +176,7 @@ __attribute__((noinline)) void test_cxx_init_direct_plain_arr_idx(struct Small a
 // CXX: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // CXX: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 0
 // CXX: icmp ne ptr [[SRC]], null
-// CXX: call void @__ubsan_handle_type_mismatch
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort(
 // CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_init_brace_plain_arr_idx(struct Small arr[4]) {
   struct Small a{arr[0]};
@@ -181,7 +185,7 @@ __attribute__((noinline)) void test_cxx_init_brace_plain_arr_idx(struct Small ar
 // CXX-LABEL: define {{[^@]*}}@test_cxx_init_direct_plain_deref_ptr
 // CXX: [[SRC:%.*]] = load ptr, ptr %ap.addr
 // CXX: icmp ne ptr [[SRC]], null
-// CXX: call void @__ubsan_handle_type_mismatch
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort(
 // CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_init_direct_plain_deref_ptr(struct Small *ap) {
   struct Small a(*ap);
@@ -190,7 +194,7 @@ __attribute__((noinline)) void test_cxx_init_direct_plain_deref_ptr(struct Small
 // CXX-LABEL: define {{[^@]*}}@test_cxx_init_brace_plain_deref_ptr
 // CXX: [[SRC:%.*]] = load ptr, ptr %ap.addr
 // CXX: icmp ne ptr [[SRC]], null
-// CXX: call void @__ubsan_handle_type_mismatch
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort(
 // CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_init_brace_plain_deref_ptr(struct Small *ap) {
   struct Small a{*ap};
@@ -199,7 +203,7 @@ __attribute__((noinline)) void test_cxx_init_brace_plain_deref_ptr(struct Small 
 // CXX-LABEL: define {{[^@]*}}@test_cxx_new_direct_plain_deref_ptr
 // CXX: [[SRC:%.*]] = load ptr, ptr %ap.addr
 // CXX: icmp ne ptr [[SRC]], null
-// CXX: call void @__ubsan_handle_type_mismatch
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort(
 // CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_new_direct_plain_deref_ptr(struct Small *ap) {
   struct Small *a = new struct Small(*ap);
@@ -211,9 +215,9 @@ __attribute__((noinline)) void test_cxx_new_direct_plain_deref_ptr(struct Small 
 // CXX-LABEL: define {{[^@]*}}@test_cxx_past_the_end_direct
 // CXX: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // CXX: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 4
-// CXX-NOT: __ubsan_handle_out_of_bounds
+// CXX-NOT: call void @__ubsan_handle_out_of_bounds_abort(
 // CXX: icmp ne ptr [[SRC]], null
-// CXX: call void @__ubsan_handle_type_mismatch
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort(
 // CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_past_the_end_direct(struct Small arr[4]) {
   struct Small a(arr[4]);
@@ -222,9 +226,9 @@ __attribute__((noinline)) void test_cxx_past_the_end_direct(struct Small arr[4])
 // CXX-LABEL: define {{[^@]*}}@test_cxx_past_the_end_brace
 // CXX: [[ARR:%.*]] = load ptr, ptr %arr.addr
 // CXX: [[SRC:%.*]] = getelementptr inbounds %struct.Small, ptr [[ARR]], i64 4
-// CXX-NOT: __ubsan_handle_out_of_bounds
+// CXX-NOT: call void @__ubsan_handle_out_of_bounds_abort(
 // CXX: icmp ne ptr [[SRC]], null
-// CXX: call void @__ubsan_handle_type_mismatch
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort(
 // CXX: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 [[SRC]], i64 4, i1 false)
 __attribute__((noinline)) void test_cxx_past_the_end_brace(struct Small arr[4]) {
   struct Small a{arr[4]};
