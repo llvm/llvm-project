@@ -2428,3 +2428,27 @@ func.func @test_omp_wsloop_nested_canMoveFromDescendant(%arg0: !fir.ref<!fir.arr
   }
   return
 }
+
+// -----
+// Test that fir.undefined and fir.insert_value (used for complex constant
+// creation) are hoisted out of loops as pure operations.
+// CHECK-LABEL:   func.func @test_hoist_complex_constant(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<complex<f32>>)
+// CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[UNDEF:.*]] = fir.undefined complex<f32>
+// CHECK:           %[[INS0:.*]] = fir.insert_value %[[UNDEF]], %[[CST]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+// CHECK:           %[[INS1:.*]] = fir.insert_value %[[INS0]], %[[CST]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[INS1]] to %[[ARG0]] : !fir.ref<complex<f32>>
+func.func @test_hoist_complex_constant(%arg0: !fir.ref<complex<f32>>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.undefined complex<f32>
+    %1 = fir.insert_value %0, %cst, [0 : index] : (complex<f32>, f32) -> complex<f32>
+    %2 = fir.insert_value %1, %cst, [1 : index] : (complex<f32>, f32) -> complex<f32>
+    fir.store %2 to %arg0 : !fir.ref<complex<f32>>
+  }
+  return
+}

@@ -526,7 +526,7 @@ def fir_CharConvertOp : fir_Op<"char_convert", []> {
   let hasVerifier = 1;
 }
 
-def fir_UndefOp : fir_OneResultOp<"undefined", [NoMemoryEffect]> {
+def fir_UndefOp : fir_OneResultOp<"undefined", [Pure]> {
   let summary = "explicit undefined value of some type";
   let description = [{
     Constructs an ssa-value of the specified type with an undefined value.
@@ -2199,7 +2199,7 @@ def fir_SliceOp : fir_Op<"slice", [Pure, AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoMemoryEffect]> {
+def fir_InsertValueOp : fir_OneResultOp<"insert_value", [Pure]> {
   let summary = "insert a new sub-value into a copy of an existing aggregate";
 
   let description = [{
