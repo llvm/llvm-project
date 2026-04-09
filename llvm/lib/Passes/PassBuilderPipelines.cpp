@@ -205,6 +205,10 @@ static cl::opt<bool> ExtraVectorizerPasses(
     "extra-vectorizer-passes", cl::init(false), cl::Hidden,
     cl::desc("Run cleanup optimization passes after vectorization"));
 
+static cl::opt<bool> EnableOpenMPVFABIMappings(
+    "enable-openmp-vfabi-mappings", cl::init(false), cl::Hidden,
+    cl::desc("Inject OpenMP declare simd VFABI mappings for LoopVectorize"));
+
 static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
 
@@ -1637,7 +1641,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                           .hoistLoadsStoresWithCondFaulting(true)));
 
   // Enable LoopVectorize for OpenMP declare simd.
-  MPM.addPass(InjectOpenMPVFABIMappings());
+  if (EnableOpenMPVFABIMappings)
+    MPM.addPass(InjectOpenMPVFABIMappings());
 
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),

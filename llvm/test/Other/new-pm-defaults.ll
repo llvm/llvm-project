@@ -242,7 +242,6 @@
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: RecomputeGlobalsAAPass
 ; CHECK-EP-OPTIMIZER-EARLY: Running pass: NoOpModulePass
-; CHECK-O-NEXT: Running pass: InjectOpenMPVFABIMappings
 ; CHECK-DEFAULT-NEXT: Running pass: DropUnnecessaryAssumesPass
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
