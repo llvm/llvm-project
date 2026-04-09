@@ -13,9 +13,9 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 
-#include "llvm/ADT/PatternMatchHelpers.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Support/PatternMatchHelpers.h"
 
 using namespace llvm::PatternMatchHelpers;
 

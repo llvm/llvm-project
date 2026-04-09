@@ -16,7 +16,7 @@
 #define LLVM_TRANSFORM_VECTORIZE_VPLANPATTERNMATCH_H
 
 #include "VPlan.h"
-#include "llvm/ADT/PatternMatchHelpers.h"
+#include "llvm/Support/PatternMatchHelpers.h"
 
 using namespace llvm::PatternMatchHelpers;
 

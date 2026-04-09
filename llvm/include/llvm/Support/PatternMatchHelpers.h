@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_PATTERNMATCHHELPERS_H
-#define LLVM_ADT_PATTERNMATCHHELPERS_H
+#ifndef LLVM_SUPPORT_PATTERNMATCHHELPERS_H
+#define LLVM_SUPPORT_PATTERNMATCHHELPERS_H
 
 #include "llvm/Support/Casting.h"
 #include <tuple>
