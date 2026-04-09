@@ -1608,14 +1608,6 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
   }
   const Child *C = &*I;
 
-  auto Increment = [&]() {
-    ++I;
-    if (Err)
-      return false;
-    C = &*I;
-    return true;
-  };
-
   Expected<StringRef> NameOrErr = C->getRawName();
   if (!NameOrErr) {
     Err = NameOrErr.takeError();
@@ -1646,6 +1638,15 @@ ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
     SymbolTableBuf.append(ESymbolTable.data(), OffsetToENames);
     SymbolTableBuf.append(Dst.str());
     SymbolTable = StringRef(SymbolTableBuf.data(), SymbolTableBuf.size());
+
+    auto Increment = [&]() {
+      ++I;
+      if (Err)
+        return false;
+      C = &*I;
+      return true;
+    };
+
     if (!Increment())
       return;
     setFirstRegular(*C);
