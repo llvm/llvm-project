@@ -18674,7 +18674,8 @@ static Function *getStructuredLoadFunction(Module *M, unsigned Factor,
                                              Intrinsic::aarch64_neon_ld3,
                                              Intrinsic::aarch64_neon_ld4};
   if (Scalable)
-    return Intrinsic::getOrInsertDeclaration(M, SVELoads[Factor - 2], {LDVTy});
+    return Intrinsic::getOrInsertDeclaration(M, SVELoads[Factor - 2],
+                                             {LDVTy, PtrTy});
 
   return Intrinsic::getOrInsertDeclaration(M, NEONLoads[Factor - 2],
                                            {LDVTy, PtrTy});
@@ -18691,7 +18692,8 @@ static Function *getStructuredStoreFunction(Module *M, unsigned Factor,
                                               Intrinsic::aarch64_neon_st3,
                                               Intrinsic::aarch64_neon_st4};
   if (Scalable)
-    return Intrinsic::getOrInsertDeclaration(M, SVEStores[Factor - 2], {STVTy});
+    return Intrinsic::getOrInsertDeclaration(M, SVEStores[Factor - 2],
+                                             {STVTy, PtrTy});
 
   return Intrinsic::getOrInsertDeclaration(M, NEONStores[Factor - 2],
                                            {STVTy, PtrTy});

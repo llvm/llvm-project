@@ -3440,19 +3440,7 @@ Value *CodeGenFunction::EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
   auto *ResultTy = getSVEType(TypeFlags);
   auto *OverloadedTy =
       llvm::ScalableVectorType::get(SVEBuiltinMemEltTy(TypeFlags), ResultTy);
-
-  Function *F = nullptr;
-  if (Ops[1]->getType()->isVectorTy())
-    // This is the "vector base, scalar offset" case. In order to uniquely
-    // map this built-in to an LLVM IR intrinsic, we need both the return type
-    // and the type of the vector base.
-    F = CGM.getIntrinsic(IntID, {OverloadedTy, Ops[1]->getType()});
-  else
-    // This is the "scalar base, vector offset case". The type of the offset
-    // is encoded in the name of the intrinsic. We only need to specify the
-    // return type in order to uniquely map this built-in to an LLVM IR
-    // intrinsic.
-    F = CGM.getIntrinsic(IntID, OverloadedTy);
+  Function *F = CGM.getIntrinsic(IntID, {OverloadedTy, Ops[1]->getType()});
 
   // At the ACLE level there's only one predicate type, svbool_t, which is
   // mapped to <n x 16 x i1>. However, this might be incompatible with the
@@ -3499,18 +3487,7 @@ Value *CodeGenFunction::EmitSVEScatterStore(const SVETypeFlags &TypeFlags,
   // it's the first argument. Move it accordingly.
   Ops.insert(Ops.begin(), Ops.pop_back_val());
 
-  Function *F = nullptr;
-  if (Ops[2]->getType()->isVectorTy())
-    // This is the "vector base, scalar offset" case. In order to uniquely
-    // map this built-in to an LLVM IR intrinsic, we need both the return type
-    // and the type of the vector base.
-    F = CGM.getIntrinsic(IntID, {OverloadedTy, Ops[2]->getType()});
-  else
-    // This is the "scalar base, vector offset case". The type of the offset
-    // is encoded in the name of the intrinsic. We only need to specify the
-    // return type in order to uniquely map this built-in to an LLVM IR
-    // intrinsic.
-    F = CGM.getIntrinsic(IntID, OverloadedTy);
+  Function *F = CGM.getIntrinsic(IntID, {OverloadedTy, Ops[2]->getType()});
 
   // Pass 0 when the offset is missing. This can only be applied when using
   // the "vector base" addressing mode for which ACLE allows no offset. The
@@ -3572,9 +3549,12 @@ Value *CodeGenFunction::EmitSVEGatherPrefetch(const SVETypeFlags &TypeFlags,
       if (BytesPerElt > 1)
         Ops[2] = Builder.CreateShl(Ops[2], Log2_32(BytesPerElt));
     }
+
+    Function *F = CGM.getIntrinsic(IntID, OverloadedTy);
+    return Builder.CreateCall(F, Ops);
   }
 
-  Function *F = CGM.getIntrinsic(IntID, OverloadedTy);
+  Function *F = CGM.getIntrinsic(IntID, {Ops[1]->getType(), OverloadedTy});
   return Builder.CreateCall(F, Ops);
 }
 
@@ -3589,7 +3569,7 @@ Value *CodeGenFunction::EmitSVEStructLoad(const SVETypeFlags &TypeFlags,
   if (Ops.size() > 2)
     BasePtr = Builder.CreateGEP(VTy, BasePtr, Ops[2]);
 
-  Function *F = CGM.getIntrinsic(IntID, {VTy});
+  Function *F = CGM.getIntrinsic(IntID, {VTy, BasePtr->getType()});
   return Builder.CreateCall(F, {Predicate, BasePtr});
 }
 
@@ -3633,7 +3613,7 @@ Value *CodeGenFunction::EmitSVEStructStore(const SVETypeFlags &TypeFlags,
   for (unsigned I = Ops.size() - N; I < Ops.size(); ++I)
     Operands.push_back(Ops[I]);
   Operands.append({Predicate, BasePtr});
-  Function *F = CGM.getIntrinsic(IntID, { VTy });
+  Function *F = CGM.getIntrinsic(IntID, {VTy, BasePtr->getType()});
 
   return Builder.CreateCall(F, Operands);
 }
@@ -3682,7 +3662,8 @@ Value *CodeGenFunction::EmitSVEPrefetchLoad(const SVETypeFlags &TypeFlags,
 
   Value *PrfOp = Ops.back();
 
-  Function *F = CGM.getIntrinsic(BuiltinID, Predicate->getType());
+  llvm::Type *Tys[2] = {Predicate->getType(), BasePtr->getType()};
+  Function *F = CGM.getIntrinsic(BuiltinID, Tys);
   return Builder.CreateCall(F, {Predicate, BasePtr, PrfOp});
 }
 
@@ -3730,9 +3711,9 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   if (Ops.size() > 2)
     BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Ops[2]);
 
-  Function *F = CGM.getIntrinsic(IntrinsicID, IsQuadLoad ? VectorTy : MemoryTy);
-  auto *Load =
-      cast<llvm::Instruction>(Builder.CreateCall(F, {Predicate, BasePtr}));
+  llvm::Type *Tys[2] = {IsQuadLoad ? VectorTy : MemoryTy, BasePtr->getType()};
+  Function *F = CGM.getIntrinsic(IntrinsicID, Tys);
+  auto *Load = Builder.CreateCall(F, {Predicate, BasePtr});
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
   CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
 
@@ -3789,10 +3770,9 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   Value *Val =
       IsQuadStore ? Ops.back() : Builder.CreateTrunc(Ops.back(), MemoryTy);
 
-  Function *F =
-      CGM.getIntrinsic(IntrinsicID, IsQuadStore ? VectorTy : MemoryTy);
-  auto *Store =
-      cast<llvm::Instruction>(Builder.CreateCall(F, {Val, Predicate, BasePtr}));
+  llvm::Type *Tys[2] = {IsQuadStore ? VectorTy : MemoryTy, BasePtr->getType()};
+  Function *F = CGM.getIntrinsic(IntrinsicID, Tys);
+  auto *Store = Builder.CreateCall(F, {Val, Predicate, BasePtr});
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
   CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
   return Store;
@@ -3829,7 +3809,7 @@ Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
   NewOps.push_back(BasePtr);
   NewOps.push_back(Ops[0]);
   NewOps.push_back(RealSlice);
-  Function *F = CGM.getIntrinsic(IntID);
+  Function *F = CGM.getIntrinsic(IntID, BasePtr->getType());
   return Builder.CreateCall(F, NewOps);
 }
 
@@ -3862,7 +3842,7 @@ Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
     Ops.push_back(Builder.getInt32(0));
   else
     Ops[2] = Builder.CreateIntCast(Ops[2], Int32Ty, true);
-  Function *F = CGM.getIntrinsic(IntID, {});
+  Function *F = CGM.getIntrinsic(IntID, Ops[1]->getType());
   return Builder.CreateCall(F, Ops);
 }
 
@@ -4461,6 +4441,12 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
     if (auto PredTy = dyn_cast<llvm::VectorType>(Op->getType()))
       if (PredTy->getElementType()->isIntegerTy(1))
         Op = EmitSVEPredicateCast(Op, getSVEType(TypeFlags));
+
+  if (BuiltinID == SME::BI__builtin_sme_svldr_zt ||
+      BuiltinID == SME::BI__builtin_sme_svstr_zt) {
+    Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic, Ops[1]->getType());
+    return Builder.CreateCall(F, Ops);
+  }
 
   Function *F =
       TypeFlags.isOverloadNone()
