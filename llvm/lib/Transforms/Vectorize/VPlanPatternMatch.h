@@ -1071,6 +1071,7 @@ inline auto m_WidenIntrinsic(const T &...Ops) {
 inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
+/// and bind the source element type and operands.
 struct GetElementPtr_match {
   Type *&SourceElementType;
   ArrayRef<VPValue *> &Operands;
