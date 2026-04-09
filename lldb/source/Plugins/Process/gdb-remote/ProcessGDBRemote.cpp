@@ -3887,8 +3887,7 @@ public:
 };
 
 Status ProcessGDBRemote::StepBack() {
-  LLDB_LOGF(GetLog(GDBRLog::Process), "Thread count = %d", m_thread_ids.size());
-  ThreadSP thread = GetThreadList().FindThreadByID(m_thread_ids[0]);
+  ThreadSP thread = GetThreadList().GetSelectedThread();
 
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepBackInstruction(
       *thread, false, true, eVoteNoOpinion, eVoteNoOpinion));
@@ -3897,7 +3896,6 @@ Status ProcessGDBRemote::StepBack() {
   thread_plan_sp->SetIsControllingPlan(true);
   thread_plan_sp->SetOkayToDiscard(false);
 
-  GetThreadList().SetSelectedThreadByID(m_thread_ids[0]);
   return Resume();
 }
 
