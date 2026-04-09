@@ -53,10 +53,16 @@ Session::Session(ExecutorProcessInfo EPI,
                  std::unique_ptr<TaskDispatcher> Dispatcher,
                  ErrorReporterFn ReportError)
     : EPI(std::move(EPI)), Dispatcher(std::move(Dispatcher)),
-      ReportError(std::move(ReportError)), Notifiers(addNotificationService()) {
-}
+      ReportError(std::move(ReportError)),
+      Notifiers(createService<NotificationService>()) {}
 
-Session::~Session() { waitForShutdown(); }
+Session::~Session() {
+  shutdown();
+  std::unique_lock<std::mutex> Lock(M);
+  CV.wait(Lock, [&]() {
+    return CurrentState == State::Shutdown && TargetState == State::None;
+  });
+}
 
 void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
   assert(CA && "attach called with null CA object");
@@ -183,7 +189,8 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
       TmpCA = std::atomic_load(&this->CA);
       break;
     case State::Detached:
-      proceedToShutdown(Lock);
+      Lock.unlock();
+      waitForManagedCodeTasksThenShutdown();
       return;
     default:
       assert(false && "Illegal state");
@@ -192,14 +199,6 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
   }
 
   TmpCA->disconnect();
-}
-
-void Session::waitForShutdown() {
-  std::promise<void> P;
-  auto F = P.get_future();
-  addOnShutdown([P = std::move(P)]() mutable { P.set_value(); });
-  shutdown();
-  F.get();
 }
 
 void Session::addOnDetach(OnDetachFn OnDetach) {
@@ -228,13 +227,6 @@ void Session::addOnShutdown(OnShutdownFn OnShutdown) {
   }
   // We've already shutdown. Run in-place.
   OnShutdown();
-}
-
-Session::NotificationService &Session::addNotificationService() {
-  auto NS = std::make_unique<NotificationService>();
-  auto &TmpNS = *NS;
-  Services.push_back(std::move(NS));
-  return TmpNS;
 }
 
 void Session::appendService(std::unique_ptr<Service> Srv) {
@@ -314,27 +306,35 @@ void Session::detachServices(std::vector<Service *> ToNotify,
 }
 
 void Session::completeDetach() {
-  std::unique_lock<std::mutex> Lock(M);
-  assert(CurrentState == State::Detached);
-  if (TargetState == State::Detached) {
-    TargetState = State::None;
-    return;
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(CurrentState == State::Detached);
+    if (TargetState == State::Detached) {
+      TargetState = State::None;
+      return;
+    }
+    // Someone must have requested shutdown.
+    assert(TargetState == State::Shutdown);
   }
 
-  // Someone must have requested shutdown.
-  assert(TargetState == State::Shutdown);
-  proceedToShutdown(Lock);
+  waitForManagedCodeTasksThenShutdown();
 }
 
-void Session::proceedToShutdown(std::unique_lock<std::mutex> &Lock) {
-  std::vector<Service *> ToNotify;
-  ToNotify.reserve(Services.size());
-  for (auto &Srv : Services)
-    ToNotify.push_back(Srv.get());
-  CurrentState = State::Shutdown;
-  Lock.unlock();
+void Session::waitForManagedCodeTasksThenShutdown() {
+  ManagedCodeTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
+  ManagedCodeTaskGroup->close();
+}
 
-  // Notify services.
+void Session::proceedToShutdown() {
+  std::vector<Service *> ToNotify;
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    ToNotify.reserve(Services.size());
+    for (auto &Srv : Services)
+      ToNotify.push_back(Srv.get());
+    CurrentState = State::Shutdown;
+  }
+
   shutdownServices(std::move(ToNotify));
 }
 
@@ -352,10 +352,13 @@ void Session::shutdownServices(std::vector<Service *> ToNotify) {
 void Session::completeShutdown() {
   Dispatcher->shutdown();
 
-  std::unique_lock<std::mutex> Lock(M);
-  assert(CurrentState == State::Shutdown);
-  assert(TargetState == State::Shutdown);
-  TargetState = State::None;
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(CurrentState == State::Shutdown);
+    assert(TargetState == State::Shutdown);
+    TargetState = State::None;
+  }
+  CV.notify_all();
 }
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,

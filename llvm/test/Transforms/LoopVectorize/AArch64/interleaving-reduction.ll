@@ -150,4 +150,3 @@ exit:
   ret i32 %red.next
 }
 
-declare i8 @llvm.smax.i8(i8, i8)

@@ -1639,8 +1639,15 @@ the Clang Static Analyzer makes sure that allocating functions annotated with
 ``malloc`` are treated like they used the standard ``malloc()``, and can be
 safely deallocated with the standard ``free()``.
 
-* Use ``ownership_returns`` to mark a function as an allocating function. Takes
-  1 parameter to denote the allocation type.
+* Use ``ownership_returns`` to mark a function as an allocating function.
+  It takes 1 or 2 parameters.
+  The first parameter is a user-provided identifier representing the "kind" of the allocation.
+  This is basically what is enforced when checking the deallocation.
+  The second parameter is optional.
+  It represents the index of the parameter that represents the allocation size in bytes (counting from 1).
+  The referenced parameter must have some integral type.
+  This attribute may appear at most once per declaration.
+  If forward declarations have this attribute, those must have the same parameters.
 * Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
   parameters: the allocation type, and the index of the parameter that is being
   deallocated (counting from 1).
@@ -1660,7 +1667,10 @@ Example:
 
   // Denotes that my_malloc will return with a dynamically allocated piece of
   // memory using malloc().
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
+
+  // 'sz' (parameter 1) is the allocation size.
+  void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
 
   // Denotes that my_free will deallocate its parameter using free().
   void __attribute((ownership_takes(malloc, 1))) my_free(void *);
@@ -8579,6 +8589,18 @@ pointing to precise locations of the call site in the source.
       dontcall(); // No Warning
     sizeof(dontcall()); // No Warning
   }
+
+When the call occurs through inlined functions, the
+``-fdiagnostics-show-inlining-chain`` option can be used to show the
+inlining chain that led to the call. This helps identify which call site
+triggered the diagnostic when the attributed function is called from
+multiple locations through inline functions.
+
+When enabled, this option automatically uses debug info for accurate source
+locations if available (``-gline-directives-only`` (implicitly enabled at
+``-g1``) or higher), or falls back to a heuristic based on metadata tracking.
+When falling back, a note is emitted suggesting ``-gline-directives-only`` for
+more accurate locations.
   }];
 }
 
@@ -8972,6 +8994,29 @@ like follows:
 
 This variable will be lowered into a module-level variable, with the `Input`
 storage class, and the `BuiltIn 26` decoration.
+
+The full documentation for this inline SPIR-V attribute can be found here:
+https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
+  }];
+}
+
+def HLSLVkExtBuiltinOutputDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `Output` builtins. Those variables are externally
+visible to the driver/pipeline, but each copy is private to the current
+lane.
+
+Those builtins can be declared using the `[[vk::ext_builtin_output]]`
+attribute like follows:
+
+.. code-block:: c++
+
+  [[vk::ext_builtin_output(/* Position */ 0)]]
+  static float4 position;
+
+This variable will be lowered into a module-level variable, with the `Output`
+storage class, and the `BuiltIn 0` decoration.
 
 The full documentation for this inline SPIR-V attribute can be found here:
 https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md

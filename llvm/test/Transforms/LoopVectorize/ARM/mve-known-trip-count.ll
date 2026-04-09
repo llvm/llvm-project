@@ -236,7 +236,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK-LABEL: predicated_test
 ; CHECK: LV: Selecting VF: 1
 ; CHECK: LV: Selecting VF: 1
-define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
+define i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %2 = alloca [101 x i32], align 4
   %3 = alloca [21 x i32], align 4
   call void @llvm.lifetime.start.p0(ptr nonnull %2)
@@ -472,7 +472,5 @@ while.end:                                        ; preds = %while.end.loopexit,
 }
 
 
-declare void @llvm.lifetime.start.p0(ptr)
-declare void @llvm.lifetime.end.p0(ptr)
 
 attributes #0 = { "target-features"="+mve.fp" }

@@ -556,7 +556,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // information (such as the embedded command line) to be associated
   // with all sections in the object file rather than a single section.
   if (!Target.isOSBinFormatXCOFF())
-    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+    OutStreamer->initSections(*TM.getMCSubtargetInfo());
 
   // Emit the version-min deployment target directive if needed.
   //
@@ -2280,12 +2280,9 @@ void AsmPrinter::emitFunctionBody() {
           (MI.getOpcode() != TargetOpcode::INLINEASM &&
            MI.getOpcode() != TargetOpcode::INLINEASM_BR)) {
         const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-        MCFragment *NewFragment = OutStreamer->getCurrentFragment();
         TargetInstrInfo::InstSizeVerifyMode Mode =
             TII->getInstSizeVerifyMode(MI);
-        // Don't try to handle fragment splitting cases.
-        if (NewFragment == OldFragment &&
-            Mode != TargetInstrInfo::InstSizeVerifyMode::NoVerify) {
+        if (Mode != TargetInstrInfo::InstSizeVerifyMode::NoVerify) {
           unsigned ExpectedSize = TII->getInstSizeInBytes(MI);
           if (MI.isBundled()) {
             // Bundled instructions are emitted together.
@@ -2294,7 +2291,17 @@ void AsmPrinter::emitFunctionBody() {
               ExpectedSize += TII->getInstSizeInBytes(*It);
           }
 
-          unsigned ActualSize = NewFragment->getFixedSize() - OldFragSize;
+          MCFragment *NewFragment = OutStreamer->getCurrentFragment();
+          unsigned ActualSize;
+          if (OldFragment == NewFragment) {
+            ActualSize = NewFragment->getFixedSize() - OldFragSize;
+          } else {
+            ActualSize = OldFragment->getFixedSize() - OldFragSize;
+            const MCFragment *F = OldFragment->getNext();
+            for (; F != NewFragment; F = F->getNext())
+              ActualSize += F->getFixedSize();
+            ActualSize += NewFragment->getFixedSize();
+          }
           bool AllowOverEstimate =
               Mode == TargetInstrInfo::InstSizeVerifyMode::AllowOverEstimate;
           bool Valid = AllowOverEstimate ? ActualSize <= ExpectedSize

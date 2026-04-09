@@ -11,6 +11,7 @@
 
 namespace llvm {
 class StringRef;
+class Triple;
 } // namespace llvm
 
 namespace clang {
@@ -103,6 +104,8 @@ enum class OffloadArch {
   GFX1152,
   GFX1153,
   GFX1170,
+  GFX1171,
+  GFX1172,
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
@@ -150,6 +153,9 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // Convert a string to an OffloadArch enum value. Returns
 // OffloadArch::Unknown if the string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
+
+llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
+                                 OffloadArch ID);
 
 } // namespace clang
 

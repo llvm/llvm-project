@@ -3139,7 +3139,7 @@ class UncondBrInst : public BranchInst {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
 
   UncondBrInst(const UncondBrInst &BI);
-  LLVM_ABI explicit UncondBrInst(BasicBlock *IfTrue,
+  LLVM_ABI explicit UncondBrInst(BasicBlock *Target,
                                  InsertPosition InsertBefore);
 
 protected:
@@ -3149,9 +3149,9 @@ protected:
   LLVM_ABI UncondBrInst *cloneImpl() const;
 
 public:
-  static UncondBrInst *Create(BasicBlock *IfTrue,
+  static UncondBrInst *Create(BasicBlock *Target,
                               InsertPosition InsertBefore = nullptr) {
-    return new (AllocMarker) UncondBrInst(IfTrue, InsertBefore);
+    return new (AllocMarker) UncondBrInst(Target, InsertBefore);
   }
 
   /// Transparently provide more efficient getOperand methods.
@@ -3699,8 +3699,17 @@ public:
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed && Weights.has_value() && Weights->size() >= 2)
-      setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
+    if (Changed && Weights.has_value()) {
+      if (Weights->size() >= 2) {
+        setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
+        return;
+      }
+      // In some cases while simplifying switch instructions, we end up with
+      // degenerate switch instructions (e.g., only contains the default case).
+      // We drop profile metadata in such cases rather than updating given it
+      // does not convey anything.
+      SI.setMetadata(LLVMContext::MD_prof, nullptr);
+    }
   }
 
   /// Delegate the call to the underlying SwitchInst::removeCase() and remove

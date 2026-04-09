@@ -1422,11 +1422,31 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
-  case Intrinsic::amdgcn_mbcnt_hi: {
+  case Intrinsic::amdgcn_mbcnt_hi:
     // exec_hi is all 0, so this is just a copy.
     if (ST->isWave32())
       return IC.replaceInstUsesWith(II, II.getArgOperand(1));
-    break;
+    [[fallthrough]];
+  case Intrinsic::amdgcn_mbcnt_lo: {
+    ConstantRange AccRange = computeConstantRange(II.getArgOperand(1),
+                                                  /*ForSigned=*/false);
+    if (AccRange.isFullSet())
+      return nullptr;
+
+    // TODO: Can raise lower bound by inspecting first argument.
+    ConstantRange MbcntRange(APInt(32, 0), APInt(32, 32 + 1));
+    ConstantRange ComputedRange = AccRange.add(MbcntRange);
+    if (ComputedRange.isFullSet())
+      return nullptr;
+
+    if (std::optional<ConstantRange> ExistingRange = II.getRange()) {
+      ComputedRange = ComputedRange.intersectWith(*ExistingRange);
+      if (ComputedRange == *ExistingRange)
+        return nullptr;
+    }
+
+    II.addRangeRetAttr(ComputedRange);
+    return nullptr;
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Arg = II.getArgOperand(0);
