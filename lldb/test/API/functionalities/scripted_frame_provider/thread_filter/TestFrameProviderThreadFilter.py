@@ -59,6 +59,7 @@ class FrameProviderThreadFilterTestCase(TestBase):
             )
             self.assertTrue(error.Success(), f"Should register {cls}: {error}")
 
+    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/191222")
     def test_bt_provider_star_with_thread_filter(self):
         """
         Register EvenThreadProvider, OddThreadProvider, and UpperCaseProvider.
