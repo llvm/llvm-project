@@ -3498,7 +3498,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case ULongAccum:
     return "unsigned long _Accum";
   case BuiltinType::MetaInfo:
-    return "meta::info";
+    return "std::meta::info";
   case BuiltinType::ShortFract:
     return "short _Fract";
   case BuiltinType::Fract:
