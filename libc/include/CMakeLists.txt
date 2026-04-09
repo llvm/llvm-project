@@ -935,6 +935,7 @@ endfunction(get_all_install_header_targets)
 get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADERS})
 add_library(libc-headers INTERFACE)
 add_dependencies(libc-headers ${all_install_header_targets})
+add_custom_target(libc-headers-build DEPENDS libc-headers)
 target_include_directories(libc-headers SYSTEM INTERFACE ${LIBC_INCLUDE_DIR})
 
 foreach(target IN LISTS all_install_header_targets)
