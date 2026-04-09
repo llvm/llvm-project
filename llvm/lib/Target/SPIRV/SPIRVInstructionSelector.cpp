@@ -1640,11 +1640,8 @@ bool SPIRVInstructionSelector::selectPopCount64Overflow(
 
   std::vector<Register> PartialRegs;
 
-  // Loops 0, 2, 4, ... but stops one loop early when ComponentCount is odd
   unsigned CurrentComponent = 0;
   for (; CurrentComponent + 1 < ComponentCount; CurrentComponent += 2) {
-    // This register holds the firstbitX result for each of the i64x2 vectors
-    // extracted from SrcReg
     Register PopCountResult =
         MRI->createVirtualRegister(GR.getRegClass(I64x2Type));
 
