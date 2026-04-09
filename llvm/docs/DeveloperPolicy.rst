@@ -715,7 +715,7 @@ Attribution of Changes
 
 When contributors submit a patch to an LLVM project, other developers with
 commit access may merge the PR for the author (based on the
-progression of code review, etc.). Github will automatically ensure that
+progression of code review, etc.). GitHub will automatically ensure that
 authorship is preserved, and one does not need to take any further action. We
 do not want the source code to be littered with random attributions "this code
 written by J. Random Hacker" (this is noisy and distracting). In practice, the
