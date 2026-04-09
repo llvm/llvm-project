@@ -293,7 +293,7 @@ define i32 @t15(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[T0]], [[T1]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %t0 = add i32 %y, 1
@@ -310,8 +310,7 @@ define i32 @t15_5(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 4
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T0]], [[T1]]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t0 = add i32 %y, 5

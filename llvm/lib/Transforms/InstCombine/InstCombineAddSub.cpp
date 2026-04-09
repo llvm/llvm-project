@@ -1614,8 +1614,10 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     // (two adds and a bitwise-not) with two (sub and add)
     // or even one (just sub for the C==1 special case).
     const APInt *C;
-    if (match(&I, m_c_BinOp(m_Add(m_Value(A), m_APIntAllowPoison(C)),
+    if (match(&I, m_c_BinOp(m_OneUse(m_Add(m_Value(A), m_APIntAllowPoison(C))),
                             m_Not(m_Value(B)))) ||
+        match(&I, m_c_BinOp(m_Add(m_Value(A), m_APIntAllowPoison(C)),
+                            m_OneUse(m_Not(m_Value(B))))) ||
         match(&I, m_BinOp(m_OneUse(m_c_Add(m_Not(m_Value(B)), m_Value(A))),
                           m_APIntAllowPoison(C)))) {
       Value *Sub = Builder.CreateSub(A, B);
