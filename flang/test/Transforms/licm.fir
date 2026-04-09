@@ -2615,3 +2615,20 @@ func.func @test_hoist_box_offset(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>, %arg
   }
   return
 }
+
+// -----
+// Test that fir.assumed_size_extent is hoisted as a pure operation.
+// CHECK-LABEL:   func.func @test_hoist_assumed_size_extent(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<index>)
+// CHECK:           %[[EXT:.*]] = fir.assumed_size_extent : index
+// CHECK:           fir.do_loop
+// CHECK:             fir.store %[[EXT]] to %[[ARG0]] : !fir.ref<index>
+func.func @test_hoist_assumed_size_extent(%arg0: !fir.ref<index>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %0 = fir.assumed_size_extent : index
+    fir.store %0 to %arg0 : !fir.ref<index>
+  }
+  return
+}

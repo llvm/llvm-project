@@ -1333,7 +1333,7 @@ def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
-def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [NoMemoryEffect]> {
+def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [Pure]> {
   let summary = "get the assumed-size last extent sentinel";
 
   let description = [{
