@@ -6,6 +6,7 @@ add_lldb_unittest(SymbolFileNativePDBTests
   LINK_COMPONENTS
     Support
     DebugInfoPDB
+    TestingSupport
   LINK_LIBS
     lldbCore
     lldbHost
@@ -18,8 +19,7 @@ add_lldb_unittest(SymbolFileNativePDBTests
   )
 
 set(test_inputs
-   DynamicTypes.cpp
-   DynamicTypes.exe
-   DynamicTypes.pdb)
+   dynamic-types-exe.yaml
+   dynamic-types.yaml)
 
 add_unittest_inputs(SymbolFileNativePDBTests "${test_inputs}")

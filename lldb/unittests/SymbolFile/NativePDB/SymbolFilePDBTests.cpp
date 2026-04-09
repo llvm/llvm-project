@@ -13,6 +13,17 @@
 #include "Plugins/SymbolFile/NativePDB/UdtRecordCompleter.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "llvm/DebugInfo/CodeView/AppendingTypeTableBuilder.h"
+#include "llvm/DebugInfo/MSF/MSFBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
+#include "llvm/ObjectYAML/COFFYAML.h"
+#include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
@@ -29,12 +40,190 @@
 using namespace lldb_private;
 using namespace lldb_private::npdb;
 using namespace llvm;
+using namespace llvm::codeview;
+
+namespace {
+
+struct TpiStreamYaml {
+  std::vector<CodeViewYAML::LeafRecord> records;
+};
+
+struct MinimalPdbYaml {
+  TpiStreamYaml tpi;
+  // FIXME: Take DBI section headers from YAML too.
+};
+
+} // namespace
+
+template <> struct llvm::yaml::MappingTraits<TpiStreamYaml> {
+  static void mapping(IO &io, TpiStreamYaml &tpi) {
+    io.mapRequired("Records", tpi.records);
+  }
+};
+
+template <> struct llvm::yaml::MappingTraits<MinimalPdbYaml> {
+  static void mapping(IO &io, MinimalPdbYaml &pdb) {
+    io.mapRequired("TpiStream", pdb.tpi);
+  }
+};
+
+static object::coff_section g_fixed_coff_sections[]{
+    {
+        /*.Name=*/".text",
+        /*.VirtualSize=*/ulittle32_t(542),
+        /*.VirtualAddress=*/ulittle32_t(4096),
+        /*.SizeOfRawData=*/ulittle32_t(1024),
+        /*.PointerToRawData=*/ulittle32_t(1024),
+        /*.PointerToRelocations=*/ulittle32_t(0),
+        /*.PointerToLinenumbers=*/ulittle32_t(0),
+        /*.NumberOfRelocations=*/ulittle16_t(0),
+        /*.NumberOfLinenumbers=*/ulittle16_t(0),
+        /*.Characteristics=*/
+        ulittle32_t(COFF::IMAGE_SCN_CNT_CODE | COFF::IMAGE_SCN_MEM_EXECUTE |
+                    COFF::IMAGE_SCN_MEM_READ),
+    },
+    {
+        /*.Name=*/".rdata",
+        /*.VirtualSize=*/ulittle32_t(244),
+        /*.VirtualAddress=*/ulittle32_t(8192),
+        /*.SizeOfRawData=*/ulittle32_t(512),
+        /*.PointerToRawData=*/ulittle32_t(2048),
+        /*.PointerToRelocations=*/ulittle32_t(0),
+        /*.PointerToLinenumbers=*/ulittle32_t(0),
+        /*.NumberOfRelocations=*/ulittle16_t(0),
+        /*.NumberOfLinenumbers=*/ulittle16_t(0),
+        /*.Characteristics=*/
+        ulittle32_t(COFF::IMAGE_SCN_CNT_CODE | COFF::IMAGE_SCN_MEM_READ),
+    },
+    {
+        /*.Name=*/".pdata",
+        /*.VirtualSize=*/ulittle32_t(12),
+        /*.VirtualAddress=*/ulittle32_t(16384),
+        /*.SizeOfRawData=*/ulittle32_t(512),
+        /*.PointerToRawData=*/ulittle32_t(2048),
+        /*.PointerToRelocations=*/ulittle32_t(0),
+        /*.PointerToLinenumbers=*/ulittle32_t(0),
+        /*.NumberOfRelocations=*/ulittle16_t(0),
+        /*.NumberOfLinenumbers=*/ulittle16_t(0),
+        /*.Characteristics=*/
+        ulittle32_t(COFF::IMAGE_SCN_CNT_CODE | COFF::IMAGE_SCN_MEM_READ),
+    },
+};
+
+/// Create a PDB from the YAML input.
+///
+/// This is essentially a trimmed down version of llvm-pdbutil's yamlToPdb which
+/// we can't use directly here.
+static Expected<std::string> createPdb() {
+  std::string input_path = GetInputFilePath("dynamic-types.yaml");
+  ErrorOr<std::unique_ptr<MemoryBuffer>> in_buffer =
+      llvm::MemoryBuffer::getFile(input_path, /*IsText=*/true);
+  if (std::error_code ec = in_buffer.getError())
+    return errorCodeToError(ec);
+
+  MinimalPdbYaml minimal_pdb;
+  yaml::Input yin(*in_buffer.get());
+  // FIXME: Remove this once we can build a PDB with ObjectYAML or similar.
+  yin.setAllowUnknownKeys(true);
+  yin >> minimal_pdb;
+  if (yin.error())
+    return errorCodeToError(yin.error());
+
+  BumpPtrAllocator allocator;
+  pdb::PDBFileBuilder builder(allocator);
+  Error err = builder.initialize(/*BlockSize=*/4096);
+  if (err)
+    return std::move(err);
+
+  for (uint32_t I = 0; I < pdb::kSpecialStreamCount; ++I) {
+    Expected<uint32_t> res = builder.getMsfBuilder().addStream(0);
+    if (!res)
+      return res.takeError();
+  }
+
+  pdb::InfoStreamBuilder &info = builder.getInfoBuilder();
+  info.setAge(1);
+  // GUID from dynamic-types-exe.yaml: {863E815D-0880-FDB2-4C4C-44205044422E}
+  info.setGuid({0x5D, 0x81, 0x3E, 0x86, 0x80, 0x08, 0xB2, 0xFD, 0x4C, 0x4C,
+                0x44, 0x20, 0x50, 0x44, 0x42, 0x2E});
+  info.setSignature(0);
+  info.setVersion(pdb::PdbImplVC70);
+  info.addFeature(pdb::PdbRaw_FeatureSig::VC140);
+
+  pdb::TpiStreamBuilder &tpi = builder.getTpiBuilder();
+  codeview::AppendingTypeTableBuilder type_builder(allocator);
+  tpi.setVersionHeader(pdb::PdbTpiV80);
+  for (const auto &type : minimal_pdb.tpi.records) {
+    codeview::CVType Type = type.toCodeViewRecord(type_builder);
+    Expected<uint32_t> Hash = pdb::hashTypeRecord(Type);
+    if (!Hash)
+      return Hash.takeError();
+    tpi.addTypeRecord(Type.RecordData, *Hash);
+  }
+
+  pdb::TpiStreamBuilder &ipi = builder.getIpiBuilder();
+  ipi.setVersionHeader(pdb::PdbTpiV80);
+
+  pdb::GSIStreamBuilder &gsi = builder.getGsiBuilder();
+  // Add a fake public symbol to make sure the PDB has a publics stream.
+  std::vector<pdb::BulkPublic> publics{pdb::BulkPublic()};
+  gsi.addPublicSymbols(std::move(publics));
+
+  pdb::DbiStreamBuilder &dbi = builder.getDbiBuilder();
+  dbi.setAge(1);
+  dbi.setBuildNumber(0);
+  dbi.setFlags(1);
+  dbi.setMachineType(pdb::PDB_Machine::Amd64);
+  dbi.setPdbDllRbld(0);
+  dbi.setPdbDllVersion(0);
+  dbi.setVersionHeader(pdb::PdbDbiV70);
+
+  ArrayRef<object::coff_section> coff_sections(g_fixed_coff_sections);
+  dbi.createSectionMap(coff_sections);
+  err = dbi.addDbgStream(
+      pdb::DbgHeaderType::SectionHdr,
+      ArrayRef<uint8_t>{(const uint8_t *)coff_sections.data(),
+                        coff_sections.size() * sizeof(object::coff_section)});
+  if (err)
+    return std::move(err);
+
+  std::string output_path = GetInputFilePath("dynamic-types.pdb");
+  GUID out_guid;
+  err = builder.commit(output_path, &out_guid);
+  if (err)
+    return std::move(err);
+  return output_path;
+}
+
+static Expected<std::string> createExe() {
+  std::string input_path = GetInputFilePath("dynamic-types-exe.yaml");
+  ErrorOr<std::unique_ptr<MemoryBuffer>> in_buffer =
+      llvm::MemoryBuffer::getFile(input_path, /*IsText=*/true);
+  if (std::error_code ec = in_buffer.getError())
+    return errorCodeToError(ec);
+
+  COFFYAML::Object obj;
+  yaml::Input yin(*in_buffer.get());
+  yin >> obj;
+  if (yin.error())
+    return errorCodeToError(yin.error());
+
+  std::string output_path = GetInputFilePath("dynamic-types.exe");
+  std::error_code ec;
+  raw_fd_ostream os(output_path, ec);
+  if (ec)
+    return errorCodeToError(ec);
+  std::string err;
+  bool ok = yaml::yaml2coff(obj, os,
+                            [&](const Twine &msg) { err.append(msg.str()); });
+  if (!ok)
+    return createStringError(err);
+  return output_path;
+}
 
 class SymbolFilePDBTests : public testing::Test {
 public:
   void SetUp() override {
-    m_test_exe = GetInputFilePath("DynamicTypes.exe");
-
     ArchSpec arch("x86_64-pc-windows-msvc");
     Platform::SetHostPlatform(PlatformWindows::CreateInstance(true, &arch));
     m_debugger_sp = Debugger::CreateInstance();
@@ -67,8 +256,6 @@ public:
   }
 
 protected:
-  std::string m_test_exe;
-
   SubsystemRAII<FileSystem, HostInfo, ObjectFilePECOFF, SymbolFileNativePDB,
                 SymbolFilePDB, TypeSystemClang>
       m_subsystems;
@@ -76,7 +263,12 @@ protected:
 };
 
 TEST_F(SymbolFilePDBTests, TestDynamicCxxType) {
-  FileSpec fspec(m_test_exe);
+  Expected<std::string> pdb_path = createPdb();
+  EXPECT_THAT_EXPECTED(pdb_path, Succeeded());
+  Expected<std::string> exe_path = createExe();
+  EXPECT_THAT_EXPECTED(exe_path, Succeeded());
+
+  FileSpec fspec(*exe_path);
   ArchSpec aspec("x86_64-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
