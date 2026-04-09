@@ -310,6 +310,31 @@ struct KnownFPClass {
   /// Report known values for cos
   LLVM_ABI static KnownFPClass cos(const KnownFPClass &Src);
 
+  /// Report known values for tan
+  LLVM_ABI static KnownFPClass tan(const KnownFPClass &Src);
+
+  /// Report known values for sinh
+  LLVM_ABI static KnownFPClass sinh(const KnownFPClass &Src);
+
+  /// Report known values for cosh
+  LLVM_ABI static KnownFPClass cosh(const KnownFPClass &Src);
+
+  /// Report known values for tanh
+  LLVM_ABI static KnownFPClass tanh(const KnownFPClass &Src);
+
+  /// Report known values for asin
+  LLVM_ABI static KnownFPClass asin(const KnownFPClass &Src);
+
+  /// Report known values for acos
+  LLVM_ABI static KnownFPClass acos(const KnownFPClass &Src);
+
+  /// Report known values for atan
+  LLVM_ABI static KnownFPClass atan(const KnownFPClass &Src);
+
+  /// Report known values for atan2
+  LLVM_ABI static KnownFPClass atan2(const KnownFPClass &LHS,
+                                     const KnownFPClass &RHS);
+
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
 

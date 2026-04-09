@@ -5257,14 +5257,76 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       break;
     }
-    case Intrinsic::sin:
-    case Intrinsic::cos: {
-      // Return NaN on infinite inputs.
+    case Intrinsic::sin: {
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known = IID == Intrinsic::sin ? KnownFPClass::sin(KnownSrc)
-                                    : KnownFPClass::cos(KnownSrc);
+      Known = KnownFPClass::sin(KnownSrc);
+      break;
+    }
+    case Intrinsic::cos: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::cos(KnownSrc);
+      break;
+    }
+    case Intrinsic::tan: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::tan(KnownSrc);
+      break;
+    }
+    case Intrinsic::sinh: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::sinh(KnownSrc);
+      break;
+    }
+    case Intrinsic::cosh: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::cosh(KnownSrc);
+      break;
+    }
+    case Intrinsic::tanh: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::tanh(KnownSrc);
+      break;
+    }
+    case Intrinsic::asin: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::asin(KnownSrc);
+      break;
+    }
+    case Intrinsic::acos: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::acos(KnownSrc);
+      break;
+    }
+    case Intrinsic::atan: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+      Known = KnownFPClass::atan(KnownSrc);
+      break;
+    }
+    case Intrinsic::atan2: {
+      KnownFPClass KnownLHS, KnownRHS;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownLHS, Q, Depth + 1);
+      computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedClasses,
+                          KnownRHS, Q, Depth + 1);
+      Known = KnownFPClass::atan2(KnownLHS, KnownRHS);
       break;
     }
     case Intrinsic::maxnum:
