@@ -1217,13 +1217,14 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case([](const VPWidenIntrinsicRecipe *I) {
         return std::make_pair(true, I->getVectorIntrinsicID());
       })
-      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
-        // For recipes that do not directly map to LLVM IR instructions,
-        // assign opcodes after the last VPInstruction opcode (which is also
-        // after the last IR Instruction opcode), based on the VPRecipeID.
-        return std::make_pair(false,
-                              VPInstruction::OpsEnd + 1 + I->getVPRecipeID());
-      })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
+          [](auto *I) {
+            // For recipes that do not directly map to LLVM IR instructions,
+            // assign opcodes after the last VPInstruction opcode (which is also
+            // after the last IR Instruction opcode), based on the VPRecipeID.
+            return std::make_pair(false, VPInstruction::OpsEnd + 1 +
+                                             I->getVPRecipeID());
+          })
       .Default([](auto *) { return std::nullopt; });
 }
 
