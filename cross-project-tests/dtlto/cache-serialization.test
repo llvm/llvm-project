@@ -1,0 +1,98 @@
+REQUIRES: ld.lld
+
+# Show that DTLTO input file serialization interacts correctly with
+# the ThinLTO cache.
+#
+# To handle bitcode inputs that are not in individual files on disk,
+# such as members of non-thin archives, DTLTO serializes such input
+# bitcode to a temporary individual file on disk. This serialization
+# should only be performed if the backend compilation is required. A
+# backend compilation is only required if there is a miss in the ThinLTO
+# cache for that module, or a module is imported by a module that has
+# missed in the ThinLTO cache.
+#
+# Test DTLTO input serialization across three cases:
+#   1. ThinLTO cache miss for all backends
+#      (sanity check that the assumptions for this test hold).
+#   2. Full ThinLTO cache hit
+#   3. Partial ThinLTO cache hit
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -c t1.c t2.c
+RUN: llvm-ar rcs t1.a t1.o
+RUN: llvm-ar rcs t2.a t2.o
+
+RUN: mkdir cache.dir
+DEFINE: %{link} = \
+DEFINE:   %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin -fuse-ld=lld \
+DEFINE:     -fthinlto-distributor=%python \
+DEFINE:     -Xthinlto-distributor=%llvm_src_root/utils/dtlto/local.py \
+DEFINE:     -Wl,--thinlto-remote-compiler=%clang \
+DEFINE:     -Wl,--thinlto-cache-dir=cache.dir \
+DEFINE:     -Wl,--save-temps -shared
+
+# First link: full cache miss.
+#
+# Both t1.o and t2.o require backend compilation, so both should be
+# serialized.
+# Each backend compilation should produce:
+#   * a native object
+#   * a thinlto.bc file
+#   * a regular saved temp object
+RUN: mkdir miss
+RUN: %{link} -Wl,--whole-archive t1.a t2.a -o miss/t.elf
+RUN: ls miss | sort | FileCheck %s --check-prefixes=JSON,ELF,MISS
+JSON: {{^}}t.[[#PID:]].dist-file.json{{$}}
+ELF: {{^}}t.elf.resolution.txt{{$}}
+MISS-NEXT: t1.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID:]].native.o
+MISS-NEXT: t1.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].1.[[#PID]].native.o.thinlto.bc
+MISS-NEXT: t1.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].o
+MISS-NEXT: t2.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o
+MISS-NEXT: t2.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc
+MISS-NEXT: t2.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].o
+MISS-NOT: {{.}}
+
+# Second link: full cache hit.
+#
+# Both t1.o and t2.o are satisfied from the ThinLTO cache, so no backend
+# compilation runs.
+# Only the .thinlto.bc individual summary index files are produced.
+RUN: mkdir hit
+RUN: %{link} -Wl,--whole-archive t1.a t2.a -o hit/t.elf
+RUN: ls hit | sort | FileCheck %s --check-prefixes=JSON,ELF,HIT
+HIT-NEXT: t1.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID:]].native.o.thinlto.bc
+HIT-NEXT: t2.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc
+HIT-NOT: {{.}}
+
+# Third link: partial cache hit.
+#
+# t1.o and t2.o are cached, but the new t3.o misses the cache and imports
+# from t1.o:
+#   * t3.o must be compiled and serialized
+#   * cached t1.o must be serialized because it is imported from
+#   * cached t2.o should not be serialized or compiled (only a .thinlto.bc
+#     will be produced for it)
+RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -c t3.c
+RUN: llvm-ar rcs t3.a t3.o
+RUN: mkdir partial
+RUN: %{link} -Wl,--whole-archive t1.a t2.a t3.a -o partial/t.elf
+RUN: ls partial | sort | FileCheck %s --check-prefixes=JSON,ELF,PARTIAL
+PARTIAL-NEXT: t1.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID]].native.o.thinlto.bc
+PARTIAL-NEXT: t1.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].o
+PARTIAL-NEXT: t2.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc
+PARTIAL-NEXT: t3.a(t3.o at [[#T3_OFFSET:]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o
+PARTIAL-NEXT: t3.a(t3.o at [[#T3_OFFSET]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o.thinlto.bc
+PARTIAL-NEXT: t3.a(t3.o at [[#T3_OFFSET]]).3.[[#%X,HEXPID]].o
+PARTIAL-NOT: {{.}}
+
+#--- t1.c
+__attribute__((retain)) int t1(int x) { return x; }
+
+#--- t2.c
+extern int t1(int);
+__attribute__((retain)) int t2(int x) { return t1(x) + x; }
+
+#--- t3.c
+extern int t1(int);
+__attribute__((retain)) int t3(int x) { return t1(x) + x; }

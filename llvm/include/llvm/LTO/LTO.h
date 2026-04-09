@@ -22,12 +22,14 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/thread.h"
@@ -134,11 +136,6 @@ private:
 
   MemoryBufferRef MbRef;
   bool IsFatLTOObject = false;
-  // For distributed compilation, each input must exist as an individual bitcode
-  // file on disk and be identified by its ModuleID. Archive members and FatLTO
-  // objects violate this. So, in these cases we flag that the bitcode must be
-  // written out to a new standalone file.
-  bool SerializeForDistribution = false;
   bool IsThinLTO = false;
   StringRef ArchivePath;
   StringRef MemberName;
@@ -212,12 +209,6 @@ public:
   LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
   // Returns the memory buffer reference for this input file.
   MemoryBufferRef getFileBuffer() const { return MbRef; }
-  // Returns true if this input should be serialized to disk for distribution.
-  // See the comment on SerializeForDistribution for details.
-  bool getSerializeForDistribution() const { return SerializeForDistribution; }
-  // Mark whether this input should be serialized to disk for distribution.
-  // See the comment on SerializeForDistribution for details.
-  void setSerializeForDistribution(bool SFD) { SerializeForDistribution = SFD; }
   // Returns true if this bitcode came from a FatLTO object.
   bool isFatLTOObject() const { return IsFatLTOObject; }
   // Mark this bitcode as coming from a FatLTO object.
@@ -303,12 +294,15 @@ public:
 /// This callable defines the behavior of a ThinLTO backend after the thin-link
 /// phase. It accepts a configuration \p C, a combined module summary index
 /// \p CombinedIndex, a map of module identifiers to global variable summaries
-/// \p ModuleToDefinedGVSummaries, a function to add output streams \p
-/// AddStream, and a file cache \p Cache. It returns a unique pointer to a
-/// ThinBackendProc, which can be used to launch backends in parallel.
+/// \p ModuleToDefinedGVSummaries, a map of rewritten DTLTO module identifiers
+/// to input bitcode buffers \p BitcodeForDistribution, a function to add
+/// output streams \p AddStream, and a file cache \p Cache. It returns a unique
+/// pointer to a ThinBackendProc, which can be used to launch backends in
+/// parallel.
 using ThinBackendFunction = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    const StringMap<MemoryBufferRef> &BitcodeForDistribution,
     AddStreamFn AddStream, FileCache Cache,
     ArrayRef<StringRef> BitcodeLibFuncs)>;
 
@@ -325,11 +319,13 @@ struct ThinBackend {
   std::unique_ptr<ThinBackendProc> operator()(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      const StringMap<MemoryBufferRef> &BitcodeForDistribution,
       AddStreamFn AddStream, FileCache Cache,
       ArrayRef<StringRef> BitcodeLibFuncs) {
     assert(isValid() && "Invalid backend function");
     return Func(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                std::move(AddStream), std::move(Cache), BitcodeLibFuncs);
+                BitcodeForDistribution, std::move(AddStream), std::move(Cache),
+                BitcodeLibFuncs);
   }
   ThreadPoolStrategy getParallelism() const { return Parallelism; }
   bool isValid() const { return static_cast<bool>(Func); }
@@ -483,11 +479,16 @@ public:
   getLibFuncSymbols(const Triple &TT, llvm::StringSaver &Saver);
 
 protected:
-  // Called at the start of run().
-  virtual Error serializeInputsForDistribution() { return Error::success(); }
-
   // Called before returning from run().
   virtual void cleanup();
+
+  // For DTLTO, some ThinLTO-enabled inputs may have their module IDs rewritten
+  // to distinct temporary filenames so the backend can reference individual
+  // bitcode files for distributed compilation. This map holds the input
+  // bitcode so the ThinLTO backend can serialize those files at the rewritten
+  // paths. Serialization is deferred until the backend determines that the
+  // compilation job is not cached.
+  StringMap<MemoryBufferRef> BitcodeForDistribution;
 
 private:
   Config Conf;

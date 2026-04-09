@@ -217,8 +217,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   else
     ltoObj = std::make_unique<lto::DTLTO>(
         createConfig(ctx), backend, ctx.arg.ltoPartitions,
-        ltoModes[ctx.arg.ltoKind], ctx.arg.outputFile,
-        !ctx.arg.saveTempsArgs.empty());
+        ltoModes[ctx.arg.ltoKind], ctx.arg.outputFile);
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;

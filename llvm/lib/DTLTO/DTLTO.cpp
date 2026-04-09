@@ -21,12 +21,9 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/raw_ostream.h"
 #ifdef _WIN32
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
@@ -36,27 +33,6 @@
 using namespace llvm;
 
 namespace {
-
-// Saves the content of Buffer to Path overwriting any existing file.
-Error save(StringRef Buffer, StringRef Path) {
-  std::error_code EC;
-  raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::OF_None);
-  if (EC)
-    return createStringError(inconvertibleErrorCode(),
-                             "Failed to create file %s: %s", Path.data(),
-                             EC.message().c_str());
-  OS.write(Buffer.data(), Buffer.size());
-  if (OS.has_error())
-    return createStringError(inconvertibleErrorCode(),
-                             "Failed writing to file %s", Path.data());
-  return Error::success();
-}
-
-// Saves the content of Input to Path overwriting any existing file.
-Error save(lto::InputFile *Input, StringRef Path) {
-  MemoryBufferRef MB = Input->getFileBuffer();
-  return save(MB.getBuffer(), Path);
-}
 
 // Normalize and save a path. Aside from expanding Windows 8.3 short paths,
 // no other normalization is currently required here. These paths are
@@ -150,8 +126,13 @@ Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
 //    (normalized on Windows) to the member file on disk.
 // 4. For archive members and FatLTO objects, overwrite the module ID with a
 //    unique path (normalized on Windows) naming a file that will contain the
-//    member content. The file is created and populated later (see
-//    serializeInputs()).
+//    member content. The file is created and populated later by the ThinLTO
+//    backend once it knows the backend compilation job is not already cached.
+// 5. To allow the ThinLTO backend to write the file contents, this function
+//    records the input file buffer and provides it to the backend (associated
+//    with the new name). If a file with that name already exists, it is likely
+//    a leftover from a previously terminated linker process and can be safely
+//    overwritten.
 Expected<std::shared_ptr<lto::InputFile>>
 lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
   TimeTraceScope TimeScope("Add input for DTLTO");
@@ -201,7 +182,6 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
   }
 
   // A new file on disk will be needed for archive members and FatLTO objects.
-  Input->setSerializeForDistribution(true);
 
   // Get the normalized output directory, if we haven't already.
   if (LinkerOutputDir.empty()) {
@@ -219,47 +199,10 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
                         std::to_string(InputFiles.size()) /*Sequence number*/ +
                         "." + utohexstr(sys::Process::getProcessId()) + ".o");
   BM.setModuleIdentifier(Saver.save(Id.str()));
+
+  // Record the input file buffer associated with the new identifier so the
+  // ThinLTO backend can write this to the filesystem to enable backend
+  // compilation.
+  BitcodeForDistribution[BM.getModuleIdentifier()] = Input->getFileBuffer();
   return Input;
-}
-
-// Save the contents of ThinLTO-enabled input files that must be serialized for
-// distribution, such as archive members and FatLTO objects, to individual
-// bitcode files named after the module ID.
-//
-// Must be called after all input files are added but before optimization
-// begins. If a file with that name already exists, it is likely a leftover from
-// a previously terminated linker process and can be safely overwritten.
-llvm::Error lto::DTLTO::serializeInputsForDistribution() {
-  for (auto &Input : InputFiles) {
-    if (!Input->isThinLTO() || !Input->getSerializeForDistribution())
-      continue;
-    // Save the content of the input file to a file named after the module ID.
-    StringRef ModuleId = Input->getName();
-    TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleId);
-    // Cleanup this file on abnormal process exit.
-    if (!SaveTemps)
-      llvm::sys::RemoveFileOnSignal(ModuleId);
-    if (Error EC = save(Input.get(), ModuleId))
-      return EC;
-  }
-
-  return Error::success();
-}
-
-// Remove serialized inputs created to enable distribution.
-void lto::DTLTO::cleanup() {
-  if (!SaveTemps) {
-    TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
-    for (auto &Input : InputFiles) {
-      if (!Input->getSerializeForDistribution())
-        continue;
-      std::error_code EC =
-          sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
-      if (EC &&
-          EC != std::make_error_code(std::errc::no_such_file_or_directory))
-        errs() << "warning: could not remove temporary DTLTO input file '"
-               << Input->getName() << "': " << EC.message() << "\n";
-    }
-  }
-  Base::cleanup();
 }

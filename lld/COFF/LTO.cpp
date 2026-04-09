@@ -155,8 +155,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
   else
     ltoObj = std::make_unique<lto::DTLTO>(
         createConfig(), backend, ctx.config.ltoPartitions,
-        llvm::lto::LTO::LTOKind::LTOK_Default, ctx.config.outputFile,
-        !ctx.config.saveTempsArgs.empty());
+        llvm::lto::LTO::LTOKind::LTOK_Default, ctx.config.outputFile);
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;

@@ -1301,9 +1301,6 @@ Error LTO::checkPartiallySplit() {
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   llvm::scope_exit CleanUp([this]() { cleanup(); });
 
-  if (Error EC = serializeInputsForDistribution())
-    return EC;
-
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
@@ -1879,8 +1876,8 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn AddStream, FileCache Cache,
-          ArrayRef<StringRef> BitcodeLibFuncs) {
+          const StringMap<MemoryBufferRef> &, AddStreamFn AddStream,
+          FileCache Cache, ArrayRef<StringRef> BitcodeLibFuncs) {
         return std::make_unique<InProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
@@ -2001,8 +1998,8 @@ ThinBackend lto::createWriteIndexesThinBackend(
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn AddStream, FileCache Cache,
-          ArrayRef<StringRef> BitcodeLibFuncs) {
+          const StringMap<MemoryBufferRef> &, AddStreamFn AddStream,
+          FileCache Cache, ArrayRef<StringRef> BitcodeLibFuncs) {
         return std::make_unique<WriteIndexesThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             OldPrefix, NewPrefix, NativeObjectPrefix, ShouldEmitImportsFiles,
@@ -2253,9 +2250,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   };
 
   if (!CodeGenDataThinLTOTwoRounds) {
-    std::unique_ptr<ThinBackendProc> BackendProc =
-        ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                        AddStream, Cache, BitcodeLibFuncs);
+    std::unique_ptr<ThinBackendProc> BackendProc = ThinLTO.Backend(
+        Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
+        BitcodeForDistribution, AddStream, Cache, BitcodeLibFuncs);
     return RunBackends(BackendProc.get());
   }
 
@@ -2354,6 +2351,21 @@ std::vector<int> lto::generateModulesOrdering(ArrayRef<BitcodeModule *> R) {
 }
 
 namespace {
+// Saves the content of Buffer to Path overwriting any existing file.
+Error saveBuffer(StringRef Buffer, StringRef Path) {
+  std::error_code EC;
+  raw_fd_ostream OS(Path, EC, sys::fs::OF_None);
+  if (EC)
+    return createStringError(inconvertibleErrorCode(),
+                             "Failed to create file %s: %s", Path.data(),
+                             EC.message().c_str());
+  OS.write(Buffer.data(), Buffer.size());
+  if (OS.has_error())
+    return createStringError(inconvertibleErrorCode(),
+                             "Failed writing to file %s", Path.data());
+  return Error::success();
+}
+
 /// This out-of-process backend does not perform code generation when invoked
 /// for each task. Instead, it generates the necessary information (e.g., the
 /// summary index shard, import list, etc.) to enable code generation to be
@@ -2410,11 +2422,71 @@ class OutOfProcessThinBackend : public CGThinBackend {
   // Callback to add a pre-existing native object buffer to the link.
   AddBufferFn AddBuffer;
 
+  // Map from module ID to input buffer for modules whose module IDs were
+  // rewritten to distinct temporary filenames (e.g. archive members or
+  // FatLTO objects). This allows the ThinLTO backend to serialize those
+  // modules at the rewritten paths. Serialization is deferred until the
+  // backend determines that the compilation job is not cached.
+  const StringMap<MemoryBufferRef> &BitcodeForDistribution;
+
+  // Records which bitcode input files were seralized.
+  SmallVector<StringRef> SerializedBitcode;
+
+  // For DTLTO, some ThinLTO-enabled inputs may have their module IDs rewritten
+  // to distinct temporary filenames so the external backend compilation can
+  // reference an individual bitcode file. Serialize such modules for uncached
+  // backend jobs, along with any imported modules, even if those imports were
+  // satisfied from the cache.
+  Error serializeBitcodeForUncachedJobs() {
+    if (BitcodeForDistribution.empty())
+      return Error::success();
+
+    DenseSet<StringRef> Seen;
+
+    auto serializeBitcode = [&](StringRef ModuleID) -> Error {
+      auto It = BitcodeForDistribution.find(ModuleID);
+      if (It == BitcodeForDistribution.end() ||
+          !Seen.insert(It->getKey()).second)
+        return Error::success();
+      TimeTraceScope TimeScope("Serialize bitcode input for DTLTO",
+                               It->getKey());
+      if (!SaveTemps)
+        llvm::sys::RemoveFileOnSignal(It->getKey());
+      SerializedBitcode.push_back(It->getKey());
+      return saveBuffer(It->second.getBuffer(), It->getKey());
+    };
+
+    for (const Job &J : Jobs) {
+      if (J.Cached)
+        continue;
+      if (Error E = serializeBitcode(J.ModuleID))
+        return E;
+      for (StringRef M : J.ImportsFiles)
+        if (Error E = serializeBitcode(M))
+          return E;
+    }
+    return Error::success();
+  }
+
+  void removeSerializedBitcode() {
+    if (SaveTemps || SerializedBitcode.empty())
+      return;
+    TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
+    for (StringRef Path : SerializedBitcode) {
+      std::error_code EC = sys::fs::remove(Path, /*IgnoreNonExisting=*/true);
+      if (EC &&
+          EC != std::make_error_code(std::errc::no_such_file_or_directory))
+        errs() << "warning: could not remove temporary DTLTO input file '"
+               << Path << "': " << EC.message() << "\n";
+    }
+  }
+
 public:
   OutOfProcessThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      const StringMap<MemoryBufferRef> &BitcodeForDistribution,
       FileCache CacheFn, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
       StringRef LinkerOutputFile, StringRef Distributor,
@@ -2429,7 +2501,8 @@ public:
         DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
         RemoteCompilerPrependArgs(RemoteCompilerPrependArgs),
         RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps),
-        Cache(std::move(CacheFn)), AddBuffer(std::move(AddBuffer)) {}
+        Cache(std::move(CacheFn)), AddBuffer(std::move(AddBuffer)),
+        BitcodeForDistribution(BitcodeForDistribution) {}
 
   void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
              llvm::Triple Triple) override {
@@ -2698,10 +2771,14 @@ public:
             removeFile(Job.SummaryIndexPath);
         }
     });
+    llvm::scope_exit CleanSerializedBitcode([&] { removeSerializedBitcode(); });
 
     const StringRef BCError = "DTLTO backend compilation: ";
 
     buildCommonRemoteCompilerOptions();
+
+    if (Error E = serializeBitcodeForUncachedJobs())
+      return E;
 
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
     {
@@ -2801,13 +2878,14 @@ ThinBackend lto::createOutOfProcessThinBackend(
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn, FileCache Cache, ArrayRef<StringRef> BitcodeLibFuncs) {
+          const StringMap<MemoryBufferRef> &BitcodeForDistribution, AddStreamFn,
+          FileCache Cache, ArrayRef<StringRef> BitcodeLibFuncs) {
         return std::make_unique<OutOfProcessThinBackend>(
-            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries, Cache,
-            OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
-            LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
-            RemoteCompilerPrependArgs, RemoteCompilerArgs, SaveTemps,
-            AddBuffer);
+            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+            BitcodeForDistribution, Cache, OnWrite, ShouldEmitIndexFiles,
+            ShouldEmitImportsFiles, LinkerOutputFile, Distributor,
+            DistributorArgs, RemoteCompiler, RemoteCompilerPrependArgs,
+            RemoteCompilerArgs, SaveTemps, AddBuffer);
       };
   return ThinBackend(Func, Parallelism);
 }

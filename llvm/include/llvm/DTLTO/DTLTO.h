@@ -10,7 +10,6 @@
 #define LLVM_DTLTO_DTLTO_H
 
 #include "llvm/LTO/LTO.h"
-#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 namespace lto {
@@ -22,25 +21,31 @@ namespace lto {
 // file on disk and be loadable via its ModuleID. This requirement is not met
 // for archive members, as an archive is a collection of files rather than a
 // standalone file. Similarly, for FatLTO objects, the bitcode is stored in a
-// section of the containing ELF object file. To address this, the class ensures
-// that an individual bitcode file exists for each input (by writing it out if
-// necessary) and that the ModuleID is updated to point to it. Module IDs are
-// also normalized on Windows to remove short 8.3 form paths that cannot be
-// loaded on remote machines.
+// section of the containing ELF object file. To address this, the class
+// updates the ModuleID of such bitcode inputs to a unique temporary path to
+// which the extracted input bitcode can be written. On Windows it also
+// normalizes the paths to avoid machine-local 8.3 short names that remote
+// workers cannot reliably load.
+//
+// The bitcode is not immediately written. Instead, the class records the
+// original input buffer and lets the ThinLTO backend write the file only if
+// backend compilation is actually required. This avoids writing the file when
+// the ThinLTO object cache already satisfies the backend job.
 //
 // The class ensures that lto::InputFile objects are preserved until enough of
 // the LTO pipeline has executed to determine the required per-module
-// information, such as whether a module will participate in ThinLTO.
+// information, such as whether a module will participate in ThinLTO and to
+// allow the ThinLTO backend to write out the associated bitcode buffer.
 class DTLTO : public LTO {
   using Base = LTO;
 
 public:
   LLVM_ABI DTLTO(Config Conf, ThinBackend Backend,
                  unsigned ParallelCodeGenParallelismLevel, LTOKind LTOMode,
-                 StringRef LinkerOutputFile, bool SaveTemps)
+                 StringRef LinkerOutputFile)
       : Base(std::move(Conf), Backend, ParallelCodeGenParallelismLevel,
              LTOMode),
-        LinkerOutputFile(LinkerOutputFile), SaveTemps(SaveTemps) {
+        LinkerOutputFile(LinkerOutputFile) {
     assert(!LinkerOutputFile.empty() && "expected a valid linker output file");
   }
 
@@ -48,16 +53,8 @@ public:
   LLVM_ABI Expected<std::shared_ptr<InputFile>>
   addInput(std::unique_ptr<InputFile> InputPtr) override;
 
-protected:
-  // Save the contents of ThinLTO-enabled input files that must be serialized
-  // for distribution, such as archive members and FatLTO objects, to individual
-  // bitcode files named after the module ID.
-  LLVM_ABI llvm::Error serializeInputsForDistribution() override;
-
-  LLVM_ABI void cleanup() override;
-
 private:
-  // Bump allocator for a purpose of saving updated module IDs.
+  // Bump allocator for saving updated module IDs.
   BumpPtrAllocator PtrAlloc;
   StringSaver Saver{PtrAlloc};
 
@@ -67,10 +64,8 @@ private:
   /// The normalized output directory, derived from LinkerOutputFile.
   StringRef LinkerOutputDir;
 
-  /// Controls preservation of any created temporary files.
-  bool SaveTemps;
-
-  // Array of input bitcode files for LTO.
+  // Array of input bitcode files for LTO. We use shared_ptr here to
+  // keep InputFile objects alive whilst the ThinLTO backend is invoked.
   std::vector<std::shared_ptr<lto::InputFile>> InputFiles;
 
   // Cache of whether a path refers to a thin archive.
