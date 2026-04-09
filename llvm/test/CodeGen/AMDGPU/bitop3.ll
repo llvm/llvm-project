@@ -741,6 +741,329 @@ define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
   %ret_cast = bitcast i16 %or1 to half
   ret half %ret_cast
 }
+
+; ========= v2i32-i32 pattern tests =========
+
+define i32 @v_v2i32_or_i32_xor(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: v_v2i32_or_i32_xor:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x36
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_v2i32_or_i32_xor:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x36
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %x = or disjoint <2 x i32> %a, %b
+  %x_lo = extractelement <2 x i32> %x, i64 0
+  %x_hi = extractelement <2 x i32> %x, i64 1
+  %res = xor i32 %x_lo, %x_hi
+  ret i32 %res
+}
+
+; Test if bitop3 is not created in SDAG under this pattern v2i32(and)-v2i32(or)-i32
+define i32 @v_v2i32_and_v2i32_or_i32_xor(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; GFX950-SDAG-LABEL: v_v2i32_and_v2i32_or_i32_xor:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_and_or_b32 v1, v1, v3, v5
+; GFX950-SDAG-NEXT:    v_and_or_b32 v0, v0, v2, v4
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_v2i32_and_v2i32_or_i32_xor:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_and_or_b32 v1, v1, v3, v5
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v4 bitop3:0x36
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: v_v2i32_and_v2i32_or_i32_xor:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_and_or_b32 v1, v1, v3, v5
+; GFX1250-SDAG-NEXT:    v_and_or_b32 v0, v0, v2, v4
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: v_v2i32_and_v2i32_or_i32_xor:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX1250-GISEL-NEXT:    v_and_or_b32 v1, v1, v3, v5
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v4 bitop3:0x36
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %x = and <2 x i32> %a, %b
+  %y = or disjoint <2 x i32> %x, %c
+  %y_lo = extractelement <2 x i32> %y, i64 0
+  %y_hi = extractelement <2 x i32> %y, i64 1
+  %res = xor i32 %y_lo, %y_hi
+  ret i32 %res
+}
+
+; Test if bitop3 is not created in SDAG under this pattern v2i32(or)-v2i32(or)-i32
+define i32 @v_v2i32_or_v2i32_or_i32_xor(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; GFX950-SDAG-LABEL: v_v2i32_or_v2i32_or_i32_xor:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_or3_b32 v1, v1, v3, v5
+; GFX950-SDAG-NEXT:    v_or3_b32 v0, v0, v2, v4
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_v2i32_or_v2i32_or_i32_xor:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_or3_b32 v1, v1, v3, v5
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v4 bitop3:0x36
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: v_v2i32_or_v2i32_or_i32_xor:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_or3_b32 v1, v1, v3, v5
+; GFX1250-SDAG-NEXT:    v_or3_b32 v0, v0, v2, v4
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: v_v2i32_or_v2i32_or_i32_xor:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX1250-GISEL-NEXT:    v_or3_b32 v1, v1, v3, v5
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v4 bitop3:0x36
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %x = or <2 x i32> %a, %b
+  %y = or disjoint <2 x i32> %x, %c
+  %y_lo = extractelement <2 x i32> %y, i64 0
+  %y_hi = extractelement <2 x i32> %y, i64 1
+  %res = xor i32 %y_lo, %y_hi
+  ret i32 %res
+}
+
+; Test if bitop3 is created under this pattern v2i32(xor)-v2i32(and)-i32
+define i32 @v_v2i32_and_v2i32_and_i32_xor(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; GFX950-LABEL: v_v2i32_and_v2i32_and_i32_xor:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX950-NEXT:    v_bitop3_b32 v1, v1, v5, v3 bitop3:0x48
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v4 bitop3:0x6c
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_v2i32_and_v2i32_and_i32_xor:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX1250-NEXT:    v_bitop3_b32 v1, v1, v5, v3 bitop3:0x48
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v4 bitop3:0x6c
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %x = xor <2 x i32> %a, %b
+  %y = and <2 x i32> %x, %c
+  %y_lo = extractelement <2 x i32> %y, i64 0
+  %y_hi = extractelement <2 x i32> %y, i64 1
+  %res = xor i32 %y_lo, %y_hi
+  ret i32 %res
+}
+
+define i32 @v_v2i32_or_i32_xor_const(<2 x i32> %a) {
+; GFX950-SDAG-LABEL: v_v2i32_or_i32_xor_const:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v1, -16, v1 bitop3:0xc
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_v2i32_or_i32_xor_const:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_or_b32_e32 v0, 15, v1
+; GFX950-GISEL-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: v_v2i32_or_i32_xor_const:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v1, -16, v1 bitop3:0xc
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: v_v2i32_or_i32_xor_const:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_or_b32_e32 v0, 15, v1
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %x = or <2 x i32> %a, <i32 -1, i32 15>
+  %x_lo = extractelement <2 x i32> %x, i64 0
+  %x_hi = extractelement <2 x i32> %x, i64 1
+  %res = xor i32 %x_lo, %x_hi
+  ret i32 %res
+}
+
+define i32 @v_v2i32_and_v2i32_or_i32_xor_constx2(<2 x i32> %a) {
+; GFX950-SDAG-LABEL: v_v2i32_and_v2i32_or_i32_xor_constx2:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
+; GFX950-SDAG-NEXT:    v_and_b32_e32 v0, 4, v0
+; GFX950-SDAG-NEXT:    v_or_b32_e32 v1, 7, v1
+; GFX950-SDAG-NEXT:    v_or_b32_e32 v0, 8, v0
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_v2i32_and_v2i32_or_i32_xor_constx2:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 4, v0
+; GFX950-GISEL-NEXT:    v_and_or_b32 v1, v1, 15, 7
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, 8 bitop3:0x36
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: v_v2i32_and_v2i32_or_i32_xor_constx2:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_and_or_b32 v1, v1, 15, 7
+; GFX1250-SDAG-NEXT:    v_and_or_b32 v0, v0, 4, 8
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: v_v2i32_and_v2i32_or_i32_xor_constx2:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 4, v0
+; GFX1250-GISEL-NEXT:    v_and_or_b32 v1, v1, 15, 7
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, 8 bitop3:0x36
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %x = and <2 x i32> %a, <i32 4, i32 15>
+  %y = or <2 x i32> %x, <i32 8, i32 7>
+  %y_lo = extractelement <2 x i32> %y, i64 0
+  %y_hi = extractelement <2 x i32> %y, i64 1
+  %res = xor i32 %y_lo, %y_hi
+  ret i32 %res
+}
+
+define i32 @v_not_and_not_and(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-SDAG-LABEL: v_not_and_not_and:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_bitop3_b32 v1, v1, v3, v1 bitop3:3
+; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc9
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_not_and_not_and:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_not_b32_e32 v3, v3
+; GFX950-GISEL-NEXT:    v_bfi_b32 v1, v1, 0, v3
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc9
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: v_not_and_not_and:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_bitop3_b32 v1, v1, v3, v1 bitop3:3
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc9
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: v_not_and_not_and:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_not_b32_e32 v3, v3
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v1, v1, 0, v3
+; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc9
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %nota = xor <2 x i32> %a, <i32 -1, i32 -1>
+  %notb = xor <2 x i32> %b, <i32 -1, i32 -1>
+  %and1 = and <2 x i32> %nota, %notb
+  %and1_lo = extractelement <2 x i32> %and1, i64 0
+  %and1_hi = extractelement <2 x i32> %and1, i64 1
+  %res = xor i32 %and1_lo, %and1_hi
+  ret i32 %res
+}
+
+define i32 @v_not_or_and_or(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-SDAG-LABEL: v_not_or_and_or:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX950-SDAG-NEXT:    v_and_or_b32 v1, v3, 8, v1
+; GFX950-SDAG-NEXT:    v_and_or_b32 v0, v2, 16, v0
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: v_not_or_and_or:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v2, 16, v2
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v3, 8, v3
+; GFX950-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, -1
+; GFX950-GISEL-NEXT:    v_bfi_b32 v1, v1, v3, -1
+; GFX950-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: v_not_or_and_or:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-SDAG-NEXT:    v_and_or_b32 v1, v3, 8, v1
+; GFX1250-SDAG-NEXT:    v_and_or_b32 v0, v2, 16, v0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: v_not_or_and_or:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v2, 16, v2
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v3, 8, v3
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, -1
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v1, v1, v3, -1
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %nota = xor <2 x i32> %a, <i32 -1, i32 -1>
+  %andb = and <2 x i32> %b, <i32 16, i32 8>
+  %or = or <2 x i32> %nota, %andb
+  %or_lo = extractelement <2 x i32> %or, i64 0
+  %or_hi = extractelement <2 x i32> %or, i64 1
+  %res = xor i32 %or_lo, %or_hi
+  ret i32 %res
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
 ; GFX1250-FAKE16: {{.*}}
