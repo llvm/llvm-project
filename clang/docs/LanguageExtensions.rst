@@ -653,8 +653,6 @@ differences:
   boolean vectors.
 * Casting a scalar bool value to a boolean vector type means broadcasting the
   scalar value onto all lanes (same as general ext_vector_type).
-* It is not possible to access or swizzle elements of a boolean vector
-  (different than general ext_vector_type).
 
 The size and alignment are both the number of bits rounded up to the next power
 of two, but the alignment is at most the maximum vector alignment of the
