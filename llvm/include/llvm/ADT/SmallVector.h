@@ -893,8 +893,6 @@ public:
   iterator insert(iterator I, ItTy From, ItTy To) {
     // TODO: support efficient insert with input iterators. This requires
     // appending all elements and rotating them later to their correct position.
-    static_assert(HasIteratorTag<ItTy, std::forward_iterator_tag>::value,
-                  "insert() with input iterator is not implemented");
 
     // Convert iterator to elt# to avoid invalidating iterator when we reserve()
     size_t InsertElt = I - this->begin();
@@ -902,6 +900,15 @@ public:
     if (I == this->end()) {  // Important special case for empty vector.
       append(From, To);
       return this->begin()+InsertElt;
+    }
+
+    if constexpr (!HasIteratorTag<ItTy, std::forward_iterator_tag>::value) {
+      // For input iterators, we don't know the number of elements to insert.
+      size_t OldSize = this->size();
+      append(From, To);
+      I = this->begin() + InsertElt; // Uninvalidate the iterator.
+      std::rotate(I, this->begin() + OldSize, this->end());
+      return I;
     }
 
     assert(this->isReferenceToStorage(I) && "Insertion iterator is out of bounds.");
