@@ -9004,10 +9004,11 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         auto *VPI = dyn_cast<VPInstruction>(R);
         if (!VPI)
           return false;
-        // Prefer ComputeAnyOfResult over intermediate ComputeReductionResult,
-        // which is used for the Or reduction in AnyOf reductions.
         if (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult)
           return true;
+        // ComputeReductionResult is also considered, unless it is used for the
+        // Or reduction in AnyOf reductions and feeds a ComputeAnyOfReduction,
+        // in which case the latter will be considered instead.
         if (VPI->getOpcode() != VPInstruction::ComputeReductionResult)
           return false;
         return !any_of(VPI->users(), [](VPUser *U) {
