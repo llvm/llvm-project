@@ -78,14 +78,6 @@
 using namespace clang;
 using namespace sema;
 
-namespace AttributeLangSupport {
-  enum LANG {
-    C,
-    Cpp,
-    ObjC
-  };
-} // end namespace AttributeLangSupport
-
 static unsigned getNumAttributeArgs(const ParsedAttr &AL) {
   // FIXME: Include the type in the argument list.
   return AL.getNumArgs() + AL.hasParsedType();
@@ -1985,7 +1977,7 @@ static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleCommonAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (S.LangOpts.CPlusPlus) {
     S.Diag(AL.getLoc(), diag::err_attribute_not_supported_in_lang)
-        << AL << AttributeLangSupport::Cpp;
+        << AL << diag::UnsupportedAttrLang::Cpp;
     return;
   }
 
@@ -6252,7 +6244,7 @@ UuidAttr *Sema::mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
 static void handleUuidAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.LangOpts.CPlusPlus) {
     S.Diag(AL.getLoc(), diag::err_attribute_not_supported_in_lang)
-        << AL << AttributeLangSupport::C;
+        << AL << diag::UnsupportedAttrLang::C;
     return;
   }
 
@@ -6312,7 +6304,7 @@ static void handleUuidAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleMSInheritanceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.LangOpts.CPlusPlus) {
     S.Diag(AL.getLoc(), diag::err_attribute_not_supported_in_lang)
-        << AL << AttributeLangSupport::C;
+        << AL << diag::UnsupportedAttrLang::C;
     return;
   }
   MSInheritanceAttr *IA = S.mergeMSInheritanceAttr(
