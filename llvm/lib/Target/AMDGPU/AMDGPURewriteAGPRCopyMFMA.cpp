@@ -70,7 +70,6 @@ class AMDGPURewriteAGPRCopyMFMAImpl {
   LiveIntervals &LIS;
   LiveStacks &LSS;
   const RegisterClassInfo &RegClassInfo;
-  mutable unsigned NumRewritesPerformed = 0;
 
   bool attemptReassignmentsToAGPR(SmallSetVector<Register, 4> &InterferingRegs,
                                   MCPhysReg PrefPhysReg) const;
@@ -279,7 +278,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
     LRM.unassign(LI);
   }
 
-  if (NumRewritesPerformed + RewriteCandidates.size() >
+  if (NumMFMAsRewrittenToAGPR + RewriteCandidates.size() >
           RewriteAGPRCopyMFMALimit ||
       !attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
     // Roll back the register assignments to the original state.
@@ -305,7 +304,6 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
         AMDGPU::getMFMASrcCVDstAGPROp(RewriteCandidate->getOpcode());
     RewriteCandidate->setDesc(TII.get(NewMFMAOp));
     ++NumMFMAsRewrittenToAGPR;
-    ++NumRewritesPerformed;
   }
 
   return true;
@@ -602,11 +600,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
   // If we've successfully rewritten some MFMAs, we've alleviated some VGPR
   // pressure. See if we can eliminate some spills now that those registers are
   // more available.
-  if (MadeChange) {
-    LLVM_DEBUG(dbgs() << "Number of MFMA instructions rewritten to AGPR form: "
-                      << NumRewritesPerformed << '\n');
+  if (MadeChange)
     eliminateSpillsOfReassignedVGPRs();
-  }
 
   return MadeChange;
 }
