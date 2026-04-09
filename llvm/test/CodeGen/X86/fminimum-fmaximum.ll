@@ -3172,23 +3172,23 @@ define float @test_fminimum_snan(float %x) {
   ret float %1
 }
 
-define float @test_fmaximum_dnz(float %x) nounwind {
-; SSE2-LABEL: test_fmaximum_dnz:
+define float @test_fmaximum_ieee(float %x) nounwind {
+; SSE2-LABEL: test_fmaximum_ieee:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: test_fmaximum_dnz:
+; AVX-LABEL: test_fmaximum_ieee:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmaxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX10_2-LABEL: test_fmaximum_dnz:
+; AVX10_2-LABEL: test_fmaximum_ieee:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vminmaxss $5, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX10_2-NEXT:    retq
 ;
-; X86-LABEL: test_fmaximum_dnz:
+; X86-LABEL: test_fmaximum_ieee:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -3264,23 +3264,23 @@ define float @test_fmaximum_daz(float %x) #0 {
   ret float %1
 }
 
-define float @test_fminimum_dnz(float %x) nounwind {
-; SSE2-LABEL: test_fminimum_dnz:
+define float @test_fminimum_ieee(float %x) nounwind {
+; SSE2-LABEL: test_fminimum_ieee:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: test_fminimum_dnz:
+; AVX-LABEL: test_fminimum_ieee:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX10_2-LABEL: test_fminimum_dnz:
+; AVX10_2-LABEL: test_fminimum_ieee:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vminmaxss $4, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX10_2-NEXT:    retq
 ;
-; X86-LABEL: test_fminimum_dnz:
+; X86-LABEL: test_fminimum_ieee:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -3356,4 +3356,4 @@ define float @test_fminimum_daz(float %x) #0 {
   ret float %1
 }
 
-attributes #0 = { nounwind denormal_fpenv(preservesign|preservesign) }
+attributes #0 = { nounwind denormal_fpenv(preservesign) }
