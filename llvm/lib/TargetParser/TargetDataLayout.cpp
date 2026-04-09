@@ -278,7 +278,17 @@ static std::string computeAMDDataLayout(const Triple &TT) {
          "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-"
          "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
+static std::string computeLX32DataLayout(const Triple &TT) {
+    
+    if(TT.isOSBinFormatMachO()) {
+        assert(false && "Lx32 not support Mach-O");
+    }
+    assert(TT.isLittleEndian() && "Invalid endianness");
+    assert(TT.isArch32Bit() && "Invalid triple");
 
+    return "e-m:e-p:32:32-i64:64-n32-S128";
+    
+}
 static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
   if (TT.isOSBinFormatMachO()) {
     assert(TT.isLittleEndian() && "Invalid endianness");
@@ -588,6 +598,8 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::r600:
   case Triple::amdgcn:
     return computeAMDDataLayout(*this);
+  case Triple::lx32:
+    return computeLX32DataLayout(*this);
   case Triple::riscv32:
   case Triple::riscv64:
   case Triple::riscv32be:

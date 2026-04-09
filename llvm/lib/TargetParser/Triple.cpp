@@ -62,6 +62,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case renderscript32: return "renderscript32";
   case renderscript64: return "renderscript64";
   case riscv32:        return "riscv32";
+  case lx32:           return "lx32";
   case riscv64:        return "riscv64";
   case riscv32be:
     return "riscv32be";
@@ -243,7 +244,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case shave:       return "shave";
   case wasm32:
   case wasm64:      return "wasm";
-
+  case lx32:
   case riscv32:
   case riscv64:
   case riscv32be:
@@ -482,6 +483,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("ppc64le", ppc64le)
       .Case("r600", r600)
       .Case("amdgcn", amdgcn)
+      .Case("lx32", lx32)
       .Case("riscv32", riscv32)
       .Case("riscv64", riscv64)
       .Case("riscv32be", riscv32be)
@@ -633,6 +635,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
                  Triple::mips64el)
           .Case("r600", Triple::r600)
           .Case("amdgcn", Triple::amdgcn)
+          .Case("lx32", Triple::lx32)
           .Case("riscv32", Triple::riscv32)
           .Case("riscv64", Triple::riscv64)
           .Case("riscv32be", Triple::riscv32be)
@@ -1021,6 +1024,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::r600:
   case Triple::renderscript32:
   case Triple::renderscript64:
+  case Triple::lx32:
   case Triple::riscv32:
   case Triple::riscv64:
   case Triple::riscv32be:
@@ -1760,6 +1764,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::ppcle:
   case llvm::Triple::r600:
   case llvm::Triple::renderscript32:
+  case llvm::Triple::lx32:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv32be:
   case llvm::Triple::shave:
@@ -1870,6 +1875,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::ppcle:
   case Triple::r600:
   case Triple::renderscript32:
+  case Triple::lx32:
   case Triple::riscv32:
   case Triple::riscv32be:
   case Triple::shave:

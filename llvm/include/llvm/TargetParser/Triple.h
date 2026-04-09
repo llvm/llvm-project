@@ -76,6 +76,7 @@ public:
     r600,        // R600: AMD GPUs HD2XXX - HD6XXX
     amdgcn,      // AMDGCN: AMD GCN GPUs
     riscv32,     // RISC-V (32-bit, little endian): riscv32
+    lx32,        // Lx32 (32-bit)
     riscv64,     // RISC-V (64-bit, little endian): riscv64
     riscv32be,   // RISC-V (32-bit, big endian): riscv32be
     riscv64be,   // RISC-V (64-bit, big endian): riscv64be
