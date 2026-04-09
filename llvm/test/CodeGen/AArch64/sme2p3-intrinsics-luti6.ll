@@ -6,8 +6,7 @@ define <vscale x 16 x i8> @luti6_zt_i8(<vscale x 16 x i8> %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    luti6 z0.b, zt0, z0
 ; CHECK-NEXT:    ret
-  %res = tail call <vscale x 16 x i8> @llvm.aarch64.sme.luti6.zt(
-      i32 0, <vscale x 16 x i8> %x)
+  %res = tail call <vscale x 16 x i8> @llvm.aarch64.sme.luti6.zt(i32 0, <vscale x 16 x i8> %x)
   ret <vscale x 16 x i8> %res
 }
 
@@ -55,5 +54,3 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
   %res = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti6.lane.x4.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %b, i32 1)
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
-
-attributes #0 = { "target-features"="+sme2p3" }

@@ -2256,13 +2256,10 @@ void AArch64DAGToDAGISel::EmitMultiVectorLutiLane(SDNode *Node,
   EVT VT = Node->getValueType(0);
   bool HasChain = Node->getOpcode() == ISD::INTRINSIC_W_CHAIN;
 
-  SmallVector<SDValue, 4> MachineOps(Ops);
   SmallVector<EVT, 2> ResTys = {MVT::Untyped};
   if (HasChain)
-    MachineOps.push_back(Node->getOperand(0));
-  if (HasChain)
     ResTys.push_back(MVT::Other);
-  SDNode *Instruction = CurDAG->getMachineNode(Opc, DL, ResTys, MachineOps);
+  SDNode *Instruction = CurDAG->getMachineNode(Opc, DL, ResTys, Ops);
   SDValue SuperReg(Instruction, 0);
 
   for (unsigned i = 0; i < NumOutVecs; ++i)
@@ -2287,7 +2284,8 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
+  SmallVector<SDValue, 4> Ops = {ZtValue, Node->getOperand(3),
+                                 Node->getOperand(4), Node->getOperand(0)};
   EmitMultiVectorLutiLane(Node, NumOutVecs, Opc, Ops);
 }
 
@@ -2295,10 +2293,9 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLaneTuple(SDNode *Node,
                                                          unsigned NumOutVecs,
                                                          unsigned Opc,
                                                          uint32_t MaxImm) {
-  SDValue ImmVal = Node->getOperand(5);
-  if (auto *Imm = dyn_cast<ConstantSDNode>(ImmVal))
-    if (Imm->getZExtValue() > MaxImm)
-      return;
+  auto *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(5));
+  if (Imm && Imm->getZExtValue() > MaxImm)
+    return;
 
   SmallVector<SDValue, 4> Ops = {
       createZTuple({Node->getOperand(1), Node->getOperand(2)}),

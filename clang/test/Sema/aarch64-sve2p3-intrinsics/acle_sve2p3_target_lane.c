@@ -5,10 +5,17 @@
 #include <arm_sve.h>
 
 svfloat16_t missing_sve2p3_luti6_lane(svfloat16x2_t table, svuint8_t indices) {
-  return svluti6_lane_f16_x2(table, indices, 1); // expected-error {{'svluti6_lane_f16_x2' needs target feature (sve,sve2p3)|(sme,sme2p3)}}
+  return svluti6_lane_f16_x2(table, indices, 1); // expected-error {{'svluti6_lane_f16_x2' needs target feature (sve,sve2p3)|(sme,(sve2p3|sme2p3))}}
 }
 
 __attribute__((target("sve2p3")))
 svfloat16_t has_sve2p3_luti6_lane(svfloat16x2_t table, svuint8_t indices) {
   return svluti6_lane_f16_x2(table, indices, 0);
+}
+
+__attribute__((target("sve2p3,sme")))
+svfloat16_t has_streaming_sve2p3_luti6_lane(svfloat16x2_t table,
+                                            svuint8_t indices)
+    __arm_streaming {
+  return svluti6_lane_f16_x2(table, indices, 1);
 }

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaARM.h"
-#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
@@ -619,7 +618,7 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
     else if (SatisfiesSME)
       BuiltinType = SemaARM::ArmStreaming;
     else
-      // This should be diagnosed by CodeGen.
+      // This should be diagnosed by CodeGen
       return false;
   }
 

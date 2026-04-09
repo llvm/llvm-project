@@ -1923,7 +1923,7 @@ let SVETargetGuard = "sve2p3", SMETargetGuard = InvalidMode in {
   def SVLUTI6 : SInst<"svluti6[_{d}]", "d2u", "cUcm", MergeNone, "aarch64_sve_luti6", [IsOverloadNone]>;
 }
 
-let SVETargetGuard = "sve2p3", SMETargetGuard = "sme2p3" in {
+let SVETargetGuard = "sve2p3", SMETargetGuard = "sve2p3|sme2p3" in {
   def SVLUTI6_x2 : SInst<"svluti6_lane[_{d}_x2]", "d2.d[i", "sUshb", MergeNone, "aarch64_sve_luti6_lane_x2", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_1>]>;
 }
 
