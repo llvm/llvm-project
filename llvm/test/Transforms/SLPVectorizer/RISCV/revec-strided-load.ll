@@ -5,7 +5,8 @@
 define void @widened_strided_load(ptr %in0, ptr %out0) {
 ; CHECK-LABEL: @widened_strided_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.experimental.vp.strided.load.v16i8.p0.i64(ptr align 2 [[IN0:%.*]], i64 16, <16 x i1> splat (i1 true), i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr align 2 [[IN0:%.*]], i64 16, <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
 ; CHECK-NEXT:    store <16 x i8> [[TMP0]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -50,7 +51,12 @@ entry:
 define void @too_wide(ptr %in0, ptr %out0) {
 ; CHECK-LABEL: @too_wide(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i16> @llvm.experimental.vp.strided.load.v16i16.p0.i64(ptr align 2 [[IN0:%.*]], i64 32, <16 x i1> splat (i1 true), i32 16)
+; CHECK-NEXT:    [[IN1:%.*]] = getelementptr i16, ptr [[IN0:%.*]], i64 16
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP4]], ptr [[IN1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, <16 x ptr> [[TMP2]], <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr> align 2 [[TMP3]], <16 x i1> splat (i1 true), <16 x i16> poison)
 ; CHECK-NEXT:    store <16 x i16> [[TMP0]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
