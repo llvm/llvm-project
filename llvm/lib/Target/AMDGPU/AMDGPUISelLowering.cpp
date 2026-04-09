@@ -1473,6 +1473,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
     return LowerCTLZ_CTTZ(Op, DAG);
+  case ISD::CTLS:
+    return LowerCTLS(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG);
   }
   return Op;
@@ -3418,6 +3420,19 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
   return DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i64, NewOpr);
 }
 
+SDValue AMDGPUTargetLowering::LowerCTLS(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  assert(Src.getValueType() == MVT::i32 && "LowerCTLS only supports i32");
+  SDValue Ffbh = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+      DAG.getTargetConstant(Intrinsic::amdgcn_sffbh, SL, MVT::i32), Src);
+  SDValue Clamped = DAG.getNode(ISD::UMIN, SL, MVT::i32, Ffbh,
+                                DAG.getConstant(32, SL, MVT::i32));
+  return DAG.getNode(ISD::ADD, SL, MVT::i32, Clamped,
+                     DAG.getAllOnesConstant(SL, MVT::i32));
+}
+
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
   // The regular method converting a 64-bit integer to float roughly consists of
@@ -3482,7 +3497,9 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
         DAG.getNode(ISD::ADD, SL, MVT::i32, DAG.getConstant(32, SL, MVT::i32),
                     OppositeSign);
     // Count the leading sign bits.
-    ShAmt = DAG.getNode(AMDGPUISD::FFBH_I32, SL, MVT::i32, Hi);
+    ShAmt = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+        DAG.getTargetConstant(Intrinsic::amdgcn_sffbh, SL, MVT::i32), Hi);
     // Different from unsigned conversion, the shift should be one bit less to
     // preserve the sign bit.
     ShAmt = DAG.getNode(ISD::SUB, SL, MVT::i32, ShAmt,
@@ -3905,53 +3922,69 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   if (DstVT == MVT::i16 && SatWidth == DstWidth && SrcVT == MVT::f16)
     return Op;
 
-  const SDValue Int32VTOp = DAG.getValueType(MVT::i32);
-
-  // Perform all saturation at i32 and truncate
+  // Perform all saturation at selected width (i16 or i32) and truncate
   if (SatWidth < DstWidth && SatWidth <= 32) {
-    const uint64_t Int32Width = 32;
-    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VTOp);
-    SDValue Int32SatVal;
+    // For f16 conversion with sub-i16 saturation perform saturation
+    // at i16, if available in the target. This removes the need for extra f16
+    // to f32 conversion. For all the others use i32.
+    MVT ResultVT =
+        Subtarget->has16BitInsts() && SrcVT == MVT::f16 && SatWidth < 16
+            ? MVT::i16
+            : MVT::i32;
 
+    const SDValue ResultVTOp = DAG.getValueType(ResultVT);
+    const uint64_t ResultWidth = ResultVT.getScalarSizeInBits();
+
+    // First, convert input float into selected integer (i16 or i32)
+    SDValue FpToInt = DAG.getNode(OpOpcode, DL, ResultVT, Src, ResultVTOp);
+    SDValue IntSatVal;
+
+    // Then, clamp at the saturation width using either i16 or i32 instructions
     if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
       SDValue MinConst = DAG.getConstant(
-          APInt::getSignedMaxValue(SatWidth).sext(Int32Width), DL, MVT::i32);
+          APInt::getSignedMaxValue(SatWidth).sext(ResultWidth), DL, ResultVT);
       SDValue MaxConst = DAG.getConstant(
-          APInt::getSignedMinValue(SatWidth).sext(Int32Width), DL, MVT::i32);
-      SDValue MinVal =
-          DAG.getNode(ISD::SMIN, DL, MVT::i32, FpToInt32, MinConst);
-      Int32SatVal = DAG.getNode(ISD::SMAX, DL, MVT::i32, MinVal, MaxConst);
+          APInt::getSignedMinValue(SatWidth).sext(ResultWidth), DL, ResultVT);
+      SDValue MinVal = DAG.getNode(ISD::SMIN, DL, ResultVT, FpToInt, MinConst);
+      IntSatVal = DAG.getNode(ISD::SMAX, DL, ResultVT, MinVal, MaxConst);
     } else {
       SDValue MinConst = DAG.getConstant(
-          APInt::getMaxValue(SatWidth).zext(Int32Width), DL, MVT::i32);
-      Int32SatVal = DAG.getNode(ISD::UMIN, DL, MVT::i32, FpToInt32, MinConst);
+          APInt::getMaxValue(SatWidth).zext(ResultWidth), DL, ResultVT);
+      IntSatVal = DAG.getNode(ISD::UMIN, DL, ResultVT, FpToInt, MinConst);
     }
 
-    return DAG.getExtOrTrunc(OpOpcode == ISD::FP_TO_SINT_SAT, Int32SatVal, DL,
+    // Finally, after saturating at i16 or i32 fit into the destination type
+    return DAG.getExtOrTrunc(OpOpcode == ISD::FP_TO_SINT_SAT, IntSatVal, DL,
                              DstVT);
   }
 
   // SatWidth == DstWidth
 
-  // Saturate at i32 for i64 dst and 16b src (will invoke f16 promotion below)
+  // Saturate at i32 for i64 dst and f16/bf16 src (will invoke f16 promotion
+  // below)
   if (DstVT == MVT::i64 &&
       (SrcVT == MVT::f16 || SrcVT == MVT::bf16 ||
        (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP))) {
+    const SDValue Int32VTOp = DAG.getValueType(MVT::i32);
     return DAG.getNode(OpOpcode, DL, DstVT, Src, Int32VTOp);
   }
 
-  // Promote f16/bf16 src to f32
-  if (SrcVT == MVT::f16 || SrcVT == MVT::bf16) {
+  // Promote f16/bf16 src to f32 for i32 conversion
+  if (DstVT == MVT::i32 && (SrcVT == MVT::f16 || SrcVT == MVT::bf16)) {
     SDValue PromotedSrc = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
     return DAG.getNode(Op.getOpcode(), DL, DstVT, PromotedSrc, SatVTOp);
   }
 
-  // Promote sub-i32 dst to i32 with sub-i32 saturation
+  // For DstWidth < 16, promote i1 and i8 dst to i16 (if legal) with sub-i16
+  // saturation. For DstWidth == 16, promote i16 dst to i32 with sub-i32
+  // saturation; this covers i16.f32 and i16.f64
   if (DstWidth < 32) {
     // Note: this triggers SatWidth < DstWidth above to generate saturated
-    // truncate by requesting MVT::i32 destination with SatWidth < 32.
-    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, SatVTOp);
-    return DAG.getNode(ISD::TRUNCATE, DL, DstVT, FpToInt32);
+    // truncate by requesting MVT::i16/i32 destination with SatWidth < 16/32.
+    MVT PromoteVT =
+        (DstWidth < 16 && Subtarget->has16BitInsts()) ? MVT::i16 : MVT::i32;
+    SDValue FpToInt = DAG.getNode(OpOpcode, DL, PromoteVT, Src, SatVTOp);
+    return DAG.getNode(ISD::TRUNCATE, DL, DstVT, FpToInt);
   }
 
   // TODO: can we implement i64 dst for f32/f64?
@@ -5773,6 +5806,34 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  case ISD::INTRINSIC_WO_CHAIN: {
+    switch (Op.getConstantOperandVal(0)) {
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_wwm: {
+      if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
+                               OriginalDemandedElts, Known, TLO, Depth + 1))
+        return true;
+      break;
+    }
+    default:
+      break;
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -5988,43 +6049,24 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   case AMDGPUISD::MUL_I24: {
     KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
-    unsigned TrailZ = LHSKnown.countMinTrailingZeros() +
-                      RHSKnown.countMinTrailingZeros();
-    Known.Zero.setLowBits(std::min(TrailZ, 32u));
-    // Skip extra check if all bits are known zeros.
-    if (TrailZ >= 32)
-      break;
+    unsigned BitWidth = Op.getScalarValueSizeInBits();
 
-    // Truncate to 24 bits.
-    LHSKnown = LHSKnown.trunc(24);
-    RHSKnown = RHSKnown.trunc(24);
-
+    // Sign/Zero extend from 24 bits.
     if (Opc == AMDGPUISD::MUL_I24) {
-      unsigned LHSValBits = LHSKnown.countMaxSignificantBits();
-      unsigned RHSValBits = RHSKnown.countMaxSignificantBits();
-      unsigned MaxValBits = LHSValBits + RHSValBits;
-      if (MaxValBits > 32)
-        break;
-      unsigned SignBits = 32 - MaxValBits + 1;
-      bool LHSNegative = LHSKnown.isNegative();
-      bool LHSNonNegative = LHSKnown.isNonNegative();
-      bool LHSPositive = LHSKnown.isStrictlyPositive();
-      bool RHSNegative = RHSKnown.isNegative();
-      bool RHSNonNegative = RHSKnown.isNonNegative();
-      bool RHSPositive = RHSKnown.isStrictlyPositive();
-
-      if ((LHSNonNegative && RHSNonNegative) || (LHSNegative && RHSNegative))
-        Known.Zero.setHighBits(SignBits);
-      else if ((LHSNegative && RHSPositive) || (LHSPositive && RHSNegative))
-        Known.One.setHighBits(SignBits);
+      LHSKnown = LHSKnown.trunc(24).sext(BitWidth);
+      RHSKnown = RHSKnown.trunc(24).sext(BitWidth);
     } else {
-      unsigned LHSValBits = LHSKnown.countMaxActiveBits();
-      unsigned RHSValBits = RHSKnown.countMaxActiveBits();
-      unsigned MaxValBits = LHSValBits + RHSValBits;
-      if (MaxValBits >= 32)
-        break;
-      Known.Zero.setBitsFrom(MaxValBits);
+      LHSKnown = LHSKnown.trunc(24).zext(BitWidth);
+      RHSKnown = RHSKnown.trunc(24).zext(BitWidth);
     }
+
+    // TODO: SelfMultiply can be poison, but not undef.
+    bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
+    if (SelfMultiply)
+      SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
+          Op.getOperand(0), DemandedElts, false, Depth + 1);
+
+    Known = KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
     break;
   }
   case AMDGPUISD::PERM: {

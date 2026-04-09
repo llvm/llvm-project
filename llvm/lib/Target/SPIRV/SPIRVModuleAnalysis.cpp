@@ -141,7 +141,7 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     MAI.MS[i].clear();
   MAI.RegisterAliasTable.clear();
   MAI.InstrsToDelete.clear();
-  MAI.FuncMap.clear();
+  MAI.GlobalObjMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.Reqs.clear();
@@ -182,6 +182,23 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     // Prevent Major part of OpenCL version to be 0
     MAI.SrcLangVersion =
         (std::max(1U, MajorNum) * 100 + MinorNum) * 1000 + RevNum;
+    // When opencl.cxx.version is also present, validate compatibility
+    // and use C++ for OpenCL as source language with the C++ version.
+    if (auto *CxxVerNode = M.getNamedMetadata("opencl.cxx.version")) {
+      assert(CxxVerNode->getNumOperands() > 0 && "Invalid SPIR");
+      auto *CxxMD = CxxVerNode->getOperand(0);
+      unsigned CxxVer =
+          (getMetadataUInt(CxxMD, 0) * 100 + getMetadataUInt(CxxMD, 1)) * 1000 +
+          getMetadataUInt(CxxMD, 2);
+      if ((MAI.SrcLangVersion == 200000 && CxxVer == 100000) ||
+          (MAI.SrcLangVersion == 300000 && CxxVer == 202100000)) {
+        MAI.SrcLang = SPIRV::SourceLanguage::CPP_for_OpenCL;
+        MAI.SrcLangVersion = CxxVer;
+      } else {
+        report_fatal_error(
+            "opencl cxx version is not compatible with opencl c version!");
+      }
+    }
   } else {
     // If there is no information about OpenCL version we are forced to generate
     // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
@@ -495,6 +512,8 @@ MCRegister SPIRVModuleAnalysis::handleVariable(
   MCRegister GReg = MAI.getNextIDRegister();
   It->second = GReg;
   MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+  if (const auto *GV = dyn_cast<GlobalVariable>(GObj))
+    MAI.GlobalObjMap[GV] = GReg;
   return GReg;
 }
 
@@ -562,7 +581,8 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
         const Function *ImportedFunc =
             F->getParent()->getFunction(getStringImm(MI, 2));
         Register Target = MI.getOperand(0).getReg();
-        MAI.FuncMap[ImportedFunc] = MAI.getRegisterAlias(MI.getMF(), Target);
+        MAI.GlobalObjMap[ImportedFunc] =
+            MAI.getRegisterAlias(MI.getMF(), Target);
       }
     }
   } else if (MI.getOpcode() == SPIRV::OpFunction) {
@@ -570,7 +590,7 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
     Register Reg = MI.defs().begin()->getReg();
     MCRegister GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
     assert(GlobalReg.isValid());
-    MAI.FuncMap[F] = GlobalReg;
+    MAI.GlobalObjMap[F] = GlobalReg;
   }
 }
 
@@ -944,8 +964,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl, Capability::MinLod,
-                    Capability::ImageGatherExtended, Capability::Addresses,
-                    Capability::VulkanMemoryModelKHR});
+                    Capability::ImageQuery, Capability::ImageGatherExtended,
+                    Capability::Addresses, Capability::VulkanMemoryModelKHR});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1715,6 +1735,16 @@ void addInstrRequirements(const MachineInstr &MI,
   }
   case SPIRV::OpGroupNonUniformQuadSwap:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformQuad);
+    break;
+  case SPIRV::OpImageQueryLod:
+    Reqs.addCapability(SPIRV::Capability::ImageQuery);
+    break;
+  case SPIRV::OpImageQuerySize:
+  case SPIRV::OpImageQuerySizeLod:
+  case SPIRV::OpImageQueryLevels:
+  case SPIRV::OpImageQuerySamples:
+    if (ST.isShader())
+      Reqs.addCapability(SPIRV::Capability::ImageQuery);
     break;
   case SPIRV::OpImageQueryFormat: {
     Register ResultReg = MI.getOperand(0).getReg();
@@ -2645,8 +2675,13 @@ static void handleMIFlagDecoration(
     buildOpDecorate(I.getOperand(0).getReg(), I, TII,
                     SPIRV::Decoration::NoUnsignedWrap, {});
   }
-  if (!TII.canUseFastMathFlags(
-          I, ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)))
+  // In Kernel environments, FPFastMathMode on OpExtInst is valid per core
+  // spec. For other instruction types, SPV_KHR_float_controls2 is required.
+  bool CanUseFM =
+      TII.canUseFastMathFlags(
+          I, ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) ||
+      (ST.isKernel() && I.getOpcode() == SPIRV::OpExtInst);
+  if (!CanUseFM)
     return;
 
   unsigned FMFlags = getFastMathFlags(I, ST);

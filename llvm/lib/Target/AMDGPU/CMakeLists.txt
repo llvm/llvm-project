@@ -86,6 +86,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
   AMDGPUMemoryUtils.cpp
+  AMDGPUCoExecSchedStrategy.cpp
   AMDGPUIGroupLP.cpp
   AMDGPULowerVGPREncoding.cpp
   AMDGPUMCResourceInfo.cpp
@@ -171,6 +172,7 @@ add_llvm_target(AMDGPUCodeGen
   SILowerWWMCopies.cpp
   SILowerSGPRSpills.cpp
   SIMachineFunctionInfo.cpp
+  SISpillUtils.cpp
   SIMachineScheduler.cpp
   SIMemoryLegalizer.cpp
   SIModeRegister.cpp

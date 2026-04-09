@@ -1061,9 +1061,7 @@ define void @scalar_predication(ptr %addr) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[ADDR]], i64 [[TMP0]]
-; CHECK-NEXT:    store float 1.000000e+01, ptr [[TMP6]], align 4
+; CHECK-NEXT:    store float 1.000000e+01, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1

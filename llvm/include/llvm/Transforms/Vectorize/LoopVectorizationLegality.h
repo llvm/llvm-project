@@ -446,10 +446,13 @@ public:
     return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
-  /// Returns true if vector representation of the instruction \p I
-  /// requires mask.
-  bool isMaskRequired(const Instruction *I) const {
-    return MaskedOp.contains(I);
+  /// Returns true if instruction \p I requires a mask for vectorization.
+  /// This accounts for both control flow masking (conditionally executed
+  /// blocks) and tail-folding masking (predicated loop vectorization).
+  bool isMaskRequired(const Instruction *I, bool TailFolded) const {
+    if (TailFolded)
+      return TailFoldedMaskedOp.contains(I);
+    return ConditionallyExecutedOps.contains(I);
   }
 
   /// Returns true if there is at least one function call in the loop which
@@ -472,12 +475,6 @@ public:
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
-
-  /// Returns potentially faulting loads.
-  const SmallPtrSetImpl<const Instruction *> &
-  getPotentiallyFaultingLoads() const {
-    return PotentiallyFaultingLoads;
-  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -724,18 +721,16 @@ private:
   /// which a reduction can be computed.
   AssumptionCache *AC;
 
-  /// While vectorizing these instructions we have to generate a
-  /// call to the appropriate masked intrinsic or drop them in case of
-  /// conditional assumes.
-  SmallPtrSet<const Instruction *, 8> MaskedOp;
+  /// Instructions that require masking because they are in source-level
+  /// conditionally executed blocks.
+  SmallPtrSet<const Instruction *, 8> ConditionallyExecutedOps;
+  /// Instructions that require masking only due to tail-folding predication.
+  SmallPtrSet<const Instruction *, 8> TailFoldedMaskedOp;
 
   /// Contains all identified histogram operations, which are sequences of
   /// load -> update -> store instructions where multiple lanes in a vector
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
-
-  /// Hold potentially faulting loads.
-  SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
 
   /// Whether or not creating SCEV predicates is allowed.
   bool AllowRuntimeSCEVChecks;

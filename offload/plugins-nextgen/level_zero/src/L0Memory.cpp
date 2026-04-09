@@ -301,8 +301,12 @@ Expected<void *> MemAllocatorTy::MemPoolTy::alloc(size_t Size,
     void *Base = *BaseOrErr;
     if (ZeroInit) {
       auto Err = Allocator->enqueueMemSet(Base, 0, BlockSize);
-      if (Err)
-        return Err;
+      if (Err) {
+        // deallocate Base on error.
+        if (auto DeallocErr = Allocator->deallocFromL0(Base))
+          return joinErrors(std::move(Err), std::move(DeallocErr));
+        return std::move(Err);
+      }
     }
 
     BlockTy *Block = new BlockTy(Base, BlockSize, ChunkSize);
@@ -708,12 +712,24 @@ Expected<ze_event_handle_t> EventPoolTy::getEvent() {
     ze_event_desc_t EventDesc{ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, 0, 0};
     EventDesc.wait = 0;
     EventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    uint32_t CreatedEvents = 0;
     for (uint32_t I = 0; I < PoolSize; I++) {
       EventDesc.index = I;
       ze_event_handle_t Event;
-      CALL_ZE_RET_ERROR(zeEventCreate, Pool, &EventDesc, &Event);
+      ze_result_t RC;
+      CALL_ZE(RC, zeEventCreate, Pool, &EventDesc, &Event);
+      if (RC != ZE_RESULT_SUCCESS) {
+        // Log the error and skip this event.
+        ODBG(OLDT_Init) << "Warning: zeEventCreate failed at index " << I
+                        << " with code " << RC << ". Skipping this event.";
+        continue;
+      }
       Events.push_back(Event);
+      CreatedEvents++;
     }
+    PoolSize = CreatedEvents;
+    ODBG(OLDT_Init) << "Created a new event pool " << Pool << " with "
+                    << PoolSize << " events";
   }
 
   auto Ret = Events.back();

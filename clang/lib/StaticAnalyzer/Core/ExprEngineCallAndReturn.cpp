@@ -169,7 +169,7 @@ void ExprEngine::removeDeadOnEndOfFunction(ExplodedNode *Pred,
   const CFGBlock *Blk = nullptr;
   std::tie(LastSt, Blk) = getLastStmt(Pred);
   if (!Blk || !LastSt) {
-    Dst.Add(Pred);
+    Dst.insert(Pred);
     return;
   }
 
@@ -259,7 +259,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // look up the first enclosing stack frame.
   const StackFrameContext *CallerCtx = CalleeCtx->getParent()->getStackFrame();
 
-  const Stmt *CE = CalleeCtx->getCallSite();
+  const Expr *CE = CalleeCtx->getCallSite();
   ProgramStateRef State = CEBNode->getState();
   // Find the last statement in the function and the corresponding basic block.
   auto [LastSt, Blk] = getLastStmt(CEBNode);
@@ -297,6 +297,10 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
       const LocationContext *LCtx = CEBNode->getLocationContext();
+      // FIXME: This tries to look up the return statement in the environment,
+      // which is special cased to look up the subexpression RS->getRetValue()
+      // in environment. Instead of relying on this hack, pass
+      // RS->getRetValue() to getSVal() after checking it for nullness.
       SVal V = State->getSVal(RS, LCtx);
 
       // Ensure that the return type matches the type of the returned Expr.
@@ -304,10 +308,8 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
         QualType ReturnedTy =
             CallEvent::getDeclaredResultType(CalleeCtx->getDecl());
         if (!ReturnedTy.isNull()) {
-          if (const Expr *Ex = dyn_cast<Expr>(CE)) {
-            V = adjustReturnValue(V, Ex->getType(), ReturnedTy,
-                                  getStoreManager());
-          }
+          V = adjustReturnValue(V, CE->getType(), ReturnedTy,
+                                getStoreManager());
         }
       }
 
@@ -369,7 +371,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
         /*DiagnosticStmt=*/CalleeCtx->getAnalysisDeclContext()->getBody(),
         ProgramPoint::PostStmtPurgeDeadSymbolsKind);
   } else {
-    CleanedNodes.Add(CEBNode);
+    CleanedNodes.insert(CEBNode);
   }
 
   // The second half of this process happens in the caller context. This is an
@@ -587,7 +589,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
 }
 
 static ProgramStateRef getInlineFailedState(ProgramStateRef State,
-                                            const Stmt *CallE) {
+                                            const Expr *CallE) {
   const void *ReplayState = State->get<ReplayWithoutInlining>();
   if (!ReplayState)
     return nullptr;
@@ -1225,9 +1227,6 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
     return;
   }
 
-  // Try to inline the call.
-  // The origin expression here is just used as a kind of checksum;
-  // this should still be safe even for CallEvents that don't come from exprs.
   const Expr *E = Call.getOriginExpr();
 
   ProgramStateRef InlinedFailedState = getInlineFailedState(State, E);

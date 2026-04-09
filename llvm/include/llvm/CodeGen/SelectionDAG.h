@@ -40,6 +40,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <cassert>
 #include <cstdint>
@@ -2182,6 +2183,30 @@ public:
   LLVM_ABI KnownBits computeKnownBits(SDValue Op, const APInt &DemandedElts,
                                       unsigned Depth = 0) const;
 
+  /// Determine the possible constant range of an integer or vector of integers.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op, bool ForSigned,
+                                              unsigned Depth = 0) const;
+
+  /// Determine the possible constant range of an integer or vector of integers.
+  /// The DemandedElts argument allows us to only collect the known ranges that
+  /// are shared by the requested vector elements.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op,
+                                              const APInt &DemandedElts,
+                                              bool ForSigned,
+                                              unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits().
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, bool ForSigned, unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits(). The DemandedElts argument allows us to only collect
+  /// the known ranges that are shared by the requested vector elements.
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, const APInt &DemandedElts, bool ForSigned,
+      unsigned Depth = 0) const;
+
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.
   /// Always: the operation will always overflow.
@@ -2373,6 +2398,24 @@ public:
   /// equivalence:
   ///     X|Cst == X+Cst iff X&Cst = 0.
   LLVM_ABI bool isBaseWithConstantOffset(SDValue Op) const;
+
+  /// Determine floating-point class information about \p Op. For vectors, the
+  /// known FP classes are those shared by every demanded vector element.
+  /// \p InterestedClasses is a hint for which FP classes we care about;
+  /// the implementation may bail out early if it can determine that
+  /// none of the interested classes are possible.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
+
+  /// Determine floating-point class information about \p Op. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  /// \p InterestedClasses is a hint for which FP classes we care about.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            const APInt &DemandedElts,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
 
   /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,

@@ -213,84 +213,78 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   }
 
   // Now we know that the input and output vectors are both integer vectors
-  // of the same size, and that their #elements is not the same.  Do the
-  // conversion here, which depends on whether the input or output has
-  // more elements.
+  // of the same size, and that their #elements is not the same.
+  // Use data buffer for easy non-integer element ratio vectors handling,
+  // For example: <4 x i24> to <3 x i32>.
   bool isLittleEndian = DL.isLittleEndian();
-
+  unsigned SrcBitSize = SrcEltTy->getPrimitiveSizeInBits();
+  unsigned DstBitSize = DstEltTy->getPrimitiveSizeInBits();
   SmallVector<Constant*, 32> Result;
-  if (NumDstElt < NumSrcElt) {
-    // Handle: bitcast (<4 x i32> <i32 0, i32 1, i32 2, i32 3> to <2 x i64>)
-    Constant *Zero = Constant::getNullValue(DstEltTy);
-    unsigned Ratio = NumSrcElt/NumDstElt;
-    unsigned SrcBitSize = SrcEltTy->getPrimitiveSizeInBits();
-    unsigned SrcElt = 0;
-    for (unsigned i = 0; i != NumDstElt; ++i) {
-      // Build each element of the result.
-      Constant *Elt = Zero;
-      unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize*(Ratio-1);
-      for (unsigned j = 0; j != Ratio; ++j) {
-        Constant *Src = C->getAggregateElement(SrcElt++);
-        if (isa_and_nonnull<UndefValue>(Src))
-          Src = Constant::getNullValue(
-              cast<VectorType>(C->getType())->getElementType());
-        else
-          Src = dyn_cast_or_null<ConstantInt>(Src);
-        if (!Src)  // Reject constantexpr elements.
-          return ConstantExpr::getBitCast(C, DestTy);
+  unsigned SrcElt = 0;
 
-        // Zero extend the element to the right size.
-        Src = ConstantFoldCastOperand(Instruction::ZExt, Src, Elt->getType(),
-                                      DL);
-        assert(Src && "Constant folding cannot fail on plain integers");
+  APInt Buffer(2 * std::max(SrcBitSize, DstBitSize), 0);
+  APInt UndefMask(Buffer.getBitWidth(), 0);
+  APInt PoisonMask(Buffer.getBitWidth(), 0);
+  unsigned BufferBitSize = 0;
 
-        // Shift it to the right place, depending on endianness.
-        Src = ConstantFoldBinaryOpOperands(
-            Instruction::Shl, Src, ConstantInt::get(Src->getType(), ShiftAmt),
-            DL);
-        assert(Src && "Constant folding cannot fail on plain integers");
+  while (Result.size() != NumDstElt) {
+    // Load SrcElts into Buffer.
+    while (BufferBitSize < DstBitSize) {
+      Constant *Element = C->getAggregateElement(SrcElt++);
+      if (!Element) // Reject constantexpr elements
+        return ConstantExpr::getBitCast(C, DestTy);
 
-        ShiftAmt += isLittleEndian ? SrcBitSize : -SrcBitSize;
-
-        // Mix it in.
-        Elt = ConstantFoldBinaryOpOperands(Instruction::Or, Elt, Src, DL);
-        assert(Elt && "Constant folding cannot fail on plain integers");
+      // Shift Buffer & Masks to fit next SrcElt.
+      if (!isLittleEndian) {
+        Buffer <<= SrcBitSize;
+        UndefMask <<= SrcBitSize;
+        PoisonMask <<= SrcBitSize;
       }
-      Result.push_back(Elt);
+
+      APInt SrcValue;
+      unsigned BitPosition = isLittleEndian ? BufferBitSize : 0;
+      if (isa<UndefValue>(Element)) {
+        // Set masks fragments bits.
+        UndefMask.setBits(BitPosition, BitPosition + SrcBitSize);
+        if (isa<PoisonValue>(Element))
+          PoisonMask.setBits(BitPosition, BitPosition + SrcBitSize);
+        SrcValue = APInt::getZero(DstBitSize);
+      } else {
+        auto *Src = dyn_cast<ConstantInt>(Element);
+        if (!Src)
+          return ConstantExpr::getBitCast(C, DestTy);
+        SrcValue = Src->getValue();
+      }
+
+      // Insert src element bits into Buffer on correct position.
+      Buffer.insertBits(SrcValue, BitPosition);
+      BufferBitSize += SrcBitSize;
     }
-    return ConstantVector::get(Result);
-  }
 
-  // Handle: bitcast (<2 x i64> <i64 0, i64 1> to <4 x i32>)
-  unsigned Ratio = NumDstElt/NumSrcElt;
-  unsigned DstBitSize = DL.getTypeSizeInBits(DstEltTy);
+    // Create DstElts from Buffer.
+    while (BufferBitSize >= DstBitSize) {
+      unsigned ShiftAmt = isLittleEndian ? 0 : BufferBitSize - DstBitSize;
+      // Emit undef/poison, if all undef mask fragment bits are set.
+      if (UndefMask.extractBits(DstBitSize, ShiftAmt).isAllOnes()) {
+        // Push poison, if any bit in poison mask fragment is set.
+        if (!PoisonMask.extractBits(DstBitSize, ShiftAmt).isZero()) {
+          Result.push_back(PoisonValue::get(DstEltTy));
+        } else {
+          Result.push_back(UndefValue::get(DstEltTy));
+        }
+      } else {
+        // Create and push DstElt.
+        APInt Elt = Buffer.extractBits(DstBitSize, ShiftAmt);
+        Result.push_back(ConstantInt::get(DstEltTy, Elt));
+      }
 
-  // Loop over each source value, expanding into multiple results.
-  for (unsigned i = 0; i != NumSrcElt; ++i) {
-    auto *Element = C->getAggregateElement(i);
-
-    if (!Element) // Reject constantexpr elements.
-      return ConstantExpr::getBitCast(C, DestTy);
-
-    if (isa<UndefValue>(Element)) {
-      // Correctly Propagate undef values.
-      Result.append(Ratio, UndefValue::get(DstEltTy));
-      continue;
-    }
-
-    auto *Src = dyn_cast<ConstantInt>(Element);
-    if (!Src)
-      return ConstantExpr::getBitCast(C, DestTy);
-
-    unsigned ShiftAmt = isLittleEndian ? 0 : DstBitSize*(Ratio-1);
-    for (unsigned j = 0; j != Ratio; ++j) {
-      // Shift the piece of the value into the right place, depending on
-      // endianness.
-      APInt Elt = Src->getValue().lshr(ShiftAmt);
-      ShiftAmt += isLittleEndian ? DstBitSize : -DstBitSize;
-
-      // Truncate and remember this piece.
-      Result.push_back(ConstantInt::get(DstEltTy, Elt.trunc(DstBitSize)));
+      // Shift unused Buffer fragment to lower bits.
+      if (isLittleEndian) {
+        Buffer.lshrInPlace(DstBitSize);
+        UndefMask.lshrInPlace(DstBitSize);
+        PoisonMask.lshrInPlace(DstBitSize);
+      }
+      BufferBitSize -= DstBitSize;
     }
   }
 
@@ -1357,7 +1351,8 @@ static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
 static DenormalMode getInstrDenormalMode(const Instruction *CtxI, Type *Ty) {
   if (!CtxI || !CtxI->getParent() || !CtxI->getFunction())
     return DenormalMode::getDynamic();
-  return CtxI->getFunction()->getDenormalMode(Ty->getFltSemantics());
+  return CtxI->getFunction()->getDenormalMode(
+      Ty->getScalarType()->getFltSemantics());
 }
 
 static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
@@ -3413,22 +3408,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           IsFMax = true;
           break;
         }
-        APFloat Res = IsFMax ? maximum(A, B) : minimum(A, B);
+        APFloat Res =
+            IsFMax ? (IsNaNPropagating ? maximum(A, B) : maximumnum(A, B))
+                   : (IsNaNPropagating ? minimum(A, B) : minimumnum(A, B));
 
-        if (ShouldCanonicalizeNaNs) {
+        if (ShouldCanonicalizeNaNs && Res.isNaN()) {
           APFloat NVCanonicalNaN(Res.getSemantics(), APInt(32, 0x7fffffff));
-          if (A.isNaN() && B.isNaN())
-            return ConstantFP::get(Ty, NVCanonicalNaN);
-          else if (IsNaNPropagating && (A.isNaN() || B.isNaN()))
-            return ConstantFP::get(Ty, NVCanonicalNaN);
+          return ConstantFP::get(Ty, NVCanonicalNaN);
         }
-
-        if (A.isNaN() && B.isNaN())
-          return Operands[1];
-        else if (A.isNaN())
-          Res = B;
-        else if (B.isNaN())
-          Res = A;
 
         if (IsXorSignAbs && XorSign != Res.isNegative())
           Res.changeSign();
@@ -3736,7 +3723,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::amdgcn_wave_reduce_and:
     case Intrinsic::amdgcn_wave_reduce_or:
     case Intrinsic::amdgcn_wave_reduce_xor:
-      return dyn_cast<Constant>(Operands[0]);
+      return Operands[0];
     }
 
     return nullptr;
@@ -4324,8 +4311,8 @@ static Constant *ConstantFoldScalableVectorCall(
     const TargetLibraryInfo *TLI, const CallBase *Call) {
   switch (IntrinsicID) {
   case Intrinsic::aarch64_sve_convert_from_svbool: {
-    auto *Src = dyn_cast<Constant>(Operands[0]);
-    if (!Src || !Src->isNullValue())
+    Constant *Src = Operands[0];
+    if (!Src->isNullValue())
       break;
 
     return ConstantInt::getFalse(SVTy);

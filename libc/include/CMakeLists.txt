@@ -237,6 +237,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  cpio
+  ../libc/include/cpio.yaml
+  cpio.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   setjmp
   ../libc/include/setjmp.yaml
   setjmp.h
@@ -253,6 +261,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.null_macro
+    .llvm-libc-types.errno_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
 )
 
@@ -273,9 +283,13 @@ add_header_macro(
     .llvm-libc-types.ACTION
     .llvm-libc-types.ENTRY
     .llvm-libc-types.VISIT
+    .llvm-libc-types.posix_tnode
     .llvm-libc-types.__search_compare_t
     .llvm-libc-types.size_t
     .llvm-libc-types.struct_hsearch_data
+    .llvm-libc-types.__action_closure_fn_t
+    .llvm-libc-types.__action_fn_t
+    .llvm-libc-types.__free_fn_t
     .llvm_libc_common_h
 )
 
@@ -288,11 +302,13 @@ add_header_macro(
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.time_macros
     .llvm-libc-types.clock_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.time_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
+    .llvm-libc-types.rsize_t
 )
 
 add_header_macro(
@@ -360,12 +376,15 @@ add_header_macro(
   ../libc/include/stdio.yaml
   stdio.h
   DEPENDS
+    .llvm-libc-macros._LIBC_MODULAR_FORMAT_PRINTF
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdio_macros
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.off_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
     .llvm_libc_common_h
@@ -382,10 +401,13 @@ add_header_macro(
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__search_compare_t
+    .llvm-libc-types.constraint_handler_t
     .llvm-libc-types.div_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
     .llvm-libc-types.locale_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm_libc_common_h
 )
@@ -832,6 +854,7 @@ add_header_macro(
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.wchar_macros
     .llvm-libc-types.mbstate_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t

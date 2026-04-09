@@ -438,10 +438,10 @@ define amdgpu_cs float @fdiv_f32_i32(float inreg %a, i32 inreg %b) {
 define amdgpu_cs half @fdiv_f16_i16(half inreg %a, i16 inreg %b) {
 ; GFX12-LABEL: fdiv_f16_i16:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_cvt_f16_u16_e32 v0, s1
+; GFX12-NEXT:    v_cvt_f16_u16_e32 v0.l, s1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX12-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX12-NEXT:    v_mul_f16_e32 v0, s0, v0
+; GFX12-NEXT:    v_rcp_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    v_mul_f16_e32 v0.l, s0, v0.l
 ; GFX12-NEXT:    ; return to shader part epilog
   %uint = uitofp i16 %b to half
   %result = fdiv afn half %a, %uint

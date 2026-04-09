@@ -63,6 +63,13 @@ class ConfigurableService : public Service {
 public:
   ConfigurableService(int ConstructorOption) {}
 
+  /// Fallible named constructor for testing tryCreateService.
+  static Expected<std::unique_ptr<ConfigurableService>> Create(bool Fail) {
+    if (Fail)
+      return make_error<StringError>("failed to create service");
+    return std::make_unique<ConfigurableService>(42);
+  }
+
   void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) override {
     OnComplete();
   }
@@ -110,12 +117,24 @@ private:
 
 class MockControllerAccess : public Session::ControllerAccess {
 public:
+  using OnConnectFn = move_only_function<void(BootstrapInfo &BI)>;
+
   MockControllerAccess(Session &SS) : Session::ControllerAccess(SS), SS(SS) {}
+
+  void setOnConnect(OnConnectFn OnConnect) {
+    this->OnConnect = std::move(OnConnect);
+  }
+
+  void connect(BootstrapInfo BI) override {
+    if (OnConnect)
+      OnConnect(BI);
+  }
 
   void disconnect() override {
     std::unique_lock<std::mutex> Lock(M);
     Shutdown = true;
     ShutdownCV.wait(Lock, [this]() { return Shutdown && Outstanding == 0; });
+    notifyDisconnected();
   }
 
   void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
@@ -248,6 +267,7 @@ private:
   size_t CallId = 0;
   std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
   std::condition_variable ShutdownCV;
+  OnConnectFn OnConnect;
 };
 
 class CallViaMockControllerAccess {
@@ -311,9 +331,9 @@ TEST(SessionTest, SingleService) {
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
   }
 
-  EXPECT_EQ(OpIdx, 1U);
-  EXPECT_EQ(DetachOpIdx, std::nullopt);
-  EXPECT_THAT(ShutdownOpIdx, Optional(Eq(0)));
+  EXPECT_EQ(OpIdx, 2U);
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_EQ(ShutdownOpIdx, 1U);
 }
 
 TEST(SessionTest, MultipleServices) {
@@ -329,15 +349,15 @@ TEST(SessionTest, MultipleServices) {
                                                  ShutdownOpIdx[I], OpIdx));
   }
 
-  EXPECT_EQ(OpIdx, 3U);
+  EXPECT_EQ(OpIdx, 6U);
   // Expect shutdown in reverse order.
   for (size_t I = 0; I != 3; ++I) {
-    EXPECT_EQ(DetachOpIdx[I], std::nullopt);
-    EXPECT_THAT(ShutdownOpIdx[I], Optional(Eq(2 - I)));
+    EXPECT_EQ(DetachOpIdx[I], 2 - I);
+    EXPECT_EQ(ShutdownOpIdx[I], 5 - I);
   }
 }
 
-TEST(SessionTest, ExpectedShutdownSequence) {
+TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
   // Check that Session shutdown results in...
   // 1. Services being shut down.
   // 2. The TaskDispatcher being shut down.
@@ -355,8 +375,8 @@ TEST(SessionTest, ExpectedShutdownSequence) {
                 Tasks,
                 [&]() {
                   EXPECT_TRUE(ShutdownOpIdx);
-                  EXPECT_EQ(*ShutdownOpIdx, 0);
-                  EXPECT_FALSE(SessionShutdownComplete);
+                  EXPECT_EQ(*ShutdownOpIdx, 1);
+                  EXPECT_TRUE(SessionShutdownComplete);
                   DispatcherShutDown = true;
                 }),
             noErrors);
@@ -364,12 +384,229 @@ TEST(SessionTest, ExpectedShutdownSequence) {
       std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
   S.shutdown([&]() {
-    EXPECT_TRUE(DispatcherShutDown);
+    EXPECT_FALSE(DispatcherShutDown);
     SessionShutdownComplete = true;
   });
   S.waitForShutdown();
 
   EXPECT_TRUE(SessionShutdownComplete);
+}
+
+TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
+  std::deque<std::unique_ptr<Task>> Tasks;
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+
+  size_t OpIdx = 0;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+  S.createService<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx);
+
+  ASSERT_FALSE(DetachOpIdx);
+  ASSERT_FALSE(ShutdownOpIdx);
+
+  // Take a managed code call token. This should succeed.
+  auto Tok = TaskGroup::Token(S.managedCodeTaskGroup());
+  ASSERT_TRUE(Tok);
+
+  // We expect shutdown to wait for any active managed calls to complete.
+  bool ShutdownComplete = false;
+  S.shutdown([&]() { ShutdownComplete = true; });
+
+  // Detach should have happened, but shutdown should be waiting on token.
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_FALSE(ShutdownOpIdx);
+  EXPECT_FALSE(ShutdownComplete);
+
+  // The managed calls code group should have been closed. Assert that we
+  // can't get a new token.
+  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTaskGroup()));
+
+  Tok = TaskGroup::Token(); // Reset token.
+
+  EXPECT_EQ(ShutdownOpIdx, 1U);
+
+  EXPECT_TRUE(ShutdownComplete);
+}
+
+static void managedSyncVoidFunction(int *P) { *P = 42; }
+
+TEST(SessionTest, SyncCallManagedCodeVoidFn) {
+  // Test synchronous calls to a void function while holding a
+  // ManagedCodeTaskGroup token.
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  {
+    // Pre-shutdown we expect token acquisition to succeed and the function to
+    // run.
+    int X = 0;
+    bool CallSucceeded = S.callManagedCodeSync(managedSyncVoidFunction, &X);
+
+    EXPECT_TRUE(CallSucceeded);
+    EXPECT_EQ(X, 42U);
+  }
+
+  S.waitForShutdown();
+
+  {
+    // Post-shutdown we expect token acquisition to fail, and
+    // callManagedCodeSync to return false.
+    int X = 0;
+    bool CallSucceeded = S.callManagedCodeSync(managedSyncVoidFunction, &X);
+
+    EXPECT_FALSE(CallSucceeded);
+  }
+}
+
+static int managedSyncNonVoidFunction(int N) { return N + 1; }
+
+TEST(SessionTest, SyncCallManagedCodeNonVoidFn) {
+  // Test synchronous calls to a non-void function while holding a
+  // ManagedCodeTaskGroup token.
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  {
+    // Pre-shutdown we expect token acquisition to succeed, the function to be
+    // run, and the result to be returned.
+    auto Result = S.callManagedCodeSync(managedSyncNonVoidFunction, 41);
+
+    EXPECT_TRUE(Result);
+    EXPECT_EQ(*Result, 42U);
+  }
+
+  S.waitForShutdown();
+
+  {
+    // Post-shutdown we expect token acquisition to fail, and
+    // callManagedCodeSync to return std::nullopt.
+    auto Result = S.callManagedCodeSync(managedSyncNonVoidFunction, 41);
+
+    EXPECT_EQ(Result, std::nullopt);
+  }
+}
+
+static void managedAsyncVoidFunction(move_only_function<void()> Return,
+                                     int *P) {
+  *P = 42;
+  Return();
+}
+
+TEST(SessionTest, AsyncCallManagedCodeVoidFn) {
+  // Test asynchronous calls to a void function while holding a
+  // ManagedCodeTaskGroup token.
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  {
+    // Pre-shutdown we expect token acquisition to succeed, and the function
+    // and Return callback to be run.
+    int X = 0;
+    bool ReturnSucceeded = false;
+    S.callManagedCodeAsync([&](bool B) { ReturnSucceeded = B; },
+                           managedAsyncVoidFunction, &X);
+    EXPECT_TRUE(ReturnSucceeded);
+    EXPECT_EQ(X, 42U);
+  }
+
+  S.waitForShutdown();
+
+  {
+    // Post-shutdown we expect token acquisition to fail. Return should be
+    // with `false` and the function should not be called.
+    int X = 0;
+    bool ReturnSucceeded = false;
+    S.callManagedCodeAsync([&](bool B) { ReturnSucceeded = B; },
+                           managedAsyncVoidFunction, &X);
+    EXPECT_FALSE(ReturnSucceeded);
+    EXPECT_EQ(X, 0U);
+  }
+}
+
+static void managedAsyncNonVoidFunction(move_only_function<void(int)> Return,
+                                        int *P) {
+  Return(++*P);
+}
+
+TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
+  // Test asynchronous calls to a non-void function while holding a
+  // ManagedCodeTaskGroup token.
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  {
+    // Pre-shutdown we expect token acquisition to succeed, and the function
+    // and Return callback to be run.
+    int N = 41;
+    std::optional<int> Result;
+    S.callManagedCodeAsync([&](std::optional<int> N) { Result = N; },
+                           managedAsyncNonVoidFunction, &N);
+    EXPECT_TRUE(Result);
+    EXPECT_EQ(*Result, 42U);
+    EXPECT_EQ(N, 42U);
+  }
+
+  S.waitForShutdown();
+
+  {
+    // Post-shutdown we expect token acquisition to fail. Return should be
+    // with `std::nullopt` and the function should not be called.
+    int N = 41;
+    std::optional<int> Result;
+    S.callManagedCodeAsync([&](std::optional<int> N) { Result = N; },
+                           managedAsyncNonVoidFunction, &N);
+    EXPECT_EQ(Result, std::nullopt);
+    EXPECT_EQ(N, 41U);
+  }
+}
+
+TEST(SessionTest, AsyncCallManagedCodeHoldsTokenAcrossAsyncGap) {
+  // Verify that the ManagedCodeTaskGroup token is held until the async
+  // continuation runs, not just until callManagedCodeAsync returns. This
+  // ensures shutdown blocks for the duration of the actual async work.
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  size_t OpIdx = 0;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+  S.createService<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx);
+
+  // The managed code function stashes its continuation instead of calling it.
+  std::optional<int> Result;
+  move_only_function<void(int)> StashedContinuation;
+  S.callManagedCodeAsync([&](std::optional<int> N) { Result = std::move(N); },
+                         [&](move_only_function<void(int)> Return, int N) {
+                           // Stash the continuation and return without calling
+                           // it.
+                           StashedContinuation = std::move(Return);
+                         },
+                         41);
+
+  // callManagedCodeAsync has returned, but the continuation hasn't been
+  // called yet. The token should still be held inside StashedContinuation.
+  ASSERT_TRUE(StashedContinuation);
+
+  // Request shutdown. It should detach but block on the outstanding token.
+  bool ShutdownComplete = false;
+  S.shutdown([&]() { ShutdownComplete = true; });
+
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_FALSE(ShutdownOpIdx);
+  EXPECT_FALSE(ShutdownComplete);
+
+  // Now invoke the stashed continuation and then destroy it, releasing the
+  // token.
+  StashedContinuation(42);
+  StashedContinuation = {};
+
+  // Check result.
+  EXPECT_EQ(Result, 42);
+
+  // Shutdown should now have completed.
+  EXPECT_EQ(ShutdownOpIdx, 1U);
+  EXPECT_TRUE(ShutdownComplete);
 }
 
 TEST(SessionTest, AddServiceAndUseRef) {
@@ -386,6 +623,26 @@ TEST(SessionTest, CreateServiceAndUseRef) {
   CS.doMoreConfig(1);
 }
 
+TEST(SessionTest, TryCreateServiceSuccess) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  auto CS = S.tryCreateService<ConfigurableService>(false);
+  if (auto Err = CS.takeError()) {
+    ADD_FAILURE() << "expected service creation to succeed";
+    consumeError(std::move(Err));
+  }
+}
+
+TEST(SessionTest, TryCreateServiceFailure) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  auto CS = S.tryCreateService<ConfigurableService>(true);
+  if (auto Err = CS.takeError())
+    consumeError(std::move(Err));
+  else
+    ADD_FAILURE() << "expected service creation to fail";
+}
+
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.
@@ -393,7 +650,7 @@ TEST(ControllerAccessTest, Basics) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
 
@@ -416,7 +673,7 @@ TEST(ControllerAccessTest, ValidCallToController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -456,7 +713,7 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   S.detach();
 
@@ -480,7 +737,7 @@ TEST(ControllerAccessTest, CallFromController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -504,4 +761,35 @@ TEST(ControllerAccessTest, RedundantAsyncShutdown) {
   bool RedundantCallbackRan = false;
   S.shutdown([&]() { RedundantCallbackRan = true; });
   EXPECT_TRUE(RedundantCallbackRan);
+}
+
+TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  // Test values.
+  constexpr const char *SymName = "test_sym";
+  const char Sym = '.';
+  constexpr const char *SecretKey = "luggage_combo";
+  constexpr const char *SecretValue = "12345";
+
+  // Build a BootstrapInfo with custom symbols and values.
+  BootstrapInfo BI(S);
+  std::pair<const char *, const void *> TestSyms[] = {
+      {SymName, static_cast<const void *>(&Sym)}};
+  cantFail(BI.symbols().addUnique(TestSyms));
+  BI.values()[SecretKey] = SecretValue;
+
+  bool OnConnectRan = false;
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  CA->setOnConnect([&](BootstrapInfo &BI) {
+    EXPECT_EQ(BI.symbols().at(SymName), static_cast<const void *>(&Sym));
+    EXPECT_EQ(BI.values().at(SecretKey), SecretValue);
+    OnConnectRan = true;
+  });
+  S.attach(CA, std::move(BI));
+
+  ASSERT_TRUE(OnConnectRan);
+
+  S.waitForShutdown();
 }

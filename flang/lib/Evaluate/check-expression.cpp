@@ -112,6 +112,19 @@ public:
     return result;
   }
 
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) const {
+    // A conditional expression is a primary.  Therefore, only the selected
+    // branch must be constant. If the condition is a constant expression
+    // whose value cannot yet be determined, both branches must be constant.
+    if (!(*this)(x.condition())) {
+      return false;
+    } else if (auto condVal{ToLogical(x.condition())}) {
+      return *condVal ? (*this)(x.thenValue()) : (*this)(x.elseValue());
+    } else {
+      return (*this)(x.thenValue()) && (*this)(x.elseValue());
+    }
+  }
+
 private:
   bool IsConstantStructureConstructorComponent(
       const Symbol &, const Expr<SomeType> &) const;
@@ -356,6 +369,10 @@ public:
   bool operator()(const StructureConstructor &) const { return false; }
   template <typename D, typename R, typename... O>
   bool operator()(const Operation<D, R, O...> &) const {
+    return false;
+  }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    // A conditional expression cannot be an initial data target
     return false;
   }
   template <typename T> bool operator()(const Parentheses<T> &x) const {
@@ -1193,6 +1210,12 @@ public:
 
   Result operator()(const NullPointer &) const { return true; }
 
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) {
+    // Conditional expressions are never variables; expression results are
+    // always contiguous.
+    return true;
+  }
+
 private:
   // Returns "true" for a provably empty or simply contiguous array section;
   // return "false" for a provably nonempty discontiguous section or for use
@@ -1758,6 +1781,12 @@ public:
   }
   Result operator()(const DescriptorInquiry &) const {
     return {}; // doesn't count as a use
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    return Combine((*this)(condExpr.condition()),
+        Combine((*this)(condExpr.thenValue()), (*this)(condExpr.elseValue())));
   }
 
 private:

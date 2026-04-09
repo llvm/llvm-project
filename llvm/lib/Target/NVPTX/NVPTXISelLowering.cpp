@@ -20,6 +20,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -7672,7 +7673,7 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
     unsigned Sign = Sel.getHiBits(1).getZExtValue();
     KnownBits Byte = BitField.extractBits(8, Idx * 8);
     if (Sign)
-      Byte = KnownBits::ashr(Byte, 8);
+      Byte = KnownBits::ashr(Byte, KnownBits::makeConstant(APInt(8, 7)));
     Known.insertBits(Byte, I * 8);
   }
 }

@@ -182,15 +182,15 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
   assert(hasEffect<MemoryEffects::Read>(toOp) &&
          "expected read effect on toOp");
 
-  // Collect the resources of fromOp's read effects. A write can only block
-  // CSE if its resource is not disjoint from one of these.
-  SmallPtrSet<SideEffects::Resource *, 1> readResources;
+  // Collect the read effects of fromOp. A write can only block CSE if it
+  // can conflict with one of these reads.
+  SmallVector<MemoryEffects::EffectInstance> readEffects;
   if (auto memOp = dyn_cast<MemoryEffectOpInterface>(fromOp)) {
     SmallVector<MemoryEffects::EffectInstance> fromEffects;
     memOp.getEffects(fromEffects);
-    for (const auto &e : fromEffects)
+    for (MemoryEffects::EffectInstance &e : fromEffects)
       if (isa<MemoryEffects::Read>(e.getEffect()))
-        readResources.insert(e.getResource());
+        readEffects.push_back(e);
   }
 
   Operation *nextOp = fromOp->getNextNode();
@@ -224,10 +224,20 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
       if (isa<MemoryEffects::Write>(effect.getEffect())) {
         // A write on a resource disjoint from all read resources cannot
         // conflict with the reads being CSE'd.
-        auto *writeResource = effect.getResource();
-        bool canConflict = llvm::any_of(readResources, [&](auto *readResource) {
-          return !writeResource->isDisjointFrom(readResource);
-        });
+        SideEffects::Resource *writeResource = effect.getResource();
+        bool canConflict =
+            llvm::any_of(readEffects, [&](const auto &readEffect) {
+              SideEffects::Resource *readResource = readEffect.getResource();
+              if (writeResource->isDisjointFrom(readResource))
+                return false;
+              // A pointer-based access to an addressable resource cannot
+              // conflict with a non-addressable resource.
+              if (readEffect.getValue() && !writeResource->isAddressable())
+                return false;
+              if (effect.getValue() && !readResource->isAddressable())
+                return false;
+              return true;
+            });
         if (canConflict) {
           result.first->second = {nextOp, MemoryEffects::Write::get()};
           return true;
@@ -248,9 +258,11 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
 
-  // If the operation is already trivially dead just add it to the erase list.
+  // If the operation is already trivially dead, erase it immediately.
+  // Retaining dead operations in a region can affect the equivalence check
+  // between two region ops, causing CSE to miss optimization opportunities.
   if (isOpTriviallyDead(op)) {
-    opsToErase.push_back(op);
+    rewriter.eraseOp(op);
     ++numDCE;
     return success();
   }
@@ -288,7 +300,6 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   // Look for an existing definition for the operation.
   if (auto *existing = knownValues.lookup(op)) {
     replaceUsesAndDelete(knownValues, op, existing, hasSSADominance);
-    ++numCSE;
     return success();
   }
 
@@ -299,7 +310,7 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
-  for (auto &op : *bb) {
+  for (auto &op : llvm::make_early_inc_range(*bb)) {
     // Most operations don't have regions, so fast path that case.
     if (op.getNumRegions() != 0) {
       // If this operation is isolated above, we can't process nested regions
@@ -388,8 +399,10 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   /// Erase any operations that were marked as dead during simplification.
   for (auto *op : opsToErase)
     rewriter.eraseOp(op);
-  if (changed)
-    *changed = !opsToErase.empty();
+  if (changed) {
+    assert(opsToErase.empty() || numDCE || numCSE);
+    *changed = numDCE || numCSE;
+  }
 
   // Note: CSE does currently not remove ops with regions, so DominanceInfo
   // does not have to be invalidated.
@@ -424,7 +437,8 @@ void CSE::runOnOperation() {
   if (!changed)
     return markAllAnalysesPreserved();
 
-  // We currently don't remove region operations, so mark dominance as
-  // preserved.
+  // We only delete redundant operations without moving any operation to a
+  // different block, so the dominance tree structure remains unchanged and
+  // DominanceInfo/PostDominanceInfo can be safely preserved.
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
 }

@@ -1603,7 +1603,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
     // We must be able to predicate all blocks that need to be predicated.
     if (blockNeedsPredication(BB) &&
-        !blockCanBePredicated(BB, SafePointers, MaskedOp)) {
+        !blockCanBePredicated(BB, SafePointers, ConditionallyExecutedOps)) {
       reportVectorizationFailure(
           "Control flow cannot be substituted for a select", "NoCFGForSelect",
           ORE, TheLoop, BB->getTerminator());
@@ -1832,9 +1832,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
           "EarlyExitLoopWithStridedFaultOnlyFirstLoad", ORE, TheLoop);
       return false;
     }
-    PotentiallyFaultingLoads.insert(LI);
-    LLVM_DEBUG(dbgs() << "LV: Found potentially faulting load: " << *LI
-                      << "\n");
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
@@ -1894,20 +1891,9 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
     return false;
   }
 
-  // FIXME: Support gathers after first-faulting load support lands.
-  SmallVector<const SCEVPredicate *, 4> Predicates;
-  LoadInst *Load = cast<LoadInst>(L);
-  if (!isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT, AC,
-                                         &Predicates)) {
-    reportVectorizationFailure(
-        "Loop may fault",
-        "Cannot vectorize potentially faulting early exit loop",
-        "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
-    return false;
-  }
-
   ICFLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(TheLoop);
+  LoadInst *Load = cast<LoadInst>(L);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
   if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
@@ -2085,11 +2071,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
-  SmallPtrSet<const Value *, 8> ReductionLiveOuts;
-
-  for (const auto &Reduction : getReductionVars())
-    ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
-
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
 
@@ -2113,9 +2094,11 @@ void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   SmallPtrSet<Value *, 8> SafePointers;
 
   // Mark all blocks for predication, including those that ordinarily do not
-  // need predication such as the header block.
+  // need predication such as the header block, and collect instructions needing
+  // predication in TailFoldedMaskedOp.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    [[maybe_unused]] bool R = blockCanBePredicated(BB, SafePointers, MaskedOp);
+    [[maybe_unused]] bool R =
+        blockCanBePredicated(BB, SafePointers, TailFoldedMaskedOp);
     assert(R && "Must be able to predicate block when tail-folding.");
   }
 }
