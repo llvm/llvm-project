@@ -147,5 +147,3 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-declare i32 @llvm.fptosi.sat.i32.f32(float)
-declare i32 @llvm.fptoui.sat.i32.f32(float)

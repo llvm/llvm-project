@@ -38,6 +38,4 @@ for.cond:                                         ; preds = %for.cond, %func_1.e
   br label %for.cond
 }
 
-declare void @llvm.lifetime.start.p0(ptr nocapture)
-declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare i64 @safe_sub_func_int64_t_s_s(i64, i64)

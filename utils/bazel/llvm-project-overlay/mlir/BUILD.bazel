@@ -1052,10 +1052,10 @@ filegroup(
 
 cc_library(
     name = "MLIRBindingsPythonHeaders",
+    hdrs = [":MLIRBindingsPythonHeaderFiles"],
     includes = [
         "include",
     ],
-    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
@@ -1067,8 +1067,8 @@ cc_library(
 
 cc_library(
     name = "MLIRBindingsPythonHeadersAndDeps",
+    hdrs = [":MLIRBindingsPythonHeaderFiles"],
     includes = ["include"],
-    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1080,8 +1080,8 @@ cc_library(
 
 cc_library(
     name = "MLIRBindingsPythonNanobindHeaders",
+    hdrs = [":MLIRBindingsPythonHeaderFiles"],
     includes = ["include"],
-    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
@@ -1093,8 +1093,8 @@ cc_library(
 
 cc_library(
     name = "MLIRBindingsPythonNanobindHeadersAndDeps",
+    hdrs = [":MLIRBindingsPythonHeaderFiles"],
     includes = ["include"],
-    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1104,13 +1104,13 @@ cc_library(
     ],
 )
 
-# These flags are needed for pybind11 to work.
-PYBIND11_COPTS = [
+# These flags are needed for python extensions to work.
+PYTHON_BINDINGS_COPTS = [
     "-fexceptions",
     "-frtti",
 ]
 
-PYBIND11_FEATURES = [
+PYTHON_BINDINGS_FEATURES = [
     # Cannot use header_modules (parse_headers feature fails).
     "-use_header_modules",
 ]
@@ -1138,22 +1138,23 @@ filegroup(
 
 cc_library(
     name = "MLIRBindingsPythonLibHeaders",
+    hdrs = [":MLIRBindingsPythonCoreHeaders"],
     includes = ["lib/Bindings/Python"],
-    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":MLIRBindingsPythonNanobindHeaders",
+        "@nanobind",
     ],
 )
 
 cc_library(
     name = "MLIRBindingsPythonCore",
     srcs = [":MLIRBindingsPythonSourceFiles"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    hdrs = [":MLIRBindingsPythonCoreHeaders"],
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
-    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsync",
         ":CAPIDebug",
@@ -1172,12 +1173,12 @@ cc_library(
 cc_library(
     name = "MLIRBindingsPythonCoreNoCAPI",
     srcs = [":MLIRBindingsPythonSourceFiles"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    hdrs = [":MLIRBindingsPythonCoreHeaders"],
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
-    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
@@ -1209,9 +1210,8 @@ cc_library(
 cc_binary(
     name = "_mlir.so",
     srcs = ["lib/Bindings/Python/MainModule.cpp"],
-    # These flags are needed for pybind11 to work.
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
@@ -1227,8 +1227,8 @@ cc_binary(
 cc_binary(
     name = "_mlirDialectsIRDL.so",
     srcs = ["lib/Bindings/Python/DialectIRDL.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     linkshared = 1,
     linkstatic = 0,
     deps = [
@@ -1241,8 +1241,8 @@ cc_binary(
 cc_binary(
     name = "_mlirDialectsLinalg.so",
     srcs = ["lib/Bindings/Python/DialectLinalg.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
@@ -1259,8 +1259,8 @@ cc_binary(
 cc_binary(
     name = "_mlirDialectsLLVM.so",
     srcs = ["lib/Bindings/Python/DialectLLVM.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     linkshared = 1,
     linkstatic = 0,
     deps = [
@@ -1277,8 +1277,8 @@ cc_binary(
 cc_binary(
     name = "_mlirDialectsQuant.so",
     srcs = ["lib/Bindings/Python/DialectQuant.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     linkshared = 1,
     linkstatic = 0,
     deps = [
@@ -1294,8 +1294,8 @@ cc_binary(
 cc_binary(
     name = "_mlirDialectsSparseTensor.so",
     srcs = ["lib/Bindings/Python/DialectSparseTensor.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     linkshared = 1,
     linkstatic = 0,
     deps = [
@@ -1312,8 +1312,8 @@ cc_binary(
 cc_binary(
     name = "_mlirExecutionEngine.so",
     srcs = ["lib/Bindings/Python/ExecutionEngineModule.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     linkshared = 1,
     linkstatic = 0,
     deps = [
@@ -1328,8 +1328,8 @@ cc_binary(
 cc_binary(
     name = "_mlirLinalgPasses.so",
     srcs = ["lib/Bindings/Python/LinalgPasses.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    copts = PYTHON_BINDINGS_COPTS,
+    features = PYTHON_BINDINGS_FEATURES,
     linkshared = 1,
     linkstatic = 0,
     deps = [
@@ -10390,12 +10390,10 @@ cc_library(
         include = ["include/mlir/Dialect/OpenACC/*.h"],
         exclude = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"],
     ) + [
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h",
     ],
     includes = ["include"],
-    textual_hdrs = [
-        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
-    ],
     deps = [
         ":ArithDialect",
         ":AtomicInterfaces",
@@ -10624,11 +10622,9 @@ cc_library(
         exclude = ["include/mlir/Dialect/OpenMP/OpenMPInterfaces.h"],
     ) + [
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h",
-    ],
-    includes = ["include"],
-    textual_hdrs = [
         "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
     ],
+    includes = ["include"],
     deps = [
         ":AtomicInterfaces",
         ":AtomicInterfacesIncGen",

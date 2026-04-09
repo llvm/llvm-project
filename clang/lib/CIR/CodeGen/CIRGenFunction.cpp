@@ -245,16 +245,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
   CIRGenBuilderTy &builder = cgf.builder;
   LexicalScope *localScope = cgf.curLexScope;
 
-  auto applyCleanup = [&]() {
-    if (performCleanup) {
-      // ApplyDebugLocation
-      assert(!cir::MissingFeatures::generateDebugInfo());
-      forceCleanup();
-    }
-  };
-
-  // Cleanup are done right before codegen resumes a scope. This is where
-  // objects are destroyed. Process all return blocks.
+  // Process all return blocks — emit cir.return ops.
   // TODO(cir): Handle returning from a switch statement through a cleanup
   // block. We can't simply jump to the cleanup block, because the cleanup block
   // is not part of the case region. Either reemit all cleanups in the return
@@ -268,74 +259,13 @@ void CIRGenFunction::LexicalScope::cleanup() {
     emitReturn(retLoc);
   }
 
-  auto insertCleanupAndLeave = [&](mlir::Block *insPt) {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToEnd(insPt);
-
-    // If we still don't have a cleanup block, it means that `applyCleanup`
-    // below might be able to get us one.
-    mlir::Block *cleanupBlock = localScope->getCleanupBlock(builder);
-
-    // Leverage and defers to RunCleanupsScope's dtor and scope handling.
-    applyCleanup();
-
-    mlir::Block *currentBlock = builder.getBlock();
-
-    // If we now have one after `applyCleanup`, hook it up properly.
-    if (!cleanupBlock && localScope->getCleanupBlock(builder)) {
-      cleanupBlock = localScope->getCleanupBlock(builder);
-      cir::BrOp::create(builder, insPt->back().getLoc(), cleanupBlock);
-      if (!cleanupBlock->mightHaveTerminator()) {
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        builder.setInsertionPointToEnd(cleanupBlock);
-        cir::YieldOp::create(builder, localScope->endLoc);
-      }
-    }
-
-    if (localScope->depth == 0) {
-      // Reached the end of the function.
-      // Special handling only for single return block case
-      if (localScope->getRetBlocks().size() == 1) {
-        mlir::Block *retBlock = localScope->getRetBlocks()[0];
-        mlir::Location retLoc = localScope->getRetLoc(retBlock);
-        if (retBlock->getUses().empty()) {
-          retBlock->erase();
-        } else {
-          // Thread return block via cleanup block.
-          if (cleanupBlock) {
-            for (mlir::BlockOperand &blockUse : retBlock->getUses()) {
-              cir::BrOp brOp = mlir::cast<cir::BrOp>(blockUse.getOwner());
-              brOp.setSuccessor(cleanupBlock);
-            }
-          }
-
-          cir::BrOp::create(builder, retLoc, retBlock);
-          return;
-        }
-      }
-      emitImplicitReturn();
-      return;
-    }
-
-    // End of any local scope != function
-    // Ternary ops have to deal with matching arms for yielding types
-    // and do return a value, it must do its own cir.yield insertion.
-    if (!localScope->isTernary() && !currentBlock->mightHaveTerminator()) {
-      !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
-              : cir::YieldOp::create(builder, localScope->endLoc, retVal);
-    }
-  };
-
-  // If a cleanup block has been created at some point, branch to it
-  // and set the insertion point to continue at the cleanup block.
-  // Terminators are then inserted either in the cleanup block or
-  // inline in this current block.
-  mlir::Block *cleanupBlock = localScope->getCleanupBlock(builder);
-  if (cleanupBlock)
-    insertCleanupAndLeave(cleanupBlock);
-
-  // Now deal with any pending block wrap up like implicit end of
-  // scope.
+  // Pop cleanup scopes from the EH stack. In CIR, this emits cleanup code
+  // into the cleanup regions of cir.cleanup.scope ops — no CFG-level cleanup
+  // blocks or branches are needed.
+  if (performCleanup) {
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    forceCleanup();
+  }
 
   mlir::Block *curBlock = builder.getBlock();
   if (isGlobalInit() && !curBlock)
@@ -343,7 +273,9 @@ void CIRGenFunction::LexicalScope::cleanup() {
   if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
     return;
 
-  // Get rid of any empty block at the end of the scope.
+  // Get rid of any empty block at the end of the scope. An empty non-entry
+  // block is created when a terminator (return/break/continue) is followed
+  // by unreachable code.
   bool isEntryBlock = builder.getInsertionBlock()->isEntryBlock();
   if (!isEntryBlock && curBlock->empty()) {
     curBlock->erase();
@@ -351,27 +283,32 @@ void CIRGenFunction::LexicalScope::cleanup() {
       if (retBlock->getUses().empty())
         retBlock->erase();
     }
-    // The empty block was created by a terminator (return/break/continue)
-    // and is now erased. If there are pending cleanup scopes (from variables
-    // with destructors), we need to pop them and ensure the containing scope
-    // block gets a proper terminator (e.g. cir.yield). Without this, the
-    // cleanup-scope-op popping that would otherwise happen in
-    // ~RunCleanupsScope leaves the scope block without a terminator.
-    if (hasPendingCleanups()) {
-      builder.setInsertionPointToEnd(entryBlock);
-      insertCleanupAndLeave(entryBlock);
+    return;
+  }
+
+  if (localScope->depth == 0) {
+    // Reached the end of the function.
+    if (localScope->getRetBlocks().size() == 1) {
+      mlir::Block *retBlock = localScope->getRetBlocks()[0];
+      mlir::Location retLoc = localScope->getRetLoc(retBlock);
+      if (retBlock->getUses().empty()) {
+        retBlock->erase();
+      } else {
+        cir::BrOp::create(builder, retLoc, retBlock);
+        return;
+      }
     }
+    emitImplicitReturn();
     return;
   }
 
-  // If there's a cleanup block, branch to it, nothing else to do.
-  if (cleanupBlock) {
-    cir::BrOp::create(builder, curBlock->back().getLoc(), cleanupBlock);
-    return;
+  // End of any local scope != function.
+  // Ternary ops have to deal with matching arms for yielding types
+  // and do return a value, it must do its own cir.yield insertion.
+  if (!localScope->isTernary() && !curBlock->mightHaveTerminator()) {
+    !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
+            : cir::YieldOp::create(builder, localScope->endLoc, retVal);
   }
-
-  // No pre-existent cleanup block, emit cleanup code and yield/return.
-  insertCleanupAndLeave(curBlock);
 }
 
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {

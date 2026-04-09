@@ -31,4 +31,3 @@ for.body9.us.us:                                  ; preds = %for.body9.us.us, %e
   br i1 %exitcond50, label %for.cond6.for.cond.cleanup8_crit_edge.us.us, label %for.body9.us.us
 }
 
-declare i16 @llvm.fshl.i16(i16, i16, i16)

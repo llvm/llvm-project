@@ -2093,6 +2093,10 @@ static unsigned getConstrainedOpcode(Intrinsic::ID ID) {
     return TargetOpcode::G_STRICT_FSQRT;
   case Intrinsic::experimental_constrained_ldexp:
     return TargetOpcode::G_STRICT_FLDEXP;
+  case Intrinsic::experimental_constrained_fcmp:
+    return TargetOpcode::G_STRICT_FCMP;
+  case Intrinsic::experimental_constrained_fcmps:
+    return TargetOpcode::G_STRICT_FCMPS;
   default:
     return 0;
   }
@@ -2109,6 +2113,19 @@ bool IRTranslator::translateConstrainedFPIntrinsic(
   uint32_t Flags = MachineInstr::copyFlagsFromInstruction(FPI);
   if (EB == fp::ExceptionBehavior::ebIgnore)
     Flags |= MachineInstr::NoFPExcept;
+
+  if (Opcode == TargetOpcode::G_STRICT_FCMP ||
+      Opcode == TargetOpcode::G_STRICT_FCMPS) {
+    auto *FPCmp = cast<ConstrainedFPCmpIntrinsic>(&FPI);
+    Register Operand0 = getOrCreateVReg(*FPCmp->getArgOperand(0));
+    Register Operand1 = getOrCreateVReg(*FPCmp->getArgOperand(1));
+    Register Result = getOrCreateVReg(FPI);
+    MIRBuilder.buildInstr(Opcode, {Result}, {}, Flags)
+        .addPredicate(FPCmp->getPredicate())
+        .addUse(Operand0)
+        .addUse(Operand1);
+    return true;
+  }
 
   SmallVector<llvm::SrcOp, 4> VRegs;
   for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)

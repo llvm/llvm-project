@@ -17,7 +17,6 @@
 
 @a = global ptr null, align 8
 @b = global ptr null, align 8
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 define void @_Z3foov() #0 !dbg !6 {
   %1 = load ptr, ptr @b, align 8, !dbg !8, !tbaa !9
