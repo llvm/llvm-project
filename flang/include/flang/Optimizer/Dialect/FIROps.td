@@ -2755,7 +2755,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
 // Constant operations that support Fortran
 
-def fir_StringLitOp : fir_Op<"string_lit", [NoMemoryEffect]> {
+def fir_StringLitOp : fir_Op<"string_lit", [Pure]> {
   let summary = "create a string literal constant";
 
   let description = [{
