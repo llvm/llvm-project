@@ -596,23 +596,23 @@ int elf_testfn(int y) EXCLUSIVE_LOCK_FUNCTION(); // expected-warning {{'exclusiv
 
 int elf_testfn(int y) {
   int x EXCLUSIVE_LOCK_FUNCTION() = y; // \
-    // expected-warning {{'exclusive_lock_function' attribute only applies to functions}}
+    // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int elf_test_var EXCLUSIVE_LOCK_FUNCTION(); // \
-  // expected-warning {{'exclusive_lock_function' attribute only applies to functions}}
+  // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 class ElfFoo {
  private:
   int test_field EXCLUSIVE_LOCK_FUNCTION(); // \
-    // expected-warning {{'exclusive_lock_function' attribute only applies to functions}}
+    // expected-warning {{'exclusive_lock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() EXCLUSIVE_LOCK_FUNCTION(); // \
     // expected-warning {{'exclusive_lock_function' attribute without capability arguments refers to 'this', but 'ElfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
 };
 
 class EXCLUSIVE_LOCK_FUNCTION() ElfTestClass { // \
-  // expected-warning {{'exclusive_lock_function' attribute only applies to functions}}
+  // expected-warning {{'exclusive_lock_function' attribute only applies to functions, parameters, variables, and non-static data members}}
 };
 
 void elf_fun_params1(MutexLock& scope EXCLUSIVE_LOCK_FUNCTION(mu1));
@@ -690,12 +690,12 @@ int slf_testfn(int y) SHARED_LOCK_FUNCTION(); // expected-warning {{'shared_lock
 
 int slf_testfn(int y) {
   int x SHARED_LOCK_FUNCTION() = y; // \
-    // expected-warning {{'shared_lock_function' attribute only applies to functions}}
+    // expected-warning {{'shared_lock_function' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int slf_test_var SHARED_LOCK_FUNCTION(); // \
-  // expected-warning {{'shared_lock_function' attribute only applies to functions}}
+  // expected-warning {{'shared_lock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 void slf_fun_params1(MutexLock& scope SHARED_LOCK_FUNCTION(mu1));
 void slf_fun_params2(int lvar SHARED_LOCK_FUNCTION(mu1)); // \
@@ -706,13 +706,13 @@ void slf_fun_params3(MutexLock& scope SHARED_LOCK_FUNCTION()); // \
 class SlfFoo {
  private:
   int test_field SHARED_LOCK_FUNCTION(); // \
-    // expected-warning {{'shared_lock_function' attribute only applies to functions}}
+    // expected-warning {{'shared_lock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() SHARED_LOCK_FUNCTION(); // \
     // expected-warning {{'shared_lock_function' attribute without capability arguments refers to 'this', but 'SlfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
 };
 
 class SHARED_LOCK_FUNCTION() SlfTestClass { // \
-  // expected-warning {{'shared_lock_function' attribute only applies to functions}}
+  // expected-warning {{'shared_lock_function' attribute only applies to functions, parameters, variables, and non-static data members}}
 };
 
 // Check argument parsing.
@@ -790,27 +790,27 @@ int etf_testfn(int y) EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
 
 int etf_testfn(int y) {
   int x EXCLUSIVE_TRYLOCK_FUNCTION(1) = y; // \
-    // expected-warning {{'exclusive_trylock_function' attribute only applies to functions}}
+    // expected-warning {{'exclusive_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int etf_test_var EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
-  // expected-warning {{'exclusive_trylock_function' attribute only applies to functions}}
+  // expected-warning {{'exclusive_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 class EtfFoo {
  private:
   int test_field EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
-    // expected-warning {{'exclusive_trylock_function' attribute only applies to functions}}
+    // expected-warning {{'exclusive_trylock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
     // expected-warning {{'exclusive_trylock_function' attribute without capability arguments refers to 'this', but 'EtfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
 };
 
 class EXCLUSIVE_TRYLOCK_FUNCTION(1) EtfTestClass { // \
-  // expected-warning {{'exclusive_trylock_function' attribute only applies to functions}}
+  // expected-warning {{'exclusive_trylock_function' attribute only applies to functions, variables, and non-static data members}}
 };
 
 void etf_fun_params(int lvar EXCLUSIVE_TRYLOCK_FUNCTION(1)); // \
-  // expected-warning {{'exclusive_trylock_function' attribute only applies to functions}}
+  // expected-warning {{'exclusive_trylock_function' attribute only applies to functions, variables, and non-static data members}}
 
 // Check argument parsing.
 
@@ -885,27 +885,27 @@ int stf_testfn(int y) SHARED_TRYLOCK_FUNCTION(1); // \
 
 int stf_testfn(int y) {
   int x SHARED_TRYLOCK_FUNCTION(1) = y; // \
-    // expected-warning {{'shared_trylock_function' attribute only applies to functions}}
+    // expected-warning {{'shared_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int stf_test_var SHARED_TRYLOCK_FUNCTION(1); // \
-  // expected-warning {{'shared_trylock_function' attribute only applies to functions}}
+  // expected-warning {{'shared_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 void stf_fun_params(int lvar SHARED_TRYLOCK_FUNCTION(1)); // \
-  // expected-warning {{'shared_trylock_function' attribute only applies to functions}}
+  // expected-warning {{'shared_trylock_function' attribute only applies to functions, variables, and non-static data members}}
 
 
 class StfFoo {
  private:
   int test_field SHARED_TRYLOCK_FUNCTION(1); // \
-    // expected-warning {{'shared_trylock_function' attribute only applies to functions}}
+    // expected-warning {{'shared_trylock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() SHARED_TRYLOCK_FUNCTION(1); // \
     // expected-warning {{'shared_trylock_function' attribute without capability arguments refers to 'this', but 'StfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
 };
 
 class SHARED_TRYLOCK_FUNCTION(1) StfTestClass { // \
-    // expected-warning {{'shared_trylock_function' attribute only applies to functions}}
+    // expected-warning {{'shared_trylock_function' attribute only applies to functions, variables, and non-static data members}}
 };
 
 // Check argument parsing.
@@ -978,17 +978,17 @@ int uf_testfn(int y) UNLOCK_FUNCTION(); //\
 
 int uf_testfn(int y) {
   int x UNLOCK_FUNCTION() = y; // \
-    // expected-warning {{'unlock_function' attribute only applies to functions}}
+    // expected-warning {{'unlock_function' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int uf_test_var UNLOCK_FUNCTION(); // \
-  // expected-warning {{'unlock_function' attribute only applies to functions}}
+  // expected-warning {{'unlock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 class UfFoo {
  private:
   int test_field UNLOCK_FUNCTION(); // \
-    // expected-warning {{'unlock_function' attribute only applies to functions}}
+    // expected-warning {{'unlock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() UNLOCK_FUNCTION(); // \
     // expected-warning {{'unlock_function' attribute without capability arguments refers to 'this', but 'UfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
 };
@@ -1143,12 +1143,12 @@ int le_testfn(int y) LOCKS_EXCLUDED(mu1);
 
 int le_testfn(int y) {
   int x LOCKS_EXCLUDED(mu1) = y; // \
-    // expected-warning {{'locks_excluded' attribute only applies to functions}}
+    // expected-warning {{'locks_excluded' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int le_test_var LOCKS_EXCLUDED(mu1); // \
-  // expected-warning {{'locks_excluded' attribute only applies to functions}}
+  // expected-warning {{'locks_excluded' attribute on a variable requires the variable to be of function pointer type}}
 
 void le_fun_params1(MutexLock& scope LOCKS_EXCLUDED(mu1));
 void le_fun_params2(int lvar LOCKS_EXCLUDED(mu1)); // \
@@ -1157,12 +1157,12 @@ void le_fun_params2(int lvar LOCKS_EXCLUDED(mu1)); // \
 class LeFoo {
  private:
   int test_field LOCKS_EXCLUDED(mu1); // \
-    // expected-warning {{'locks_excluded' attribute only applies to functions}}
+    // expected-warning {{'locks_excluded' attribute on a field requires the field to be of function pointer type}}
   void test_method() LOCKS_EXCLUDED(mu1);
 };
 
 class LOCKS_EXCLUDED(mu1) LeTestClass { // \
-  // expected-warning {{'locks_excluded' attribute only applies to functions}}
+  // expected-warning {{'locks_excluded' attribute only applies to functions, parameters, variables, and non-static data members}}
 };
 
 // Check argument parsing.
@@ -1228,12 +1228,12 @@ int elr_testfn(int y) EXCLUSIVE_LOCKS_REQUIRED(mu1);
 
 int elr_testfn(int y) {
   int x EXCLUSIVE_LOCKS_REQUIRED(mu1) = y; // \
-    // expected-warning {{'exclusive_locks_required' attribute only applies to functions}}
+    // expected-warning {{'exclusive_locks_required' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int elr_test_var EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
-  // expected-warning {{'exclusive_locks_required' attribute only applies to functions}}
+  // expected-warning {{'exclusive_locks_required' attribute on a variable requires the variable to be of function pointer type}}
 
 void elr_fun_params1(MutexLock& scope EXCLUSIVE_LOCKS_REQUIRED(mu1));
 void elr_fun_params2(int lvar EXCLUSIVE_LOCKS_REQUIRED(mu1)); // \
@@ -1242,12 +1242,12 @@ void elr_fun_params2(int lvar EXCLUSIVE_LOCKS_REQUIRED(mu1)); // \
 class ElrFoo {
  private:
   int test_field EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
-    // expected-warning {{'exclusive_locks_required' attribute only applies to functions}}
+    // expected-warning {{'exclusive_locks_required' attribute on a field requires the field to be of function pointer type}}
   void test_method() EXCLUSIVE_LOCKS_REQUIRED(mu1);
 };
 
 class EXCLUSIVE_LOCKS_REQUIRED(mu1) ElrTestClass { // \
-  // expected-warning {{'exclusive_locks_required' attribute only applies to functions}}
+  // expected-warning {{'exclusive_locks_required' attribute only applies to functions, parameters, variables, and non-static data members}}
 };
 
 // Check argument parsing.
@@ -1315,12 +1315,12 @@ int slr_testfn(int y) SHARED_LOCKS_REQUIRED(mu1);
 
 int slr_testfn(int y) {
   int x SHARED_LOCKS_REQUIRED(mu1) = y; // \
-    // expected-warning {{'shared_locks_required' attribute only applies to functions}}
+    // expected-warning {{'shared_locks_required' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int slr_test_var SHARED_LOCKS_REQUIRED(mu1); // \
-  // expected-warning {{'shared_locks_required' attribute only applies to functions}}
+  // expected-warning {{'shared_locks_required' attribute on a variable requires the variable to be of function pointer type}}
 
 void slr_fun_params1(MutexLock& scope SHARED_LOCKS_REQUIRED(mu1));
 void slr_fun_params2(int lvar SHARED_LOCKS_REQUIRED(mu1)); // \
@@ -1329,12 +1329,12 @@ void slr_fun_params2(int lvar SHARED_LOCKS_REQUIRED(mu1)); // \
 class SlrFoo {
  private:
   int test_field SHARED_LOCKS_REQUIRED(mu1); // \
-    // expected-warning {{'shared_locks_required' attribute only applies to functions}}
+    // expected-warning {{'shared_locks_required' attribute on a field requires the field to be of function pointer type}}
   void test_method() SHARED_LOCKS_REQUIRED(mu1);
 };
 
 class SHARED_LOCKS_REQUIRED(mu1) SlrTestClass { // \
-  // expected-warning {{'shared_locks_required' attribute only applies to functions}}
+  // expected-warning {{'shared_locks_required' attribute only applies to functions, parameters, variables, and non-static data members}}
 };
 
 // Check argument parsing.
@@ -1746,3 +1746,46 @@ namespace CRASH_POST_R301735 {
    };
 }
 #endif
+
+//-----------------------------------------//
+//  Function pointer attributes
+//-----------------------------------------//
+
+namespace FunctionPointers {
+
+void (*fp_lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu1);
+void (*fp_unlock)(void) UNLOCK_FUNCTION(mu1);
+void (*fp_requires)(void) EXCLUSIVE_LOCKS_REQUIRED(mu1);
+void (*fp_excludes)(void) LOCKS_EXCLUDED(mu1);
+bool (*fp_trylock)(void) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu1);
+void (*fp_assert)(void) ASSERT_EXCLUSIVE_LOCK(mu1);
+void (*fp_shared_lock)(void) SHARED_LOCK_FUNCTION(mu1);
+void (*fp_shared_require)(void) SHARED_LOCKS_REQUIRED(mu1);
+void (*fp_shared_trylock)(void) SHARED_TRYLOCK_FUNCTION(true, mu1);
+
+struct FPFields {
+  void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu1);
+  void (*unlock)(void) UNLOCK_FUNCTION(mu1);
+  void (*requires_mu)(void) EXCLUSIVE_LOCKS_REQUIRED(mu1);
+};
+
+int bad_fp_var EXCLUSIVE_LOCK_FUNCTION(mu1); // \
+  // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
+struct BadFPFields {
+  int bad_field EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
+    // expected-warning {{'exclusive_locks_required' attribute on a field requires the field to be of function pointer type}}
+};
+
+template <typename FuncPtr>
+struct DependentFPFields {
+  FuncPtr lock EXCLUSIVE_LOCK_FUNCTION(mu1); // \
+    // expected-warning {{'exclusive_lock_function' attribute on a field requires the field to be of function pointer type}}
+  FuncPtr requires_mu EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
+    // expected-warning {{'exclusive_locks_required' attribute on a field requires the field to be of function pointer type}}
+};
+
+typedef void (*GoodLockFn)(void);
+DependentFPFields<GoodLockFn> dependent_fp_fields_ok;
+DependentFPFields<int> dependent_fp_fields_bad; // expected-note {{in instantiation of template class 'FunctionPointers::DependentFPFields<int>' requested here}}
+
+}  // namespace FunctionPointers

@@ -187,10 +187,15 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   }
 
   // If the attribute has no arguments, then assume the argument is "this".
-  if (!AttrExp)
+  // SelfArg may be null for non-method callees (e.g. function pointers).
+  if (!AttrExp) {
+    if (!Ctx.SelfArg)
+      return CapabilityExpr();
     return translateAttrExpr(cast<const Expr *>(Ctx.SelfArg), nullptr);
-  else  // For most attributes.
-    return translateAttrExpr(AttrExp, &Ctx);
+  }
+
+  // For most attributes.
+  return translateAttrExpr(AttrExp, &Ctx);
 }
 
 /// Translate a clang expression in an attribute to a til::SExpr.

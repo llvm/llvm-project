@@ -14246,6 +14246,8 @@ public:
   };
   typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
+  bool checkDependentThreadSafetyAttrs(Decl *D, const Attr *A);
+
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,
                         LateInstantiatedAttrVec *LateAttrs = nullptr,

@@ -282,6 +282,27 @@ struct TestInit test_init(void) {
   return foo;
 }
 
+// Function pointer struct members.
+struct FPOps {
+  struct Mutex mu;
+  int a GUARDED_BY(&mu);
+  void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(&mu);
+  void (*unlock)(void) UNLOCK_FUNCTION(&mu);
+  void (*requires_mu)(void) EXCLUSIVE_LOCKS_REQUIRED(&mu);
+};
+
+void test_fp_ops(struct FPOps *ops) {
+  ops->lock();
+  ops->a = 42;
+  ops->requires_mu();
+  ops->unlock();
+}
+
+void test_fp_ops_fail(struct FPOps *ops) {
+  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex '&FPOps::mu' exclusively}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex '&FPOps::mu' exclusively}}
+}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
