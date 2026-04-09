@@ -146,7 +146,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
   initializeRISCVIndirectBranchTrackingPass(*PR);
-  initializeRISCVBranchCondCombinePass(*PR);
+  initializeRISCVConditionalBranchCombinePass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
   initializeRISCVPreAllocZilsdOptPass(*PR);
   initializeRISCVExpandAtomicPseudoPass(*PR);
@@ -617,7 +617,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
 
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
-  addPass(createRISCVBranchCondCombinePass());
+  addPass(createRISCVConditionalBranchCombinePass());
 
   TargetPassConfig::addMachineSSAOptimization();
 
