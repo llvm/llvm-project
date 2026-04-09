@@ -862,9 +862,9 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
          "expected");
 
   mlir::Value retVal;
-  if (inputVar.getType() == alloc.getType() && !allocateSection) {
+  if (inputVar.getType() == alloc.getType() && !allocateSection)
     retVal = alloc;
-  }
+
   // Step4: reconstruct the input variable from the privatized part:
   // - get a mock base address if the privatized part is a section (so that
   // any addressing of the input variable can be replaced by the same
