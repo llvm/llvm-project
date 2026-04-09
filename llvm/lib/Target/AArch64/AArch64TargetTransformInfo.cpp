@@ -5490,6 +5490,7 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // If this is a small, multi-exit loop similar to something like std::find,
   // then there is typically a performance improvement achieved by unrolling.
   if (!L->getExitBlock() && shouldUnrollMultiExitLoop(L, SE, *this)) {
+    UP.UnrollSkipReason.clear();
     UP.RuntimeUnrollMultiExit = true;
     UP.Runtime = true;
     // Limit unroll count.
@@ -5506,6 +5507,7 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // unchanged
   if (ST->getProcFamily() != AArch64Subtarget::Generic &&
       !ST->getSchedModel().isOutOfOrder()) {
+    UP.UnrollSkipReason.clear();
     UP.Runtime = true;
     UP.Partial = true;
     UP.UnrollRemainder = true;
@@ -5517,8 +5519,13 @@ void AArch64TTIImpl::getUnrollingPreferences(
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
-  if (Cost < Aarch64ForceUnrollThreshold)
+  if (Cost < Aarch64ForceUnrollThreshold) {
+    UP.UnrollSkipReason.clear();
     UP.Force = true;
+  } else if (UP.UnrollSkipReason.empty()) {
+    UP.UnrollSkipReason =
+        "AArch64: no target-specific unrolling strategy matched";
+  }
 }
 
 void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
