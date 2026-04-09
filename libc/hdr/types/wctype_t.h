@@ -1,5 +1,4 @@
-//===-- Definition of wctype_t.h
-//--------------------------------------------===//
+//===-- Definition of wctype_t.h ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

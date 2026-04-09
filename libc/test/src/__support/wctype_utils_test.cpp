@@ -1,7 +1,7 @@
+#include "hdr/types/wctype_t.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wctype/wctype_classification_utils.h"
 #include "test/UnitTest/Test.h"
-
 namespace {
 
 namespace ascii_mode {
@@ -9,7 +9,12 @@ namespace ascii_mode {
 #define LIBC_CONF_WCTYPE_MODE LIBC_WCTYPE_MODE_ASCII
 
 #undef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
+
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp = ::LIBC_NAMESPACE::cpp;
+} // namespace LIBC_NAMESPACE_DECL
 #include "src/__support/wctype_utils.h"
+
 } // namespace ascii_mode
 
 namespace utf8_mode {
@@ -19,9 +24,11 @@ namespace utf8_mode {
 namespace LIBC_NAMESPACE_DECL {
 using ::LIBC_NAMESPACE::lookup_properties;
 using ::LIBC_NAMESPACE::PropertyFlag;
+namespace cpp = ::LIBC_NAMESPACE::cpp;
 } // namespace LIBC_NAMESPACE_DECL
 
 #undef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
+
 #include "src/__support/wctype_utils.h"
 } // namespace utf8_mode
 

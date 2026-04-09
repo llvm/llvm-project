@@ -1,5 +1,4 @@
-//===-- Definition of wctype_t types
-//----------------------------------------===//
+//===-- Definition of wctype_t types --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_WCTYPE_T_H
 #define LLVM_LIBC_TYPES_WCTYPE_T_H
 
-typedef unsigned int wctype_t;
+typedef unsigned short wctype_t;
 
 #endif // LLVM_LIBC_TYPES_WCTYPE_T_H

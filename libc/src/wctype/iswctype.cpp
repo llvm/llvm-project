@@ -16,8 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, iswctype, (wint_t c, wctype_t desc)) {
-  return internal::iswctype(static_cast<wchar_t>(c),
-                            static_cast<unsigned int>(desc));
+  return internal::iswctype(static_cast<wchar_t>(c), desc);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

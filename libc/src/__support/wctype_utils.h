@@ -10,6 +10,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "hdr/types/wchar_t.h"
+#include "hdr/types/wctype_t.h"
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 
@@ -454,74 +457,6 @@ LIBC_INLINE constexpr wchar_t toupper(wchar_t wch) {
   }
 }
 
-LIBC_INLINE constexpr unsigned int wctype(const char *property) {
-  if (!property)
-    return 0; // WCTYPE_INVALID
-
-  constexpr const char *names[] = {
-      "unknown", // 0
-      "alnum",   // 1 - WCTYPE_ALNUM
-      "alpha",   // 2 - WCTYPE_ALPHA
-      "blank",   // 3 - WCTYPE_BLANK
-      "cntrl",   // 4 - WCTYPE_CNTRL
-      "digit",   // 5 - WCTYPE_DIGIT
-      "graph",   // 6 - WCTYPE_GRAPH
-      "lower",   // 7 - WCTYPE_LOWER
-      "print",   // 8 - WCTYPE_PRINT
-      "punct",   // 9 - WCTYPE_PUNCT
-      "space",   // 10 - WCTYPE_SPACE
-      "upper",   // 11 - WCTYPE_UPPER
-      "xdigit"   // 12 - WCTYPE_XDIGIT
-  };
-
-  for (unsigned int i = 1; i < sizeof(names) / sizeof(names[0]); ++i) {
-    const char *s1 = property;
-    const char *s2 = names[i];
-
-    while (*s1 && (*s1 == *s2)) {
-      ++s1;
-      ++s2;
-    }
-
-    if (*s1 == *s2) {
-      return i;
-    }
-  }
-
-  return 0; // WCTYPE_INVALID
-}
-
-LIBC_INLINE constexpr int iswctype(wchar_t c, unsigned int desc) {
-  switch (desc) {
-  case 1:
-    return isalnum(c); // alnum
-  case 2:
-    return isalpha(c); // alpha
-  case 3:
-    return isblank(c); // blank
-  case 4:
-    return iscntrl(c); // cntrl
-  case 5:
-    return isdigit(c); // digit
-  case 6:
-    return isgraph(c); // graph
-  case 7:
-    return islower(c); // lower
-  case 8:
-    return isprint(c); // print
-  case 9:
-    return ispunct(c); // punct
-  case 10:
-    return isspace(c); // space
-  case 11:
-    return isupper(c); // upper
-  case 12:
-    return isxdigit(c); // xdigit
-  default:
-    return 0;
-  }
-}
-
 } // namespace ascii
 
 LIBC_INLINE constexpr bool islower(wchar_t wch) {
@@ -619,66 +554,6 @@ LIBC_INLINE constexpr bool isprint(wchar_t wch) {
   return lookup_properties(wch) & PropertyFlag::PRINT;
 #endif
 }
-
-LIBC_INLINE constexpr bool iswctype(wchar_t wch, unsigned int desc) {
-#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
-  return ascii::iswctype(wch, desc);
-#else
-  if (static_cast<uint32_t>(wch) < 128) {
-    return ascii::iswctype(wch, desc);
-  }
-
-  const unsigned prop = lookup_properties(wch);
-
-  switch (desc) {
-  case 1: // alnum
-    return prop & PropertyFlag::ALPHA;
-
-  case 2: // alpha
-    return prop & PropertyFlag::ALPHA;
-
-  case 3: // blank
-    return prop & PropertyFlag::BLANK;
-
-  case 4: // cntrl
-    return prop & PropertyFlag::CNTRL;
-
-  case 5: // digit
-    return ascii::isdigit(wch);
-
-  case 6: // graph
-    // print && !space
-    return (prop & (PropertyFlag::PRINT | PropertyFlag::SPACE)) ==
-           PropertyFlag::PRINT;
-
-  case 7: // lower
-    return prop & PropertyFlag::LOWER;
-
-  case 8: // print
-    return prop & PropertyFlag::PRINT;
-
-  case 9: // punct
-    return prop & PropertyFlag::PUNCT;
-
-  case 10: // space
-    return prop & PropertyFlag::SPACE;
-
-  case 11: // upper
-    return prop & PropertyFlag::UPPER;
-
-  case 12: // xdigit
-    return ascii::isxdigit(wch);
-
-  default:
-    return false;
-  }
-#endif
-}
-
-LIBC_INLINE constexpr unsigned int wctype(const char *property) {
-  return ascii::wctype(property);
-}
-
 LIBC_INLINE constexpr bool isxdigit(wchar_t wch) {
   // Hexadecimal digits are the same in C.UTF8 as in ASCII
   return ascii::isxdigit(wch);
@@ -704,6 +579,85 @@ LIBC_INLINE constexpr bool ispunct(wchar_t wch) {
   }
   return lookup_properties(wch) & PropertyFlag::PUNCT;
 #endif
+}
+
+struct wctype_mapping {
+  cpp::string_view name;
+  wctype_t desc;
+};
+
+LIBC_INLINE constexpr wctype_t WCTYPE_INVALID = 0;
+LIBC_INLINE constexpr wctype_t WCTYPE_ALNUM = 1;
+LIBC_INLINE constexpr wctype_t WCTYPE_ALPHA = 2;
+LIBC_INLINE constexpr wctype_t WCTYPE_BLANK = 3;
+LIBC_INLINE constexpr wctype_t WCTYPE_CNTRL = 4;
+LIBC_INLINE constexpr wctype_t WCTYPE_DIGIT = 5;
+LIBC_INLINE constexpr wctype_t WCTYPE_GRAPH = 6;
+LIBC_INLINE constexpr wctype_t WCTYPE_LOWER = 7;
+LIBC_INLINE constexpr wctype_t WCTYPE_PRINT = 8;
+LIBC_INLINE constexpr wctype_t WCTYPE_PUNCT = 9;
+LIBC_INLINE constexpr wctype_t WCTYPE_SPACE = 10;
+LIBC_INLINE constexpr wctype_t WCTYPE_UPPER = 11;
+LIBC_INLINE constexpr wctype_t WCTYPE_XDIGIT = 12;
+
+LIBC_INLINE constexpr cpp::array<wctype_mapping, 12> mappings = {{
+    {"alnum", WCTYPE_ALNUM},
+    {"alpha", WCTYPE_ALPHA},
+    {"blank", WCTYPE_BLANK},
+    {"cntrl", WCTYPE_CNTRL},
+    {"digit", WCTYPE_DIGIT},
+    {"graph", WCTYPE_GRAPH},
+    {"lower", WCTYPE_LOWER},
+    {"print", WCTYPE_PRINT},
+    {"punct", WCTYPE_PUNCT},
+    {"space", WCTYPE_SPACE},
+    {"upper", WCTYPE_UPPER},
+    {"xdigit", WCTYPE_XDIGIT},
+}};
+
+LIBC_INLINE constexpr wctype_t wctype(const char *property) {
+  if (!property)
+    return WCTYPE_INVALID;
+
+  cpp::string_view prop(property);
+
+  for (const auto &wc : mappings) {
+    if (wc.name == prop) {
+      return wc.desc;
+    }
+  }
+  return WCTYPE_INVALID;
+}
+
+LIBC_INLINE constexpr int iswctype(wchar_t c, wctype_t desc) {
+  switch (desc) {
+  case WCTYPE_ALNUM:
+    return isalnum(c);
+  case WCTYPE_ALPHA:
+    return isalpha(c);
+  case WCTYPE_BLANK:
+    return isblank(c);
+  case WCTYPE_CNTRL:
+    return iscntrl(c);
+  case WCTYPE_DIGIT:
+    return isdigit(c);
+  case WCTYPE_GRAPH:
+    return isgraph(c);
+  case WCTYPE_LOWER:
+    return islower(c);
+  case WCTYPE_PRINT:
+    return isprint(c);
+  case WCTYPE_PUNCT:
+    return ispunct(c);
+  case WCTYPE_SPACE:
+    return isspace(c);
+  case WCTYPE_UPPER:
+    return isupper(c);
+  case WCTYPE_XDIGIT:
+    return isxdigit(c);
+  default:
+    return 0;
+  }
 }
 
 LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
