@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
@@ -619,8 +620,8 @@ TEST(GSYMV2Test, TestReaderV2TruncatedFileTable) {
       // Set FileSize to 4 (just the NumFiles field, no room for entries).
       // FileSize is at EntryOffset + 4 (Type) + 8 (FileOffset) = +12.
       uint64_t FileSizeOffset = EntryOffset + 12;
-      memcpy(Bytes.data() + FileSizeOffset, "\x04\x00\x00\x00\x00\x00\x00\x00",
-             8);
+      support::endian::write64(Bytes.data() + FileSizeOffset, 4,
+                               llvm::endianness::native);
       break;
     }
     if (Type == static_cast<uint32_t>(GlobalInfoType::EndOfList))
