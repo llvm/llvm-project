@@ -344,6 +344,8 @@ define arm_aapcs_vfpcc void @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2, ptr %d
 ; CHECK-MVEFP-NEXT:    vins.f16 s5, s1
 ; CHECK-MVEFP-NEXT:    vins.f16 s6, s2
 ; CHECK-MVEFP-NEXT:    vins.f16 s7, s3
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s10
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s9
 ; CHECK-MVEFP-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:
@@ -384,6 +386,8 @@ define arm_aapcs_vfpcc void @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2, ptr %d
 ; CHECK-MVEFP-NEXT:    vins.f16 s1, s5
 ; CHECK-MVEFP-NEXT:    vins.f16 s2, s6
 ; CHECK-MVEFP-NEXT:    vins.f16 s3, s7
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s10
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s9
 ; CHECK-MVEFP-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:

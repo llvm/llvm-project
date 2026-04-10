@@ -601,6 +601,8 @@ define void @vld2_v8f16_align1(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v8f16_align1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
+; CHECK-NEXT:    @ implicit-def: $s10
+; CHECK-NEXT:    @ implicit-def: $s5
 ; CHECK-NEXT:    vldrb.u8 q2, [r0, #16]
 ; CHECK-NEXT:    vmovx.f16 s4, s0
 ; CHECK-NEXT:    vmovx.f16 s6, s1

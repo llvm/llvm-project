@@ -542,8 +542,8 @@ define arm_aapcs_vfpcc <8 x half> @fdiv_v8f16(<8 x half> %z, <8 x half> %x, <8 x
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovx.f16 s14, s4
 ; CHECK-NEXT:    vmovx.f16 s12, s8
-; CHECK-NEXT:    vdiv.f16 s4, s4, s8
 ; CHECK-NEXT:    vdiv.f16 s12, s14, s12
+; CHECK-NEXT:    vdiv.f16 s4, s4, s8
 ; CHECK-NEXT:    vins.f16 s4, s12
 ; CHECK-NEXT:    vmovx.f16 s12, s5
 ; CHECK-NEXT:    vmovx.f16 s8, s9
@@ -561,6 +561,8 @@ define arm_aapcs_vfpcc <8 x half> @fdiv_v8f16(<8 x half> %z, <8 x half> %x, <8 x
 ; CHECK-NEXT:    vdiv.f16 s8, s10, s8
 ; CHECK-NEXT:    vcmp.f16 eq, q0, zr
 ; CHECK-NEXT:    vins.f16 s7, s8
+; CHECK-NEXT:    @ implicit-def: $s14
+; CHECK-NEXT:    @ implicit-def: $s13
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:

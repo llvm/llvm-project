@@ -24,6 +24,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v2i8(<vscale x 16 x i8> %op1, <2 x i8> 
 ; CHECK-NEXT:    vmseq.vv v10, v8, v12
 ; CHECK-NEXT:    vmor.mm v8, v10, v14
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <2 x i8> %op2, <vscale x 16 x i1> %mask)
   ret <vscale x 16 x i1> %r
@@ -45,6 +46,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> 
 ; CHECK-NEXT:    vmseq.vv v11, v8, v12
 ; CHECK-NEXT:    vmor.mm v8, v10, v11
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <4 x i8> %op2, <vscale x 16 x i1> %mask)
   ret <vscale x 16 x i1> %r
@@ -78,6 +80,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v8i8(<vscale x 16 x i8> %op1, <8 x i8> 
 ; CHECK-NEXT:    vmseq.vv v11, v8, v12
 ; CHECK-NEXT:    vmor.mm v8, v10, v11
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <8 x i8> %op2, <vscale x 16 x i1> %mask)
   ret <vscale x 16 x i1> %r
@@ -135,6 +138,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v16i8(<vscale x 16 x i8> %op1, <16 x i8
 ; CHECK-NEXT:    vmseq.vv v11, v8, v12
 ; CHECK-NEXT:    vmor.mm v8, v10, v11
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <16 x i8> %op2, <vscale x 16 x i1> %mask)
   ret <vscale x 16 x i1> %r
@@ -339,6 +343,7 @@ define <vscale x 8 x i1> @match_nxv8i16_v8i16(<vscale x 8 x i16> %op1, <8 x i16>
 ; CHECK-NEXT:    vmseq.vv v11, v8, v12
 ; CHECK-NEXT:    vmor.mm v8, v10, v11
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 8 x i1> @llvm.experimental.vector.match(<vscale x 8 x i16> %op1, <8 x i16> %op2, <vscale x 8 x i1> %mask)
   ret <vscale x 8 x i1> %r
@@ -974,6 +979,7 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 ; CHECK-NEXT:    vmseq.vv v11, v8, v12
 ; CHECK-NEXT:    vmor.mm v8, v10, v11
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 4 x i1> @llvm.experimental.vector.match(<vscale x 4 x i32> %op1, <4 x i32> %op2, <vscale x 4 x i1> %mask)
   ret <vscale x 4 x i1> %r
@@ -989,6 +995,7 @@ define <vscale x 2 x i1> @match_nxv2xi64_v2i64(<vscale x 2 x i64> %op1, <2 x i64
 ; CHECK-NEXT:    vmseq.vv v10, v8, v12
 ; CHECK-NEXT:    vmor.mm v8, v10, v14
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 2 x i1> @llvm.experimental.vector.match(<vscale x 2 x i64> %op1, <2 x i64> %op2, <vscale x 2 x i1> %mask)
   ret <vscale x 2 x i1> %r

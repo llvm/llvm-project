@@ -76,8 +76,8 @@ define arm_aapcs_vfpcc <8 x half> @add_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s0
 ; CHECK-MVE-NEXT:    vmovx.f16 s10, s4
-; CHECK-MVE-NEXT:    vadd.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vadd.f16 s8, s10, s8
+; CHECK-MVE-NEXT:    vadd.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vins.f16 s0, s8
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s5
@@ -93,6 +93,9 @@ define arm_aapcs_vfpcc <8 x half> @add_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-MVE-NEXT:    vmovx.f16 s6, s7
 ; CHECK-MVE-NEXT:    vadd.f16 s3, s7, s3
 ; CHECK-MVE-NEXT:    vadd.f16 s4, s6, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4
 ; CHECK-MVE-NEXT:    bx lr
 ;
@@ -207,8 +210,8 @@ define arm_aapcs_vfpcc <8 x half> @sub_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s0
 ; CHECK-MVE-NEXT:    vmovx.f16 s10, s4
-; CHECK-MVE-NEXT:    vsub.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vsub.f16 s8, s10, s8
+; CHECK-MVE-NEXT:    vsub.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vins.f16 s0, s8
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s5
@@ -224,6 +227,9 @@ define arm_aapcs_vfpcc <8 x half> @sub_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-MVE-NEXT:    vmovx.f16 s6, s7
 ; CHECK-MVE-NEXT:    vsub.f16 s3, s7, s3
 ; CHECK-MVE-NEXT:    vsub.f16 s4, s6, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4
 ; CHECK-MVE-NEXT:    bx lr
 ;
@@ -322,8 +328,8 @@ define arm_aapcs_vfpcc <8 x half> @mul_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s0
 ; CHECK-MVE-NEXT:    vmovx.f16 s10, s4
-; CHECK-MVE-NEXT:    vmul.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vmul.f16 s8, s10, s8
+; CHECK-MVE-NEXT:    vmul.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vins.f16 s0, s8
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s5
@@ -339,6 +345,9 @@ define arm_aapcs_vfpcc <8 x half> @mul_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-MVE-NEXT:    vmovx.f16 s6, s7
 ; CHECK-MVE-NEXT:    vmul.f16 s3, s7, s3
 ; CHECK-MVE-NEXT:    vmul.f16 s4, s6, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4
 ; CHECK-MVE-NEXT:    bx lr
 ;

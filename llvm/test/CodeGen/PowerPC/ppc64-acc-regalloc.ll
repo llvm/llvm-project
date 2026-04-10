@@ -39,6 +39,8 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; CHECK-NEXT:    xxlor vs10, v4, v4
 ; CHECK-NEXT:    xxlor vs8, v4, v4
 ; CHECK-NEXT:    xxlor vs8, v2, v2
+; CHECK-NEXT:    # implicit-def: $v8
+; CHECK-NEXT:    # implicit-def: $v8
 ; CHECK-NEXT:    mulld r6, r6, r3
 ; CHECK-NEXT:    xvmaddadp vs7, vs0, v1
 ; CHECK-NEXT:    xvmuldp vs6, vs0, v2
@@ -132,6 +134,8 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; TRACKLIVE-NEXT:    xxlor vs10, v4, v4
 ; TRACKLIVE-NEXT:    xxlor vs8, v4, v4
 ; TRACKLIVE-NEXT:    xxlor vs8, v2, v2
+; TRACKLIVE-NEXT:    # implicit-def: $v8
+; TRACKLIVE-NEXT:    # implicit-def: $v8
 ; TRACKLIVE-NEXT:    mulld r6, r6, r3
 ; TRACKLIVE-NEXT:    xvmaddadp vs7, vs0, v1
 ; TRACKLIVE-NEXT:    xvmuldp vs6, vs0, v2

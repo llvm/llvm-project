@@ -42,6 +42,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_2(<vscale x 8 x i32> %vec, ptr %
 ; VLA-NEXT:    vle32.v v12, (a0)
 ; VLA-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
 ; VLA-NEXT:    vslideup.vi v8, v12, 2
+; VLA-NEXT:    # implicit-def: $v14m2
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_nxv8i32_v2i32_2:
@@ -63,6 +64,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_6(<vscale x 8 x i32> %vec, ptr %
 ; VLA-NEXT:    vle32.v v12, (a0)
 ; VLA-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
 ; VLA-NEXT:    vslideup.vi v8, v12, 6
+; VLA-NEXT:    # implicit-def: $v14m2
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_nxv8i32_v2i32_6:
@@ -607,6 +609,8 @@ define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, ptr %out) {
 ; VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; VLA-NEXT:    vle64.v v8, (a0)
 ; VLA-NEXT:    vle64.v v16, (a1)
+; VLA-NEXT:    # implicit-def: $v12m4
+; VLA-NEXT:    # implicit-def: $v10m2
 ; VLA-NEXT:    vsetivli zero, 6, e64, m8, tu, ma
 ; VLA-NEXT:    vslideup.vi v8, v16, 4
 ; VLA-NEXT:    vs8r.v v8, (a2)
@@ -650,6 +654,8 @@ define void @insert_v2i64_nxv16i64_lo2(ptr %psv, ptr %out) {
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; VLA-NEXT:    vle64.v v8, (a0)
+; VLA-NEXT:    # implicit-def: $v12m4
+; VLA-NEXT:    # implicit-def: $v10m2
 ; VLA-NEXT:    vsetivli zero, 4, e64, m8, ta, ma
 ; VLA-NEXT:    vslideup.vi v16, v8, 2
 ; VLA-NEXT:    vs8r.v v16, (a1)

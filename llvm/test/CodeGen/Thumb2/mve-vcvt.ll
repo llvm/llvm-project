@@ -100,10 +100,13 @@ define arm_aapcs_vfpcc <8 x half> @foo_half_int16(<8 x i16> %src) {
 ; CHECK-MVE-NEXT:    vins.f16 s0, s2
 ; CHECK-MVE-NEXT:    vmov s2, r0
 ; CHECK-MVE-NEXT:    vmov.s16 r0, q1[2]
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvt.f16.s32 s2, s2
 ; CHECK-MVE-NEXT:    vmov s8, r0
 ; CHECK-MVE-NEXT:    vmov.s16 r0, q1[4]
 ; CHECK-MVE-NEXT:    vcvt.f16.s32 s1, s8
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
 ; CHECK-MVE-NEXT:    vins.f16 s1, s2
 ; CHECK-MVE-NEXT:    vmov s2, r0
 ; CHECK-MVE-NEXT:    vmov.s16 r0, q1[5]
@@ -143,10 +146,13 @@ define arm_aapcs_vfpcc <8 x half> @foo_half_uint16(<8 x i16> %src) {
 ; CHECK-MVE-NEXT:    vins.f16 s0, s2
 ; CHECK-MVE-NEXT:    vmov s2, r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q1[2]
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvt.f16.u32 s2, s2
 ; CHECK-MVE-NEXT:    vmov s8, r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q1[4]
 ; CHECK-MVE-NEXT:    vcvt.f16.u32 s1, s8
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
 ; CHECK-MVE-NEXT:    vins.f16 s1, s2
 ; CHECK-MVE-NEXT:    vmov s2, r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q1[5]
@@ -361,6 +367,10 @@ define arm_aapcs_vfpcc <8 x half> @vmovn32_trunc1(<4 x float> %src1, <4 x float>
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s6
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: vmovn32_trunc1:
@@ -378,6 +388,10 @@ define arm_aapcs_vfpcc <8 x half> @vmovn32_trunc2(<4 x float> %src1, <4 x float>
 ; CHECK-MVE-LABEL: vmovn32_trunc2:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmov q2, q0
+; CHECK-MVE-NEXT:    @ implicit-def: $s2
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s6

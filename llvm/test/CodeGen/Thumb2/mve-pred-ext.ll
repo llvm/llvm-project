@@ -700,6 +700,9 @@ define arm_aapcs_vfpcc <8 x half> @uitofp_v8i1_v8f16(<8 x i16> %src) {
 ; CHECK-MVE-LABEL: uitofp_v8i1_v8f16:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vcmp.s16 gt, q0, zr
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
 ; CHECK-MVE-NEXT:    vmrs r0, p0
 ; CHECK-MVE-NEXT:    and r1, r0, #1
 ; CHECK-MVE-NEXT:    ubfx r2, r0, #2, #1
@@ -748,6 +751,9 @@ define arm_aapcs_vfpcc <8 x half> @sitofp_v8i1_v8f16(<8 x i16> %src) {
 ; CHECK-MVE-LABEL: sitofp_v8i1_v8f16:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vcmp.s16 gt, q0, zr
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
 ; CHECK-MVE-NEXT:    vmrs r0, p0
 ; CHECK-MVE-NEXT:    and r1, r0, #1
 ; CHECK-MVE-NEXT:    ubfx r2, r0, #2, #1
@@ -809,7 +815,10 @@ define arm_aapcs_vfpcc <8 x half> @fptoui_v8i1_v8f16(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmov r0, s4
 ; CHECK-MVE-NEXT:    vmov r1, s0
 ; CHECK-MVE-NEXT:    vldr.16 s8, .LCPI24_0
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
 ; CHECK-MVE-NEXT:    vmov.f16 s6, #1.000000e+00
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vmovx.f16 s10, s1
 ; CHECK-MVE-NEXT:    vcvt.s32.f16 s10, s10
 ; CHECK-MVE-NEXT:    cmp r1, #0
@@ -873,7 +882,10 @@ define arm_aapcs_vfpcc <8 x half> @fptosi_v8i1_v8f16(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmov r0, s4
 ; CHECK-MVE-NEXT:    vmov r1, s0
 ; CHECK-MVE-NEXT:    vldr.16 s8, .LCPI25_0
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
 ; CHECK-MVE-NEXT:    vmov.f16 s6, #1.000000e+00
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vmovx.f16 s10, s1
 ; CHECK-MVE-NEXT:    vcvt.s32.f16 s10, s10
 ; CHECK-MVE-NEXT:    lsls r0, r0, #31

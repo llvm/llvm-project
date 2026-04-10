@@ -68,6 +68,7 @@ define half @v_constained_fmul_f16_fpexcept_strict(half %x, half %y) #0 {
 ; GFX1-GISEL-TRUE16:       ; %bb.0:
 ; GFX1-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1-GISEL-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX1-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX1-GISEL-FAKE16-LABEL: v_constained_fmul_f16_fpexcept_strict:
 ; GFX1-GISEL-FAKE16:       ; %bb.0:
@@ -128,6 +129,7 @@ define half @v_constained_fmul_f16_fpexcept_ignore(half %x, half %y) #0 {
 ; GFX1-GISEL-TRUE16:       ; %bb.0:
 ; GFX1-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1-GISEL-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX1-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX1-GISEL-FAKE16-LABEL: v_constained_fmul_f16_fpexcept_ignore:
 ; GFX1-GISEL-FAKE16:       ; %bb.0:
@@ -188,6 +190,7 @@ define half @v_constained_fmul_f16_fpexcept_maytrap(half %x, half %y) #0 {
 ; GFX1-GISEL-TRUE16:       ; %bb.0:
 ; GFX1-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1-GISEL-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX1-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX1-GISEL-FAKE16-LABEL: v_constained_fmul_f16_fpexcept_maytrap:
 ; GFX1-GISEL-FAKE16:       ; %bb.0:
@@ -589,6 +592,7 @@ define amdgpu_ps half @s_constained_fmul_f16_fpexcept_strict(half inreg %x, half
 ; GFX1-GISEL-TRUE16-LABEL: s_constained_fmul_f16_fpexcept_strict:
 ; GFX1-GISEL-TRUE16:       ; %bb.0:
 ; GFX1-GISEL-TRUE16-NEXT:    v_mul_f16_e64 v0.l, s2, s3
+; GFX1-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ; GFX1-GISEL-FAKE16-LABEL: s_constained_fmul_f16_fpexcept_strict:
 ; GFX1-GISEL-FAKE16:       ; %bb.0:

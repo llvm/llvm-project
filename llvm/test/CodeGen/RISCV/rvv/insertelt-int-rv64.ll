@@ -201,6 +201,7 @@ define <vscale x 32 x i8> @insertelt_nxv32i8_idx(<vscale x 32 x i8> %v, i8 signe
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v12, a1
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 32 x i8> %v, i8 %elt, i32 %idx
   ret <vscale x 32 x i8> %r
@@ -235,6 +236,8 @@ define <vscale x 64 x i8> @insertelt_nxv64i8_idx(<vscale x 64 x i8> %v, i8 signe
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a1
+; CHECK-NEXT:    # implicit-def: $v20m4
+; CHECK-NEXT:    # implicit-def: $v18m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 64 x i8> %v, i8 %elt, i32 %idx
   ret <vscale x 64 x i8> %r
@@ -405,6 +408,7 @@ define <vscale x 16 x i16> @insertelt_nxv16i16_idx(<vscale x 16 x i16> %v, i16 s
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v12, a1
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 16 x i16> %v, i16 %elt, i32 %idx
   ret <vscale x 16 x i16> %r
@@ -439,6 +443,8 @@ define <vscale x 32 x i16> @insertelt_nxv32i16_idx(<vscale x 32 x i16> %v, i16 s
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a1
+; CHECK-NEXT:    # implicit-def: $v20m4
+; CHECK-NEXT:    # implicit-def: $v18m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 32 x i16> %v, i16 %elt, i32 %idx
   ret <vscale x 32 x i16> %r
@@ -575,6 +581,7 @@ define <vscale x 8 x i32> @insertelt_nxv8i32_idx(<vscale x 8 x i32> %v, i32 sign
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v12, a1
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 8 x i32> %v, i32 %elt, i32 %idx
   ret <vscale x 8 x i32> %r
@@ -609,6 +616,8 @@ define <vscale x 16 x i32> @insertelt_nxv16i32_idx(<vscale x 16 x i32> %v, i32 s
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a1
+; CHECK-NEXT:    # implicit-def: $v20m4
+; CHECK-NEXT:    # implicit-def: $v18m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 16 x i32> %v, i32 %elt, i32 %idx
   ret <vscale x 16 x i32> %r
@@ -717,6 +726,7 @@ define <vscale x 4 x i64> @insertelt_nxv4i64_idx(<vscale x 4 x i64> %v, i64 %elt
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v12, a1
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 4 x i64> %v, i64 %elt, i32 %idx
   ret <vscale x 4 x i64> %r
@@ -753,6 +763,8 @@ define <vscale x 8 x i64> @insertelt_nxv8i64_idx(<vscale x 8 x i64> %v, i64 %elt
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a1
+; CHECK-NEXT:    # implicit-def: $v20m4
+; CHECK-NEXT:    # implicit-def: $v18m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 8 x i64> %v, i64 %elt, i32 %idx
   ret <vscale x 8 x i64> %r

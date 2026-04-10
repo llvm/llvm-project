@@ -145,6 +145,7 @@ define <vscale x 32 x bfloat> @trunc_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; CHECK-NEXT:    vfsgnj.vv v24, v16, v24, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %a = call <vscale x 32 x bfloat> @llvm.trunc.nxv32bf16(<vscale x 32 x bfloat> %x)
   ret <vscale x 32 x bfloat> %a
@@ -367,6 +368,7 @@ define <vscale x 32 x half> @trunc_nxv32f16(<vscale x 32 x half> %x) {
 ; ZVFHMIN-NEXT:    vfsgnj.vv v24, v16, v24, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %a = call <vscale x 32 x half> @llvm.trunc.nxv32f16(<vscale x 32 x half> %x)
   ret <vscale x 32 x half> %a

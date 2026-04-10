@@ -39,6 +39,7 @@ define <8 x float> @fpext_v8bf16(<8 x bfloat> %x) {
 ; CHECK-NEXT:    vslideup.vi v8, v13, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    ret
   %y = fpext <8 x bfloat> %x to <8 x float>
   ret <8 x float> %y
@@ -81,6 +82,7 @@ define <8 x float> @fpext_v8f16(<8 x bfloat> %x) {
 ; CHECK-NEXT:    vslideup.vi v8, v13, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    ret
   %y = fpext <8 x bfloat> %x to <8 x float>
   ret <8 x float> %y

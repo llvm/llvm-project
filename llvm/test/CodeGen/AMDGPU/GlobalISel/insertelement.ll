@@ -5836,11 +5836,13 @@ entry:
 define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_v_v_s(<7 x double> %vec, double %val, i32 inreg %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v7f64_v_v_s:
 ; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, v15
+; GPRIDX-NEXT:    ; implicit-def: $vgpr14_vgpr15
 ; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
-; GPRIDX-NEXT:    v_mov_b32_e32 v16, v15
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, v14
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, v16
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v16
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v17
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v0
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v1
@@ -5858,27 +5860,52 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_v_v_s(<7 x double> %vec, 
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s13, v13
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_insertelement_v7f64_v_v_s:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v16, v15
-; GFX10PLUS-NEXT:    s_lshl_b32 m0, s2, 1
-; GFX10PLUS-NEXT:    v_movreld_b32_e32 v0, v14
-; GFX10PLUS-NEXT:    v_movreld_b32_e32 v1, v16
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s5, v5
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s6, v6
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s7, v7
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s8, v8
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s9, v9
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s10, v10
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s11, v11
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s12, v12
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s13, v13
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_insertelement_v7f64_v_v_s:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_mov_b32_e32 v16, v14
+; GFX10-NEXT:    v_mov_b32_e32 v17, v15
+; GFX10-NEXT:    s_lshl_b32 m0, s2, 1
+; GFX10-NEXT:    ; implicit-def: $vgpr14_vgpr15
+; GFX10-NEXT:    v_movreld_b32_e32 v0, v16
+; GFX10-NEXT:    v_movreld_b32_e32 v1, v17
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX10-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v4
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v5
+; GFX10-NEXT:    v_readfirstlane_b32 s6, v6
+; GFX10-NEXT:    v_readfirstlane_b32 s7, v7
+; GFX10-NEXT:    v_readfirstlane_b32 s8, v8
+; GFX10-NEXT:    v_readfirstlane_b32 s9, v9
+; GFX10-NEXT:    v_readfirstlane_b32 s10, v10
+; GFX10-NEXT:    v_readfirstlane_b32 s11, v11
+; GFX10-NEXT:    v_readfirstlane_b32 s12, v12
+; GFX10-NEXT:    v_readfirstlane_b32 s13, v13
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_insertelement_v7f64_v_v_s:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    v_dual_mov_b32 v16, v14 :: v_dual_mov_b32 v17, v15
+; GFX11-NEXT:    s_lshl_b32 m0, s2, 1
+; GFX11-NEXT:    ; implicit-def: $vgpr14_vgpr15
+; GFX11-NEXT:    v_movreld_b32_e32 v0, v16
+; GFX11-NEXT:    v_movreld_b32_e32 v1, v17
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v4
+; GFX11-NEXT:    v_readfirstlane_b32 s5, v5
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v6
+; GFX11-NEXT:    v_readfirstlane_b32 s7, v7
+; GFX11-NEXT:    v_readfirstlane_b32 s8, v8
+; GFX11-NEXT:    v_readfirstlane_b32 s9, v9
+; GFX11-NEXT:    v_readfirstlane_b32 s10, v10
+; GFX11-NEXT:    v_readfirstlane_b32 s11, v11
+; GFX11-NEXT:    v_readfirstlane_b32 s12, v12
+; GFX11-NEXT:    v_readfirstlane_b32 s13, v13
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <7 x double> %vec, double %val, i32 %idx
   ret <7 x double> %insert

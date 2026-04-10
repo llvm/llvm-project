@@ -5,17 +5,20 @@ define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 ; EG-LABEL: main:
 ; EG:       ; %bb.0: ; %main_body
 ; EG-NEXT:    CALL_FS
-; EG-NEXT:    ALU 3, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 2, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    EXPORT T1.XYZW
 ; EG-NEXT:    EXPORT T0.XYXX
+; EG-NEXT:    ALU 0, @13, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    EXPORT T0.ZXXX
 ; EG-NEXT:    EXPORT T0.XXWX
 ; EG-NEXT:    EXPORT T0.XXXW
 ; EG-NEXT:    CF_END
-; EG-NEXT:    ALU clause starting at 8:
+; EG-NEXT:    PAD
+; EG-NEXT:    ALU clause starting at 10:
 ; EG-NEXT:     MOV * T0.W, KC0[0].X,
 ; EG-NEXT:     MUL_IEEE T0.X, KC0[0].X, 0.0,
-; EG-NEXT:     MUL_IEEE T0.Y, KC0[0].Y, KC0[0].X,
+; EG-NEXT:     MUL_IEEE * T0.Y, KC0[0].Y, KC0[0].X,
+; EG-NEXT:    ALU clause starting at 13:
 ; EG-NEXT:     MUL_IEEE * T0.Z, KC0[0].Z, KC0[0].X,
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0

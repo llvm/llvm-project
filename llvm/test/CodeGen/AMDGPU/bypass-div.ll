@@ -145,7 +145,7 @@ define i64 @sdiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_add_u32_e32 v3, 1, v1
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v1, v3, vcc
-; GFX9-NEXT:  .LBB0_4:
+; GFX9-NEXT:  .LBB0_4: ; %.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
@@ -280,7 +280,7 @@ define i64 @udiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_add_u32_e32 v3, 1, v1
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v1, v3, vcc
-; GFX9-NEXT:  .LBB1_4:
+; GFX9-NEXT:  .LBB1_4: ; %.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
@@ -426,7 +426,7 @@ define i64 @srem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_sub_u32_e32 v1, v0, v2
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v0, v1, vcc
-; GFX9-NEXT:  .LBB2_4:
+; GFX9-NEXT:  .LBB2_4: ; %.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
@@ -558,7 +558,7 @@ define i64 @urem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_sub_u32_e32 v1, v0, v2
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v0, v1, vcc
-; GFX9-NEXT:  .LBB3_4:
+; GFX9-NEXT:  .LBB3_4: ; %.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
@@ -846,7 +846,7 @@ define <2 x i64> @sdivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v6, v0, v3, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v1, v4, vcc
-; GFX9-NEXT:  .LBB8_4:
+; GFX9-NEXT:  .LBB8_4: ; %.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
@@ -997,7 +997,7 @@ define <2 x i64> @udivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v6, v0, v3, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v1, v4, vcc
-; GFX9-NEXT:  .LBB9_4:
+; GFX9-NEXT:  .LBB9_4: ; %.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
@@ -1139,7 +1139,7 @@ define i64 @sdiv64_known32(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_add_u32_e32 v2, 1, v0
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v3
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v0, v2, vcc
-; GFX9-NEXT:  .LBB10_4:
+; GFX9-NEXT:  .LBB10_4: ; %.split
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5

@@ -38,7 +38,9 @@ define arm_aapcs_vfpcc <4 x half> @fptrunc_4(<4 x float> %src1) {
 ; CHECK-LABEL: fptrunc_4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    @ implicit-def: $s5
 ; CHECK-NEXT:    vcvtt.f16.f32 s0, s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vcvtb.f16.f32 s1, s2
 ; CHECK-NEXT:    vcvtt.f16.f32 s1, s3
 ; CHECK-NEXT:    bx lr
@@ -51,7 +53,11 @@ define arm_aapcs_vfpcc <8 x half> @fptrunc_8(<8 x float> %src1) {
 ; CHECK-LABEL: fptrunc_8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    @ implicit-def: $s9
+; CHECK-NEXT:    @ implicit-def: $s10
+; CHECK-NEXT:    @ implicit-def: $s11
 ; CHECK-NEXT:    vcvtt.f16.f32 s0, s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vcvtb.f16.f32 s1, s2
 ; CHECK-NEXT:    vcvtb.f16.f32 s2, s4
 ; CHECK-NEXT:    vcvtt.f16.f32 s1, s3
@@ -76,6 +82,10 @@ define arm_aapcs_vfpcc <8 x half> @shuffle_trunc1(<4 x float> %src1, <4 x float>
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s6
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: shuffle_trunc1:
@@ -93,6 +103,10 @@ define arm_aapcs_vfpcc <8 x half> @shuffle_trunc2(<4 x float> %src1, <4 x float>
 ; CHECK-MVE-LABEL: shuffle_trunc2:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmov q2, q0
+; CHECK-MVE-NEXT:    @ implicit-def: $s2
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s6
@@ -118,6 +132,8 @@ entry:
 define arm_aapcs_vfpcc <16 x half> @shuffle_trunc3(<8 x float> %src1, <8 x float> %src2) {
 ; CHECK-MVE-LABEL: shuffle_trunc3:
 ; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    .vsave {d8, d9}
+; CHECK-MVE-NEXT:    vpush {d8, d9}
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s2
@@ -126,14 +142,23 @@ define arm_aapcs_vfpcc <16 x half> @shuffle_trunc3(<8 x float> %src1, <8 x float
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s5, s5
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s6, s6
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s7, s7
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s8
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s9
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s10
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s17
+; CHECK-MVE-NEXT:    @ implicit-def: $s18
+; CHECK-MVE-NEXT:    @ implicit-def: $s19
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s8
+; CHECK-MVE-NEXT:    @ implicit-def: $s17
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s4, s12
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s5, s13
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s6, s14
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s7, s15
+; CHECK-MVE-NEXT:    vpop {d8, d9}
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: shuffle_trunc3:
@@ -155,10 +180,18 @@ define arm_aapcs_vfpcc <16 x half> @shuffle_trunc4(<8 x float> %src1, <8 x float
 ; CHECK-MVE-NEXT:    .vsave {d8, d9}
 ; CHECK-MVE-NEXT:    vpush {d8, d9}
 ; CHECK-MVE-NEXT:    vmov q4, q0
+; CHECK-MVE-NEXT:    @ implicit-def: $s2
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s8
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s9
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s10
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s8, s12
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s9, s13
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s10, s14
@@ -201,6 +234,10 @@ define arm_aapcs_vfpcc <8 x half> @shuffle_trunc5(<4 x float> %src1, <4 x float>
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s6
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: shuffle_trunc5:
@@ -219,6 +256,10 @@ define arm_aapcs_vfpcc <8 x half> @shuffle_trunc6(<4 x float> %src1, <4 x float>
 ; CHECK-MVE-LABEL: shuffle_trunc6:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmov q2, q0
+; CHECK-MVE-NEXT:    @ implicit-def: $s2
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s6
@@ -245,6 +286,8 @@ entry:
 define arm_aapcs_vfpcc <16 x half> @shuffle_trunc7(<8 x float> %src1, <8 x float> %src2) {
 ; CHECK-MVE-LABEL: shuffle_trunc7:
 ; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    .vsave {d8, d9}
+; CHECK-MVE-NEXT:    vpush {d8, d9}
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s2
@@ -253,14 +296,23 @@ define arm_aapcs_vfpcc <16 x half> @shuffle_trunc7(<8 x float> %src1, <8 x float
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s5, s5
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s6, s6
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s7, s7
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s8
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s9
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s10
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s17
+; CHECK-MVE-NEXT:    @ implicit-def: $s18
+; CHECK-MVE-NEXT:    @ implicit-def: $s19
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s8
+; CHECK-MVE-NEXT:    @ implicit-def: $s17
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s4, s12
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s5, s13
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s6, s14
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s7, s15
+; CHECK-MVE-NEXT:    vpop {d8, d9}
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: shuffle_trunc7:
@@ -283,10 +335,18 @@ define arm_aapcs_vfpcc <16 x half> @shuffle_trunc8(<8 x float> %src1, <8 x float
 ; CHECK-MVE-NEXT:    .vsave {d8, d9}
 ; CHECK-MVE-NEXT:    vpush {d8, d9}
 ; CHECK-MVE-NEXT:    vmov q4, q0
+; CHECK-MVE-NEXT:    @ implicit-def: $s2
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s8
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s9
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s10
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s8, s12
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s9, s13
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s10, s14
@@ -467,6 +527,7 @@ define arm_aapcs_vfpcc void @store_trunc_4(ptr %src, <4 x float> %val) {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s2
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s3
 ; CHECK-MVE-NEXT:    vmov r1, r2, d0
@@ -488,7 +549,11 @@ define arm_aapcs_vfpcc void @store_trunc_8(ptr %src, <8 x float> %val) {
 ; CHECK-MVE-LABEL: store_trunc_8:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s2
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s4
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s3
@@ -514,8 +579,14 @@ entry:
 define arm_aapcs_vfpcc void @store_trunc_16(ptr %src, <16 x float> %val) {
 ; CHECK-MVE-LABEL: store_trunc_16:
 ; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    .vsave {d8, d9}
+; CHECK-MVE-NEXT:    vpush {d8, d9}
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-MVE-NEXT:    @ implicit-def: $s17
+; CHECK-MVE-NEXT:    @ implicit-def: $s18
+; CHECK-MVE-NEXT:    @ implicit-def: $s19
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s2
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s4
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s3
@@ -523,6 +594,10 @@ define arm_aapcs_vfpcc void @store_trunc_16(ptr %src, <16 x float> %val) {
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s5
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s7
 ; CHECK-MVE-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-MVE-NEXT:    @ implicit-def: $s2
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s8
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s10
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s12
@@ -532,6 +607,7 @@ define arm_aapcs_vfpcc void @store_trunc_16(ptr %src, <16 x float> %val) {
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s13
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s15
 ; CHECK-MVE-NEXT:    vstrw.32 q0, [r0]
+; CHECK-MVE-NEXT:    vpop {d8, d9}
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: store_trunc_16:
@@ -562,6 +638,10 @@ define arm_aapcs_vfpcc void @store_shuffletrunc_8(ptr %src, <4 x float> %val1, <
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s6
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-MVE-NEXT:    bx lr
 ;
@@ -581,6 +661,8 @@ entry:
 define arm_aapcs_vfpcc void @store_shuffletrunc_16(ptr %src, <8 x float> %val1, <8 x float> %val2) {
 ; CHECK-MVE-LABEL: store_shuffletrunc_16:
 ; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    .vsave {d8, d9}
+; CHECK-MVE-NEXT:    vpush {d8, d9}
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s2
@@ -590,6 +672,10 @@ define arm_aapcs_vfpcc void @store_shuffletrunc_16(ptr %src, <8 x float> %val1, 
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s10
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s11
 ; CHECK-MVE-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-MVE-NEXT:    @ implicit-def: $s2
+; CHECK-MVE-NEXT:    @ implicit-def: $s3
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s6
@@ -598,7 +684,12 @@ define arm_aapcs_vfpcc void @store_shuffletrunc_16(ptr %src, <8 x float> %val1, 
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s13
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s14
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s15
+; CHECK-MVE-NEXT:    @ implicit-def: $s17
+; CHECK-MVE-NEXT:    @ implicit-def: $s18
+; CHECK-MVE-NEXT:    @ implicit-def: $s19
+; CHECK-MVE-NEXT:    @ implicit-def: $s17
 ; CHECK-MVE-NEXT:    vstrw.32 q0, [r0]
+; CHECK-MVE-NEXT:    vpop {d8, d9}
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: store_shuffletrunc_16:

@@ -999,9 +999,11 @@ define void @vst4_v2f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldm.w r0, {r2, r3, r12}
 ; CHECK-NEXT:    vmov.32 q3[0], r12
 ; CHECK-NEXT:    vmov q4, q3
-; CHECK-NEXT:    vmov.f32 s1, s12
-; CHECK-NEXT:    ldr r0, [r0, #12]
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
 ; CHECK-NEXT:    vmovx.f16 s3, s12
+; CHECK-NEXT:    ldr r0, [r0, #12]
+; CHECK-NEXT:    vmov.f32 s1, s12
 ; CHECK-NEXT:    vmov.32 q1[0], r2
 ; CHECK-NEXT:    vmov q2, q1
 ; CHECK-NEXT:    vmov.32 q4[1], r0

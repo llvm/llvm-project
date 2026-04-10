@@ -47,6 +47,8 @@ define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; V128-NEXT:    vmv2r.v v10, v8
 ; V128-NEXT:    vslideup.vi v10, v8, 1
 ; V128-NEXT:    vmerge.vvm v8, v10, v12, v0
+; V128-NEXT:    # implicit-def: $v11
+; V128-NEXT:    # implicit-def: $v11
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v2f64:

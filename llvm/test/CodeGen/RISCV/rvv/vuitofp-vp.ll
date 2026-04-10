@@ -448,6 +448,7 @@ define <vscale x 32 x half> @vuitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFH-NEXT:    vfncvt.f.xu.w v24, v8
 ; ZVFH-NEXT:    vfncvt.f.xu.w v28, v16
+; ZVFH-NEXT:    # implicit-def: $v12m4
 ; ZVFH-NEXT:    vmv8r.v v8, v24
 ; ZVFH-NEXT:    ret
 ;
@@ -461,6 +462,7 @@ define <vscale x 32 x half> @vuitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFHMIN-NEXT:    vfcvt.f.xu.v v16, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vp.uitofp.nxv32f16.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x half> %v

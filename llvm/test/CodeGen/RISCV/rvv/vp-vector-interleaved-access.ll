@@ -444,6 +444,7 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
 define void @masked_store_factor4_v2(<vscale x 1 x i1> %mask, <vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: masked_store_factor4_v2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # implicit-def: $v10
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v9

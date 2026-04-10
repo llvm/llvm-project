@@ -704,6 +704,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   dead renamable $sgpr15 = S_BFE_U32 renamable $sgpr20, 65560, implicit-def $scc
   ; GFX90A-NEXT:   renamable $vgpr10 = V_ADD_CO_U32_e32 4096, $vgpr0, implicit-def $vcc, implicit $exec
+  ; GFX90A-NEXT:   dead renamable $vgpr3 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr11, dead renamable $sgpr18_sgpr19 = V_ADDC_U32_e64 0, 0, killed $vcc, 0, implicit $exec
   ; GFX90A-NEXT:   S_CBRANCH_SCC0 %bb.59, implicit killed $scc
   ; GFX90A-NEXT: {{  $}}

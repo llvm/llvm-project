@@ -270,6 +270,11 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   void joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
                         LaneBitmask LaneMask, const CoalescerPair &CP);
 
+  /// Insert IMPLICIT_DEFs for undefined subregister lanes (in ShrinkMask)
+  /// that are still live after coalescing and have full-register uses.
+  /// Returns true if any IMPLICIT_DEFs were inserted.
+  bool fillSubRangeGaps(Register Reg, LaneBitmask ShrinkMask);
+
   /// We found a non-trivially-coalescable copy. If the source value number is
   /// defined by a copy from the destination reg see if we can merge these two
   /// destination reg valno# into a single value number, eliminating a copy.
@@ -617,6 +622,105 @@ void RegisterCoalescer::eliminateDeadDefs(LiveRangeEdit *Edit) {
 void RegisterCoalescer::LRE_WillEraseInstruction(MachineInstr *MI) {
   // MI may be in WorkList. Make sure we don't visit it.
   ErasedInstrs.insert(MI);
+}
+
+bool RegisterCoalescer::fillSubRangeGaps(Register Reg,
+                                         LaneBitmask ShrinkMask) {
+  LiveInterval &LI = LIS->getInterval(Reg);
+
+  // Collect lanes that were shrunk and still have a subrange.
+  LaneBitmask GapLanes;
+  for (const auto &SR : LI.subranges())
+    if ((SR.LaneMask & ShrinkMask).any())
+      GapLanes |= SR.LaneMask;
+  if (GapLanes.none())
+    return false;
+
+  // Find the first undef subreg def the IMPLICIT_DEFs are inserted after it.
+  MachineInstr *DefMI = nullptr;
+  for (MachineOperand &MO : MRI->def_operands(Reg))
+    if (MO.getSubReg() && MO.isUndef() && !MO.getParent()->isImplicitDef()) {
+      DefMI = MO.getParent();
+      break;
+    }
+  if (!DefMI)
+    return false;
+
+  // Map the gap lanes to concrete subreg indices for the IMPLICIT_DEFs.
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+  SmallVector<unsigned, 4> SubRegIndices;
+  if (!TRI->getCoveringSubRegIndexes(RC, GapLanes, SubRegIndices))
+    return false;
+
+  // Advance past consecutive non-undef partial defs of the same register.
+  MachineBasicBlock *MBB = DefMI->getParent();
+  auto InsertPt = std::next(DefMI->getIterator());
+  while (InsertPt != MBB->end()) {
+    auto *MO = InsertPt->findRegisterDefOperand(Reg, /*TRI=*/nullptr);
+    if (!MO || MO->isUndef())
+      break;
+    ++InsertPt;
+  }
+
+  // Insert IMPLICIT_DEF for subreg and create dead defs in the
+  // overlapping subranges. Skip lanes that are already live at the insertion point.
+  SlotIndex CheckIdx =
+      LIS->getInstructionIndex(*std::prev(InsertPt)).getRegSlot();
+  bool Changed = false;
+  for (unsigned SubIdx : SubRegIndices) {
+    LaneBitmask SubLanes = TRI->getSubRegIndexLaneMask(SubIdx) & GapLanes;
+    if (SubLanes.none() || !TRI->getSubRegisterClass(RC, SubIdx))
+      continue;
+    bool Conflict = false;
+    for (const auto &SR : LI.subranges())
+      if ((SR.LaneMask & SubLanes).any() && SR.liveAt(CheckIdx)) {
+        Conflict = true;
+        break;
+      }
+    if (Conflict)
+      continue;
+    MachineInstr *ID =
+        BuildMI(*MBB, InsertPt, DefMI->getDebugLoc(),
+                TII->get(TargetOpcode::IMPLICIT_DEF))
+            .addReg(Reg, RegState::Define, SubIdx);
+    SlotIndex Idx = LIS->InsertMachineInstrInMaps(*ID).getRegSlot();
+    for (auto &SR : LI.subranges())
+      if ((SR.LaneMask & SubLanes).any())
+        SR.createDeadDef(Idx, LIS->getVNInfoAllocator());
+    Changed = true;
+  }
+  if (!Changed)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "\t Adding undef lanes as IMPLICIT_DEFs for "
+                    << printReg(Reg, TRI)
+                    << " Lanes=" << PrintLaneMask(GapLanes) << '\n');
+
+  // Extend the new dead defs to all use points of Reg.
+  SmallVector<SlotIndex, 8> Indices;
+  for (const MachineOperand &Use : MRI->use_nodbg_operands(Reg)) {
+    if (!Use.readsReg())
+      continue;
+    const MachineInstr *UseMI = Use.getParent();
+    if (UseMI->isPHI())
+      Indices.push_back(
+          LIS->getMBBEndIdx(UseMI->getOperand(Use.getOperandNo() + 1).getMBB()));
+    else
+      Indices.push_back(LIS->getInstructionIndex(*UseMI).getRegSlot());
+  }
+  for (auto &SR : LI.subranges()) {
+    if ((SR.LaneMask & GapLanes).none())
+      continue;
+    SmallVector<SlotIndex, 4> Undefs;
+    LI.computeSubRangeUndefs(Undefs, SR.LaneMask, *MRI,
+                             *LIS->getSlotIndexes());
+    LIS->extendToIndices(SR, Indices, Undefs);
+  }
+
+  // Rebuild the main range from the updated subranges.
+  LI.clear();
+  LIS->constructMainRangeFromSubranges(LI);
+  return true;
 }
 
 bool RegisterCoalescer::adjustCopiesBackFrom(const CoalescerPair &CP,
@@ -2255,6 +2359,22 @@ bool RegisterCoalescer::joinCopy(
       ShrinkMainRange = true;
     }
     LI.removeEmptySubRanges();
+
+    // If the coalesced register has full-register uses, insert IMPLICIT_DEFs
+    // for undefined lanes so every subrange is defined at those use points.
+    bool HasFullCopy = !CP.isPhys() && LI.hasSubRanges() &&
+        MRI->shouldTrackSubRegLiveness(*CP.getNewRC());
+    if (HasFullCopy) {
+      HasFullCopy = false;
+      for (const MachineOperand &Use :
+           MRI->use_nodbg_operands(CP.getDstReg()))
+        if (Use.readsReg() && Use.getParent()->isFullCopy()) {
+          HasFullCopy = true;
+          break;
+        }
+    }
+    if (HasFullCopy && fillSubRangeGaps(CP.getDstReg(), ShrinkMask))
+      ShrinkMainRange = true;
   }
 
   // CP.getSrcReg()'s live interval has been merged into CP.getDstReg's live
@@ -2947,8 +3067,14 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     MachineInstr *OtherImpDef =
         Indexes->getInstructionFromIndex(V.OtherVNI->def);
     MachineBasicBlock *OtherMBB = OtherImpDef->getParent();
-    if (DefMI &&
-        (DefMI->getParent() != OtherMBB || LIS->isLiveInToMBB(LR, OtherMBB))) {
+    // Keep subreg IMPLICIT_DEFs non-erasable so their ValidLanes are
+    // preserved through pruneValues and pruneValues does not
+    // incorrectly retain stale undef flags on other subreg defs.
+    if (!SubRangeJoin && OtherImpDef->getOperand(0).getSubReg() != 0) { 
+      OtherV.ErasableImplicitDef = false;
+    } else if (DefMI &&
+               (DefMI->getParent() != OtherMBB ||
+                LIS->isLiveInToMBB(LR, OtherMBB))) {
       LLVM_DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
                         << " extends into "
                         << printMBBReference(*DefMI->getParent())

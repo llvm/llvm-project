@@ -211,12 +211,14 @@ define {<vscale x 64 x i8>, <vscale x 64 x i8>} @vector_deinterleave_nxv64i8_nxv
 ; V-LABEL: vector_deinterleave_nxv64i8_nxv128i8:
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; V-NEXT:    vmv8r.v v24, v8
-; V-NEXT:    vnsrl.wi v8, v24, 0
-; V-NEXT:    vnsrl.wi v0, v24, 8
+; V-NEXT:    vmv8r.v v0, v8
+; V-NEXT:    vnsrl.wi v8, v0, 0
+; V-NEXT:    vnsrl.wi v24, v0, 8
 ; V-NEXT:    vnsrl.wi v12, v16, 0
-; V-NEXT:    vnsrl.wi v4, v16, 8
-; V-NEXT:    vmv8r.v v16, v0
+; V-NEXT:    vnsrl.wi v28, v16, 8
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv64i8_nxv128i8:
@@ -237,12 +239,14 @@ define {<vscale x 32 x i16>, <vscale x 32 x i16>} @vector_deinterleave_nxv32i16_
 ; V-LABEL: vector_deinterleave_nxv32i16_nxv64i16:
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; V-NEXT:    vmv8r.v v24, v8
-; V-NEXT:    vnsrl.wi v8, v24, 0
-; V-NEXT:    vnsrl.wi v0, v24, 16
+; V-NEXT:    vmv8r.v v0, v8
+; V-NEXT:    vnsrl.wi v8, v0, 0
+; V-NEXT:    vnsrl.wi v24, v0, 16
 ; V-NEXT:    vnsrl.wi v12, v16, 0
-; V-NEXT:    vnsrl.wi v4, v16, 16
-; V-NEXT:    vmv8r.v v16, v0
+; V-NEXT:    vnsrl.wi v28, v16, 16
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv32i16_nxv64i16:
@@ -263,13 +267,14 @@ define {<vscale x 16 x i32>, <vscale x 16 x i32>} @vector_deinterleave_nxv16i32_
 ; V-LABEL: vector_deinterleave_nxv16i32_nxvv32i32:
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; V-NEXT:    vmv8r.v v24, v16
+; V-NEXT:    vmv8r.v v0, v8
 ; V-NEXT:    li a0, 32
-; V-NEXT:    vnsrl.wx v20, v24, a0
-; V-NEXT:    vnsrl.wx v16, v8, a0
-; V-NEXT:    vnsrl.wi v0, v8, 0
-; V-NEXT:    vnsrl.wi v4, v24, 0
-; V-NEXT:    vmv8r.v v8, v0
+; V-NEXT:    vnsrl.wi v8, v0, 0
+; V-NEXT:    vnsrl.wx v28, v16, a0
+; V-NEXT:    vnsrl.wx v24, v0, a0
+; V-NEXT:    vnsrl.wi v12, v16, 0
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv16i32_nxvv32i32:
@@ -1782,12 +1787,14 @@ define {<vscale x 32 x bfloat>, <vscale x 32 x bfloat>} @vector_deinterleave_nxv
 ; V-LABEL: vector_deinterleave_nxv32bf16_nxv64bf16:
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; V-NEXT:    vmv8r.v v24, v8
-; V-NEXT:    vnsrl.wi v8, v24, 0
-; V-NEXT:    vnsrl.wi v0, v24, 16
+; V-NEXT:    vmv8r.v v0, v8
+; V-NEXT:    vnsrl.wi v8, v0, 0
+; V-NEXT:    vnsrl.wi v24, v0, 16
 ; V-NEXT:    vnsrl.wi v12, v16, 0
-; V-NEXT:    vnsrl.wi v4, v16, 16
-; V-NEXT:    vmv8r.v v16, v0
+; V-NEXT:    vnsrl.wi v28, v16, 16
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv32bf16_nxv64bf16:
@@ -1808,12 +1815,14 @@ define {<vscale x 32 x half>, <vscale x 32 x half>} @vector_deinterleave_nxv32f1
 ; V-LABEL: vector_deinterleave_nxv32f16_nxv64f16:
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; V-NEXT:    vmv8r.v v24, v8
-; V-NEXT:    vnsrl.wi v8, v24, 0
-; V-NEXT:    vnsrl.wi v0, v24, 16
+; V-NEXT:    vmv8r.v v0, v8
+; V-NEXT:    vnsrl.wi v8, v0, 0
+; V-NEXT:    vnsrl.wi v24, v0, 16
 ; V-NEXT:    vnsrl.wi v12, v16, 0
-; V-NEXT:    vnsrl.wi v4, v16, 16
-; V-NEXT:    vmv8r.v v16, v0
+; V-NEXT:    vnsrl.wi v28, v16, 16
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv32f16_nxv64f16:
@@ -1834,13 +1843,14 @@ define {<vscale x 16 x float>, <vscale x 16 x float>} @vector_deinterleave_nxv16
 ; V-LABEL: vector_deinterleave_nxv16f32_nxv32f32:
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; V-NEXT:    vmv8r.v v24, v16
+; V-NEXT:    vmv8r.v v0, v8
 ; V-NEXT:    li a0, 32
-; V-NEXT:    vnsrl.wx v20, v24, a0
-; V-NEXT:    vnsrl.wx v16, v8, a0
-; V-NEXT:    vnsrl.wi v0, v8, 0
-; V-NEXT:    vnsrl.wi v4, v24, 0
-; V-NEXT:    vmv8r.v v8, v0
+; V-NEXT:    vnsrl.wi v8, v0, 0
+; V-NEXT:    vnsrl.wx v28, v16, a0
+; V-NEXT:    vnsrl.wx v24, v0, a0
+; V-NEXT:    vnsrl.wi v12, v16, 0
+; V-NEXT:    # implicit-def: $v20m4
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv16f32_nxv32f32:

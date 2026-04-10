@@ -200,6 +200,7 @@ define void @vst2_v8i16_align1(ptr %src, ptr %dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
+; CHECK-NEXT:    @ implicit-def: $s2
 ; CHECK-NEXT:    vmovx.f16 s1, s10
 ; CHECK-NEXT:    vmovx.f16 s0, s6
 ; CHECK-NEXT:    vins.f16 s10, s6
@@ -506,12 +507,13 @@ define void @vst2_v4f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    ldrd r2, r12, [r0]
+; CHECK-NEXT:    @ implicit-def: $s5
 ; CHECK-NEXT:    ldrd r3, r0, [r0, #8]
 ; CHECK-NEXT:    vmov.32 q4[0], r2
 ; CHECK-NEXT:    vmov q0, q4
 ; CHECK-NEXT:    vmov.32 q3[0], r3
-; CHECK-NEXT:    vmov q2, q3
 ; CHECK-NEXT:    vmov.32 q0[1], r12
+; CHECK-NEXT:    vmov q2, q3
 ; CHECK-NEXT:    vmov.32 q2[1], r0
 ; CHECK-NEXT:    vmovx.f16 s0, s12
 ; CHECK-NEXT:    vmovx.f16 s5, s16
@@ -523,6 +525,7 @@ define void @vst2_v4f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vins.f16 s4, s12
 ; CHECK-NEXT:    vins.f16 s7, s0
 ; CHECK-NEXT:    vmov.f32 s6, s1
+; CHECK-NEXT:    @ implicit-def: $s2
 ; CHECK-NEXT:    vstrh.16 q1, [r1]
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
@@ -578,6 +581,7 @@ define void @vst2_v8f16_align1(ptr %src, ptr %dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
+; CHECK-NEXT:    @ implicit-def: $s2
 ; CHECK-NEXT:    vmovx.f16 s1, s6
 ; CHECK-NEXT:    vmovx.f16 s0, s10
 ; CHECK-NEXT:    vins.f16 s1, s0

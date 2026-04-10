@@ -32,6 +32,8 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    vmr v3, v2
 ; CHECK-NEXT:    vmr v2, v5
 ; CHECK-NEXT:    pmxvf64gernp acc0, vsp34, v0, 0, 0
+; CHECK-NEXT:    # implicit-def: $v2
+; CHECK-NEXT:    # implicit-def: $v2
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
 ; CHECK-NEXT:    stxv vs1, 32(r3)
@@ -56,6 +58,8 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    vmr v3, v2
 ; CHECK-BE-NEXT:    vmr v2, v5
 ; CHECK-BE-NEXT:    pmxvf64gernp acc0, vsp34, v0, 0, 0
+; CHECK-BE-NEXT:    # implicit-def: $v2
+; CHECK-BE-NEXT:    # implicit-def: $v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
@@ -277,6 +281,7 @@ define void @test2(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -292,6 +297,7 @@ define void @test2(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -396,6 +402,7 @@ define void @test4(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -411,6 +418,7 @@ define void @test4(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -515,6 +523,7 @@ define void @test6(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -530,6 +539,7 @@ define void @test6(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -634,6 +644,7 @@ define void @test8(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -649,6 +660,7 @@ define void @test8(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -753,6 +765,7 @@ define void @test10(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -768,6 +781,7 @@ define void @test10(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -872,6 +886,7 @@ define void @test12(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -887,6 +902,7 @@ define void @test12(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -991,6 +1007,7 @@ define void @test14(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1006,6 +1023,7 @@ define void @test14(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1061,6 +1079,7 @@ define void @test15(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1076,6 +1095,7 @@ define void @test15(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1131,6 +1151,7 @@ define void @test16(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1146,6 +1167,7 @@ define void @test16(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1201,6 +1223,7 @@ define void @test17(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1216,6 +1239,7 @@ define void @test17(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1320,6 +1344,7 @@ define void @test19(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1335,6 +1360,7 @@ define void @test19(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1390,6 +1416,7 @@ define void @test20(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1405,6 +1432,7 @@ define void @test20(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1460,6 +1488,7 @@ define void @test21(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1475,6 +1504,7 @@ define void @test21(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1530,6 +1560,7 @@ define void @test22(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1545,6 +1576,7 @@ define void @test22(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1649,6 +1681,7 @@ define void @test24(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1664,6 +1697,7 @@ define void @test24(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1719,6 +1753,7 @@ define void @test25(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1734,6 +1769,7 @@ define void @test25(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1789,6 +1825,7 @@ define void @test26(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1804,6 +1841,7 @@ define void @test26(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1859,6 +1897,7 @@ define void @test27(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1874,6 +1913,7 @@ define void @test27(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1978,6 +2018,7 @@ define void @test29(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1993,6 +2034,7 @@ define void @test29(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -2048,6 +2090,7 @@ define void @test30(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -2063,6 +2106,7 @@ define void @test30(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -2118,6 +2162,7 @@ define void @test31(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -2133,6 +2178,7 @@ define void @test31(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -2188,6 +2234,7 @@ define void @test32(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -2203,6 +2250,7 @@ define void @test32(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -2314,6 +2362,7 @@ define void @test34(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
@@ -2331,6 +2380,7 @@ define void @test34(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
@@ -2391,6 +2441,7 @@ define void @test35(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
@@ -2408,6 +2459,7 @@ define void @test35(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
@@ -2468,6 +2520,7 @@ define void @test36(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
@@ -2485,6 +2538,7 @@ define void @test36(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
@@ -2545,6 +2599,7 @@ define void @test37(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
@@ -2562,6 +2617,7 @@ define void @test37(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
@@ -2678,6 +2734,7 @@ define void @test39(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
@@ -2695,6 +2752,7 @@ define void @test39(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
@@ -2755,6 +2813,7 @@ define void @test40(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
@@ -2772,6 +2831,7 @@ define void @test40(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
@@ -2832,6 +2892,7 @@ define void @test41(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
@@ -2849,6 +2910,7 @@ define void @test41(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
@@ -2909,6 +2971,7 @@ define void @test42(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
@@ -2926,6 +2989,7 @@ define void @test42(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)

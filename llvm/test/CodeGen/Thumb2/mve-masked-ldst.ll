@@ -798,11 +798,15 @@ define void @foo_v4f32_v4f16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    pop {r7, pc}
 ; CHECK-LE-NEXT:  .LBB18_6: @ %cond.load
 ; CHECK-LE-NEXT:    vldr.16 s0, [r2]
+; CHECK-LE-NEXT:    @ implicit-def: $d1
+; CHECK-LE-NEXT:    @ implicit-def: $d1
+; CHECK-LE-NEXT:    @ implicit-def: $s1
 ; CHECK-LE-NEXT:    lsls r3, r1, #30
 ; CHECK-LE-NEXT:    bpl .LBB18_2
 ; CHECK-LE-NEXT:  .LBB18_7: @ %cond.load1
 ; CHECK-LE-NEXT:    vldr.16 s2, [r2, #2]
 ; CHECK-LE-NEXT:    vins.f16 s0, s2
+; CHECK-LE-NEXT:    @ implicit-def: $d1
 ; CHECK-LE-NEXT:    lsls r3, r1, #29
 ; CHECK-LE-NEXT:    bpl .LBB18_3
 ; CHECK-LE-NEXT:  .LBB18_8: @ %cond.load4
@@ -889,11 +893,15 @@ define void @foo_v4f32_v4f16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-BE-NEXT:    pop {r7, pc}
 ; CHECK-BE-NEXT:  .LBB18_6: @ %cond.load
 ; CHECK-BE-NEXT:    vldr.16 s0, [r2]
+; CHECK-BE-NEXT:    @ implicit-def: $d1
+; CHECK-BE-NEXT:    @ implicit-def: $d1
+; CHECK-BE-NEXT:    @ implicit-def: $s1
 ; CHECK-BE-NEXT:    lsls r3, r1, #29
 ; CHECK-BE-NEXT:    bpl .LBB18_2
 ; CHECK-BE-NEXT:  .LBB18_7: @ %cond.load1
 ; CHECK-BE-NEXT:    vldr.16 s2, [r2, #2]
 ; CHECK-BE-NEXT:    vins.f16 s0, s2
+; CHECK-BE-NEXT:    @ implicit-def: $d1
 ; CHECK-BE-NEXT:    lsls r3, r1, #30
 ; CHECK-BE-NEXT:    bpl .LBB18_3
 ; CHECK-BE-NEXT:  .LBB18_8: @ %cond.load4
@@ -989,11 +997,15 @@ define void @foo_v4f32_v4f16_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    pop {r7, pc}
 ; CHECK-LE-NEXT:  .LBB19_6: @ %cond.load
 ; CHECK-LE-NEXT:    vldr.16 s0, [r2]
+; CHECK-LE-NEXT:    @ implicit-def: $d1
+; CHECK-LE-NEXT:    @ implicit-def: $d1
+; CHECK-LE-NEXT:    @ implicit-def: $s1
 ; CHECK-LE-NEXT:    lsls r3, r1, #30
 ; CHECK-LE-NEXT:    bpl .LBB19_2
 ; CHECK-LE-NEXT:  .LBB19_7: @ %cond.load1
 ; CHECK-LE-NEXT:    vldr.16 s2, [r2, #2]
 ; CHECK-LE-NEXT:    vins.f16 s0, s2
+; CHECK-LE-NEXT:    @ implicit-def: $d1
 ; CHECK-LE-NEXT:    lsls r3, r1, #29
 ; CHECK-LE-NEXT:    bpl .LBB19_3
 ; CHECK-LE-NEXT:  .LBB19_8: @ %cond.load4
@@ -1080,11 +1092,15 @@ define void @foo_v4f32_v4f16_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-BE-NEXT:    pop {r7, pc}
 ; CHECK-BE-NEXT:  .LBB19_6: @ %cond.load
 ; CHECK-BE-NEXT:    vldr.16 s0, [r2]
+; CHECK-BE-NEXT:    @ implicit-def: $d1
+; CHECK-BE-NEXT:    @ implicit-def: $d1
+; CHECK-BE-NEXT:    @ implicit-def: $s1
 ; CHECK-BE-NEXT:    lsls r3, r1, #29
 ; CHECK-BE-NEXT:    bpl .LBB19_2
 ; CHECK-BE-NEXT:  .LBB19_7: @ %cond.load1
 ; CHECK-BE-NEXT:    vldr.16 s2, [r2, #2]
 ; CHECK-BE-NEXT:    vins.f16 s0, s2
+; CHECK-BE-NEXT:    @ implicit-def: $d1
 ; CHECK-BE-NEXT:    lsls r3, r1, #30
 ; CHECK-BE-NEXT:    bpl .LBB19_3
 ; CHECK-BE-NEXT:  .LBB19_8: @ %cond.load4

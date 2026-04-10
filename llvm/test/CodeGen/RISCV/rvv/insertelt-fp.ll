@@ -408,6 +408,7 @@ define <vscale x 16 x bfloat> @insertelt_nxv16bf16_idx(<vscale x 16 x bfloat> %v
 ; ZVFH-NEXT:    addi a1, a0, 1
 ; ZVFH-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
 ; ZVFH-NEXT:    vslideup.vx v8, v12, a0
+; ZVFH-NEXT:    # implicit-def: $v14m2
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: insertelt_nxv16bf16_idx:
@@ -418,6 +419,7 @@ define <vscale x 16 x bfloat> @insertelt_nxv16bf16_idx(<vscale x 16 x bfloat> %v
 ; ZVFHMIN-NEXT:    addi a1, a0, 1
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
 ; ZVFHMIN-NEXT:    vslideup.vx v8, v12, a0
+; ZVFHMIN-NEXT:    # implicit-def: $v14m2
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: insertelt_nxv16bf16_idx:
@@ -427,6 +429,7 @@ define <vscale x 16 x bfloat> @insertelt_nxv16bf16_idx(<vscale x 16 x bfloat> %v
 ; ZVFBFA-NEXT:    addi a1, a0, 1
 ; ZVFBFA-NEXT:    vsetvli zero, a1, e16alt, m4, tu, ma
 ; ZVFBFA-NEXT:    vslideup.vx v8, v12, a0
+; ZVFBFA-NEXT:    # implicit-def: $v14m2
 ; ZVFBFA-NEXT:    ret
   %r = insertelement <vscale x 16 x bfloat> %v, bfloat %elt, i32 %idx
   ret <vscale x 16 x bfloat> %r
@@ -492,6 +495,8 @@ define <vscale x 32 x bfloat> @insertelt_nxv32bf16_idx(<vscale x 32 x bfloat> %v
 ; ZVFH-NEXT:    addi a1, a0, 1
 ; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; ZVFH-NEXT:    vslideup.vx v8, v16, a0
+; ZVFH-NEXT:    # implicit-def: $v20m4
+; ZVFH-NEXT:    # implicit-def: $v18m2
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: insertelt_nxv32bf16_idx:
@@ -502,6 +507,8 @@ define <vscale x 32 x bfloat> @insertelt_nxv32bf16_idx(<vscale x 32 x bfloat> %v
 ; ZVFHMIN-NEXT:    addi a1, a0, 1
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; ZVFHMIN-NEXT:    vslideup.vx v8, v16, a0
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
+; ZVFHMIN-NEXT:    # implicit-def: $v18m2
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: insertelt_nxv32bf16_idx:
@@ -511,6 +518,8 @@ define <vscale x 32 x bfloat> @insertelt_nxv32bf16_idx(<vscale x 32 x bfloat> %v
 ; ZVFBFA-NEXT:    addi a1, a0, 1
 ; ZVFBFA-NEXT:    vsetvli zero, a1, e16alt, m8, tu, ma
 ; ZVFBFA-NEXT:    vslideup.vx v8, v16, a0
+; ZVFBFA-NEXT:    # implicit-def: $v20m4
+; ZVFBFA-NEXT:    # implicit-def: $v18m2
 ; ZVFBFA-NEXT:    ret
   %r = insertelement <vscale x 32 x bfloat> %v, bfloat %elt, i32 %idx
   ret <vscale x 32 x bfloat> %r
@@ -911,6 +920,7 @@ define <vscale x 16 x half> @insertelt_nxv16f16_idx(<vscale x 16 x half> %v, hal
 ; ZVFH-NEXT:    addi a1, a0, 1
 ; ZVFH-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
 ; ZVFH-NEXT:    vslideup.vx v8, v12, a0
+; ZVFH-NEXT:    # implicit-def: $v14m2
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: insertelt_nxv16f16_idx:
@@ -921,6 +931,7 @@ define <vscale x 16 x half> @insertelt_nxv16f16_idx(<vscale x 16 x half> %v, hal
 ; ZVFHMIN-NEXT:    addi a1, a0, 1
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
 ; ZVFHMIN-NEXT:    vslideup.vx v8, v12, a0
+; ZVFHMIN-NEXT:    # implicit-def: $v14m2
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: insertelt_nxv16f16_idx:
@@ -931,6 +942,7 @@ define <vscale x 16 x half> @insertelt_nxv16f16_idx(<vscale x 16 x half> %v, hal
 ; ZVFBFA-NEXT:    addi a1, a0, 1
 ; ZVFBFA-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
 ; ZVFBFA-NEXT:    vslideup.vx v8, v12, a0
+; ZVFBFA-NEXT:    # implicit-def: $v14m2
 ; ZVFBFA-NEXT:    ret
   %r = insertelement <vscale x 16 x half> %v, half %elt, i32 %idx
   ret <vscale x 16 x half> %r
@@ -995,6 +1007,8 @@ define <vscale x 32 x half> @insertelt_nxv32f16_idx(<vscale x 32 x half> %v, hal
 ; ZVFH-NEXT:    addi a1, a0, 1
 ; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; ZVFH-NEXT:    vslideup.vx v8, v16, a0
+; ZVFH-NEXT:    # implicit-def: $v20m4
+; ZVFH-NEXT:    # implicit-def: $v18m2
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: insertelt_nxv32f16_idx:
@@ -1005,6 +1019,8 @@ define <vscale x 32 x half> @insertelt_nxv32f16_idx(<vscale x 32 x half> %v, hal
 ; ZVFHMIN-NEXT:    addi a1, a0, 1
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; ZVFHMIN-NEXT:    vslideup.vx v8, v16, a0
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
+; ZVFHMIN-NEXT:    # implicit-def: $v18m2
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: insertelt_nxv32f16_idx:
@@ -1015,6 +1031,8 @@ define <vscale x 32 x half> @insertelt_nxv32f16_idx(<vscale x 32 x half> %v, hal
 ; ZVFBFA-NEXT:    addi a1, a0, 1
 ; ZVFBFA-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; ZVFBFA-NEXT:    vslideup.vx v8, v16, a0
+; ZVFBFA-NEXT:    # implicit-def: $v20m4
+; ZVFBFA-NEXT:    # implicit-def: $v18m2
 ; ZVFBFA-NEXT:    ret
   %r = insertelement <vscale x 32 x half> %v, half %elt, i32 %idx
   ret <vscale x 32 x half> %r
@@ -1151,6 +1169,7 @@ define <vscale x 8 x float> @insertelt_nxv8f32_idx(<vscale x 8 x float> %v, floa
 ; CHECK-NEXT:    addi a1, a0, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v12, a0
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 8 x float> %v, float %elt, i32 %idx
   ret <vscale x 8 x float> %r
@@ -1185,6 +1204,8 @@ define <vscale x 16 x float> @insertelt_nxv16f32_idx(<vscale x 16 x float> %v, f
 ; CHECK-NEXT:    addi a1, a0, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a0
+; CHECK-NEXT:    # implicit-def: $v20m4
+; CHECK-NEXT:    # implicit-def: $v18m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 16 x float> %v, float %elt, i32 %idx
   ret <vscale x 16 x float> %r
@@ -1287,6 +1308,7 @@ define <vscale x 4 x double> @insertelt_nxv4f64_idx(<vscale x 4 x double> %v, do
 ; CHECK-NEXT:    addi a1, a0, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m4, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v12, a0
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 4 x double> %v, double %elt, i32 %idx
   ret <vscale x 4 x double> %r
@@ -1321,6 +1343,8 @@ define <vscale x 8 x double> @insertelt_nxv8f64_idx(<vscale x 8 x double> %v, do
 ; CHECK-NEXT:    addi a1, a0, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v16, a0
+; CHECK-NEXT:    # implicit-def: $v20m4
+; CHECK-NEXT:    # implicit-def: $v18m2
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 8 x double> %v, double %elt, i32 %idx
   ret <vscale x 8 x double> %r

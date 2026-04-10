@@ -15,6 +15,7 @@ define amdgpu_kernel void @load_constant_v3i64(ptr addrspace(1) %dst, ptr addrsp
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x8
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CHECK-NEXT:    ; implicit-def: $sgpr8
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x10
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -44,6 +45,7 @@ define amdgpu_kernel void @load_global_v3i64(ptr addrspace(1) %dst, ptr addrspac
 ; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x8
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v6, s[2:3]
+; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    global_load_dwordx2 v[4:5], v6, s[2:3] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx2 v6, v[4:5], s[0:1] offset:16
@@ -65,6 +67,7 @@ define amdgpu_kernel void @load_global_v3i64_invariant(ptr addrspace(1) %dst, pt
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x8
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CHECK-NEXT:    ; implicit-def: $sgpr8
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x10
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)

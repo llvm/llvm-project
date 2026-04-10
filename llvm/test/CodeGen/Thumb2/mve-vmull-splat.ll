@@ -193,11 +193,12 @@ define arm_aapcs_vfpcc <4 x i64> @sext32_0213_0ext(<8 x i32> %src1, i32 %src2) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r0
 ; CHECK-NEXT:    vmov.f32 s17, s4
-; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vmullb.s32 q2, q4, q3
 ; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmullb.s32 q2, q4, q3
 ; CHECK-NEXT:    vmullb.s32 q1, q0, q3
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    vpop {d8, d9}
@@ -218,11 +219,12 @@ define arm_aapcs_vfpcc <4 x i64> @sext32_0ext_0213(<8 x i32> %src1, i32 %src2) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r0
 ; CHECK-NEXT:    vmov.f32 s17, s4
-; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vmullb.s32 q2, q3, q4
 ; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmullb.s32 q2, q3, q4
 ; CHECK-NEXT:    vmullb.s32 q1, q3, q0
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    vpop {d8, d9}
@@ -479,11 +481,12 @@ define arm_aapcs_vfpcc <4 x i64> @zext32_0213_0ext(<8 x i32> %src1, i32 %src2) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r0
 ; CHECK-NEXT:    vmov.f32 s17, s4
-; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vmullb.u32 q2, q4, q3
 ; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmullb.u32 q2, q4, q3
 ; CHECK-NEXT:    vmullb.u32 q1, q0, q3
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    vpop {d8, d9}
@@ -504,11 +507,12 @@ define arm_aapcs_vfpcc <4 x i64> @zext32_0ext_0213(<8 x i32> %src1, i32 %src2) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r0
 ; CHECK-NEXT:    vmov.f32 s17, s4
-; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vmullb.u32 q2, q3, q4
 ; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmullb.u32 q2, q3, q4
 ; CHECK-NEXT:    vmullb.u32 q1, q3, q0
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    vpop {d8, d9}

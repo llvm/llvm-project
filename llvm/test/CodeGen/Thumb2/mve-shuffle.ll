@@ -1310,10 +1310,12 @@ define arm_aapcs_vfpcc <8 x half> @shuffle2step_f16(<16 x half> %src) {
 ; CHECKFP16:       @ %bb.0: @ %entry
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s1
 ; CHECKFP16-NEXT:    vmovx.f16 s10, s0
-; CHECKFP16-NEXT:    vadd.f16 s0, s0, s10
 ; CHECKFP16-NEXT:    vadd.f16 s8, s1, s8
+; CHECKFP16-NEXT:    vadd.f16 s0, s0, s10
+; CHECKFP16-NEXT:    @ implicit-def: $s10
 ; CHECKFP16-NEXT:    vins.f16 s0, s8
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s3
+; CHECKFP16-NEXT:    @ implicit-def: $s1
 ; CHECKFP16-NEXT:    vmovx.f16 s10, s2
 ; CHECKFP16-NEXT:    vadd.f16 s8, s3, s8
 ; CHECKFP16-NEXT:    vadd.f16 s1, s2, s10
@@ -1321,6 +1323,7 @@ define arm_aapcs_vfpcc <8 x half> @shuffle2step_f16(<16 x half> %src) {
 ; CHECKFP16-NEXT:    vins.f16 s1, s8
 ; CHECKFP16-NEXT:    vadd.f16 s8, s5, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s4
+; CHECKFP16-NEXT:    @ implicit-def: $s11
 ; CHECKFP16-NEXT:    vadd.f16 s2, s4, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s4, s7
 ; CHECKFP16-NEXT:    vins.f16 s2, s8
@@ -1334,9 +1337,10 @@ define arm_aapcs_vfpcc <8 x half> @shuffle2step_f16(<16 x half> %src) {
 ; CHECKFP:       @ %bb.0: @ %entry
 ; CHECKFP-NEXT:    vmovx.f16 s8, s0
 ; CHECKFP-NEXT:    vmovx.f16 s10, s1
+; CHECKFP-NEXT:    @ implicit-def: $s9
 ; CHECKFP-NEXT:    vins.f16 s8, s10
-; CHECKFP-NEXT:    vmovx.f16 s9, s2
 ; CHECKFP-NEXT:    vmovx.f16 s10, s3
+; CHECKFP-NEXT:    vmovx.f16 s9, s2
 ; CHECKFP-NEXT:    vmovx.f16 s12, s5
 ; CHECKFP-NEXT:    vins.f16 s9, s10
 ; CHECKFP-NEXT:    vmovx.f16 s10, s4
@@ -1351,6 +1355,7 @@ define arm_aapcs_vfpcc <8 x half> @shuffle2step_f16(<16 x half> %src) {
 ; CHECKFP-NEXT:    vins.f16 s11, s12
 ; CHECKFP-NEXT:    vmov.f32 s2, s4
 ; CHECKFP-NEXT:    vmov.f32 s3, s6
+; CHECKFP-NEXT:    @ implicit-def: $s14
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q2
 ; CHECKFP-NEXT:    bx lr
 entry:
@@ -1365,62 +1370,66 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16:       @ %bb.0: @ %entry
 ; CHECKFP16-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECKFP16-NEXT:    vpush {d8, d9, d10, d11}
-; CHECKFP16-NEXT:    vmovx.f16 s13, s1
+; CHECKFP16-NEXT:    vmovx.f16 s15, s1
 ; CHECKFP16-NEXT:    vmovx.f16 s16, s0
-; CHECKFP16-NEXT:    vins.f16 s0, s13
-; CHECKFP16-NEXT:    vmovx.f16 s13, s4
-; CHECKFP16-NEXT:    vmovx.f16 s15, s3
-; CHECKFP16-NEXT:    vins.f16 s3, s13
+; CHECKFP16-NEXT:    vins.f16 s0, s15
+; CHECKFP16-NEXT:    vmovx.f16 s15, s4
+; CHECKFP16-NEXT:    vmovx.f16 s13, s3
+; CHECKFP16-NEXT:    vins.f16 s3, s15
+; CHECKFP16-NEXT:    vmovx.f16 s15, s7
+; CHECKFP16-NEXT:    vmovx.f16 s14, s6
 ; CHECKFP16-NEXT:    vmov q5, q0
 ; CHECKFP16-NEXT:    vins.f16 s16, s2
+; CHECKFP16-NEXT:    vins.f16 s6, s15
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s2
-; CHECKFP16-NEXT:    vmovx.f16 s14, s6
+; CHECKFP16-NEXT:    vmovx.f16 s15, s10
+; CHECKFP16-NEXT:    vmovx.f16 s12, s9
+; CHECKFP16-NEXT:    vins.f16 s9, s15
 ; CHECKFP16-NEXT:    vins.f16 s1, s2
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s5
-; CHECKFP16-NEXT:    vmovx.f16 s18, s16
+; CHECKFP16-NEXT:    vmovx.f16 s15, s16
 ; CHECKFP16-NEXT:    vmovx.f16 s0, s20
 ; CHECKFP16-NEXT:    vins.f16 s4, s2
-; CHECKFP16-NEXT:    vins.f16 s14, s8
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s8
-; CHECKFP16-NEXT:    vadd.f16 s0, s0, s18
+; CHECKFP16-NEXT:    vins.f16 s14, s8
+; CHECKFP16-NEXT:    vadd.f16 s0, s0, s15
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s1
-; CHECKFP16-NEXT:    vins.f16 s15, s5
 ; CHECKFP16-NEXT:    vadd.f16 s8, s0, s8
 ; CHECKFP16-NEXT:    vadd.f16 s0, s20, s16
 ; CHECKFP16-NEXT:    vadd.f16 s0, s0, s1
-; CHECKFP16-NEXT:    vmovx.f16 s1, s3
+; CHECKFP16-NEXT:    vmov.f32 s17, s3
+; CHECKFP16-NEXT:    @ implicit-def: $s1
+; CHECKFP16-NEXT:    vins.f16 s13, s5
 ; CHECKFP16-NEXT:    vins.f16 s0, s8
-; CHECKFP16-NEXT:    vmovx.f16 s8, s15
+; CHECKFP16-NEXT:    vmovx.f16 s8, s13
+; CHECKFP16-NEXT:    vmovx.f16 s1, s17
 ; CHECKFP16-NEXT:    vadd.f16 s8, s1, s8
 ; CHECKFP16-NEXT:    vmovx.f16 s1, s4
-; CHECKFP16-NEXT:    vmovx.f16 s13, s7
 ; CHECKFP16-NEXT:    vadd.f16 s8, s8, s1
-; CHECKFP16-NEXT:    vadd.f16 s1, s3, s15
-; CHECKFP16-NEXT:    vins.f16 s6, s13
+; CHECKFP16-NEXT:    vadd.f16 s1, s17, s13
 ; CHECKFP16-NEXT:    vadd.f16 s1, s1, s4
 ; CHECKFP16-NEXT:    vins.f16 s7, s2
 ; CHECKFP16-NEXT:    vins.f16 s1, s8
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s6
 ; CHECKFP16-NEXT:    vmovx.f16 s4, s14
-; CHECKFP16-NEXT:    vmovx.f16 s12, s9
-; CHECKFP16-NEXT:    vmovx.f16 s13, s10
 ; CHECKFP16-NEXT:    vmovx.f16 s2, s11
 ; CHECKFP16-NEXT:    vadd.f16 s4, s8, s4
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s7
 ; CHECKFP16-NEXT:    vadd.f16 s6, s6, s14
 ; CHECKFP16-NEXT:    vins.f16 s10, s2
-; CHECKFP16-NEXT:    vins.f16 s12, s11
-; CHECKFP16-NEXT:    vins.f16 s9, s13
 ; CHECKFP16-NEXT:    vadd.f16 s2, s6, s7
 ; CHECKFP16-NEXT:    vadd.f16 s4, s4, s8
+; CHECKFP16-NEXT:    vins.f16 s12, s11
 ; CHECKFP16-NEXT:    vins.f16 s2, s4
 ; CHECKFP16-NEXT:    vmovx.f16 s4, s12
 ; CHECKFP16-NEXT:    vmovx.f16 s6, s9
 ; CHECKFP16-NEXT:    vadd.f16 s4, s6, s4
 ; CHECKFP16-NEXT:    vmovx.f16 s6, s10
 ; CHECKFP16-NEXT:    vadd.f16 s4, s4, s6
+; CHECKFP16-NEXT:    @ implicit-def: $s3
 ; CHECKFP16-NEXT:    vadd.f16 s6, s9, s12
 ; CHECKFP16-NEXT:    vadd.f16 s3, s6, s10
+; CHECKFP16-NEXT:    @ implicit-def: $s18
 ; CHECKFP16-NEXT:    vins.f16 s3, s4
 ; CHECKFP16-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECKFP16-NEXT:    bx lr
@@ -1513,22 +1522,24 @@ define arm_aapcs_vfpcc <8 x half> @shuffle4step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s0
 ; CHECKFP16-NEXT:    vmovx.f16 s6, s12
 ; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
+; CHECKFP16-NEXT:    vmovx.f16 s10, s10
 ; CHECKFP16-NEXT:    vadd.f16 s8, s28, s24
 ; CHECKFP16-NEXT:    vadd.f16 s0, s0, s12
-; CHECKFP16-NEXT:    vmovx.f16 s10, s10
-; CHECKFP16-NEXT:    vadd.f16 s0, s0, s8
-; CHECKFP16-NEXT:    vadd.f16 s6, s6, s1
 ; CHECKFP16-NEXT:    vmovx.f16 s3, s16
 ; CHECKFP16-NEXT:    vins.f16 s26, s10
 ; CHECKFP16-NEXT:    vmovx.f16 s10, s18
+; CHECKFP16-NEXT:    vadd.f16 s6, s6, s1
+; CHECKFP16-NEXT:    vadd.f16 s0, s0, s8
+; CHECKFP16-NEXT:    vins.f16 s3, s10
+; CHECKFP16-NEXT:    @ implicit-def: $s10
 ; CHECKFP16-NEXT:    vins.f16 s0, s6
 ; CHECKFP16-NEXT:    vmovx.f16 s6, s20
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s5
-; CHECKFP16-NEXT:    vins.f16 s3, s10
-; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
 ; CHECKFP16-NEXT:    vmovx.f16 s10, s4
+; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s7
 ; CHECKFP16-NEXT:    vadd.f16 s8, s10, s8
+; CHECKFP16-NEXT:    @ implicit-def: $s1
 ; CHECKFP16-NEXT:    vadd.f16 s4, s4, s7
 ; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
 ; CHECKFP16-NEXT:    vadd.f16 s8, s5, s20
@@ -1553,6 +1564,7 @@ define arm_aapcs_vfpcc <8 x half> @shuffle4step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    vadd.f16 s4, s6, s4
 ; CHECKFP16-NEXT:    vmovx.f16 s6, s3
 ; CHECKFP16-NEXT:    vmovx.f16 s8, s16
+; CHECKFP16-NEXT:    @ implicit-def: $s11
 ; CHECKFP16-NEXT:    vadd.f16 s6, s8, s6
 ; CHECKFP16-NEXT:    vadd.f16 s8, s16, s3
 ; CHECKFP16-NEXT:    vadd.f16 s4, s6, s4

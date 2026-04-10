@@ -347,6 +347,13 @@ define <3 x half> @v_constained_fadd_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX12-GISEL-NEXT:    v_pk_add_f16 v0, v0, v2
 ; GFX12-GISEL-NEXT:    v_pk_add_f16 v1, v1, v3
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_constained_fadd_v3f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, v2
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.l, v1.l, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fadd.v3f16(<3 x half> %x, <3 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val
 }

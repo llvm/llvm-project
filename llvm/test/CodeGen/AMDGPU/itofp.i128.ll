@@ -142,11 +142,12 @@ define float @sitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    s_cbranch_execz .LBB0_14
 ; GISEL-NEXT:  ; %bb.1: ; %itofp-if-end
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v6, 31, v3
-; GISEL-NEXT:    v_xor_b32_e32 v0, v6, v0
-; GISEL-NEXT:    v_xor_b32_e32 v1, v6, v1
-; GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v6
+; GISEL-NEXT:    v_xor_b32_e32 v4, v6, v0
+; GISEL-NEXT:    v_xor_b32_e32 v5, v6, v1
+; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GISEL-NEXT:    v_xor_b32_e32 v2, v6, v2
-; GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v6, vcc
+; GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v4, v6
+; GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v5, v6, vcc
 ; GISEL-NEXT:    v_xor_b32_e32 v3, v6, v3
 ; GISEL-NEXT:    v_subb_co_u32_e32 v2, vcc, v2, v6, vcc
 ; GISEL-NEXT:    v_ffbh_u32_e32 v5, v0
@@ -671,8 +672,9 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:  ; %bb.1: ; %itofp-if-end
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v6, 31, v3
 ; GISEL-NEXT:    v_xor_b32_e32 v0, v6, v4
-; GISEL-NEXT:    v_xor_b32_e32 v1, v6, v5
 ; GISEL-NEXT:    v_xor_b32_e32 v4, v6, v2
+; GISEL-NEXT:    ; implicit-def: $vgpr2
+; GISEL-NEXT:    v_xor_b32_e32 v1, v6, v5
 ; GISEL-NEXT:    v_sub_co_u32_e32 v2, vcc, v0, v6
 ; GISEL-NEXT:    v_xor_b32_e32 v5, v6, v3
 ; GISEL-NEXT:    v_subb_co_u32_e32 v3, vcc, v1, v6, vcc
@@ -1231,11 +1233,12 @@ define half @sitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    s_cbranch_execz .LBB4_14
 ; GISEL-NEXT:  ; %bb.1: ; %itofp-if-end
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v6, 31, v3
-; GISEL-NEXT:    v_xor_b32_e32 v0, v6, v0
-; GISEL-NEXT:    v_xor_b32_e32 v1, v6, v1
-; GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v6
+; GISEL-NEXT:    v_xor_b32_e32 v4, v6, v0
+; GISEL-NEXT:    v_xor_b32_e32 v5, v6, v1
+; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GISEL-NEXT:    v_xor_b32_e32 v2, v6, v2
-; GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v6, vcc
+; GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v4, v6
+; GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v5, v6, vcc
 ; GISEL-NEXT:    v_xor_b32_e32 v3, v6, v3
 ; GISEL-NEXT:    v_subb_co_u32_e32 v2, vcc, v2, v6, vcc
 ; GISEL-NEXT:    v_ffbh_u32_e32 v5, v0

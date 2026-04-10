@@ -366,6 +366,8 @@ define arm_aapcs_vfpcc void @mul_i32(ptr %A, ptr %B, i64 %C, ptr %D) {
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    ldr.w lr, [sp, #20]
 ; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vmov.f32 s14, s5
 ; CHECK-NEXT:    vmov r5, s4
 ; CHECK-NEXT:    vmov.f32 s4, s6

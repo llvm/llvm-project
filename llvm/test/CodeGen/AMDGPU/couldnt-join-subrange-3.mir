@@ -23,6 +23,7 @@ body:             |
   ; GCN-NEXT:   [[V_LSHRREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e32 4, [[V_CVT_U32_F32_e32_]], implicit $exec
   ; GCN-NEXT:   undef [[V_MUL_LO_I32_e64_:%[0-9]+]].sub0:vreg_128 = V_MUL_LO_I32_e64 [[V_LSHRREV_B32_e32_]], 3, implicit $exec
   ; GCN-NEXT:   [[V_MUL_LO_I32_e64_:%[0-9]+]].sub3:vreg_128 = COPY [[V_MUL_LO_I32_e64_]].sub0
+  ; GCN-NEXT:   [[V_MUL_LO_I32_e64_:%[0-9]+]].sub1_sub2:vreg_128 = IMPLICIT_DEF
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:

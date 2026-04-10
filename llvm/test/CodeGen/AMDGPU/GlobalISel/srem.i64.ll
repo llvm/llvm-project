@@ -20,7 +20,7 @@ define i64 @v_srem_i64(i64 %num, i64 %den) {
 ; CHECK-NEXT:  ; %bb.1: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[6:7]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_4
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  .LBB0_2: ; %.split
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .LBB0_3:
@@ -319,6 +319,7 @@ define amdgpu_ps i64 @s_srem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; CHECK-NEXT:    v_xor_b32_e32 v0, s6, v0
 ; CHECK-NEXT:    v_subrev_i32_e32 v0, vcc, s6, v0
+; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:
@@ -345,7 +346,8 @@ define amdgpu_ps i64 @s_srem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_subrev_i32_e32 v1, vcc, s4, v0
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; CHECK-NEXT:  .LBB1_5:
+; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:  .LBB1_5: ; %.split
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -793,7 +795,7 @@ define <2 x i64> @v_srem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_sub_i32_e32 v2, vcc, v0, v4
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v4
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; CGP-NEXT:  .LBB2_4:
+; CGP-NEXT:  .LBB2_4: ; %.split
 ; CGP-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CGP-NEXT:    v_or_b32_e32 v3, v9, v7
 ; CGP-NEXT:    v_mov_b32_e32 v2, 0
@@ -805,7 +807,7 @@ define <2 x i64> @v_srem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:  ; %bb.5: ; %Flow
 ; CGP-NEXT:    s_andn2_saveexec_b64 s[4:5], s[6:7]
 ; CGP-NEXT:    s_cbranch_execnz .LBB2_8
-; CGP-NEXT:  .LBB2_6:
+; CGP-NEXT:  .LBB2_6: ; %.split.split
 ; CGP-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CGP-NEXT:    s_setpc_b64 s[30:31]
 ; CGP-NEXT:  .LBB2_7:
@@ -2164,7 +2166,7 @@ define i64 @v_srem_i64_pow2_shl_denom(i64 %x, i64 %y) {
 ; CHECK-NEXT:  ; %bb.1: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[6:7]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB7_4
-; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:  .LBB7_2: ; %.split
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .LBB7_3:
@@ -2768,7 +2770,7 @@ define <2 x i64> @v_srem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    v_sub_i32_e32 v2, vcc, v0, v11
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v11
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; CGP-NEXT:  .LBB8_4:
+; CGP-NEXT:  .LBB8_4: ; %.split
 ; CGP-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CGP-NEXT:    v_or_b32_e32 v3, v7, v10
 ; CGP-NEXT:    v_mov_b32_e32 v2, 0
@@ -2780,7 +2782,7 @@ define <2 x i64> @v_srem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:  ; %bb.5: ; %Flow
 ; CGP-NEXT:    s_andn2_saveexec_b64 s[4:5], s[6:7]
 ; CGP-NEXT:    s_cbranch_execnz .LBB8_8
-; CGP-NEXT:  .LBB8_6:
+; CGP-NEXT:  .LBB8_6: ; %.split.split
 ; CGP-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CGP-NEXT:    s_setpc_b64 s[30:31]
 ; CGP-NEXT:  .LBB8_7:

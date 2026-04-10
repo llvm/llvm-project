@@ -1240,9 +1240,14 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align1_undef(ptr %dest, <4 x i3
 ; CHECK-LE-NEXT:    rsbs r2, r2, #0
 ; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
-; CHECK-LE-NEXT:    itt ne
-; CHECK-LE-NEXT:    ldrne r2, [r0]
-; CHECK-LE-NEXT:    vmovne s0, r2
+; CHECK-LE-NEXT:    beq .LBB39_2
+; CHECK-LE-NEXT:  @ %bb.1: @ %cond.load
+; CHECK-LE-NEXT:    ldr r2, [r0]
+; CHECK-LE-NEXT:    vmov s0, r2
+; CHECK-LE-NEXT:    @ implicit-def: $s1
+; CHECK-LE-NEXT:    @ implicit-def: $d1
+; CHECK-LE-NEXT:    @ implicit-def: $d1
+; CHECK-LE-NEXT:  .LBB39_2: @ %else
 ; CHECK-LE-NEXT:    lsls r2, r1, #30
 ; CHECK-LE-NEXT:    itt mi
 ; CHECK-LE-NEXT:    ldrmi r2, [r0, #4]
@@ -1280,9 +1285,14 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align1_undef(ptr %dest, <4 x i3
 ; CHECK-BE-NEXT:    rsbs r2, r2, #0
 ; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
 ; CHECK-BE-NEXT:    lsls r2, r1, #28
-; CHECK-BE-NEXT:    itt mi
-; CHECK-BE-NEXT:    ldrmi r2, [r0]
-; CHECK-BE-NEXT:    vmovmi s4, r2
+; CHECK-BE-NEXT:    bpl .LBB39_2
+; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
+; CHECK-BE-NEXT:    ldr r2, [r0]
+; CHECK-BE-NEXT:    @ implicit-def: $d1
+; CHECK-BE-NEXT:    @ implicit-def: $s1
+; CHECK-BE-NEXT:    @ implicit-def: $d1
+; CHECK-BE-NEXT:    vmov s4, r2
+; CHECK-BE-NEXT:  .LBB39_2: @ %else
 ; CHECK-BE-NEXT:    lsls r2, r1, #29
 ; CHECK-BE-NEXT:    itt mi
 ; CHECK-BE-NEXT:    ldrmi r2, [r0, #4]
@@ -1478,6 +1488,9 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(ptr %dest, <8 x i16
 ; CHECK-LE-NEXT:    ldrh r2, [r0]
 ; CHECK-LE-NEXT:    strh.w r2, [sp, #28]
 ; CHECK-LE-NEXT:    vldr.16 s0, [sp, #28]
+; CHECK-LE-NEXT:    @ implicit-def: $s1
+; CHECK-LE-NEXT:    @ implicit-def: $d1
+; CHECK-LE-NEXT:    @ implicit-def: $d1
 ; CHECK-LE-NEXT:    lsls r2, r1, #30
 ; CHECK-LE-NEXT:    bpl .LBB45_2
 ; CHECK-LE-NEXT:  .LBB45_10: @ %cond.load1
@@ -1601,6 +1614,9 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(ptr %dest, <8 x i16
 ; CHECK-BE-NEXT:    bx lr
 ; CHECK-BE-NEXT:  .LBB45_10: @ %cond.load
 ; CHECK-BE-NEXT:    ldrh r2, [r0]
+; CHECK-BE-NEXT:    @ implicit-def: $d1
+; CHECK-BE-NEXT:    @ implicit-def: $s1
+; CHECK-BE-NEXT:    @ implicit-def: $d1
 ; CHECK-BE-NEXT:    strh.w r2, [sp, #28]
 ; CHECK-BE-NEXT:    vldr.16 s4, [sp, #28]
 ; CHECK-BE-NEXT:    lsls r2, r1, #25
