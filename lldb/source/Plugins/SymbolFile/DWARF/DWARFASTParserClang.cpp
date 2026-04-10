@@ -1910,7 +1910,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       dwarf->GetObjectFile()->GetModule()->LogMessage(
           log, "SymbolFileDWARF({0:p}) - {1:x16}: {2} has unique name: {3} ",
           static_cast<void *>(this), die.GetID(), DW_TAG_value_to_name(tag),
-          unique_typename.AsCString());
+          unique_typename.AsCString(nullptr));
     }
     if (UniqueDWARFASTType *unique_ast_entry_type =
             dwarf->GetUniqueDWARFASTTypeMap().Find(

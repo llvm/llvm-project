@@ -201,8 +201,7 @@ StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
       return idx;
   }
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("Type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *

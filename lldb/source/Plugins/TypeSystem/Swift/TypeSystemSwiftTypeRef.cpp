@@ -1073,7 +1073,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   TypeQuery query(mangled.GetStringRef(), TypeQueryOptions::e_find_one);
   if (!prefer_clang_types) {
     // First check if this type has already been parsed from DWARF.
-    if (auto cached = m_swift_type_map.Lookup(mangled.AsCString()))
+    if (auto cached = m_swift_type_map.Lookup(mangled.AsCString(nullptr)))
       results.InsertUnique(cached);
     else if (auto *M = GetModule())
       M->FindTypes(query, results);
@@ -1086,16 +1086,14 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
         if (ty)
           return {GetDemangledType(dem, ty->GetMangledTypeName()), {}};
         LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ty.takeError(),
-                        "Could not resolve type alias {0}: {1}",
-                        mangled.AsCString());
+                        "Could not resolve type alias {0}: {1}", mangled);
       }
       // Do an even more expensive global search.
       target_sp->GetImages().FindTypes(/*search_first=*/nullptr, query,
                                        results);
     } else {
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "No module. Couldn't resolve type alias %s",
-                mangled.AsCString());
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "No module. Couldn't resolve type alias {0}", mangled);
       return {{}, {}};
     }
   }
@@ -1122,15 +1120,14 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     // end up pointing to a *Swift* type!
     auto clang_type = resolve_clang_type();
     if (!clang_type)
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "Couldn't resolve type alias %s as a Swift or clang type.",
-                mangled.AsCString());
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "Couldn't resolve type alias {0} as a Swift or clang type.",
+               mangled);
     return {{}, clang_type};
   }
 
   if (!type) {
-    LLDB_LOGF(GetLog(LLDBLog::Types), "Found empty type alias %s",
-              mangled.AsCString());
+    LLDB_LOG(GetLog(LLDBLog::Types), "Found empty type alias {0}", mangled);
     return {{}, {}};
   }
 
@@ -1140,19 +1137,19 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   if (!isMangledName(desugared_name.GetStringRef())) {
     // The name is not mangled, this might be a Clang typedef, try
     // to look it up as a clang type.
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "Found non-Swift type alias %s, looking it up as clang type.",
-              mangled.AsCString());
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "Found non-Swift type alias {0}, looking it up as clang type.",
+             mangled);
     auto clang_type = resolve_clang_type();
     if (!clang_type)
-      LLDB_LOGF(GetLog(LLDBLog::Types), "Could not find a clang type for %s.",
-                mangled.AsCString());
+      LLDB_LOG(GetLog(LLDBLog::Types), "Could not find a clang type for {0}.",
+               mangled);
     return {{}, clang_type};
   }
   NodePointer n = GetDemangledType(dem, desugared_name.GetStringRef());
   if (!n) {
     LLDB_LOG(GetLog(LLDBLog::Types), "Unrecognized demangling {0}",
-             desugared_name.AsCString());
+             desugared_name);
     return {{}, {}};
   }
   return {n, {}};
@@ -2488,7 +2485,8 @@ const char *TypeSystemSwiftTypeRef::DeriveKeyFor(const SymbolContext &sc) {
 
   // Otherwise create a catch-all context per unique triple.
   if (sc.module_sp)
-    return ConstString(sc.module_sp->GetArchitecture().GetTriple().str()).AsCString();
+    return ConstString(sc.module_sp->GetArchitecture().GetTriple().str())
+        .AsCString(nullptr);
 
   return nullptr;
 }
@@ -2753,7 +2751,7 @@ TypeSystemSwiftTypeRef::ReconstructType(CompilerType type,
 CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
     ConstString mangled_typename) {
   return {weak_from_this(),
-          (opaque_compiler_type_t)mangled_typename.AsCString()};
+          (opaque_compiler_type_t)mangled_typename.AsCString(nullptr)};
 }
 
 TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
@@ -4492,7 +4490,7 @@ CompilerType TypeSystemSwiftTypeRef::ConvertClangTypeToSwiftType(
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = GetClangTypeTypeNode(dem, clang_type);
   CompilerType result = RemangleAsType(dem, node, flavor);
-  m_imported_type_map.Insert(result.GetMangledTypeName().AsCString(),
+  m_imported_type_map.Insert(result.GetMangledTypeName().AsCString(nullptr),
                              clang_type);
   return result;
 }

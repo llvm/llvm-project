@@ -86,7 +86,7 @@ public:
     if (!inline_info)
       return {};
 
-    llvm::StringRef runtime_error = inline_info->GetName().AsCString();
+    llvm::StringRef runtime_error = inline_info->GetName().GetStringRef();
 
     if (runtime_error.empty())
       return {};

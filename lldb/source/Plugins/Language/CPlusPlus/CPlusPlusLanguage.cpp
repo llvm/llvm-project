@@ -1893,7 +1893,7 @@ static bool PrintFunctionNameWithArgs(Stream &s,
 
   const char *cstr = sc.GetPossiblyInlinedFunctionName()
                          .GetName(Mangled::NamePreference::ePreferDemangled)
-                         .AsCString();
+                         .AsCString(nullptr);
   if (!cstr)
     return false;
 

@@ -461,9 +461,8 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    dump_stream.Printf("0x%" PRIx64 ": EntityPersistentVariable (%s)\n",
-                       load_addr,
-                       m_persistent_variable_sp->GetName().AsCString());
+    dump_stream.Format("{0:x}: EntityPersistentVariable ({1})\n", load_addr,
+                       m_persistent_variable_sp->GetName());
 
     {
       dump_stream.Printf("Pointer:\n");

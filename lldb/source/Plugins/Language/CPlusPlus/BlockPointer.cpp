@@ -146,12 +146,11 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_block_struct_type.IsValid())
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+      return llvm::createStringErrorV("Type has no child named '{0}'", name);
 
     const bool omit_empty_base_classes = false;
     return m_block_struct_type.GetIndexOfChildWithName(
-        name.AsCString(), nullptr, omit_empty_base_classes);
+        name.AsCString(nullptr), nullptr, omit_empty_base_classes);
   }
 
 private:

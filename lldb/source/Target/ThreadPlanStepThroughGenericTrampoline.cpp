@@ -69,8 +69,7 @@ void ThreadPlanStepThroughGenericTrampoline::GetDescription(
     return;
   }
 
-  s->Printf("Stepping through generic trampoline %s",
-            sc.function->GetName().AsCString());
+  s->Format("Stepping through generic trampoline {0}", sc.function->GetName());
 
   lldb::StackFrameSP curr_frame = GetThread().GetStackFrameAtIndex(0);
   if (!curr_frame)

@@ -710,8 +710,7 @@ public:
   if (name == GetNameFor##Name())                                              \
     return ID;
 #include "URLComponents.def"
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   }
 
 private:

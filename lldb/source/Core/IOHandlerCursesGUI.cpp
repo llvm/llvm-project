@@ -2960,7 +2960,7 @@ public:
     if (!module_sp->IsExecutable())
       return "";
 
-    return module_sp->GetFileSpec().GetFilename().AsCString();
+    return module_sp->GetFileSpec().GetFilename().GetString();
   }
 
   bool StopRunningProcess() {

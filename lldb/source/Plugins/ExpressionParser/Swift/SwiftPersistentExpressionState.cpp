@@ -55,7 +55,7 @@ void SwiftPersistentExpressionState::RemovePersistentVariable(
 
   RemoveVariable(variable);
 
-  const char *name = variable->GetName().AsCString();
+  const char *name = variable->GetName().AsCString("");
 
   if (*name != '$')
     return;

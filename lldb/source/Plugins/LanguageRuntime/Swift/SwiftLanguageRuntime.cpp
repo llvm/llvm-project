@@ -552,7 +552,7 @@ bool SwiftLanguageRuntime::AddJitObjectFileToReflectionContext(
         auto section_name = obj_file_format->getSectionName(section_kind);
         for (auto section : *obj_file.GetSectionList()) {
           JITSection *jit_section = llvm::dyn_cast<JITSection>(section.get());
-          if (jit_section && section->GetName().AsCString() == section_name) {
+          if (jit_section && section->GetName() == section_name) {
             DataExtractor extractor;
             auto section_size = section->GetSectionData(extractor);
             if (!section_size)
@@ -684,7 +684,7 @@ std::optional<uint32_t> SwiftLanguageRuntime::AddObjectFileToReflectionContext(
     for (auto section : segment->GetChildren()) {
       // Iterate over the sections until we find the reflection section we
       // need.
-      if (section->GetName().AsCString() == section_name) {
+      if (section->GetName() == section_name) {
         DataExtractor extractor;
         auto size = section->GetSectionData(extractor);
         auto data = extractor.GetData();
@@ -944,7 +944,7 @@ RunObjectDescription(ValueObject &object, std::string &expr_string,
   }
   if (result_sp->GetError().Fail()) {
     LLDB_LOG(log, "[RunObjectDescriptionExpr] expression generated error: {0}",
-             result_sp->GetError().AsCString());
+             result_sp->GetError());
 
     return result_sp->GetError().ToError();
   }
@@ -1536,7 +1536,7 @@ bool SwiftLanguageRuntime::SwiftExceptionPrecondition::EvaluatePrecondition(
     // This shouldn't fail, since at worst it will return me the object I just
     // successfully got.
     std::string full_error_name(
-        error_valobj_sp->GetCompilerType().GetTypeName().AsCString());
+        error_valobj_sp->GetCompilerType().GetTypeName());
     size_t last_dot_pos = full_error_name.rfind('.');
     std::string type_name_base;
     if (last_dot_pos == std::string::npos)
@@ -1712,8 +1712,7 @@ protected:
         if (m_projection->field_projections.at(idx).name == name)
           return idx;
       }
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+      return llvm::createStringErrorV("Type has no child named '{0}'", name);
     }
 
     lldb::ChildCacheState Update() override {
@@ -1744,7 +1743,7 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
   ConstString type_name = valobj.GetCompilerType().GetTypeName();
 
   if (!type_name.IsEmpty()) {
-    auto iter = m_bridged_synthetics_map.find(type_name.AsCString()),
+    auto iter = m_bridged_synthetics_map.find(type_name.AsCString(nullptr)),
          end = m_bridged_synthetics_map.end();
     if (iter != end)
       return iter->second;
@@ -1779,7 +1778,8 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
         SyntheticChildrenSP synth_sp =
             SyntheticChildrenSP(new ProjectionSyntheticChildren(
                 SyntheticChildren::Flags(), std::move(type_projection)));
-        m_bridged_synthetics_map.insert({type_name.AsCString(), synth_sp});
+        m_bridged_synthetics_map.insert(
+            {type_name.AsCString(nullptr), synth_sp});
         return synth_sp;
       }
     }
