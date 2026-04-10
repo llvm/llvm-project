@@ -708,13 +708,12 @@ public:
     // classref except by calling this function.
     llvm::Type *params[] = {Int8PtrPtrTy};
     llvm::LLVMContext &C = CGM.getLLVMContext();
-    llvm::SmallVector<llvm::Attribute, 3> AttrVec;
-    if (!CGM.getTriple().isArm64e()) {
+    llvm::SmallVector<llvm::Attribute, 3> AttrVec = {
+        llvm::Attribute::getWithMemoryEffects(C, llvm::MemoryEffects::none()),
+        llvm::Attribute::get(C, llvm::Attribute::NoUnwind),
+    };
+    if (!CGM.getTriple().isArm64e())
       AttrVec.push_back(llvm::Attribute::get(C, llvm::Attribute::NonLazyBind));
-    }
-    AttrVec.push_back(
-        llvm::Attribute::getWithMemoryEffects(C, llvm::MemoryEffects::none()));
-    AttrVec.push_back(llvm::Attribute::get(C, llvm::Attribute::NoUnwind));
     llvm::AttributeSet AS = llvm::AttributeSet::get(C, AttrVec);
     llvm::FunctionCallee F = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ClassnfABIPtrTy, params, false),
