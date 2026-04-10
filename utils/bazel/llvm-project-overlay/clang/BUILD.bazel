@@ -410,6 +410,16 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "basic_builtins_systemz_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsSystemZ.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsSystemZ.td",
+    deps = [
+        ":BuiltinsBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "basic_builtins_x86_gen",
     tbl_outs = {"include/clang/Basic/BuiltinsX86.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
@@ -747,6 +757,7 @@ cc_library(
         ":basic_builtins_spirv_cl_gen",
         ":basic_builtins_spirv_common_gen",
         ":basic_builtins_spirv_vk_gen",
+        ":basic_builtins_systemz_gen",
         ":basic_builtins_x86_64_gen",
         ":basic_builtins_x86_gen",
         ":basic_riscv_andes_vector_builtins_gen",
@@ -1635,6 +1646,7 @@ cc_library(
         ":lex",
         ":options",
         ":parse",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
         ":serialization",
@@ -2028,6 +2040,10 @@ cc_library(
         "include",
         "lib/DirectoryWatcher",
     ],
+    linkopts = select({
+        "@platforms//os:macos": ["-Wl,-framework,CoreServices"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//llvm:Support",
     ],
@@ -2135,6 +2151,7 @@ cc_library(
         ":options",
         ":rewrite",
         ":sema",
+        ":serialization",
         ":tooling",
         ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
@@ -2169,6 +2186,7 @@ cc_plugin_library(
         ":options",
         ":rewrite",
         ":sema",
+        ":serialization",
         ":tooling",
         ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
@@ -2679,6 +2697,7 @@ cc_binary(
     srcs = ["tools/clang-ssaf-format/SSAFFormat.cpp"],
     deps = [
         ":basic",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_tool",
         "//llvm:Option",
@@ -2691,6 +2710,7 @@ cc_binary(
     srcs = ["tools/clang-ssaf-linker/SSAFLinker.cpp"],
     deps = [
         ":basic",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_tool",
         "//llvm:Option",

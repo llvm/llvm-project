@@ -466,6 +466,9 @@ SourceLocation
 Preprocessor::CheckEndOfDirective(StringRef DirType, bool EnableMacros,
                                   SmallVectorImpl<Token> *ExtraToks) {
   Token Tmp;
+  // Avoid use-of-uninitialized-memory for edge case(s) where there is no extra
+  // token to be parsed.
+  Tmp.startToken();
   auto ReadNextTok = [this, ExtraToks, &Tmp](auto &&LexFn) {
     std::invoke(LexFn, this, Tmp);
     if (ExtraToks && Tmp.isNot(tok::eod))
@@ -2727,6 +2730,20 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
               : diag::pp_nonportable_system_path;
       Diag(FilenameTok, DiagId) << Path <<
         FixItHint::CreateReplacement(FilenameRange, Path);
+    }
+
+    bool SuppressBackslashDiag =
+        // The diagnostic logic is expensive, so only run it if it's enabled...
+        Diags->isIgnored(diag::pp_nonportable_path_separator, FilenameLoc) ||
+        // ...and try to only trigger on paths that appear in source.
+        FilenameLoc.isMacroID() ||
+        SourceMgr.isWrittenInBuiltinFile(FilenameLoc) ||
+        SourceMgr.isWrittenInModuleIncludes(FilenameLoc);
+    if (!SuppressBackslashDiag && OriginalFilename.contains('\\')) {
+      std::string SuggestedPath = OriginalFilename.str();
+      llvm::replace(SuggestedPath, '\\', '/');
+      Diag(FilenameTok, diag::pp_nonportable_path_separator)
+          << Name << FixItHint::CreateReplacement(FilenameRange, SuggestedPath);
     }
   }
 

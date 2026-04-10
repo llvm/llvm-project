@@ -34,7 +34,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep = getelementptr i32, ptr %ptr, i64 %index
   store i32 %val, ptr %gep
@@ -42,7 +42,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 
@@ -75,7 +75,7 @@ define void @simple_memset_v4i32(i32 %val, ptr %ptr, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep = getelementptr i32, ptr %ptr, i64 %index
   store i32 %val, ptr %gep
@@ -83,7 +83,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !3
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 
@@ -118,7 +118,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep1 = getelementptr i32, ptr %src, i64 %index
   %val = load i32, ptr %gep1
@@ -128,7 +128,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 
@@ -173,7 +173,7 @@ define void @copy_stride4(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep1 = getelementptr i32, ptr %src, i64 %index
   %val = load i32, ptr %gep1
@@ -183,7 +183,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 
@@ -220,7 +220,7 @@ define void @simple_gather_scatter(ptr noalias %dst, ptr noalias %src, ptr noali
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep1 = getelementptr i32, ptr %ind, i64 %index
   %ind_val = load i32, ptr %gep1
@@ -232,7 +232,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 
@@ -270,7 +270,7 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %val = load i32, ptr %src, align 4
   %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %indvars.iv
@@ -279,7 +279,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -324,18 +324,18 @@ define void @cond_uniform_load(ptr noalias %dst, ptr noalias readonly %src, ptr 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %if.end
+for.body:
   %index = phi i64 [ %index.next, %if.end ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %cond, i64 %index
   %0 = load i32, ptr %arrayidx, align 4
   %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %if.end, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %1 = load i32, ptr %src, align 4
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %for.body
+if.end:
   %val.0 = phi i32 [ %1, %if.then ], [ 0, %for.body ]
   %arrayidx1 = getelementptr inbounds i32, ptr %dst, i64 %index
   store i32 %val.0, ptr %arrayidx1, align 4
@@ -343,7 +343,7 @@ if.end:                                           ; preds = %if.then, %for.body
   %exitcond.not = icmp eq i64 %index.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   ret void
 }
 
@@ -381,7 +381,7 @@ define void @uniform_store(ptr noalias %dst, ptr noalias readonly %src, i64 %n) 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
   %val = load i32, ptr %arrayidx, align 4
@@ -390,7 +390,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -427,7 +427,7 @@ define void @simple_fdiv(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep1 = getelementptr float, ptr %src, i64 %index
   %gep2 = getelementptr float, ptr %dst, i64 %index
@@ -439,7 +439,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 
@@ -478,7 +478,7 @@ define void @simple_idiv(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep1 = getelementptr i32, ptr %src, i64 %index
   %gep2 = getelementptr i32, ptr %dst, i64 %index
@@ -490,7 +490,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, %n
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 
@@ -521,7 +521,7 @@ define void @simple_memset_trip1024(i32 %val, ptr %ptr, i64 %n) #0 {
 entry:
   br label %while.body
 
-while.body:                                       ; preds = %while.body, %entry
+while.body:
   %index = phi i64 [ %index.next, %while.body ], [ 0, %entry ]
   %gep = getelementptr i32, ptr %ptr, i64 %index
   store i32 %val, ptr %gep
@@ -529,7 +529,7 @@ while.body:                                       ; preds = %while.body, %entry
   %cmp10 = icmp ult i64 %index.next, 1024
   br i1 %cmp10, label %while.body, label %while.end.loopexit, !llvm.loop !0
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   ret void
 }
 

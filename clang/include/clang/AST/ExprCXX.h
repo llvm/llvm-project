@@ -3279,14 +3279,10 @@ public:
 
   /// Determines whether this expression had explicit template arguments.
   bool hasExplicitTemplateArgs() const {
-    if (!hasTemplateKWAndArgsInfo())
-      return false;
-    // FIXME: deduced function types can have "hidden" args and no <
-    // investigate that further, but ultimately maybe we want to model concepts
-    // reference with another kind of expression.
-    return (isConceptReference() || isVarDeclReference())
-               ? getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs
-               : getLAngleLoc().isValid();
+    if (getLAngleLoc().isValid())
+      return true;
+    return hasTemplateKWAndArgsInfo() &&
+           getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
   bool isConceptReference() const {

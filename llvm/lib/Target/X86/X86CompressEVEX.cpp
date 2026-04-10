@@ -447,6 +447,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
 
   if (!NewOpc)
     return false;
+  // NF (No Flags) instructions cannot compress to VEX/legacy encoding.
+  // NF_ND can still compress to NF (both remain EVEX).
+  assert((IsND || !(TSFlags & X86II::EVEX_NF)) &&
+         "Unexpected to compress NF instructions without ND.");
 
   const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(NewOpc);
   MI.setDesc(NewDesc);

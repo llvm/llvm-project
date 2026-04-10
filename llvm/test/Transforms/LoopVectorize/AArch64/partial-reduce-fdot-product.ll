@@ -52,7 +52,7 @@ define float @fdot_f16_f32(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -67,7 +67,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -119,7 +119,7 @@ define double @fdot_f16_f64(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -134,7 +134,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret double %add
 }
 
@@ -143,42 +143,42 @@ define double @fdot_f32_f64(ptr %a, ptr %b) #0 {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double 0.000000e+00, i32 0), %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[TMP4]], i64 [[TMP6]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 2 x float>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD]] to <vscale x 2 x double>
-; CHECK-NEXT:    [[TMP9:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD2]] to <vscale x 2 x double>
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[TMP10]], i64 [[TMP6]]
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x float>, ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 2 x float>, ptr [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP14:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD3]] to <vscale x 2 x double>
-; CHECK-NEXT:    [[TMP15:%.*]] = fpext <vscale x 2 x float> [[WIDE_LOAD4]] to <vscale x 2 x double>
-; CHECK-NEXT:    [[TMP16:%.*]] = fmul <vscale x 2 x double> [[TMP14]], [[TMP8]]
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul <vscale x 2 x double> [[TMP15]], [[TMP9]]
-; CHECK-NEXT:    [[TMP18]] = fadd reassoc contract <vscale x 2 x double> [[TMP16]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP19]] = fadd reassoc contract <vscale x 2 x double> [[TMP17]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double 0.000000e+00, i32 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double -0.000000e+00, i32 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[TMP6]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[TMP15]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[TMP7]], i64 [[TMP6]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x float>, ptr [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD3]] to <vscale x 4 x double>
+; CHECK-NEXT:    [[TMP10:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD]] to <vscale x 4 x double>
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <vscale x 4 x double> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd.nxv2f64.nxv4f64(<vscale x 2 x double> [[VEC_PHI]], <vscale x 4 x double> [[TMP11]])
+; CHECK-NEXT:    [[TMP12:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD4]] to <vscale x 4 x double>
+; CHECK-NEXT:    [[TMP13:%.*]] = fpext <vscale x 4 x float> [[WIDE_LOAD2]] to <vscale x 4 x double>
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul <vscale x 4 x double> [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE5]] = call reassoc contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd.nxv2f64.nxv4f64(<vscale x 2 x double> [[VEC_PHI1]], <vscale x 4 x double> [[TMP14]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <vscale x 2 x double> [[TMP19]], [[TMP18]]
-; CHECK-NEXT:    [[TMP21:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.nxv2f64(double -0.000000e+00, <vscale x 2 x double> [[BIN_RDX]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <vscale x 2 x double> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
+; CHECK-NEXT:    [[TMP16:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.nxv2f64(double -0.000000e+00, <vscale x 2 x double> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[FOR_EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -186,7 +186,7 @@ define double @fdot_f32_f64(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr float, ptr %a, i64 %iv
@@ -201,7 +201,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret double %add
 }
 
@@ -253,7 +253,7 @@ define float @fdot_f16_f32_interleave2(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -268,7 +268,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !2
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -303,7 +303,7 @@ define fp128 @not_fdot_f64_f128(ptr %a, ptr %b, fp128 %zero) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi fp128 [ %zero, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr double, ptr %a, i64 %iv
@@ -318,7 +318,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret fp128 %add
 }
 
@@ -331,20 +331,20 @@ define float @not_fdot_f16_f32_nosve(ptr %a, ptr %b) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x half>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x half>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <8 x half> [[WIDE_LOAD4]] to <8 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <8 x float> [[TMP7]], [[TMP3]]
-; CHECK-NEXT:    [[TMP11]] = fadd reassoc contract <8 x float> [[TMP9]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PARTIAL_REDUCE]])
 ; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
 ; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    ret float [[TMP13]]
@@ -352,7 +352,7 @@ define float @not_fdot_f16_f32_nosve(ptr %a, ptr %b) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -367,7 +367,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -380,20 +380,20 @@ define double @not_fdot_f32_f64_nosve(ptr %a, ptr %b) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <4 x float> [[WIDE_LOAD2]] to <4 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <4 x float> [[WIDE_LOAD4]] to <4 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <4 x float> [[WIDE_LOAD2]] to <4 x double>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <4 x double> [[TMP7]], [[TMP3]]
-; CHECK-NEXT:    [[TMP11]] = fadd reassoc contract <4 x double> [[TMP9]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v4f64(<2 x double> [[VEC_PHI]], <4 x double> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[PARTIAL_REDUCE]])
 ; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
 ; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    ret double [[TMP13]]
@@ -401,7 +401,7 @@ define double @not_fdot_f32_f64_nosve(ptr %a, ptr %b) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr float, ptr %a, i64 %iv
@@ -416,7 +416,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret double %add
 }
 
@@ -451,7 +451,7 @@ define fp128 @not_fdot_f64_f128_nosve(ptr %a, ptr %b, fp128 %zero) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi fp128 [ %zero, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr double, ptr %a, i64 %iv
@@ -466,7 +466,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret fp128 %add
 }
 
@@ -506,7 +506,7 @@ define float @not_fdot_f16_f32_nofmf(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -521,7 +521,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -562,7 +562,7 @@ define float @not_fdot_f32_f32(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr float, ptr %a, i64 %iv
@@ -575,7 +575,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -616,7 +616,7 @@ define double @not_fdot_different_types(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi double [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -631,7 +631,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret double %add
 }
 
@@ -677,7 +677,7 @@ entry:
   %ext.b = fpext half %b to float
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr inbounds half, ptr %a, i64 %iv
@@ -689,7 +689,7 @@ for.body:                                         ; preds = %for.body, %entry
   %cmp.1 = icmp eq i64 %iv.next, %n
   br i1 %cmp.1, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                 ; preds = %for.body
+exit:
   %result = phi float [ %add, %for.body ]
   ret float %result
 }
@@ -731,7 +731,7 @@ define float @fdot_f16_f32_nocontract(ptr %a, ptr %b) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -746,7 +746,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -783,7 +783,7 @@ define float @extended_reduce_fadd(ptr %a) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -794,7 +794,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -830,7 +830,7 @@ define float @not_extended_reduce_fadd_no_fmf(ptr %a) #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr half, ptr %a, i64 %iv
@@ -841,7 +841,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -879,7 +879,7 @@ entry:
   %ext.a = fpext half %a to float
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi float [ 0.0, %entry ], [ %add, %for.body ]
   %add = fadd reassoc contract float %ext.a, %accum
@@ -887,7 +887,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body, !llvm.loop !0
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret float %add
 }
 
@@ -956,8 +956,8 @@ define double @ext_fmul_half_to_double(i64 %n, ptr %a, i8 %b) #2 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[TMP1]], i64 8
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP1]], align 2
@@ -967,15 +967,15 @@ define double @ext_fmul_half_to_double(i64 %n, ptr %a, i8 %b) #2 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul reassoc contract <8 x float> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul reassoc contract <8 x float> [[TMP4]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <8 x float> [[TMP5]] to <8 x double>
-; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v8f64(<2 x double> [[VEC_PHI]], <8 x double> [[TMP7]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fpext <8 x float> [[TMP6]] to <8 x double>
-; CHECK-NEXT:    [[PARTIAL_REDUCE3]] = call reassoc contract <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v8f64(<2 x double> [[VEC_PHI1]], <8 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP9]] = fadd reassoc contract <8 x double> [[VEC_PHI]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10]] = fadd reassoc contract <8 x double> [[VEC_PHI1]], [[TMP8]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <2 x double> [[PARTIAL_REDUCE3]], [[PARTIAL_REDUCE]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <8 x double> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v8f64(double -0.000000e+00, <8 x double> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:

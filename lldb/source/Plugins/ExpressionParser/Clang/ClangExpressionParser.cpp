@@ -1512,8 +1512,8 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
           "Couldn't find %s() in the module", m_expr.FunctionName());
       return err;
     } else {
-      LLDB_LOGF(log, "Found function %s for %s", function_name.AsCString(),
-                m_expr.FunctionName());
+      LLDB_LOG(log, "Found function {0} for {1}", function_name,
+               m_expr.FunctionName());
     }
   }
 
@@ -1564,9 +1564,9 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
 
   if (decl_map) {
     StreamString error_stream;
-    IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(),
-                              *execution_unit_sp, error_stream,
-                              execution_policy, function_name.AsCString());
+    IRForTarget ir_for_target(
+        decl_map, m_expr.NeedsVariableResolution(), *execution_unit_sp,
+        error_stream, execution_policy, function_name.AsCString(nullptr));
 
     if (!ir_for_target.runOnModule(*execution_unit_sp->GetModule())) {
       err = Status(error_stream.GetString().str());
@@ -1628,7 +1628,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
         if (auto *checker_funcs = llvm::dyn_cast<ClangDynamicCheckerFunctions>(
                 process->GetDynamicCheckers())) {
           IRDynamicChecks ir_dynamic_checks(*checker_funcs,
-                                            function_name.AsCString());
+                                            function_name.AsCString(nullptr));
 
           llvm::Module *module = execution_unit_sp->GetModule();
           if (!module || !ir_dynamic_checks.runOnModule(*module)) {

@@ -1531,7 +1531,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
            // If HLSL, then check if it is a constant initializer because
            // PODness will no longer be true for any user defined structs.
            getLangOpts().HLSL) &&
-          D.getInit()->isConstantInitializer(getContext(), false)))) {
+          D.getInit()->isConstantInitializer(getContext())))) {
 
       // If the variable's a const type, and it's neither an NRVO
       // candidate nor a __block variable and has no mutable members,
@@ -2783,7 +2783,9 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   llvm::Value *ArgVal = (DoStore ? Arg.getDirectValue() : nullptr);
 
   LValue lv = MakeAddrLValue(DeclPtr, Ty);
-  if (IsScalar) {
+  // If this is a thunk, don't bother with ARC lifetime management.
+  // The true implementation will take care of that.
+  if (IsScalar && !CurFuncIsThunk) {
     Qualifiers qs = Ty.getQualifiers();
     if (Qualifiers::ObjCLifetime lt = qs.getObjCLifetime()) {
       // We honor __attribute__((ns_consumed)) for types with lifetime.

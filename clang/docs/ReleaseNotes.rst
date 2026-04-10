@@ -46,6 +46,9 @@ C++ Specific Potentially Breaking Changes
 - Clang now more aggressively optimizes away stores to objects after they are
   dead. This behavior can be disabled with ``-fno-lifetime-dse``.
 
+- Clang now correctly rejects ``export`` declarations in module implementation
+  partitions. (#GH107602)
+
 ABI Changes in This Version
 ---------------------------
 
@@ -200,6 +203,14 @@ New Compiler Flags
   Control Flow Guard (CFG) is enabled by other options, it will instruct Clang
   to emit the CFG metadata, but disable adding checks.
 
+- New option ``-fdiagnostics-show-inlining-chain`` added to show inlining chain
+  notes for ``[[gnu::warning]]`` and ``[[gnu::error]]`` diagnostics. When a
+  function with these attributes is called from an inlined context, Clang can
+  now show which functions were inlined to reach the call. When debug info is
+  available (``-gline-directives-only`` (implicitly enabled at ``-g1``) or
+  higher), accurate source locations are used; otherwise, a heuristic fallback
+  is used with a note suggesting how to enable debug info for better accuracy.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -240,6 +251,11 @@ Attribute Changes in Clang
   exclusively, while *reading* requires at least one to be held.  This is
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
+
+- Added support for ``[[msvc::forceinline]]`` for functions and
+  ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
+  ``[[clang::always_inline]]`` with additional checks to ensure that they
+  are only accepted in places where MSVC also does.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -339,6 +355,17 @@ Improvements to Clang's diagnostics
   ``-Wunused-private-field`` no longer emits a warning for annotated private
   fields.
 
+- Improved ``-Wgnu-zero-variadic-macro-arguments`` to suggest using
+  ``__VA_OPT__`` if the current language version supports it(#GH188624)
+
+- Clang now emits an error when implicitly casting a complex type to a built-in vector type. (#GH186805)
+
+- Added ``-Wnonportable-include-path-separator`` (off by default) to catch
+  #include directives that use backslashes as a path separator. The warning
+  includes a FixIt to change all the backslashes to forward slashes, so that the
+  code can automatically be made portable to other host platforms that don't
+  support backslashes.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -373,6 +400,14 @@ Bug Fixes in This Version
 - Correctly diagnosing and no longer crashing when ``export module foo``
   (without a semicolon) are the final tokens in a module file. (#GH187771)
 - Fixed a crash in duplicate attribute checking caused by comparing constant arguments with different integer signedness. (#GH188259)
+- Clang now emits an error when returning an initializer list from a lambda
+  with an explicit return type of void. The diagnostic now correctly refers
+  to "lambda" instead of "block". (#GH188661)
+- Fixed a crash on _BitInt(N) arrays where 129 ≤ N ≤ 192 due to incorrect array filler lowering. (#GH189643)
+- Fixed the behavior in C23 of ``auto``, by emitting an error when an array type is specified for a ``char *``. (#GH162694)
+- Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
+- Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
+- Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -386,13 +421,17 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
+- Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
 - Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- We no longer caches invalid variable specializations. (#GH132592)
 - Fixed an incorrect template argument deduction when matching packs of template
   template parameters when one of its parameters is also a pack. (#GH181166)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed an alias template CTAD crash.
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
@@ -411,12 +450,12 @@ Bug Fixes to C++ Support
 - Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
+- Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
-- Fixed a assertion when __block is used on global variables in C mode. (#GH183974)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -438,6 +477,11 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
 - Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
 - Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
+- Fixed an assertion failure when parsing an invalid ``decltype`` specifier with missing parentheses or extra semicolons. (#GH188014)
+- Fixed a crash when explicitly casting a complex type to or from an atomic complex type. (#GH172208)
+- Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
+- Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
+- Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
 
 OpenACC Specific Changes
 ------------------------
@@ -447,7 +491,10 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
-
+- Introduced a new target specific builtin ``__builtin_amdgcn_processor_is``,
+  a late / deferred query for the current target processor.
+- Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
+  a late / deferred query for the availability of target specific builtins.
 - Initial support for gfx1310
 
 NVPTX Support
@@ -580,8 +627,8 @@ Python Binding Changes
   ``CodeCompletionResults.results`` should be changed to directly use
   ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
   so it can be used the same as ``CodeCompletionResults.results``.
-- Added a new helper method ``get_version`` to the class ``Config`` to read the
-  version string of the libclang in use.
+- Added a new helper method ``get_clang_version`` to the class ``Config`` to
+  read the version string of the libclang in use.
 
 OpenMP Support
 --------------
@@ -591,6 +638,7 @@ OpenMP Support
 
 Improvements
 ^^^^^^^^^^^^
+- Improved substitution performance in concept checking. (#GH172266)
 
 Additional Information
 ======================

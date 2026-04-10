@@ -880,7 +880,7 @@ define i32 @PR27246() {
 ; UNROLL-NO-IC:       vector.body:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 -4)
+; UNROLL-NO-IC-NEXT:    [[STEP_ADD:%.*]] = add nsw <4 x i32> [[VEC_IND]], splat (i32 -4)
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i32> [[STEP_ADD]], splat (i32 -4)
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -2393,17 +2393,17 @@ entry:
   %cmp530 = icmp slt i32 0, %tc
   br label %for.body4
 
-for.body4:                                        ; preds = %cond.end, %entry
+for.body4:
   %indvars.iv = phi i32 [ 0, %entry ], [ %indvars.iv.next, %cond.end ]
   %cmp534 = phi i1 [ %cmp530, %entry ], [ %cmp5, %cond.end ]
   br i1 %cmp534, label %cond.true, label %cond.end
 
-cond.true:                                        ; preds = %for.body4
+cond.true:
   %arrayidx7 = getelementptr inbounds i32, ptr %in, i32 %indvars.iv
   %in.val = load i32, ptr %arrayidx7, align 4
   br label %cond.end
 
-cond.end:                                         ; preds = %for.body4, %cond.true
+cond.end:
   %cond = phi i32 [ %in.val, %cond.true ], [ 0, %for.body4 ]
   %arrayidx8 = getelementptr inbounds i32, ptr %out, i32 %indvars.iv
   store i32 %cond, ptr %arrayidx8, align 4
@@ -2412,7 +2412,7 @@ cond.end:                                         ; preds = %for.body4, %cond.tr
   %exitcond = icmp eq i32 %indvars.iv.next, %x
   br i1 %exitcond, label %for.end12.loopexit, label %for.body4
 
-for.end12.loopexit:                               ; preds = %cond.end
+for.end12.loopexit:
   ret void
 }
 
@@ -2813,11 +2813,11 @@ define i32 @sink_into_replication_region(i32 %y) {
 bb:
   br label %bb2
 
-  bb1:                                              ; preds = %bb2
+  bb1:
   %var = phi i32 [ %var6, %bb2 ]
   ret i32 %var
 
-  bb2:                                              ; preds = %bb2, %bb
+  bb2:
   %var3 = phi i32 [ %var8, %bb2 ], [ %y, %bb ]
   %var4 = phi i32 [ %var7, %bb2 ], [ 0, %bb ]
   %var5 = phi i32 [ %var6, %bb2 ], [ 0, %bb ]
@@ -2941,8 +2941,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP10]], i32 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP48]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; UNROLL-NO-IC:       pred.store.if:
-; UNROLL-NO-IC-NEXT:    [[TMP49:%.*]] = add i32 [[INDEX]], 0
-; UNROLL-NO-IC-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[TMP49]]
+; UNROLL-NO-IC-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
 ; UNROLL-NO-IC-NEXT:    store i32 [[OFFSET_IDX]], ptr [[TMP50]], align 4
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; UNROLL-NO-IC:       pred.store.continue:
@@ -3140,8 +3139,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; SINK-AFTER-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
 ; SINK-AFTER-NEXT:    br i1 [[TMP25]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; SINK-AFTER:       pred.store.if:
-; SINK-AFTER-NEXT:    [[TMP26:%.*]] = add i32 [[INDEX]], 0
-; SINK-AFTER-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[TMP26]]
+; SINK-AFTER-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
 ; SINK-AFTER-NEXT:    store i32 [[OFFSET_IDX]], ptr [[TMP27]], align 4
 ; SINK-AFTER-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; SINK-AFTER:       pred.store.continue:
@@ -3183,11 +3181,11 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 bb:
   br label %bb2
 
-  bb1:                                              ; preds = %bb2
+  bb1:
   %var = phi i32 [ %var6, %bb2 ]
   ret i32 %var
 
-  bb2:                                              ; preds = %bb2, %bb
+  bb2:
   %var3 = phi i32 [ %var8, %bb2 ], [ %y, %bb ]
   %iv = phi i32 [ %iv.next, %bb2 ], [ 0, %bb ]
   %var4 = phi i32 [ %var7, %bb2 ], [ 0, %bb ]
