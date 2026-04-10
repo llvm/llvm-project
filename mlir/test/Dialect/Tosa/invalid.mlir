@@ -1088,26 +1088,26 @@ func.func @test_shape_type(%arg0: !tosa.shape<-1>) -> !tosa.shape<-1> {
 
 // -----
 
-func.func @test_const_shape() -> !tosa.shape<4> {
+func.func @test_const_shape() {
   // expected-error@+1 {{'tosa.const_shape' op attribute 'values' failed to satisfy constraint: index elements attribute}}
   %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xi32>} : () -> !tosa.shape<4>
-  return %cst : !tosa.shape<4>
+  return
 }
 
 // -----
 
-func.func @test_const_shape_values() -> !tosa.shape<5> {
+func.func @test_const_shape_values() {
   // expected-error@+1 {{'tosa.const_shape' op expect number of elements in attribute values (4) to be equal to the rank (5) for the result shape type}}
   %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<5>
-  return %cst : !tosa.shape<5>
+  return
 }
 
 // -----
 
-func.func @test_const_shape_values() -> !tosa.shape<4> {
+func.func @test_const_shape_values() {
   // expected-error@+1 {{'tosa.const_shape' op expect elements in attribute values with rank 1}}
   %cst = tosa.const_shape {values = dense<[[1, 2], [3, 4]]> : tensor<2x2xindex>} : () -> !tosa.shape<4>
-  return %cst : !tosa.shape<4>
+  return
 }
 
 // -----
@@ -2263,22 +2263,22 @@ func.func @test_rfft2d(%arg0: tensor<13x8x16xbf16>) -> (tensor<13x8x9xbf16>, ten
 
 // -----
 
-func.func @test_slice_shape_non_const_start(%arg0: tensor<1xi32>) -> !tosa.shape<3> {
+func.func @test_slice_shape_non_const_start(%arg0: tensor<1xi32>) {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %2 = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.slice_shape' op expected compile time resolvable constant, but got variable value for operand #1}}
   %3 = tosa.slice_shape %0, %arg0, %2 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
-  return %3 : !tosa.shape<3>
+  return
 }
 
 // -----
 
-func.func @test_slice_shape_non_const_size(%arg0: tensor<1xi32>) -> !tosa.shape<3> {
+func.func @test_slice_shape_non_const_size(%arg0: tensor<1xi32>) {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %1 = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.slice_shape' op expected compile time resolvable constant, but got variable value for operand #2}}
   %3 = tosa.slice_shape %0, %1, %arg0 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
-  return %3 : !tosa.shape<3>
+  return
 }
 
 // -----
@@ -2290,4 +2290,19 @@ func.func @test_conv2d_block_scaled(%arg0: tensor<*xf4E2M1FN>, %arg1: tensor<*xf
   // expected-error@+1 {{'tosa.conv2d_block_scaled' op illegal: operation operand/result data types did not align with any profile or extension, got (fp4e2m1,fp8e8m0,fp4e2m1,fp8e8m0,f16,f16), did you mean (fp4e2m1,fp8e8m0,fp4e2m1,fp8e8m0,f32,f32)? Otherwise, please refer to the 'supported data types' for 'tosa.conv2d_block_scaled' in the specification.}}
   %3 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %0, %1, %2 {block_size = BLOCK_SIZE_32} : (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>, tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>, tensor<*xf16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xf16>
   return %3 : tensor<*xf16>
+}
+
+// -----
+
+// expected-error@+1 {{func.func' op Function argument types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
+func.func @test_shape_func_input(%arg0: !tosa.shape<1>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{'func.func' op Function return types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
+func.func @test_shape_func_output() -> !tosa.shape<4> {
+  %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  return %cst : !tosa.shape<4>
 }
