@@ -5155,19 +5155,6 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
          SubReg.getReg() == SuperVec.getReg();
 }
 
-/// Check if given MachineOperand is an SGPR with SubReg hi16.
-static bool isSGPRHi16(const MachineRegisterInfo &MRI, const SIRegisterInfo &RI,
-                       const MachineOperand &MO) {
-  if (!MO.isReg())
-    return false;
-
-  Register Reg = MO.getReg();
-  if (!Reg || !Reg.isVirtual() || !MRI.getRegClassOrNull(Reg))
-    return false;
-
-  return RI.isSGPRReg(MRI, Reg) && MO.getSubReg() == AMDGPU::hi16;
-}
-
 // Verify the illegal copy from vector register to SGPR for generic opcode COPY
 bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI,
@@ -5197,20 +5184,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (!MRI.isSSA() && MI.isCopy())
     return verifyCopy(MI, MRI, ErrInfo);
 
-  if (SIInstrInfo::isGenericOpcode(Opcode) && !MI.isCopy())
-    return true;
-
-  // Verify that none of the operands in either AMDGPU instruction or COPY
-  // is SGPR hi16.
-  const MCInstrDesc &Desc = get(Opcode);
-  for (int I = 0, E = Desc.getNumOperands(); I != E; ++I) {
-    if (isSGPRHi16(MRI, RI, MI.getOperand(I))) {
-      ErrInfo = "SGPR cannot use hi16 subreg";
-      return false;
-    }
-  }
-
-  if (MI.isCopy())
+  if (SIInstrInfo::isGenericOpcode(Opcode))
     return true;
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
@@ -5226,6 +5200,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   // Make sure the number of operands is correct.
+  const MCInstrDesc &Desc = get(Opcode);
   if (!Desc.isVariadic() &&
       Desc.getNumOperands() != MI.getNumExplicitOperands()) {
     ErrInfo = "Instruction has wrong number of operands.";
