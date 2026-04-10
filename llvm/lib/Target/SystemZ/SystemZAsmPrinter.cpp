@@ -1509,8 +1509,7 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
   //       extension.  This optional field is also created if the
   //       routine has alloca(). This may reduce stack space
   //       if alloca() call causes a stack extension.
-  bool HasArgAreaLength =
-      (Info.AllocaReg != 0) || (Info.CallFrameSize > 128);
+  bool HasArgAreaLength = (Info.AllocaReg != 0) || (Info.CallFrameSize > 128);
 
   // Emit PPA1 section.
   OutStreamer->AddComment("PPA1");
