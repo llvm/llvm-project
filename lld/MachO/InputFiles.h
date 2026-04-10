@@ -81,6 +81,10 @@ public:
   Section(Section &&) = delete;
   Section &operator=(Section &&) = delete;
 
+  // Subsection ordering is semantically meaningful and must not be reordered
+  // by priority-based sorting (e.g. __eh_frame CIE/FDE records).
+  bool orderSensitive = false;
+
 private:
   // Whether we have already split this section into individual subsections.
   // For sections that cannot be split (e.g. literal sections), this is always

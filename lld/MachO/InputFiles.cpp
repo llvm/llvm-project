@@ -447,6 +447,7 @@ void ObjFile::splitEhFrames(ArrayRef<uint8_t> data, Section &ehFrameSection) {
                                             /*align=*/1)});
   }
   ehFrameSection.doneSplitting = true;
+  ehFrameSection.orderSensitive = true;
 }
 
 template <class T>
