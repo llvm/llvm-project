@@ -6608,7 +6608,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   // Determine what the derived output name should be.
   const char *NamedOutput;
 
-  if ((JA.getType() == types::TY_Object || JA.getType() == types::TY_LTO_BC) &&
+  if ((JA.getType() == types::TY_Object || JA.getType() == types::TY_LTO_BC ||
+       JA.getType() == types::TY_LLVM_BC ||
+       JA.getType() == types::TY_LLVM_IR) &&
       C.getArgs().hasArg(options::OPT__SLASH_Fo, options::OPT__SLASH_o)) {
     // The /Fo or /o flag decides the object filename.
     StringRef Val =
@@ -6616,7 +6618,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
             .getLastArg(options::OPT__SLASH_Fo, options::OPT__SLASH_o)
             ->getValue();
     NamedOutput =
-        MakeCLOutputFilename(C.getArgs(), Val, BaseName, types::TY_Object);
+        MakeCLOutputFilename(C.getArgs(), Val, BaseName, JA.getType());
   } else if (JA.getType() == types::TY_Image &&
              C.getArgs().hasArg(options::OPT__SLASH_Fe,
                                 options::OPT__SLASH_o)) {

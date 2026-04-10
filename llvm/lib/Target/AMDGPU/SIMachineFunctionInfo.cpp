@@ -106,10 +106,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       // required for scratch access.
       ScratchRSrcReg = AMDGPU::isChainCC(CC)
                            ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                           : ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+                           : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
 
       ArgInfo.PrivateSegmentBuffer =
-        ArgDescriptor::createRegister(ScratchRSrcReg);
+          ArgDescriptor::createRegister(ScratchRSrcReg);
     }
 
     if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr") &&

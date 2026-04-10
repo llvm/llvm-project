@@ -1977,6 +1977,119 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
   }
 }
 
+/// Returns true if \p Line begins with an alphabetic character or underscore,
+/// indicating it is a PTX instruction that should receive a .loc directive.
+static bool isPTXInstruction(StringRef Line) {
+  StringRef Trimmed = Line.ltrim();
+  return !Trimmed.empty() &&
+         (std::isalpha(static_cast<unsigned char>(Trimmed[0])) ||
+          Trimmed[0] == '_');
+}
+
+/// Returns the DILocation for an inline asm MachineInstr if debug line info
+/// should be emitted, or nullptr otherwise.
+static const DILocation *getInlineAsmDebugLoc(const MachineInstr *MI) {
+  if (!MI || !MI->getDebugLoc())
+    return nullptr;
+  const DISubprogram *SP = MI->getMF()->getFunction().getSubprogram();
+  if (!SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
+    return nullptr;
+  const DILocation *DL = MI->getDebugLoc();
+  if (!DL->getFile() || !DL->getLine())
+    return nullptr;
+  return DL;
+}
+
+namespace {
+struct InlineAsmInliningContext {
+  MCSymbol *FuncNameSym = nullptr;
+  unsigned FileIA = 0;
+  unsigned LineIA = 0;
+  unsigned ColIA = 0;
+
+  bool hasInlinedAt() const { return FuncNameSym != nullptr; }
+};
+} // namespace
+
+/// Resolves the enhanced-lineinfo inlining context for an inline asm debug
+/// location. Returns a default (empty) context if inlining info is unavailable.
+static InlineAsmInliningContext
+getInlineAsmInliningContext(const DILocation *DL, const MachineFunction &MF,
+                            NVPTXDwarfDebug *NVDD, MCStreamer &Streamer,
+                            unsigned CUID) {
+  InlineAsmInliningContext Ctx;
+  const DILocation *InlinedAt = DL->getInlinedAt();
+  if (!InlinedAt || !InlinedAt->getFile() || !NVDD ||
+      !NVDD->isEnhancedLineinfo(MF))
+    return Ctx;
+  const auto *SubProg = getDISubprogram(DL->getScope());
+  if (!SubProg)
+    return Ctx;
+  Ctx.FuncNameSym = NVDD->getOrCreateFuncNameSymbol(SubProg->getLinkageName());
+  Ctx.FileIA = Streamer.emitDwarfFileDirective(
+      0, InlinedAt->getFile()->getDirectory(),
+      InlinedAt->getFile()->getFilename(), std::nullopt, std::nullopt, CUID);
+  Ctx.LineIA = InlinedAt->getLine();
+  Ctx.ColIA = InlinedAt->getColumn();
+  return Ctx;
+}
+
+void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                                    const MCTargetOptions &MCOptions,
+                                    const MDNode *LocMDNode,
+                                    InlineAsm::AsmDialect Dialect,
+                                    const MachineInstr *MI) {
+  assert(!Str.empty() && "Can't emit empty inline asm block");
+  if (Str.back() == 0)
+    Str = Str.substr(0, Str.size() - 1);
+
+  auto emitAsmStr = [&](StringRef AsmStr) {
+    emitInlineAsmStart();
+    OutStreamer->emitRawText(AsmStr);
+    emitInlineAsmEnd(STI, nullptr, MI);
+  };
+
+  const DILocation *DL = getInlineAsmDebugLoc(MI);
+  if (!DL) {
+    emitAsmStr(Str);
+    return;
+  }
+
+  const DIFile *File = DL->getFile();
+  unsigned Line = DL->getLine();
+  const unsigned Column = DL->getColumn();
+  const unsigned CUID = OutStreamer->getContext().getDwarfCompileUnitID();
+  const unsigned FileNumber = OutStreamer->emitDwarfFileDirective(
+      0, File->getDirectory(), File->getFilename(), std::nullopt, std::nullopt,
+      CUID);
+
+  auto *NVDD = static_cast<NVPTXDwarfDebug *>(getDwarfDebug());
+  InlineAsmInliningContext InlineCtx =
+      getInlineAsmInliningContext(DL, *MI->getMF(), NVDD, *OutStreamer, CUID);
+
+  SmallVector<StringRef, 16> Lines;
+  Str.split(Lines, '\n');
+  emitInlineAsmStart();
+  for (const StringRef &L : Lines) {
+    StringRef RTrimmed = L.rtrim('\r');
+    if (isPTXInstruction(L)) {
+      if (InlineCtx.hasInlinedAt()) {
+        OutStreamer->emitDwarfLocDirectiveWithInlinedAt(
+            FileNumber, Line, Column, InlineCtx.FileIA, InlineCtx.LineIA,
+            InlineCtx.ColIA, InlineCtx.FuncNameSym, DWARF2_FLAG_IS_STMT, 0, 0,
+            File->getFilename());
+      } else {
+        OutStreamer->emitDwarfLocDirective(FileNumber, Line, Column,
+                                           DWARF2_FLAG_IS_STMT, 0, 0,
+                                           File->getFilename());
+      }
+    }
+    OutStreamer->emitRawText(RTrimmed);
+    ++Line;
+  }
+  emitInlineAsmEnd(STI, nullptr, MI);
+}
+
 char NVPTXAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(NVPTXAsmPrinter, "nvptx-asm-printer", "NVPTX Assembly Printer",
