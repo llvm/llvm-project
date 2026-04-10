@@ -16,23 +16,47 @@
 
 #include "llvm/Support/Casting.h"
 #include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace llvm::PatternMatchHelpers {
+// A naive std::apply would cost more in compile-time.
+template <typename TupleT, typename IndicesT> class PatternStorage;
+
+template <typename TupleT, size_t... Indices>
+class PatternStorage<TupleT, std::index_sequence<Indices...>> {
+  TupleT Patterns;
+
+public:
+  template <typename... Ty>
+  constexpr PatternStorage(Ty &&...Ps) : Patterns(std::forward<Ty>(Ps)...) {}
+  template <typename ITy> bool combineAnd(ITy *V) const {
+    return (std::get<Indices>(Patterns).match(V) && ...);
+  }
+  template <typename ITy> bool combineOr(ITy *V) const {
+    return (std::get<Indices>(Patterns).match(V) || ...);
+  }
+};
+
 /// Matching or combinator.
 template <typename... Ty> struct match_combine_or { // NOLINT
-  std::tuple<Ty...> Ps;
-  match_combine_or(const Ty &...Ps) : Ps(Ps...) {}
+  PatternStorage<std::tuple<std::decay_t<Ty>...>,
+                 std::index_sequence_for<Ty...>>
+      Storage;
+  match_combine_or(const Ty &...Ps) : Storage(Ps...) {}
   template <typename ITy> bool match(ITy *V) const {
-    return std::apply([V](auto &&...Ps) { return (Ps.match(V) || ...); }, Ps);
+    return Storage.combineOr(V);
   }
 };
 
 /// Matching and combinator.
 template <typename... Ty> struct match_combine_and { // NOLINT
-  std::tuple<Ty...> Ps;
-  match_combine_and(const Ty &...Ps) : Ps(Ps...) {}
+  PatternStorage<std::tuple<std::decay_t<Ty>...>,
+                 std::index_sequence_for<Ty...>>
+      Storage;
+  match_combine_and(const Ty &...Ps) : Storage(Ps...) {}
   template <typename ITy> bool match(ITy *V) const {
-    return std::apply([V](auto &&...Ps) { return (Ps.match(V) && ...); }, Ps);
+    return Storage.combineAnd(V);
   }
 };
 
