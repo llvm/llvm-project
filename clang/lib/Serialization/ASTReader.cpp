@@ -2914,16 +2914,6 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     }
   }
 
-  struct Change {
-    enum ModificationKind {
-      Size,
-      ModTime,
-      Content,
-      None,
-    } Kind;
-    std::optional<int64_t> Old = std::nullopt;
-    std::optional<int64_t> New = std::nullopt;
-  };
   auto HasInputContentChanged = [&](Change OriginalChange) {
     assert(ValidateASTInputFilesContent &&
            "We should only check the content of the inputs with "
@@ -5226,26 +5216,24 @@ ASTReader::ASTReadResult ASTReader::ReadASTCore(
     ModuleFile *ImportedBy, SmallVectorImpl<ImportedModule> &Loaded,
     off_t ExpectedSize, time_t ExpectedModTime,
     ASTFileSignature ExpectedSignature, unsigned ClientLoadCapabilities) {
-  ModuleFile *M;
-  std::string ErrorStr;
-  ModuleManager::AddModuleResult AddResult
-    = ModuleMgr.addModule(FileName, Type, ImportLoc, ImportedBy,
-                          getGeneration(), ExpectedSize, ExpectedModTime,
-                          ExpectedSignature, readASTFileSignature,
-                          M, ErrorStr);
+  auto Result = ModuleMgr.addModule(
+      FileName, Type, ImportLoc, ImportedBy, getGeneration(), ExpectedSize,
+      ExpectedModTime, ExpectedSignature, readASTFileSignature);
+  ModuleFile *M = Result.getModule();
 
-  switch (AddResult) {
-  case ModuleManager::AlreadyLoaded:
+  switch (Result.getKind()) {
+  case AddModuleResult::AlreadyLoaded: {
     Diag(diag::remark_module_import)
         << M->ModuleName << M->FileName << (ImportedBy ? true : false)
         << (ImportedBy ? StringRef(ImportedBy->ModuleName) : StringRef());
     return Success;
+  }
 
-  case ModuleManager::NewlyLoaded:
+  case AddModuleResult::NewlyLoaded:
     // Load module file below.
     break;
 
-  case ModuleManager::Missing:
+  case AddModuleResult::Missing:
     // The module file was missing; if the client can handle that, return
     // it.
     if (ClientLoadCapabilities & ARR_Missing)
@@ -5253,11 +5241,12 @@ ASTReader::ASTReadResult ASTReader::ReadASTCore(
 
     // Otherwise, return an error.
     Diag(diag::err_ast_file_not_found)
-        << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
-        << ErrorStr;
+        << moduleKindForDiagnostic(Type) << FileName;
+    if (!Result.getBufferError().empty())
+      Diag(diag::note_ast_file_buffer_failed) << Result.getBufferError();
     return Failure;
 
-  case ModuleManager::OutOfDate:
+  case AddModuleResult::OutOfDate:
     // We couldn't load the module file because it is out-of-date. If the
     // client can handle out-of-date, return it.
     if (ClientLoadCapabilities & ARR_OutOfDate)
@@ -5265,9 +5254,20 @@ ASTReader::ASTReadResult ASTReader::ReadASTCore(
 
     // Otherwise, return an error.
     Diag(diag::err_ast_file_out_of_date)
-        << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
-        << ErrorStr;
+        << moduleKindForDiagnostic(Type) << FileName;
+    for (const auto &C : Result.getChanges()) {
+      Diag(diag::note_fe_ast_file_modified)
+          << C.Kind << (C.Old && C.New) << llvm::itostr(C.Old.value_or(0))
+          << llvm::itostr(C.New.value_or(0));
+    }
+    Diag(diag::note_ast_file_input_files_validation_status)
+        << Result.getValidationStatus();
+    if (!Result.getSignatureError().empty())
+      Diag(diag::note_ast_file_signature_failed) << Result.getSignatureError();
     return Failure;
+
+  case AddModuleResult::None:
+    llvm_unreachable("Unexpected value from adding module.");
   }
 
   assert(M && "Missing module file");
