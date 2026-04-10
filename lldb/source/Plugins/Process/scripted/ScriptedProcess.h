@@ -98,7 +98,7 @@ public:
     // dictionary before emitting the private stop event to avoid having the
     // module loading happen while the process state is changing.
     if (StateIsStoppedState(state, true))
-      GetLoadedDynamicLibrariesInfos(true);
+      GetLoadedDynamicLibrariesInfos(/*include_mh_and_load_commands=*/true);
     SetPrivateState(state);
   }
 

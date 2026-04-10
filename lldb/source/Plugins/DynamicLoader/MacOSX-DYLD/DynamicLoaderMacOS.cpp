@@ -217,16 +217,16 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
     StructuredData::Array *images = all_image_info_json_sp->GetAsDictionary()
                                         ->GetValueForKey("images")
                                         ->GetAsArray();
-    if (images->GetSize() > 0 &&
+    if (images->GetSize() > 0 && images->GetItemAtIndex(0)->GetAsDictionary() &&
         images->GetItemAtIndex(0)->GetAsDictionary()->HasKey("mach_header")) {
       if (JSONImageInformationIntoImageInfo(all_image_info_json_sp,
                                             image_infos)) {
-        LLDB_LOGF(log, "Initial module fetch:  Adding %" PRId64 " modules.\n",
+        LLDB_LOGF(log, "Initial module fetch:  Adding %" PRIu64 " modules.\n",
                   (uint64_t)image_infos.size());
 
-        auto images = PreloadModulesFromImageInfos(image_infos);
-        UpdateSpecialBinariesFromPreloadedModules(images);
-        AddModulesUsingPreloadedModules(images);
+        auto new_images = PreloadModulesFromImageInfos(image_infos);
+        UpdateSpecialBinariesFromPreloadedModules(new_images);
+        AddModulesUsingPreloadedModules(new_images);
       }
     } else {
       // This is a newer debugserver which only replied with
@@ -238,7 +238,7 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
       for (size_t i = 0; i < image_count; i++) {
         StructuredData::Dictionary *image =
             images->GetItemAtIndex(i)->GetAsDictionary();
-        if (image->HasKey("load_address")) {
+        if (image && image->HasKey("load_address")) {
           addr_t val = image->GetValueForKey("load_address")
                            ->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
           if (val != LLDB_INVALID_ADDRESS)
@@ -440,19 +440,15 @@ void DynamicLoaderMacOS::AddBinaries(
   Log *log = GetLog(LLDBLog::DynamicLoader);
   ImageInfo::collection image_infos;
 
-  const size_t image_fetch_max = 600;
-  std::vector<addr_t> fetch_binaries;
+  static constexpr size_t g_image_fetch_max = 600;
   size_t fetched = 0;
   size_t total_image_size = load_addresses.size();
-  fetch_binaries.reserve(std::min(image_fetch_max, total_image_size));
   while (fetched < total_image_size) {
     size_t this_fetch_amt =
-        std::min(image_fetch_max, total_image_size - fetched);
-    fetch_binaries.resize(this_fetch_amt);
-    // `addr_t* + num_elem` -- pointer math is addr_t sized.
-    const addr_t *this_chunk_start = load_addresses.data() + fetched;
-    memcpy(fetch_binaries.data(), this_chunk_start,
-           this_fetch_amt * sizeof(addr_t));
+        std::min(g_image_fetch_max, total_image_size - fetched);
+    std::vector<addr_t> fetch_binaries(load_addresses.begin() + fetched,
+                                       load_addresses.begin() + fetched +
+                                           this_fetch_amt);
 
     LLDB_LOGF(log, "Adding %" PRId64 " modules.",
               (uint64_t)fetch_binaries.size());
@@ -469,9 +465,9 @@ void DynamicLoaderMacOS::AddBinaries(
                                           ->GetAsArray();
       if (images->GetSize() == fetch_binaries.size() &&
           JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
-        auto images = PreloadModulesFromImageInfos(image_infos);
-        UpdateSpecialBinariesFromPreloadedModules(images);
-        AddModulesUsingPreloadedModules(images);
+        auto new_images = PreloadModulesFromImageInfos(image_infos);
+        UpdateSpecialBinariesFromPreloadedModules(new_images);
+        AddModulesUsingPreloadedModules(new_images);
       }
     }
     fetched += this_fetch_amt;
