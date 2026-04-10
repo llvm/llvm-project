@@ -161,8 +161,8 @@ namespace std {
     constexpr T &value() &;
     constexpr T &&value() &&;
     constexpr const T &&value() const &&;
-    template<class U = remove_cv_t<T>> constexpr T value_or(U &&) const &;
-    template<class U = remove_cv_t<T>> constexpr T value_or(U &&) &&;
+    template<class U = remove_cv_t<T>> constexpr remove_cv_t<T> value_or(U &&) const &;  // LWG4406
+    template<class U = remove_cv_t<T>> constexpr remove_cv_t<T> value_or(U &&) &&;      // LWG4406
 
     // [optional.monadic], monadic operations
     template<class F> constexpr auto and_then(F&& f) &;         // since C++23
@@ -1176,24 +1176,31 @@ public:
   using __base::has_value;
   using __base::value;
 
+  // LWG4406 value_or return statement is inconsistent with Mandates
   template <class _Up = remove_cv_t<_Tp>>
 #    if _LIBCPP_STD_VER >= 26
     requires(is_object_v<_Tp>)
 #    endif
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) const& {
-    static_assert(is_copy_constructible_v<_Tp>, "optional<T>::value_or: T must be copy constructible");
-    static_assert(is_convertible_v<_Up, _Tp>, "optional<T>::value_or: U must be convertible to T");
-    return this->has_value() ? this->__get() : static_cast<_Tp>(std::forward<_Up>(__v));
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr remove_cv_t<_Tp> value_or(_Up&& __v) const& {
+    using _Ret = remove_cv_t<_Tp>;
+    static_assert(is_convertible_v<const _Tp&, _Ret>,
+                  "optional<T>::value_or: const T& must be implicitly convertible to remove_cv_t<T>");
+    static_assert(
+        is_convertible_v<_Up, _Ret>, "optional<T>::value_or: U must be implicitly convertible to remove_cv_t<T>");
+    return this->has_value() ? this->__get() : std::forward<_Up>(__v);
   }
 
   template <class _Up = remove_cv_t<_Tp>>
 #    if _LIBCPP_STD_VER >= 26
     requires(is_object_v<_Tp>)
 #    endif
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) && {
-    static_assert(is_move_constructible_v<_Tp>, "optional<T>::value_or: T must be move constructible");
-    static_assert(is_convertible_v<_Up, _Tp>, "optional<T>::value_or: U must be convertible to T");
-    return this->has_value() ? std::move(this->__get()) : static_cast<_Tp>(std::forward<_Up>(__v));
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr remove_cv_t<_Tp> value_or(_Up&& __v) && {
+    using _Ret = remove_cv_t<_Tp>;
+    static_assert(
+        is_convertible_v<_Tp, _Ret>, "optional<T>::value_or: T must be implicitly convertible to remove_cv_t<T>");
+    static_assert(
+        is_convertible_v<_Up, _Ret>, "optional<T>::value_or: U must be implicitly convertible to remove_cv_t<T>");
+    return this->has_value() ? std::move(this->__get()) : std::forward<_Up>(__v);
   }
 
 #    if _LIBCPP_STD_VER >= 23
@@ -1343,15 +1350,17 @@ public:
 // optional<T&> overloads
 #    if _LIBCPP_STD_VER >= 26
 
+  // LWG4406 value_or return statement is inconsistent with Mandates
   template <class _Up = remove_cvref_t<_Tp>>
     requires(is_lvalue_reference_v<_Tp> && is_object_v<__libcpp_remove_reference_t<_Tp>> &&
              !is_array_v<__libcpp_remove_reference_t<_Tp>>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decay_t<_Tp> value_or(_Up&& __v) const {
+    using _Ret = remove_cvref_t<_Tp>;
     static_assert(
-        is_constructible_v<remove_cvref_t<_Tp>, _Tp&>, "optional<T&>::value_or: remove_cv_t<T> must be constructible");
+        is_convertible_v<_Tp&, _Ret>, "optional<T&>::value_or: T& must be implicitly convertible to remove_cv_t<T>");
     static_assert(
-        is_convertible_v<_Up, remove_cvref_t<_Tp>>, "optional<T&>::value_or: U must be convertible to remove_cv_t<T>");
-    return this->has_value() ? this->__get() : static_cast<remove_cvref_t<_Tp>>(std::forward<_Up>(__v));
+        is_convertible_v<_Up, _Ret>, "optional<T&>::value_or: U must be implicitly convertible to remove_cv_t<T>");
+    return this->has_value() ? this->__get() : std::forward<_Up>(__v);
   }
 
   template <class _Func>

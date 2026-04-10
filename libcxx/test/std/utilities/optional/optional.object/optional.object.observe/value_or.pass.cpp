@@ -13,6 +13,7 @@
 
 #include <optional>
 #include <type_traits>
+#include <utility>
 #include <cassert>
 
 #include "test_macros.h"
@@ -89,6 +90,30 @@ constexpr int test()
       assert(!opt);
     }
 #endif
+    // LWG3424: return type is remove_cv_t<T>
+    {
+      optional<const int> opt(2);
+      ASSERT_SAME_TYPE(decltype(opt.value_or(3)), int);
+      assert(opt.value_or(3) == 2);
+    }
+    {
+      optional<const int> opt;
+      ASSERT_SAME_TYPE(decltype(std::move(opt).value_or(3)), int);
+      assert(std::move(opt).value_or(3) == 3);
+    }
+    // LWG3424: also check `volatile T` and `const volatile T`. Volatile reads
+    // are not allowed in constant expressions, so we verify the return type
+    // via decltype/declval without actually invoking value_or at runtime.
+    {
+      using O = optional<volatile int>;
+      ASSERT_SAME_TYPE(decltype(std::declval<const O&>().value_or(0)), int);
+      ASSERT_SAME_TYPE(decltype(std::declval<O&&>().value_or(0)), int);
+    }
+    {
+      using O = optional<const volatile int>;
+      ASSERT_SAME_TYPE(decltype(std::declval<const O&>().value_or(0)), int);
+      ASSERT_SAME_TYPE(decltype(std::declval<O&&>().value_or(0)), int);
+    }
     return 0;
 }
 
