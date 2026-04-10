@@ -6036,8 +6036,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost;
   }
 
-  // f16 -> f32 is natively supported for fdot
-  if (Opcode == Instruction::FAdd && !IsUSDot && !IsSub &&
+  // f16 -> f32 is natively supported for fdot using either
+  // SVE or NEON instruction.
+  if (Opcode == Instruction::FAdd && !IsSub &&
       IsSupported(ST->hasSME2() || ST->hasSVE2p1(), ST->hasF16F32DOT()) &&
       AccumLT.second.getScalarType() == MVT::f32 &&
       InputLT.second.getScalarType() == MVT::f16)
