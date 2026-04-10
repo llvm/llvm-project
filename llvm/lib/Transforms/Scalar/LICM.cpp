@@ -197,8 +197,6 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
                                      Loop *CurLoop, Instruction &I,
                                      SinkAndHoistLICMFlags &Flags,
                                      bool InvariantGroup);
-static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
-                                      MemoryUse &MU);
 /// Aggregates various functions for hoisting computations out of loop.
 static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
@@ -2390,44 +2388,72 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
     MemoryAccess *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, MU);
     return !MSSA->isLiveOnEntryDef(Source) &&
            CurLoop->contains(Source->getBlock()) &&
-           !(InvariantGroup && Source->getBlock() == CurLoop->getHeader() && isa<MemoryPhi>(Source));
+           !(InvariantGroup && Source->getBlock() == CurLoop->getHeader() &&
+             isa<MemoryPhi>(Source));
   }
 
-  // For sinking, we'd need to check all Defs below this use. The getClobbering
-  // call will look on the backedge of the loop, but will check aliasing with
-  // the instructions on the previous iteration.
-  // For example:
-  // for (i ... )
-  //   load a[i] ( Use (LoE)
-  //   store a[i] ( 1 = Def (2), with 2 = Phi for the loop.
-  //   i++;
-  // The load sees no clobbering inside the loop, as the backedge alias check
-  // does phi translation, and will check aliasing against store a[i-1].
-  // However sinking the load outside the loop, below the store is incorrect.
+  // For sinking, check that no aliasing MemoryDef in the loop could execute
+  // after the use.  Walk the MemorySSA graph from the loop header's MemoryPhi
+  // to find all defs, and reject only those that alias with MU.
+  BatchAAResults BAA(MSSA->getAA());
+  Instruction *UseInst = MU->getMemoryInst();
+  auto UseLoc = MemoryLocation::getOrNone(UseInst);
 
-  // For now, only sink if there are no Defs in the loop, and the existing ones
-  // precede the use and are in the same block.
-  // FIXME: Increase precision: Safe to sink if Use post dominates the Def;
-  // needs PostDominatorTreeAnalysis.
-  // FIXME: More precise: no Defs that alias this Use.
-  if (Flags.tooManyMemoryAccesses())
-    return true;
-  for (auto *BB : CurLoop->getBlocks())
-    if (pointerInvalidatedByBlock(*BB, *MSSA, *MU))
-      return true;
-  // When sinking, the source block may not be part of the loop so check it.
-  if (!CurLoop->contains(&I))
-    return pointerInvalidatedByBlock(*I.getParent(), *MSSA, *MU);
+  SmallVector<const MemoryAccess *, 8> Worklist;
+  SmallPtrSet<const MemoryAccess *, 8> Visited;
 
-  return false;
-}
+  // Seed with the loop header's MemoryPhi to reach defs inside the loop.
+  if (auto *HeaderPhi = MSSA->getMemoryAccess(CurLoop->getHeader())) {
+    Worklist.push_back(HeaderPhi);
+    Visited.insert(HeaderPhi);
+  }
 
-bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA, MemoryUse &MU) {
-  if (const auto *Accesses = MSSA.getBlockDefs(&BB))
-    for (const auto &MA : *Accesses)
-      if (const auto *MD = dyn_cast<MemoryDef>(&MA))
-        if (MU.getBlock() != MD->getBlock() || !MSSA.locallyDominates(MD, &MU))
-          return true;
+  // When sinking from outside the loop, also seed with MU's defining access
+  // so that defs after MU in the source block are reachable via users().
+  if (!CurLoop->contains(&I)) {
+    auto *DefAcc = MU->getDefiningAccess();
+    if (MSSA->isLiveOnEntryDef(DefAcc)) {
+      // MU's defining access is LiveOnEntry — check defs after MU in the
+      // source block.
+      if (const auto *Defs = MSSA->getBlockDefs(I.getParent()))
+        for (const auto &MA : *Defs)
+          if (const auto *MD = dyn_cast<MemoryDef>(&MA))
+            if (!MSSA->locallyDominates(MD, MU))
+              if (isModSet(BAA.getModRefInfo(MD->getMemoryInst(), UseLoc)))
+                return true;
+    } else if (Visited.insert(DefAcc).second) {
+      Worklist.push_back(DefAcc);
+    }
+  }
+
+  while (!Worklist.empty()) {
+    const MemoryAccess *MA = Worklist.pop_back_val();
+    for (const User *U : MA->users()) {
+      const auto *UserMA = cast<MemoryAccess>(U);
+      if (!Visited.insert(UserMA).second)
+        continue;
+      // Only visit accesses in the loop or in the source block.
+      if (!CurLoop->contains(UserMA->getBlock()) &&
+          UserMA->getBlock() != I.getParent())
+        continue;
+
+      if (const auto *MD = dyn_cast<MemoryDef>(UserMA)) {
+        Instruction *DefInst = MD->getMemoryInst();
+        // Check if this def aliases with the use we want to sink.
+        if (isModSet(BAA.getModRefInfo(DefInst, UseLoc)))
+          // An aliasing def exists — can't sink past it unless it dominates
+          // the use in the same block.
+          if (MU->getBlock() != MD->getBlock() ||
+              !MSSA->locallyDominates(MD, MU))
+            return true;
+        Worklist.push_back(MD);
+      }
+
+      if (isa<MemoryPhi>(UserMA))
+        Worklist.push_back(UserMA);
+    }
+  }
+
   return false;
 }
 
