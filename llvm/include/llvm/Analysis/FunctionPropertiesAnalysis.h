@@ -187,11 +187,11 @@ public:
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
     : public PassInfoMixin<FunctionPropertiesStatisticsPass> {
-  bool IsPrePasses;
+  bool IsPreOpt;
 
 public:
-  explicit FunctionPropertiesStatisticsPass(bool IsPrePasses = false)
-      : IsPrePasses(IsPrePasses) {}
+  explicit FunctionPropertiesStatisticsPass(bool IsPreOpt = false)
+      : IsPreOpt(IsPreOpt) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

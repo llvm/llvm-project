@@ -19,12 +19,11 @@ namespace llvm {
 
 class Function;
 
-/// Statistics pass for the FunctionPropertiesAnalysis results.
 class InstCountPass : public PassInfoMixin<InstCountPass> {
-  bool IsPrePasses;
+  bool IsPreOpt;
 
 public:
-  explicit InstCountPass(bool IsPrePasses = false) : IsPrePasses(IsPrePasses) {}
+  explicit InstCountPass(bool IsPreOpt = false) : IsPreOpt(IsPreOpt) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

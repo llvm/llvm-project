@@ -21,28 +21,28 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instcount"
 
-STATISTIC(TotalInstsPrePasses,
-          "Number of instructions of all types (before passes)");
+STATISTIC(TotalInstsPreOpt,
+          "Number of instructions of all types (before optimizations)");
 STATISTIC(TotalInsts, "Number of instructions of all types");
-STATISTIC(TotalBlocksPrePasses, "Number of basic blocks (before passes)");
+STATISTIC(TotalBlocksPreOpt, "Number of basic blocks (before optimizations)");
 STATISTIC(TotalBlocks, "Number of basic blocks");
-STATISTIC(TotalFuncsPrePasses,
-          "Number of non-external functions (before passes)");
+STATISTIC(TotalFuncsPreOpt,
+          "Number of non-external functions (before optimizations)");
 STATISTIC(TotalFuncs, "Number of non-external functions");
-STATISTIC(LargestFunctionSizePrePasses,
+STATISTIC(LargestFunctionSizePreOpt,
           "Largest number of instructions in a single function (before "
-          "passes)");
+          "optimizations)");
 STATISTIC(LargestFunctionSize,
           "Largest number of instructions in a single function");
-STATISTIC(LargestFunctionBBCountPrePasses,
+STATISTIC(LargestFunctionBBCountPreOpt,
           "Largest number of basic blocks in a single function (before "
-          "passes)");
+          "optimizations)");
 STATISTIC(LargestFunctionBBCount,
           "Largest number of basic blocks in a single function");
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
-  STATISTIC(Num##OPCODE##InstPrePasses,                                        \
-            "Number of " #OPCODE " insts (before passes)");                    \
+  STATISTIC(Num##OPCODE##InstPreOpt,                                           \
+            "Number of " #OPCODE " insts (before optimizations)");             \
   STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");
 
 #include "llvm/IR/Instruction.def"
@@ -50,16 +50,16 @@ STATISTIC(LargestFunctionBBCount,
 namespace {
 class InstCount : public InstVisitor<InstCount> {
   friend class InstVisitor<InstCount>;
-  bool IsPrePasses;
+  bool IsPreOpt;
 
 public:
-  InstCount(bool IsPrePasses) : IsPrePasses(IsPrePasses) {}
+  InstCount(bool IsPreOpt) : IsPreOpt(IsPreOpt) {}
 
   void visitFunction(Function &F) {
-    if (IsPrePasses) {
-      ++TotalFuncsPrePasses;
-      LargestFunctionSizePrePasses.updateMax(F.getInstructionCount());
-      LargestFunctionBBCountPrePasses.updateMax(F.size());
+    if (IsPreOpt) {
+      ++TotalFuncsPreOpt;
+      LargestFunctionSizePreOpt.updateMax(F.getInstructionCount());
+      LargestFunctionBBCountPreOpt.updateMax(F.size());
     } else {
       ++TotalFuncs;
       LargestFunctionSize.updateMax(F.getInstructionCount());
@@ -68,17 +68,17 @@ public:
   }
 
   void visitBasicBlock(BasicBlock &BB) {
-    if (IsPrePasses)
-      ++TotalBlocksPrePasses;
+    if (IsPreOpt)
+      ++TotalBlocksPreOpt;
     else
       ++TotalBlocks;
   }
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
   void visit##OPCODE(CLASS &) {                                                \
-    if (IsPrePasses) {                                                         \
-      ++Num##OPCODE##InstPrePasses;                                            \
-      ++TotalInstsPrePasses;                                                   \
+    if (IsPreOpt) {                                                            \
+      ++Num##OPCODE##InstPreOpt;                                               \
+      ++TotalInstsPreOpt;                                                      \
     } else {                                                                   \
       ++Num##OPCODE##Inst;                                                     \
       ++TotalInsts;                                                            \
@@ -98,7 +98,7 @@ PreservedAnalyses InstCountPass::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   LLVM_DEBUG(dbgs() << "INSTCOUNT: running on function " << F.getName()
                     << "\n");
-  InstCount(this->IsPrePasses).visit(F);
+  InstCount(this->IsPreOpt).visit(F);
 
   return PreservedAnalyses::all();
 }
