@@ -294,7 +294,7 @@ Changes to LLDB
 
 ### Windows
 
-* Python 3.11 will become the minimum required version to build lldb on Windows.
+* Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
 
 Changes to BOLT
 ---------------
