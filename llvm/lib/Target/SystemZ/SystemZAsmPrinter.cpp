@@ -1373,9 +1373,7 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
   if (TM.getTargetTriple().isOSzOS()) {
     // Emit symbol for the end of function if the z/OS target streamer
     // is used. This is needed to calculate the size of the function.
-    MCSymbol *FnEndSym = createTempSymbol("func_end");
-    OutStreamer->emitLabel(FnEndSym);
-    DeferredPPA1.back().FnEnd = FnEndSym;
+    OutStreamer->emitLabel(DeferredPPA1.back().FnEnd);
   }
 }
 
@@ -1689,7 +1687,7 @@ void SystemZAsmPrinter::calculatePPA1(MCSymbol *CurrentFnPPA1Sym, MCSymbol *Curr
     Info.Name = MF->getFunction().getName();
   Info.PPA1 = CurrentFnPPA1Sym;
   Info.EPMarker = CurrentFnEPMarkerSym;
-  Info.FnEnd = nullptr; // Filled later.
+  Info.FnEnd = createTempSymbol("func_end");
   Info.PersonalityRoutine = PersonalityRoutine;
   Info.GCCEH = GCCEH;
   Info.CallFrameSize = MFFrame.getMaxCallFrameSize();
