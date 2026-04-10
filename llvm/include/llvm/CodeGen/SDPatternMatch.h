@@ -1019,10 +1019,7 @@ struct FunnelShiftLike_match {
                               : m_Rotr(m_Value(X), m_Value(Z))))
       return matchOperands(Ctx, X, X, Z);
 
-    if (N->getOpcode() == ISD::OR)
-      return matchShiftOr(Ctx, N, N.getValueType().getScalarSizeInBits());
-
-    return false;
+    return matchShiftOr(Ctx, N, N.getValueType().getScalarSizeInBits());
   }
 };
 
@@ -1305,10 +1302,8 @@ bool FunnelShiftLike_match<T0_P, T1_P, T2_P, Left>::matchShiftOr(
   APInt ShlConst, SrlConst;
   if (!sd_context_match(
           N, Ctx,
-          m_Or(
-              m_Shl(m_Value(X), m_AllOf(m_Value(ShlAmt), m_ConstInt(ShlConst))),
-              m_Srl(m_Value(Y),
-                    m_AllOf(m_Value(SrlAmt), m_ConstInt(SrlConst))))) ||
+          m_Or(m_Shl(m_Value(X), m_Value(ShlAmt, m_ConstInt(ShlConst))),
+               m_Srl(m_Value(Y), m_Value(SrlAmt, m_ConstInt(SrlConst))))) ||
       !hasComplementaryConstantShifts(ShlConst, SrlConst, BitWidth))
     return false;
 
