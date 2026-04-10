@@ -273,6 +273,19 @@ public:
              "Implicit cast types must be compatible");
       Visit(e->getSubExpr());
       break;
+    case CK_ToUnion: {
+      if (dest.isIgnored()) {
+        cgf.emitAnyExpr(e->getSubExpr(), AggValueSlot::ignored(),
+                        /*ignoreResult=*/true);
+        break;
+      }
+      QualType ty = e->getSubExpr()->getType();
+      Address castPtr = dest.getAddress().withElementType(cgf.getBuilder(),
+                                                          cgf.convertType(ty));
+      emitInitializationToLValue(e->getSubExpr(),
+                                 cgf.makeAddrLValue(castPtr, ty));
+      break;
+    }
     default:
       cgf.cgm.errorNYI(e->getSourceRange(),
                        std::string("AggExprEmitter: VisitCastExpr: ") +
