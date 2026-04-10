@@ -7600,8 +7600,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
       const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
       MachineRegisterInfo &MRI = MF.getRegInfo();
-      Register SubReg = X86::NoSubRegister;
-      Register NewSrc = X86::NoSubRegister;
+      unsigned SubReg = X86::NoSubRegister;
+      Register NewSrc;
 
       if (MRI.isSSA()) {
         NewSrc = MRI.createVirtualRegister(&RC);

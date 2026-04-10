@@ -74,18 +74,18 @@ l0:
     i32 5, label %l1
   ]
 
-common.ret1:                                      ; preds = %l2, %7, %7
+common.ret1:                                      ; preds = %l2, %l0, %l0
   ret ptr null
 
-l1:                                               ; preds = %7, %7
+l1:                                               ; preds = %l0, %l0
   br label %.sink.split
 
-.sink.split:                                      ; preds = %7, %7, %l1
+.sink.split:                                      ; preds = %l0, %l0, %l1
   %.sink = phi i32 [ %f, %l1 ], [ 0, %l0 ], [ 0, %l0 ]
   store i32 %.sink, ptr %d, align 4
   br label %l2
 
-l2:                                               ; preds = %.sink.split, %7
+l2:                                               ; preds = %.sink.split, %l0
   %b2 = tail call ptr @__rv_alloc_D2A()
   store i32 0, ptr %c, align 4
   %reass.sub = sub i32 %y, %f
@@ -102,3 +102,116 @@ declare ptr @bitstob(ptr)
 declare void @__Bfree_D2A()
 declare ptr @__rv_alloc_D2A()
 declare i32 @llvm.smin.i32(i32, i32)
+
+define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
+; CHECK-LABEL: pr190962:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rsi
+; CHECK-NEXT:    pushq %rdi
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    movq %r9, %rdi
+; CHECK-NEXT:    movq %rdx, %rbx
+; CHECK-NEXT:    movq %rcx, %rsi
+; CHECK-NEXT:    callq f2
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    imulq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    je .LBB1_3
+; CHECK-NEXT:  # %bb.1: # %l1
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r13
+; CHECK-NEXT:    movq 0, %r15
+; CHECK-NEXT:    callq f2
+; CHECK-NEXT:    movq 0, %r12
+; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    orq %r13, %r15
+; CHECK-NEXT:    jne .LBB1_2
+; CHECK-NEXT:  # %bb.4: # %l2
+; CHECK-NEXT:    movq %rax, %r14
+; CHECK-NEXT:    movq %rbx, %rcx
+; CHECK-NEXT:    callq f4
+; CHECK-NEXT:    movl $1, %ebp
+; CHECK-NEXT:    orq %r12, %r14
+; CHECK-NEXT:    je .LBB1_5
+; CHECK-NEXT:  .LBB1_2: # %common.ret1.sink.split
+; CHECK-NEXT:    callq f3
+; CHECK-NEXT:    # implicit-def: $ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    movl %ebp, %r9d
+; CHECK-NEXT:    callq f1
+; CHECK-NEXT:    callq f3
+; CHECK-NEXT:  .LBB1_3: # %common.ret1
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    popq %rdi
+; CHECK-NEXT:    popq %rsi
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB1_5: # %l3
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    je .LBB1_3
+; CHECK-NEXT:  # %bb.6: # %l4
+; CHECK-NEXT:    movl $0, (%rsi)
+; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    callq f1
+  %g = tail call i64 @f2()
+  %h = mul i64 %e, %d
+  %i = icmp eq i64 %h, 0
+  br i1 %i, label %common.ret1, label %l1
+
+common.ret1.sink.split:                           ; preds = %l2, %l1
+  %.sink = phi i32 [ 0, %l1 ], [ 1, %l2 ]
+  tail call void @f3()
+  %b0 = tail call i32 (i32, ptr, ...) @f1(i32 undef, ptr null, ptr null, i32 %.sink)
+  tail call void @f3()
+  br label %common.ret1
+
+common.ret1:                                      ; preds = %common.ret1.sink.split, %l3, %6
+  ret i32 0
+
+l1:                                               ; preds = %6
+  %b2 = load volatile i64, ptr null, align 4294967296
+  %b3 = tail call i64 @f2()
+  %b4 = load volatile i64, ptr null, align 4294967296
+  %b5 = or i64 %b2, %f
+  %.not = icmp eq i64 %b5, 0
+  br i1 %.not, label %l2, label %common.ret1.sink.split
+
+l2:                                               ; preds = %l1
+  %b7 = tail call i64 @f4(ptr %b)
+  %b8 = or i64 %b4, %b3
+  %.not1 = icmp eq i64 %b8, 0
+  br i1 %.not1, label %l3, label %common.ret1.sink.split
+
+l3:                                               ; preds = %l2
+  %c0 = icmp eq i64 %d, 0
+  br i1 %c0, label %common.ret1, label %l4
+
+l4:                                               ; preds = %l3
+  store i32 0, ptr %a, align 4
+  %c2 = tail call i32 (i32, ptr, ...) @f1(i32 0, ptr null, ptr null, i32 0, i64 0, i64 0, i64 %e)
+  unreachable
+}
+
+declare i32 @f1(i32, ptr, ...)
+declare i64 @f2()
+declare void @f3()
+declare i64 @f4(ptr)
