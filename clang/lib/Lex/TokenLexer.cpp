@@ -88,7 +88,8 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
   // Mark the macro as currently disabled, so that it is not recursively
   // expanded.  The macro must be disabled only after argument pre-expansion of
   // function-like macro arguments occurs.
-  Macro->DisableMacro();
+  if (!Macro->TryDisableMacro())
+    PP.Diag(Tok, diag::err_pp_macro_recursion_depth_limit_exceeded);
 }
 
 /// Create a TokenLexer for the specified token stream.  This does not
