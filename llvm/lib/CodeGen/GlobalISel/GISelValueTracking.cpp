@@ -1819,8 +1819,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
     break;
   }
-  case TargetOpcode::G_PHI:
-  case TargetOpcode::PHI: {
+  case TargetOpcode::G_PHI: {
     // Cap PHI recursion below the global limit to avoid spending the entire
     // budget chasing loop back-edges (matches ValueTracking's
     // PhiRecursionLimit).
@@ -1832,8 +1831,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
       const MachineOperand &Src = MI.getOperand(Idx);
       Register SrcReg = Src.getReg();
-      LLT SrcTy = MRI.getType(SrcReg);
-      if (!SrcReg.isVirtual() || Src.getSubReg() != 0 || !SrcTy.isValid()) {
+      if (!SrcReg.isVirtual()) {
         Known.resetAll();
         break;
       }
