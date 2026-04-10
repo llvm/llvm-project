@@ -1383,12 +1383,12 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 2);
 
     if (LangOpts.PointerAuthELFGOT)
-      getModule().addModuleFlag(llvm::Module::Min, "ptrauth-elf-got", 1);
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got", 1);
 
     if (getTriple().isOSLinux()) {
       if (LangOpts.PointerAuthCalls)
-        getModule().addModuleFlag(llvm::Module::Min, "ptrauth-sign-personality",
-                                  1);
+        getModule().addModuleFlag(llvm::Module::Error,
+                                  "ptrauth-sign-personality", 1);
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =
@@ -8315,8 +8315,7 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
     auto *VD = cast<VarDecl>(cast<DeclRefExpr>(RefExpr)->getDecl());
     bool PerformInit =
         VD->getAnyInitializer() &&
-        !VD->getAnyInitializer()->isConstantInitializer(getContext(),
-                                                        /*ForRef=*/false);
+        !VD->getAnyInitializer()->isConstantInitializer(getContext());
 
     Address Addr(GetAddrOfGlobalVar(VD),
                  getTypes().ConvertTypeForMem(VD->getType()),

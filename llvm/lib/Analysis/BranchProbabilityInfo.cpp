@@ -1357,12 +1357,6 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
   return {1, static_cast<uint32_t>(succ_size(Src))};
 }
 
-BranchProbability
-BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
-                                          const_succ_iterator Dst) const {
-  return getEdgeProbability(Src, std::distance(succ_begin(Src), Dst));
-}
-
 /// Get the raw edge probability calculated for the block pair. This returns the
 /// sum of all raw edge probabilities from Src to Dst.
 BranchProbability
