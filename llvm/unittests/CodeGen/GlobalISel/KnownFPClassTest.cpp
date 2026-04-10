@@ -1595,3 +1595,51 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtan2NNaN) {
   EXPECT_EQ(fcFinite, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
+
+// isAbsoluteValueULEOne: x - floor(x) is in [0, 1), so multiplying a known-
+// finite value by it cannot overflow to infinity.
+TEST_F(AArch64GISelMITest, TestFPClassFMulAbsULEOne) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %floor:_(s32) = G_FFLOOR %x
+    %fract:_(s32) = G_FSUB %x, %floor
+    %finite:_(s32) = nnan ninf G_FABS %val
+    %fmul:_(s32) = G_FMUL %finite, %fract
+    %copy:_(s32) = COPY %fmul
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+  EXPECT_EQ(~fcInf, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
+
+// G_FMA with A == B (and A guaranteed not-undef): the multiply part is a
+// square, so the result is known non-negative (never fcNegative).
+TEST_F(AArch64GISelMITest, TestFPClassFMASelfSquare) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %val:_(s32) = G_FREEZE %load
+    %c:_(s32) = G_FCONSTANT float 1.0
+    %fma:_(s32) = G_FMA %val, %val, %c
+    %copy:_(s32) = COPY %fma
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+  EXPECT_EQ(fcNan | fcPosInf | fcPosNormal, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
