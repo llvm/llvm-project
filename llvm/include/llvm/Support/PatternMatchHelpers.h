@@ -15,48 +15,39 @@
 #define LLVM_SUPPORT_PATTERNMATCHHELPERS_H
 
 #include "llvm/Support/Casting.h"
-#include <tuple>
-#include <type_traits>
-#include <utility>
 
 namespace llvm::PatternMatchHelpers {
-// A naive std::apply would cost more in compile-time.
-template <typename TupleT, typename IndicesT> class PatternStorage;
-
-template <typename TupleT, size_t... Indices>
-class PatternStorage<TupleT, std::index_sequence<Indices...>> {
-  TupleT Patterns;
-
-public:
-  template <typename... Ty>
-  constexpr PatternStorage(Ty &&...Ps) : Patterns(std::forward<Ty>(Ps)...) {}
-  template <typename ITy> bool combineAnd(ITy *V) const {
-    return (std::get<Indices>(Patterns).match(V) && ...);
-  }
-  template <typename ITy> bool combineOr(ITy *V) const {
-    return (std::get<Indices>(Patterns).match(V) || ...);
-  }
+/// Matching or combinator leaf case.
+template <typename... Tys> struct match_combine_or { // NOLINT
+  template <typename ITy> bool match(ITy *) const { return false; }
 };
 
 /// Matching or combinator.
-template <typename... Ty> struct match_combine_or { // NOLINT
-  PatternStorage<std::tuple<std::decay_t<Ty>...>,
-                 std::index_sequence_for<Ty...>>
-      Storage;
-  match_combine_or(const Ty &...Ps) : Storage(Ps...) {}
+template <typename Ty, typename... Tys>
+struct match_combine_or<Ty, Tys...> : match_combine_or<Tys...> {
+  Ty P;
+  match_combine_or(const Ty &P, const Tys &...Ps)
+      : match_combine_or<Tys...>(Ps...), P(P) {}
+
   template <typename ITy> bool match(ITy *V) const {
-    return Storage.combineOr(V);
+    return P.match(V) || match_combine_or<Tys...>::match(V);
   }
 };
 
+/// Matching and combinator leaf case.
+template <typename... Tys> struct match_combine_and { // NOLINT
+  template <typename ITy> bool match(ITy *) const { return true; }
+};
+
 /// Matching and combinator.
-template <typename... Ty> struct match_combine_and { // NOLINT
-  PatternStorage<std::tuple<std::decay_t<Ty>...>,
-                 std::index_sequence_for<Ty...>>
-      Storage;
-  match_combine_and(const Ty &...Ps) : Storage(Ps...) {}
+template <typename Ty, typename... Tys>
+struct match_combine_and<Ty, Tys...> : match_combine_and<Tys...> {
+  Ty P;
+  match_combine_and(const Ty &P, const Tys &...Ps)
+      : match_combine_and<Tys...>(Ps...), P(P) {}
+
   template <typename ITy> bool match(ITy *V) const {
-    return Storage.combineAnd(V);
+    return P.match(V) && match_combine_and<Tys...>::match(V);
   }
 };
 
