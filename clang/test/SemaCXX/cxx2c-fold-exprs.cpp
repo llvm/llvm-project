@@ -508,3 +508,51 @@ static_assert(!__callable<__mdispatch<int>>);
 }
 
 }
+
+namespace GH190169 {
+
+namespace _1 {
+
+template <typename Type, typename... Choices>
+concept OneOf = (... || __is_same(Type, Choices));
+
+template <typename F, typename... Ts>
+using check = decltype((F{}(Ts{}), ...));
+
+using X = check<decltype([](auto val) {
+  [](OneOf<int, char> auto) {}(val);
+}), char>;
+
+}
+
+namespace _2 {
+
+template <typename T, typename U>
+concept Same = __is_same(T, U);
+
+template <typename Type, typename... Choices>
+concept OneOf = (... || Same<Type, Choices>);
+
+template <class... Ts>
+struct visitor : Ts... { using Ts::operator()...; };
+
+struct A {};
+struct B {};
+struct C {};
+
+template <typename F, typename T, typename = decltype(F{}(T{}))>
+struct check {};
+
+template <typename F, typename... Ts>
+struct check_all : check<F, Ts>... {};
+
+using F = decltype([](auto val) {
+  visitor{[](const A&) {},
+          [](const OneOf<B, C> auto&) {}}(val);
+});
+
+check_all<F, A, B, C> x;
+
+}
+
+}
