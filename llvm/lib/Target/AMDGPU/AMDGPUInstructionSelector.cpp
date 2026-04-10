@@ -731,13 +731,15 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   for (int I = 0, E = NumDst; I != E; ++I) {
     MachineOperand &Dst = MI.getOperand(I);
     // hi16:sreg_32 is not allowed so explicitly shift upper 16-bits.
-    if (SrcBank->getID() == AMDGPU::SGPRRegBankID && SubRegs[I] == AMDGPU::hi16)
+    if (SrcBank->getID() == AMDGPU::SGPRRegBankID &&
+        SubRegs[I] == AMDGPU::hi16) {
       BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst.getReg())
           .addReg(SrcReg)
           .addImm(16);
-    else
+    } else {
       BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
           .addReg(SrcReg, {}, SubRegs[I]);
+    }
 
     // Make sure the subregister index is valid for the source register.
     SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
