@@ -732,7 +732,7 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   I.eraseFromParent();
 }
 
-static bool IsVecBufferLoad(const SIInstrInfo *TII, const MachineInstr &MI) {
+static bool isVecBufferLoad(const SIInstrInfo *TII, const MachineInstr &MI) {
   return MI.mayLoad() && (TII->isMTBUF(MI) || TII->isMUBUF(MI));
 };
 
