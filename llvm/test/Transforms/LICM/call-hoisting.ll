@@ -277,6 +277,35 @@ exit:
   ret i32 %val
 }
 
+define i32 @unrelated_read(ptr noalias %loc, ptr noalias %otherloc) {
+; CHECK-LABEL: define i32 @unrelated_read(
+; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[OTHERLOC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(i32 [[IV]], ptr [[OTHERLOC]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[VAL_LCSSA:%.*]] = phi i32 [ [[VAL]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[VAL_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %val = call i32 @load(i32 %iv, ptr %otherloc)
+  call void @store(i32 0, ptr %loc)
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret i32 %val
+}
+
 define void @neg_lv_value(ptr %loc) {
 ; CHECK-LABEL: define void @neg_lv_value(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
@@ -368,18 +397,18 @@ exit:
 define void @neg_ref(ptr %loc) {
 ; CHECK-LABEL: define void @neg_ref(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[BACKEDGE:.*]] ]
+; CHECK-NEXT:  [[LOOP:.*]]:
 ; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[LOC]], align 4
 ; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp eq i32 [[V]], 198
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[IV_NEXT:%.*]], %[[BACKEDGE:.*]] ]
 ; CHECK-NEXT:    br i1 [[EARLYCND]], label %[[EXIT1:.*]], label %[[BACKEDGE]]
 ; CHECK:       [[BACKEDGE]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT2:.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT2:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[EXIT2]]:

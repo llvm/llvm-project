@@ -2302,15 +2302,15 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
 
 // For a given store instruction or writeonly call instruction, this function
 // checks that there are no read or writes that conflict with the memory
-// access in the instruction
+// access in the instruction.  Instead of scanning all memory accesses in the
+// loop, walk the MemorySSA use-def graph starting from the loop header's
+// MemoryPhi.  This visits only MemoryDefs and MemoryUses that are reachable
+// through loop-internal accesses, skipping uses that have already been
+// optimized to point outside the loop.
 static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
                                     AAResults *AA, Loop *CurLoop,
                                     SinkAndHoistLICMFlags &Flags) {
   assert(isa<CallInst>(*I) || isa<StoreInst>(*I));
-  // If there are more accesses than the Promotion cap, then give up as we're
-  // not walking a list that long.
-  if (Flags.tooManyMemoryAccesses())
-    return false;
 
   auto *IMD = MSSA->getMemoryAccess(I);
   BatchAAResults BAA(*AA);
@@ -2319,54 +2319,77 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
   if (!MSSA->isLiveOnEntryDef(Source) && CurLoop->contains(Source->getBlock()))
     return false;
 
-  // If there are interfering Uses (i.e. their defining access is in the
-  // loop), or ordered loads (stored as Defs!), don't move this store.
-  // Could do better here, but this is conservatively correct.
-  // TODO: Cache set of Uses on the first walk in runOnLoop, update when
-  // moving accesses. Can also extend to dominating uses.
-  for (auto *BB : CurLoop->getBlocks()) {
-    auto *Accesses = MSSA->getBlockAccesses(BB);
-    if (!Accesses)
-      continue;
-    for (const auto &MA : *Accesses)
-      if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
-        auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
-                                             const_cast<MemoryUse *>(MU));
-        if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock()))
-          return false;
-        // Disable hoisting past potentially interfering loads. Optimized
-        // Uses may point to an access outside the loop, as getClobbering
-        // checks the previous iteration when walking the backedge.
-        // FIXME: More precise: no Uses that alias I.
-        if (!Flags.getIsSink() && !MSSA->dominates(IMD, MU))
-          return false;
-      } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
+  // Walk the MemorySSA graph from the loop header's MemoryPhi.  Every
+  // MemoryDef and (in optimized MSSA) every aliasing MemoryUse in the loop
+  // is reachable through the users of the MemoryPhi and loop-internal defs.
+  auto *HeaderPhi = MSSA->getMemoryAccess(CurLoop->getHeader());
+  if (!HeaderPhi)
+    return true;
+
+  SmallVector<const MemoryAccess *, 8> Worklist;
+  SmallPtrSet<const MemoryAccess *, 8> Visited;
+  Worklist.push_back(HeaderPhi);
+  Visited.insert(HeaderPhi);
+
+  while (!Worklist.empty()) {
+    const MemoryAccess *MA = Worklist.pop_back_val();
+    for (const User *U : MA->users()) {
+      const auto *UserMA = cast<MemoryAccess>(U);
+      if (!Visited.insert(UserMA).second)
+        continue;
+      // Skip accesses outside the loop (e.g., LCSSA phi users).
+      if (!CurLoop->contains(UserMA->getBlock()))
+        continue;
+
+      if (const auto *MU = dyn_cast<MemoryUse>(UserMA)) {
+        // If this use's defining access is IMD, it reads the location I
+        // writes.  Since I is loop-invariant (its clobber is outside the
+        // loop, checked above), this read sees the same value every
+        // iteration and does not block hoisting.
+        if (MU->getDefiningAccess() == IMD)
+          continue;
+        // A MemoryUse whose defining access is inside the loop may or may
+        // not alias with I (MemorySSA uses may not be optimized yet).
+        // Check directly whether this use reads from I's write location.
+        Instruction *UseInst = MU->getMemoryInst();
+        if (auto *SI = dyn_cast<StoreInst>(I)) {
+          if (isRefSet(BAA.getModRefInfo(UseInst, MemoryLocation::get(SI))))
+            return false;
+        } else {
+          if (UseInst != I &&
+              isRefSet(BAA.getModRefInfo(UseInst, cast<CallInst>(I))))
+            return false;
+        }
+        continue;
+      }
+
+      if (const auto *MD = dyn_cast<MemoryDef>(UserMA)) {
+        // Ordered loads are stored as MemoryDefs; always reject.
         if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
-          (void)LI; // Silence warning.
+          (void)LI;
           assert(!LI->isUnordered() && "Expected unordered load");
           return false;
         }
-        // Any call, while it may not be clobbering I, it may be a use.
+        // A call may read from the location written by I.
         if (auto *CI = dyn_cast<CallInst>(MD->getMemoryInst())) {
-          // Check if the call may read from the memory location written
-          // to by I. Check CI's attributes and arguments; the number of
-          // such checks performed is limited above by NoOfMemAccTooLarge.
-          if (auto *SI = dyn_cast<StoreInst>(I)) {
-            ModRefInfo MRI = BAA.getModRefInfo(CI, MemoryLocation::get(SI));
-            if (isModOrRefSet(MRI))
-              return false;
-          } else {
-            auto *SCI = cast<CallInst>(I);
-            // If the instruction we are wanting to hoist is also a call
-            // instruction then we need not check mod/ref info with itself
-            if (SCI == CI)
-              continue;
-            ModRefInfo MRI = BAA.getModRefInfo(CI, SCI);
-            if (isModOrRefSet(MRI))
-              return false;
+          if (CI != I) {
+            if (auto *SI = dyn_cast<StoreInst>(I)) {
+              if (isModOrRefSet(BAA.getModRefInfo(CI, MemoryLocation::get(SI))))
+                return false;
+            } else {
+              if (isModOrRefSet(BAA.getModRefInfo(CI, cast<CallInst>(I))))
+                return false;
+            }
           }
         }
+        // Follow defs inside the loop to find their users.
+        Worklist.push_back(MD);
       }
+
+      // MemoryPhis in sub-loops: follow them.
+      if (isa<MemoryPhi>(UserMA))
+        Worklist.push_back(UserMA);
+    }
   }
   return true;
 }
