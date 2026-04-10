@@ -11,12 +11,12 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %indvars.iv, !dbg !12
-  %0 = load i32, ptr %arrayidx, align 4, !dbg !12, !tbaa !14
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !12
   %cmp1 = icmp eq i32 %0, 1024, !dbg !12
   br i1 %cmp1, label %if.then, label %for.inc, !dbg !12
 
 if.then:
-  store i32 0, ptr %arrayidx, align 4, !dbg !18, !tbaa !14
+  store i32 0, ptr %arrayidx, align 4, !dbg !18
   br label %for.inc, !dbg !18
 
 for.inc:
@@ -43,9 +43,5 @@ for.end:
 !11 = distinct !DILexicalBlock(line: 2, column: 3, file: !1, scope: !4)
 !12 = !DILocation(line: 3, column: 9, scope: !13)
 !13 = distinct !DILexicalBlock(line: 3, column: 9, file: !1, scope: !11)
-!14 = !{!15, !15, i64 0}
-!15 = !{!"int", !16, i64 0}
-!16 = !{!"omnipotent char", !17, i64 0}
-!17 = !{!"Simple C/C++ TBAA"}
 !18 = !DILocation(line: 3, column: 29, scope: !13)
 !19 = !DILocation(line: 4, column: 1, scope: !4)

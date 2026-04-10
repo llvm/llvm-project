@@ -36,12 +36,12 @@ for.body:
 
 if.then:
   %arrayidx = getelementptr inbounds i32, ptr %q1, i64 %indvars.iv
-  %1 = load i32, ptr %arrayidx, align 4, !tbaa !2
+  %1 = load i32, ptr %arrayidx, align 4
   %arrayidx3 = getelementptr inbounds i32, ptr %q2, i64 %indvars.iv
-  %2 = load i32, ptr %arrayidx3, align 4, !tbaa !2
+  %2 = load i32, ptr %arrayidx3, align 4
   %add = add nsw i32 %2, %1
   %arrayidx5 = getelementptr inbounds i32, ptr %p, i64 %indvars.iv
-  store i32 %add, ptr %arrayidx5, align 4, !tbaa !2
+  store i32 %add, ptr %arrayidx5, align 4
   br label %for.inc
 
 for.inc:
@@ -79,12 +79,12 @@ define void @assume_safety(ptr nocapture, ptr nocapture readonly, ptr nocapture 
 
 ; <label>:10:
   %11 = getelementptr inbounds i32, ptr %1, i64 %8
-  %12 = load i32, ptr %11, align 4, !tbaa !2, !llvm.mem.parallel_loop_access !6
+  %12 = load i32, ptr %11, align 4, !llvm.mem.parallel_loop_access !6
   %13 = getelementptr inbounds i32, ptr %2, i64 %8
-  %14 = load i32, ptr %13, align 4, !tbaa !2, !llvm.mem.parallel_loop_access !6
+  %14 = load i32, ptr %13, align 4, !llvm.mem.parallel_loop_access !6
   %15 = add nsw i32 %14, %12
   %16 = getelementptr inbounds i32, ptr %0, i64 %8
-  store i32 %15, ptr %16, align 4, !tbaa !2, !llvm.mem.parallel_loop_access !6
+  store i32 %15, ptr %16, align 4, !llvm.mem.parallel_loop_access !6
   br label %17
 
 ; <label>:17:
@@ -126,12 +126,12 @@ for.body:
 
 if.then:
   %arrayidx = getelementptr inbounds i32, ptr %q1, i64 %indvars.iv
-  %1 = load i32, ptr %arrayidx, align 4, !tbaa !2, !llvm.access.group !10
+  %1 = load i32, ptr %arrayidx, align 4, !llvm.access.group !10
   %arrayidx3 = getelementptr inbounds i32, ptr %q2, i64 %indvars.iv
-  %2 = load i32, ptr %arrayidx3, align 4, !tbaa !2, !llvm.access.group !10
+  %2 = load i32, ptr %arrayidx3, align 4, !llvm.access.group !10
   %add = add nsw i32 %2, %1
   %arrayidx5 = getelementptr inbounds i32, ptr %p, i64 %indvars.iv
-  store i32 %add, ptr %arrayidx5, align 4, !tbaa !2, !llvm.access.group !10
+  store i32 %add, ptr %arrayidx5, align 4, !llvm.access.group !10
   br label %for.inc
 
 for.inc:
@@ -142,10 +142,6 @@ for.inc:
 
 attributes #0 = { "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 
-!2 = !{!3, !3, i64 0}
-!3 = !{!"int", !4, i64 0}
-!4 = !{!"omnipotent char", !5, i64 0}
-!5 = !{!"Simple C/C++ TBAA"}
 !6 = distinct !{!6, !7}
 !7 = !{!"llvm.loop.vectorize.enable", i1 true}
 

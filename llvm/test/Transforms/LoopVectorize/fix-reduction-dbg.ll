@@ -49,7 +49,7 @@ for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %ret.09 = phi i32 [ %count, %for.body.preheader ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %bar, i64 %indvars.iv, !dbg !11
-  %0 = load i32, ptr %arrayidx, align 4, !dbg !11, !tbaa !15
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !11
   %add = add nsw i32 %0, %ret.09, !dbg !12
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count, !dbg !10
@@ -70,9 +70,5 @@ for.body:
 !12 = !DILocation(line: 7, scope: !8)
 !13 = !DILocation(line: 10, scope: !8)
 !14 = !DILocation(line: 0, scope: !8)
-!15 = !{!16, !16, i64 0}
-!16 = !{!"int", !17, i64 0}
-!17 = !{!"omnipotent char", !18, i64 0}
-!18 = !{!"Simple C++ TBAA"}
 !19 = distinct !{!19, !10, !20}
 !20 = !DILocation(line: 8, scope: !8)

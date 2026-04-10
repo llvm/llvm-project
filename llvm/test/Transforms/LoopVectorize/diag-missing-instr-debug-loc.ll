@@ -40,10 +40,10 @@ for.body:
   %a.addr.08 = phi i32 [ %0, %for.body ], [ %a, %for.body.preheader ]
 
   %arrayidx = getelementptr inbounds [0 x i32], ptr @out, i64 0, i64 %indvars.iv, !dbg !10
-  store i32 %a.addr.08, ptr %arrayidx, align 4, !dbg !12, !tbaa !13
+  store i32 %a.addr.08, ptr %arrayidx, align 4, !dbg !12
   %idxprom1 = sext i32 %a.addr.08 to i64, !dbg !17
   %arrayidx2 = getelementptr inbounds [0 x i32], ptr @map, i64 0, i64 %idxprom1, !dbg !17
-  %0 = load i32, ptr %arrayidx2, align 4, !dbg !17, !tbaa !13
+  %0 = load i32, ptr %arrayidx2, align 4, !dbg !17
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !9
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count, !dbg !9
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !9, !llvm.loop !18
@@ -66,9 +66,5 @@ attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-
 !10 = !DILocation(line: 6, column: 5, scope: !6)
 !11 = !DILocation(line: 9, column: 1, scope: !6)
 !12 = !DILocation(line: 6, column: 12, scope: !6)
-!13 = !{!14, !14, i64 0}
-!14 = !{!"int", !15, i64 0}
-!15 = !{!"omnipotent char", !16, i64 0}
-!16 = !{!"Simple C/C++ TBAA"}
 !17 = !DILocation(line: 7, column: 9, scope: !6)
 !18 = distinct !{!18, !9}

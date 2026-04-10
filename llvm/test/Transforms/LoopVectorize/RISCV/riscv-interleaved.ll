@@ -27,13 +27,8 @@ for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
-  store i32 %0, ptr %arrayidx, align 4, !tbaa !4
+  store i32 %0, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
-
-!4 = !{!5, !5, i64 0}
-!5 = !{!"int", !6, i64 0}
-!6 = !{!"omnipotent char", !7, i64 0}
-!7 = !{!"Simple C/C++ TBAA"}
