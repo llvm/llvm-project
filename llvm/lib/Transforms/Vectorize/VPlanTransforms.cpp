@@ -2612,6 +2612,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
       if (RFlags->hasPredicate())
         return hash_combine(Result, RFlags->getPredicate());
+    if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
+      return hash_combine(Result, SIVSteps->getInductionOpcode());
     return Result;
   }
 
@@ -2631,6 +2633,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LFlags->hasPredicate() &&
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
+        return false;
+    if (auto *LSIV = dyn_cast<VPScalarIVStepsRecipe>(L))
+      if (LSIV->getInductionOpcode() !=
+          cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
     // Recipes in replicate regions implicitly depend on predicate. If either
     // recipe is in a replicate region, only consider them equal if both have
