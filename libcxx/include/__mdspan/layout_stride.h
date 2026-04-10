@@ -22,6 +22,7 @@
 #include <__config>
 #include <__fwd/mdspan.h>
 #include <__mdspan/extents.h>
+#include <__mdspan/layout_common.h>
 #include <__memory/addressof.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_constructible.h>
@@ -46,24 +47,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
-
-namespace __mdspan_detail {
-template <class _Layout, class _Mapping>
-constexpr bool __is_mapping_of =
-    is_same_v<typename _Layout::template mapping<typename _Mapping::extents_type>, _Mapping>;
-
-template <class _Mapping>
-concept __layout_mapping_alike = requires {
-  requires __is_mapping_of<typename _Mapping::layout_type, _Mapping>;
-  requires __is_extents_v<typename _Mapping::extents_type>;
-  { _Mapping::is_always_strided() } -> same_as<bool>;
-  { _Mapping::is_always_exhaustive() } -> same_as<bool>;
-  { _Mapping::is_always_unique() } -> same_as<bool>;
-  bool_constant<_Mapping::is_always_strided()>::value;
-  bool_constant<_Mapping::is_always_exhaustive()>::value;
-  bool_constant<_Mapping::is_always_unique()>::value;
-};
-} // namespace __mdspan_detail
 
 template <class _Extents>
 class layout_stride::mapping {
@@ -224,12 +207,16 @@ public:
     requires(__mdspan_detail::__layout_mapping_alike<_StridedLayoutMapping> &&
              is_constructible_v<extents_type, typename _StridedLayoutMapping::extents_type> &&
              _StridedLayoutMapping::is_always_unique() && _StridedLayoutMapping::is_always_strided())
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit(
-      !(is_convertible_v<typename _StridedLayoutMapping::extents_type, extents_type> &&
-        (__mdspan_detail::__is_mapping_of<layout_left, _StridedLayoutMapping> ||
-         __mdspan_detail::__is_mapping_of<layout_right, _StridedLayoutMapping> ||
-         __mdspan_detail::__is_mapping_of<layout_stride, _StridedLayoutMapping>)))
-      mapping(const _StridedLayoutMapping& __other) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(!(
+      is_convertible_v<typename _StridedLayoutMapping::extents_type, extents_type> &&
+      (__mdspan_detail::__is_mapping_of<layout_left, _StridedLayoutMapping> ||
+       __mdspan_detail::__is_mapping_of<layout_right, _StridedLayoutMapping> ||
+       __mdspan_detail::__is_mapping_of<layout_stride, _StridedLayoutMapping>
+#  if _LIBCPP_STD_VER >= 26
+       || __mdspan_detail::__layout_left_padded_mapping_of<_StridedLayoutMapping> ||
+       __mdspan_detail::__layout_right_padded_mapping_of<_StridedLayoutMapping>
+#  endif
+       ))) mapping(const _StridedLayoutMapping& __other) noexcept
       : __extents_(__other.extents()), __strides_([&]<size_t... _Pos>(index_sequence<_Pos...>) {
           // stride() only compiles for rank > 0
           if constexpr (__rank_ > 0) {

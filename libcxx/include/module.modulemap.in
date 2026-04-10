@@ -1637,13 +1637,16 @@ module std [system] {
   }
 
   module mdspan {
-    module aligned_accessor   { header "__mdspan/aligned_accessor.h" }
-    module default_accessor   { header "__mdspan/default_accessor.h" }
-    module extents            { header "__mdspan/extents.h" }
-    module fwd                { header "__fwd/mdspan.h" }
-    module layout_left        { header "__mdspan/layout_left.h" }
-    module layout_right       { header "__mdspan/layout_right.h" }
-    module layout_stride      { header "__mdspan/layout_stride.h" }
+    module aligned_accessor     { header "__mdspan/aligned_accessor.h" }
+    module default_accessor     { header "__mdspan/default_accessor.h" }
+    module extents              { header "__mdspan/extents.h" }
+    module fwd                  { header "__fwd/mdspan.h" }
+    module layout_common        { header "__mdspan/layout_common.h" }
+    module layout_left          { header "__mdspan/layout_left.h" }
+    module layout_left_padded   { header "__mdspan/layout_left_padded.h" }
+    module layout_right         { header "__mdspan/layout_right.h" }
+    module layout_right_padded  { header "__mdspan/layout_right_padded.h" }
+    module layout_stride        { header "__mdspan/layout_stride.h" }
     module mdspan {
       header "__mdspan/mdspan.h"
       export std.array // returned by some methods

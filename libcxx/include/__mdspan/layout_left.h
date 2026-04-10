@@ -20,7 +20,9 @@
 #include <__assert>
 #include <__config>
 #include <__fwd/mdspan.h>
+#include <__fwd/span.h>
 #include <__mdspan/extents.h>
+#include <__mdspan/layout_common.h>
 #include <__memory/addressof.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_constructible.h>
@@ -108,6 +110,34 @@ public:
         __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
         "layout_left::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
+
+#  if _LIBCPP_STD_VER >= 26 // _LIBCPP_STD_VER >= 26
+
+  template <class _LayoutLeftPaddedMapping>
+    requires __mdspan_detail::__layout_left_padded_mapping_of<_LayoutLeftPaddedMapping> &&
+             is_constructible_v<extents_type, typename _LayoutLeftPaddedMapping::extents_type>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(
+      !is_convertible_v<typename _LayoutLeftPaddedMapping::extents_type, extents_type>)
+      mapping(const _LayoutLeftPaddedMapping& __other) noexcept
+      : __extents_(__other.extents()) {
+    static_assert(
+        _Extents::rank() <= 1 || _Extents::static_extent(0) == dynamic_extent ||
+            __mdspan_detail::__static_padding_stride_of<_LayoutLeftPaddedMapping> == dynamic_extent ||
+            _Extents::static_extent(0) == __mdspan_detail::__static_padding_stride_of<_LayoutLeftPaddedMapping>,
+        "layout_left::mapping converting from layout_left_padded ctor: incompatible static extent(0) and "
+        "source static padding stride.");
+
+    if constexpr (extents_type::rank() > 1)
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __other.stride(1) == __other.extents().extent(0),
+          "layout_left::mapping from layout_left_padded ctor: other.stride(1) must equal other.extents().extent(0).");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
+        "layout_left::mapping from layout_left_padded ctor: other.required_span_size() must be representable as "
+        "index_type.");
+  }
+
+#  endif // _LIBCPP_STD_VER >= 26
 
   template <class _OtherExtents>
     requires(is_constructible_v<extents_type, _OtherExtents>)
