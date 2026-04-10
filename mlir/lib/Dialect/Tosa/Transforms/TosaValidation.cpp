@@ -359,9 +359,8 @@ private:
 
   template <typename T>
   static constexpr bool IsSupportedAdaptivePoolOp =
-      std::is_same_v<T, tosa::AvgPool2dAdaptiveOp>
-      // || std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>
-      ;
+      std::is_same_v<T, tosa::AvgPool2dAdaptiveOp> ||
+      std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>;
 
   template <typename T, typename std::enable_if<IsSupportedAdaptivePoolOp<T>,
                                                 int>::type = 0>
@@ -817,6 +816,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(MatMul);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
+  CHECK_SIZES(MaxPool2dAdaptive);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
   CHECK_SIZES(Gather);
@@ -918,6 +918,7 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       failed(levelCheckConv<tosa::DepthwiseConv2DOp>(op)) ||
       failed(levelCheckFFT<tosa::FFT2dOp>(op)) ||
       failed(levelCheckPool<tosa::MaxPool2dOp>(op)) ||
+      failed(levelCheckAdaptivePool<tosa::MaxPool2dAdaptiveOp>(op)) ||
       failed(levelCheckFFT<tosa::RFFT2dOp>(op)) ||
       failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op)) ||
       failed(levelCheckConv2DBlockScaled(op))) {

@@ -582,8 +582,7 @@ public:
                                       ArrayRef<MachineOperand> MOs,
                                       MachineBasicBlock::iterator InsertPt,
                                       unsigned Size, Align Alignment,
-                                      bool AllowCommute,
-                                      LiveIntervals *LIS) const;
+                                      bool AllowCommute) const;
 
   bool isHighLatencyDef(int opc) const override;
 

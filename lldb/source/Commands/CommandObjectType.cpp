@@ -1293,8 +1293,8 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
 
     if (interpreter && !interpreter->CheckObjectExists(funct_name))
       result.AppendWarningWithFormatv(
-          "The provided function \"{0}\" does not exist - "
-          "please define it before attempting to use this summary.",
+          "the provided function \"{0}\" does not exist - "
+          "please define it before attempting to use this summary",
           funct_name);
   } else if (!m_options.m_python_script
                   .empty()) // we have a quick 1-line script, just use it
@@ -2197,7 +2197,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   const char *python_class_name = impl->GetPythonClassName();
   if (interpreter && !interpreter->CheckObjectExists(python_class_name))
     result.AppendWarningWithFormatv(
-        "The provided class '{0}' does not exist - please define it "
+        "the provided class '{0}' does not exist - please define it "
         "before attempting to use this synthetic provider",
         llvm::StringRef(python_class_name));
 
