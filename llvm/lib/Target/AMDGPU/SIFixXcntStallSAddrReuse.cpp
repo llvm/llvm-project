@@ -17,8 +17,10 @@
 
 #include "SIFixXcntStallSAddrReuse.h"
 #include "AMDGPU.h"
+#include "GCNRegPressure.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -43,15 +45,19 @@ static cl::opt<unsigned> SAddrKillDistance(
     cl::init(16), cl::Hidden);
 
 STATISTIC(NumConverted, "Number of SADDR loads converted to VADDR");
+STATISTIC(NumSkippedPressure,
+          "Number of SADDR loads skipped due to VGPR pressure");
 
 namespace {
 
 class SIFixXcntStallSAddrReuse {
+  const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   LiveIntervals *LIS = nullptr;
   VirtRegMap *VRM = nullptr;
+  unsigned MaxVGPRs = 0;
 
   bool isSAddrRedefined(const MachineInstr &MI, Register SAddr);
   MachineInstr *convertToVAddr(MachineInstr &MI, MachineBasicBlock &MBB,
@@ -142,6 +148,19 @@ static bool isEligible(const MachineInstr &MI, const SIInstrInfo &TII,
   return AMDGPU::SReg_64RegClass.hasSubClassEq(MRI.getRegClass(SAddr));
 }
 
+static bool canConvertToVAddr(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  int NewOpc = AMDGPU::getGlobalVaddrOp(Opc);
+  if (NewOpc < 0)
+    return false;
+  if (AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vaddr) < 0)
+    return false;
+  int CPolIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cpol);
+  if (CPolIdx >= 0 && (MI.getOperand(CPolIdx).getImm() & AMDGPU::CPol::SCAL))
+    return false;
+  return true;
+}
+
 bool SIFixXcntStallSAddrReuse::isSAddrRedefined(const MachineInstr &MI,
                                                 Register SAddr) {
   MCRegister Phys = VRM->getPhys(SAddr);
@@ -168,18 +187,10 @@ bool SIFixXcntStallSAddrReuse::isSAddrRedefined(const MachineInstr &MI,
 MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
                                                        MachineBasicBlock &MBB,
                                                        Register &NewAddrReg) {
+  assert(canConvertToVAddr(MI));
   unsigned Opc = MI.getOpcode();
   int NewOpc = AMDGPU::getGlobalVaddrOp(Opc);
-  if (NewOpc < 0)
-    return nullptr;
   int NewVAddrIdx = AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vaddr);
-  if (NewVAddrIdx < 0)
-    return nullptr;
-
-  // VADDR form does not support scale_offset.
-  int CPolIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cpol);
-  if (CPolIdx >= 0 && (MI.getOperand(CPolIdx).getImm() & AMDGPU::CPol::SCAL))
-    return nullptr;
 
   int OldSAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr);
   int OldVAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
@@ -279,24 +290,65 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
 }
 
 bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
-  using ConvertedOp = std::pair<Register, MachineInstr *>;
-  SmallVector<ConvertedOp, 8> Converted;
-  bool Changed = false;
+  GCNDownwardRPTracker RPT(*LIS);
+  SmallVector<MachineInstr *, 8> ToConvert;
+  SmallVector<unsigned, 16> ActiveWindow;
+  unsigned WindowFront = 0;
+  unsigned InstIdx = 0;
 
-  for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+  for (MachineInstr &MI : MBB) {
+    if (MI.isDebugInstr())
+      continue;
+    ++InstIdx;
+
+    if (!RPT.getNext().isValid())
+      RPT.reset(MI);
+    else {
+      RPT.advance(MachineBasicBlock::const_iterator(MI));
+      RPT.advanceBeforeNext();
+    }
+
     int SAddrIdx;
     if (!isEligible(MI, *TII, *TRI, *MRI, SAddrIdx))
+      continue;
+    if (!canConvertToVAddr(MI))
       continue;
     if (!isSAddrRedefined(MI, MI.getOperand(SAddrIdx).getReg()))
       continue;
 
+    while (WindowFront < ActiveWindow.size() &&
+           InstIdx > ActiveWindow[WindowFront] + SAddrKillDistance)
+      ++WindowFront;
+
+    unsigned ActiveCount = ActiveWindow.size() - WindowFront;
+    unsigned BasePressure = RPT.getPressure().getVGPRNum(ST->hasGFX90AInsts());
+
+    // *2: each active conversion holds a vreg_64 address.
+    // +4: peak transient VGPRs from address math (sext + 64-bit add).
+    unsigned AddedPressure = ActiveCount * 2 + 4;
+
+    if (BasePressure + AddedPressure > MaxVGPRs) {
+      LLVM_DEBUG(dbgs() << "  Skipping (pressure): Base=" << BasePressure
+                        << " Added=" << AddedPressure
+                        << " MaxVGPRs=" << MaxVGPRs << " " << MI);
+      ++NumSkippedPressure;
+      continue;
+    }
+
+    ToConvert.push_back(&MI);
+    ActiveWindow.push_back(InstIdx);
+  }
+
+  if (ToConvert.empty())
+    return false;
+
+  SmallVector<std::pair<Register, MachineInstr *>, 8> Converted;
+  for (MachineInstr *MI : ToConvert) {
     Register NewAddr;
-    MachineInstr *NewMI = convertToVAddr(MI, MBB, NewAddr);
+    MachineInstr *NewMI = convertToVAddr(*MI, MBB, NewAddr);
     if (!NewMI)
       continue;
-
     Converted.push_back({NewAddr, NewMI});
-    Changed = true;
   }
 
   for (auto &[Reg, NewMI] : Converted) {
@@ -308,26 +360,36 @@ bool SIFixXcntStallSAddrReuse::processMBB(MachineBasicBlock &MBB) {
         ++Count;
       ++It;
     }
+
     auto KillMI =
         BuildMI(MBB, It, NewMI->getDebugLoc(), TII->get(TargetOpcode::KILL))
             .addReg(Reg, RegState::Kill);
+
     LIS->InsertMachineInstrInMaps(*KillMI);
-    if (LIS->hasInterval(Reg)) {
-      SlotIndex KillIdx = LIS->getInstructionIndex(*KillMI).getRegSlot();
+    SlotIndex KillIdx = LIS->getInstructionIndex(*KillMI).getRegSlot();
+    if (LIS->hasInterval(Reg))
       LIS->extendToIndices(LIS->getInterval(Reg), {KillIdx});
-    }
   }
 
-  return Changed;
+  return !Converted.empty();
 }
 
 bool SIFixXcntStallSAddrReuse::run(MachineFunction &MF) {
   if (!VRM || !LIS)
     return false;
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  TII = ST.getInstrInfo();
-  TRI = ST.getRegisterInfo();
+  ST = &MF.getSubtarget<GCNSubtarget>();
+  TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
   MRI = &MF.getRegInfo();
+
+  auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned TargetOcc = MFI->getOccupancy();
+  unsigned DynVGPRBlockSize = MFI->getDynamicVGPRBlockSize();
+  MaxVGPRs = ST->getMaxNumVGPRs(TargetOcc, DynVGPRBlockSize);
+
+  LLVM_DEBUG(dbgs() << "SIFixXcntStallSAddrReuse: TargetOcc=" << TargetOcc
+                    << " MaxVGPRs=" << MaxVGPRs << "\n");
+
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
     Changed |= processMBB(MBB);
