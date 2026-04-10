@@ -3478,6 +3478,12 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
 
   Op.checkQualifiedDestType();
 
+  if (Op.Kind == CK_PointerToIntegral && Context.getLangOpts().Kernel) {
+    ExprResult Transformed =
+        TransformForMSKernel(Op.SrcExpr.get()->IgnoreParenImpCasts());
+    if (Transformed.isUsable())
+      return BuildCStyleCastExpr(LPLoc, CastTypeInfo, RPLoc, Transformed.get());
+  }
   return Op.complete(CStyleCastExpr::Create(
       Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
       &Op.BasePath, CurFPFeatureOverrides(), CastTypeInfo, LPLoc, RPLoc));

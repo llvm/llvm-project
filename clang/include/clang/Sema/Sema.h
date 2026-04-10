@@ -12430,6 +12430,10 @@ public:
                                                     DeclarationName Name);
   bool RebuildNestedNameSpecifierInCurrentInstantiation(CXXScopeSpec &SS);
 
+  /// Do MS kernel specific AST transformations, e.g replace
+  /// &((type*)0)->member with __builtin_offsetof(type, member)
+  ExprResult TransformForMSKernel(Expr *UOp);
+
   ExprResult RebuildExprInCurrentInstantiation(Expr *E);
 
   /// Rebuild the template parameters now that we know we're in a current
