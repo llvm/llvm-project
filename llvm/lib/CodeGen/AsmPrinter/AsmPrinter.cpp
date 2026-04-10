@@ -840,8 +840,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_Memtag);
   }
 
-  if (!GV->hasInitializer()) // External globals require no extra code.
-    return emitExternalGlobalVariableEnd(EmittedSym);
+  if (!GV->hasInitializer())   // External globals require no extra code.
+    return;
 
   GVSym->redefineIfPossible();
   if (GVSym->isDefined() || GVSym->isVariable())
