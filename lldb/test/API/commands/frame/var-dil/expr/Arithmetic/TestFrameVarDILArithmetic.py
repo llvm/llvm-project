@@ -123,6 +123,13 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("ref / my_ref", value="1")
         self.expect_var_path("ref % my_ref", value="0")
 
+        # Check enums
+        self.expect_var_path("enum_one + 1", value="2")
+        self.expect_var_path("enum_one - 1", value="0")
+        self.expect_var_path("enum_one * 2", value="2")
+        self.expect_var_path("enum_one / 1", value="1")
+        self.expect_var_path("enum_one % 1", value="0")
+
         # Check errors
         self.expect(
             "frame var -- '1 / 0'",
