@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUWaitcntUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
@@ -1745,6 +1746,8 @@ static std::optional<InstCounterType> counterTypeForInstr(unsigned Opcode) {
     return KM_CNT;
   case AMDGPU::S_WAIT_XCNT:
     return X_CNT;
+  case AMDGPU::S_WAIT_ASYNCCNT:
+    return ASYNC_CNT;
   default:
     return {};
   }
@@ -3681,7 +3684,8 @@ bool SIInsertWaitcnts::run() {
 
   MachineBasicBlock &EntryBB = MF.front();
 
-  if (!MFI->isEntryFunction()) {
+  if (!MFI->isEntryFunction() &&
+      !MF.getFunction().hasFnAttribute(Attribute::Naked)) {
     // Wait for any outstanding memory operations that the input registers may
     // depend on. We can't track them and it's better to do the wait after the
     // costly call sequence.

@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the ContextImpl class, which
+/// implements sycl::context functionality.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_CONTEXT_IMPL
 #define _LIBSYCL_CONTEXT_IMPL
