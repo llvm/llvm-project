@@ -19,7 +19,7 @@ AST_MATCHER(DeclRefExpr, refersToEnclosingVariableOrCapture) {
   return Node.refersToEnclosingVariableOrCapture();
 }
 
-}
+} // namespace
 
 static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
                                    const ParmVarDecl *ParmVar,
@@ -88,15 +88,16 @@ void MoveForwardingReferenceCheck::registerMatchers(MatchFinder *Finder) {
           .bind("parm-var");
 
   Finder->addMatcher(
-      callExpr(callee(unresolvedLookupExpr(
-                          hasAnyDeclaration(namedDecl(
-                              hasUnderlyingDecl(hasName("::std::move")))))
-                          .bind("lookup")),
-               argumentCountIs(1),
-               hasArgument(0, ignoringParenImpCasts(declRefExpr(
-                                  to(ForwardingReferenceParmMatcher),
-                                  // FIXME: allow capture by reference
-                                  unless(refersToEnclosingVariableOrCapture())))))
+      callExpr(
+          callee(unresolvedLookupExpr(
+                     hasAnyDeclaration(
+                         namedDecl(hasUnderlyingDecl(hasName("::std::move")))))
+                     .bind("lookup")),
+          argumentCountIs(1),
+          hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                             to(ForwardingReferenceParmMatcher),
+                             // FIXME: allow capture by reference
+                             unless(refersToEnclosingVariableOrCapture())))))
           .bind("call-move"),
       this);
 }

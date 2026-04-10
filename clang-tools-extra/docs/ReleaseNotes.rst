@@ -278,7 +278,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-move-forwarding-reference
   <clang-tidy/checks/bugprone/move-forwarding-reference>` check by removing some
-  false positive in the context of moved lambda captures.
+  false positives in the context of moved lambda captures.
 
 - Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
