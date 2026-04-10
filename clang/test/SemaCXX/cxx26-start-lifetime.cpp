@@ -105,7 +105,7 @@ consteval CVResult test_constituent_values() {
   __builtin_start_lifetime(&s.arr);
   ::new (&s.arr[0]) int(100);
   ::new (&s.arr[1]) int(200);
-  // arr[2] and arr[3] are not within their lifetime — that's OK per P3726R1.
+  // arr[2] and arr[3] are not within their lifetime — that's OK per P3726R2.
   return s;
 }
 // This should be a valid constexpr variable even though arr[2] and arr[3]
@@ -115,6 +115,33 @@ static_assert(cv_result.arr[0] == 100);
 static_assert(cv_result.arr[1] == 200);
 static_assert(cv_result.size == 2);
 
-// TODO: Multi-dimensional array support for start_lifetime requires
-// the constexpr evaluator to handle intermediate array element lifetime.
-// This is tracked separately.
+// CWG guidance: for nested arrays, start lifetime of the top-level array and
+// then each nested array before constructing inner scalar subobjects.
+consteval int test_multidim_without_nested_start() {
+  struct S {
+    union {
+      int storage[2][3];
+    };
+  };
+  S s;
+  __builtin_start_lifetime(&s.storage);
+  ::new (&s.storage[0][0]) int(1); // expected-note {{construction of subobject of object outside its lifetime is not allowed in a constant expression}}
+  return s.storage[0][0];
+}
+static_assert(test_multidim_without_nested_start() == 1); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to 'test_multidim_without_nested_start()'}}
+
+consteval int test_multidim_with_nested_start() {
+  struct S {
+    union {
+      int storage[2][3];
+    };
+  };
+  S s;
+  __builtin_start_lifetime(&s.storage);
+  __builtin_start_lifetime(&s.storage[0]);
+  __builtin_start_lifetime(&s.storage[1]);
+  ::new (&s.storage[0][0]) int(1);
+  ::new (&s.storage[0][1]) int(2);
+  return s.storage[0][0] + s.storage[0][1];
+}
+static_assert(test_multidim_with_nested_start() == 3);
