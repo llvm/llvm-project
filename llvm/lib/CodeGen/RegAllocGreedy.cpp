@@ -2984,6 +2984,7 @@ bool RAGreedy::run(MachineFunction &mf) {
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();
 
+  MRI->removeIncompatibleChainHints();
   allocatePhysRegs();
   tryHintsRecoloring();
 
