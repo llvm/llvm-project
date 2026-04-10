@@ -551,8 +551,6 @@ TEST_F(PlatformDarwinLocateTest,
   // target.auto-load-scripts-for-modules setting.
 
   m_target_sp->SetLoadScriptFromSymbolFile(eLoadScriptFromSymFileTrusted);
-  TestingProperties::GetGlobalTestingProperties().AppendSafeAutoLoadPaths(
-      FileSpec(m_tmp_root_dir));
 
   auto setup_module = [this](llvm::StringRef module_name) {
     FileSpec module_fspec(
