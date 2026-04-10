@@ -292,7 +292,7 @@ object::SectionedAddress SymbolizableObjectFile::convertDwarfOffsetForWasm(
   // If the address is not in a text section, or we couldn't find a
   // matching section, invalidate it. This prevents it from incorrectly
   // being interpreted as as section-relative DWARF offset.
-  ModuleOffset.Address = object::SectionedAddress::UndefSection;
+  ModuleOffset.Address = UINT64_MAX;
   return ModuleOffset;
 }
 

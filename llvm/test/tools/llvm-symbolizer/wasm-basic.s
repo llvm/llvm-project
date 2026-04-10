@@ -3,9 +3,9 @@
 # RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.o 0 1 2 3 4 5 6 7 8 9 10 11 12 13 16 | FileCheck %s
 
 # This is the same test but on a linked wasm file, using file offsets rather than section offsets.
-# The code section starts at 0x41, so these are equivalent (see below for why the first one is 3).
+# The code section starts at 0x41, so these are equivalent to above (except 3, see below for why).
 # RUN: wasm-ld %t.o -o %t.wasm --no-entry --export=foo --export=bar
-# RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.wasm 3 0x42 0x43 0x44 0x45 0x46 0x47 0x48 0x49 0x4a 0x4b 0x4c 0x4d 0x4e 0x5e | FileCheck %s
+# RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.wasm 3 0x42 0x43 0x44 0x45 0x46 0x47 0x48 0x49 0x4a 0x4b 0x4c 0x4d 0x4e 0x51 | FileCheck %s
 
 .globl foo
 foo:
@@ -74,6 +74,6 @@ bar:
 # CHECK-NEXT: ??
 # CHECK-NEXT: ??:0
 
-## Past the end of the section.
+## Byte 16 is further past the end of the section.
 # CHECK: ??
 # CHECK-NEXT: ??:0
