@@ -6068,9 +6068,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
 
-  // With no-signed-zeros semantics, +0 and -0 are interchangeable. 
-  // If the operation has nsz and only one sign of zero is possible in the result,
-  // the other must also be considered possible. 
+  // With no-signed-zeros semantics, +0 and -0 are interchangeable.
+  // If the operation has nsz and only one sign of zero is possible in the
+  // result, the other must also be considered possible.
   if (const auto *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
     if (FPOp->hasNoSignedZeros()) {
       FPClassTest KnownZero = Known.KnownFPClasses & fcZero;
