@@ -789,7 +789,7 @@ uint32_t Symtab::AppendSymbolIndexesMatchingRegExAndType(
     if (symbol_type == eSymbolTypeAny ||
         m_symbols[i].GetType() == symbol_type) {
       const char *name =
-          m_symbols[i].GetMangled().GetName(name_preference).AsCString();
+          m_symbols[i].GetMangled().GetName(name_preference).AsCString(nullptr);
       if (name) {
         if (regexp.Execute(name))
           indexes.push_back(i);
@@ -815,7 +815,7 @@ uint32_t Symtab::AppendSymbolIndexesMatchingRegExAndType(
         continue;
 
       const char *name =
-          m_symbols[i].GetMangled().GetName(name_preference).AsCString();
+          m_symbols[i].GetMangled().GetName(name_preference).AsCString(nullptr);
       if (name) {
         if (regexp.Execute(name))
           indexes.push_back(i);

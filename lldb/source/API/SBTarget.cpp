@@ -163,7 +163,7 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Target::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Target::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 bool SBTarget::IsValid() const {
@@ -1688,7 +1688,7 @@ const char *SBTarget::GetLabel() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetLabel().data()).AsCString();
+    return ConstString(target_sp->GetLabel().data()).AsCString(nullptr);
   return nullptr;
 }
 
@@ -1704,7 +1704,7 @@ const char *SBTarget::GetTargetSessionName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetTargetSessionName()).AsCString();
+    return ConstString(target_sp->GetTargetSessionName()).AsCString(nullptr);
   return nullptr;
 }
 
