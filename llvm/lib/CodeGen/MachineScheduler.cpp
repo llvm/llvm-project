@@ -752,7 +752,7 @@ PostMachineSchedulerPass::run(MachineFunction &MF,
   return PA;
 }
 
-/// Return true of the given instruction should not be included in a scheduling
+/// Return true if the given instruction should not be included in a scheduling
 /// region.
 ///
 /// MachineScheduler does not currently support scheduling across calls. To
@@ -762,20 +762,15 @@ PostMachineSchedulerPass::run(MachineFunction &MF,
 /// scheduling across calls. In PostRA scheduling, we need the isCall to enforce
 /// the boundary, but there would be no benefit to postRA scheduling across
 /// calls this late anyway.
-static bool isSchedBoundary(MachineBasicBlock::iterator MI,
-                            MachineBasicBlock *MBB,
-                            MachineFunction *MF,
-                            const TargetInstrInfo *TII) {
+bool llvm::isSchedBoundary(MachineBasicBlock::iterator MI,
+                           MachineBasicBlock *MBB, MachineFunction *MF,
+                           const TargetInstrInfo *TII) {
   return MI->isCall() || TII->isSchedulingBoundary(*MI, MBB, *MF) ||
          MI->isFakeUse();
 }
 
-using MBBRegionsVector = SmallVector<SchedRegion, 16>;
-
-static void
-getSchedRegions(MachineBasicBlock *MBB,
-                MBBRegionsVector &Regions,
-                bool RegionsTopDown) {
+void llvm::getSchedRegions(MachineBasicBlock *MBB, MBBRegionsVector &Regions,
+                           bool RegionsTopDown) {
   MachineFunction *MF = MBB->getParent();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 

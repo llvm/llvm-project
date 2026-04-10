@@ -201,6 +201,7 @@
 ; GCN-O2-NEXT: register-coalescer
 ; GCN-O2-NEXT: rename-independent-subregs
 ; GCN-O2-NEXT: amdgpu-rewrite-partial-reg-uses
+; GCN-O2-NEXT: amdgpu-iglp-unpack
 ; GCN-O2-NEXT: machine-scheduler
 ; GCN-O2-NEXT: amdgpu-pre-ra-optimizations
 ; GCN-O2-NEXT: si-wqm
@@ -370,6 +371,7 @@
 ; GCN-O3-NEXT: register-coalescer
 ; GCN-O3-NEXT: rename-independent-subregs
 ; GCN-O3-NEXT: amdgpu-rewrite-partial-reg-uses
+; GCN-O3-NEXT: amdgpu-iglp-unpack
 ; GCN-O3-NEXT: machine-scheduler
 ; GCN-O3-NEXT: amdgpu-pre-ra-optimizations
 ; GCN-O3-NEXT: si-wqm

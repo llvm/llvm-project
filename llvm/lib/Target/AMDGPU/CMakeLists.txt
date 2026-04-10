@@ -88,6 +88,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMemoryUtils.cpp
   AMDGPUCoExecSchedStrategy.cpp
   AMDGPUIGroupLP.cpp
+  AMDGPUIGroupFixup.cpp
   AMDGPULowerVGPREncoding.cpp
   AMDGPUMCResourceInfo.cpp
   AMDGPUMarkLastScratchLoad.cpp

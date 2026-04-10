@@ -651,3 +651,15 @@ define void @test_mfma_f32_32x32x1f32(float %arg0, float %arg1, <32 x float> %ar
 
   ret void
 }
+
+declare void @llvm.amdgcn.iglp.opt(i32 immarg)
+define void @iglp_opt_invalid(i32 %mask) {
+  ; CHECK: immarg value 5 out of range [0, 5)
+  ; CHECK-NEXT: call void @llvm.amdgcn.iglp.opt(i32 5)
+  call void @llvm.amdgcn.iglp.opt(i32 5)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %mask
+  ; CHECK-NEXT: call void @llvm.amdgcn.iglp.opt(i32 %mask)
+  call void @llvm.amdgcn.iglp.opt(i32 %mask)
+  ret void
+}
