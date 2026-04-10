@@ -1537,7 +1537,7 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
   auto IsOFP8Type = [&]() {
     switch (BT->getKind()) {
 #define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
-    case BuiltinType::Id:
+  case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
       return true;
     default:
