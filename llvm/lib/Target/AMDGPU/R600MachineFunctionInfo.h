@@ -12,13 +12,13 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_R600MACHINEFUNCTIONINFO_H
 
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 
 namespace llvm {
 
 class R600Subtarget;
 
-class R600MachineFunctionInfo final : public AMDGPUMachineFunction {
+class R600MachineFunctionInfo final : public AMDGPUMachineFunctionInfo {
 public:
   R600MachineFunctionInfo(const Function &F, const R600Subtarget *STI);
   unsigned CFStackSize;

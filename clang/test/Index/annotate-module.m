@@ -46,6 +46,6 @@ int glob;
 // RUN: c-index-test -cursor-at=%s:3:11 %s -fmodules-cache-path=%t.cache -fmodules -F %S/../Modules/Inputs \
 // RUN:     | FileCheck %s -check-prefix=CHECK-CURSOR
 
-// CHECK-CURSOR:      3:1 ModuleImport=DependsOnModule:3:1 (Definition) Extent=[3:1 - 3:24] Spelling=DependsOnModule ([3:9 - 3:24]) ModuleName=DependsOnModule ({{.*}}DependsOnModule-{{[^.]*}}.pcm) system=0 Headers(2):
+// CHECK-CURSOR:      3:1 ModuleImport=DependsOnModule:3:1 (Definition) Extent=[3:1 - 3:24] Spelling=DependsOnModule ([3:9 - 3:24]) ModuleName=DependsOnModule system=0 Headers(2):
 // CHECK-CURSOR-NEXT: {{.*}}other.h
 // CHECK-CURSOR-NEXT: {{.*}}DependsOnModule.h

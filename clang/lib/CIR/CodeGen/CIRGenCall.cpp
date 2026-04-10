@@ -65,16 +65,6 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
                             info.isVariadic());
 }
 
-cir::FuncType CIRGenTypes::getFunctionTypeForVTable(GlobalDecl gd) {
-  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
-  const FunctionProtoType *fpt = md->getType()->getAs<FunctionProtoType>();
-
-  if (!isFuncTypeConvertible(fpt))
-    cgm.errorNYI("getFunctionTypeForVTable: non-convertible function type");
-
-  return getFunctionType(gd);
-}
-
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
   if (isVirtual()) {
     const CallExpr *ce = getVirtualCallExpr();
@@ -620,7 +610,7 @@ void CIRGenModule::constructFunctionReturnAttributes(
       if (pointeeTy->isObjectType())
         retAttrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
                      builder.getI64IntegerAttr(
-                         getNaturalTypeAlignment(pointeeTy).getQuantity()));
+                         getNaturalPointeeTypeAlignment(retTy).getQuantity()));
     }
   }
 }
@@ -657,9 +647,10 @@ void CIRGenModule::constructFunctionArgumentAttributes(
               builder.getI64IntegerAttr(bytes));
       }
 
-      argAttrs[0].set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
-                      builder.getI64IntegerAttr(
-                          getNaturalTypeAlignment(thisTy).getQuantity()));
+      argAttrs[0].set(
+          mlir::LLVM::LLVMDialect::getAlignAttrName(),
+          builder.getI64IntegerAttr(
+              getNaturalPointeeTypeAlignment(thisPtrTy).getQuantity()));
 
       // TODO(cir): the classic codegen has a recently-added bunch of logic for
       // 'dead_on_return' as an attribute. This both doesn't exist in the LLVM
@@ -702,9 +693,10 @@ void CIRGenModule::constructFunctionArgumentAttributes(
         argAttrList.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
                         mlir::UnitAttr::get(&getMLIRContext()));
       if (pointeeTy->isObjectType())
-        argAttrList.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
-                        builder.getI64IntegerAttr(
-                            getNaturalTypeAlignment(argType).getQuantity()));
+        argAttrList.set(
+            mlir::LLVM::LLVMDialect::getAlignAttrName(),
+            builder.getI64IntegerAttr(
+                getNaturalPointeeTypeAlignment(argType).getQuantity()));
     }
   }
 }
@@ -1029,6 +1021,15 @@ RValue CallArg::getRValue(CIRGenFunction &cgf, mlir::Location loc) const {
                         lv.isVolatile());
   isUsed = true;
   return RValue::getAggregate(copy.getAddress());
+}
+
+void CIRGenFunction::emitNonNullArgCheck(RValue rv, QualType argType,
+                                         SourceLocation argLoc,
+                                         AbstractCallee ac, unsigned paramNum) {
+  if (!ac.getDecl() || !(sanOpts.has(SanitizerKind::NonnullAttribute) ||
+                         sanOpts.has(SanitizerKind::NullabilityArg)))
+    return;
+  cgm.errorNYI("non-null arg check is NYI");
 }
 
 static cir::CIRCallOpInterface

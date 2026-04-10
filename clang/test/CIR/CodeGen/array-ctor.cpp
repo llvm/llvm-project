@@ -19,7 +19,6 @@ void foo() {
 // CIR-BEFORE-LPP:   cir.array.ctor %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>> {
 // CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S>):
 // CIR-BEFORE-LPP:      cir.call @_ZN1SC1Ev(%[[ARG]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
-// CIR-BEFORE-LPP:      cir.yield
 // CIR-BEFORE-LPP:    }
 // CIR-BEFORE-LPP:   cir.return
 // CIR-BEFORE-LPP: }
@@ -40,7 +39,7 @@ void foo() {
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[CURRENT2:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CURRENT2]], %[[END_PTR]]) : !cir.ptr<!rec_S>, !cir.bool
+// CIR:     %[[CMP:.*]] = cir.cmp ne %[[CURRENT2]], %[[END_PTR]] : !cir.ptr<!rec_S>
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   cir.return
@@ -115,7 +114,6 @@ void multi_dimensional() {
 // CIR-BEFORE-LPP:       cir.array.ctor %[[FLAT]] : !cir.ptr<!cir.array<!rec_S x 15>> {
 // CIR-BEFORE-LPP:        ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S>):
 // CIR-BEFORE-LPP:          cir.call @_ZN1SC1Ev(%[[ARG]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
-// CIR-BEFORE-LPP:          cir.yield
 // CIR-BEFORE-LPP:       }
 // CIR-BEFORE-LPP:       cir.return
 
@@ -135,7 +133,7 @@ void multi_dimensional() {
 // CIR:         cir.yield
 // CIR:       } while {
 // CIR:         %[[CURRENT2:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:         %[[CMP:.*]] = cir.cmp(ne, %[[CURRENT2]], %[[END_PTR]]) : !cir.ptr<!rec_S>, !cir.bool
+// CIR:         %[[CMP:.*]] = cir.cmp ne %[[CURRENT2]], %[[END_PTR]] : !cir.ptr<!rec_S>
 // CIR:         cir.condition(%[[CMP]])
 // CIR:       }
 // CIR:       cir.return

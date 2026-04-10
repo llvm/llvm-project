@@ -260,7 +260,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       auto *OpN = getNode(OpI);
       if (OpN == nullptr)
         continue;
-      ++OpN->UnscheduledSuccs;
+      OpN->incrUnscheduledSuccs();
     }
   }
 
@@ -292,7 +292,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
         continue;
       if (!TopInterval.contains(OpI))
         continue;
-      ++OpN->UnscheduledSuccs;
+      OpN->incrUnscheduledSuccs();
     }
   }
 }
@@ -531,18 +531,29 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   //  ---|---   ---|---   -
   //  U.User     U.User
   auto *UserI = dyn_cast_or_null<Instruction>(U.getUser());
-  if (UserI == nullptr || !getNode(UserI))
+  if (UserI == nullptr)
+    return;
+  auto *UserN = getNode(UserI);
+  if (UserN == nullptr)
+    return;
+  // If UserN is marked as scheduled then we should not update CrrSrcN' or
+  // NewSrcN's unscheduled successors.
+  if (UserN->scheduled())
     return;
   // Update the UnscheduledSuccs counter for both the current source and
   // NewSrc if needed.
   if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
     if (auto *CurrSrcN = getNode(CurrSrcI)) {
-      CurrSrcN->decrUnscheduledSuccs();
+      // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
+      if (!CurrSrcN->scheduled())
+        CurrSrcN->decrUnscheduledSuccs();
     }
   }
   if (auto *NewSrcI = dyn_cast<Instruction>(NewSrc)) {
     if (auto *NewSrcN = getNode(NewSrcI)) {
-      ++NewSrcN->UnscheduledSuccs;
+      // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
+      if (!NewSrcN->scheduled())
+        NewSrcN->incrUnscheduledSuccs();
     }
   }
 }

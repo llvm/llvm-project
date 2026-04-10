@@ -1,8 +1,7 @@
 // RUN: %check_clang_tidy %s modernize-use-emplace %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {modernize-use-emplace.IgnoreImplicitConstructors: \
-// RUN:                true}}" \
-// RUN:   -- -isystem %clang_tidy_headers
+// RUN:                true}}"
 #include <vector>
 
 void testInts() {

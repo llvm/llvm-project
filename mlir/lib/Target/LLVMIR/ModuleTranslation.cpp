@@ -1564,13 +1564,13 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto preferVectorWidth = func.getPreferVectorWidth())
     llvmFunc->addFnAttr("prefer-vector-width", *preferVectorWidth);
 
+  if (func.getUseSampleProfile())
+    llvmFunc->addFnAttr("use-sample-profile");
+
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
-
-  if (auto noNansFpMath = func.getNoNansFpMath())
-    llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
 
   if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",

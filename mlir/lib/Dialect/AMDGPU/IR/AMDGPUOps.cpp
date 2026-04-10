@@ -103,7 +103,7 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
 
 LogicalResult FatRawBufferCastOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Adaptor adaptor(operands, attributes, properties, regions);
   auto sourceType =
@@ -671,6 +671,77 @@ LogicalResult SparseMFMAOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// SparseWMMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SparseWMMAOp::verify() {
+  auto sparseType = cast<VectorType>(getSourceA().getType());
+  auto denseType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  Type sparseElem = sparseType.getElementType();
+  Type denseElem = denseType.getElementType();
+  Type destElem = destType.getElementType();
+  int64_t sparseLen = sparseType.getNumElements();
+  int64_t denseLen = denseType.getNumElements();
+  int64_t destLen = destType.getNumElements();
+
+  uint32_t m = getM(), n = getN(), k = getK();
+  if ((m != 16) || (n != 16))
+    return emitOpError("expected MxN to be exactly 16x16");
+
+  const bool isWavesize64 = getWave64();
+  const bool isInt4Input = sparseElem.isInteger(4) && denseElem.isInteger(4);
+  const bool isEqualLengthAllowed = isWavesize64 && isInt4Input && k == 32;
+
+  if ((denseLen != 2 * sparseLen) && !isEqualLengthAllowed)
+    return emitOpError("expected dense source operand to have exactly double "
+                       "the number of elements of the sparse source operand");
+
+  if (isEqualLengthAllowed && (denseLen != sparseLen))
+    return emitOpError("expected dense source operand to have exactly the "
+                       "same the number of elements");
+
+  if (destElem.isInteger()) {
+    if (!(sparseElem.isInteger() && denseElem.isInteger())) {
+      return emitOpError("source operand and destination operands must all be "
+                         "either integer or float types");
+    }
+  }
+
+  if (destElem.isFloat()) {
+    if (!(sparseElem.isFloat() && denseElem.isFloat())) {
+      return emitOpError("source operand and destination operands must all be "
+                         "either integer or float types");
+    }
+  }
+
+  // Check that source element types are compatible.
+  // For fp8/bf8 mixed operations, element types can differ (e.g., fp8 * bf8).
+  // For other types, element types must match exactly.
+  bool bothFloat8 = sparseElem.isFloat(8) && denseElem.isFloat(8);
+  if (!bothFloat8 && sparseElem != denseElem)
+    return emitOpError(
+        "expected source operands to have the same element type");
+
+  const int64_t waveSize = isWavesize64 ? 64 : 32;
+
+  int64_t expectedSourceElems = (getM() * getK()) / waveSize;
+  if (denseLen != expectedSourceElems)
+    return emitOpError("expected " + Twine(expectedSourceElems) +
+                       " source values for this operation but got " +
+                       Twine(denseLen));
+
+  int64_t expectedDestElems = (getM() * getN()) / waveSize;
+  if (destLen != expectedDestElems)
+    return emitOpError("expected " + Twine(expectedDestElems) +
+                       " result values for this operation but got " +
+                       Twine(destLen));
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DPPOp
 //===----------------------------------------------------------------------===//
 LogicalResult DPPOp::verify() {
@@ -870,6 +941,37 @@ struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
 void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<FoldGatherToLDSOfCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalLoadAsyncToLDSOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalLoadAsyncToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (srcType.getElementType() != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  Type transferType = getTransferType();
+  int transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
+    return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be global");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return emitOpError("destination memory address space must be Workgroup");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1229,6 +1331,53 @@ LogicalResult DsAsyncBarrierArriveOp::verify() {
 
 LogicalResult DsBarrierArriveOp::verify() {
   return verifyDsBarrierOpCommon(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalPrefetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalPrefetchOp::verify() {
+  auto src = cast<MemRefType>(getSrc().getType());
+
+  Attribute memSpace = src.getMemorySpace();
+  if (!memSpace)
+    return this->emitOpError("the source must have address space attribute");
+  if (!hasGlobalMemorySpace(memSpace))
+    return this->emitOpError("the source must reside in global address space");
+
+  ArrayRef<int64_t> srcShape = src.getShape();
+  const size_t numIndices = getIndices().size();
+  if (srcShape.size() != numIndices)
+    return this->emitOpError(
+        "the number of indices must match the source shape size");
+
+  const LoadTemporalHint temporalHint = getTemporalHint();
+  const Scope scope = getCacheScope();
+  const bool isSpeculative = getSpeculative();
+
+  // See GFX1250 SPG for a detail explanation
+  if (isSpeculative && scope == Scope::WGP)
+    return this->emitOpError(
+        "does not support speculative prefetch in WGP scope");
+
+  // Note that temporal hints are shared between load, store,
+  // prefetch, etc. instructions. However, some instructions
+  // operate only with a subset of hints according to the ISA
+  // documentation. In case of global prefetch, non-temporal (NT)
+  // and last-use (LU) hints are not used. The extra bits of encoding
+  // are used to encode speculative or non-speculative instruction behavior
+  if (llvm::is_contained({LoadTemporalHint::NT, LoadTemporalHint::LU},
+                         temporalHint))
+    return this->emitOpError("does not support NT and LU modes");
+
+  if (llvm::is_contained({LoadTemporalHint::NT_RT, LoadTemporalHint::RT_NT,
+                          LoadTemporalHint::NT_HT},
+                         temporalHint) &&
+      !isSpeculative) {
+    return this->emitOpError("operates only in the speculative mode");
+  }
+  return success();
 }
 
 #define GET_OP_CLASSES

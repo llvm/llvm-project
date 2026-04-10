@@ -1288,10 +1288,11 @@ protected:
           result.AppendMessageWithFormatv(
               "{0} matching process{1} found on \"{2}\"", matches,
               matches > 1 ? "es were" : " was", platform_sp->GetName());
+          Stream &strm = result.GetOutputStream();
           if (match_desc)
-            result.AppendMessageWithFormat(" whose name %s \"%s\"", match_desc,
-                                           match_name);
-          result.AppendMessageWithFormat("\n");
+            strm << llvm::formatv(" whose name {0} \"{1}\"", match_desc,
+                                  match_name);
+          strm.PutChar('\n');
           ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                m_options.verbose);
           for (uint32_t i = 0; i < matches; ++i) {
@@ -1707,9 +1708,9 @@ public:
       std::string output;
       int status = -1;
       int signo = -1;
-      error = (platform_sp->RunShellCommand(m_options.m_shell_interpreter, cmd,
-                                            working_dir, &status, &signo,
-                                            &output, m_options.m_timeout));
+      error = (platform_sp->RunShellCommand(
+          m_options.m_shell_interpreter, cmd, working_dir, &status, &signo,
+          &output, nullptr, m_options.m_timeout));
       if (!output.empty())
         result.GetOutputStream().PutCString(output);
       if (status > 0) {

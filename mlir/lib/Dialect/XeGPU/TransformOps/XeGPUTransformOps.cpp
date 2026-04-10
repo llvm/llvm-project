@@ -122,17 +122,16 @@ static std::optional<T> findProducerOfType(Value val) {
 }
 
 /// Create a layout attribute from the given parameters.
-static xegpu::LayoutAttr
-createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
-                 ArrayRef<int32_t> sgData,
-                 std::optional<ArrayRef<int32_t>> instData) {
+static xegpu::LayoutAttr createLayoutAttr(
+    MLIRContext *ctx, ArrayRef<int32_t> sgLayout, ArrayRef<int32_t> sgData,
+    std::optional<ArrayRef<int32_t>> instData, ArrayRef<int32_t> order) {
   return xegpu::LayoutAttr::get(
       ctx, DenseI32ArrayAttr::get(ctx, sgLayout),
       DenseI32ArrayAttr::get(ctx, sgData),
       instData ? DenseI32ArrayAttr::get(ctx, instData.value()) : nullptr,
       /*lane_layout=*/nullptr,
       /*lane_data=*/nullptr,
-      /*order=*/nullptr);
+      /*order=*/order.empty() ? nullptr : DenseI32ArrayAttr::get(ctx, order));
 }
 
 /// Generate `xegpu::LayoutAttr` from op mixed layout values.
@@ -142,6 +141,7 @@ getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
                           ArrayRef<::mlir::OpFoldResult> mixedSgLayout,
                           ArrayRef<::mlir::OpFoldResult> mixedSgData,
                           ArrayRef<::mlir::OpFoldResult> mixedInstData,
+                          ArrayRef<int32_t> order,
                           xegpu::LayoutAttr &layoutAttr) {
   SmallVector<int32_t> sgLayout, sgData, instData;
   auto status =
@@ -160,35 +160,13 @@ getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
                            ? std::nullopt
                            : std::optional<ArrayRef<int32_t>>(instData);
 
-  layoutAttr = createLayoutAttr(ctx, sgLayout, sgData, maybeInstData);
+  layoutAttr = createLayoutAttr(ctx, sgLayout, sgData, maybeInstData, order);
 
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Replace xegpu.create_nd_desc op with a new one with the given layout.
-static xegpu::CreateNdDescOp
-setDescLayout(transform::TransformRewriter &rewriter,
-              xegpu::CreateNdDescOp descOp,
-              xegpu::DistributeLayoutAttr layout) {
-  assert(descOp.getMixedOffsets().size() == 0 &&
-         "create desc op with offsets is not supported");
-  auto oldTensorDesc = descOp.getType();
-  auto descType = xegpu::TensorDescType::get(
-      oldTensorDesc.getShape(), oldTensorDesc.getElementType(),
-      /*array_length=*/oldTensorDesc.getArrayLength(),
-      /*boundary_check=*/oldTensorDesc.getBoundaryCheck(),
-      /*memory_space=*/oldTensorDesc.getMemorySpace(),
-      /*layout=*/layout);
-
-  rewriter.setInsertionPointAfter(descOp);
-  auto newDescOp = rewriter.replaceOpWithNewOp<xegpu::CreateNdDescOp>(
-      descOp, descType, descOp.getSource(), descOp.getMixedSizes(),
-      descOp.getMixedStrides());
-  return newDescOp;
-}
-
 DiagnosedSilenceableFailure
-transform::GetDescOp::apply(transform::TransformRewriter &rewriter,
+transform::GetLoadOp::apply(transform::TransformRewriter &rewriter,
                             transform::TransformResults &results,
                             transform::TransformState &state) {
   auto targetValues = state.getPayloadValues(getTarget());
@@ -198,100 +176,33 @@ transform::GetDescOp::apply(transform::TransformRewriter &rewriter,
            << llvm::range_size(targetValues) << ")";
   }
 
-  auto maybeDescOp =
-      findProducerOfType<xegpu::CreateNdDescOp>(*targetValues.begin());
-  if (!maybeDescOp) {
-    return emitSilenceableFailure(getLoc())
-           << "Could not find a matching descriptor op when walking the "
-              "producer chain of the first operand.";
+  Operation *loadOp = nullptr;
+  auto maybeLoadNdOp =
+      findProducerOfType<xegpu::LoadNdOp>(*targetValues.begin());
+  if (maybeLoadNdOp) {
+    loadOp = maybeLoadNdOp->getOperation();
+  } else {
+    auto maybeLoadOp =
+        findProducerOfType<xegpu::LoadGatherOp>(*targetValues.begin());
+    if (maybeLoadOp) {
+      loadOp = maybeLoadOp->getOperation();
+    } else {
+      return emitSilenceableFailure(getLoc())
+             << "Could not find a matching xegpu.load_nd or xegpu.load op when "
+                "walking the "
+                "producer chain of the first operand.";
+    }
   }
 
-  results.set(llvm::cast<OpResult>(getResult()), {*maybeDescOp});
+  results.set(llvm::cast<OpResult>(getResult()), {loadOp});
   return DiagnosedSilenceableFailure::success();
 }
 
-void transform::SetDescLayoutOp::build(OpBuilder &builder,
-                                       OperationState &result, Value target,
-                                       ArrayRef<OpFoldResult> mixedSgLayout,
-                                       ArrayRef<OpFoldResult> mixedSgData,
-                                       ArrayRef<OpFoldResult> mixedInstData,
-                                       ArrayRef<int64_t> sliceDims) {
-  SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
-  SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
-  dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
-  dispatchIndexOpFoldResults(mixedSgData, dynamicSgData, staticSgData);
-  dispatchIndexOpFoldResults(mixedInstData, dynamicInstData, staticInstData);
-  build(builder, result, target.getType(),
-        /*target=*/target,
-        /*sg_layout=*/dynamicSgLayout,
-        /*sg_data=*/dynamicSgData,
-        /*inst_data=*/dynamicInstData,
-        /*static_sg_layout=*/staticSgLayout,
-        /*static_sg_data=*/staticSgData,
-        /*static_inst_data=*/staticInstData,
-        /*slice_dims=*/sliceDims);
-}
-
-DiagnosedSilenceableFailure
-transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
-                                  transform::TransformResults &results,
-                                  transform::TransformState &state) {
-  auto targetOps = state.getPayloadOps(getTarget());
-  if (!llvm::hasSingleElement(targetOps)) {
-    return emitDefiniteFailure() << "requires exactly one targetOp handle (got "
-                                 << llvm::range_size(targetOps) << ")";
-  }
-  Operation *target = *targetOps.begin();
-
-  xegpu::LayoutAttr layoutAttr = nullptr;
-  auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
-                                          getMixedSgLayout(), getMixedSgData(),
-                                          getMixedInstData(), layoutAttr);
-  if (!status.succeeded())
-    return status;
-
-  xegpu::DistributeLayoutAttr layout = layoutAttr;
-  auto sliceDims = getSliceDims();
-  if (sliceDims.size() > 0) {
-    // Wrap layoutAttr in a slice attribute.
-    layout = xegpu::SliceAttr::get(
-        getContext(), layout, DenseI64ArrayAttr::get(getContext(), sliceDims));
-  }
-
-  // For now only create_nd_desc op is supported.
-  auto descOp = dyn_cast<xegpu::CreateNdDescOp>(target);
-  if (!descOp) {
-    auto diag = emitSilenceableFailure(getLoc())
-                << "Expected a xegpu.create_nd_desc op, but got: "
-                << target->getName();
-    diag.attachNote(target->getLoc()) << "target op";
-    return diag;
-  }
-
-  // Set layout attr in desc op's return type. Replaces old desc op.
-  auto newdescOp = setDescLayout(rewriter, descOp, layout);
-
-  // Map result handles.
-  results.set(cast<OpResult>(getTransformed()), {newdescOp.getOperation()});
-
-  return DiagnosedSilenceableFailure::success();
-}
-
-void transform::SetDescLayoutOp::getEffects(
-    ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  onlyReadsHandle(getSgLayoutMutable(), effects);
-  onlyReadsHandle(getSgDataMutable(), effects);
-  onlyReadsHandle(getInstDataMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
-  modifiesPayload(effects);
-}
-
-void transform::SetOpLayoutAttrOp::build(
+void transform::SetAnchorLayoutOp::build(
     OpBuilder &builder, OperationState &ostate, Value target, int64_t index,
     ArrayRef<OpFoldResult> mixedSgLayout, ArrayRef<OpFoldResult> mixedSgData,
-    ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int64_t> sliceDims,
-    bool result, bool operand) {
+    ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int32_t> order,
+    ArrayRef<int64_t> sliceDims) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -306,39 +217,22 @@ void transform::SetOpLayoutAttrOp::build(
         /*static_sg_layout=*/staticSgLayout,
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
-        /*slice_dims=*/sliceDims,
-        /*result=*/result,
-        /*operand=*/operand);
+        /*order=*/order,
+        /*slice_dims=*/sliceDims);
 }
 
 DiagnosedSilenceableFailure
-transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
+transform::SetAnchorLayoutOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformResults &results,
                                     transform::TransformState &state) {
   auto targetOps = state.getPayloadOps(getTarget());
-  if (!llvm::hasSingleElement(targetOps)) {
-    return emitDefiniteFailure() << "Requires exactly one targetOp handle (got "
-                                 << llvm::range_size(targetOps) << ")";
-  }
-  Operation *target = *targetOps.begin();
-
-  bool resultTarget = getResult();
-  bool operandTarget = getOperand();
-
   int64_t index = getIndex();
-  if (resultTarget && index >= target->getNumResults()) {
-    return emitSilenceableFailure(getLoc())
-           << "Index exceeds the number of op results";
-  }
-  if (operandTarget && index >= target->getNumOperands()) {
-    return emitSilenceableFailure(getLoc())
-           << "Index exceeds the number of op operands";
-  }
 
+  // Construct layout attribute.
   xegpu::LayoutAttr layoutAttr = nullptr;
-  auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
-                                          getMixedSgLayout(), getMixedSgData(),
-                                          getMixedInstData(), layoutAttr);
+  auto status = getLayoutAttrFromOperands(
+      getContext(), state, (*this), getMixedSgLayout(), getMixedSgData(),
+      getMixedInstData(), getOrder(), layoutAttr);
   if (!status.succeeded())
     return status;
 
@@ -350,55 +244,45 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
         getContext(), layout, DenseI64ArrayAttr::get(getContext(), sliceDims));
   }
 
-  // Set layout attribute
-  if (resultTarget) {
-    // op result
-    xegpu::setDistributeLayoutAttr(target->getResult(index), layout);
-  } else if (operandTarget) {
-    // op operand
-    xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layout);
-  } else if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
-    // dpas op is a special case where layout needs to be set for A, B, and C
-    if (index == 0)
-      dpasOp.getProperties().layout_a = layout;
-    else if (index == 1)
-      dpasOp.getProperties().layout_b = layout;
-    else if (index == 2)
-      dpasOp.getProperties().layout_cd = layout;
-    else {
-      auto diag = emitSilenceableFailure(getLoc())
-                  << "Invalid index for setting dpas op layout: " << index;
-      diag.attachNote(target->getLoc()) << "target op";
-      return diag;
+  // Apply the layout to all target ops.
+  for (Operation *target : targetOps) {
+    // Set layout attribute
+    if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
+      // dpas op is a special case where layout needs to be set for A, B, and C
+      if (index == 0)
+        dpasOp.getProperties().layout_a = layout;
+      else if (index == 1)
+        dpasOp.getProperties().layout_b = layout;
+      else if (index == 2)
+        dpasOp.getProperties().layout_cd = layout;
+      else {
+        auto diag = emitSilenceableFailure(getLoc())
+                    << "Invalid index for setting dpas op layout: " << index;
+        diag.attachNote(target->getLoc()) << "target op";
+        return diag;
+      }
+    } else {
+      // op's anchor layout.
+      auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(target);
+      if (!anchorOp) {
+        auto diag = emitSilenceableFailure(getLoc())
+                    << "Cannot set anchor layout to op: " << target->getName();
+        diag.attachNote(target->getLoc()) << "target op";
+        return diag;
+      }
+      anchorOp.setAnchorLayout(layout);
     }
-  } else {
-    // op's anchor layout.
-    auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(target);
-    if (!anchorOp) {
-      auto diag = emitSilenceableFailure(getLoc())
-                  << "Cannot set anchor layout to op: " << target->getName();
-      diag.attachNote(target->getLoc()) << "target op";
-      return diag;
-    }
-    anchorOp.setAnchorLayout(layout);
   }
   return DiagnosedSilenceableFailure::success();
 }
 
-void transform::SetOpLayoutAttrOp::getEffects(
+void transform::SetAnchorLayoutOp::getEffects(
     ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsHandle(getTargetMutable(), effects);
   onlyReadsHandle(getSgLayoutMutable(), effects);
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
   modifiesPayload(effects);
-}
-
-LogicalResult transform::SetOpLayoutAttrOp::verify() {
-  if (getResult() && getOperand()) {
-    return emitOpError("Cannot set both result and operand simultaneously.");
-  }
-  return success();
 }
 
 void transform::SetGPULaunchThreadsOp::build(
@@ -468,12 +352,12 @@ DiagnosedSilenceableFailure
 transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
                                    transform::TransformResults &results,
                                    transform::TransformState &state) {
-  auto targetValues = state.getPayloadValues(getTarget());
-  if (!llvm::hasSingleElement(targetValues))
+  auto targetOps = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(targetOps))
     return emitDefiniteFailure()
-           << "requires exactly one target value handle (got "
-           << llvm::range_size(targetValues) << ")";
-  auto value = *targetValues.begin();
+           << "requires exactly one target op handle (got "
+           << llvm::range_size(targetOps) << ")";
+  auto target = *targetOps.begin();
 
   int64_t nbPrefetch = getStaticNbPrefetch();
   if (getDynamicNbPrefetch()) {
@@ -492,11 +376,13 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
     return emitSilenceableFailure(getLoc())
            << "nb_prefetch must be a positive integer.";
 
-  // Find load operation of the operand.
-  auto maybeLoadOp = findProducerOfType<xegpu::LoadNdOp>(value);
-  if (!maybeLoadOp)
-    return emitSilenceableFailure(getLoc()) << "Could not find load op.";
-  auto loadOp = *maybeLoadOp;
+  // Cast target to load op.
+  auto maybeLoadOp = dyn_cast<xegpu::LoadNdOp>(target);
+  if (!maybeLoadOp) {
+    return emitSilenceableFailure(getLoc())
+           << "Expected xegpu.load_nd op, got " << target->getName();
+  }
+  auto loadOp = maybeLoadOp;
   if (loadOp.getMixedOffsets().size() == 0) {
     auto diag = emitSilenceableFailure(getLoc())
                 << "Load op must have offsets.";
@@ -514,7 +400,8 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Find descriptor op.
-  auto maybeDescOp = findProducerOfType<xegpu::CreateNdDescOp>(value);
+  auto maybeDescOp =
+      findProducerOfType<xegpu::CreateNdDescOp>(loadOp.getResult());
   if (!maybeDescOp)
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
@@ -600,10 +487,10 @@ void transform::ConvertLayoutOp::build(
     OpBuilder &builder, OperationState &ostate, Value target,
     ArrayRef<OpFoldResult> mixedInputSgLayout,
     ArrayRef<OpFoldResult> mixedInputSgData,
-    ArrayRef<OpFoldResult> mixedInputInstData,
+    ArrayRef<OpFoldResult> mixedInputInstData, ArrayRef<int32_t> inputOrder,
     ArrayRef<OpFoldResult> mixedTargetSgLayout,
     ArrayRef<OpFoldResult> mixedTargetSgData,
-    ArrayRef<OpFoldResult> mixedTargetInstData) {
+    ArrayRef<OpFoldResult> mixedTargetInstData, ArrayRef<int32_t> targetOrder) {
   SmallVector<int64_t> staticInputSgLayout, staticInputSgData,
       staticInputInstData;
   SmallVector<Value> dynamicInputSgLayout, dynamicInputSgData,
@@ -632,12 +519,14 @@ void transform::ConvertLayoutOp::build(
         /*target_sg_layout=*/dynamicTargetSgLayout,
         /*target_sg_data=*/dynamicTargetSgData,
         /*target_inst_data=*/dynamicTargetInstData,
+        /*input_order=*/inputOrder,
         /*static_input_sg_layout=*/staticInputSgLayout,
         /*static_input_sg_data=*/staticInputSgData,
         /*static_input_inst_data=*/staticInputInstData,
         /*static_target_sg_layout=*/staticTargetSgLayout,
         /*static_target_sg_data=*/staticTargetSgData,
-        /*static_target_inst_data=*/staticTargetInstData);
+        /*static_target_inst_data=*/staticTargetInstData,
+        /*target_order=*/targetOrder);
 }
 
 DiagnosedSilenceableFailure
@@ -655,14 +544,16 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
   xegpu::LayoutAttr inputLayoutAttr = nullptr;
   auto status = getLayoutAttrFromOperands(
       getContext(), state, (*this), getMixedInputSgLayout(),
-      getMixedInputSgData(), getMixedInputInstData(), inputLayoutAttr);
+      getMixedInputSgData(), getMixedInputInstData(), getInputOrder(),
+      inputLayoutAttr);
   if (!status.succeeded())
     return status;
 
   xegpu::LayoutAttr targetLayoutAttr = nullptr;
   status = getLayoutAttrFromOperands(
       getContext(), state, (*this), getMixedTargetSgLayout(),
-      getMixedTargetSgData(), getMixedTargetInstData(), targetLayoutAttr);
+      getMixedTargetSgData(), getMixedTargetInstData(), getTargetOrder(),
+      targetLayoutAttr);
   if (!status.succeeded())
     return status;
 

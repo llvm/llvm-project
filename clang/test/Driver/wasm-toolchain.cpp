@@ -111,3 +111,38 @@
 // COMPILE_WALI_STDCXX: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
 // COMPILE_WALI_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-linux-muslwali"
 // COMPILE_WALI_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include"
+
+// With a known OS "eh" and "noeh" directories are added to enable segregating
+// object built with/without exception-handling
+
+// RUN: %clangxx -### --target=wasm32-wasi --stdlib=libc++ %s 2>&1 \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree/usr \
+// RUN:   | FileCheck -check-prefix=EH_OFF %s
+// EH_OFF: "-cc1"
+// EH_OFF: "-isysroot" "[[SYSROOT:[^"]+]]"
+// EH_OFF: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi/noeh/c++/v1"
+// EH_OFF-NOT: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi/eh/c++/v1"
+// EH_OFF: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi/c++/v1"
+// EH_OFF: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
+// EH_OFF: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi"
+// EH_OFF: "-internal-isystem" "[[SYSROOT:[^"]+]]/include"
+
+// RUN: %clangxx -### --target=wasm32-wasi -fwasm-exceptions --stdlib=libc++ %s 2>&1 \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree/usr \
+// RUN:   | FileCheck -check-prefix=EH_ON %s
+// EH_ON: "-cc1"
+// EH_ON: "-isysroot" "[[SYSROOT:[^"]+]]"
+// EH_ON: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi/eh/c++/v1"
+// EH_ON-NOT: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi/noeh/c++/v1"
+// EH_ON: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi/c++/v1"
+// EH_ON: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
+// EH_ON: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi"
+// EH_ON: "-internal-isystem" "[[SYSROOT:[^"]+]]/include"
+//
+// RUN: %clangxx -### --target=wasm32-wasi --sysroot=/foo --stdlib=libc++ %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=EH_OFF_LINK %s
+// EH_OFF_LINK: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi/noeh" "-L/foo/lib/wasm32-wasi"
+//
+// RUN: %clangxx -### --target=wasm32-wasi -fwasm-exceptions --sysroot=/foo --stdlib=libc++ %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=EH_ON_LINK %s
+// EH_ON_LINK: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi/eh" "-L/foo/lib/wasm32-wasi"

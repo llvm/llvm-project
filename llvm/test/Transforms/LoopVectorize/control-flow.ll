@@ -10,7 +10,7 @@
 ;   return 0;
 ; }
 
-; CHECK: remark: source.cpp:5:9: loop not vectorized: Cannot vectorize potentially faulting early exit loop
+; CHECK: remark: source.cpp:5:9: loop not vectorized: Cannot determine whether critical uncountable exit load address does not alias with a memory write
 ; CHECK: remark: source.cpp:5:9: loop not vectorized
 
 ; CHECK: _Z4testPii
@@ -19,8 +19,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind optsize ssp uwtable
-define i32 @_Z4testPii(ptr nocapture %A, i32 %Length) #0 !dbg !4 {
+define i32 @_Z4testPii(ptr nocapture %A, i32 %Length) !dbg !4 {
 entry:
   %cmp8 = icmp sgt i32 %Length, 0, !dbg !10
   br i1 %cmp8, label %for.body.preheader, label %end, !dbg !10
@@ -48,8 +47,6 @@ end.loopexit:                                     ; preds = %if.else, %for.body
 end:                                              ; preds = %end.loopexit, %entry
   ret i32 0, !dbg !20
 }
-
-attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

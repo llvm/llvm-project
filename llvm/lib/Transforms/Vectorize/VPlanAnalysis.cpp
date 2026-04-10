@@ -24,7 +24,8 @@ using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
-VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
+VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
+    : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {
   if (auto LoopRegion = Plan.getVectorLoopRegion()) {
     if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
             &LoopRegion->getEntryBasicBlock()->front())) {
@@ -122,7 +123,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return inferScalarType(R->getOperand(1));
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
-    return Type::getIntNTy(Ctx, 64);
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    return DL.getIndexType(Ctx, 0);
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
@@ -388,34 +391,31 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   if (ParentA == ParentB)
     return LocalComesBefore(A, B);
 
-#ifndef NDEBUG
-  auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
-    VPRegionBlock *Region = R->getRegion();
-    if (Region && Region->isReplicator()) {
-      assert(Region->getNumSuccessors() == 1 &&
-             Region->getNumPredecessors() == 1 && "Expected SESE region!");
-      assert(R->getParent()->size() == 1 &&
-             "A recipe in an original replicator region must be the only "
-             "recipe in its block");
-      return Region;
-    }
-    return nullptr;
-  };
-  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
-         "No replicate regions expected at this point");
-  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
-         "No replicate regions expected at this point");
-#endif
   return Base::properlyDominates(ParentA, ParentB);
 }
 
-bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI,
-                                        unsigned OverrideMaxNumRegs) const {
-  return any_of(MaxLocalUsers, [&TTI, &OverrideMaxNumRegs](auto &LU) {
-    return LU.second > (OverrideMaxNumRegs > 0
-                            ? OverrideMaxNumRegs
-                            : TTI.getNumberOfRegisters(LU.first));
-  });
+InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
+                                           unsigned OverrideMaxNumRegs) const {
+  InstructionCost Cost;
+  for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
+    unsigned AvailableRegs = OverrideMaxNumRegs > 0
+                                 ? OverrideMaxNumRegs
+                                 : Ctx.TTI.getNumberOfRegisters(RegClass);
+    if (MaxUsers > AvailableRegs) {
+      // Assume that for each register used past what's available we get one
+      // spill and reload.
+      unsigned Spills = MaxUsers - AvailableRegs;
+      InstructionCost SpillCost =
+          Ctx.TTI.getRegisterClassSpillCost(RegClass, Ctx.CostKind) +
+          Ctx.TTI.getRegisterClassReloadCost(RegClass, Ctx.CostKind);
+      InstructionCost TotalCost = Spills * SpillCost;
+      LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
+                        << Spills << " spills of "
+                        << Ctx.TTI.getRegisterClassName(RegClass) << "\n");
+      Cost += TotalCost;
+    }
+  }
+  return Cost;
 }
 
 SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
@@ -436,7 +436,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   // the loop (not including non-recipe values such as arguments and
   // constants).
   SmallSetVector<VPValue *, 8> LoopInvariants;
-  LoopInvariants.insert(&Plan.getVectorTripCount());
+  if (Plan.getVectorTripCount().getNumUsers() > 0)
+    LoopInvariants.insert(&Plan.getVectorTripCount());
 
   // We scan the loop in a topological order in order and assign a number to
   // each recipe. We use RPO to ensure that defs are met before their users. We
@@ -454,25 +455,21 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
       // Save the end location of each USE.
       for (VPValue *U : R.operands()) {
-        auto *DefR = U->getDefiningRecipe();
-
-        // Ignore non-recipe values such as arguments, constants, etc.
-        // FIXME: Might need some motivation why these values are ignored. If
-        // for example an argument is used inside the loop it will increase the
-        // register pressure (so shouldn't we add it to LoopInvariants).
-        auto *IRV = dyn_cast<VPIRValue>(U);
-        if (!DefR && (!IRV || !isa<Instruction>(IRV->getValue())))
-          continue;
-
-        // If this recipe is outside the loop then record it and continue.
-        if (!DefR) {
+        if (isa<VPRecipeValue>(U)) {
+          // Overwrite previous end points.
+          EndPoint[U] = Idx2Recipe.size();
+          Ends.insert(U);
+        } else if (auto *IRV = dyn_cast<VPIRValue>(U)) {
+          // Ignore non-recipe values such as arguments, constants, etc.
+          // FIXME: Might need some motivation why these values are ignored. If
+          // for example an argument is used inside the loop it will increase
+          // the register pressure (so shouldn't we add it to LoopInvariants).
+          if (!isa<Instruction>(IRV->getValue()))
+            continue;
+          // This recipe is outside the loop, record it and continue.
           LoopInvariants.insert(U);
-          continue;
         }
-
-        // Overwrite previous end points.
-        EndPoint[U] = Idx2Recipe.size();
-        Ends.insert(U);
+        // Other types of VPValue are currently not tracked.
       }
     }
     if (VPBB == LoopRegion->getExiting()) {
