@@ -29,6 +29,20 @@ define i32 @or_min_max_assoc(i32 %x, i32 %y, i32 %z) {
   ret i32 %ret
 }
 
+define i32 @or_disjoint_min_max_assoc(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i32 @or_disjoint_min_max_assoc(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[LHS:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[Z]], [[LHS]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %min = call i32 @llvm.smin.i32(i32 %x, i32 %y)
+  %lhs = or disjoint i32 %z, %min
+  %max = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %ret = or i32 %lhs, %max
+  ret i32 %ret
+}
+
 define i32 @smul_min_max_assoc(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @smul_min_max_assoc(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
