@@ -237,7 +237,9 @@ private:
   /// Cache definitions of tensor values.
   DenseMap<Value, SetVector<Value>> cachedDefinitions;
 
-  /// Cache results of areNonConflictingSubsets checks.
+  /// Cache results of areNonConflictingSubsets checks. The bool value is `true`
+  /// if the operands are non-conflicting subsets, `false` if they are
+  /// conflicting. The absence of an entry means uncached.
   DenseMap<std::pair<OpOperand *, OpOperand *>, bool> nonConflictingSubsetCache;
 
   /// Set of all OpResults that were decided to bufferize in-place.
