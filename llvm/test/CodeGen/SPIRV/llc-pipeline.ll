@@ -7,8 +7,6 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
 ; RUN:llc -O3 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
-;
-; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
 ; SPIRV-O0-NEXT:Runtime Library Function Analysis
@@ -40,6 +38,9 @@
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      Lower invoke and unwind, for unwindless code generators
 ; SPIRV-O0-NEXT:      Remove unreachable blocks from the CFG
+; SPIRV-O0-NEXT:      Dominator Tree Construction
+; SPIRV-O0-NEXT:      Natural Loop Information
+; SPIRV-O0-NEXT:      Canonicalize natural loops
 ; SPIRV-O0-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-O0-NEXT:    SPIRV Legalize Implicit Binding
 ; SPIRV-O0-NEXT:    SPIRV Legalize Zero-Size Arrays
@@ -95,14 +96,19 @@
 ; SPIRV-Opt-NEXT:Target Pass Configuration
 ; SPIRV-Opt-NEXT:Machine Module Information
 ; SPIRV-Opt-NEXT:Target Transform Information
-; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Assumption Cache Tracker
+; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Type-Based Alias Analysis
 ; SPIRV-Opt-NEXT:Scoped NoAlias Alias Analysis
-; SPIRV-Opt-NEXT:Profile summary info
 ; SPIRV-Opt-NEXT:Create Garbage Collector Module Metadata
+; SPIRV-Opt-NEXT:Profile summary info
 ; SPIRV-Opt-NEXT:Machine Branch Probability Analysis
 ; SPIRV-Opt-NEXT:  ModulePass Manager
+; SPIRV-Opt-NEXT:    FunctionPass Manager
+; SPIRV-Opt-NEXT:      Dominator Tree Construction
+; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
+; SPIRV-Opt-NEXT:      Function Alias Analysis Results
+; SPIRV-Opt-NEXT:      ObjC ARC contraction
 ; SPIRV-Opt-NEXT:    Pre-ISel Intrinsic Lowering
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Expand IR instructions
@@ -116,13 +122,6 @@
 ; SPIRV-Opt-NEXT:        Canonicalize Freeze Instructions in Loops
 ; SPIRV-Opt-NEXT:        Induction Variable Users
 ; SPIRV-Opt-NEXT:        Loop Strength Reduction
-; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
-; SPIRV-Opt-NEXT:      Function Alias Analysis Results
-; SPIRV-Opt-NEXT:      Merge contiguous icmps into a memcmp
-; SPIRV-Opt-NEXT:      Natural Loop Information
-; SPIRV-Opt-NEXT:      Lazy Branch Probability Analysis
-; SPIRV-Opt-NEXT:      Lazy Block Frequency Analysis
-; SPIRV-Opt-NEXT:      Expand memcmp() to load/stores
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
@@ -154,6 +153,9 @@
 ; SPIRV-Opt-NEXT:      CodeGen Prepare
 ; SPIRV-Opt-NEXT:      Lower invoke and unwind, for unwindless code generators
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
+; SPIRV-Opt-NEXT:      Dominator Tree Construction
+; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Canonicalize natural loops
 ; SPIRV-Opt-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Implicit Binding
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Zero-Size Arrays
@@ -162,14 +164,11 @@
 ; SPIRV-Opt-NEXT:    SPIRV emit intrinsics
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIRV legalize bitcast pass
-; SPIRV-Opt-NEXT:      Dominator Tree Construction
-; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
-; SPIRV-Opt-NEXT:      Function Alias Analysis Results
-; SPIRV-Opt-NEXT:      ObjC ARC contraction
 ; SPIRV-Opt-NEXT:      Prepare inline asm insts
 ; SPIRV-Opt-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-Opt-NEXT:      Insert stack protectors
 ; SPIRV-Opt-NEXT:      Analysis containing CSE Info
+; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis

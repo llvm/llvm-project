@@ -8,7 +8,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; This test checks that the given loop still beneficial for vecotization
 ; even if it contains scalarized load (gather on AVX2)
 
-; Function Attrs: norecurse nounwind readonly uwtable
 define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; CHECK-LABEL: define i32 @matrix_row_col(
 ; CHECK-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -473,10 +472,10 @@ entry:
   %idxprom5 = sext i32 %j to i64
   br label %for.body
 
-  for.cond.cleanup:                                 ; preds = %for.body
+  for.cond.cleanup:
   ret i32 %add7
 
-  for.body:                                         ; preds = %for.body, %entry
+  for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.015 = phi i32 [ 0, %entry ], [ %add7, %for.body ]
   ; first consecutive load as vector load

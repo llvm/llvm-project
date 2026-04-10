@@ -394,7 +394,7 @@ llvm.func @imp_fn() {
 #di_subprogram = #llvm.di_subprogram<id = distinct[2]<>, recId = distinct[1]<>,
   compileUnit = #di_compile_unit, scope = #di_file, name = "imp_fn",
   file = #di_file, subprogramFlags = Definition, type = #di_subroutine_type,
-  retainedNodes = #di_imported_entity_1, #di_imported_entity_2>
+  retainedNodes = [#di_imported_entity_1, #di_imported_entity_2]>
 #loc1 = loc("test.f90":12:14)
 #loc2 = loc(fused<#di_subprogram>[#loc1])
 
@@ -740,3 +740,65 @@ llvm.mlir.global @data() {dbg_exprs = [#var_expression, #var_expression1]} : i64
 // CHECK: ![[VAR1]] = {{.*}}!DIGlobalVariable(name: "a"{{.*}})
 // CHECK: ![[EXP2]] = !DIGlobalVariableExpression(var: ![[VAR2:[0-9]+]], expr: !DIExpression())
 // CHECK: ![[VAR2]] = {{.*}}!DIGlobalVariable(name: "b"{{.*}})
+
+// -----
+
+// Test lowering compile unit `importedEntities` to LLVM IR `imports`.
+
+#file = #llvm.di_file<"test.mlir" in "">
+#ns = #llvm.di_namespace<name = "imported_ns", exportSymbols = false>
+#ie = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #file, entity = #ns, file = #file>
+#cu = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
+  producer = "MLIR", isOptimized = false, emissionKind = Full,
+  importedEntities = #ie
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_imports",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_imports()
+llvm.func @fn_cu_imports() {
+  llvm.return
+} loc(fused<#sp>["cu_imports.mlir":1:1])
+
+// CHECK-DAG: ![[FILE:[0-9]+]] = !DIFile(filename: "test.mlir", directory: "")
+// CHECK-DAG: ![[NS:[0-9]+]] = !DINamespace(name: "imported_ns"{{.*}})
+// CHECK-DAG: ![[IE:[0-9]+]] = !DIImportedEntity(tag: DW_TAG_imported_module{{.*}}entity: ![[NS]]{{.*}})
+// CHECK-DAG: ![[IMP_LIST:[0-9]+]] = !{![[IE]]}
+// CHECK-DAG: !DICompileUnit({{.*}}imports: ![[IMP_LIST]])
+
+// -----
+
+#file = #llvm.di_file<"m.cpp" in "/">
+#ns = #llvm.di_namespace<name = "n", exportSymbols = false>
+#self = #llvm.di_compile_unit<
+  recId = distinct[0]<>, isRecSelf = true, sourceLanguage = DW_LANG_C
+>
+#ie = #llvm.di_imported_entity<
+  tag = DW_TAG_imported_module, scope = #self,
+  entity = #ns, file = #file
+>
+#cu = #llvm.di_compile_unit<
+  recId = distinct[0]<>, id = distinct[2]<>,
+  sourceLanguage = DW_LANG_C, file = #file,
+  producer = "p", isOptimized = false, emissionKind = Full,
+  importedEntities = #ie
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_import_cycle",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_import_cycle()
+llvm.func @fn_cu_import_cycle() {
+  llvm.return
+} loc(fused<#sp>["m.mlir":1:1])
+
+// CHECK-DAG: !DIImportedEntity(tag: DW_TAG_imported_module{{.*}})
+// CHECK-DAG: !DICompileUnit({{.*}}imports:

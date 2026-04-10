@@ -171,13 +171,12 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z4testPii(ptr nocapture %A, i32 %Length) #0 !dbg !4 {
+define void @_Z4testPii(ptr nocapture %A, i32 %Length) !dbg !4 {
 entry:
   %cmp10 = icmp sgt i32 %Length, 0, !dbg !12
   br i1 %cmp10, label %loop, label %exit, !dbg !12, !llvm.loop !14
 
-loop:                                         ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !16
   %0 = trunc i64 %iv to i32, !dbg !16
@@ -190,7 +189,7 @@ loop:                                         ; preds = %entry, %loop
   %or.cond = and i1 %cmp3, %cmp, !dbg !22
   br i1 %or.cond, label %loop, label %exit, !dbg !22
 
-exit:                                          ; preds = %loop, %entry
+exit:
   ret void, !dbg !24
 }
 
@@ -198,13 +197,12 @@ exit:                                          ; preds = %loop, %entry
 ; CHECK-NOT: x i32>
 ; CHECK: ret
 
-; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z13test_disabledPii(ptr nocapture %A, i32 %Length) #0 !dbg !7 {
+define void @_Z13test_disabledPii(ptr nocapture %A, i32 %Length) !dbg !7 {
 entry:
   %cmp4 = icmp sgt i32 %Length, 0, !dbg !25
   br i1 %cmp4, label %loop, label %exit, !dbg !25, !llvm.loop !27
 
-loop:                                         ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv, !dbg !30
   %0 = trunc i64 %iv to i32, !dbg !30
@@ -214,7 +212,7 @@ loop:                                         ; preds = %entry, %loop
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !25
   br i1 %exitcond, label %exit, label %loop, !dbg !25, !llvm.loop !27
 
-exit:                                          ; preds = %loop, %entry
+exit:
   ret void, !dbg !31
 }
 
@@ -222,16 +220,15 @@ exit:                                          ; preds = %loop, %entry
 ; CHECK-NOT: x i32>
 ; CHECK: ret
 
-; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z17test_array_boundsPiS_i(ptr nocapture %A, ptr nocapture readonly %B, i32 %Length) #0 !dbg !8 {
+define void @_Z17test_array_boundsPiS_i(ptr nocapture %A, ptr nocapture readonly %B, i32 %Length) !dbg !8 {
 entry:
   %cmp9 = icmp sgt i32 %Length, 0, !dbg !32
   br i1 %cmp9, label %loop.preheader, label %exit, !dbg !32, !llvm.loop !34
 
-loop.preheader:                               ; preds = %entry
+loop.preheader:
   br label %loop, !dbg !32
 
-loop:                                         ; preds = %loop.preheader, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i64 %iv, !dbg !35
   %0 = load i32, ptr %arrayidx, align 4, !dbg !35, !tbaa !18
@@ -253,12 +250,11 @@ exit:
 ; CHECK-NOT: x i32>
 ; CHECK: ret
 
-; Function Attrs: nounwind uwtable
-define i32 @test_multiple_failures(ptr nocapture readonly %A) #0 !dbg !46 {
+define i32 @test_multiple_failures(ptr nocapture readonly %A) !dbg !46 {
 entry:
   br label %loop, !dbg !38
 
-loop:                                         ; preds = %entry, %for.inc
+loop:
   %i.09 = phi i32 [ 0, %entry ], [ %add, %for.inc ]
   %k.09 = phi i32 [ 0, %entry ], [ %k.1, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.09, !dbg !40
@@ -266,19 +262,19 @@ loop:                                         ; preds = %entry, %for.inc
   %tobool = icmp eq i32 %0, 0, !dbg !40
   br i1 %tobool, label %for.inc, label %if.then, !dbg !40
 
-if.then:                                          ; preds = %loop
+if.then:
   %call = tail call i32 (...) @foo(), !dbg !41
   %.pre = load i32, ptr %arrayidx, align 4
   br label %for.inc, !dbg !42
 
-for.inc:                                          ; preds = %loop, %if.then
+for.inc:
   %1 = phi i32 [ %.pre, %if.then ], [ 0, %loop ], !dbg !43
   %k.1 = phi i32 [ %call, %if.then ], [ %k.09, %loop ]
   %add = add nsw i32 %1, %i.09, !dbg !44
   %cmp = icmp slt i32 %add, 1000, !dbg !45
   br i1 %cmp, label %loop, label %exit, !dbg !38
 
-exit:                                 ; preds = %for.inc
+exit:
   ret i32 %k.1, !dbg !39
 }
 
@@ -307,8 +303,6 @@ declare i32 @foo(...)
 ; CHECK: test_multiple_failure
 ; CHECK-NOT: x i32>
 ; CHECK: ret
-
-attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}

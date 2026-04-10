@@ -141,7 +141,8 @@ def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                           "(Integer Conditional Operations)">;
 
 def FeatureStdExtZifencei
-    : RISCVExtension<2, 0, "fence.i">;
+    : RISCVExtension<2, 0, "fence.i">,
+      RISCVExtensionBitmask<1, 11>;
 def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
                         AssemblerPredicate<(all_of FeatureStdExtZifencei),
                                            "'Zifencei' (fence.i)">;
@@ -201,7 +202,8 @@ def FeatureZilsd4ByteAlign
 // Multiply Extensions
 
 def FeatureStdExtZmmul
-    : RISCVExtension<1, 0, "Integer Multiplication">;
+    : RISCVExtension<1, 0, "Integer Multiplication">,
+      RISCVExtensionBitmask<1, 12>;
 def HasStdExtZmmul : Predicate<"Subtarget->hasStdExtZmmul()">,
                      AssemblerPredicate<(all_of FeatureStdExtZmmul),
                      "'Zmmul' (Integer Multiplication)">;
@@ -1747,6 +1749,13 @@ def FeatureVendorXAIFET
 def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
                           AssemblerPredicate<(all_of FeatureVendorXAIFET),
                           "'XAIFET' (AI Foundry ET Extension)">;
+
+def FeatureVendorXCheriot
+    : RISCVExtension<1, 0, "CHERIoT extension",
+    [FeatureStdExtZca, FeatureStdExtE, FeatureStdExtM]>;
+def HasCheriot
+    : Predicate<"Subtarget->hasVendorXCheriot()">,
+      AssemblerPredicate<(all_of FeatureVendorXCheriot), "'XCheriot' (CHERIoT Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions

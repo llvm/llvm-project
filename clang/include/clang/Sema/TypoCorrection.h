@@ -350,6 +350,34 @@ protected:
   NestedNameSpecifier TypoNNS;
 };
 
+/// Callback class to reject typo corrections that look like template parameters
+/// when doing a qualified lookup. A template parameter (type or template) is
+/// local to the current template scope and cannot be validly qualified by any
+/// external scope (e.g. 'std::T' where T is a template parameter).
+class QualifiedLookupValidatorCCC : public CorrectionCandidateCallback {
+public:
+  explicit QualifiedLookupValidatorCCC(bool HasQualifier)
+      : HasQualifier(HasQualifier) {}
+
+  bool ValidateCandidate(const TypoCorrection &Candidate) override {
+    if (HasQualifier) {
+      if (const NamedDecl *ND = Candidate.getCorrectionDecl()) {
+        // A template parameter can never be a member of any qualifier scope.
+        if (isa<TemplateTypeParmDecl>(ND) || isa<TemplateTemplateParmDecl>(ND))
+          return false;
+      }
+    }
+    return CorrectionCandidateCallback::ValidateCandidate(Candidate);
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return std::make_unique<QualifiedLookupValidatorCCC>(*this);
+  }
+
+private:
+  bool HasQualifier;
+};
+
 class DefaultFilterCCC final : public CorrectionCandidateCallback {
 public:
   explicit DefaultFilterCCC(const IdentifierInfo *Typo = nullptr,

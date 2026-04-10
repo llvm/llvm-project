@@ -514,8 +514,11 @@ void macho::markAddrSigSymbols() {
       continue;
 
     Section *addrSigSection = obj->addrSigSection;
-    if (!addrSigSection)
+    if (!addrSigSection) {
+      for (Symbol *sym : obj->symbols)
+        markSymAsAddrSig(sym);
       continue;
+    }
     assert(addrSigSection->subsections.size() == 1);
 
     const InputSection *isec = addrSigSection->subsections[0].isec;
