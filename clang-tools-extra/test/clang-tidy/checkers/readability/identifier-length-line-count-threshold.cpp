@@ -1,63 +1,52 @@
 // RUN: %check_clang_tidy %s readability-identifier-length %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  {readability-identifier-length.IgnoredVariableNames: "^[xy]$"}}' \
+// RUN:  {readability-identifier-length.LineCountThreshold: 3}}' \
 // RUN: -- -fexceptions
 
 struct myexcept {
   int val;
 };
 
-struct simpleexcept {
-  int other;
-};
+template<typename... Ts>
+void doIt(Ts...);
 
-void doIt();
-
-void tooShortVariableNames(int z)
+void shouldWarn(int z)
 // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: parameter name 'z' is too short, expected at least 3 characters [readability-identifier-length]
 {
   int i = 5;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable name 'i' is too short, expected at least 3 characters [readability-identifier-length]
 
-  int jj = z;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable name 'jj' is too short, expected at least 3 characters [readability-identifier-length]
-
   for (int m = 0; m < 5; ++m)
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: loop variable name 'm' is too short, expected at least 2 characters [readability-identifier-length]
   {
-    doIt();
+    doIt(i);
+    doIt(m);
   }
 
   try {
-    doIt();
+    doIt(z);
   } catch (const myexcept &x)
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: exception variable name 'x' is too short, expected at least 2 characters [readability-identifier-length]
   {
-    doIt();
+    doIt(x);
   }
 }
 
-void longEnoughVariableNames(int n) // argument 'n' ignored by default configuration
+void shouldNotWarn(int m)
 {
-  int var = 5;
+  doIt(m);
 
-  for (int i = 0; i < 42; ++i) // 'i' is default allowed, for historical reasons
+  int v = 5;
+  doIt(v);
+
+  for (int a = 0; a < 42; ++a)
   {
-    doIt();
-  }
-
-  for (int kk = 0; kk < 42; ++kk) {
-    doIt();
+      doIt(a);
   }
 
   try {
     doIt();
-  } catch (const simpleexcept &e) // ignored by default configuration
-  {
-    doIt();
-  } catch (const myexcept &ex) {
-    doIt();
+  } catch (const myexcept &x) {
+    doIt(x);
   }
-
-  int x = 5; // ignored by configuration
 }
