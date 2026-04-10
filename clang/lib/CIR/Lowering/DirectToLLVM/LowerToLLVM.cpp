@@ -618,6 +618,9 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
                                          llvmDstTy, addrOp);
   }
 
+  if (mlir::isa<cir::VPtrType>(globalAttr.getType()))
+    return addrOp;
+
   llvm_unreachable("Expecting pointer or integer type for GlobalViewAttr");
 }
 
