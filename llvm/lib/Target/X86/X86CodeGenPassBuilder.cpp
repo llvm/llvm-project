@@ -57,12 +57,9 @@ public:
   void addPreEmitPass2(PassManagerWrapper &PMW) const;
   // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
   // once it is available to support AMX.
-  void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                          CreateMCStreamer CreateStreamer) const;
-  void addAsmPrinter(PassManagerWrapper &PMW,
-                     CreateMCStreamer CreateStreamer) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                        CreateMCStreamer CreateStreamer) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
 };
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -260,20 +257,17 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   }
 }
 
-void X86CodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
-  addModulePass(X86AsmPrinterBeginPass(TM, CreateStreamer), PMW,
+void X86CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
+  addModulePass(X86AsmPrinterBeginPass(), PMW,
                 /*Force=*/true);
 }
 
-void X86CodeGenPassBuilder::addAsmPrinter(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
-  addMachineFunctionPass(X86AsmPrinterPass(TM, CreateStreamer), PMW);
+void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86AsmPrinterPass(), PMW);
 }
 
-void X86CodeGenPassBuilder::addAsmPrinterEnd(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
-  addModulePass(X86AsmPrinterEndPass(TM, CreateStreamer), PMW, /*Force=*/true);
+void X86CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+  addModulePass(X86AsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace
@@ -293,9 +287,10 @@ void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opt, MCContext &Ctx,
+    ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    const CGPassBuilderOption &Opt, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
+  return CGPB.buildPipeline(MPM, MAM, Out, DwoOut, FileType, Ctx);
 }
