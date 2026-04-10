@@ -73,7 +73,8 @@ define i64 @findlast_shl_expr(ptr %a, i64 %n) {
 ; TF-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP1]], <4 x i1> [[TMP0]], <4 x i64> poison)
 ; TF-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_MASKED_LOAD]], splat (i64 42)
-; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; TF-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP9]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; TF-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; TF-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -174,7 +175,8 @@ define i64 @findlast_mul_expr(ptr %a, i64 %n) {
 ; TF-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP1]], <4 x i1> [[TMP0]], <4 x i64> poison)
 ; TF-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_MASKED_LOAD]], splat (i64 42)
-; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; TF-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP9]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; TF-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; TF-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -392,7 +394,8 @@ define i64 @findlast_or_expr(ptr %a, i64 %n) {
 ; TF-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP1]], <4 x i1> [[TMP0]], <4 x i64> poison)
 ; TF-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_MASKED_LOAD]], splat (i64 42)
-; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; TF-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP9]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; TF-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; TF-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1195,8 +1198,8 @@ define i64 @findlast_expr_flipped_select_anyof(ptr %a, ptr %b, i64 %rdx.start, i
 ; TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TF:       [[VECTOR_BODY]]:
 ; TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; TF-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; TF-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; TF-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; TF-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; TF-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; TF-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
 ; TF-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
@@ -1213,11 +1216,14 @@ define i64 @findlast_expr_flipped_select_anyof(ptr %a, ptr %b, i64 %rdx.start, i
 ; TF-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP6]], i64 -3
 ; TF-NEXT:    [[WIDE_MASKED_LOAD8:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP7]], <4 x i1> [[REVERSE]], <4 x i64> poison)
 ; TF-NEXT:    [[REVERSE9:%.*]] = shufflevector <4 x i64> [[WIDE_MASKED_LOAD8]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; TF-NEXT:    [[TMP8:%.*]] = icmp sle <4 x i64> [[REVERSE6]], [[REVERSE9]]
+; TF-NEXT:    [[TMP16:%.*]] = icmp sgt <4 x i64> [[REVERSE6]], [[REVERSE9]]
+; TF-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP16]], <4 x i1> zeroinitializer
 ; TF-NEXT:    [[TMP9]] = select <4 x i1> [[TMP8]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; TF-NEXT:    [[TMP10]] = or <4 x i1> [[VEC_PHI3]], [[TMP8]]
+; TF-NEXT:    [[TMP17:%.*]] = xor <4 x i1> [[TMP16]], splat (i1 true)
+; TF-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
+; TF-NEXT:    [[TMP10]] = or <4 x i1> [[VEC_PHI3]], [[TMP18]]
 ; TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; TF-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
+; TF-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_PHI]], splat (i64 -4)
 ; TF-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TF-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; TF:       [[MIDDLE_BLOCK]]:
@@ -1321,7 +1327,8 @@ define i64 @findlast_sub_n_expr(ptr %a, i64 %n) {
 ; TF-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP1]], <4 x i1> [[TMP0]], <4 x i64> poison)
 ; TF-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_MASKED_LOAD]], splat (i64 42)
-; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; TF-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP9]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; TF-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; TF-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1424,7 +1431,8 @@ define i64 @findlast_sub_iv_as_lhs(ptr %a, i64 %n) {
 ; TF-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP1]], <4 x i1> [[TMP0]], <4 x i64> poison)
 ; TF-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_MASKED_LOAD]], splat (i64 42)
-; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; TF-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; TF-NEXT:    [[TMP3]] = select <4 x i1> [[TMP9]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; TF-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; TF-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
