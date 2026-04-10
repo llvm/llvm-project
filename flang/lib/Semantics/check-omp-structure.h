@@ -49,6 +49,10 @@ static const OmpDirectiveSet noWaitClauseNotAllowedSet{
 namespace Fortran::semantics {
 struct AnalyzedCondStmt;
 
+namespace omp {
+struct LoopSequence;
+}
+
 // Mapping from 'Symbol' to 'Source' to keep track of the variables
 // used in multiple clauses
 using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
@@ -259,6 +263,7 @@ private:
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckAssumedSizeArray(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCrayPointee(const parser::OmpObjectList &objectList,
       llvm::StringRef clause, bool suggestToUseCrayPointer = true);
@@ -326,9 +331,10 @@ private:
   void CheckAtomicUpdate(const parser::OpenMPAtomicConstruct &x);
 
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
-  void CheckLooprangeBounds(const parser::OpenMPLoopConstruct &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
+  void CheckRectangularNest(const parser::OmpDirectiveSpecification &spec,
+      const omp::LoopSequence &nest);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();

@@ -1,8 +1,9 @@
 // RUN: %check_clang_tidy %s android-cloexec-accept %t
 
+#include <cstddef>
+
 struct sockaddr {};
 typedef int socklen_t;
-#define NULL 0
 
 extern "C" int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 

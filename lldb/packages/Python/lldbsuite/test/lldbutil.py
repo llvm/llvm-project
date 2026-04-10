@@ -1685,16 +1685,18 @@ def read_file_from_process_wd(test, name):
     return read_file_on_target(test, path)
 
 
-def wait_for_file_on_target(testcase, file_path, max_attempts=6):
-    for i in range(max_attempts):
-        err, retcode, msg = testcase.run_platform_command("ls %s" % file_path)
+def wait_for_file_on_target(testcase, file_path):
+    import time
+
+    MAX_ATTEMPTS = 60
+    timeout_seconds = 20 if "ASAN_OPTIONS" in os.environ else 2
+    for i in range(MAX_ATTEMPTS):
+        command = f"ls {file_path}"
+        err, retcode, msg = testcase.run_platform_command(command)
         if err.Success() and retcode == 0:
             break
-        if i < max_attempts:
-            # Exponential backoff!
-            import time
 
-            time.sleep(pow(2, i) * 0.25)
+        time.sleep(timeout_seconds)
     else:
         testcase.fail(
             "File %s not found even after %d attempts." % (file_path, max_attempts)
@@ -1792,7 +1794,6 @@ def launch_exe_in_apple_simulator(
     device_uuid,
     exe_path,
     exe_args=[],
-    stderr_lines_to_read=0,
     stderr_patterns=[],
     log=None,
 ):
@@ -1816,18 +1817,21 @@ def launch_exe_in_apple_simulator(
     total_patterns = len(stderr_patterns)
     matches_found = 0
     matched_strings = [None] * total_patterns
-    for _ in range(0, stderr_lines_to_read):
-        stderr = sim_launcher.stderr.readline().decode("utf-8")
-        if not stderr:
-            continue
-        for i, pattern in enumerate(stderr_patterns):
-            if matched_strings[i] is not None:
+    if len(stderr_patterns) != 0:
+        while True:
+            stderr = sim_launcher.stderr.readline().decode("utf-8")
+            if not stderr:
                 continue
-            match = re.match(pattern, stderr)
-            if match:
-                matched_strings[i] = str(match.group(1))
-                matches_found += 1
-        if matches_found == total_patterns:
-            break
+            if log:
+                log(f"searching stderr line: {stderr}")
+            for i, pattern in enumerate(stderr_patterns):
+                if matched_strings[i] is not None:
+                    continue
+                match = re.match(pattern, stderr)
+                if match:
+                    matched_strings[i] = str(match.group(1))
+                    matches_found += 1
+            if matches_found == total_patterns:
+                break
 
     return exe_path, matched_strings

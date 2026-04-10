@@ -1,0 +1,12 @@
+static_library("HTTP") {
+  output_name = "LLVMSupportHTTP"
+  deps = [
+    "//llvm/lib/Support",
+    "//llvm/utils/gn/build/libs/curl",
+  ]
+  sources = [
+    "HTTPClient.cpp",
+    "HTTPServer.cpp",
+    "StreamedHTTPResponseHandler.cpp",
+  ]
+}

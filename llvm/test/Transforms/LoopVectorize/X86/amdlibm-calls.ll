@@ -1,88 +1,58 @@
-; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -mattr=avx -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF4
-; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -mattr=avx -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF2
-; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=8 -force-vector-interleave=1 -mattr=+avx512f -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF8
-; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize -force-vector-width=16 -force-vector-interleave=1 -mattr=+avx512f -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF16
+; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize,replace-with-veclib -force-vector-width=4 -force-vector-interleave=1 -mattr=avx -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF4
+; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize,replace-with-veclib -force-vector-width=2 -force-vector-interleave=1 -mattr=avx -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF2
+; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize,replace-with-veclib -force-vector-width=8 -force-vector-interleave=1 -mattr=+avx512f -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF8
+; RUN: opt -vector-library=AMDLIBM -passes=inject-tli-mappings,loop-vectorize,replace-with-veclib -force-vector-width=16 -force-vector-interleave=1 -mattr=+avx512f -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-VF16
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare double @sin(double) #0
 declare float @sinf(float) #0
-declare double @llvm.sin.f64(double) #0
-declare float @llvm.sin.f32(float) #0
 
 declare double @cos(double) #0
 declare float @cosf(float) #0
-declare double @llvm.cos.f64(double) #0
-declare float @llvm.cos.f32(float) #0
 
 declare double @tan(double) #0
 declare float @tanf(float) #0
-declare double @llvm.tan.f64(double) #0
-declare float @llvm.tan.f32(float) #0
 
 declare double @acos(double) #0
 declare float @acosf(float) #0
-declare double @llvm.acos.f64(double) #0
-declare float @llvm.acos.f32(float) #0
 
 declare double @asin(double) #0
 declare float @asinf(float) #0
-declare double @llvm.asin.f64(double) #0
-declare float @llvm.asin.f32(float) #0
 
 declare double @atan(double) #0
 declare float @atanf(float) #0
-declare double @llvm.atan.f64(double) #0
-declare float @llvm.atan.f32(float) #0
 
 declare double @sinh(double) #0
 declare float @sinhf(float) #0
-declare double @llvm.sinh.f64(double) #0
-declare float @llvm.sinh.f32(float) #0
 
 declare double @cosh(double) #0
 declare float @coshf(float) #0
-declare double @llvm.cosh.f64(double) #0
-declare float @llvm.cosh.f32(float) #0
 
 declare double @tanh(double) #0
 declare float @tanhf(float) #0
-declare double @llvm.tanh.f64(double) #0
-declare float @llvm.tanh.f32(float) #0
 
 declare double @pow(double, double) #0
 declare float @powf(float, float) #0
-declare double @llvm.pow.f64(double, double) #0
-declare float @llvm.pow.f32(float, float) #0
 
 declare double @exp(double) #0
 declare float @expf(float) #0
-declare double @llvm.exp.f64(double) #0
-declare float @llvm.exp.f32(float) #0
 
 declare double @log(double) #0
 declare float @logf(float) #0
-declare double @llvm.log.f64(double) #0
-declare float @llvm.log.f32(float) #0
 
 declare double @log2(double) #0
 declare float @log2f(float) #0
-declare double @llvm.log2.f64(double) #0
-declare float @llvm.log2.f32(float) #0
 
 declare double @log10(double) #0
 declare float @log10f(float) #0
-declare double @llvm.log10.f64(double) #0
-declare float @llvm.log10.f32(float) #0
 
 declare double @sqrt(double) #0
 declare float @sqrtf(float) #0
 
 declare double @exp2(double) #0
 declare float @exp2f(float) #0
-declare double @llvm.exp2.f64(double) #0
-declare float @llvm.exp2.f32(float) #0
 
 define void @sin_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f64(
@@ -398,8 +368,8 @@ for.end:
 
 define void @acos_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @acos_f64(
-; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @llvm.acos.v2f64(<2 x double> [[TMP4:%.*]])
-; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @llvm.acos.v4f64(<4 x double> [[TMP4:%.*]])
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_acos(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_acos(<4 x double> [[TMP4:%.*]])
 ; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @llvm.acos.v8f64(<8 x double> [[TMP4:%.*]])
 ; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.acos.v16f64(<16 x double> [[TMP4:%.*]])
 ; CHECK:        ret void
@@ -450,8 +420,8 @@ for.end:
 
 define void @acos_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @acos_f64_intrinsic(
-; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @llvm.acos.v2f64(<2 x double> [[TMP4:%.*]])
-; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @llvm.acos.v4f64(<4 x double> [[TMP4:%.*]])
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_acos(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_acos(<4 x double> [[TMP4:%.*]])
 ; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @llvm.acos.v8f64(<8 x double> [[TMP4:%.*]])
 ; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.acos.v16f64(<16 x double> [[TMP4:%.*]])
 ; CHECK:        ret void
@@ -502,8 +472,8 @@ for.end:
 
 define void @asin_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @asin_f64(
-; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @llvm.asin.v2f64(<2 x double> [[TMP4:%.*]])
-; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @llvm.asin.v4f64(<4 x double> [[TMP4:%.*]])
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_asin(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_asin(<4 x double> [[TMP4:%.*]])
 ; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_asin(<8 x double> [[TMP4:%.*]])
 ; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.asin.v16f64(<16 x double> [[TMP4:%.*]])
 ; CHECK:        ret void
@@ -554,8 +524,8 @@ for.end:
 
 define void @asin_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @asin_f64_intrinsic(
-; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @llvm.asin.v2f64(<2 x double> [[TMP4:%.*]])
-; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @llvm.asin.v4f64(<4 x double> [[TMP4:%.*]])
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_asin(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_asin(<4 x double> [[TMP4:%.*]])
 ; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_asin(<8 x double> [[TMP4:%.*]])
 ; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.asin.v16f64(<16 x double> [[TMP4:%.*]])
 ; CHECK:        ret void
@@ -1809,11 +1779,197 @@ for.cond.cleanup:
   ret void
 }
 
+
+; ======================= erfc ============================
+define void @erfc_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @erfc_f64(
+;
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_erfc(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_erfc(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_erfc(<8 x double> [[TMP4:%.*]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @erfc(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; ======================= erfcf ============================
+define void @erfcf_f32(ptr nocapture %varray) {
+; CHECK-LABEL: @erfcf_f32(
+;
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_erfcf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_erfcf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:    [[TMP5:%.*]] = call <16 x float> @amd_vrs16_erfcf(<16 x float> [[TMP4:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @erfcf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+; ======================= cdfnorm ============================
+define void @cdfnorm_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @cdfnorm_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cdfnorm(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_cdfnorm(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_cdfnorm(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   {{.*}} = tail call double @cdfnorm(double {{.*}})
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @cdfnorm(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; ======================= round ============================
+define void @round_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @round_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_round(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_round(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_round(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.round.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @round(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @round_f32(ptr nocapture %varray) {
+; CHECK-LABEL: @round_f32(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.round.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_roundf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_roundf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_roundf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @roundf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @round_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-LABEL: @round_f64_intrinsic(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_round(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_round(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_round(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x double> @llvm.round.v16f64(<16 x double> [[TMP4:%.*]])
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.round.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @round_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-LABEL: @round_f32_intrinsic(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x float> @llvm.round.v2f32(<2 x float> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_roundf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_roundf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   [[TMP5:%.*]] = call <16 x float> @amd_vrs16_roundf(<16 x float> [[TMP4:%.*]])
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.round.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 
 declare double @exp10(double) #0
 declare float @exp10f(float) #0
-declare double @llvm.exp10.f64(double) #0
-declare float @llvm.exp10.f32(float) #0
 declare void @sincos(double, ptr, ptr)
 declare void @sincosf(float, ptr, ptr)
+declare double @erfc(double) #0
+declare float @erfcf(float) #0
+declare double @cdfnorm(double) #0
+declare double @round(double) #0
+declare float @roundf(float) #0

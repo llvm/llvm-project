@@ -562,7 +562,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
           Debugger::ReportWarning(
               "the debug server supports Target Description XML but LLDB does "
               "not have XML parsing enabled. Using \"qRegisterInfo\" was also "
-              "not possible. Register information may be incorrect or missing.",
+              "not possible. Register information may be incorrect or missing",
               GetTarget().GetDebugger().GetID());
         }
         break;
@@ -714,20 +714,17 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       stderr_file_spec = file_action->GetFileSpec();
   }
 
-  if (log) {
-    if (stdin_file_spec || stdout_file_spec || stderr_file_spec)
-      LLDB_LOGF(log,
-                "ProcessGDBRemote::%s provided with STDIO paths via "
-                "launch_info: stdin=%s, stdout=%s, stderr=%s",
-                __FUNCTION__,
-                stdin_file_spec ? stdin_file_spec.GetPath().c_str() : "<null>",
-                stdout_file_spec ? stdout_file_spec.GetPath().c_str() : "<null>",
-                stderr_file_spec ? stderr_file_spec.GetPath().c_str() : "<null>");
-    else
-      LLDB_LOGF(log,
-                "ProcessGDBRemote::%s no STDIO paths given via launch_info",
-                __FUNCTION__);
-  }
+  if (stdin_file_spec || stdout_file_spec || stderr_file_spec)
+    LLDB_LOGF(log,
+              "ProcessGDBRemote::%s provided with STDIO paths via "
+              "launch_info: stdin=%s, stdout=%s, stderr=%s",
+              __FUNCTION__,
+              stdin_file_spec ? stdin_file_spec.GetPath().c_str() : "<null>",
+              stdout_file_spec ? stdout_file_spec.GetPath().c_str() : "<null>",
+              stderr_file_spec ? stderr_file_spec.GetPath().c_str() : "<null>");
+  else
+    LLDB_LOGF(log, "ProcessGDBRemote::%s no STDIO paths given via launch_info",
+              __FUNCTION__);
 
   const bool disable_stdio = (launch_flags & eLaunchFlagDisableSTDIO) != 0;
   if (stdin_file_spec || disable_stdio) {
@@ -1639,7 +1636,7 @@ bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
                                           ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log = GetLog(GDBRLog::Thread);
-  LLDB_LOGV(log, "pid = {0}", GetID());
+  LLDB_LOG_VERBOSE(log, "pid = {0}", GetID());
 
   size_t num_thread_ids = m_thread_ids.size();
   // The "m_thread_ids" thread ID list should always be updated after each stop
@@ -1658,11 +1655,11 @@ bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
           old_thread_list_copy.RemoveThreadByProtocolID(tid, false));
       if (!thread_sp) {
         thread_sp = CreateThread(tid);
-        LLDB_LOGV(log, "Making new thread: {0} for thread ID: {1:x}.",
-                  thread_sp.get(), thread_sp->GetID());
+        LLDB_LOG_VERBOSE(log, "Making new thread: {0} for thread ID: {1:x}.",
+                         thread_sp.get(), thread_sp->GetID());
       } else {
-        LLDB_LOGV(log, "Found old thread: {0} for thread ID: {1:x}.",
-                  thread_sp.get(), thread_sp->GetID());
+        LLDB_LOG_VERBOSE(log, "Found old thread: {0} for thread ID: {1:x}.",
+                         thread_sp.get(), thread_sp->GetID());
       }
 
       SetThreadPc(thread_sp, i);
@@ -3118,8 +3115,7 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
   MemoryRegionInfo region;
   Status region_status = GetMemoryRegionInfo(addr, region);
 
-  bool is_flash =
-      region_status.Success() && region.GetFlash() == MemoryRegionInfo::eYes;
+  bool is_flash = region_status.Success() && region.GetFlash() == eLazyBoolYes;
 
   if (is_flash) {
     if (!m_allow_flash_writes) {
@@ -3271,8 +3267,99 @@ size_t ProcessGDBRemote::PutSTDIN(const char *src, size_t src_len,
   return 0;
 }
 
+/// Enable a single breakpoint site by trying Z0 (software), then Z1
+/// (hardware), then manual memory write as a last resort.
+static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
+                                          BreakpointSite &bp_site) {
+  Log *log = GetLog(GDBRLog::Breakpoints);
+  const addr_t addr = bp_site.GetLoadAddress();
+  const size_t bp_op_size = proc.GetSoftwareBreakpointTrapOpcode(&bp_site);
+  auto &gdb_comm = proc.GetGDBRemote();
+
+  // SupportsGDBStoppointPacket always returns true unless a previously sent
+  // packet failed. As such, query the function before AND after sending the
+  // packet.
+  if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware) &&
+      !bp_site.HardwareRequired()) {
+    uint8_t error_no = gdb_comm.SendGDBStoppointTypePacket(
+        eBreakpointSoftware, true, addr, bp_op_size,
+        proc.GetInterruptTimeout());
+    if (error_no == 0) {
+      bp_site.SetEnabled(true);
+      bp_site.SetType(BreakpointSite::eExternal);
+      return llvm::Error::success();
+    }
+    if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware)) {
+      if (error_no != UINT8_MAX)
+        return llvm::createStringErrorV(
+            "error sending the breakpoint request: {0}", error_no);
+      return llvm::createStringError("error sending the breakpoint request");
+    }
+    LLDB_LOG(log, "Software breakpoints are unsupported");
+  }
+
+  // Like above, this is also queried twice.
+  if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
+    uint8_t error_no = gdb_comm.SendGDBStoppointTypePacket(
+        eBreakpointHardware, true, addr, bp_op_size,
+        proc.GetInterruptTimeout());
+    if (error_no == 0) {
+      bp_site.SetEnabled(true);
+      bp_site.SetType(BreakpointSite::eHardware);
+      return llvm::Error::success();
+    }
+    if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
+      if (error_no != UINT8_MAX)
+        return llvm::createStringErrorV(
+            "error sending the hardware breakpoint request: {0} "
+            "(hardware breakpoint resources might be exhausted or unavailable)",
+            error_no);
+      return llvm::createStringError(
+          "error sending the hardware breakpoint request "
+          "(hardware breakpoint resources might be exhausted or unavailable)");
+    }
+    LLDB_LOG(log, "Hardware breakpoints are unsupported");
+  }
+
+  if (bp_site.HardwareRequired())
+    return llvm::createStringError("hardware breakpoints are not supported");
+
+  return proc.EnableSoftwareBreakpoint(&bp_site).takeError();
+}
+
+/// Disable a single breakpoint site directly by sending the appropriate
+/// z packet or restoring the original instruction.
+static llvm::Error DoDisableBreakpointSite(ProcessGDBRemote &proc,
+                                           BreakpointSite &bp_site) {
+  const addr_t addr = bp_site.GetLoadAddress();
+  const size_t bp_op_size = proc.GetSoftwareBreakpointTrapOpcode(&bp_site);
+  auto &gdb_comm = proc.GetGDBRemote();
+
+  switch (bp_site.GetType()) {
+  case BreakpointSite::eSoftware: {
+    Status error = proc.DisableSoftwareBreakpoint(&bp_site);
+    if (error.Fail())
+      return error.takeError();
+    break;
+  }
+  case BreakpointSite::eHardware:
+    if (gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, false, addr,
+                                            bp_op_size,
+                                            proc.GetInterruptTimeout()))
+      return llvm::createStringError("unknown error");
+    break;
+  case BreakpointSite::eExternal:
+    if (gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, false, addr,
+                                            bp_op_size,
+                                            proc.GetInterruptTimeout()))
+      return llvm::createStringError("unknown error");
+    break;
+  }
+  bp_site.SetEnabled(false);
+  return llvm::Error::success();
+}
+
 Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
-  Status error;
   assert(bp_site != nullptr);
 
   // Get logging info
@@ -3294,110 +3381,13 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
               "ProcessGDBRemote::EnableBreakpointSite (size_id = %" PRIu64
               ") address = 0x%" PRIx64 " -- SUCCESS (already enabled)",
               site_id, (uint64_t)addr);
-    return error;
+    return Status();
   }
 
-  // Get the software breakpoint trap opcode size
-  const size_t bp_op_size = GetSoftwareBreakpointTrapOpcode(bp_site);
-
-  // SupportsGDBStoppointPacket() simply checks a boolean, indicating if this
-  // breakpoint type is supported by the remote stub. These are set to true by
-  // default, and later set to false only after we receive an unimplemented
-  // response when sending a breakpoint packet. This means initially that
-  // unless we were specifically instructed to use a hardware breakpoint, LLDB
-  // will attempt to set a software breakpoint. HardwareRequired() also queries
-  // a boolean variable which indicates if the user specifically asked for
-  // hardware breakpoints.  If true then we will skip over software
-  // breakpoints.
-  if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware) &&
-      (!bp_site->HardwareRequired())) {
-    // Try to send off a software breakpoint packet ($Z0)
-    uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(
-        eBreakpointSoftware, true, addr, bp_op_size, GetInterruptTimeout());
-    if (error_no == 0) {
-      // The breakpoint was placed successfully
-      bp_site->SetEnabled(true);
-      bp_site->SetType(BreakpointSite::eExternal);
-      return error;
-    }
-
-    // SendGDBStoppointTypePacket() will return an error if it was unable to
-    // set this breakpoint. We need to differentiate between a error specific
-    // to placing this breakpoint or if we have learned that this breakpoint
-    // type is unsupported. To do this, we must test the support boolean for
-    // this breakpoint type to see if it now indicates that this breakpoint
-    // type is unsupported.  If they are still supported then we should return
-    // with the error code.  If they are now unsupported, then we would like to
-    // fall through and try another form of breakpoint.
-    if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware)) {
-      if (error_no != UINT8_MAX)
-        error = Status::FromErrorStringWithFormat(
-            "error: %d sending the breakpoint request", error_no);
-      else
-        error = Status::FromErrorString("error sending the breakpoint request");
-      return error;
-    }
-
-    // We reach here when software breakpoints have been found to be
-    // unsupported. For future calls to set a breakpoint, we will not attempt
-    // to set a breakpoint with a type that is known not to be supported.
-    LLDB_LOGF(log, "Software breakpoints are unsupported");
-
-    // So we will fall through and try a hardware breakpoint
-  }
-
-  // The process of setting a hardware breakpoint is much the same as above.
-  // We check the supported boolean for this breakpoint type, and if it is
-  // thought to be supported then we will try to set this breakpoint with a
-  // hardware breakpoint.
-  if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
-    // Try to send off a hardware breakpoint packet ($Z1)
-    uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(
-        eBreakpointHardware, true, addr, bp_op_size, GetInterruptTimeout());
-    if (error_no == 0) {
-      // The breakpoint was placed successfully
-      bp_site->SetEnabled(true);
-      bp_site->SetType(BreakpointSite::eHardware);
-      return error;
-    }
-
-    // Check if the error was something other then an unsupported breakpoint
-    // type
-    if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
-      // Unable to set this hardware breakpoint
-      if (error_no != UINT8_MAX)
-        error = Status::FromErrorStringWithFormat(
-            "error: %d sending the hardware breakpoint request "
-            "(hardware breakpoint resources might be exhausted or unavailable)",
-            error_no);
-      else
-        error = Status::FromErrorString(
-            "error sending the hardware breakpoint request "
-            "(hardware breakpoint resources "
-            "might be exhausted or unavailable)");
-      return error;
-    }
-
-    // We will reach here when the stub gives an unsupported response to a
-    // hardware breakpoint
-    LLDB_LOGF(log, "Hardware breakpoints are unsupported");
-
-    // Finally we will falling through to a #trap style breakpoint
-  }
-
-  // Don't fall through when hardware breakpoints were specifically requested
-  if (bp_site->HardwareRequired()) {
-    error = Status::FromErrorString("hardware breakpoints are not supported");
-    return error;
-  }
-
-  // As a last resort we want to place a manual breakpoint. An instruction is
-  // placed into the process memory using memory write packets.
-  return EnableSoftwareBreakpoint(bp_site);
+  return Status::FromError(DoEnableBreakpointSite(*this, *bp_site));
 }
 
 Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
-  Status error;
   assert(bp_site != nullptr);
   addr_t addr = bp_site->GetLoadAddress();
   user_id_t site_id = bp_site->GetID();
@@ -3407,42 +3397,15 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
             ") addr = 0x%8.8" PRIx64,
             site_id, (uint64_t)addr);
 
-  if (bp_site->IsEnabled()) {
-    const size_t bp_op_size = GetSoftwareBreakpointTrapOpcode(bp_site);
-
-    BreakpointSite::Type bp_type = bp_site->GetType();
-    switch (bp_type) {
-    case BreakpointSite::eSoftware:
-      error = DisableSoftwareBreakpoint(bp_site);
-      break;
-
-    case BreakpointSite::eHardware:
-      if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, false,
-                                                addr, bp_op_size,
-                                                GetInterruptTimeout()))
-        error = Status::FromErrorString("unknown error");
-      break;
-
-    case BreakpointSite::eExternal: {
-      if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, false,
-                                                addr, bp_op_size,
-                                                GetInterruptTimeout()))
-        error = Status::FromErrorString("unknown error");
-    } break;
-    }
-    if (error.Success())
-      bp_site->SetEnabled(false);
-  } else {
+  if (!bp_site->IsEnabled()) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::DisableBreakpointSite (site_id = %" PRIu64
               ") addr = 0x%8.8" PRIx64 " -- SUCCESS (already disabled)",
               site_id, (uint64_t)addr);
-    return error;
+    return Status();
   }
 
-  if (error.Success())
-    error = Status::FromErrorString("unknown error");
-  return error;
+  return Status::FromError(DoDisableBreakpointSite(*this, *bp_site));
 }
 
 // Pre-requisite: wp != NULL.
@@ -4131,8 +4094,7 @@ Status ProcessGDBRemote::UpdateAutomaticSignalFiltering() {
 bool ProcessGDBRemote::StartNoticingNewThreads() {
   Log *log = GetLog(LLDBLog::Step);
   if (m_thread_create_bp_sp) {
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log, "Enabled noticing new thread breakpoint.");
+    LLDB_LOGF_VERBOSE(log, "Enabled noticing new thread breakpoint.");
     m_thread_create_bp_sp->SetEnabled(true);
   } else {
     PlatformSP platform_sp(GetTarget().GetPlatform());
@@ -4140,10 +4102,9 @@ bool ProcessGDBRemote::StartNoticingNewThreads() {
       m_thread_create_bp_sp =
           platform_sp->SetThreadCreationBreakpoint(GetTarget());
       if (m_thread_create_bp_sp) {
-        if (log && log->GetVerbose())
-          LLDB_LOGF(
-              log, "Successfully created new thread notification breakpoint %i",
-              m_thread_create_bp_sp->GetID());
+        LLDB_LOGF_VERBOSE(
+            log, "Successfully created new thread notification breakpoint %i",
+            m_thread_create_bp_sp->GetID());
         m_thread_create_bp_sp->SetCallback(
             ProcessGDBRemote::NewThreadNotifyBreakpointHit, this, true);
       } else {
@@ -4156,8 +4117,7 @@ bool ProcessGDBRemote::StartNoticingNewThreads() {
 
 bool ProcessGDBRemote::StopNoticingNewThreads() {
   Log *log = GetLog(LLDBLog::Step);
-  if (log && log->GetVerbose())
-    LLDB_LOGF(log, "Disabling new thread notification breakpoint.");
+  LLDB_LOGF_VERBOSE(log, "Disabling new thread notification breakpoint.");
 
   if (m_thread_create_bp_sp)
     m_thread_create_bp_sp->SetEnabled(false);
@@ -4427,9 +4387,8 @@ void ProcessGDBRemote::GetMaxMemorySize() {
         // In unlikely scenario that max packet size is less then 70, we will
         // hope that data being written is small enough to fit.
         Log *log(GetLog(GDBRLog::Comm | GDBRLog::Memory));
-        if (log)
-          log->Warning("Packet size is too small. "
-                       "LLDB may face problems while writing memory");
+        LLDB_LOG(log, "warning: Packet size is too small. "
+                      "LLDB may face problems while writing memory");
       }
 
       m_max_memory_size = stub_max_size;
@@ -4986,13 +4945,13 @@ bool ParseRegisters(
             if (reg_info.byte_size == flags_type->GetSize())
               reg_info.flags_type = flags_type;
             else
-              LLDB_LOGF(log,
-                        "ProcessGDBRemote::ParseRegisters Size of register "
-                        "flags %s (%d bytes) for "
-                        "register %s does not match the register size (%d "
-                        "bytes). Ignoring this set of flags.",
-                        flags_type->GetID().c_str(), flags_type->GetSize(),
-                        reg_info.name.AsCString(), reg_info.byte_size);
+              LLDB_LOG(
+                  log,
+                  "ProcessGDBRemote::ParseRegisters Size of register flags {0} "
+                  "({1} bytes) for register {2} does not match the register "
+                  "size ({3} bytes). Ignoring this set of flags.",
+                  flags_type->GetID().c_str(), flags_type->GetSize(),
+                  reg_info.name, reg_info.byte_size);
           }
 
           // There's a slim chance that the gdb_type name is both a flags type
@@ -5045,9 +5004,9 @@ bool ParseRegisters(
         }
 
         if (reg_info.byte_size == 0) {
-          LLDB_LOGF(log,
-                    "ProcessGDBRemote::%s Skipping zero bitsize register %s",
-                    __FUNCTION__, reg_info.name.AsCString());
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::{0} Skipping zero bitsize register {1}",
+                   __FUNCTION__, reg_info.name);
         } else
           registers.push_back(reg_info);
 
@@ -5349,9 +5308,8 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
                        // node
         });
 
-    if (log)
-      LLDB_LOGF(log, "found %" PRId32 " modules in total",
-                (int)list.m_list.size());
+    LLDB_LOGF(log, "found %" PRId32 " modules in total",
+              (int)list.m_list.size());
     return list;
   } else if (comm.GetQXferLibrariesReadSupported()) {
     // request the loaded library list
@@ -5409,9 +5367,8 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
                        // node
         });
 
-    if (log)
-      LLDB_LOGF(log, "found %" PRId32 " modules in total",
-                (int)list.m_list.size());
+    LLDB_LOGF(log, "found %" PRId32 " modules in total",
+              (int)list.m_list.size());
     return list;
   } else {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -5738,15 +5695,13 @@ ParseStructuredDataPacket(llvm::StringRef packet) {
   Log *log = GetLog(GDBRLog::Process);
 
   if (!packet.consume_front(s_async_json_packet_prefix)) {
-    if (log) {
-      LLDB_LOGF(
-          log,
-          "GDBRemoteCommunicationClientBase::%s() received $J packet "
-          "but was not a StructuredData packet: packet starts with "
-          "%s",
-          __FUNCTION__,
-          packet.slice(0, strlen(s_async_json_packet_prefix)).str().c_str());
-    }
+    LLDB_LOGF(
+        log,
+        "GDBRemoteCommunicationClientBase::%s() received $J packet "
+        "but was not a StructuredData packet: packet starts with "
+        "%s",
+        __FUNCTION__,
+        packet.slice(0, strlen(s_async_json_packet_prefix)).str().c_str());
     return StructuredData::ObjectSP();
   }
 

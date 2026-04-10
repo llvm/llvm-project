@@ -370,7 +370,7 @@ defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
 defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, DivergentUnaryFrag<bitreverse>>;
 defm V_FFBH_U32 : VOP1Inst <"v_ffbh_u32", VOP_I32_I32, AMDGPUffbh_u32>;
 defm V_FFBL_B32 : VOP1Inst <"v_ffbl_b32", VOP_I32_I32, AMDGPUffbl_b32>;
-defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, AMDGPUffbh_i32>;
+defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, int_amdgcn_sffbh>;
 
 let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
 defm V_FREXP_EXP_I32_F64 : VOP1Inst <"v_frexp_exp_i32_f64", VOP_I32_F64_SPECIAL_OMOD, int_amdgcn_frexp_exp>;
@@ -393,10 +393,6 @@ def : GCNPat<(i32 (fp_to_uint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)
              (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
 def : GCNPat<(i32 (fp_to_sint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
              (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_uint_sat f32:$src0, i32)), (V_CVT_U32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat f32:$src0, i32)), (V_CVT_I32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_uint_sat f64:$src0, i32)), (V_CVT_U32_F64_e32 (f64 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat f64:$src0, i32)), (V_CVT_I32_F64_e32 (f64 $src0))>;
 
 def : GCNPat<(i32 (fp_to_uint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
              (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
@@ -406,10 +402,6 @@ def : GCNPat<(i32 (fp_to_uint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifie
              (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
 def : GCNPat<(i32 (fp_to_sint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
              (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_uint_sat_gi f32:$src0)), (V_CVT_U32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi f32:$src0)), (V_CVT_I32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_uint_sat_gi f64:$src0)), (V_CVT_U32_F64_e32 (f64 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi f64:$src0)), (V_CVT_I32_F64_e32 (f64 $src0))>;
 
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 
@@ -632,6 +624,29 @@ def : GCNPat<
 >;
 }
 
+// These i16 conversions naturally saturate.
+multiclass fp16_fp_to_int_sat_Pats<Instruction cvt_u16_f16_inst_e64,
+                                   Instruction cvt_i16_f16_inst_e64> {
+  def : GCNPat<(i16 (fp_to_uint_sat (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)), i16)),
+               (cvt_u16_f16_inst_e64 $src0_modifiers, $src0)>;
+  def : GCNPat<(i16 (fp_to_sint_sat (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)), i16)),
+               (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
+
+  def : GCNPat<(i16 (fp_to_uint_sat_gi (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)))),
+               (cvt_u16_f16_inst_e64 $src0_modifiers, $src0)>;
+  def : GCNPat<(i16 (fp_to_sint_sat_gi (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)))),
+               (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
+}
+
+let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in
+defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_e64, V_CVT_I16_F16_e64>;
+
+let True16Predicate = UseRealTrue16Insts in
+defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_t16_e64, V_CVT_I16_F16_t16_e64>;
+
+let True16Predicate = UseFakeTrue16Insts in
+defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_fake16_e64, V_CVT_I16_F16_fake16_e64>;
+
 def VOP_SWAP_I32 : VOPProfile<[i32, i32, untyped, untyped]> {
   let Outs32 = (outs VGPR_32:$vdst, VRegSrc_32:$vdst1);
   let Ins32 = (ins VRegSrc_32:$src0, VGPR_32:$src1);
@@ -806,12 +821,25 @@ class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
+class Cvt_PK_F32_F8_Pat_t16<SDPatternOperator node, int index,
+    VOP3_Pseudo inst_e64> : GCNPat<
+    (v2f32 (node i32:$src, index)),
+    (inst_e64 0, (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src, VGPR_32)),
+      !if(index, hi16, lo16)), 0)
+>;
+
 let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts] in {
   foreach Index = [0, -1] in {
-    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
-                                  V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
-    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
-                                  V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
+    let True16Predicate = UseFakeTrue16Insts in {
+      def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
+                                    V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
+      def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
+                                    V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
+    }
+    let True16Predicate = UseRealTrue16Insts in {
+      def : Cvt_PK_F32_F8_Pat_t16<int_amdgcn_cvt_pk_f32_fp8, Index, V_CVT_PK_F32_FP8_t16_e64>;
+      def : Cvt_PK_F32_F8_Pat_t16<int_amdgcn_cvt_pk_f32_bf8, Index, V_CVT_PK_F32_BF8_t16_e64>;
+    }
   }
 }
 
@@ -904,7 +932,7 @@ let SubtargetPredicate = HasPrngInst in
 defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
-     SchedRW = [Write32Bit, Write32Bit],
+     SchedRW = [Write32Bit, WriteVALUDummy],
      isConvergent = 1 in {
 let SubtargetPredicate = HasPermlane16Swap in {
 defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP>;

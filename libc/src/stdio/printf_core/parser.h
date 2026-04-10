@@ -15,6 +15,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
@@ -40,9 +41,11 @@ template <typename T> struct int_type_of {
 template <> struct int_type_of<double> {
   using type = fputil::FPBits<double>::StorageType;
 };
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 template <> struct int_type_of<long double> {
   using type = fputil::FPBits<long double>::StorageType;
 };
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 template <typename T>
@@ -254,7 +257,9 @@ public:
         if (lm != LengthModifier::L) {
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
         } else {
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
         }
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -292,7 +297,7 @@ public:
         WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
       case ('s'):
-        WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, char *, conv_index);
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
       default:
         // if the conversion is undefined, change this to a raw section.
@@ -493,8 +498,10 @@ private:
       // Floating point numbers are stored separately from the other arguments.
       else if (cur_type_desc == type_desc_from_type<double>())
         args_cur.template next_var<double>();
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
       else if (cur_type_desc == type_desc_from_type<long double>())
         args_cur.template next_var<long double>();
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
       // Floating point numbers may be stored separately from the other
@@ -660,8 +667,10 @@ private:
         case ('G'):
           if (lm != LengthModifier::L)
             conv_size = type_desc_from_type<double>();
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
           else
             conv_size = type_desc_from_type<long double>();
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT

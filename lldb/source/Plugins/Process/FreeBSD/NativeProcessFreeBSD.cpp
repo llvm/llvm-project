@@ -92,15 +92,13 @@ NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::make_error<StringError>("Could not sync with inferior process",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("cannot get process architecture");
   }
 
   // Set the architecture to the exe architecture.
@@ -131,8 +129,7 @@ NativeProcessFreeBSD::Manager::Attach(
   // Retrieve the architecture for the running process.
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("cannot get process architecture");
   }
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
@@ -618,10 +615,10 @@ Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
       range_info.GetRange().SetRangeBase(load_addr);
       range_info.GetRange().SetByteSize(
           proc_entry_info.GetRange().GetRangeBase() - load_addr);
-      range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+      range_info.SetReadable(eLazyBoolNo);
+      range_info.SetWritable(eLazyBoolNo);
+      range_info.SetExecutable(eLazyBoolNo);
+      range_info.SetMapped(eLazyBoolNo);
       return error;
     } else if (proc_entry_info.GetRange().Contains(load_addr)) {
       // The target address is within the memory region we're processing here.
@@ -636,10 +633,10 @@ Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
   // load address and the end of the memory as size.
   range_info.GetRange().SetRangeBase(load_addr);
   range_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+  range_info.SetReadable(eLazyBoolNo);
+  range_info.SetWritable(eLazyBoolNo);
+  range_info.SetExecutable(eLazyBoolNo);
+  range_info.SetMapped(eLazyBoolNo);
   return error;
 }
 
@@ -683,22 +680,22 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
     info.Clear();
     info.GetRange().SetRangeBase(kv->kve_start);
     info.GetRange().SetRangeEnd(kv->kve_end);
-    info.SetMapped(MemoryRegionInfo::OptionalBool::eYes);
+    info.SetMapped(eLazyBoolYes);
 
     if (kv->kve_protection & VM_PROT_READ)
-      info.SetReadable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetReadable(eLazyBoolYes);
     else
-      info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetReadable(eLazyBoolNo);
 
     if (kv->kve_protection & VM_PROT_WRITE)
-      info.SetWritable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetWritable(eLazyBoolYes);
     else
-      info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetWritable(eLazyBoolNo);
 
     if (kv->kve_protection & VM_PROT_EXECUTE)
-      info.SetExecutable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetExecutable(eLazyBoolYes);
     else
-      info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetExecutable(eLazyBoolNo);
 
     if (kv->kve_path[0])
       info.SetName(kv->kve_path);
@@ -1075,7 +1072,7 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
       openFile(path, pc.pc_fd, CD_CreateNew, FA_Write, OF_None)) {
     if (std::error_code errc =
             createTemporaryFile("lldb", "core", pc.pc_fd, path))
-      return llvm::createStringError(errc, "Unable to create a temporary file");
+      return llvm::createStringError(errc, "unable to create a temporary file");
   }
   error = PtraceWrapper(PT_COREDUMP, GetID(), &pc, sizeof(pc));
 
