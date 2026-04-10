@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -226,7 +227,7 @@ bool NVPTXInstrInfo::invertPredicateBranchInstr(MachineBasicBlock &MBB) const {
   return true;
 }
 
-bool NVPTXInstrInfo::isIntegerSetp(const MachineInstr &MI) const {
+static bool isIntegerSetp(const MachineInstr &MI) {
   if (!MI.isCompare() || MI.getNumOperands() < 4)
     return false;
 
@@ -246,7 +247,7 @@ bool NVPTXInstrInfo::isIntegerSetp(const MachineInstr &MI) const {
   }
 }
 
-bool NVPTXInstrInfo::isFloatSetp(const MachineInstr &MI) const {
+static bool isFloatSetp(const MachineInstr &MI) {
   if (!MI.isCompare() || MI.getNumOperands() < 4)
     return false;
 
@@ -271,114 +272,84 @@ bool NVPTXInstrInfo::isFloatSetp(const MachineInstr &MI) const {
   }
 }
 
-bool NVPTXInstrInfo::invertCompareInstr(MachineInstr &MI) const {
-  if (isIntegerSetp(MI)) {
-    MachineOperand &ModeOp = MI.getOperand(3);
-    if (!ModeOp.isImm())
-      return false;
-
-    int64_t CompareMode = ModeOp.getImm();
-
-    int64_t InvertedCompareMode;
-    switch (CompareMode) {
-    case NVPTX::PTXCmpMode::EQ:
-      InvertedCompareMode = NVPTX::PTXCmpMode::NE;
-      break;
-    case NVPTX::PTXCmpMode::NE:
-      InvertedCompareMode = NVPTX::PTXCmpMode::EQ;
-      break;
-    case NVPTX::PTXCmpMode::LT:
-      InvertedCompareMode = NVPTX::PTXCmpMode::GE;
-      break;
-    case NVPTX::PTXCmpMode::LE:
-      InvertedCompareMode = NVPTX::PTXCmpMode::GT;
-      break;
-    case NVPTX::PTXCmpMode::GT:
-      InvertedCompareMode = NVPTX::PTXCmpMode::LE;
-      break;
-    case NVPTX::PTXCmpMode::GE:
-      InvertedCompareMode = NVPTX::PTXCmpMode::LT;
-      break;
-    case NVPTX::PTXCmpMode::LTU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::GEU;
-      break;
-    case NVPTX::PTXCmpMode::LEU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::GTU;
-      break;
-    case NVPTX::PTXCmpMode::GTU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::LEU;
-      break;
-    case NVPTX::PTXCmpMode::GEU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::LTU;
-      break;
-    default:
-      return false;
-    }
-
-    ModeOp.setImm(InvertedCompareMode);
-    return true;
+static std::optional<int64_t> invertIntegerCmpMode(int64_t Mode) {
+  switch (Mode) {
+  case NVPTX::PTXCmpMode::EQ:
+    return NVPTX::PTXCmpMode::NE;
+  case NVPTX::PTXCmpMode::NE:
+    return NVPTX::PTXCmpMode::EQ;
+  case NVPTX::PTXCmpMode::LT:
+    return NVPTX::PTXCmpMode::GE;
+  case NVPTX::PTXCmpMode::LE:
+    return NVPTX::PTXCmpMode::GT;
+  case NVPTX::PTXCmpMode::GT:
+    return NVPTX::PTXCmpMode::LE;
+  case NVPTX::PTXCmpMode::GE:
+    return NVPTX::PTXCmpMode::LT;
+  case NVPTX::PTXCmpMode::LTU:
+    return NVPTX::PTXCmpMode::GEU;
+  case NVPTX::PTXCmpMode::LEU:
+    return NVPTX::PTXCmpMode::GTU;
+  case NVPTX::PTXCmpMode::GTU:
+    return NVPTX::PTXCmpMode::LEU;
+  case NVPTX::PTXCmpMode::GEU:
+    return NVPTX::PTXCmpMode::LTU;
+  default:
+    return std::nullopt;
   }
+}
 
-  if (isFloatSetp(MI)) {
-    MachineOperand &ModeOp = MI.getOperand(3);
-    if (!ModeOp.isImm())
-      return false;
-
-    int64_t CompareMode = ModeOp.getImm();
-
-    int64_t InvertedCompareMode;
-    switch (CompareMode) {
-    case NVPTX::PTXCmpMode::EQ:
-      InvertedCompareMode = NVPTX::PTXCmpMode::NEU;
-      break;
-    case NVPTX::PTXCmpMode::NE:
-      InvertedCompareMode = NVPTX::PTXCmpMode::EQU;
-      break;
-    case NVPTX::PTXCmpMode::EQU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::NE;
-      break;
-    case NVPTX::PTXCmpMode::NEU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::EQ;
-      break;
-    case NVPTX::PTXCmpMode::LT:
-      InvertedCompareMode = NVPTX::PTXCmpMode::GEU;
-      break;
-    case NVPTX::PTXCmpMode::LE:
-      InvertedCompareMode = NVPTX::PTXCmpMode::GTU;
-      break;
-    case NVPTX::PTXCmpMode::GT:
-      InvertedCompareMode = NVPTX::PTXCmpMode::LEU;
-      break;
-    case NVPTX::PTXCmpMode::GE:
-      InvertedCompareMode = NVPTX::PTXCmpMode::LTU;
-      break;
-    case NVPTX::PTXCmpMode::LTU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::GE;
-      break;
-    case NVPTX::PTXCmpMode::LEU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::GT;
-      break;
-    case NVPTX::PTXCmpMode::GTU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::LE;
-      break;
-    case NVPTX::PTXCmpMode::GEU:
-      InvertedCompareMode = NVPTX::PTXCmpMode::LT;
-      break;
-    case NVPTX::PTXCmpMode::NUM:
-      InvertedCompareMode = NVPTX::PTXCmpMode::NotANumber;
-      break;
-    case NVPTX::PTXCmpMode::NotANumber:
-      InvertedCompareMode = NVPTX::PTXCmpMode::NUM;
-      break;
-    default:
-      return false;
-    }
-
-    ModeOp.setImm(InvertedCompareMode);
-    return true;
+static std::optional<int64_t> invertFloatCmpMode(int64_t Mode) {
+  switch (Mode) {
+  case NVPTX::PTXCmpMode::EQ:
+    return NVPTX::PTXCmpMode::NEU;
+  case NVPTX::PTXCmpMode::NE:
+    return NVPTX::PTXCmpMode::EQU;
+  case NVPTX::PTXCmpMode::EQU:
+    return NVPTX::PTXCmpMode::NE;
+  case NVPTX::PTXCmpMode::NEU:
+    return NVPTX::PTXCmpMode::EQ;
+  case NVPTX::PTXCmpMode::LT:
+    return NVPTX::PTXCmpMode::GEU;
+  case NVPTX::PTXCmpMode::LE:
+    return NVPTX::PTXCmpMode::GTU;
+  case NVPTX::PTXCmpMode::GT:
+    return NVPTX::PTXCmpMode::LEU;
+  case NVPTX::PTXCmpMode::GE:
+    return NVPTX::PTXCmpMode::LTU;
+  case NVPTX::PTXCmpMode::LTU:
+    return NVPTX::PTXCmpMode::GE;
+  case NVPTX::PTXCmpMode::LEU:
+    return NVPTX::PTXCmpMode::GT;
+  case NVPTX::PTXCmpMode::GTU:
+    return NVPTX::PTXCmpMode::LE;
+  case NVPTX::PTXCmpMode::GEU:
+    return NVPTX::PTXCmpMode::LT;
+  case NVPTX::PTXCmpMode::NUM:
+    return NVPTX::PTXCmpMode::NotANumber;
+  case NVPTX::PTXCmpMode::NotANumber:
+    return NVPTX::PTXCmpMode::NUM;
+  default:
+    return std::nullopt;
   }
+}
 
-  return false;
+static bool invertCompareInstr(MachineInstr &MI) {
+  MachineOperand &ModeOp = MI.getOperand(3);
+  if (!ModeOp.isImm())
+    return false;
+
+  std::optional<int64_t> Inverted;
+  if (isIntegerSetp(MI))
+    Inverted = invertIntegerCmpMode(ModeOp.getImm());
+  else if (isFloatSetp(MI))
+    Inverted = invertFloatCmpMode(ModeOp.getImm());
+
+  if (!Inverted)
+    return false;
+
+  ModeOp.setImm(*Inverted);
+  return true;
 }
 
 bool NVPTXInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
