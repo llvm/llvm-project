@@ -80,8 +80,9 @@ bool objdump::DylibId;
 bool objdump::Verbose;
 bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
+bool objdump::IsOtool;
 bool objdump::SymbolicOperands;
-static std::vector<std::string> ArchFlags;
+std::vector<std::string> objdump::ArchFlags;
 
 static bool ArchAll = false;
 static std::string ThumbTripleName;
@@ -2764,9 +2765,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
         }
         if (MachOObjectFile *O =
                 dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
-          if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(O))
-            ProcessMachO(Filename, MachOOF, MachOOF->getFileName(),
-                          ArchitectureName);
+          ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
         }
       }
       if (Err)
@@ -7508,7 +7507,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       }
     }
     if (!DisSymName.empty() && !DisSymNameFound) {
-      outs() << "Can't find -dis-symname: " << DisSymName << "\n";
+      outs() << "Can't find " << (IsOtool ? "-p symbol" : "--dis-symname")
+             << ": " << DisSymName << "\n";
       return;
     }
     // Set up the block of info used by the Symbolizer call backs.
@@ -7549,7 +7549,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       bool containsSym = Sections[SectIdx].containsSymbol(Symbols[SymIdx]);
       if (!containsSym) {
         if (!DisSymName.empty() && DisSymName == SymName) {
-          outs() << "-dis-symname: " << DisSymName << " not in the section\n";
+          outs() << (IsOtool ? "-p symbol" : "--dis-symname") << ": "
+                 << DisSymName << " not in the section\n";
           return;
         }
         continue;
@@ -7560,7 +7561,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       // is an N_SECT symbol in the (__TEXT,__text) but its address is before the
       // start of the section in a standard MH_EXECUTE filetype.
       if (!DisSymName.empty() && DisSymName == "__mh_execute_header") {
-        outs() << "-dis-symname: __mh_execute_header not in any section\n";
+        outs() << (IsOtool ? "-p symbol" : "--dis-symname")
+               << ": __mh_execute_header not in any section\n";
         return;
       }
       // When this code is trying to disassemble a symbol at a time and in the

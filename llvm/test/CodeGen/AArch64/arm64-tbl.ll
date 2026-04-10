@@ -140,16 +140,6 @@ define <16 x i8> @tbl4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %
   ret <16 x i8> %tmp3
 }
 
-; CHECK-SD-LABEL: .LCPI8_0:
-; CHECK-SD:              .byte   0                               // 0x0
-; CHECK-SD-NEXT:         .byte   4                               // 0x4
-; CHECK-SD-NEXT:         .byte   8                               // 0x8
-; CHECK-SD-NEXT:         .byte   12                              // 0xc
-; CHECK-SD-NEXT:         .byte   255                             // 0xff
-; CHECK-SD-NEXT:         .byte   255                             // 0xff
-; CHECK-SD-NEXT:         .byte   255                             // 0xff
-; CHECK-SD-NEXT:         .byte   255                             // 0xff
-
 ; CHECK-GI-LABEL: .LCPI8_0:
 ; CHECK-GI:              .byte   0                               // 0x0
 ; CHECK-GI-NEXT:         .byte   1                               // 0x1
@@ -172,12 +162,13 @@ define <16 x i8> @tbl4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %
 define <8 x i8> @shuffled_tbl2_to_tbl4_v8i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; CHECK-SD-LABEL: shuffled_tbl2_to_tbl4_v8i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI8_0
+; CHECK-SD-NEXT:    mov x8, #-64512 // =0xffffffffffff0400
 ; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
-; CHECK-SD-NEXT:    ldr d4, [x8, :lo12:.LCPI8_0]
+; CHECK-SD-NEXT:    movk x8, #3080, lsl #16
 ; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
+; CHECK-SD-NEXT:    fmov d4, x8
 ; CHECK-SD-NEXT:    tbl.8b v0, { v0, v1 }, v4
 ; CHECK-SD-NEXT:    tbl.8b v1, { v2, v3 }, v4
 ; CHECK-SD-NEXT:    mov.s v0[1], v1[1]

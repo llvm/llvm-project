@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -82,6 +83,103 @@ bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
 
 bool isSigned(unsigned int Opcode) {
   return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+}
+
+/// For signed div/rem by a power of 2, compute the bias-adjusted dividend:
+///   Sign = ashr X, (BitWidth - 1)          -- 0 or -1
+///   Bias = lshr Sign, (BitWidth - ShiftAmt) -- 0 or 2^ShiftAmt - 1
+///   Adjusted = add X, Bias
+/// The bias adds (2^ShiftAmt - 1) for negative X, correcting rounding towards
+/// zero (instead of towards -inf that a plain ashr would give).
+/// The lshr form is used instead of 'and' to avoid large immediate constants.
+static Value *addSignedBias(IRBuilder<> &Builder, Value *X, unsigned BitWidth,
+                            unsigned ShiftAmt) {
+  assert(ShiftAmt > 0 && ShiftAmt < BitWidth &&
+         "ShiftAmt out of range; callers should handle ShiftAmt == 0");
+  Value *Sign = Builder.CreateAShr(X, BitWidth - 1, "sign");
+  Value *Bias = Builder.CreateLShr(Sign, BitWidth - ShiftAmt, "bias");
+  return Builder.CreateAdd(X, Bias, "adjusted");
+}
+
+/// Expand division or remainder by a power-of-2 constant.
+/// Division (let C = log2(|divisor|)):
+///   udiv X, 2^C  ->  lshr X, C
+///   sdiv X, 2^C  ->  ashr (add X, Bias), C  (Bias corrects rounding)
+///   sdiv exact X, 2^C  ->  ashr exact X, C  (no bias needed)
+///   For negative power-of-2 divisors, the division result is negated.
+/// Remainder (let C = log2(|divisor|)):
+///   urem X, 2^C  ->  and X, (2^C - 1)
+///   srem X, 2^C  ->  sub X, (shl (ashr (add X, Bias), C), C)
+static void expandPow2DivRem(BinaryOperator *BO) {
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *BO << '\n');
+
+  unsigned Opcode = BO->getOpcode();
+  bool IsDiv = (Opcode == Instruction::UDiv || Opcode == Instruction::SDiv);
+  bool IsSigned = isSigned(Opcode);
+  // isExact() is only valid for div.
+  bool IsExact = IsDiv && BO->isExact();
+
+  assert(isConstantPowerOfTwo(BO->getOperand(1), IsSigned) &&
+         "Expected power-of-2 constant divisor");
+
+  Value *X = BO->getOperand(0);
+  auto *C = cast<ConstantInt>(BO->getOperand(1));
+  Type *Ty = BO->getType();
+  unsigned BitWidth = Ty->getIntegerBitWidth();
+
+  APInt DivisorVal = C->getValue();
+  bool IsNegativeDivisor = IsSigned && DivisorVal.isNegative();
+  // Use countr_zero() to get the shift amount directly from the bit pattern.
+  // This works correctly for both positive and negative powers of 2, including
+  // INT_MIN, without needing to negate the value first.
+  unsigned ShiftAmt = DivisorVal.countr_zero();
+
+  IRBuilder<> Builder(BO);
+  Value *Result;
+
+  if (ShiftAmt == 0) {
+    // Div by 1/-1: X / 1 = X, X / -1 = -X.
+    // Rem by 1/-1: always 0.
+    if (IsDiv)
+      Result = IsNegativeDivisor ? Builder.CreateNeg(X) : X;
+    else
+      Result = ConstantInt::get(Ty, 0);
+  } else if (IsSigned) {
+    // The signed expansion uses X multiple times (bias computation, shift,
+    // and sub for remainder). Freeze X to ensure consistent behavior if it is
+    // undef/poison. For exact division, no bias is needed and X is used only
+    // once, so freeze is unnecessary.
+    if (!IsExact && !isGuaranteedNotToBeUndefOrPoison(X))
+      X = Builder.CreateFreeze(X, X->getName() + ".fr");
+    // For exact division, no bias is needed since there's no rounding.
+    Value *Dividend =
+        IsExact ? X : addSignedBias(Builder, X, BitWidth, ShiftAmt);
+    Value *Quotient = Builder.CreateAShr(
+        Dividend, ShiftAmt, IsDiv && IsNegativeDivisor ? "pre.neg" : "shifted",
+        IsExact);
+    if (IsDiv) {
+      Result = IsNegativeDivisor ? Builder.CreateNeg(Quotient) : Quotient;
+    } else {
+      // Rem = X - (Quotient << ShiftAmt):
+      // clear lower ShiftAmt bits via round-trip shift, then subtract.
+      Value *Truncated = Builder.CreateShl(Quotient, ShiftAmt, "truncated");
+      Result = Builder.CreateSub(X, Truncated);
+    }
+  } else {
+    if (IsDiv) {
+      Result = Builder.CreateLShr(X, ShiftAmt, "", IsExact);
+    } else {
+      APInt Mask = APInt::getLowBitsSet(BitWidth, ShiftAmt);
+      Result = Builder.CreateAnd(X, ConstantInt::get(Ty, Mask));
+    }
+  }
+
+  BO->replaceAllUsesWith(Result);
+  if (Result != X)
+    if (auto *RI = dyn_cast<Instruction>(Result))
+      RI->takeName(BO);
+  BO->dropAllReferences();
+  BO->eraseFromParent();
 }
 
 /// This class implements a precise expansion of the frem instruction.
@@ -495,7 +593,7 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
 /// }
 ///
 /// Replace fp to integer with generated code.
-static void expandFPToI(Instruction *FPToI) {
+static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   // clang-format on
   IRBuilder<> Builder(FPToI);
   auto *FloatVal = FPToI->getOperand(0);
@@ -537,12 +635,15 @@ static void expandFPToI(Instruction *FPToI) {
   BasicBlock *Entry = Builder.GetInsertBlock();
   Function *F = Entry->getParent();
   Entry->setName(Twine(Entry->getName(), "fp-to-i-entry"));
+  BasicBlock *CheckSaturateBB, *SaturateBB;
   BasicBlock *End =
       Entry->splitBasicBlock(Builder.GetInsertPoint(), "fp-to-i-cleanup");
-  BasicBlock *CheckSaturateBB = BasicBlock::Create(
-      Builder.getContext(), "fp-to-i-if-check.saturate", F, End);
-  BasicBlock *SaturateBB =
-      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-saturate", F, End);
+  if (IsSaturating) {
+    CheckSaturateBB = BasicBlock::Create(Builder.getContext(),
+                                         "fp-to-i-if-check.saturate", F, End);
+    SaturateBB =
+        BasicBlock::Create(Builder.getContext(), "fp-to-i-if-saturate", F, End);
+  }
   BasicBlock *CheckExpSizeBB = BasicBlock::Create(
       Builder.getContext(), "fp-to-i-if-check.exp.size", F, End);
   BasicBlock *ExpSmallBB =
@@ -563,40 +664,56 @@ static void expandFPToI(Instruction *FPToI) {
     FloatVal =
         Builder.CreateFPExt(FloatVal, Type::getFP128Ty(Builder.getContext()));
   Value *ARep = Builder.CreateBitCast(FloatVal, FloatIntTy);
-  Value *PosOrNeg =
-      Builder.CreateICmpSGT(ARep, ConstantInt::getSigned(FloatIntTy, -1));
-  Value *Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
-                                     ConstantInt::getSigned(IntTy, -1), "sign");
+  Value *PosOrNeg, *Sign;
+  if (IsSigned) {
+    PosOrNeg =
+        Builder.CreateICmpSGT(ARep, ConstantInt::getSigned(FloatIntTy, -1));
+    Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
+                                ConstantInt::getSigned(IntTy, -1), "sign");
+  }
   Value *And =
       Builder.CreateLShr(ARep, Builder.getIntN(FloatWidth, FPMantissaWidth));
   Value *BiasedExp = Builder.CreateAnd(
       And, Builder.getIntN(FloatWidth, (1 << ExponentWidth) - 1), "biased.exp");
   Value *Abs = Builder.CreateAnd(ARep, SignificandMask);
   Value *Significand = Builder.CreateOr(Abs, ImplicitBit, "significand");
-  Value *ExpIsNegative = Builder.CreateICmpULT(
+  Value *ZeroResultCond = Builder.CreateICmpULT(
       BiasedExp, Builder.getIntN(FloatWidth, ExponentBias), "exp.is.negative");
-  Builder.CreateCondBr(ExpIsNegative, End, CheckSaturateBB);
+  if (IsSaturating) {
+    Value *IsNaN = Builder.CreateFCmpUNO(FloatVal, FloatVal, "is.nan");
+    ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNaN);
+    if (!IsSigned) {
+      Value *IsNeg = Builder.CreateIsNeg(ARep);
+      ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNeg);
+    }
+  }
+  Builder.CreateCondBr(ZeroResultCond, End,
+                       IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
 
-  // check.saturate:
-  Builder.SetInsertPoint(CheckSaturateBB);
-  Value *Add1 = Builder.CreateAdd(
-      BiasedExp,
-      ConstantInt::getSigned(FloatIntTy,
-                             -static_cast<int64_t>(ExponentBias + BitWidth)));
-  Value *Cmp3 = Builder.CreateICmpULT(
-      Add1,
-      ConstantInt::getSigned(FloatIntTy, -static_cast<int64_t>(BitWidth)));
-  Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
+  Value *Saturated;
+  if (IsSaturating) {
+    // check.saturate:
+    Builder.SetInsertPoint(CheckSaturateBB);
+    Value *Cmp3 = Builder.CreateICmpUGE(
+        BiasedExp, ConstantInt::getSigned(
+                       FloatIntTy, static_cast<int64_t>(ExponentBias +
+                                                        BitWidth - IsSigned)));
+    Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
 
-  // saturate:
-  Builder.SetInsertPoint(SaturateBB);
-  Value *SignedMax =
-      ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
-  Value *SignedMin =
-      ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
-  Value *Saturated =
-      Builder.CreateSelect(PosOrNeg, SignedMax, SignedMin, "saturated");
-  Builder.CreateBr(End);
+    // saturate:
+    Builder.SetInsertPoint(SaturateBB);
+    if (IsSigned) {
+      Value *SignedMax =
+          ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
+      Value *SignedMin =
+          ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
+      Saturated =
+          Builder.CreateSelect(PosOrNeg, SignedMax, SignedMin, "saturated");
+    } else {
+      Saturated = ConstantInt::getAllOnesValue(IntTy);
+    }
+    Builder.CreateBr(End);
+  }
 
   // if.end9:
   Builder.SetInsertPoint(CheckExpSizeBB);
@@ -609,9 +726,10 @@ static void expandFPToI(Instruction *FPToI) {
   Builder.SetInsertPoint(ExpSmallBB);
   Value *Sub13 = Builder.CreateSub(
       Builder.getIntN(FloatWidth, ExponentBias + FPMantissaWidth), BiasedExp);
-  Value *Shr14 =
+  Value *ExpSmallRes =
       Builder.CreateZExtOrTrunc(Builder.CreateLShr(Significand, Sub13), IntTy);
-  Value *Mul = Builder.CreateMul(Shr14, Sign);
+  if (IsSigned)
+    ExpSmallRes = Builder.CreateMul(ExpSmallRes, Sign);
   Builder.CreateBr(End);
 
   // exp.large:
@@ -621,18 +739,20 @@ static void expandFPToI(Instruction *FPToI) {
       ConstantInt::getSigned(
           FloatIntTy, -static_cast<int64_t>(ExponentBias + FPMantissaWidth)));
   Value *SignificandCast = Builder.CreateZExtOrTrunc(Significand, IntTy);
-  Value *Shl = Builder.CreateShl(SignificandCast,
-                                 Builder.CreateZExtOrTrunc(Sub15, IntTy));
-  Value *Mul16 = Builder.CreateMul(Shl, Sign);
+  Value *ExpLargeRes = Builder.CreateShl(
+      SignificandCast, Builder.CreateZExtOrTrunc(Sub15, IntTy));
+  if (IsSigned)
+    ExpLargeRes = Builder.CreateMul(ExpLargeRes, Sign);
   Builder.CreateBr(End);
 
   // cleanup:
   Builder.SetInsertPoint(End, End->begin());
-  PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 4);
+  PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 3 + IsSaturating);
 
-  Retval0->addIncoming(Saturated, SaturateBB);
-  Retval0->addIncoming(Mul, ExpSmallBB);
-  Retval0->addIncoming(Mul16, ExpLargeBB);
+  if (IsSaturating)
+    Retval0->addIncoming(Saturated, SaturateBB);
+  Retval0->addIncoming(ExpSmallRes, ExpSmallBB);
+  Retval0->addIncoming(ExpLargeRes, ExpLargeBB);
   Retval0->addIncoming(Builder.getIntN(BitWidth, 0), Entry);
 
   FPToI->replaceAllUsesWith(Retval0);
@@ -1083,12 +1203,23 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::SDiv:
     case Instruction::URem:
     case Instruction::SRem:
+      // Power-of-2 divisors are handled inside the expansion (via efficient
+      // shift/mask sequences) rather than being excluded here, so that
+      // backends that cannot lower wide div/rem even for powers of two
+      // (e.g. when DAGCombiner is disabled) still get valid lowered code.
       return !DisableExpandLargeDivRem &&
              cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
-                 MaxLegalDivRemBitWidth
-             // The backend has peephole optimizations for powers of two.
-             // TODO: We don't consider vectors here.
-             && !isConstantPowerOfTwo(I.getOperand(1), isSigned(I.getOpcode()));
+                 MaxLegalDivRemBitWidth;
+    case Instruction::Call: {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      if (II && (II->getIntrinsicID() == Intrinsic::fptoui_sat ||
+                 II->getIntrinsicID() == Intrinsic::fptosi_sat)) {
+        return !DisableExpandLargeFp &&
+               cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
+                   MaxLegalFpConvertBitWidth;
+      }
+      return false;
+    }
     }
 
     return false;
@@ -1124,8 +1255,10 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
 
     case Instruction::FPToUI:
+      expandFPToI(I, /*IsSaturating=*/false, /*IsSigned=*/false);
+      break;
     case Instruction::FPToSI:
-      expandFPToI(I);
+      expandFPToI(I, /*IsSaturating=*/false, /*IsSigned=*/true);
       break;
 
     case Instruction::UIToFP:
@@ -1135,12 +1268,30 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
     case Instruction::UDiv:
     case Instruction::SDiv:
-      expandDivision(cast<BinaryOperator>(I));
-      break;
     case Instruction::URem:
-    case Instruction::SRem:
-      expandRemainder(cast<BinaryOperator>(I));
+    case Instruction::SRem: {
+      auto *BO = cast<BinaryOperator>(I);
+      // TODO: isConstantPowerOfTwo does not handle vector constants, so
+      // vector div/rem by a power-of-2 splat goes through the generic path.
+      if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(BO->getOpcode()))) {
+        expandPow2DivRem(BO);
+      } else {
+        unsigned Opc = BO->getOpcode();
+        if (Opc == Instruction::UDiv || Opc == Instruction::SDiv)
+          expandDivision(BO);
+        else
+          expandRemainder(BO);
+      }
       break;
+    }
+    case Instruction::Call: {
+      auto *II = cast<IntrinsicInst>(I);
+      assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
+             II->getIntrinsicID() == Intrinsic::fptosi_sat);
+      expandFPToI(I, /*IsSaturating=*/true,
+                  /*IsSigned=*/II->getIntrinsicID() == Intrinsic::fptosi_sat);
+      break;
+    }
     }
   }
 

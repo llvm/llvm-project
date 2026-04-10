@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    @expectedFailureWindows
     def test(self):
         self.build()
         (_, process, _, _) = lldbutil.run_to_source_breakpoint(

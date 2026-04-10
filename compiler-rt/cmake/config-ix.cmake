@@ -115,6 +115,9 @@ check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
 check_cxx_compiler_flag("-Werror -mcrc"      COMPILER_RT_HAS_MCRC_FLAG)
 check_cxx_compiler_flag(-fno-partial-inlining COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG)
 check_cxx_compiler_flag("-Werror -ftrivial-auto-var-init=pattern" COMPILER_RT_HAS_TRIVIAL_AUTO_INIT)
+check_c_compiler_flag(-nogpulib             COMPILER_RT_HAS_NOGPULIB_FLAG)
+check_c_compiler_flag(-flto                 COMPILER_RT_HAS_FLTO_FLAG)
+check_c_compiler_flag("-Xclang -mcode-object-version=none" COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG)
 
 if(NOT WIN32 AND NOT CYGWIN)
   # MinGW warns if -fvisibility-inlines-hidden is used.
@@ -702,7 +705,7 @@ else()
   filter_available_targets(LSAN_COMMON_SUPPORTED_ARCH
     ${SANITIZER_COMMON_SUPPORTED_ARCH})
   filter_available_targets(UBSAN_COMMON_SUPPORTED_ARCH
-    ${SANITIZER_COMMON_SUPPORTED_ARCH})
+    ${ALL_UBSAN_SUPPORTED_ARCH})
   filter_available_targets(ASAN_SUPPORTED_ARCH ${ALL_ASAN_SUPPORTED_ARCH})
   filter_available_targets(RTSAN_SUPPORTED_ARCH ${ALL_RTSAN_SUPPORTED_ARCH})
   filter_available_targets(FUZZER_SUPPORTED_ARCH ${ALL_FUZZER_SUPPORTED_ARCH})
@@ -888,8 +891,9 @@ else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
 endif()
 
-if (COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Linux|FreeBSD|NetBSD|Android|Darwin")
+if (UBSAN_SUPPORTED_ARCH AND
+    (OS_NAME MATCHES "Linux|FreeBSD|NetBSD|Android|Darwin|SunOS" OR
+     "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx"))
   set(COMPILER_RT_HAS_UBSAN_MINIMAL TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN_MINIMAL FALSE)

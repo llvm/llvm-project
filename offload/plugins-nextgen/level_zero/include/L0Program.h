@@ -19,20 +19,6 @@ namespace llvm::omp::target::plugin {
 
 class L0DeviceTy;
 
-/// Program data to be initialized by plugin.
-struct ProgramDataTy {
-  int Initialized = 0;
-  int NumDevices = 0;
-  int DeviceNum = -1;
-  uint32_t TotalEUs = 0;
-  uint32_t HWThreadsPerEU = 0;
-  uintptr_t DynamicMemoryLB = 0;
-  uintptr_t DynamicMemoryUB = 0;
-  int DeviceType = 0;
-  void *DynamicMemPool = nullptr;
-  int TeamsThreadLimit = 0;
-};
-
 class L0ProgramBuilderTy {
   L0DeviceTy &Device;
   std::unique_ptr<MemoryBuffer> Image;

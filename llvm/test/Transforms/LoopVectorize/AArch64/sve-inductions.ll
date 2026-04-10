@@ -31,9 +31,9 @@ define void @cond_ind64(ptr noalias nocapture %a, ptr noalias nocapture readonly
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP6]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc <vscale x 4 x i64> [[VEC_IND]] to <vscale x 4 x i1>
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [4 x i8], ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP10]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> poison)
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP11]], <vscale x 4 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
@@ -47,25 +47,25 @@ define void @cond_ind64(ptr noalias nocapture %a, ptr noalias nocapture readonly
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %i.08 = phi i64 [ %inc, %for.inc ], [ 0, %entry ]
   %and = and i64 %i.08, 1
   %tobool.not = icmp eq i64 %and, 0
   br i1 %tobool.not, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %i.08
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds i32, ptr %a, i64 %i.08
   store i32 %0, ptr %arrayidx1, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i64 %i.08, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                 ; preds = %for.inc
+exit:
   ret void
 }
 

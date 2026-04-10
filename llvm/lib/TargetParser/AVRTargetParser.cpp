@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AVRTargetParser.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Errc.h"
 
 using namespace llvm;
 
-Expected<std::string>
-AVR::getFeatureSetFromEFlag(const object::ELFObjectFileBase *Elf) {
+Expected<std::string> AVR::getFeatureSetFromEFlag(const unsigned EFlag) {
   static const DenseMap<unsigned, StringRef> EFlagToFeatureSet = {
       {ELF::EF_AVR_ARCH_AVR1, "avr1"},
       {ELF::EF_AVR_ARCH_AVR2, "avr2"},
@@ -39,7 +39,7 @@ AVR::getFeatureSetFromEFlag(const object::ELFObjectFileBase *Elf) {
       {ELF::EF_AVR_ARCH_XMEGA6, "xmega"},
       {ELF::EF_AVR_ARCH_XMEGA7, "xmega"},
   };
-  unsigned EFlag = Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK;
+
   auto It = EFlagToFeatureSet.find(EFlag);
   if (It != EFlagToFeatureSet.end())
     return It->second.str();

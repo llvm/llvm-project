@@ -600,7 +600,7 @@ void StmtPrinter::VisitCapturedStmt(CapturedStmt *Node) {
 }
 
 void StmtPrinter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *Node) {
-  PrintStmt(Node->getOutlinedFunctionDecl()->getBody());
+  PrintStmt(Node->getOriginalStmt());
 }
 
 void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
@@ -1447,6 +1447,11 @@ void StmtPrinter::VisitSYCLUniqueStableNameExpr(
   OS << ")";
 }
 
+void StmtPrinter::VisitUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *Node) {
+  PrintStmt(Node->getOriginalStmt());
+}
+
 void StmtPrinter::VisitPredefinedExpr(PredefinedExpr *Node) {
   OS << PredefinedExpr::getIdentKindName(Node->getIdentKind());
 }
@@ -1821,6 +1826,12 @@ void StmtPrinter::VisitObjCIsaExpr(ObjCIsaExpr *Node) {
 }
 
 void StmtPrinter::VisitExtVectorElementExpr(ExtVectorElementExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << ".";
+  OS << Node->getAccessor().getName();
+}
+
+void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
   PrintExpr(Node->getBase());
   OS << ".";
   OS << Node->getAccessor().getName();

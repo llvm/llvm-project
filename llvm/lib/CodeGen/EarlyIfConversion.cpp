@@ -1267,9 +1267,9 @@ bool EarlyIfConverter::tryConvertIf(MachineBasicBlock *MBB) {
     IfConv.convertIf(RemoveBlocks);
     Changed = true;
     updateDomTree(DomTree, IfConv, RemoveBlocks);
+    updateLoops(Loops, RemoveBlocks);
     for (MachineBasicBlock *MBB : RemoveBlocks)
       MBB->eraseFromParent();
-    updateLoops(Loops, RemoveBlocks);
   }
   return Changed;
 }
@@ -1440,9 +1440,9 @@ bool EarlyIfPredicator::tryConvertIf(MachineBasicBlock *MBB) {
     IfConv.convertIf(RemoveBlocks, /*Predicate*/ true);
     Changed = true;
     updateDomTree(DomTree, IfConv, RemoveBlocks);
+    updateLoops(Loops, RemoveBlocks);
     for (MachineBasicBlock *MBB : RemoveBlocks)
       MBB->eraseFromParent();
-    updateLoops(Loops, RemoveBlocks);
   }
   return Changed;
 }

@@ -7,6 +7,7 @@ import json
 
 class TestSimulatorPlatformLaunching(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def check_load_commands(self, expected_load_command):
         """sanity check the built binary for the expected number of load commands"""
@@ -96,7 +97,6 @@ class TestSimulatorPlatformLaunching(TestBase):
                 device_udid,
                 self.getBuildArtifact("a.out"),
                 exe_args=[],
-                stderr_lines_to_read=1,  # in hello.cpp, the pid is printed first
                 stderr_patterns=[r"PID: (.*)"],
                 log=self.trace,
             )

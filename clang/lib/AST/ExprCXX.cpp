@@ -1749,9 +1749,7 @@ PackIndexingExpr *PackIndexingExpr::Create(
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {
   if (auto *D = dyn_cast<DeclRefExpr>(getPackIdExpression()); D) {
-    NamedDecl *ND = dyn_cast<NamedDecl>(D->getDecl());
-    assert(ND && "exected a named decl");
-    return ND;
+    return D->getDecl();
   }
   assert(false && "invalid declaration kind in pack indexing expression");
   return nullptr;

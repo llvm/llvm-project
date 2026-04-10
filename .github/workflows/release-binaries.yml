@@ -80,6 +80,8 @@ jobs:
 
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+          persist-credentials: false
 
     - name: Install Dependencies
       shell: bash
@@ -176,7 +178,11 @@ jobs:
             test_runs_on=$build_runs_on
             ;;
           windows-11-arm)
-            build_runs_on="windows-11-arm-16core"
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="windows-11-arm-16core"
+            fi
             test_runs_on=$build_runs_on
             ;;
           macos-14)
@@ -244,6 +250,7 @@ jobs:
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       with:
+        persist-credentials: false
         ref: ${{ needs.prepare.outputs.ref }}
 
     - name: Set Build Prefix
@@ -308,7 +315,7 @@ jobs:
           fi
           echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
-    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+    - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       id: artifact-upload
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
@@ -343,6 +350,7 @@ jobs:
       - name: Checkout Release Scripts
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/workflows/upload-release-artifact
             llvm/utils/release/github-upload-release.py
@@ -352,6 +360,7 @@ jobs:
       - name: Upload Artifacts
         uses: ./.github/workflows/upload-release-artifact
         with:
+          release-version: ${{ needs.prepare.outputs.release-version }}
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
           attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}

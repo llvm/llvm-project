@@ -24,6 +24,7 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCDirectives.h"
@@ -157,6 +158,36 @@ static MCInst lowerVecEltInsertion(const MachineInstr *MI, unsigned Opcode) {
       .addReg(MI->getOperand(1).getReg())
       .addReg(0)
       .addImm(0);
+}
+
+bool SystemZAsmPrinter::doInitialization(Module &M) {
+  SM.reset();
+
+  // In HLASM, the only way to represent aliases is to use the
+  // extra-label-at-definition strategy. This is similar to the AIX
+  // implementation with the additional caveat that all symbol attributes must
+  // be emitted before the label is emitted.
+  if (TM.getTargetTriple().isOSzOS()) {
+    // Construct an aliasing list for each GlobalObject.
+    for (const auto &Alias : M.aliases()) {
+      const GlobalObject *Aliasee = Alias.getAliaseeObject();
+      if (!Aliasee)
+        OutContext.reportError(
+            {}, "Alias without a base object is not yet supported on z/OS.");
+
+      bool IsFunc = isa<Function>(Aliasee->stripPointerCasts());
+      if (IsFunc) {
+        if (Alias.hasWeakLinkage() || Alias.hasLinkOnceLinkage())
+          OutContext.reportError({},
+                                 "Weak alias/reference not supported on z/OS");
+
+        GOAliasMap[Aliasee].push_back(&Alias);
+      } else
+        OutContext.reportError(
+            {}, "Only aliases to functions is supported in GOFF.");
+    }
+  }
+  return AsmPrinter::doInitialization(M);
 }
 
 // The XPLINK ABI requires that a no-op encoding the call type is emitted after
@@ -1198,6 +1229,20 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (TT.isOSzOS()) {
     emitADASection();
     emitIDRLSection(M);
+    // On z/OS, we need to associate an external data reference with an ED
+    // symbol, for which we use the the ED of the ADA. We also need to mark the
+    // reference as being to data, otherwise we cannot bind with code generated
+    // by XL.
+    for (auto &GO : M.global_objects()) {
+      if (auto *GV = dyn_cast<GlobalVariable>(&GO)) {
+        if (!GV->hasInitializer()) {
+          MCSymbol *Sym = getSymbol(GV);
+          getTargetStreamer()->emitADA(
+              Sym, OutContext.getObjectFileInfo()->getADASection());
+          OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+        }
+      }
+    }
   }
   emitAttributes(M);
 }
@@ -1245,12 +1290,15 @@ void SystemZAsmPrinter::emitADASection() {
       EmittedBytes += PointerSize;
       break;
     case SystemZII::MO_ADA_INDIRECT_FUNC_DESC: {
-      MCSymbol *Alias = OutContext.createTempSymbol(
+      MCSymbol *Alias = OutContext.getOrCreateSymbol(
           Twine(Sym->getName()).concat("@indirect"));
-      OutStreamer->emitAssignment(Alias,
-                                  MCSymbolRefExpr::create(Sym, OutContext));
       OutStreamer->emitSymbolAttribute(Alias, MCSA_IndirectSymbol);
-
+      OutStreamer->emitSymbolAttribute(Alias, MCSA_ELF_TypeFunction);
+      OutStreamer->emitSymbolAttribute(Alias, MCSA_Global);
+      OutStreamer->emitSymbolAttribute(Alias, MCSA_Extern);
+      MCSymbolGOFF *GOFFSym =
+          static_cast<llvm::MCSymbolGOFF *>(const_cast<llvm::MCSymbol *>(Sym));
+      getTargetStreamer()->emitExternalName(Alias, GOFFSym->getExternalName());
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
           MCSpecifierExpr::create(MCSymbolRefExpr::create(Alias, OutContext),
@@ -1784,6 +1832,14 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   OutStreamer->popSection();
 }
 
+void SystemZAsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
+  if (!TM.getTargetTriple().isOSzOS())
+    return AsmPrinter::emitGlobalAlias(M, GA);
+
+  // Aliased function labels have already been emitted for z/OS
+}
+
 const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV,
                                                const Constant *BaseCV,
                                                uint64_t Offset) {
@@ -1884,9 +1940,24 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
         OutStreamer->AddComment("  Bit 2: 0 = Does not use alloca");
     }
     OutStreamer->emitInt32(DSAAndFlags);
+
+    getTargetStreamer()->emitADA(CurrentFnSym,
+                                 getObjFileLowering().getADASection());
   }
 
   AsmPrinter::emitFunctionEntryLabel();
+
+  if (Subtarget.getTargetTriple().isOSzOS()) {
+    const Function *F = &MF->getFunction();
+    // Emit aliasing label for function entry point label.
+    for (const GlobalAlias *Alias : GOAliasMap[F]) {
+      MCSymbol *Sym = getSymbol(Alias);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      emitVisibility(Sym, Alias->getVisibility());
+      emitLinkage(Alias, Sym);
+      OutStreamer->emitLabel(Sym);
+    }
+  }
 }
 
 char SystemZAsmPrinter::ID = 0;

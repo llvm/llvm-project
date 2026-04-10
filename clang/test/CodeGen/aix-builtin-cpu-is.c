@@ -74,7 +74,7 @@
 // CHECKOP-NEXT: entry:
 // CHECKOP-NEXT:   %retval = alloca i32, align 4
 // CHECKOP-NEXT:   store i32 0, ptr %retval, align 4
-// CHECKOP-NEXT:   %0 = load i32, ptr getelementptr inbounds ({ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i32, i32, i32, i32, i64, i64, i64, i64, i32, i32, i32, i32, i32, i32, i64, i32, i8, i8, i8, i8, i32, i32, i16, i16, [3 x i32], i32 }, ptr @_system_configuration, i32 0, i32 1), align 4
+// CHECKOP-NEXT:   %0 = load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, i32 4), align 4
 // CHECKOP-NEXT:   %1 = icmp eq i32 %0, [[VALUE]]
 // CHECKOP-NEXT:  %conv = zext i1 %1 to i32
 // CHECKOP-NEXT:   ret i32 %conv

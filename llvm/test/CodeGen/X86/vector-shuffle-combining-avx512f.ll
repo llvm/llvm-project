@@ -1035,28 +1035,25 @@ define <8 x double> @concat_vpermilvar_v8f64_v4f64(<4 x double> %a0, <4 x double
   ret <8 x double> %res
 }
 
-define <16 x float> @combine_vexpandd_of_broadcast(float %x, <16 x float> %y, i16 %m) {
-; X86-LABEL: combine_vexpandd_of_broadcast:
+define <16 x float> @combine_vexpandps_of_broadcast(float %x, <16 x float> %y, i16 %m) {
+; X86-LABEL: combine_vexpandps_of_broadcast:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %zmm1
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vexpandps %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm0 {%k1}
 ; X86-NEXT:    retl
 ;
-; X64-AVX512F-LABEL: combine_vexpandd_of_broadcast:
+; X64-AVX512F-LABEL: combine_vexpandps_of_broadcast:
 ; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vpbroadcastd %xmm0, %zmm0
 ; X64-AVX512F-NEXT:    kmovw %edi, %k1
-; X64-AVX512F-NEXT:    vexpandps %zmm0, %zmm1 {%k1}
-; X64-AVX512F-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X64-AVX512F-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
+; X64-AVX512F-NEXT:    vmovaps %zmm1, %zmm0
 ; X64-AVX512F-NEXT:    retq
 ;
-; X64-AVX512BW-LABEL: combine_vexpandd_of_broadcast:
+; X64-AVX512BW-LABEL: combine_vexpandps_of_broadcast:
 ; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    vpbroadcastd %xmm0, %zmm0
 ; X64-AVX512BW-NEXT:    kmovd %edi, %k1
-; X64-AVX512BW-NEXT:    vexpandps %zmm0, %zmm1 {%k1}
-; X64-AVX512BW-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X64-AVX512BW-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
+; X64-AVX512BW-NEXT:    vmovaps %zmm1, %zmm0
 ; X64-AVX512BW-NEXT:    retq
   %xx = insertelement <16 x float> poison, float %x, i32 0
   %vx = shufflevector <16 x float> %xx, <16 x float> poison, <16 x i32> zeroinitializer
@@ -1083,6 +1080,17 @@ define <16 x i32> @combine_vcompressd_as_vmov(<16 x i32> %x) {
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %x, <16 x i32> zeroinitializer, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
+  ret <16 x i32> %res
+}
+
+; compress of repeated splat args
+define <16 x i32> @combine_vcompressd_splat(i16 %m) {
+; CHECK-LABEL: combine_vcompressd_splat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
+; CHECK-NEXT:    ret{{[l|q]}}
+  %msk = bitcast i16 %m to <16 x i1>
+  %res = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> splat (i32 -1), <16 x i32> splat (i32 -1), <16 x i1> %msk)
   ret <16 x i32> %res
 }
 

@@ -5,15 +5,15 @@
 // CHECK-LABEL:   func.func @nodeclare
 // CHECK:         %[[C1:.*]] = arith.constant 1 : index
 // CHECK:         %[[SHAPE:.*]] = fir.shape %[[C1]] : (index) -> !fir.shape<1>
-// CHECK:         %[[COOR:.*]] = fir.array_coor %arg0(%[[SHAPE]]) %[[C1]] : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-// CHECK:         %[[C0:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> memref<i32>
-// CHECK:         %[[C1M:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> memref<i32>
-// CHECK:         %[[L0:.*]] = memref.load %[[C1M]][] : memref<i32>
+// CHECK:         %[[M0:.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<1xi32>>) -> memref<1xi32>
+// CHECK:         %[[M1:.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<1xi32>>) -> memref<1xi32>
+// CHECK:         %[[L0:.*]] = memref.load %[[M0]][%{{.*}}] : memref<1xi32>
 // CHECK:         %[[CARG1:.*]] = fir.convert %arg1 : (!fir.ref<i32>) -> memref<i32>
 // CHECK:         memref.store %[[L0]], %[[CARG1]][] : memref<i32>
-// CHECK:         %[[L1:.*]] = memref.load %[[C0]][] : memref<i32>
+// CHECK:         %[[L1:.*]] = memref.load %[[M1]][%{{.*}}] : memref<1xi32>
 // CHECK:         %[[CARG2:.*]] = fir.convert %arg2 : (!fir.ref<i32>) -> memref<i32>
 // CHECK:         memref.store %[[L1]], %[[CARG2]][] : memref<i32>
+// CHECK-NOT:     fir.array_coor
 
 func.func @nodeclare(%arg0: !fir.ref<!fir.array<1xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "b"}, %arg2: !fir.ref<i32> {fir.bindc_name = "c"}) attributes {fir.internal_name = ""} {
   %c1 = arith.constant 1 : index
@@ -27,8 +27,9 @@ func.func @nodeclare(%arg0: !fir.ref<!fir.array<1xi32>> {fir.bindc_name = "a"}, 
 }
 
 // CHECK-LABEL:   func.func @nodeclare_regions
-// CHECK-COUNT-4: fir.convert %{{.*}} : (!fir.ref<i32>) -> memref<i32>
+// CHECK-COUNT-4: fir.convert %{{.*}} : (!fir.ref<!fir.array<6xi32>>) -> memref<6xi32>
 // CHECK-COUNT-1: fir.convert %{{.*}} : (i32) -> f32
+// CHECK-NOT:     fir.array_coor
 
 func.func @nodeclare_regions(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "h11"}, %arg1: !fir.ref<!fir.array<6xi32>> {fir.bindc_name = "rslt"}) attributes {fir.internal_name = "_QPsub11"} {
   %cst = arith.constant 1.100000e+01 : f32

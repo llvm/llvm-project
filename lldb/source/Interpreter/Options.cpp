@@ -21,8 +21,12 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/OptionDefinition.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -274,57 +278,9 @@ void Options::OutputFormattedUsageText(Stream &strm,
   }
   actual_text.append(
       ansi::FormatAnsiTerminalCodes(option_def.usage_text, use_color));
-  const size_t visible_length = ansi::ColumnWidth(actual_text);
 
-  // Will it all fit on one line?
-  if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
-      output_max_columns) {
-    // Output it as a single line.
-    strm.Indent(actual_text);
-    strm.EOL();
-    return;
-  }
-
-  // We need to break it up into multiple lines. We can do this based on the
-  // formatted text because we know that:
-  // * We only break lines on whitespace, therefore we will not break in the
-  //   middle of a Unicode character or escape code.
-  // * Escape codes are so far not applied to multiple words, so there is no
-  //   risk of breaking up a phrase and the escape code being incorrectly
-  //   applied to the indent too.
-
-  const int max_text_width = output_max_columns - strm.GetIndentLevel() - 1;
-  int start = 0;
-  int end = start;
-  const int final_end = visible_length;
-
-  while (end < final_end) {
-    // Don't start the 'text' on a space, since we're already outputting the
-    // indentation.
-    while ((start < final_end) && (actual_text[start] == ' '))
-      start++;
-
-    end = start + max_text_width;
-    if (end > final_end) {
-      end = final_end;
-    } else {
-      // If we're not at the end of the text, make sure we break the line on
-      // white space.
-      while (end > start && actual_text[end] != ' ' &&
-             actual_text[end] != '\t' && actual_text[end] != '\n')
-        end--;
-    }
-
-    const int sub_len = end - start;
-    if (start != 0)
-      strm.EOL();
-    strm.Indent();
-    assert(start < final_end);
-    assert(start + sub_len <= final_end);
-    strm.PutCString(llvm::StringRef(actual_text.c_str() + start, sub_len));
-    start = end + 1;
-  }
-  strm.EOL();
+  ansi::OutputWordWrappedLines(strm, actual_text, output_max_columns,
+                               use_color);
 }
 
 bool Options::SupportsLongOption(const char *long_option) {
@@ -934,18 +890,28 @@ static Args ReconstituteArgsAfterParsing(llvm::ArrayRef<char *> parsed,
   return result;
 }
 
-static size_t FindArgumentIndexForOption(const Args &args,
-                                         const Option &long_option) {
+/// Find the index of the given option in the arguments. If the option takes an
+/// argument, the second index is the index of the value in args. Otherwise, the
+/// second index is LLDB_INVALID_INDEX64.
+static std::pair<size_t, size_t>
+FindArgumentIndexForOption(const Args &args, const Option &long_option) {
   std::string short_opt = llvm::formatv("-{0}", char(long_option.val)).str();
   std::string long_opt =
-      std::string(llvm::formatv("--{0}", long_option.definition->long_option));
+      llvm::formatv("--{0}", long_option.definition->long_option).str();
   for (const auto &entry : llvm::enumerate(args)) {
-    if (entry.value().ref().starts_with(short_opt) ||
-        entry.value().ref().starts_with(long_opt))
-      return entry.index();
+    llvm::StringRef arg = entry.value().ref();
+    size_t idx = entry.index();
+    if (long_option.definition->option_has_arg == OptionParser::eNoArgument)
+      return {idx, LLDB_INVALID_INDEX64};
+    size_t val_idx;
+    if (arg == short_opt || arg.starts_with(long_opt))
+      val_idx = idx + 1;
+    else if (arg.starts_with(short_opt))
+      val_idx = idx;
+    return {idx, val_idx};
   }
 
-  return size_t(-1);
+  return {LLDB_INVALID_INDEX64, LLDB_INVALID_INDEX64};
 }
 
 static std::string BuildShortOptions(const Option *long_options) {
@@ -981,7 +947,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
   Option *long_options = GetLongOptions();
 
   if (long_options == nullptr) {
-    return llvm::createStringError("Invalid long options");
+    return llvm::createStringError("invalid long options");
   }
 
   std::string short_options = BuildShortOptions(long_options);
@@ -1006,7 +972,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
       break;
 
     if (val == '?') {
-      return llvm::createStringError("Unknown or ambiguous option");
+      return llvm::createStringError("unknown or ambiguous option");
     }
 
     if (val == 0)
@@ -1028,16 +994,15 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
 
     // See if the option takes an argument, and see if one was supplied.
     if (long_options_index == -1) {
-      return llvm::createStringError(
-          llvm::formatv("Invalid option with value '{0}'.", char(val)).str());
+      return llvm::createStringErrorV("invalid option with value '{0}'",
+                                      char(val));
     }
 
     StreamString option_str;
     option_str.Printf("-%c", val);
-    const OptionDefinition *def = long_options[long_options_index].definition;
-    int has_arg =
-        (def == nullptr) ? OptionParser::eNoArgument : def->option_has_arg;
-
+    const Option &opt = long_options[long_options_index];
+    int has_arg = opt.definition ? opt.definition->option_has_arg
+                                 : OptionParser::eNoArgument;
     const char *option_arg = nullptr;
     switch (has_arg) {
     case OptionParser::eRequiredArgument:
@@ -1067,12 +1032,11 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     // Note: We also need to preserve any option argument values that were
     // surrounded by backticks, as we lose track of them in the
     // option_args_vector.
-    size_t idx =
-        FindArgumentIndexForOption(args_copy, long_options[long_options_index]);
+    auto [idx, val_idx] = FindArgumentIndexForOption(args_copy, opt);
     std::string option_to_insert;
     if (option_arg) {
-      if (idx != size_t(-1) && has_arg) {
-        bool arg_has_backtick = args_copy[idx + 1].GetQuoteChar() == '`';
+      if (val_idx != LLDB_INVALID_INDEX64 && val_idx < args_copy.size()) {
+        bool arg_has_backtick = args_copy[val_idx].GetQuoteChar() == '`';
         if (arg_has_backtick)
           option_to_insert = "`";
         option_to_insert += option_arg;
@@ -1086,7 +1050,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     option_arg_vector->emplace_back(std::string(option_str.GetString()),
                                     has_arg, option_to_insert);
 
-    if (idx == size_t(-1))
+    if (idx == LLDB_INVALID_INDEX64)
       continue;
 
     if (!input_line.empty()) {

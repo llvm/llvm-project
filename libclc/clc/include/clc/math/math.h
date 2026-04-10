@@ -9,8 +9,9 @@
 #ifndef __CLC_MATH_MATH_H__
 #define __CLC_MATH_MATH_H__
 
-#include <clc/clc_as_type.h>
-#include <clc/clcfunc.h>
+#include "clc/clc_as_type.h"
+#include "clc/clcfunc.h"
+#include "clc/math/clc_subnormal_config.h"
 
 #define SNAN 0x001
 #define QNAN 0x002
@@ -23,14 +24,27 @@
 #define PNOR 0x100
 #define PINF 0x200
 
-#ifdef __R600__
-#define __CLC_HAVE_HW_FMA32() (0)
+#ifdef FP_FAST_FMA_HALF
+#define __CLC_FAST_FMA_F16 1
 #else
-#define __CLC_HAVE_HW_FMA32() (1)
+#define __CLC_FAST_FMA_F16 0
+#endif
+
+// TODO: Stop forcing this for AMDGPU, and use a separate build for slow-fma
+// case.
+#if defined(FP_FAST_FMAF) || defined(__AMDGPU__)
+#define __CLC_FAST_FMA_F32 1
+#else
+#define __CLC_FAST_FMA_F32 0
+#endif
+
+#ifdef FP_FAST_FMA
+#define __CLC_FAST_FMA_F64 1
+#else
+#define __CLC_FAST_FMA_F64 0
 #endif
 
 #define HAVE_BITALIGN() (0)
-#define HAVE_FAST_FMA32() (0)
 
 #define MATH_DIVIDE(X, Y) ((X) / (Y))
 #define MATH_RECIP(X) (1.0f / (X))

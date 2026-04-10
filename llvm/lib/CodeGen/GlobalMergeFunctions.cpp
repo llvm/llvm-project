@@ -208,6 +208,10 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
   if (auto *SP = MergedFunc->getSubprogram())
     NewFunction->setSubprogram(SP);
   NewFunction->copyAttributesFrom(MergedFunc);
+  // Preserve entry count for the merged function. Branch weights for blocks
+  // are automatically preserved via splice() which moves the basic blocks.
+  if (auto EC = MergedFunc->getEntryCount())
+    NewFunction->setEntryCount(*EC);
   NewFunction->setDLLStorageClass(GlobalValue::DefaultStorageClass);
 
   NewFunction->setLinkage(GlobalValue::InternalLinkage);
@@ -254,6 +258,10 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
 
   assert(Thunk->arg_size() + Params.size() ==
          ToFunc->getFunctionType()->getNumParams());
+
+  // Save entry count before dropping references (which clears metadata).
+  auto EC = Thunk->getEntryCount();
+
   Thunk->dropAllReferences();
 
   BasicBlock *BB = BasicBlock::Create(Thunk->getContext(), "", Thunk);
@@ -289,6 +297,10 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
     Builder.CreateRetVoid();
   else
     Builder.CreateRet(Builder.CreateAggregateCast(CI, Thunk->getReturnType()));
+
+  // Restore the thunk's original entry count.
+  if (EC)
+    Thunk->setEntryCount(*EC);
 }
 
 // Check if the old merged/optimized IndexOperandHashMap is compatible with

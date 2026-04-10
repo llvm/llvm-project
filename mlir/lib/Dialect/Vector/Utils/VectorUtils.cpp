@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -22,6 +23,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
@@ -209,12 +211,9 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // explicitly checked for this property.
   /// TODO: there should be a single function for all ops to do this so we
   /// do not have to special case. Maybe a trait, or just a method, unclear atm.
-  bool mustDivide = false;
-  (void)mustDivide;
   VectorType superVectorType;
   if (auto transfer = dyn_cast<VectorTransferOpInterface>(op)) {
     superVectorType = transfer.getVectorType();
-    mustDivide = true;
   } else if (op.getNumResults() == 0) {
     if (!isa<func::ReturnOp>(op)) {
       op.emitError("NYI: assuming only return operations can have 0 "
@@ -235,20 +234,11 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
     return false;
   }
 
-  // Get the ratio.
+  // Get the ratio. If the shapes are incompatible (e.g., different ranks or
+  // non-integer divisibility), the operation does not operate on a super-vector
+  // of the given sub-vector type.
   auto ratio =
       computeShapeRatio(superVectorType.getShape(), subVectorType.getShape());
-
-  // Sanity check.
-  assert((ratio || !mustDivide) &&
-         "vector.transfer operation in which super-vector size is not an"
-         " integer multiple of sub-vector size");
-
-  // This catches cases that are not strictly necessary to have multiplicity but
-  // still aren't divisible by the sub-vector shape.
-  // This could be useful information if we wanted to reshape at the level of
-  // the vector type (but we would have to look at the compute and distinguish
-  // between parallel, reduction and possibly other cases.
   return ratio.has_value();
 }
 
@@ -260,6 +250,10 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   ArrayRef<int64_t> vectorShape =
       vectorType.getShape().drop_while([](auto v) { return v == 1; });
   auto vecRank = vectorShape.size();
+
+  // A single element is always contiguous.
+  if (vecRank == 0)
+    return true;
 
   if (!memrefType.areTrailingDimsContiguous(vecRank))
     return false;
@@ -317,6 +311,101 @@ bool vector::isLinearizableVector(VectorType type) {
   return (type.getRank() > 1) && (type.getNumScalableDims() <= 1);
 }
 
+/// Determines whether a mask for xfer_read/write is trivially "all true"
+///
+/// Given all the inputs required to generate a mask (mask sizes and shapes),
+/// and an xfer_read/write operation (indices and the source/destination tensor
+/// shape), determines whether the corresponding mask would be trivially
+/// foldable (i.e., trivially "all true").
+///
+/// Use this method to avoid generating spurious masks and relying on
+/// vectorization post-processing to remove them.
+///
+/// Pre-conditions for a mask to be trivially foldable:
+///   * All involved shapes (mask + destination tensor) are static.
+///   * All indices are constant.
+///   * All mask sizes are constant (including `arith.constant`).
+///
+/// If the pre-conditions are met, the method checks for each destination
+/// dimension `d`:
+///   (1) destDimSize[rankDiff + d] <= maskShape[d]
+///   (2) destDimSize[rankDiff + d] <= index[d] + maskSize[d]
+///
+/// rankDiff = rank(dest) - rank(mask).
+///
+/// This method takes a conservative view: it may return false even if the mask
+/// is technically foldable.
+///
+/// EXAMPLE 1 (trivially foldable, all shapes match, mask sizes match the shape
+/// of the dest tensor):
+///   %c0 = arith.constant 0 : index
+///   %mask = vector.create_mask 5, 1
+///   vector.mask %mask {
+///     vector.transfer_write %vecToStore_1, %dest{[%c0, %c0]
+///       {in_bounds = [true, true]}
+///     : vector<5x1xi32>, tensor<5x1xi32>
+///   }
+///
+/// EXAMPLE 2 (not trivially foldable - vector shape exceeds the tensor shape,
+/// mask is required to avoid out-of-bounds write):
+///   %c0 = arith.constant 0 : index
+///   %mask = vector.create_mask 5, 1
+///   vector.mask %mask {
+///     vector.transfer_write %vecToStore_2, %dest[%c0, %c0]
+///      {in_bounds = [true, true]}
+///     : vector<8x1xi32>, tensor<5x1xi32>
+///   }
+static bool isMaskTriviallyFoldable(SmallVector<OpFoldResult> &maskSizes,
+                                    SmallVector<Value> &indices,
+                                    ArrayRef<int64_t> baseShape,
+                                    ArrayRef<int64_t> maskShape) {
+  // Masking is unavoidable in the case of dynamic tensors.
+  if (ShapedType::isDynamicShape(baseShape))
+    return false;
+
+  // Collect all constant mask sizes.
+  SmallVector<int64_t, 4> cstMaskSizes;
+  for (auto [i, dimSize] : llvm::enumerate(maskSizes)) {
+    if (auto intSize = getConstantIntValue(dimSize)) {
+      cstMaskSizes.push_back(*intSize);
+    }
+  }
+
+  // If any of the mask sizes is non-constant, bail out.
+  if (cstMaskSizes.size() != maskShape.size())
+    return false;
+
+  // Collect all constant indices.
+  SmallVector<int64_t, 4> cstIndices;
+  for (auto [i, idx] : llvm::enumerate(indices)) {
+    APSInt intVal;
+    if (matchPattern(idx, m_ConstantInt(&intVal))) {
+      cstIndices.push_back(intVal.getSExtValue());
+    }
+  }
+
+  // If any of the indices is non-constant, bail out.
+  if (cstIndices.size() != baseShape.size())
+    return false;
+
+  // Go over all destination dims and check (1) and (2). Take into account that:
+  //  * The number of mask sizes will match the rank of the vector to
+  //    load/store. This could be lower than the rank of the destination tensor.
+  //  * Mask sizes could be larger than the corresponding mask shape (hence
+  //    `clamp`).
+  // TODO: The 2nd item should be rejected by the verifier.
+  int64_t rankDiff = baseShape.size() - cstMaskSizes.size();
+  for (auto [i, idx] : llvm::enumerate(cstMaskSizes)) {
+    if (/*(1)*/ maskShape[i] > baseShape[rankDiff + i] ||
+        /*(2)*/ baseShape[rankDiff + i] <
+            (std::clamp(cstMaskSizes[i], int64_t(0), maskShape[i]) +
+             cstIndices[i]))
+      return false;
+  }
+
+  return true;
+}
+
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      Value source,
                                      ArrayRef<int64_t> inputVectorSizes,
@@ -361,27 +450,115 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       inBoundsVal[i] = (sourceShape[i] == vecToReadShape[i]) &&
                        ShapedType::isStatic(sourceShape[i]);
   }
-  auto transferReadOp = vector::TransferReadOp::create(
-      builder, loc,
-      /*vectorType=*/vecToReadTy,
-      /*source=*/source,
-      /*indices=*/SmallVector<Value>(vecToReadRank, zero),
-      /*padding=*/padValue,
-      /*inBounds=*/inBoundsVal);
+  SmallVector<Value> indices(vecToReadRank, zero);
+  auto transferReadOp =
+      vector::TransferReadOp::create(builder, loc,
+                                     /*vectorType=*/vecToReadTy,
+                                     /*source=*/source,
+                                     /*indices=*/indices,
+                                     /*padding=*/padValue,
+                                     /*inBounds=*/inBoundsVal);
 
-  if (llvm::equal(vecToReadTy.getShape(), sourceShape) ||
-      useInBoundsInsteadOfMasking)
+  if (useInBoundsInsteadOfMasking)
     return transferReadOp;
+
   SmallVector<OpFoldResult> mixedSourceDims =
       isa<MemRefType>(source.getType())
           ? memref::getMixedSizes(builder, loc, source)
           : tensor::getMixedSizes(builder, loc, source);
+
+  if (isMaskTriviallyFoldable(mixedSourceDims, indices, sourceShape,
+                              vecToReadShape))
+    return transferReadOp;
 
   auto maskType = vecToReadTy.cloneWith(/*shape=*/{}, builder.getI1Type());
   Value mask =
       vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)
       ->getResult(0);
+}
+
+Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
+                                            Value vecToStore, Value dest,
+                                            SmallVector<Value> writeIndices,
+                                            bool useInBoundsInsteadOfMasking) {
+
+  ShapedType destType = cast<ShapedType>(dest.getType());
+  int64_t destRank = destType.getRank();
+  auto destShape = destType.getShape();
+
+  VectorType vecToStoreType = cast<VectorType>(vecToStore.getType());
+  int64_t vecToStoreRank = vecToStoreType.getRank();
+  auto vecToStoreShape = vecToStoreType.getShape();
+
+  // Compute the in_bounds attribute
+  SmallVector<bool> inBoundsVal(vecToStoreRank, true);
+  if (useInBoundsInsteadOfMasking) {
+    // Update the inBounds attribute.
+    // FIXME: This computation is too weak - it ignores the write indices.
+    for (unsigned i = 0; i < vecToStoreRank; i++)
+      inBoundsVal[i] =
+          (destShape[destRank - vecToStoreRank + i] >= vecToStoreShape[i]) &&
+          ShapedType::isStatic(destShape[destRank - vecToStoreRank + i]);
+  }
+
+  // If missing, initialize the write indices to 0.
+  bool useDefaultWriteIdxs = writeIndices.empty();
+  assert((useDefaultWriteIdxs ||
+          writeIndices.size() == static_cast<size_t>(destRank)) &&
+         "Invalid number of write indices!");
+  if (useDefaultWriteIdxs) {
+    auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
+    writeIndices.assign(destRank, zero);
+  }
+
+  // Generate the xfer_write Op
+  Operation *write = vector::TransferWriteOp::create(builder, loc,
+                                                     /*vector=*/vecToStore,
+                                                     /*dest=*/dest,
+                                                     /*indices=*/writeIndices,
+                                                     /*inBounds=*/inBoundsVal);
+
+  // If masking is disabled, exit.
+  if (useInBoundsInsteadOfMasking)
+    return write;
+
+  // Check if masking is needed. If not, exit.
+  if (llvm::equal(vecToStoreShape, destShape.take_back(vecToStoreRank)))
+    return write;
+
+  // Compute the mask and mask the write Op.
+  auto writeMaskType = VectorType::get(vecToStoreShape, builder.getI1Type(),
+                                       vecToStoreType.getScalableDims());
+
+  SmallVector<OpFoldResult> destSizes =
+      isa<MemRefType>(dest.getType())
+          ? memref::getMixedSizes(builder, loc, dest)
+          : tensor::getMixedSizes(builder, loc, dest);
+
+  // Compute sizes for write-mask
+  SmallVector<OpFoldResult> maskSizes;
+  if (useDefaultWriteIdxs) {
+    maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
+                                          destSizes.end());
+  } else {
+    size_t diff = destShape.size() - vecToStoreRank;
+    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
+      auto value =
+          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
+      auto neg =
+          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
+      maskSizes.push_back(OpFoldResult(neg));
+    }
+  }
+
+  if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
+                              vecToStoreShape))
+    return write;
+
+  Value maskForWrite =
+      builder.createOrFold<vector::CreateMaskOp>(loc, writeMaskType, maskSizes);
+  return mlir::vector::maskOperation(builder, write, maskForWrite);
 }
 
 LogicalResult

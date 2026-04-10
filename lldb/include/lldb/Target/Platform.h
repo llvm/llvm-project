@@ -21,12 +21,14 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
@@ -269,13 +271,35 @@ public:
   virtual Status GetFileWithUUID(const FileSpec &platform_file,
                                  const UUID *uuid_ptr, FileSpec &local_file);
 
-  // Locate the scripting resource given a module specification.
-  //
-  // Locating the file should happen only on the local computer or using the
-  // current computers global settings.
-  virtual FileSpecList
+  /// Locate the scripting resource given a module specification.
+  ///
+  /// Returns a map from a located script's \c FileSpec to the
+  /// \c LoadScriptFromSymFile with which LLDB should load it.
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
   LocateExecutableScriptingResources(Target *target, Module &module,
                                      Stream &feedback_stream);
+
+  /// Locate the platform-specific scripting resource given a module
+  /// specification.
+  virtual llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesForPlatform(Target *target, Module &module,
+                                                Stream &feedback_stream);
+
+  /// Helper function for \c LocateExecutableScriptingResources
+  /// which gathers FileSpecs for executable scripts from
+  /// pre-configured "safe" auto-load paths.
+  ///
+  /// E.g., for Python it will look for a script at:
+  ///   \c <safe-path>/<module-name>/<module-name>.py
+  static llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesFromSafePaths(Stream &feedback_stream,
+                                                  FileSpec module_spec,
+                                                  const Target &target);
+
+  /// Returns true if the module's symbol file (e.g. a dSYM bundle) is
+  /// code-signed with a trusted signature. Used to decide whether to
+  /// auto-loaded scripts.
+  virtual bool IsSymbolFileTrusted(Module &module);
 
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.
@@ -453,7 +477,7 @@ public:
   ///          (e.g., a public and internal SDK).
   virtual llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -469,7 +493,7 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -478,9 +502,10 @@ public:
   ///
   /// \param[in] unit The CU
   ///
-  /// \returns A parsed XcodeSDK object if successful, an Error otherwise. 
-  virtual llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::createStringError(
+  /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
+  virtual llvm::Expected<XcodeSDK>
+  GetSDKPathFromDebugInfo(CompileUnit & /*unit*/) {
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -495,7 +520,7 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -677,6 +702,9 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_output, // Pass nullptr to have error and command
+                                   // output combined in command_output.
       const Timeout<std::micro> &timeout);
 
   virtual lldb_private::Status RunShellCommand(
@@ -688,6 +716,9 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_output, // Pass nullptr to have error and command
+                                   // output combined in command_output.
       const Timeout<std::micro> &timeout);
 
   virtual void SetLocalCacheDirectory(const char *local);
@@ -1051,6 +1082,21 @@ protected:
                                     const FileSpec &dst_file_spec);
 
   virtual const char *GetCacheHostname();
+
+  /// If we did some replacements of reserved characters, and a
+  /// file with the untampered name exists, then warn the user
+  /// that the file as-is shall not be loaded.
+  static void WarnIfInvalidUnsanitizedScriptExists(
+      Stream &os,
+      const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
+      const FileSpec &original_fspec, const FileSpec &fspec);
+
+  /// Returns the \c LoadScriptFromSymFile of scripting resource associated
+  /// with the specified module \c FileSpec. If the load style wasn't explicitly
+  /// set for a module, returns the target-wide default.
+  static LoadScriptFromSymFile
+  GetScriptLoadStyleForModule(const FileSpec &module_fspec,
+                              const Target &target);
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;

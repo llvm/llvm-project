@@ -143,7 +143,7 @@ func.func @llvm_nvvm_bar_warp_sync(%mask : i32) {
 // CHECK-LABEL: @nvvm_mma_m8n8k4_row_col_f32_f32
 func.func @nvvm_mma_m8n8k4_row_col_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-               %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32, %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
+               %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32, %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> {
   // CHECK: nvvm.mma.sync
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -154,7 +154,7 @@ func.func @nvvm_mma_m8n8k4_row_col_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf
 // CHECK-LABEL: @nvvm_mma_m8n8k4_f16_f16
 func.func @nvvm_mma_m8n8k4_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                               %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                              %c0 : vector<2xf16>, %c1 : vector<2xf16>, %c2 : vector<2xf16>, %c3 : vector<2xf16>) {
+                              %c0 : vector<2xf16>, %c1 : vector<2xf16>, %c2 : vector<2xf16>, %c3 : vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)> {
   // CHECK: nvvm.mma.sync A[{{.*}}] B[{{.*}}] C[{{.*}}]
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -164,7 +164,7 @@ func.func @nvvm_mma_m8n8k4_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 // CHECK-LABEL: @nvvm_mma_m16n8k8_bf16_bf16
 func.func @nvvm_mma_m16n8k8_bf16_bf16(%a0 : i32, %a1 : i32, %b0 : i32,
-                              %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) {
+                              %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(f32, f32, f32, f32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}] B[{{.*}}] C[{{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<bf16>, multiplicandBPtxType = #nvvm.mma_type<bf16>, shape = #nvvm.shape<m = 16, n = 8, k = 8>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -176,7 +176,7 @@ func.func @nvvm_mma_m16n8k8_bf16_bf16(%a0 : i32, %a1 : i32, %b0 : i32,
 // CHECK-LABEL: @nvvm_mma_m16n8k16_bf16_bf16
 func.func @nvvm_mma_m16n8k16_bf16_bf16(%a0 : i32, %a1 : i32, %a2 : i32, %a3 : i32,
                               %b0 : i32, %b1 : i32,
-                              %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) {
+                              %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(f32, f32, f32, f32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}] B[{{.*}}] C[{{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<bf16>, multiplicandBPtxType = #nvvm.mma_type<bf16>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
   %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -187,7 +187,7 @@ func.func @nvvm_mma_m16n8k16_bf16_bf16(%a0 : i32, %a1 : i32, %a2 : i32, %a3 : i3
 
 // CHECK-LABEL: @nvvm_mma_m8n8k16_s8_s8
 func.func @nvvm_mma_m8n8k16_s8_s8(%a0 : i32, %b0 : i32,
-                             %c0 : i32, %c1 : i32) {
+                             %c0 : i32, %c1 : i32) -> !llvm.struct<(i32, i32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}] B[{{.*}}] C[{{.*}}, {{.*}}] {intOverflowBehavior = #nvvm.mma_int_overflow<wrapped>, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<s8>, multiplicandBPtxType = #nvvm.mma_type<s8>, shape = #nvvm.shape<m = 8, n = 8, k = 16>} : (i32, i32, i32) -> !llvm.struct<(i32, i32)>
   %0 = nvvm.mma.sync A[%a0] B[%b0] C[%c0, %c1]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -200,7 +200,7 @@ func.func @nvvm_mma_m8n8k16_s8_s8(%a0 : i32, %b0 : i32,
 // CHECK-LABEL: @nvvm_mma_m16n8k8_f16_f16
 func.func @nvvm_mma_m16n8k8_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                                %b0 : vector<2xf16>,
-                               %c0 : vector<2xf16>, %c1 : vector<2xf16>) {
+                               %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
   // CHECK: nvvm.mma.sync A[%{{.*}}, %{{.*}}] B[%{{.*}}] C[%{{.*}}, %{{.*}}] {{{.*}}} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -212,7 +212,7 @@ func.func @nvvm_mma_m16n8k8_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 func.func @nvvm_mma_m16n8k16_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                                 %a2 : vector<2xf16>, %a3 : vector<2xf16>,
                                 %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : vector<2xf16>, %c1 : vector<2xf16>) {
+                                %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
   // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}, {{.*}}, {{.*}}] B[{{.*}}, {{.*}}] C[{{.*}}, {{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
   %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -224,7 +224,7 @@ func.func @nvvm_mma_m16n8k16_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 func.func @nvvm_mma_m16n8k16_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                                 %a2 : vector<2xf16>, %a3 : vector<2xf16>,
                                 %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) {
+                                %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(f32, f32, f32, f32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}, {{.*}}, {{.*}}] B[{{.*}}, {{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32)>
   %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -235,7 +235,7 @@ func.func @nvvm_mma_m16n8k16_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 // CHECK-LABEL: @nvvm_mma_m16n8k4_tf32_f32
 func.func @nvvm_mma_m16n8k4_tf32_f32(%a0 : i32, %a1 : i32,
                                      %b0 : i32,
-                                     %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) {
+                                     %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(f32, f32, f32, f32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}] B[{{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<tf32>, multiplicandBPtxType = #nvvm.mma_type<tf32>, shape = #nvvm.shape<m = 16, n = 8, k = 4>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -246,7 +246,7 @@ func.func @nvvm_mma_m16n8k4_tf32_f32(%a0 : i32, %a1 : i32,
 
 // CHECK-LABEL: @nvvm_mma_m16n8k16_s8_s8
 func.func @nvvm_mma_m16n8k16_s8_s8(%a0 : i32, %a1 : i32, %b0 : i32,
-                              %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) {
+                              %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}] B[{{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {intOverflowBehavior = #nvvm.mma_int_overflow<wrapped>, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<s8>, multiplicandBPtxType = #nvvm.mma_type<s8>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -259,7 +259,7 @@ func.func @nvvm_mma_m16n8k16_s8_s8(%a0 : i32, %a1 : i32, %b0 : i32,
 // CHECK-LABEL: @nvvm_mma_m16n8k16_s8_u8
 func.func @nvvm_mma_m16n8k16_s8_u8(%a0 : i32, %a1 : i32,
                                 %b0 : i32,
-                                %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) {
+                                %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}] B[{{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {intOverflowBehavior = #nvvm.mma_int_overflow<satfinite>, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<s8>, multiplicandBPtxType = #nvvm.mma_type<u8>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -272,7 +272,7 @@ func.func @nvvm_mma_m16n8k16_s8_u8(%a0 : i32, %a1 : i32,
 // CHECK-LABEL: @nvvm_mma_m16n8k256_b1_b1
 func.func @nvvm_mma_m16n8k256_b1_b1(%a0 : i32, %a1 : i32, %a2 : i32, %a3 : i32,
                                %b0 : i32, %b1 : i32,
-                               %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) {
+                               %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}, {{.*}}, {{.*}}] B[{{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {b1Op = #nvvm.mma_b1op<xor_popc>, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<b1>, multiplicandBPtxType = #nvvm.mma_type<b1>, shape = #nvvm.shape<m = 16, n = 8, k = 256>} : (i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
   %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -284,7 +284,7 @@ func.func @nvvm_mma_m16n8k256_b1_b1(%a0 : i32, %a1 : i32, %a2 : i32, %a3 : i32,
 // CHECK-LABEL: @nvvm_mma_m16n8k128_b1_b1
 func.func @nvvm_mma_m16n8k128_b1_b1(%a0 : i32, %a1 : i32,
                                %b0 : i32,
-                               %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) {
+                               %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}] B[{{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {b1Op = #nvvm.mma_b1op<xor_popc>, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<b1>, multiplicandBPtxType = #nvvm.mma_type<b1>, shape = #nvvm.shape<m = 16, n = 8, k = 128>} : (i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -297,7 +297,7 @@ func.func @nvvm_mma_m16n8k128_b1_b1(%a0 : i32, %a1 : i32,
 // CHECK-LABEL: @nvvm_mma_m8n8k128_b1_b1
 func.func @nvvm_mma_m8n8k128_b1_b1(%a0 : i32,
                               %b0 : i32,
-                              %c0 : i32, %c1 : i32) {
+                              %c0 : i32, %c1 : i32) -> !llvm.struct<(i32, i32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}] B[{{.*}}] C[{{.*}}, {{.*}}] {b1Op = #nvvm.mma_b1op<xor_popc>, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<b1>, multiplicandBPtxType = #nvvm.mma_type<b1>, shape = #nvvm.shape<m = 8, n = 8, k = 128>} : (i32, i32, i32) -> !llvm.struct<(i32, i32)>
   %0 = nvvm.mma.sync A[%a0] B[%b0] C[%c0, %c1]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -309,7 +309,7 @@ func.func @nvvm_mma_m8n8k128_b1_b1(%a0 : i32,
 // CHECK-LABEL: @nvvm_mma_m16n8k32_s4_s4
 func.func @nvvm_mma_m16n8k32_s4_s4(%a0 : i32, %a1 : i32,
                                %b0 : i32,
-                               %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) {
+                               %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
   // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}] B[{{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {intOverflowBehavior = #nvvm.mma_int_overflow<wrapped>, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<s4>, multiplicandBPtxType = #nvvm.mma_type<s4>, shape = #nvvm.shape<m = 16, n = 8, k = 32>} : (i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
@@ -356,21 +356,21 @@ llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 
 // CHECK-LABEL: llvm.func @redux_sync
 llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {
-  // CHECK: nvvm.redux.sync  add %{{.*}}
+  // CHECK: nvvm.redux.sync add %{{.*}}
   %r1 = nvvm.redux.sync add %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  max %{{.*}}
+  // CHECK: nvvm.redux.sync max %{{.*}}
   %r2 = nvvm.redux.sync max %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  min %{{.*}}
+  // CHECK: nvvm.redux.sync min %{{.*}}
   %r3 = nvvm.redux.sync min %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  umax %{{.*}}
+  // CHECK: nvvm.redux.sync umax %{{.*}}
   %r5 = nvvm.redux.sync umax %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  umin %{{.*}}
+  // CHECK: nvvm.redux.sync umin %{{.*}}
   %r6 = nvvm.redux.sync umin %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  and %{{.*}}
+  // CHECK: nvvm.redux.sync and %{{.*}}
   %r7 = nvvm.redux.sync and %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  or %{{.*}}
+  // CHECK: nvvm.redux.sync or %{{.*}}
   %r8 = nvvm.redux.sync or %value, %offset : i32 -> i32
-  // CHECK: nvvm.redux.sync  xor %{{.*}}
+  // CHECK: nvvm.redux.sync xor %{{.*}}
   %r9 = nvvm.redux.sync xor %value, %offset : i32 -> i32
   llvm.return %r1 : i32
 }
@@ -454,6 +454,13 @@ llvm.func private @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
   %count = nvvm.read.ptx.sreg.ntid.x : i32
   // CHECK:   nvvm.mbarrier.arrive.nocomplete %{{.*}} : !llvm.ptr<3>
   %0 = nvvm.mbarrier.arrive.nocomplete %barrier, %count : !llvm.ptr<3>, i32  -> i64
+  llvm.return
+}
+
+// CHECK-LABEL: @mbarrier_arrive_expect_tx_predicate
+llvm.func private @mbarrier_arrive_expect_tx_predicate(%barrier: !llvm.ptr<3>, %txcount: i32, %pred: i1) {
+  // CHECK:   nvvm.mbarrier.arrive.expect_tx %{{.*}}, %{{.*}}, predicate = %{{.*}} : !llvm.ptr<3>, i32, i1{{$}}
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount, predicate = %pred : !llvm.ptr<3>, i32, i1
   llvm.return
 }
 

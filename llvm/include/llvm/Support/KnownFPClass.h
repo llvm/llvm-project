@@ -127,6 +127,17 @@ struct KnownFPClass {
     return isKnownNever(OrderedGreaterThanZeroMask);
   }
 
+  /// Return true if it's known this can never be a positive value or a logical
+  /// 0.
+  ///
+  ///      NaN --> true
+  ///  x <= +0 --> false
+  ///     psub --> true if mode is ieee, false otherwise.
+  ///   x > +0 --> true
+  bool cannotBeOrderedLessEqZero(DenormalMode Mode) const {
+    return isKnownNever(fcNegative) && isKnownNeverLogicalPosZero(Mode);
+  }
+
   /// Return true if it's know this can never be a negative value or a logical
   /// 0.
   ///
@@ -225,6 +236,10 @@ struct KnownFPClass {
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
+  /// Report known values for a bitcast into a float with provided semantics.
+  LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
+                                       const KnownBits &Bits);
+
   /// Report known values for fadd
   LLVM_ABI static KnownFPClass
   fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
@@ -255,6 +270,10 @@ struct KnownFPClass {
     Known.propagateNaN(Src);
     return Known;
   }
+
+  LLVM_ABI static KnownFPClass
+  fmul(const KnownFPClass &LHS, const APFloat &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Report known values for fdiv
   LLVM_ABI static KnownFPClass
@@ -290,6 +309,31 @@ struct KnownFPClass {
 
   /// Report known values for cos
   LLVM_ABI static KnownFPClass cos(const KnownFPClass &Src);
+
+  /// Report known values for tan
+  LLVM_ABI static KnownFPClass tan(const KnownFPClass &Src);
+
+  /// Report known values for sinh
+  LLVM_ABI static KnownFPClass sinh(const KnownFPClass &Src);
+
+  /// Report known values for cosh
+  LLVM_ABI static KnownFPClass cosh(const KnownFPClass &Src);
+
+  /// Report known values for tanh
+  LLVM_ABI static KnownFPClass tanh(const KnownFPClass &Src);
+
+  /// Report known values for asin
+  LLVM_ABI static KnownFPClass asin(const KnownFPClass &Src);
+
+  /// Report known values for acos
+  LLVM_ABI static KnownFPClass acos(const KnownFPClass &Src);
+
+  /// Report known values for atan
+  LLVM_ABI static KnownFPClass atan(const KnownFPClass &Src);
+
+  /// Report known values for atan2
+  LLVM_ABI static KnownFPClass atan2(const KnownFPClass &LHS,
+                                     const KnownFPClass &RHS);
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
