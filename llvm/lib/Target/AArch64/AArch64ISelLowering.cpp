@@ -2029,11 +2029,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
     // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
     // Other pairs will default to 'Expand'.
-    static const unsigned DotMLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
-                                         ISD::PARTIAL_REDUCE_UMLA};
-    setPartialReduceMLAAction(DotMLAOps, MVT::nxv2i64, MVT::nxv8i16, Legal);
-    setPartialReduceMLAAction(DotMLAOps, MVT::nxv4i32, MVT::nxv16i8, Legal);
-    setPartialReduceMLAAction(DotMLAOps, MVT::nxv2i64, MVT::nxv16i8, Custom);
+    static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                      ISD::PARTIAL_REDUCE_UMLA};
+    setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv8i16, Legal);
+    setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv16i8, Legal);
+
+    setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv16i8, Custom);
 
     if (Subtarget->hasMatMulInt8()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::nxv4i32,
@@ -2043,13 +2044,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
-      static const unsigned MLALBTOps[] = {
-          ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA,
-          ISD::PARTIAL_REDUCE_SMLS, ISD::PARTIAL_REDUCE_UMLS};
       // Wide add types
-      setPartialReduceMLAAction(MLALBTOps, MVT::nxv2i64, MVT::nxv4i32, Legal);
-      setPartialReduceMLAAction(MLALBTOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
-      setPartialReduceMLAAction(MLALBTOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
+      setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv4i32, Legal);
+      setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
+      setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
 
       setOperationAction(ISD::CLMUL, {MVT::nxv16i8, MVT::nxv4i32}, Legal);
     }
@@ -2144,18 +2142,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
                          Custom);
 
-      static const unsigned DotMLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
-                                           ISD::PARTIAL_REDUCE_UMLA};
-      static const unsigned MLALBTOps[] = {
-          ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA,
-          ISD::PARTIAL_REDUCE_SMLS, ISD::PARTIAL_REDUCE_UMLS};
+      static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                        ISD::PARTIAL_REDUCE_UMLA};
       // Must be lowered to SVE instructions.
-      setPartialReduceMLAAction(DotMLAOps, MVT::v2i64, MVT::v8i16, Custom);
-      setPartialReduceMLAAction(DotMLAOps, MVT::v2i64, MVT::v16i8, Custom);
-      setPartialReduceMLAAction(DotMLAOps, MVT::v4i32, MVT::v16i8, Custom);
-      setPartialReduceMLAAction(MLALBTOps, MVT::v2i64, MVT::v4i32, Custom);
-      setPartialReduceMLAAction(MLALBTOps, MVT::v4i32, MVT::v8i16, Custom);
-      setPartialReduceMLAAction(MLALBTOps, MVT::v8i16, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
     }
   }
 
@@ -2439,26 +2434,23 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   bool PreferNEON = VT.is64BitVector() || VT.is128BitVector();
   bool PreferSVE = !PreferNEON && Subtarget->isSVEAvailable();
 
-  static const unsigned MLALBTOps[] = {
-      ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA,
-      ISD::PARTIAL_REDUCE_SMLS, ISD::PARTIAL_REDUCE_UMLS};
-  static const unsigned DotMLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
-                                       ISD::PARTIAL_REDUCE_UMLA};
+  static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                    ISD::PARTIAL_REDUCE_UMLA};
   unsigned NumElts = VT.getVectorNumElements();
   if (VT.getVectorElementType() == MVT::i64) {
-    setPartialReduceMLAAction(DotMLAOps, VT,
+    setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
-    setPartialReduceMLAAction(DotMLAOps, VT,
+    setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i16, NumElts * 4), Custom);
-    setPartialReduceMLAAction(MLALBTOps, VT,
+    setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i32, NumElts * 2), Custom);
   } else if (VT.getVectorElementType() == MVT::i32) {
-    setPartialReduceMLAAction(DotMLAOps, VT,
+    setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i8, NumElts * 4), Custom);
-    setPartialReduceMLAAction(MLALBTOps, VT,
+    setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i16, NumElts * 2), Custom);
   } else if (VT.getVectorElementType() == MVT::i16) {
-    setPartialReduceMLAAction(MLALBTOps, VT,
+    setPartialReduceMLAAction(MLAOps, VT,
                               MVT::getVectorVT(MVT::i8, NumElts * 2), Custom);
   }
   if (Subtarget->hasMatMulInt8()) {
@@ -8479,8 +8471,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_HISTOGRAM(Op, DAG);
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLS:
-  case ISD::PARTIAL_REDUCE_UMLS:
   case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
@@ -32559,13 +32549,10 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   EVT ResultVT = Op.getValueType();
   EVT OrigResultVT = ResultVT;
   EVT OpVT = LHS.getValueType();
-  bool IsMLS = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLS ||
-               Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLS;
 
   // We can handle this case natively by accumulating into a wider
   // zero-padded vector.
   if (ResultVT == MVT::v2i32 && OpVT == MVT::v16i8) {
-    assert(!IsMLS && "Cannot handle this case for sub-reductions");
     SDValue ZeroVec = DAG.getConstant(0, DL, MVT::v4i32);
     SDValue WideAcc = DAG.getInsertSubvector(DL, ZeroVec, Acc, 0);
     SDValue Wide =
@@ -32593,15 +32580,12 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
     return ConvertToScalable ? convertFromScalableVector(DAG, OrigResultVT, Op)
                              : Op;
 
-  assert(!IsMLS && "i8 -> i64 custom sub-reductions are not supported");
-
   EVT DotVT = ResultVT.isScalableVector() ? MVT::nxv4i32 : MVT::v4i32;
   SDValue DotNode = DAG.getNode(Op.getOpcode(), DL, DotVT,
                                 DAG.getConstant(0, DL, DotVT), LHS, RHS);
 
   SDValue Res;
-  bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA ||
-                    Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLS;
+  bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
   if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
     unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
     unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;

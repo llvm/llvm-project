@@ -207,13 +207,16 @@ define <2 x i64> @fixed_smlslbt_i32_i64(<2 x i64> %acc, <4 x i32> %a, <4 x i32> 
 ; Test type legalisation for sub-reductions.
 ;
 
+; FIXME: The subr's could be removed with a DAG combine.
 define <vscale x 8 x i16> @legalization_split_i8_i16(<vscale x 8 x i16> %acc, <vscale x 32 x i8> %a, <vscale x 32 x i8> %b) #0 {
 ; CHECK-LABEL: legalization_split_i8_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umlslb z0.h, z1.b, z3.b
-; CHECK-NEXT:    umlslt z0.h, z1.b, z3.b
-; CHECK-NEXT:    umlslb z0.h, z2.b, z4.b
-; CHECK-NEXT:    umlslt z0.h, z2.b, z4.b
+; CHECK-NEXT:    subr z0.h, z0.h, #0 // =0x0
+; CHECK-NEXT:    umlalb z0.h, z1.b, z3.b
+; CHECK-NEXT:    umlalt z0.h, z1.b, z3.b
+; CHECK-NEXT:    umlalb z0.h, z2.b, z4.b
+; CHECK-NEXT:    umlalt z0.h, z2.b, z4.b
+; CHECK-NEXT:    subr z0.h, z0.h, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 32 x i8> %a to <vscale x 32 x i16>
   %b.zext = zext <vscale x 32 x i8> %b to <vscale x 32 x i16>
@@ -226,18 +229,9 @@ define <vscale x 8 x i16> @legalization_split_i8_i16(<vscale x 8 x i16> %acc, <v
 define <vscale x 4 x i16> @legalization_promote_acc_i8_i16(<vscale x 4 x i16> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: legalization_promote_acc_i8_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z3.h, z1.b
-; CHECK-NEXT:    uunpklo z4.h, z2.b
-; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z2.h, z2.b
-; CHECK-NEXT:    msb z3.h, p0/m, z4.h, z5.h
-; CHECK-NEXT:    msb z1.h, p0/m, z2.h, z5.h
-; CHECK-NEXT:    uaddwb z0.s, z0.s, z3.h
-; CHECK-NEXT:    uaddwt z0.s, z0.s, z3.h
-; CHECK-NEXT:    uaddwb z0.s, z0.s, z1.h
-; CHECK-NEXT:    uaddwt z0.s, z0.s, z1.h
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    udot z0.s, z1.b, z2.b
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i16>
   %b.zext = zext <vscale x 16 x i8> %b to <vscale x 16 x i16>
@@ -245,22 +239,6 @@ define <vscale x 4 x i16> @legalization_promote_acc_i8_i16(<vscale x 4 x i16> %a
   %mul.neg = sub <vscale x 16 x i16> zeroinitializer, %mul
   %res = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add(<vscale x 4 x i16> %acc, <vscale x 16 x i16> %mul.neg)
   ret <vscale x 4 x i16> %res
-}
-
-define <vscale x 8 x i16> @legalization_promote_mul_ops_i8_i16(<vscale x 8 x i16> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b) #0 {
-; CHECK-LABEL: legalization_promote_mul_ops_i8_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mls z0.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    ret
-  %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
-  %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
-  %mul = mul <vscale x 8 x i16> %a.zext, %b.zext
-  %mul.neg = sub <vscale x 8 x i16> zeroinitializer, %mul
-  %res = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add(<vscale x 8 x i16> %acc, <vscale x 8 x i16> %mul.neg)
-  ret <vscale x 8 x i16> %res
 }
 
 ; Test that MLSB/T are still generated when there is no 'mul'.
@@ -295,47 +273,13 @@ define <vscale x 2 x i64> @predicated_smlslbt_i32_i64(<vscale x 4 x i1> %pred, <
   ret <vscale x 2 x i64> %res
 }
 
-; Test that MLSB/T is not generated when the extends are mixed.
-define <vscale x 2 x i64> @negative_test_mixed_extends(<vscale x 2 x i64> %acc, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
-; CHECK-LABEL: negative_test_mixed_extends:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sunpklo z3.d, z1.s
-; CHECK-NEXT:    uunpklo z4.d, z2.s
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    sunpkhi z1.d, z1.s
-; CHECK-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEXT:    mls z0.d, p0/m, z3.d, z4.d
-; CHECK-NEXT:    mls z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    ret
-  %a.sext = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
-  %b.zext = zext <vscale x 4 x i32> %b to <vscale x 4 x i64>
-  %mul = mul <vscale x 4 x i64> %a.sext, %b.zext
-  %mul.neg = sub <vscale x 4 x i64> zeroinitializer, %mul
-  %res = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add(<vscale x 2 x i64> %acc, <vscale x 4 x i64> %mul.neg)
-  ret <vscale x 2 x i64> %res
-}
-
 ; There is no sub dot-reduction, so we can't handle natively.
 define <vscale x 4 x i32> @negative_test_no_sub_dot_inst(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: negative_test_no_sub_dot_inst:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z3.h, z1.b
-; CHECK-NEXT:    uunpklo z4.h, z2.b
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z2.h, z2.b
-; CHECK-NEXT:    uunpklo z5.s, z3.h
-; CHECK-NEXT:    uunpklo z6.s, z4.h
-; CHECK-NEXT:    uunpkhi z3.s, z3.h
-; CHECK-NEXT:    uunpkhi z4.s, z4.h
-; CHECK-NEXT:    mls z0.s, p0/m, z5.s, z6.s
-; CHECK-NEXT:    uunpklo z5.s, z1.h
-; CHECK-NEXT:    uunpklo z6.s, z2.h
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEXT:    mls z0.s, p0/m, z3.s, z4.s
-; CHECK-NEXT:    mls z0.s, p0/m, z5.s, z6.s
-; CHECK-NEXT:    mls z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    udot z0.s, z1.b, z2.b
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
   %b.zext = zext <vscale x 16 x i8> %b to <vscale x 16 x i32>

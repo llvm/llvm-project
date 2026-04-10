@@ -1542,10 +1542,6 @@ enum NodeType {
   PARTIAL_REDUCE_SUMLA, // sext, zext
   PARTIAL_REDUCE_FMLA,  // fpext, fpext
 
-  /// Similar to PARTIAL_REDUCE_[US]MLA, using a subtract instead of add.
-  PARTIAL_REDUCE_SMLS, // sext, sext
-  PARTIAL_REDUCE_UMLS, // zext, zext
-
   /// The `llvm.experimental.stackmap` intrinsic.
   /// Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
   /// Outputs: output chain, glue

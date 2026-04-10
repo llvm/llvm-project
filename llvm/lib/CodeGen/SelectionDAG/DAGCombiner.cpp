@@ -2076,8 +2076,6 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM: return visitMHISTOGRAM(N);
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLS:
-  case ISD::PARTIAL_REDUCE_UMLS:
   case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
                                 return visitPARTIAL_REDUCE_MLA(N);
@@ -13534,6 +13532,19 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     }
   };
 
+  // Generate an MLA but invert the result/accumulator if this is a partial
+  // sub-reduction.
+  auto GetMLA = [&](unsigned Opc, SDValue Acc, SDValue LHS,
+                    SDValue RHS) -> SDValue {
+    EVT AccVT = Acc.getValueType();
+    if (!IsMLS)
+      return DAG.getNode(Opc, DL, AccVT, Acc, LHS, RHS);
+    SDValue Zero = DAG.getConstant(0, DL, AccVT);
+    SDValue NewAcc = DAG.getNode(ISD::SUB, DL, AccVT, Zero, Acc);
+    SDValue MLA = DAG.getNode(Opc, DL, AccVT, NewAcc, LHS, RHS);
+    return DAG.getNode(ISD::SUB, DL, AccVT, Zero, MLA);
+  };
+
   // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
   // -> partial_reduce_*mla(acc, x, C)
   APInt C;
@@ -13548,11 +13559,6 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     unsigned NewOpcode = LHSOpcode == ISD::SIGN_EXTEND
                              ? ISD::PARTIAL_REDUCE_SMLA
                              : ISD::PARTIAL_REDUCE_UMLA;
-    if (IsMLS)
-      NewOpcode = NewOpcode == ISD::PARTIAL_REDUCE_SMLA
-                      ? ISD::PARTIAL_REDUCE_SMLS
-                      : ISD::PARTIAL_REDUCE_UMLS;
-
     // Only perform these combines if the target supports folding
     // the extends into the operation.
     if (!TLI.isPartialReduceMLALegalOrCustom(
@@ -13562,7 +13568,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
     SDValue C = DAG.getConstant(CTrunc, DL, LHSExtOpVT);
     ApplyPredicate(C, LHSExtOp);
-    return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp, C);
+    return GetMLA(NewOpcode, Acc, LHSExtOp, C);
   }
 
   unsigned RHSOpcode = RHS->getOpcode();
@@ -13575,18 +13581,15 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
   unsigned NewOpc;
   if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::SIGN_EXTEND)
-    NewOpc = IsMLS ? ISD::PARTIAL_REDUCE_SMLS : ISD::PARTIAL_REDUCE_SMLA;
+    NewOpc = ISD::PARTIAL_REDUCE_SMLA;
   else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::ZERO_EXTEND)
-    NewOpc = IsMLS ? ISD::PARTIAL_REDUCE_UMLS : ISD::PARTIAL_REDUCE_UMLA;
-  else if (!IsMLS && LHSOpcode == ISD::SIGN_EXTEND &&
-           RHSOpcode == ISD::ZERO_EXTEND)
+    NewOpc = ISD::PARTIAL_REDUCE_UMLA;
+  else if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::ZERO_EXTEND)
     NewOpc = ISD::PARTIAL_REDUCE_SUMLA;
-  else if (!IsMLS && LHSOpcode == ISD::ZERO_EXTEND &&
-           RHSOpcode == ISD::SIGN_EXTEND) {
+  else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::SIGN_EXTEND) {
     NewOpc = ISD::PARTIAL_REDUCE_SUMLA;
     std::swap(LHSExtOp, RHSExtOp);
-  } else if (!IsMLS && LHSOpcode == ISD::FP_EXTEND &&
-             RHSOpcode == ISD::FP_EXTEND) {
+  } else if (LHSOpcode == ISD::FP_EXTEND && RHSOpcode == ISD::FP_EXTEND) {
     NewOpc = ISD::PARTIAL_REDUCE_FMLA;
   } else
     return SDValue();
@@ -13608,7 +13611,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     return SDValue();
 
   ApplyPredicate(RHSExtOp, LHSExtOp);
-  return DAG.getNode(NewOpc, DL, N->getValueType(0), Acc, LHSExtOp, RHSExtOp);
+  return GetMLA(NewOpc, Acc, LHSExtOp, RHSExtOp);
 }
 
 // partial.reduce.*mla(acc, *ext(op), splat(1))
@@ -13655,11 +13658,10 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
       Op1.getValueType().getVectorElementType() != AccElemVT)
     return SDValue();
 
-  unsigned NewOpcode =
-      N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA ? ISD::PARTIAL_REDUCE_FMLA
-      : Op1IsSigned
-          ? (IsMLS ? ISD::PARTIAL_REDUCE_SMLS : ISD::PARTIAL_REDUCE_SMLA)
-          : (IsMLS ? ISD::PARTIAL_REDUCE_UMLS : ISD::PARTIAL_REDUCE_UMLA);
+  unsigned NewOpcode = N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA
+                           ? ISD::PARTIAL_REDUCE_FMLA
+                       : Op1IsSigned ? ISD::PARTIAL_REDUCE_SMLA
+                                     : ISD::PARTIAL_REDUCE_UMLA;
 
   SDValue UnextOp1 = Op1.getOperand(0);
   EVT UnextOp1VT = UnextOp1.getValueType();
@@ -13679,8 +13681,13 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
                        : DAG.getConstant(0, DL, UnextOp1VT);
     Constant = DAG.getSelect(DL, UnextOp1VT, Pred, Constant, Zero);
   }
-  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, UnextOp1,
-                     Constant);
+  EVT AccVT = Acc.getValueType();
+  if (!IsMLS)
+    return DAG.getNode(NewOpcode, DL, AccVT, Acc, UnextOp1, Constant);
+  SDValue Zero = DAG.getConstant(0, DL, AccVT);
+  SDValue NegAcc = DAG.getNode(ISD::SUB, DL, AccVT, Zero, Acc);
+  SDValue MLA = DAG.getNode(NewOpcode, DL, AccVT, NegAcc, UnextOp1, Constant);
+  return DAG.getNode(ISD::SUB, DL, AccVT, Zero, MLA);
 }
 
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {

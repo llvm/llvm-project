@@ -604,12 +604,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::PARTIAL_REDUCE_UMLA:
     return "partial_reduce_umla";
-  case ISD::PARTIAL_REDUCE_UMLS:
-    return "partial_reduce_umls";
   case ISD::PARTIAL_REDUCE_SMLA:
     return "partial_reduce_smla";
-  case ISD::PARTIAL_REDUCE_SMLS:
-    return "partial_reduce_smls";
   case ISD::PARTIAL_REDUCE_SUMLA:
     return "partial_reduce_sumla";
   case ISD::PARTIAL_REDUCE_FMLA:
