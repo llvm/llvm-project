@@ -906,6 +906,12 @@ struct VectorContractToAMXDotProduct
     Operation *current = contractOp;
     while (true) {
       Operation *parent = current->getParentOfType<scf::ForOp>();
+
+      if (!parent)
+        return rewriter.notifyMatchFailure(
+            contractOp,
+            "Accumulator read and contract op not within scf.for op");
+
       loopLists.push_back(dyn_cast<scf::ForOp>(parent));
 
       if (accReadOp->getBlock() == parent->getBlock()) {
