@@ -1604,21 +1604,25 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = checkForNegativeOperand(I, Builder))
     return replaceInstUsesWith(I, V);
 
+  // (A + 1) + ~B --> A - B
+  // ~B + (A + 1) --> A - B
+  // (~B + A) + 1 --> A - B
+  // (A + ~B) + 1 --> A - B
+  // This relies on the ~B == -1-B identity.
+  if (match(&I, m_c_BinOp(m_Add(m_Value(A), m_One()), m_Not(m_Value(B)))) ||
+      match(&I, m_BinOp(m_c_Add(m_Not(m_Value(B)), m_Value(A)), m_One())))
+    return BinaryOperator::CreateSub(A, B);
+
   {
     // (A + C) + ~B --> A - B + (C-1)
     // ~B + (A + C) --> A - B + (C-1)
     // (~B + A) + C --> A - B + (C-1)
     // (A + ~B) + C --> A - B + (C-1)
-    // This relies on the ~B == -1-B identity.
     // With constant C, subtraction of one is free, so we replace three ops
-    // (two adds and a bitwise-not) with two (sub and add)
-    // or even one (just sub for the C==1 special case).
+    // (two adds and a bitwise-not) with two (sub and add).
     const APInt *C;
     if (match(&I, m_c_BinOp(m_OneUse(m_Add(m_Value(A), m_APIntAllowPoison(C))),
                             m_Not(m_Value(B)))) ||
-        (match(&I, m_c_BinOp(m_Add(m_Value(A), m_APIntAllowPoison(C)),
-                             m_OneUse(m_Not(m_Value(B))))) &&
-         *C == 1) ||
         match(&I, m_BinOp(m_OneUse(m_c_Add(m_Not(m_Value(B)), m_Value(A))),
                           m_APIntAllowPoison(C)))) {
       Value *Sub = Builder.CreateSub(A, B);
