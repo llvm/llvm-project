@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements Next Use Analysis.
+//
 // For each register it goes over all uses and returns the estimated distance of
 // the nearest use. This will be used for selecting which registers to spill
 // before register allocation.
@@ -30,7 +31,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
-#include <cmath>
 #include <limits>
 #include <optional>
 
@@ -49,12 +49,8 @@ public:
     return NextUseDistance(std::numeric_limits<int64_t>::max());
   }
 
-  constexpr static NextUseDistance fromLoopDepth(unsigned Depth) {
-    constexpr int64_t LoopWeight = 1000;
-    // FIXME: Is 24 a realistic limit?
-    Depth = std::min(Depth, 24U);
-    int64_t v = LoopWeight * (1 << (2 * Depth));
-    return NextUseDistance(v);
+  constexpr static NextUseDistance fromSize(unsigned Size, unsigned Depth) {
+    return NextUseDistance(Size).applyLoopWeight(Depth);
   }
 
   constexpr NextUseDistance(unsigned V) : Value(V) {}
@@ -99,17 +95,14 @@ public:
     return NextUseDistance(-Value);
   }
 
-  constexpr NextUseDistance applyLoopWeight(unsigned Depth) const {
-    NextUseDistance D = *this;
-    if (Depth)
-      D.Value *= fromLoopDepth(Depth).Value;
-    return D;
-  }
-
-  // Extend this distance by 'Size' weighted by loop depth 'Depth'.
-  constexpr NextUseDistance extend(unsigned Size, unsigned Depth) const {
-    NextUseDistance D = *this;
-    return D += NextUseDistance(Size).applyLoopWeight(Depth);
+  constexpr NextUseDistance applyLoopWeight() const {
+    NextUseDistance W = fromLoopDepth(1);
+    if (W.isUnreachable())
+      return unreachable();
+    constexpr int64_t MaxVal = std::numeric_limits<int64_t>::max();
+    if (Value != 0 && W.Value > MaxVal / Value)
+      return unreachable();
+    return NextUseDistance(Value * W.Value);
   }
 
   //----------------------------------------------------------------------------
@@ -164,12 +157,52 @@ public:
     return OS.str();
   }
 
-  int64_t getRawValue() const { return Value; }
+  constexpr int64_t getRawValue() const { return Value; }
+  using RawValueType = int64_t;
 
 private:
   friend class AMDGPUNextUseAnalysisImpl;
   int64_t Value;
   constexpr explicit NextUseDistance(int64_t V) : Value(V) {}
+
+  constexpr static NextUseDistance fromLoopDepth(unsigned Depth) {
+    const unsigned Shift = 7 * Depth;
+
+    // Saturate?
+    if (Shift >= 63)
+      return unreachable();
+
+    // This implementation is multiplicative (f(a+b) == f(a) * f(b)) which we
+    // take advantage of below in applyLoopWeight(Depth).
+    return NextUseDistance(int64_t(1) << Shift);
+  }
+
+  // Semantically: apply fromLoopDepth(1) Depth times (compositional).
+  //
+  // Optimized to take advantage of multiplicative implementation of
+  // fromLoopDepth - a single multiply by fromLoopDepth(Depth) gives the same
+  // result. If fromLoopDepth is changed to a non-multiplicative formula,
+  // replace the body with something like:
+  //
+  //   NextUseDistance D = *this;
+  //   for (unsigned I = 0; I < Depth; ++I) {
+  //     D = D.applyLoopWeight();
+  //     if (D.isUnreachable())
+  //       return unreachable();
+  //   }
+  //   return D;
+  //
+  constexpr NextUseDistance applyLoopWeight(unsigned Depth) const {
+    if (!Depth)
+      return *this;
+    NextUseDistance W = fromLoopDepth(Depth);
+    if (W.isUnreachable())
+      return unreachable();
+    constexpr int64_t MaxVal = std::numeric_limits<int64_t>::max();
+    if (Value != 0 && W.Value > MaxVal / Value)
+      return unreachable();
+    return NextUseDistance(Value * W.Value);
+  }
 };
 
 constexpr inline NextUseDistance operator+(NextUseDistance A,
@@ -211,12 +244,49 @@ public:
 
   AMDGPUNextUseAnalysis &operator=(AMDGPUNextUseAnalysis &&Other);
 
-  enum CompatibilityMode { Compute, Graphics };
+  // Configuration flags for controlling the distance model. Defaults correspond
+  // to the Graphics preset.
+  struct Config {
+    // Count PHI instructions as having non-zero cost (distance and block
+    // size). When false, all PHIs share ID 0 and don't contribute to block
+    // size.
+    bool CountPhis = true;
 
-  CompatibilityMode getCompatibilityMode();
-  void setCompatibilityMode(CompatibilityMode);
+    // Restrict inter-block distances to forward-reachable paths only.
+    // When false, distances through back-edges are also considered.
+    bool ForwardOnly = true;
 
-  void getReachableUses(unsigned Register, LaneBitmask LaneMask,
+    // Model PHI uses as belonging to their incoming edge's block, and apply
+    // full loop-aware reachability filtering including intermediate-def
+    // checks. When false, a simple same-block / forward-reachable check is
+    // used.
+    bool PreciseUseModeling = false;
+
+    // Promote uses that are inside a loop not yet entered or inside a directly
+    // nested inner loop to the end of that loop's preheader. This models the
+    // assumption that a spilled value will be reloaded at the preheader rather
+    // than at the actual use site. When false, direct shortest distance to the
+    // use is used instead.
+    bool PromoteToPreheader = false;
+
+    /// Named presets. See note in AMDGPUNextUseAnalysis.cpp associated with
+    /// 'amdgpu-next-use-analysis-config' regarding the historical context for
+    /// these.
+    static Config Graphics() { return {}; }
+    static Config Compute() {
+      Config Cfg;
+      Cfg.CountPhis = false;
+      Cfg.ForwardOnly = false;
+      Cfg.PreciseUseModeling = true;
+      Cfg.PromoteToPreheader = true;
+      return Cfg;
+    }
+  };
+
+  Config getConfig() const;
+  void setConfig(Config);
+
+  void getReachableUses(Register LiveReg, LaneBitmask LaneMask,
                         const MachineInstr &MI,
                         SmallVector<const MachineOperand *> &Uses);
 
