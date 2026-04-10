@@ -10033,7 +10033,7 @@ Expected<DeclContext *> ASTImporter::ImportContext(DeclContext *FromDC) {
 }
 
 Expected<Expr *> ASTImporter::Import(Expr *FromE) {
-  if (ExpectedStmt ToSOrErr = Import(FromE))
+  if (ExpectedStmt ToSOrErr = Import(cast_or_null<Stmt>(FromE)))
     return cast_or_null<Expr>(*ToSOrErr);
   else
     return ToSOrErr.takeError();
