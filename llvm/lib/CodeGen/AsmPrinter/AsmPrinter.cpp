@@ -705,11 +705,11 @@ bool AsmPrinter::doInitialization(Module &M) {
     break;
   }
   if (ES)
-    Handlers.push_back(std::unique_ptr<EHStreamer>(ES));
+    EHHandlers.push_back(std::unique_ptr<EHStreamer>(ES));
 
   // All CFG modes required the tables emitted.
   if (M.getControlFlowGuardMode() != ControlFlowGuardMode::Disabled)
-    EHHandlers.push_back(std::make_unique<WinCFGuard>(this));
+    Handlers.push_back(std::make_unique<WinCFGuard>(this));
 
   for (auto &Handler : Handlers)
     Handler->beginModule(&M);
