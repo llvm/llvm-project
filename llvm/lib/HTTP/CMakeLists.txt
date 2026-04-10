@@ -13,6 +13,7 @@ if (WIN32)
   set(imported_libs ${imported_libs} winhttp.lib)
 endif()
 
+# This is no component library so the LLVM dylib does not gain a dependency on curl
 add_llvm_library(LLVMHTTP
   HTTPClient.cpp
   HTTPServer.cpp
