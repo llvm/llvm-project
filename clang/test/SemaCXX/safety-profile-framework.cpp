@@ -38,7 +38,8 @@ void enforced_func();
 // Enforce inside class scope: error
 // ===================================================================
 struct EnforceInClass {
-  [[profiles::enforce(test::type_cast)]]; // expected-warning {{declaration does not declare anything}}
+  [[profiles::enforce(test::type_cast)]]; // expected-warning {{declaration does not declare anything}} \
+                                        // expected-error {{'profiles::enforce' attribute on empty-declaration must be at translation unit scope}}
 };
 
 // ===================================================================

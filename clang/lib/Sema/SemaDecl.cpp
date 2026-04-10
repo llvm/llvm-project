@@ -5409,6 +5409,9 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
                                ? diag::err_no_declarators
                                : diag::ext_no_declarators)
         << DS.getSourceRange();
+    for (const ParsedAttr &AL : DeclAttrs)
+      if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce)
+        Diag(AL.getLoc(), diag::err_profiles_enforce_not_at_tu_scope);
     return TagD;
   }
 
