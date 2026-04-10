@@ -6837,8 +6837,15 @@ struct BuiltinStartLifetimeHandler {
       }
     } else if (auto *AT = dyn_cast_or_null<ConstantArrayType>(
                    SubobjType->getAsArrayTypeUnsafe())) {
-      Subobj = APValue(APValue::UninitArray(), 0, AT->getZExtSize());
-      // Leave array filler absent — no element lifetimes started.
+      unsigned NumElems = AT->getZExtSize();
+      Subobj = APValue(APValue::UninitArray(), 0, NumElems);
+      // CWG guidance (Croyden): starting the lifetime of a multi-dimensional
+      // array also starts the lifetime of each nested sub-array, but not
+      // scalar elements. Recurse via the filler so that expandArray
+      // propagates the started state to each element on demand.
+      QualType ElemType = AT->getElementType();
+      if (ElemType->isArrayType())
+        found(Subobj.getArrayFiller(), ElemType);
     } else {
       Subobj = APValue::IndeterminateValue();
     }

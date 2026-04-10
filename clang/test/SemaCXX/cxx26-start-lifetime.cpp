@@ -115,9 +115,10 @@ static_assert(cv_result.arr[0] == 100);
 static_assert(cv_result.arr[1] == 200);
 static_assert(cv_result.size == 2);
 
-// CWG guidance: for nested arrays, start lifetime of the top-level array and
-// then each nested array before constructing inner scalar subobjects.
-consteval int test_multidim_without_nested_start() {
+// CWG guidance (Croyden): starting the lifetime of a multi-dimensional array
+// recursively starts the lifetime of each nested sub-array, but not scalar
+// elements. The wording will be fixed to make this clear.
+consteval int test_multidim_single_start() {
   struct S {
     union {
       int storage[2][3];
@@ -125,23 +126,25 @@ consteval int test_multidim_without_nested_start() {
   };
   S s;
   __builtin_start_lifetime(&s.storage);
-  ::new (&s.storage[0][0]) int(1); // expected-note {{construction of subobject of object outside its lifetime is not allowed in a constant expression}}
-  return s.storage[0][0];
-}
-static_assert(test_multidim_without_nested_start() == 1); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to 'test_multidim_without_nested_start()'}}
-
-consteval int test_multidim_with_nested_start() {
-  struct S {
-    union {
-      int storage[2][3];
-    };
-  };
-  S s;
-  __builtin_start_lifetime(&s.storage);
-  __builtin_start_lifetime(&s.storage[0]);
-  __builtin_start_lifetime(&s.storage[1]);
+  // No need to start_lifetime each sub-array — done recursively.
   ::new (&s.storage[0][0]) int(1);
   ::new (&s.storage[0][1]) int(2);
-  return s.storage[0][0] + s.storage[0][1];
+  ::new (&s.storage[1][0]) int(10);
+  return s.storage[0][0] + s.storage[0][1] + s.storage[1][0];
 }
-static_assert(test_multidim_with_nested_start() == 3);
+static_assert(test_multidim_single_start() == 13);
+
+// 3-dimensional array: start_lifetime recurses through all sub-array levels.
+consteval int test_3d_array() {
+  struct S {
+    union {
+      int storage[2][2][2];
+    };
+  };
+  S s;
+  __builtin_start_lifetime(&s.storage);
+  ::new (&s.storage[0][0][0]) int(1);
+  ::new (&s.storage[1][1][1]) int(7);
+  return s.storage[0][0][0] + s.storage[1][1][1];
+}
+static_assert(test_3d_array() == 8);
