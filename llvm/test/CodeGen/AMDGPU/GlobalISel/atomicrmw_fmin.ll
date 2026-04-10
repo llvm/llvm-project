@@ -1886,8 +1886,7 @@ define double @buffer_fat_ptr_agent_atomic_fmin_ret_f64__amdgpu_no_fine_grained_
 ; GFX11-NEXT:    v_min_f64 v[2:3], v[0:1], v[6:7]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
-; GFX11-NEXT:    v_mov_b32_e32 v1, v3
-; GFX11-NEXT:    v_mov_b32_e32 v2, v4
+; GFX11-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_mov_b32 v2, v4
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v5
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b64 v[0:3], v8, s[0:3], 0 offen glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

@@ -416,18 +416,30 @@ define amdgpu_ps <4 x float> @sample_1d_tfe_adjust_writemask_12(<8 x i32> inreg 
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: sample_1d_tfe_adjust_writemask_12:
-; GFX10PLUS:       ; %bb.0: ; %main_body
-; GFX10PLUS-NEXT:    s_mov_b32 s12, exec_lo
-; GFX10PLUS-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v3, v0
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v1, v0
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v2, v0
-; GFX10PLUS-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10PLUS-NEXT:    image_sample v[0:2], v3, s[0:7], s[8:11] dmask:0x3 dim:SQ_RSRC_IMG_1D tfe
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: sample_1d_tfe_adjust_writemask_12:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    s_mov_b32 s12, exec_lo
+; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-NEXT:    v_mov_b32_e32 v3, v0
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
+; GFX10-NEXT:    image_sample v[0:2], v3, s[0:7], s[8:11] dmask:0x3 dim:SQ_RSRC_IMG_1D tfe
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: sample_1d_tfe_adjust_writemask_12:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    s_mov_b32 s12, exec_lo
+; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s12
+; GFX11-NEXT:    image_sample v[0:2], v3, s[0:7], s[8:11] dmask:0x3 dim:SQ_RSRC_IMG_1D tfe
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: sample_1d_tfe_adjust_writemask_12:
 ; GFX12:       ; %bb.0: ; %main_body
@@ -479,18 +491,30 @@ define amdgpu_ps <4 x float> @sample_1d_tfe_adjust_writemask_24(<8 x i32> inreg 
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: sample_1d_tfe_adjust_writemask_24:
-; GFX10PLUS:       ; %bb.0: ; %main_body
-; GFX10PLUS-NEXT:    s_mov_b32 s12, exec_lo
-; GFX10PLUS-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v3, v0
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v1, v0
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v2, v0
-; GFX10PLUS-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10PLUS-NEXT:    image_sample v[0:2], v3, s[0:7], s[8:11] dmask:0xa dim:SQ_RSRC_IMG_1D tfe
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: sample_1d_tfe_adjust_writemask_24:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    s_mov_b32 s12, exec_lo
+; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-NEXT:    v_mov_b32_e32 v3, v0
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
+; GFX10-NEXT:    image_sample v[0:2], v3, s[0:7], s[8:11] dmask:0xa dim:SQ_RSRC_IMG_1D tfe
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: sample_1d_tfe_adjust_writemask_24:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    s_mov_b32 s12, exec_lo
+; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s12
+; GFX11-NEXT:    image_sample v[0:2], v3, s[0:7], s[8:11] dmask:0xa dim:SQ_RSRC_IMG_1D tfe
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: sample_1d_tfe_adjust_writemask_24:
 ; GFX12:       ; %bb.0: ; %main_body
@@ -2097,9 +2121,8 @@ define amdgpu_ps <4 x float> @sample_c_d_o_2darray_V2_tfe(<8 x i32> inreg %rsrc,
 ;
 ; GFX11-LABEL: sample_c_d_o_2darray_V2_tfe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v11, v0
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v9, v2
-; GFX11-NEXT:    v_mov_b32_e32 v10, v1
+; GFX11-NEXT:    v_dual_mov_b32 v11, v0 :: v_dual_mov_b32 v0, 0
+; GFX11-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v10, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-NEXT:    image_sample_c_d_o v[0:2], [v11, v10, v9, v3, v[4:8]], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY tfe

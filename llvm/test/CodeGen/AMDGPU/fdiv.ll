@@ -1313,8 +1313,7 @@ define amdgpu_kernel void @s_fdiv_v2f32_fast_math(ptr addrspace(1) %out, <2 x fl
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_mul_f32_e32 v1, s1, v0
-; GFX11-NEXT:    v_mul_f32_e32 v0, s0, v2
+; GFX11-NEXT:    v_dual_mul_f32 v1, s1, v0 :: v_dual_mul_f32 v0, s0, v2
 ; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[4:5]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -1390,8 +1389,7 @@ define amdgpu_kernel void @s_fdiv_v2f32_arcp_math(ptr addrspace(1) %out, <2 x fl
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_mul_f32_e32 v1, s1, v0
-; GFX11-NEXT:    v_mul_f32_e32 v0, s0, v2
+; GFX11-NEXT:    v_dual_mul_f32 v1, s1, v0 :: v_dual_mul_f32 v0, s0, v2
 ; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[4:5]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -1927,9 +1925,9 @@ define amdgpu_kernel void @s_fdiv_v4f32_fast_math(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, s5
 ; GFX11-NEXT:    v_rcp_f32_e32 v5, s4
 ; GFX11-NEXT:    v_dual_mov_b32 v6, 0 :: v_dual_mul_f32 v3, s3, v0
-; GFX11-NEXT:    v_mul_f32_e32 v2, s2, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_dual_mul_f32 v1, s1, v4 :: v_dual_mul_f32 v0, s0, v5
+; GFX11-NEXT:    v_dual_mul_f32 v2, s2, v1 :: v_dual_mul_f32 v1, s1, v4
+; GFX11-NEXT:    v_mul_f32_e32 v0, s0, v5
 ; GFX11-NEXT:    global_store_b128 v6, v[0:3], s[8:9]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2033,9 +2031,9 @@ define amdgpu_kernel void @s_fdiv_v4f32_arcp_math(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, s5
 ; GFX11-NEXT:    v_rcp_f32_e32 v5, s4
 ; GFX11-NEXT:    v_dual_mov_b32 v6, 0 :: v_dual_mul_f32 v3, s3, v0
-; GFX11-NEXT:    v_mul_f32_e32 v2, s2, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_dual_mul_f32 v1, s1, v4 :: v_dual_mul_f32 v0, s0, v5
+; GFX11-NEXT:    v_dual_mul_f32 v2, s2, v1 :: v_dual_mul_f32 v1, s1, v4
+; GFX11-NEXT:    v_mul_f32_e32 v0, s0, v5
 ; GFX11-NEXT:    global_store_b128 v6, v[0:3], s[8:9]
 ; GFX11-NEXT:    s_endpgm
 ;

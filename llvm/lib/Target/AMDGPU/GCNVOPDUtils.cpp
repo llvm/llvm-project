@@ -34,32 +34,15 @@ using namespace llvm;
 
 #define DEBUG_TYPE "gcn-vopd-utils"
 
-static bool isMulticycleOp(const MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
-  return AMDGPU::isDPMACCInstruction(Opc);
-}
-
-bool llvm::dataDependency(const MachineInstr &FirstMI,
+bool llvm::dataDependencyForVOPD(const MachineInstr &FirstMI,
                           const MachineInstr &SecondMI) {
   const GCNSubtarget &ST = FirstMI.getMF()->getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   for (const auto &Use : SecondMI.all_uses()) {
     if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg(), TRI))
       return true;
   }
   return false;
-}
-
-// If SecondMI writes a source of FirstMI, we can
-// still form VOPD as SecondMI::FirstMI in cases where VOPD reads all sources
-// before writing any destination.
-bool llvm::isAntidependencyAllowed(const MachineInstr &OpX) {
-  const GCNSubtarget &ST = OpX.getMF()->getSubtarget<GCNSubtarget>();
-  if (AMDGPU::isNotGFX12Plus(ST))
-    return false;
-  if (isMulticycleOp(OpX))
-    return false;
-  return true;
 }
 
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
@@ -78,7 +61,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
 
-  const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   // Literals also count against scalar bus limit
   SmallVector<const MachineOperand *> UniqueLiterals;
@@ -209,22 +192,22 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
 
   // If SecondMI depends on FirstMI they cannot execute at the same time.
-  if (dataDependency(FirstMI, SecondMI))
+  if (dataDependencyForVOPD(FirstMI, SecondMI))
     return std::nullopt;
 
-  bool IsAntiDep = dataDependency(SecondMI, FirstMI);
+  bool IsAntiDep = dataDependencyForVOPD(SecondMI, FirstMI);
   // AllowSameVGPR relaxes the VGPR bank overlap check for source operands.
   // Only enable it for VOPD3 and when there is no antidependency.
   bool AllowSameVGPR = IsVOPD3 && !IsAntiDep;
 
   if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
-    if ((!IsAntiDep || isAntidependencyAllowed(FirstMI)) &&
+    if ((!IsAntiDep || TII.isVOPDAntidependencyAllowed(FirstMI)) &&
         checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR))
       return VOPDMatchInfo{&FirstMI, &SecondMI, IsVOPD3};
   }
 
   if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X) {
-    if (IsAntiDep && !isAntidependencyAllowed(SecondMI))
+    if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))
       return std::nullopt;
     if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR))
       return VOPDMatchInfo{&SecondMI, &FirstMI, IsVOPD3};

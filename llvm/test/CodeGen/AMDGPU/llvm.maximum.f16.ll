@@ -2893,6 +2893,8 @@ define <16 x half> @v_maximum_v16f16(<16 x half> %src0, <16 x half> %src1) {
 ; GFX11-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v6, v14
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v19, 16, v15
 ; GFX11-FAKE16-NEXT:    v_pk_max_f16 v14, v5, v13
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v7, v16, v7, 0x5040100
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v6, 0x7e00, v15, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v18, v17
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v17, 16, v13
@@ -2904,7 +2906,6 @@ define <16 x half> @v_maximum_v16f16(<16 x half> %src0, <16 x half> %src1) {
 ; GFX11-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v18, v17
 ; GFX11-FAKE16-NEXT:    v_pk_max_f16 v17, v3, v11
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v18, 16, v20
-; GFX11-FAKE16-NEXT:    v_perm_b32 v7, v16, v7, 0x5040100
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v13, 0x7e00, v19, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v4, v12
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v19, 16, v11

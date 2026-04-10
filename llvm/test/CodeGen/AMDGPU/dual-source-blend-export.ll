@@ -33,9 +33,8 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpC
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v8
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GCN-NEXT:    v_dual_cndmask_b32 v3, v5, v6 :: v_dual_cndmask_b32 v4, v6, v5
-; GCN-NEXT:    v_cndmask_b32_e32 v5, v2, v7, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e32 v2, v7, v2, vcc_lo
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GCN-NEXT:    v_dual_cndmask_b32 v5, v2, v7 :: v_dual_cndmask_b32 v2, v7, v2
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_dpp v4, v4 dpp8:[1,0,3,2,5,4,7,6]
 ; GCN-NEXT:    v_mov_b32_dpp v5, v5 dpp8:[1,0,3,2,5,4,7,6]
 ; GCN-NEXT:    s_mov_b32 exec_lo, s1

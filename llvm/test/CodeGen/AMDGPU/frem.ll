@@ -10675,17 +10675,17 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1150-FAKE16-NEXT:    s_and_b32 vcc_lo, s3, s2
 ; GFX1150-FAKE16-NEXT:    s_cmp_lg_f16 s9, 0
-; GFX1150-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v2, vcc_lo
-; GFX1150-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1150-FAKE16-NEXT:    v_dual_cndmask_b32 v1, 0x7e00, v2 :: v_dual_mov_b32 v2, 0
 ; GFX1150-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX1150-FAKE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX1150-FAKE16-NEXT:    s_cmp_nge_f16 s7, 0x7c00
+; GFX1150-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1150-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX1150-FAKE16-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX1150-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1150-FAKE16-NEXT:    s_and_b32 vcc_lo, s3, s2
 ; GFX1150-FAKE16-NEXT:    v_cndmask_b32_e32 v3, 0x7e00, v3, vcc_lo
 ; GFX1150-FAKE16-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
+; GFX1150-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1150-FAKE16-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX1150-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1150-FAKE16-NEXT:    s_endpgm

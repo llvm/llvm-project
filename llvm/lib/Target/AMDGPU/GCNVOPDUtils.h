@@ -23,8 +23,7 @@ namespace llvm {
 class MachineInstr;
 class SIInstrInfo;
 
-bool dataDependency(const MachineInstr &FirstMI, const MachineInstr &SecondMI);
-bool isAntidependencyAllowed(const MachineInstr &OpX);
+bool dataDependencyForVOPD(const MachineInstr &FirstMI, const MachineInstr &SecondMI);
 
 bool checkVOPDRegConstraints(const SIInstrInfo &TII,
                              const MachineInstr &FirstMI,
