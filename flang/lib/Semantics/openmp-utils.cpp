@@ -1139,7 +1139,7 @@ WithReason<int64_t> GetRectangularNestDepthWithReason(
   return {0, Reason()};
 }
 
-std::optional<int64_t> GetRequiredCount(
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<int64_t> first, std::optional<int64_t> count) {
   if (first && count && *first > 0) {
     if (*count > 0) {
@@ -1151,12 +1151,12 @@ std::optional<int64_t> GetRequiredCount(
   return std::nullopt;
 }
 
-std::optional<int64_t> GetRequiredCount(
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<std::pair<int64_t, int64_t>> range) {
   if (range) {
-    return GetRequiredCount(range->first, range->second);
+    return GetMinimumSequenceCount(range->first, range->second);
   }
-  return GetRequiredCount(std::nullopt, std::nullopt);
+  return GetMinimumSequenceCount(std::nullopt, std::nullopt);
 }
 
 #ifdef EXPENSIVE_CHECKS
@@ -1482,7 +1482,7 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
       if (value && nestedLength.value) {
         auto range{
             GetAffectedLoopRangeWithReason(beginSpec, version_, semaCtx_)};
-        if (auto required{GetRequiredCount(range.value)}) {
+        if (auto required{GetMinimumSequenceCount(range.value)}) {
           if (*required == -1 || *required == *nestedLength.value) {
             return Depth{value, value};
           }
