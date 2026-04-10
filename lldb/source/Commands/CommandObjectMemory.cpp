@@ -360,8 +360,8 @@ protected:
       result.AppendErrorWithFormat("%s takes a start address expression with "
                                    "an optional end address expression.\n",
                                    m_cmd_name.c_str());
-      result.AppendWarning("Expressions should be quoted if they contain "
-                           "spaces or other special characters.");
+      result.AppendWarning("expressions should be quoted if they contain "
+                           "spaces or other special characters");
       return;
     }
 
@@ -670,8 +670,8 @@ protected:
       }
 
       if (bytes_read < total_byte_size)
-        result.AppendWarningWithFormatv("Not all bytes ({0} / {1}) "
-                                        "were able to be read from {2:x}.",
+        result.AppendWarningWithFormatv("not all bytes ({0} / {1}) "
+                                        "were able to be read from {2:x}",
                                         bytes_read, total_byte_size, addr);
     } else {
       // we treat c-strings as a special case because they do not have a fixed
@@ -713,7 +713,7 @@ protected:
         if (item_byte_size == read) {
           result.AppendWarningWithFormatv(
               "unable to find a NULL terminated string at {0:x}"
-              ". Consider increasing the maximum read length.",
+              ". Consider increasing the maximum read length",
               data_addr);
           --read;
           break_on_no_NULL = true;

@@ -2795,20 +2795,20 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
   case SharedCacheWarningReason::eNotEnoughClassesRead:
     Debugger::ReportWarning("could not find Objective-C class data in "
                             "the process. This may reduce the quality of type "
-                            "information available.\n",
+                            "information available\n",
                             debugger.GetID(), &m_no_classes_cached_warning);
     break;
   case SharedCacheWarningReason::eExpressionExecutionFailure:
     Debugger::ReportWarning(
         "could not execute support code to read "
         "Objective-C class data in the process. This may "
-        "reduce the quality of type information available.\n",
+        "reduce the quality of type information available\n",
         debugger.GetID(), &m_no_classes_cached_warning);
     break;
   case SharedCacheWarningReason::eExpressionUnableToRun:
     Debugger::ReportWarning(
         "could not execute support code to read Objective-C class data because "
-        "it's not yet safe to do so, and will be retried later.\n",
+        "it's not yet safe to do so, and will be retried later\n",
         debugger.GetID(), nullptr);
     break;
   }
@@ -2845,7 +2845,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   } else {
     os << "read from the shared cache";
   }
-  os << ". This will likely reduce debugging performance.\n";
+  os << ". This will likely reduce debugging performance\n";
 
   Debugger::ReportWarning(buffer, debugger.GetID(),
                           &m_no_expanded_cache_warning);
