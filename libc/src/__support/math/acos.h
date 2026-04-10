@@ -51,7 +51,8 @@ LIBC_INLINE constexpr double acos(double x) {
     //         = pi/2 - x * (1 + x^2 * P1(x^2))
     //         = pi/2 - x - x^3 * P1(x^2)
     double xsq = x * x;
-    return PI_OVER_TWO.hi + fputil::multiply_add(-x * xsq, asinf_eval(xsq), PI_OVER_TWO.lo - x);
+    return PI_OVER_TWO.hi +
+           fputil::multiply_add(-x * xsq, asin_eval(xsq), PI_OVER_TWO.lo - x);
 #else
     unsigned idx = 0;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
@@ -179,7 +180,8 @@ LIBC_INLINE constexpr double acos(double x) {
   DoubleDouble const_term = CONST_TERM[xbits.is_neg()];
 
   double scale = x_sign * 2.0 * v_hi;
-  double r = const_term.hi + fputil::multiply_add(scale * u, asinf_eval(u), const_term.lo + scale);
+  double r = const_term.hi + fputil::multiply_add(scale * u, asin_eval(u),
+                                                  const_term.lo + scale);
   return r;
 #else
 

@@ -40,7 +40,7 @@ LIBC_INLINE_VAR constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
 // > dirtyinfnorm((asin(x) - x*Q)/x, [0, 0.5]);
 //   0x1.feb2fcdba66447ccbe28a1a0f935b51678a718fb1p-59
 // Coefficients for float-precision asin (ASINF_COEFFS excludes the leading 1
-// term; used as: asin(x) ~ x + x^3 * asinf_eval(x^2)).
+// term; used as: asin(x) ~ x + x^3 * asin_eval(x^2)).
 LIBC_INLINE_VAR constexpr double ASINF_COEFFS[12] = {
     0x1.555555555538p-3,  0x1.333333336fd5bp-4,  0x1.6db6db41ce4bcp-5,
     0x1.f1c72c66896dep-6, 0x1.6e89f0a0ac64bp-6,  0x1.1c6c111de4074p-6,
@@ -49,8 +49,8 @@ LIBC_INLINE_VAR constexpr double ASINF_COEFFS[12] = {
 };
 
 // Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x, for float-precision asin.
-// Used as: asin(x) ~ x + x^3 * asinf_eval(x^2).
-LIBC_INLINE double asinf_eval(double xsq) {
+// Used as: asin(x) ~ x + x^3 * asin_eval(x^2).
+LIBC_INLINE double asin_eval(double xsq) {
   double x4 = xsq * xsq;
   double c0 = fputil::multiply_add(xsq, ASINF_COEFFS[1], ASINF_COEFFS[0]);
   double c1 = fputil::multiply_add(xsq, ASINF_COEFFS[3], ASINF_COEFFS[2]);
@@ -97,9 +97,9 @@ LIBC_INLINE_VAR constexpr double ASINPIF_COEFFS[13] = {
 
 // Evaluates P1(v2) = c1 + c2*v2 + ... + c12*v2^11 (tail of the asinpif
 // polynomial without c0) using Estrin's scheme.
-// Used as: asinpif(x) ~ x * (ASINPIF_COEFFS[0] + v2 * asinpif_eval(v2))
+// Used as: asinpif(x) ~ x * (ASINPIF_COEFFS[0] + v2 * asinpi_eval(v2))
 // where v2 = x^2.
-LIBC_INLINE double asinpif_eval(double v2) {
+LIBC_INLINE double asinpi_eval(double v2) {
   double v4 = v2 * v2;
   double v8 = v4 * v4;
   double v16 = v8 * v8;
@@ -119,7 +119,6 @@ LIBC_INLINE double asinpif_eval(double v2) {
 
   return fputil::multiply_add(v16, q2, r0);
 }
-
 
 // The Taylor expansion of asin(x) around 0 is:
 //   asin(x) = x + x^3/6 + 3x^5/40 + ...

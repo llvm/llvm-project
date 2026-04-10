@@ -2865,7 +2865,6 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -2954,7 +2953,6 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -3199,6 +3197,7 @@ libc_support_library(
     name = "__support_math_asinpi",
     hdrs = ["src/__support/math/asinpi.h"],
     deps = [
+        ":__support_fputil_cast",
         ":__support_fputil_double_double",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_except_value_utils",
@@ -3206,6 +3205,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
@@ -3228,7 +3228,6 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -3289,7 +3288,6 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -3319,7 +3317,6 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_macros_optimization",
-        ":__support_math_inv_trigf_utils",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -3351,7 +3348,6 @@ libc_support_library(
         ":__support_fputil_rounding_mode",
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -3382,7 +3378,6 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
-        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -3398,7 +3393,6 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":__support_math_inv_trigf_utils",
     ],
 )
 

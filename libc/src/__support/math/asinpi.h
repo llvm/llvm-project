@@ -49,7 +49,7 @@ LIBC_INLINE double asinpi(double x) {
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     double xsq = x * x;
-    return x * fputil::multiply_add(xsq, asin_internal::asinpif_eval(xsq),
+    return x * fputil::multiply_add(xsq, asin_internal::asinpi_eval(xsq),
                                     asin_internal::ASINPIF_COEFFS[0]);
 #else
     using Float128 = fputil::DyadicFloat<128>;
@@ -197,8 +197,8 @@ LIBC_INLINE double asinpi(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   double neg2_v = -2.0 * v_hi;
   double r = x_sign * fputil::multiply_add(
-                 neg2_v * u, asin_internal::asinpif_eval(u),
-                 0.5 + neg2_v * asin_internal::ASINPIF_COEFFS[0]);
+                          neg2_v * u, asin_internal::asinpi_eval(u),
+                          0.5 + neg2_v * asin_internal::ASINPIF_COEFFS[0]);
   return r;
 #else
   using Float128 = fputil::DyadicFloat<128>;

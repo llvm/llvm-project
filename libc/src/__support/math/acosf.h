@@ -84,7 +84,7 @@ LIBC_INLINE constexpr float acosf(float x) {
     double xd = static_cast<double>(x);
     double xsq = xd * xd;
     double x3 = xd * xsq;
-    double r = asinf_eval(xsq);
+    double r = asin_eval(xsq);
     return static_cast<float>(fputil::multiply_add(-x3, r, M_MATH_PI_2 - xd));
   }
 
@@ -136,7 +136,7 @@ LIBC_INLINE constexpr float acosf(float x) {
   double u = fputil::multiply_add(-0.5, xd, 0.5);
   double cv = 2 * fputil::sqrt<double>(u);
 
-  double r3 = asinf_eval(u);
+  double r3 = asin_eval(u);
   double r = fputil::multiply_add(cv * u, r3, cv);
   return static_cast<float>(x_sign ? M_MATH_PI - r : r);
 }

@@ -76,7 +76,7 @@ LIBC_INLINE constexpr float asinf(float x) {
     double xd = static_cast<double>(x);
     double xsq = xd * xd;
     double x3 = xd * xsq;
-    double r = asinf_eval(xsq);
+    double r = asin_eval(xsq);
     return static_cast<float>(fputil::multiply_add(x3, r, xd));
   }
 
@@ -128,7 +128,7 @@ LIBC_INLINE constexpr float asinf(float x) {
   double c2 = fputil::multiply_add(sign_two, M_PI_OVER_4, c1);
   double c3 = c1 * u;
 
-  double r = asinf_eval(u);
+  double r = asin_eval(u);
   return static_cast<float>(fputil::multiply_add(c3, r, c2));
 }
 

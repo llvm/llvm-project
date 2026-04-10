@@ -385,7 +385,7 @@ add_header_library(
   HDRS
     asinbf16.h
   DEPENDS
-    .inv_trigf_utils
+    .asin_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.bfloat16
