@@ -563,14 +563,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::BitInt: {
     const auto *bitIntTy = cast<BitIntType>(type);
-    if (bitIntTy->getNumBits() > cir::IntType::maxBitwidth()) {
-      cgm.errorNYI(SourceLocation(), "large _BitInt type", type);
-      resultType = cgm.sInt32Ty;
-    } else {
-      resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
-                                     bitIntTy->isSigned(),
-                                     /*isBitInt=*/true);
-    }
+    resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
+                                   bitIntTy->isSigned(),
+                                   /*isBitInt=*/true);
     break;
   }
 

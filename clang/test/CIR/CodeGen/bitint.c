@@ -13,19 +13,24 @@
 // CIR-DAG: !s128i_bitint = !cir.int<s, 128, bitint>
 // CIR-DAG: !u64i_bitint = !cir.int<u, 64, bitint>
 // CIR-DAG: !s128i = !cir.int<s, 128>
+// CIR-DAG: !s256i_bitint = !cir.int<s, 256, bitint>
 
 // _BitInt(128) has alignment 8 while __int128 has alignment 16.
 signed _BitInt(128) bitint128_var;
 __int128 int128_var;
+signed _BitInt(256) bitint256_var;
 
 // CIR: cir.global external @bitint128_var = #cir.int<0> : !s128i_bitint {alignment = 8 : i64}
 // CIR: cir.global external @int128_var = #cir.int<0> : !s128i {alignment = 16 : i64}
+// CIR: cir.global external @bitint256_var = #cir.int<0> : !s256i_bitint
 
 // LLVM: @bitint128_var = global i128 0, align 8
 // LLVM: @int128_var = global i128 0, align 16
+// LLVM: @bitint256_var = global i256 0
 
 // OGCG: @bitint128_var = global i128 0, align 8
 // OGCG: @int128_var = global i128 0, align 16
+// OGCG: @bitint256_var = global i256 0
 
 void take_bitint_32(_BitInt(32) x) {}
 // CIR: cir.func {{.*}} @take_bitint_32(%arg0: !s32i_bitint
