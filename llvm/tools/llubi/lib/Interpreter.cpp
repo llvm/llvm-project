@@ -118,7 +118,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return AnyValue::poison();
     if (FMF.noInfs() && APVal.isInfinity())
       return AnyValue::poison();
-    if (FMF.noSignedZeros() && APVal.isZero() && IsInput)
+    if (IsInput && FMF.noSignedZeros() && APVal.isZero())
       return AnyValue(APFloat::getZero(
           APVal.getSemantics(), APVal.isNegative() ^ Ctx.getRandomBool()));
     return Val;
@@ -136,7 +136,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const APFloat &pickNaNSource(ArrayRef<const APFloat *> Inputs,
                                const APFloat &Fallback) {
     for (const APFloat *Input : Inputs) {
-      if (Input && Input->isNaN())
+      if (Input->isNaN())
         return *Input;
     }
     return Fallback;
@@ -221,13 +221,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       // operation is fneg. And fneg is specified as a bitwise operation which
       // only flips the sign bit of the input.
 
-      AnyValue ValidatedOperand = handleFMFFlags(Operand, FMF, true);
+      AnyValue ValidatedOperand =
+          handleFMFFlags(Operand, FMF, /*IsInput=*/true);
       if (ValidatedOperand.isPoison())
         return ValidatedOperand;
 
       APFloat Result = ScalarFn(ValidatedOperand.asFloat());
 
-      return handleFMFFlags(Result, FMF, false);
+      return handleFMFFlags(Result, FMF, /*IsInput=*/false);
     });
   }
 
@@ -277,8 +278,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
 
-      AnyValue ValidatedLHS = handleFMFFlags(LHS, FMF, true);
-      AnyValue ValidatedRHS = handleFMFFlags(RHS, FMF, false);
+      AnyValue ValidatedLHS = handleFMFFlags(LHS, FMF, /*IsInput=*/true);
+      AnyValue ValidatedRHS = handleFMFFlags(RHS, FMF, /*IsInput=*/true);
       if (ValidatedLHS.isPoison())
         return ValidatedLHS;
       if (ValidatedRHS.isPoison())
@@ -292,7 +293,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
       // Flush output denormals and handle fast-math flags.
       AnyValue FResult = handleFMFFlags(
-          handleDenormal(RawResult, DenormMode.Output, true), FMF, false);
+          handleDenormal(RawResult, DenormMode.Output, /*NonDet=*/true), FMF,
+          /*IsInput=*/false);
 
       if (FResult.isPoison())
         return FResult;
@@ -323,7 +325,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       if (isa<FPMathOperator>(PHI)) {
         FastMathFlags FMF = PHI->getFastMathFlags();
         if (FMF.any())
-          IncomingVal = handleFMFFlags(std::move(IncomingVal), FMF, true);
+          IncomingVal =
+              handleFMFFlags(std::move(IncomingVal), FMF, /*IsInput=*/true);
       }
 
       IncomingValues.emplace_back(PHI, IncomingVal);
@@ -870,7 +873,7 @@ public:
       FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
       DenormalMode DenormMode = getCurrentDenormalMode(I);
 
-      auto ValidatedOperand = handleFMFFlags(Operand, FMF, true);
+      auto ValidatedOperand = handleFMFFlags(Operand, FMF, /*IsInput=*/true);
       if (ValidatedOperand.isPoison())
         return ValidatedOperand;
 
@@ -881,7 +884,7 @@ public:
       bool LosesInfo;
       FOperand.convert(DstSem, Ctx.getCurrentRoundingMode(), &LosesInfo);
 
-      if (auto ValidateRes = handleFMFFlags(FOperand, FMF, false);
+      if (auto ValidateRes = handleFMFFlags(FOperand, FMF, /*IsInput=*/false);
           ValidateRes.isPoison())
         return ValidateRes;
 
@@ -1022,10 +1025,10 @@ public:
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
 
-      if (auto ValidateRes = handleFMFFlags(LHS, FMF, true);
+      if (auto ValidateRes = handleFMFFlags(LHS, FMF, /*IsInput=*/true);
           ValidateRes.isPoison())
         return ValidateRes;
-      if (auto ValidateRes = handleFMFFlags(RHS, FMF, true);
+      if (auto ValidateRes = handleFMFFlags(RHS, FMF, /*IsInput=*/true);
           ValidateRes.isPoison())
         return ValidateRes;
 
@@ -1077,7 +1080,7 @@ public:
     // Handle fast-math flags
     if (auto *FPMO = dyn_cast<FPMathOperator>(&SI)) {
       if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
-        Res = handleFMFFlags(std::move(Res), FMF, true);
+        Res = handleFMFFlags(std::move(Res), FMF, /*IsInput=*/true);
     }
 
     setResult(SI, std::move(Res));
