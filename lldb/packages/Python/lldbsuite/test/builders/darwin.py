@@ -60,7 +60,6 @@ class BuilderDarwin(Builder):
         return ["{}={}".format(key, value) for key, value in args.items()]
 
     def getArchCFlags(self):
-        # Get the triple components.
         triple = self.getTriple()
         if not triple:
             return []
