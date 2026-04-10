@@ -1,7 +1,7 @@
 // RUN: %clang -O2 %s -o %t && %run %t
 
 // Must not be implemented, no other reason to install interceptors.
-// XFAIL: ubsan
+// XFAIL: tysan, ubsan
 
 #include <assert.h>
 #include <malloc.h>

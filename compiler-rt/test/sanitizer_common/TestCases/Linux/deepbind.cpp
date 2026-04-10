@@ -1,5 +1,5 @@
 // RUN: %clangxx %s -o %t && %run not %t 1 2>&1 | FileCheck %s
-// UNSUPPORTED: lsan,ubsan,android
+// UNSUPPORTED: lsan,tysan,ubsan,android
 
 // FIXME: Implement.
 // XFAIL: hwasan
