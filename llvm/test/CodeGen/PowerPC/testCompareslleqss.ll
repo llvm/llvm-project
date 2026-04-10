@@ -230,16 +230,18 @@ define dso_local void @test_lleqss_sext_z_store(i16 signext %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lleqss_sext_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addic r3, r3, -1
+; CHECK-BE-NEXT:    clrldi r3, r3, 32
 ; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addic r3, r3, -1
 ; CHECK-BE-NEXT:    subfe r3, r3, r3
 ; CHECK-BE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lleqss_sext_z_store:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    addic r3, r3, -1
+; CHECK-LE-NEXT:    clrldi r3, r3, 32
 ; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addic r3, r3, -1
 ; CHECK-LE-NEXT:    subfe r3, r3, r3
 ; CHECK-LE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
