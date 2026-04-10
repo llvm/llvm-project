@@ -1912,6 +1912,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
+  setMaxLargeFPConvertBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
+
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
   EnableExtLdPromotion = true;
@@ -20095,10 +20097,78 @@ static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ADD, DL, VT, A, NewB);
 }
 
+// Fold (iN (select (src >u ((1 << N) - 1)), sext(src >s -1), trunc(src))) to
+// USATI. This pattern saturates a signed value to an unsigned N-bit range
+// [0, 2^N-1]:
+//   - If src < 0: result = 0
+//       (via the inner comparison src > -1 = false, sext to 0)
+//   - If src > ((1 << C) - 1): result = all 1s
+//       (via sext(true) = -1 = 0xFF...)
+//   - Otherwise: result = src (via trunc(src))
+// The outer comparison is unsigned, so negative values appear as large
+// unsigned values and trigger the saturation to MaxVal path, where the
+// inner signed comparison then produces 0.
+// TODO: Support (select (src <=u ((1 << C) - 1)), trunc(src), sext(src >s -1)).
+static SDValue foldSelectToUSATI(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // Only support scalar integer types smaller than XLenVT
+  if (!VT.isScalarInteger() || VT.bitsGE(XLenVT))
+    return SDValue();
+
+  unsigned SatWidth = VT.getSizeInBits();
+  uint64_t MaxVal = (1ULL << SatWidth) - 1;
+
+  using namespace SDPatternMatch;
+
+  SDValue Src, InnerSetCC, FalseSrc;
+  if (!sd_match(N, m_Select(m_SetCC(m_Value(Src), m_SpecificInt(MaxVal),
+                                    m_SpecificCondCode(ISD::SETUGT)),
+                            m_SExt(m_Value(InnerSetCC)),
+                            m_Trunc(m_Value(FalseSrc)))))
+    return SDValue();
+
+  // Src can't be larger than XLenVT.
+  if (Src.getValueType().bitsGT(XLenVT))
+    return SDValue();
+
+  // Check inner setcc: src > -1 (signed comparison)
+  if (!sd_match(InnerSetCC,
+                m_SpecificVT(MVT::i1, m_SetCC(m_Specific(Src), m_AllOnes(),
+                                              m_SpecificCondCode(ISD::SETGT)))))
+    return SDValue();
+
+  // It's possible that the input to the setccs is also a truncate, in that
+  // case the input to the truncate on the select's false operand may be the
+  // same as the input to this setcc truncate. We need to look through the
+  // setcc truncate to make sure CmpSrc and FalseSrc come from the same value.
+  SDValue CmpSrc = Src;
+  if (CmpSrc != FalseSrc && CmpSrc.getOpcode() == ISD::TRUNCATE)
+    CmpSrc = CmpSrc.getOperand(0);
+
+  if (CmpSrc != FalseSrc)
+    return SDValue();
+
+  // We found a USATI pattern.
+  SDLoc DL(N);
+  Src = DAG.getNode(ISD::SIGN_EXTEND, DL, XLenVT, Src);
+  SDValue USATI = DAG.getNode(RISCVISD::USATI, DL, XLenVT, Src,
+                              DAG.getTargetConstant(SatWidth, DL, XLenVT));
+  return DAG.getNode(ISD::TRUNCATE, DL, VT, USATI);
+}
+
 static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
                                     const RISCVSubtarget &Subtarget) {
   if (SDValue Folded = foldSelectOfCTTZOrCTLZ(N, DAG))
     return Folded;
+
+  if (SDValue V = foldSelectToUSATI(N, DAG, Subtarget))
+    return V;
 
   if (SDValue V = useInversedSetcc(N, DAG, Subtarget))
     return V;
