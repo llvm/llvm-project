@@ -131,14 +131,16 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
     const FileSpec *crash_file, bool can_connect) {
   ModuleSP executable = target_sp->GetExecutableModule();
   if (crash_file && !can_connect && executable) {
+    char errbuf[_POSIX2_LINE_MAX];
     kvm_t *kvm =
         kvm_open2(executable->GetFileSpec().GetPath().c_str(),
-                  crash_file->GetPath().c_str(), O_RDONLY, nullptr, nullptr);
+                  crash_file->GetPath().c_str(), O_RDONLY, errbuf, nullptr);
     if (kvm) {
       kvm_close(kvm);
       return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
                                                         *crash_file);
     }
+    LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
   }
   return nullptr;
 }
