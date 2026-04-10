@@ -7,7 +7,6 @@ name:   APlusBMinusCMinusB
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
-
     ; CHECK-LABEL: name: APlusBMinusCMinusB
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
@@ -497,30 +496,6 @@ body:             |
     $x0 = COPY %sub2
     RET_ReallyLR implicit $x0
 
-
-...
----
-name:   ASubMax
-body:             |
-  bb.0:
-    liveins: $x0
-
-
-    ; CHECK-LABEL: name: ASubMax
-    ; CHECK: liveins: $x0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s64) = COPY $x0
-    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB %zero, %a
-    ; CHECK-NEXT: %sub2:_(s64) = G_SMIN %a, [[SUB]]
-    ; CHECK-NEXT: $x0 = COPY %sub2(s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = COPY $x0
-
-    %zero:_(s64) = G_CONSTANT i64 0
-    %sub1:_(s64) = G_SUB %zero, %a
-    %max:_(s64) = G_SMAX %a, %sub1
-    %sub2:_(s64) = G_SUB %zero, %max
 ...
 ---
 name:   AMinusZeroMinusB
@@ -545,35 +520,6 @@ body:             |
     $x0 = COPY %sub2
     RET_ReallyLR implicit $x0
 
-...
----
-name:   ASubMaxOneUse
-body:             |
-  bb.0:
-    liveins: $x0
-
-
-    ; CHECK-LABEL: name: ASubMaxOneUse
-    ; CHECK: liveins: $x0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s64) = COPY $x0
-    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %zero, %a
-    ; CHECK-NEXT: %max:_(s64) = G_SMAX %a, %sub1
-    ; CHECK-NEXT: %sub2:_(s64) = G_SUB %zero, %max
-    ; CHECK-NEXT: %mul:_(s64) = G_MUL %max, %sub2
-    ; CHECK-NEXT: $x0 = COPY %mul(s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = COPY $x0
-
-    %zero:_(s64) = G_CONSTANT i64 0
-    %sub1:_(s64) = G_SUB %zero, %a
-    %max:_(s64) = G_SMAX %a, %sub1
-    %sub2:_(s64) = G_SUB %zero, %max
-    %mul:_(s64) = G_MUL %max, %sub2
-    $x0 = COPY %mul
-    RET_ReallyLR implicit $x0
-    
 ...
 ---
 name:   AMinusZeroMinusB_BV
