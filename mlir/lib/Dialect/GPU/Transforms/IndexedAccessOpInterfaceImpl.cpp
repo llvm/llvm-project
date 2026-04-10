@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// Implement IndexedAccessOpInterface on GPU dialect operations that have
+// %memref[%i0, %i1, ...] arguments to allow them to be manipulated by
+// generic memref-dialect passes.
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/Transforms/IndexedAccessOpInterfaceImpl.h"
 
