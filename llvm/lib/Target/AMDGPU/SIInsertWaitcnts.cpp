@@ -3684,7 +3684,8 @@ bool SIInsertWaitcnts::run() {
 
   MachineBasicBlock &EntryBB = MF.front();
 
-  if (!MFI->isEntryFunction()) {
+  if (!MFI->isEntryFunction() &&
+      !MF.getFunction().hasFnAttribute(Attribute::Naked)) {
     // Wait for any outstanding memory operations that the input registers may
     // depend on. We can't track them and it's better to do the wait after the
     // costly call sequence.
