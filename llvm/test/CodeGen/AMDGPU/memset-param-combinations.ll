@@ -1834,9 +1834,9 @@ define void @memset_p1_varsz_align_4_set0(ptr addrspace(1) align 4 %dst, i64 %si
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX942-GISEL-NEXT:  ; %bb.1: ; %dynamic-memset-expansion-main-body.preheader
+; GFX942-GISEL-NEXT:    s_mov_b32 s1, s0
 ; GFX942-GISEL-NEXT:    s_mov_b32 s2, s0
 ; GFX942-GISEL-NEXT:    s_mov_b32 s3, s0
-; GFX942-GISEL-NEXT:    s_mov_b32 s1, s0
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[4:5]

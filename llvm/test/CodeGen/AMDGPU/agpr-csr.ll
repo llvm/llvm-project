@@ -124,8 +124,8 @@ define amdgpu_kernel void @test_call_empty() #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v31, v0
+; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX90A-NEXT:    s_mov_b32 s32, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -167,14 +167,14 @@ define amdgpu_kernel void @test_call_empty() #0 {
 ; GFX908-NEXT:    s_add_u32 s4, s4, func_empty@gotpcrel32@lo+4
 ; GFX908-NEXT:    s_addc_u32 s5, s5, func_empty@gotpcrel32@hi+12
 ; GFX908-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
-; GFX908-NEXT:    s_mov_b32 s14, s10
-; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX908-NEXT:    s_mov_b32 s14, s10
+; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[20:21]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    ;;#ASMSTART
@@ -259,8 +259,8 @@ define amdgpu_kernel void @test_call_areg4() #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v31, v0
+; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX90A-NEXT:    s_mov_b32 s32, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -302,14 +302,14 @@ define amdgpu_kernel void @test_call_areg4() #0 {
 ; GFX908-NEXT:    s_add_u32 s4, s4, func_areg_4@gotpcrel32@lo+4
 ; GFX908-NEXT:    s_addc_u32 s5, s5, func_areg_4@gotpcrel32@hi+12
 ; GFX908-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
-; GFX908-NEXT:    s_mov_b32 s14, s10
-; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX908-NEXT:    s_mov_b32 s14, s10
+; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[20:21]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    ;;#ASMSTART
@@ -394,8 +394,8 @@ define amdgpu_kernel void @test_call_areg32() #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v31, v0
+; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX90A-NEXT:    s_mov_b32 s32, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -437,14 +437,14 @@ define amdgpu_kernel void @test_call_areg32() #0 {
 ; GFX908-NEXT:    s_add_u32 s4, s4, func_areg_32@gotpcrel32@lo+4
 ; GFX908-NEXT:    s_addc_u32 s5, s5, func_areg_32@gotpcrel32@hi+12
 ; GFX908-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
-; GFX908-NEXT:    s_mov_b32 s14, s10
-; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX908-NEXT:    s_mov_b32 s14, s10
+; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[20:21]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    ;;#ASMSTART
@@ -529,8 +529,8 @@ define amdgpu_kernel void @test_call_areg64() #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v31, v0
+; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX90A-NEXT:    s_mov_b32 s32, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -572,14 +572,14 @@ define amdgpu_kernel void @test_call_areg64() #0 {
 ; GFX908-NEXT:    s_add_u32 s4, s4, func_areg_64@gotpcrel32@lo+4
 ; GFX908-NEXT:    s_addc_u32 s5, s5, func_areg_64@gotpcrel32@hi+12
 ; GFX908-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
-; GFX908-NEXT:    s_mov_b32 s14, s10
-; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX908-NEXT:    s_mov_b32 s14, s10
+; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[20:21]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    ;;#ASMSTART
@@ -664,8 +664,8 @@ define amdgpu_kernel void @test_call_areg31_63() #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v31, v0
+; GFX90A-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GFX90A-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX90A-NEXT:    s_mov_b32 s32, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -707,14 +707,14 @@ define amdgpu_kernel void @test_call_areg31_63() #0 {
 ; GFX908-NEXT:    s_add_u32 s4, s4, func_areg_31_63@gotpcrel32@lo+4
 ; GFX908-NEXT:    s_addc_u32 s5, s5, func_areg_31_63@gotpcrel32@hi+12
 ; GFX908-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
-; GFX908-NEXT:    s_mov_b32 s14, s10
-; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX908-NEXT:    s_mov_b32 s14, s10
+; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[20:21]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    ;;#ASMSTART
@@ -799,8 +799,8 @@ define amdgpu_kernel void @test_call_unknown() #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX90A-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX90A-NEXT:    v_mov_b32_e32 v31, v0
+; GFX90A-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX90A-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX90A-NEXT:    s_mov_b32 s32, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -842,14 +842,14 @@ define amdgpu_kernel void @test_call_unknown() #0 {
 ; GFX908-NEXT:    s_add_u32 s4, s4, func_unknown@gotpcrel32@lo+4
 ; GFX908-NEXT:    s_addc_u32 s5, s5, func_unknown@gotpcrel32@hi+12
 ; GFX908-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
-; GFX908-NEXT:    s_mov_b32 s14, s10
-; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX908-NEXT:    s_mov_b32 s14, s10
+; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    ;;#ASMSTART

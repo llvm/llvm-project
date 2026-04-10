@@ -339,12 +339,12 @@ define void @v_constained_fma_v4f16_fpexcept_strict_uni(<4 x half> inreg %x, <4 
 ; GFX8-NEXT:    v_fma_f16 v2, s5, v2, v3
 ; GFX8-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX8-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX8-NEXT:    s_and_b32 s5, 0xffff, s5
 ; GFX8-NEXT:    s_and_b32 s7, 0xffff, s10
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX8-NEXT:    s_and_b32 s5, 0xffff, s5
-; GFX8-NEXT:    s_or_b32 s4, s7, s4
 ; GFX8-NEXT:    s_and_b32 s6, 0xffff, s6
 ; GFX8-NEXT:    s_lshl_b32 s5, s5, 16
+; GFX8-NEXT:    s_or_b32 s4, s7, s4
 ; GFX8-NEXT:    s_or_b32 s5, s6, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
@@ -412,7 +412,7 @@ define void @v_constained_fma_v4f16_fpexcept_strict_uni(<4 x half> inreg %x, <4 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_pack_ll_b32_b16 s1, s17, s4
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")

@@ -572,8 +572,8 @@ define amdgpu_kernel void @s_cttz_i64(ptr addrspace(1) noalias %out, [8 x i32], 
 ; GFX10-GISEL-NEXT:    s_ff1_i32_b64 s0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_mov_b32 s1, 0
 ; GFX10-GISEL-NEXT:    s_min_u32 s0, s0, 64
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %cttz = call i64 @llvm.cttz.i64(i64 %val, i1 false)

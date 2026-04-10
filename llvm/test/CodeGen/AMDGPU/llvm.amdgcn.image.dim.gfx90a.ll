@@ -18,11 +18,11 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1
 ; GCN-LABEL: load_1d_lwe:
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
-; GCN-NEXT:    v_mov_b32_e32 v6, v0
 ; GCN-NEXT:    v_mov_b32_e32 v9, v8
 ; GCN-NEXT:    v_mov_b32_e32 v10, v8
 ; GCN-NEXT:    v_mov_b32_e32 v11, v8
 ; GCN-NEXT:    v_mov_b32_e32 v12, v8
+; GCN-NEXT:    v_mov_b32_e32 v6, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, v8
 ; GCN-NEXT:    v_mov_b32_e32 v1, v9
 ; GCN-NEXT:    v_mov_b32_e32 v2, v10

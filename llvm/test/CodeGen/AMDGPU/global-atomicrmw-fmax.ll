@@ -4215,9 +4215,9 @@ define double @global_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr add
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_max_f64 v[0:1], v[8:9], v[8:9]
 ; GFX7-NEXT:    v_max_f64 v[6:7], v[0:1], v[10:11]
+; GFX7-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, v7
-; GFX7-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX7-NEXT:    v_mov_b32_e32 v3, v9
 ; GFX7-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -4249,9 +4249,9 @@ define double @global_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr add
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    v_max_f64 v[0:1], v[8:9], v[8:9]
 ; GFX6-NEXT:    v_max_f64 v[6:7], v[0:1], v[10:11]
+; GFX6-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX6-NEXT:    v_mov_b32_e32 v1, v7
-; GFX6-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX6-NEXT:    v_mov_b32_e32 v3, v9
 ; GFX6-NEXT:    buffer_atomic_cmpswap_x2 v[0:3], v[4:5], s[4:7], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)

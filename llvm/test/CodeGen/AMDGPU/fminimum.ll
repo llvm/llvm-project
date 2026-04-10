@@ -1160,9 +1160,9 @@ define amdgpu_ps <8 x float> @test_fminimum_v4f64_ss(<4 x double> inreg %a, <4 x
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX9-SDAG-NEXT:    v_min_f64 v[2:3], s[0:1], v[0:1]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e32 vcc, s[0:1], v[0:1]
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v10, 0x7ff80000
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s11
 ; GFX9-SDAG-NEXT:    v_min_f64 v[4:5], s[2:3], v[1:2]
 ; GFX9-SDAG-NEXT:    v_cmp_u_f64_e64 s[0:1], s[2:3], v[1:2]
@@ -1196,9 +1196,9 @@ define amdgpu_ps <8 x float> @test_fminimum_v4f64_ss(<4 x double> inreg %a, <4 x
 ; GFX9-GISEL-NEXT:    s_mov_b32 s9, 0x7ff80000
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-GISEL-NEXT:    v_cmp_o_f64_e32 vcc, s[2:3], v[0:1]
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX9-GISEL-NEXT:    s_cselect_b64 s[10:11], s[0:1], s[8:9]
 ; GFX9-GISEL-NEXT:    v_min_f64 v[2:3], s[4:5], v[0:1]

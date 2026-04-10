@@ -410,9 +410,9 @@ define amdgpu_kernel void @s_fneg_fabs_v2bf16_non_bc_src(ptr addrspace(1) %out, 
 ; CI-NEXT:    v_add_f32_e64 v0, s3, 1.0
 ; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; CI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
+; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_or_b32_e32 v2, 0x80008000, v0
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    s_endpgm
 ;
@@ -442,9 +442,9 @@ define amdgpu_kernel void @s_fneg_fabs_v2bf16_non_bc_src(ptr addrspace(1) %out, 
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_lshrrev_b64 v[0:1], 16, v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_or_b32_e32 v2, 0x80008000, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
@@ -626,9 +626,9 @@ define amdgpu_kernel void @fneg_fabs_v4bf16(ptr addrspace(1) %out, <4 x bfloat> 
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_or_b32 s3, s3, 0x80008000
 ; CI-NEXT:    s_or_b32 s2, s2, 0x80008000
-; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
+; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CI-NEXT:    s_endpgm
@@ -652,9 +652,9 @@ define amdgpu_kernel void @fneg_fabs_v4bf16(ptr addrspace(1) %out, <4 x bfloat> 
 ; VI-NEXT:    s_lshl_b32 s4, s4, 16
 ; VI-NEXT:    s_or_b32 s3, s3, s5
 ; VI-NEXT:    s_or_b32 s2, s2, s4
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm

@@ -4263,8 +4263,8 @@ define amdgpu_ps i48 @s_ssubsat_i48(i48 inreg %lhs, i48 inreg %rhs) {
 ; GFX6-NEXT:    s_sub_u32 s4, s0, s2
 ; GFX6-NEXT:    s_subb_u32 s5, s1, s3
 ; GFX6-NEXT:    s_bfe_i64 s[0:1], s[0:1], 0x300000
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    s_bfe_i64 s[6:7], s[4:5], 0x300000
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, s[6:7], v[0:1]
 ; GFX6-NEXT:    s_or_b64 s[0:1], vcc, vcc
@@ -4286,8 +4286,8 @@ define amdgpu_ps i48 @s_ssubsat_i48(i48 inreg %lhs, i48 inreg %rhs) {
 ; GFX8-NEXT:    s_sub_u32 s4, s0, s2
 ; GFX8-NEXT:    s_subb_u32 s5, s1, s3
 ; GFX8-NEXT:    s_bfe_i64 s[0:1], s[0:1], 0x300000
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_bfe_i64 s[6:7], s[4:5], 0x300000
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[6:7], v[0:1]
 ; GFX8-NEXT:    s_cmp_lg_u64 vcc, 0
@@ -4309,8 +4309,8 @@ define amdgpu_ps i48 @s_ssubsat_i48(i48 inreg %lhs, i48 inreg %rhs) {
 ; GFX9-NEXT:    s_lshl_b64 s[0:1], s[0:1], 16
 ; GFX9-NEXT:    s_lshl_b64 s[2:3], s[2:3], 16
 ; GFX9-NEXT:    s_sub_u32 s4, s0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_subb_u32 s5, s1, s3
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX9-NEXT:    v_cmp_gt_i64_e64 s[0:1], s[2:3], 0
@@ -4626,8 +4626,8 @@ define amdgpu_ps i64 @s_ssubsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX6-LABEL: s_ssubsat_i64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_sub_u32 s4, s0, s2
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    s_subb_u32 s5, s1, s3
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX6-NEXT:    s_or_b64 s[0:1], vcc, vcc
@@ -4645,8 +4645,8 @@ define amdgpu_ps i64 @s_ssubsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX8-LABEL: s_ssubsat_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_sub_u32 s4, s0, s2
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_subb_u32 s5, s1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX8-NEXT:    v_cmp_gt_i64_e64 s[0:1], s[2:3], 0
@@ -4664,8 +4664,8 @@ define amdgpu_ps i64 @s_ssubsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX9-LABEL: s_ssubsat_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_sub_u32 s4, s0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_subb_u32 s5, s1, s3
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX9-NEXT:    v_cmp_gt_i64_e64 s[0:1], s[2:3], 0
@@ -4977,8 +4977,8 @@ define amdgpu_ps <2 x i64> @s_ssubsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX6-LABEL: s_ssubsat_v2i64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_sub_u32 s8, s0, s4
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    s_subb_u32 s9, s1, s5
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, s[8:9], v[0:1]
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s2
@@ -5011,8 +5011,8 @@ define amdgpu_ps <2 x i64> @s_ssubsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX8-LABEL: s_ssubsat_v2i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_sub_u32 s8, s0, s4
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_subb_u32 s9, s1, s5
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[8:9], v[0:1]
 ; GFX8-NEXT:    v_cmp_gt_i64_e64 s[0:1], s[4:5], 0
@@ -5026,8 +5026,8 @@ define amdgpu_ps <2 x i64> @s_ssubsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX8-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX8-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[8:9]
 ; GFX8-NEXT:    s_sub_u32 s4, s2, s6
-; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    s_subb_u32 s5, s3, s7
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX8-NEXT:    v_cmp_gt_i64_e64 s[2:3], s[6:7], 0
@@ -5045,8 +5045,8 @@ define amdgpu_ps <2 x i64> @s_ssubsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX9-LABEL: s_ssubsat_v2i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_sub_u32 s8, s0, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_subb_u32 s9, s1, s5
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[8:9], v[0:1]
 ; GFX9-NEXT:    v_cmp_gt_i64_e64 s[0:1], s[4:5], 0
@@ -5060,8 +5060,8 @@ define amdgpu_ps <2 x i64> @s_ssubsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX9-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[8:9]
 ; GFX9-NEXT:    s_sub_u32 s4, s2, s6
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    s_subb_u32 s5, s3, s7
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX9-NEXT:    v_cmp_gt_i64_e64 s[2:3], s[6:7], 0
@@ -5113,13 +5113,13 @@ define amdgpu_ps i128 @s_ssubsat_i128(i128 inreg %lhs, i128 inreg %rhs) {
 ; GFX6-LABEL: s_ssubsat_i128:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_sub_u32 s8, s0, s4
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    s_subb_u32 s9, s1, s5
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    s_subb_u32 s10, s2, s6
 ; GFX6-NEXT:    v_cmp_lt_u64_e32 vcc, s[8:9], v[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    s_subb_u32 s11, s3, s7
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX6-NEXT:    s_or_b64 s[0:1], vcc, vcc
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, s[10:11], v[0:1]
@@ -5152,13 +5152,13 @@ define amdgpu_ps i128 @s_ssubsat_i128(i128 inreg %lhs, i128 inreg %rhs) {
 ; GFX8-LABEL: s_ssubsat_i128:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_sub_u32 s8, s0, s4
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_subb_u32 s9, s1, s5
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    s_subb_u32 s10, s2, s6
 ; GFX8-NEXT:    v_cmp_lt_u64_e32 vcc, s[8:9], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    s_subb_u32 s11, s3, s7
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[10:11], v[0:1]
@@ -5189,13 +5189,13 @@ define amdgpu_ps i128 @s_ssubsat_i128(i128 inreg %lhs, i128 inreg %rhs) {
 ; GFX9-LABEL: s_ssubsat_i128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_sub_u32 s8, s0, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_subb_u32 s9, s1, s5
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    s_subb_u32 s10, s2, s6
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[8:9], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    s_subb_u32 s11, s3, s7
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[10:11], v[0:1]
@@ -5851,13 +5851,13 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX6-LABEL: s_ssubsat_v2i128:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_sub_u32 s16, s0, s8
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    s_subb_u32 s17, s1, s9
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    s_subb_u32 s18, s2, s10
 ; GFX6-NEXT:    v_cmp_lt_u64_e32 vcc, s[16:17], v[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    s_subb_u32 s19, s3, s11
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX6-NEXT:    s_or_b64 s[0:1], vcc, vcc
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, s[18:19], v[0:1]
@@ -5886,13 +5886,13 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[16:17]
 ; GFX6-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[18:19]
 ; GFX6-NEXT:    s_sub_u32 s8, s4, s12
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_subb_u32 s9, s5, s13
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_subb_u32 s10, s6, s14
 ; GFX6-NEXT:    v_cmp_lt_u64_e32 vcc, s[8:9], v[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX6-NEXT:    s_subb_u32 s11, s7, s15
+; GFX6-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX6-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, s[10:11], v[0:1]
@@ -5925,13 +5925,13 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX8-LABEL: s_ssubsat_v2i128:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_sub_u32 s16, s0, s8
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_subb_u32 s17, s1, s9
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    s_subb_u32 s18, s2, s10
 ; GFX8-NEXT:    v_cmp_lt_u64_e32 vcc, s[16:17], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    s_subb_u32 s19, s3, s11
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[18:19], v[0:1]
@@ -5958,13 +5958,13 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX8-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[16:17]
 ; GFX8-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[18:19]
 ; GFX8-NEXT:    s_sub_u32 s8, s4, s12
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_subb_u32 s9, s5, s13
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_subb_u32 s10, s6, s14
 ; GFX8-NEXT:    v_cmp_lt_u64_e32 vcc, s[8:9], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    s_subb_u32 s11, s7, s15
+; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX8-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[10:11], v[0:1]
@@ -5995,13 +5995,13 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX9-LABEL: s_ssubsat_v2i128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_sub_u32 s16, s0, s8
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_subb_u32 s17, s1, s9
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    s_subb_u32 s18, s2, s10
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[16:17], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    s_subb_u32 s19, s3, s11
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[18:19], v[0:1]
@@ -6028,13 +6028,13 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[16:17]
 ; GFX9-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[18:19]
 ; GFX9-NEXT:    s_sub_u32 s8, s4, s12
-; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_subb_u32 s9, s5, s13
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    s_subb_u32 s10, s6, s14
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[8:9], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX9-NEXT:    s_subb_u32 s11, s7, s15
+; GFX9-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[10:11], v[0:1]

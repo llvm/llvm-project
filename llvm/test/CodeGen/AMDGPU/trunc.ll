@@ -99,8 +99,8 @@ define amdgpu_kernel void @trunc_shl_i64(ptr addrspace(1) %out2, ptr addrspace(1
 ; SI-NEXT:    s_mov_b32 s1, s3
 ; SI-NEXT:    s_mov_b32 s2, s6
 ; SI-NEXT:    s_mov_b32 s3, s7
-; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    s_addc_u32 s9, s9, 0
+; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
