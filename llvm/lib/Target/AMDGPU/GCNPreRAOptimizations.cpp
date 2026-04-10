@@ -256,56 +256,15 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
             TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
         const MachineOperand *Src2MO =
             TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-        if (!DstMO || !Src2MO || !DstMO->isReg() || !Src2MO->isReg())
+        if (!Src2MO->isReg())
           continue;
         Register Dst = DstMO->getReg();
         Register Src2 = Src2MO->getReg();
         if (!Dst.isVirtual() || !Src2.isVirtual())
           continue;
-        LLVM_DEBUG(dbgs() << "Setting hint for "; MI.dump());
-        LLVM_DEBUG(dbgs() << " Dst: "; DstMO->dump(); dbgs() << " Src2: ";
-                   Src2MO->dump());
-        MFMAHints.unionSets(Dst, Src2);
-      }
-    }
-
-    auto CheckAllCompatibleRC =
-        [&](const EquivalenceClasses<llvm::Register>::ECValue *I) -> bool {
-      assert(I->isLeader());
-      for (auto AI = MFMAHints.member_begin(*I), End = MFMAHints.member_end();
-           AI != End; ++AI) {
-        Register A = *AI;
-        assert(A.isVirtual());
-        const TargetRegisterClass *ARC = MRI->getRegClass(A);
-        for (auto BI = std::next(AI); BI != End; ++BI) {
-          Register B = *BI;
-          assert(B.isVirtual());
-          const TargetRegisterClass *BRC = MRI->getRegClass(B);
-
-          if (!TRI->getCommonSubClass(ARC, BRC))
-            return false;
-        }
-      }
-      return true;
-    };
-
-    for (const EquivalenceClasses<llvm::Register>::ECValue *I : MFMAHints) {
-      if (!I->isLeader())
-        continue;
-      if (!CheckAllCompatibleRC(I))
-        continue;
-
-      for (auto AI = MFMAHints.member_begin(*I), End = MFMAHints.member_end();
-           AI != End; ++AI) {
-        Register A = *AI;
-        assert(A.isVirtual());
-        for (auto BI = std::next(AI); BI != End; ++BI) {
-          Register B = *BI;
-          assert(B.isVirtual());
-
-          MRI->addRegAllocationHint(A, B);
-          MRI->addRegAllocationHint(B, A);
-        }
+        LLVM_DEBUG(dbgs() << "Setting hint for " << MI << " Dst: " << *DstMO
+                          << " Src2: " << *Src2MO << "\n");
+        MRI->addChainHint(Dst, Src2);
       }
     }
   }
