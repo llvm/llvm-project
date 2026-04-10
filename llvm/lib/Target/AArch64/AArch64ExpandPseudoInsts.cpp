@@ -1375,20 +1375,14 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
-  const AArch64Subtarget &STI =
-      MBB.getParent()->getSubtarget<AArch64Subtarget>();
 
-  // Check if we can expand the destructive op. We check target features to
-  // avoid compile-time cost of AArch64::getSVEPseudoMap if not required by
-  // target.
-  if (STI.hasSVE() || STI.hasSME()) {
-    int OrigInstr = AArch64::getSVEPseudoMap(MI.getOpcode());
-    if (OrigInstr != -1) {
-      auto &Orig = TII->get(OrigInstr);
-      if ((Orig.TSFlags & AArch64::DestructiveInstTypeMask) !=
-          AArch64::NotDestructive) {
-        return expand_DestructiveOp(MI, MBB, MBBI);
-      }
+  // Check if we can expand the destructive op
+  int OrigInstr = AArch64::getSVEPseudoMap(MI.getOpcode());
+  if (OrigInstr != -1) {
+    auto &Orig = TII->get(OrigInstr);
+    if ((Orig.TSFlags & AArch64::DestructiveInstTypeMask) !=
+        AArch64::NotDestructive) {
+      return expand_DestructiveOp(MI, MBB, MBBI);
     }
   }
 
