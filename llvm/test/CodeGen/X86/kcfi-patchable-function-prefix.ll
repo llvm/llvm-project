@@ -7,12 +7,12 @@
 ; CHECK-LABEL:    .Lcfi_func_end0:
 ; CHECK-NEXT:     .size   __cfi_f1, .Lcfi_func_end0-__cfi_f1
 ; CHECK-LABEL:    f1:
-; CHECK:          .Lfunc_end0:
 define void @f1(ptr noundef %x) !kcfi_type !1 {
 ; CHECK:            addl -4(%r{{..}}), %r10d
   call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }
+; CHECK:          .Lfunc_end0:
 
 ; CHECK:          .prefalign 4
 ; CHECK-NOT:      __cfi_f2:
