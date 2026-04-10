@@ -15,6 +15,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/Support/Compiler.h"
 
 //===----------------------------------------------------------------------===//
 // Complex Dialect
@@ -35,7 +36,11 @@
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Complex/IR/ComplexOps.h.inc"
 
+// std::complex<APFloat> is a non-standard instantiation that triggers
+// MSVC STL4037 deprecation warnings in the generated attribute code.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Complex/IR/ComplexAttributes.h.inc"
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 #endif // MLIR_DIALECT_COMPLEX_IR_COMPLEX_H_

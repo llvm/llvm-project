@@ -10,6 +10,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "gtest/gtest.h"
 #include <optional>
 
@@ -198,21 +199,27 @@ TEST(DenseComplexTest, ComplexFloatSplat) {
 TEST(DenseComplexTest, ComplexIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   std::complex<int64_t> value(10, 15);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexAPFloatSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(Float32Type::get(&context));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   std::complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexAPIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   std::complex<APInt> value(APInt(64, 10), APInt(64, 15));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   testSplat(complexType, value);
 }
 

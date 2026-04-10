@@ -12,6 +12,7 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include <complex>
 #include <optional>
 
@@ -294,6 +295,10 @@ public:
     size_t bitWidth;
   };
 
+  // std::complex<APInt> and std::complex<APFloat> are non-standard
+  // instantiations that trigger MSVC STL4037 deprecation warnings.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
   /// A utility iterator that allows walking over the internal raw complex APInt
   /// values.
   class ComplexIntElementIterator
@@ -357,6 +362,8 @@ public:
     /// The float semantics to use when constructing the APFloat.
     const llvm::fltSemantics *smt;
   };
+
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   //===--------------------------------------------------------------------===//
   // Value Querying
