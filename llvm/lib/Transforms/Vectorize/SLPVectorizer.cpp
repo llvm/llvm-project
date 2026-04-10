@@ -258,34 +258,6 @@ static const int MinScheduleRegionSize = 16;
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
 
-/// For the non-trivially vectorizable intrinsics calls, try to vectorize their
-/// operands.
-/// FIXME: Extend for all non-vectorized functions.
-SmallVector<Value *, 4>
-getNonTriviallyVectorizableIntrinsicCallOperand(Value *V) {
-
-  auto *II = dyn_cast<IntrinsicInst>(V);
-  if (!II || isAssumeLikeIntrinsic(II))
-    return {};
-
-  if (isTriviallyVectorizable(II->getIntrinsicID()))
-    return {};
-
-  // Skip vector-returning intrinsics in non-revec mode.
-  if (!SLPReVec && II->getType()->isVectorTy())
-    return {};
-
-  // FIXME: Add non-instructions operands to the list.
-  SmallVector<Value *, 4> Operands;
-  for (Value *ArgOp : II->args()) {
-    if (auto *I = dyn_cast<Instruction>(ArgOp)) {
-      Operands.emplace_back(I);
-    }
-  }
-
-  return Operands;
-}
-
 /// Predicate for the element types that the SLP vectorizer supports.
 ///
 /// The most important thing to filter here are types which are invalid in LLVM
@@ -29232,89 +29204,6 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
   return Changed;
 }
 
-bool SLPVectorizerPass::vectorizeNonTriviallyVectrizableIntrinsicCallOperand(
-    InstSetVector &IIs, BasicBlock *BB, BoUpSLP &R) {
-
-  bool Changed = false;
-
-  // Pass1 - try to find horizontal reductions of operands.
-  for (Instruction *I : IIs) {
-    auto *II = dyn_cast<IntrinsicInst>(I);
-    if (!II || R.isDeleted(II))
-      continue;
-    for (Value *Op : II->args())
-      if (auto *RootOp = dyn_cast<Instruction>(Op)) {
-        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R);
-        if (R.isDeleted(II))
-          break;
-      }
-  }
-  // Operands sorter.
-  auto OperandSorter = [this](Value *V1, Value *V2) -> bool {
-    if (V1 == V2)
-      return false;
-    auto *I1 = cast<Instruction>(V1);
-    auto *I2 = cast<Instruction>(V2);
-    if (I1->getType()->getTypeID() != I2->getType()->getTypeID())
-      return I1->getType()->getTypeID() < I2->getType()->getTypeID();
-    if (I1->getType()->getScalarSizeInBits() !=
-        I2->getType()->getScalarSizeInBits())
-      return I1->getType()->getScalarSizeInBits() <
-             I2->getType()->getScalarSizeInBits();
-    DomTreeNodeBase<BasicBlock> *Node1 = DT->getNode(I1->getParent());
-    DomTreeNodeBase<BasicBlock> *Node2 = DT->getNode(I2->getParent());
-    if (!Node1)
-      return Node2 != nullptr;
-    if (!Node2)
-      return false;
-    if (Node1->getDFSNumIn() == Node2->getDFSNumIn()) {
-      if (I1->getOpcode() != I2->getOpcode())
-        return I1->getOpcode() < I2->getOpcode();
-      return I1->comesBefore(I2);
-    }
-    return Node1->getDFSNumIn() < Node2->getDFSNumIn();
-  };
-
-  // Compatibility checker for the operands.
-  auto AreCompatibleOperands = [](ArrayRef<Value *> VL, Value *V) -> bool {
-    if (VL.empty() || VL.back() == V)
-      return true;
-    auto *I1 = cast<Instruction>(VL.back());
-    auto *I2 = cast<Instruction>(V);
-    return I1->getType() == I2->getType() &&
-           I1->getParent() == I2->getParent() &&
-           I1->getOpcode() == I2->getOpcode();
-  };
-
-  // Collect the operands of the non-trivially-vectorizable intrinsic calls.
-  SmallVector<Value *, 4> CandidateSeeds;
-  for (Instruction *I : IIs) {
-    auto *II = dyn_cast<IntrinsicInst>(I);
-    if (!II || R.isDeleted(II))
-      continue;
-    SmallVector<Value *, 4> Ops =
-        getNonTriviallyVectorizableIntrinsicCallOperand(II);
-    for (Value *Op : Ops)
-      if (isa<Instruction>(Op))
-        CandidateSeeds.push_back(Op);
-  }
-
-  auto CandidatesFiltered = make_filter_range(CandidateSeeds, [&](Value *V) {
-    auto *I = dyn_cast<Instruction>(V);
-    return I && !R.isDeleted(I) && isValidElementType(I->getType());
-  });
-  SmallVector<Value *, 4> CandidateVec(CandidatesFiltered);
-  // Pass2 - try to vectorize the operands.
-  Changed |= tryToVectorizeSequence<Value>(
-      CandidateVec, OperandSorter, AreCompatibleOperands,
-      [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
-        return tryToVectorizeList(Candidates, R, MaxVFOnly);
-      },
-      /*MaxVFOnly=*/true, R);
-
-  return Changed;
-}
-
 bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
                                          BasicBlock *BB, BoUpSLP &R) {
   assert(all_of(Instructions, IsaPred<InsertElementInst, InsertValueInst>) &&
@@ -29587,33 +29476,21 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   InstSetVector PostProcessInserts;
   SmallSetVector<CmpInst *, 8> PostProcessCmps;
-  InstSetVector PostProcessIntrinsicCalls;
-  // Vectorizes Inserts in `PostProcessInserts` and if `AtTerminator` is true
-  // also vectorizes `PostProcessCmps` and `PostProcessIntrinsicCalls`.
-  auto VectorizeInsertsAndCmps = [&](bool AtTerminator) {
+  // Vectorizes Inserts in `PostProcessInserts` and if `VectorizeCmps` is true
+  // also vectorizes `PostProcessCmps`.
+  auto VectorizeInsertsAndCmps = [&](bool VectorizeCmps) {
     bool Changed = vectorizeInserts(PostProcessInserts, BB, R);
-    if (AtTerminator) {
+    if (VectorizeCmps) {
       Changed |= vectorizeCmpInsts(reverse(PostProcessCmps), BB, R);
       PostProcessCmps.clear();
-      Changed |= vectorizeNonTriviallyVectrizableIntrinsicCallOperand(
-          PostProcessIntrinsicCalls, BB, R);
-      PostProcessIntrinsicCalls.clear();
     }
     PostProcessInserts.clear();
     return Changed;
-  };
-  auto isNonTriviallyVectorizableIntrinsic = [](const IntrinsicInst *II) {
-    return !isTriviallyVectorizable(II->getIntrinsicID()) &&
-           !isAssumeLikeIntrinsic(II) &&
-           !(!SLPReVec && II->getType()->isVectorTy());
   };
   // Returns true if `I` is in `PostProcessInserts` or `PostProcessCmps`.
   auto IsInPostProcessInstrs = [&](Instruction *I) {
     if (auto *Cmp = dyn_cast<CmpInst>(I))
       return PostProcessCmps.contains(Cmp);
-    if (auto *II = dyn_cast<IntrinsicInst>(I);
-        II && isNonTriviallyVectorizableIntrinsic(II))
-      return PostProcessIntrinsicCalls.contains(II);
     return isa<InsertElementInst, InsertValueInst>(I) &&
            PostProcessInserts.contains(I);
   };
@@ -29624,11 +29501,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     return I->use_empty() &&
            (I->getType()->isVoidTy() || isa<CallInst, InvokeInst>(I));
   };
-  SmallMapVector<std::pair<Intrinsic::ID, unsigned>, // (ID, OpIndex)
-                 SmallMapVector<unsigned,            // Opcode
-                                SmallVector<Value *, 4>, 4>,
-                 4>
-      IntrinsicSeedOps;
   for (BasicBlock::iterator It = BB->begin(), E = BB->end(); It != E; ++It) {
     // Skip instructions with scalable type. The num of elements is unknown at
     // compile-time for scalable type.
@@ -29641,7 +29513,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     // We may go through BB multiple times so skip the one we have checked.
     if (!VisitedInstrs.insert(&*It).second) {
       if (HasNoUsers(&*It) &&
-          VectorizeInsertsAndCmps(/*AtTerminator=*/It->isTerminator())) {
+          VectorizeInsertsAndCmps(/*VectorizeCmps=*/It->isTerminator())) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.
         Changed = true;
@@ -29721,7 +29593,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // top-tree instructions to try to vectorize as many instructions as
       // possible.
       OpsChanged |=
-          VectorizeInsertsAndCmps(/*AtTerminator=*/It->isTerminator());
+          VectorizeInsertsAndCmps(/*VectorizeCmps=*/It->isTerminator());
       if (OpsChanged) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.
@@ -29736,9 +29608,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       PostProcessInserts.insert(&*It);
     else if (isa<CmpInst>(It))
       PostProcessCmps.insert(cast<CmpInst>(&*It));
-    else if (auto *II = dyn_cast<IntrinsicInst>(&*It);
-             II && isNonTriviallyVectorizableIntrinsic(II))
-      PostProcessIntrinsicCalls.insert(II);
   }
 
   return Changed;

@@ -622,5 +622,5 @@ unsigned DenseMapInfo<StringRef, void>::getHashValue(StringRef Val) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   hash ^= hashing::detail::get_execution_seed();
 #endif
-  return hash;
+  return static_cast<unsigned>(hash);
 }

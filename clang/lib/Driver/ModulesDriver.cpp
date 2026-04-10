@@ -749,6 +749,8 @@ public:
   CGNode(const NodeKind K) : Kind(K) {}
   CGNode(const CGNode &) = delete;
   CGNode(CGNode &&) = delete;
+  CGNode &operator=(const CGNode &) = delete;
+  CGNode &operator=(CGNode &&) = delete;
   virtual ~CGNode() = 0;
 
   NodeKind getKind() const { return Kind; }
@@ -893,6 +895,10 @@ public:
   };
 
   CGEdge(CGNode &N, EdgeKind K) : CGEdgeBase(N), Kind(K) {}
+  CGEdge(const CGEdge &) = delete;
+  CGEdge &operator=(const CGEdge &) = delete;
+  CGEdge(CGEdge &&) = delete;
+  CGEdge &operator=(CGEdge &&) = delete;
 
   EdgeKind getKind() const { return Kind; }
 
@@ -909,7 +915,10 @@ class CompilationGraph : public CGBase {
 public:
   CompilationGraph() = default;
   CompilationGraph(const CompilationGraph &) = delete;
+  CompilationGraph &operator=(const CompilationGraph &) = delete;
   CompilationGraph(CompilationGraph &&G) = default;
+  CompilationGraph &operator=(CompilationGraph &&) = default;
+  ~CompilationGraph() = default;
 
   CGNode &getRoot() const {
     assert(Root && "Root node has not yet been created!");
@@ -1223,7 +1232,7 @@ static SmallVector<JobNode *> createNodesForUnusedStdlibModuleJobs(
 }
 
 /// Creates a job for the Clang module described by \p MD.
-static std::unique_ptr<CC1Command>
+static std::unique_ptr<Command>
 createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
                                const deps::ModuleDeps &MD) {
   DerivedArgList &Args = C.getArgs();
@@ -1243,11 +1252,11 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   for (const auto &Arg : BuildArgs)
     JobArgs.push_back(TCArgs.MakeArgString(Arg));
 
-  return std::make_unique<CC1Command>(
-      *PA, ImportingJob.getCreator(), ResponseFileSupport::AtFileUTF8(),
-      C.getDriver().getClangProgramPath(), JobArgs,
-      /*Inputs=*/ArrayRef<InputInfo>{},
-      /*Outputs=*/ArrayRef<InputInfo>{});
+  return std::make_unique<Command>(*PA, ImportingJob.getCreator(),
+                                   ResponseFileSupport::AtFileUTF8(),
+                                   C.getDriver().getClangProgramPath(), JobArgs,
+                                   /*Inputs=*/ArrayRef<InputInfo>{},
+                                   /*Outputs=*/ArrayRef<InputInfo>{});
 }
 
 /// Creates a \c ClangModuleJobNode with associated job for each unique Clang
@@ -1496,6 +1505,19 @@ static void createAndConnectRoot(CompilationGraph &Graph) {
   }
 }
 
+/// Moves jobs from \p Graph into \p C in the graph's topological order.
+static void feedJobsBackIntoCompilation(Compilation &C,
+                                        CompilationGraph &&Graph) {
+  llvm::ReversePostOrderTraversal<CompilationGraph *> TopologicallySortedNodes(
+      &Graph);
+  assert(isa<RootNode>(*TopologicallySortedNodes.begin()) &&
+         "First node in topological order must be the root!");
+  auto TopologicallySortedJobNodes = llvm::map_range(
+      llvm::drop_begin(TopologicallySortedNodes), llvm::CastTo<JobNode>);
+  for (auto *JN : TopologicallySortedJobNodes)
+    C.addCommand(std::move(JN->Job));
+}
+
 void driver::modules::runModulesDriver(
     Compilation &C, ArrayRef<StdModuleManifest::Module> ManifestEntries) {
   llvm::PrettyStackTraceString CrashInfo("Running modules driver.");
@@ -1554,12 +1576,5 @@ void driver::modules::runModulesDriver(
 
   // TODO: Fix-up command-lines for named module imports.
 
-  llvm::ReversePostOrderTraversal<CompilationGraph *> TopologicallySortedNodes(
-      &Graph);
-  assert(isa<RootNode>(*TopologicallySortedNodes.begin()) &&
-         "First node in topological order must be the root!");
-  auto TopologicallySortedJobNodes = llvm::map_range(
-      llvm::drop_begin(TopologicallySortedNodes), llvm::CastTo<JobNode>);
-  for (auto *JN : TopologicallySortedJobNodes)
-    C.addCommand(std::move(JN->Job));
+  feedJobsBackIntoCompilation(C, std::move(Graph));
 }

@@ -7289,6 +7289,18 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
         T[0].State = CurState;
     }
 
+    // Restore the push stack so that unmatched pushes from a preamble are
+    // visible when the main file is parsed, allowing the corresponding
+    // `#pragma diagnostic pop` to succeed.
+    assert(Idx < Record.size() &&
+           "Invalid data, missing diagnostic push stack");
+    unsigned NumPushes = Record[Idx++];
+    for (unsigned I = 0; I != NumPushes; ++I) {
+      auto *State = ReadDiagState(*FirstState, false);
+      if (!F.isModule())
+        Diag.DiagStateOnPushStack.push_back(State);
+    }
+
     // Don't try to read these mappings again.
     Record.clear();
   }
