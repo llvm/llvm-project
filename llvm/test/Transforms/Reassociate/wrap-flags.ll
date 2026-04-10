@@ -78,8 +78,8 @@ define i2 @pr23926(i2 %X1, i2 %X2) {
 ;
 ; CHECK-LABEL: @pr23926(
 ; CHECK-NEXT:    [[X1_NEG:%.*]] = sub i2 0, [[X1:%.*]]
-; CHECK-NEXT:    [[ADD_NEG:%.*]] = add i2 [[X1_NEG]], -1
-; CHECK-NEXT:    [[SUB:%.*]] = add i2 [[ADD_NEG]], [[X2:%.*]]
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = add i2 [[X2:%.*]], [[X1_NEG]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i2 [[ADD_NEG]], -1
 ; CHECK-NEXT:    ret i2 [[SUB]]
 ;
   %add = add nuw i2 %X1, 1

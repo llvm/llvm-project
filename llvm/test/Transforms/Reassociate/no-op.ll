@@ -10,9 +10,9 @@ define void @test1(i32 %a, i32 %b) {
 ; Shouldn't change or move any of the add instructions.  Should commute but
 ; otherwise not change or move any of the mul instructions.
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[A0:%.*]] = add nsw i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[M0:%.*]] = mul nsw i32 [[A]], 3
-; CHECK-NEXT:    [[A1:%.*]] = add nsw i32 [[A0]], [[B:%.*]]
+; CHECK-NEXT:    [[M0:%.*]] = mul nsw i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[A0:%.*]] = add i32 [[B:%.*]], [[A]]
+; CHECK-NEXT:    [[A1:%.*]] = add i32 [[A0]], 1
 ; CHECK-NEXT:    [[M1:%.*]] = mul nsw i32 [[M0]], [[B]]
 ; CHECK-NEXT:    call void @use(i32 [[A1]])
 ; CHECK-NEXT:    call void @use(i32 [[M1]])

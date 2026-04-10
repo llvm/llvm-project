@@ -316,11 +316,11 @@ define i32 @xor_bug2(i32, i32, i32, i32) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[TMP9]], [[AND_RA]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[TMP10]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i32 [[TMP3:%.*]], 255
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP1]], 32
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[TMP15]], [[TMP11]]
-; CHECK-NEXT:    ret i32 [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], 32
+; CHECK-NEXT:    ret i32 [[TMP17]]
 ;
   %5 = mul i32 %0, 123
   %6 = add i32 %2, 24

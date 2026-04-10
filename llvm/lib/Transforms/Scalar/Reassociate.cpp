@@ -966,7 +966,7 @@ static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
 static bool ShouldBreakUpSubtract(Instruction *Sub) {
   // If this is a negation, we can't split it up!
-  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value()))) 
+  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value())))
     return false;
 
   // Don't breakup X - undef.
@@ -2477,6 +2477,25 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   }
   LLVM_DEBUG(dbgs() << "RAOut after CSE reorder:\t"; PrintOps(I, Ops);
              dbgs() << '\n');
+
+  // For integer add trees with a single constant operand, hoist it outside to
+  // the outermost add:
+  //   (X + C) + Y -> (X + Y) + C
+  if (I->getOpcode() == Instruction::Add && Ops.size() > 2 &&
+      isa<Constant>(Ops.back().Op)) {
+    bool HasOtherConstant = false;
+    for (unsigned Idx = 0, End = Ops.size() - 1; Idx != End; ++Idx) {
+      if (isa<Constant>(Ops[Idx].Op)) {
+        HasOtherConstant = true;
+        break;
+      }
+    }
+    if (!HasOtherConstant) {
+      ValueEntry ConstOp = Ops.pop_back_val();
+      Ops.insert(Ops.begin(), ConstOp);
+    }
+  }
+
   // Now that we ordered and optimized the expressions, splat them back into
   // the expression tree, removing any unneeded nodes.
   RewriteExprTree(I, Ops, Flags);

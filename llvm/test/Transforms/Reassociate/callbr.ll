@@ -4,12 +4,12 @@
 define i32 @test(i1 %b) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[RES:%.*]] = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:    to label [[NORMAL:%.*]] [label %abnormal]
+; CHECK-NEXT:    to label [[NORMAL:%.*]] [label [[ABNORMAL:%.*]]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    [[RES_NEG:%.*]] = sub i32 0, [[RES]]
-; CHECK-NEXT:    [[SUB1:%.*]] = add i32 [[RES_NEG]], 5
 ; CHECK-NEXT:    [[RES_NEG1:%.*]] = sub i32 0, [[RES]]
-; CHECK-NEXT:    [[SUB2:%.*]] = add i32 [[SUB1]], [[RES_NEG1]]
+; CHECK-NEXT:    [[SUB1:%.*]] = add i32 [[RES_NEG1]], [[RES_NEG]]
+; CHECK-NEXT:    [[SUB2:%.*]] = add i32 [[SUB1]], 5
 ; CHECK-NEXT:    ret i32 [[SUB2]]
 ; CHECK:       abnormal:
 ; CHECK-NEXT:    ret i32 0

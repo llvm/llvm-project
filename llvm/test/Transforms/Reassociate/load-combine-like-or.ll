@@ -118,8 +118,8 @@ define i16 @n5(ptr %ptr, i8 %lowbits) {
 ; CHECK-NEXT:    [[I2:%.*]] = zext i8 [[I]] to i16
 ; CHECK-NEXT:    [[I3:%.*]] = shl i16 [[I2]], 8
 ; CHECK-NEXT:    [[I4:%.*]] = zext i8 [[LOWBITS:%.*]] to i16
-; CHECK-NEXT:    [[I5:%.*]] = add i16 [[I4]], 42
-; CHECK-NEXT:    [[I6:%.*]] = add i16 [[I5]], [[I3]]
+; CHECK-NEXT:    [[I5:%.*]] = add nuw nsw i16 [[I3]], [[I4]]
+; CHECK-NEXT:    [[I6:%.*]] = add i16 [[I5]], 42
 ; CHECK-NEXT:    ret i16 [[I6]]
 ;
   %i = load i8, ptr %ptr
@@ -138,8 +138,8 @@ define i16 @n6(ptr %ptr, i8 %highbits) {
 ; CHECK-NEXT:    [[I4:%.*]] = shl i16 42, 8
 ; CHECK-NEXT:    [[I5:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i8 [[I5]] to i16
-; CHECK-NEXT:    [[I7:%.*]] = add i16 [[I4]], 42
-; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], [[I6]]
+; CHECK-NEXT:    [[I7:%.*]] = add nuw nsw i16 [[I6]], [[I4]]
+; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], 42
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
   %i = getelementptr inbounds i8, ptr %ptr, i64 1
