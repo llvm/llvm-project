@@ -714,15 +714,9 @@ define { float, float, float } @mul_three_contractable_uses(float %a, float %b, 
   ret { float, float, float } %ret2
 }
 
-
 ; ==========================================================================
 ; FNEG patterns
 ; Tests for allMulUsesCanBeContracted recognizing fneg as a transparent user.
-;
-; NOTE: The allMulUsesCanBeContracted guard does not yet recognize fneg as
-; transparent. That support is added by the next patch in the series. Until
-; then, the CHECK lines below reflect current (potentially over-conservative)
-; codegen and may not match the "Expected:" comments on individual tests.
 ; ==========================================================================
 
 ; Test case: fmul -> fneg -> fsub (single use chain).
@@ -731,55 +725,55 @@ define { float, float, float } @mul_three_contractable_uses(float %a, float %b, 
 ; Should contract -- single-use chain, fneg folds into fma.
 ; Expected: single fma/mad, no v_mul.
 define float @mul_fneg_fsub_single_use(float %a, float %b, float %c) {
-; P0-GFX9-SDAG-F32FLUSH-LABEL: mul_fneg_fsub_single_use:
-; P0-GFX9-SDAG-F32FLUSH:       ; %bb.0:
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v0, v0, -v1, -v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32FLUSH-LABEL: mul_fneg_fsub_single_use:
+; GFX9-SDAG-F32FLUSH:       ; %bb.0:
+; GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v0, v0, -v1, -v2
+; GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32FLUSH-LABEL: mul_fneg_fsub_single_use:
-; P0-GFX9-GISEL-F32FLUSH:       ; %bb.0:
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v0, v0, -v1, -v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32FLUSH-LABEL: mul_fneg_fsub_single_use:
+; GFX9-GISEL-F32FLUSH:       ; %bb.0:
+; GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v0, v0, -v1, -v2
+; GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-SDAG-LABEL: mul_fneg_fsub_single_use:
-; P0-GFX9_4-SDAG:       ; %bb.0:
-; P0-GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v0, -v0, v1, -v2
-; P0-GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-SDAG-LABEL: mul_fneg_fsub_single_use:
+; GFX9_4-SDAG:       ; %bb.0:
+; GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v0, -v0, v1, -v2
+; GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-GISEL-LABEL: mul_fneg_fsub_single_use:
-; P0-GFX9_4-GISEL:       ; %bb.0:
-; P0-GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v0, v0, -v1, -v2
-; P0-GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-GISEL-LABEL: mul_fneg_fsub_single_use:
+; GFX9_4-GISEL:       ; %bb.0:
+; GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v0, v0, -v1, -v2
+; GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX12_5-SDAG-LABEL: mul_fneg_fsub_single_use:
-; P0-GFX12_5-SDAG:       ; %bb.0:
-; P0-GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    v_fma_f32 v0, -v0, v1, -v2
-; P0-GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-SDAG-LABEL: mul_fneg_fsub_single_use:
+; GFX12_5-SDAG:       ; %bb.0:
+; GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-SDAG-NEXT:    v_fma_f32 v0, -v0, v1, -v2
+; GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX12_5-GISEL-LABEL: mul_fneg_fsub_single_use:
-; P0-GFX12_5-GISEL:       ; %bb.0:
-; P0-GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    v_fma_f32 v0, v0, -v1, -v2
-; P0-GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-GISEL-LABEL: mul_fneg_fsub_single_use:
+; GFX12_5-GISEL:       ; %bb.0:
+; GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-GISEL-NEXT:    v_fma_f32 v0, v0, -v1, -v2
+; GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX9-SDAG-F32DENORM-LABEL: mul_fneg_fsub_single_use:
-; P0-GFX9-SDAG-F32DENORM:       ; %bb.0:
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v0, -v0, v1, -v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32DENORM-LABEL: mul_fneg_fsub_single_use:
+; GFX9-SDAG-F32DENORM:       ; %bb.0:
+; GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v0, -v0, v1, -v2
+; GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32DENORM-LABEL: mul_fneg_fsub_single_use:
-; P0-GFX9-GISEL-F32DENORM:       ; %bb.0:
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v0, v0, -v1, -v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32DENORM-LABEL: mul_fneg_fsub_single_use:
+; GFX9-GISEL-F32DENORM:       ; %bb.0:
+; GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v0, v0, -v1, -v2
+; GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul contract float %a, %b
   %neg = fneg contract float %mul
   %sub = fsub contract float %neg, %c       ; contractable
@@ -792,71 +786,71 @@ define float @mul_fneg_fsub_single_use(float %a, float %b, float %c) {
 ; Should contract -- all fneg uses are contractable fsubs.
 ; Expected: two fma/mad instructions, no v_mul.
 define { float, float } @mul_fneg_multiple_fsub_uses(float %a, float %b, float %c, float %d) {
-; P0-GFX9-SDAG-F32FLUSH-LABEL: mul_fneg_multiple_fsub_uses:
-; P0-GFX9-SDAG-F32FLUSH:       ; %bb.0:
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v2, v0, -v1, -v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, -v3
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32FLUSH-LABEL: mul_fneg_multiple_fsub_uses:
+; GFX9-SDAG-F32FLUSH:       ; %bb.0:
+; GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v2, v0, -v1, -v2
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, -v3
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32FLUSH-LABEL: mul_fneg_multiple_fsub_uses:
-; P0-GFX9-GISEL-F32FLUSH:       ; %bb.0:
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v2, v0, -v1, -v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, -v3
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32FLUSH-LABEL: mul_fneg_multiple_fsub_uses:
+; GFX9-GISEL-F32FLUSH:       ; %bb.0:
+; GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v2, v0, -v1, -v2
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, -v3
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-SDAG-LABEL: mul_fneg_multiple_fsub_uses:
-; P0-GFX9_4-SDAG:       ; %bb.0:
-; P0-GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v2, -v0, v1, -v2
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v1, -v0, v1, -v3
-; P0-GFX9_4-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-SDAG-LABEL: mul_fneg_multiple_fsub_uses:
+; GFX9_4-SDAG:       ; %bb.0:
+; GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v2, -v0, v1, -v2
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v1, -v0, v1, -v3
+; GFX9_4-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-GISEL-LABEL: mul_fneg_multiple_fsub_uses:
-; P0-GFX9_4-GISEL:       ; %bb.0:
-; P0-GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v2, v0, -v1, -v2
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v1, v0, -v1, -v3
-; P0-GFX9_4-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-GISEL-LABEL: mul_fneg_multiple_fsub_uses:
+; GFX9_4-GISEL:       ; %bb.0:
+; GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v2, v0, -v1, -v2
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v1, v0, -v1, -v3
+; GFX9_4-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX12_5-SDAG-LABEL: mul_fneg_multiple_fsub_uses:
-; P0-GFX12_5-SDAG:       ; %bb.0:
-; P0-GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    v_dual_fma_f32 v2, -v0, v1, -v2 :: v_dual_fma_f32 v1, -v0, v1, -v3
-; P0-GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-SDAG-LABEL: mul_fneg_multiple_fsub_uses:
+; GFX12_5-SDAG:       ; %bb.0:
+; GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-SDAG-NEXT:    v_dual_fma_f32 v2, -v0, v1, -v2 :: v_dual_fma_f32 v1, -v0, v1, -v3
+; GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX12_5-GISEL-LABEL: mul_fneg_multiple_fsub_uses:
-; P0-GFX12_5-GISEL:       ; %bb.0:
-; P0-GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    v_dual_fma_f32 v2, v0, -v1, -v2 :: v_dual_fma_f32 v1, v0, -v1, -v3
-; P0-GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-GISEL-LABEL: mul_fneg_multiple_fsub_uses:
+; GFX12_5-GISEL:       ; %bb.0:
+; GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-GISEL-NEXT:    v_dual_fma_f32 v2, v0, -v1, -v2 :: v_dual_fma_f32 v1, v0, -v1, -v3
+; GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX9-SDAG-F32DENORM-LABEL: mul_fneg_multiple_fsub_uses:
-; P0-GFX9-SDAG-F32DENORM:       ; %bb.0:
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v2, -v0, v1, -v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v1, -v0, v1, -v3
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32DENORM-LABEL: mul_fneg_multiple_fsub_uses:
+; GFX9-SDAG-F32DENORM:       ; %bb.0:
+; GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v2, -v0, v1, -v2
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v1, -v0, v1, -v3
+; GFX9-SDAG-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32DENORM-LABEL: mul_fneg_multiple_fsub_uses:
-; P0-GFX9-GISEL-F32DENORM:       ; %bb.0:
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v2, v0, -v1, -v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v1, v0, -v1, -v3
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32DENORM-LABEL: mul_fneg_multiple_fsub_uses:
+; GFX9-GISEL-F32DENORM:       ; %bb.0:
+; GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v2, v0, -v1, -v2
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v1, v0, -v1, -v3
+; GFX9-GISEL-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul contract float %a, %b
   %neg = fneg contract float %mul
   %sub1 = fsub contract float %neg, %c      ; contractable
@@ -872,71 +866,71 @@ define { float, float } @mul_fneg_multiple_fsub_uses(float %a, float %b, float %
 ; Should contract -- both fneg uses (fsub, fadd) are contractable.
 ; Expected: two fma/mad instructions, no v_mul.
 define { float, float } @mul_fneg_mixed_uses(float %a, float %b, float %c, float %d) {
-; P0-GFX9-SDAG-F32FLUSH-LABEL: mul_fneg_mixed_uses:
-; P0-GFX9-SDAG-F32FLUSH:       ; %bb.0:
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v2, -v0, v1, -v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v1, -v0, v1, v3
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32FLUSH-LABEL: mul_fneg_mixed_uses:
+; GFX9-SDAG-F32FLUSH:       ; %bb.0:
+; GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v2, -v0, v1, -v2
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v1, -v0, v1, v3
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32FLUSH-LABEL: mul_fneg_mixed_uses:
-; P0-GFX9-GISEL-F32FLUSH:       ; %bb.0:
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v2, v0, -v1, -v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, v3
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32FLUSH-LABEL: mul_fneg_mixed_uses:
+; GFX9-GISEL-F32FLUSH:       ; %bb.0:
+; GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v2, v0, -v1, -v2
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, v3
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-SDAG-LABEL: mul_fneg_mixed_uses:
-; P0-GFX9_4-SDAG:       ; %bb.0:
-; P0-GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v2, -v0, v1, -v2
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v1, -v0, v1, v3
-; P0-GFX9_4-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-SDAG-LABEL: mul_fneg_mixed_uses:
+; GFX9_4-SDAG:       ; %bb.0:
+; GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v2, -v0, v1, -v2
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v1, -v0, v1, v3
+; GFX9_4-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-GISEL-LABEL: mul_fneg_mixed_uses:
-; P0-GFX9_4-GISEL:       ; %bb.0:
-; P0-GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v2, v0, -v1, -v2
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v1, v0, -v1, v3
-; P0-GFX9_4-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-GISEL-LABEL: mul_fneg_mixed_uses:
+; GFX9_4-GISEL:       ; %bb.0:
+; GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v2, v0, -v1, -v2
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v1, v0, -v1, v3
+; GFX9_4-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX12_5-SDAG-LABEL: mul_fneg_mixed_uses:
-; P0-GFX12_5-SDAG:       ; %bb.0:
-; P0-GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    v_dual_fma_f32 v2, -v0, v1, -v2 :: v_dual_fma_f32 v1, -v0, v1, v3
-; P0-GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-SDAG-LABEL: mul_fneg_mixed_uses:
+; GFX12_5-SDAG:       ; %bb.0:
+; GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-SDAG-NEXT:    v_dual_fma_f32 v2, -v0, v1, -v2 :: v_dual_fma_f32 v1, -v0, v1, v3
+; GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX12_5-GISEL-LABEL: mul_fneg_mixed_uses:
-; P0-GFX12_5-GISEL:       ; %bb.0:
-; P0-GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    v_dual_fma_f32 v2, v0, -v1, -v2 :: v_dual_fma_f32 v1, v0, -v1, v3
-; P0-GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-GISEL-LABEL: mul_fneg_mixed_uses:
+; GFX12_5-GISEL:       ; %bb.0:
+; GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-GISEL-NEXT:    v_dual_fma_f32 v2, v0, -v1, -v2 :: v_dual_fma_f32 v1, v0, -v1, v3
+; GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX9-SDAG-F32DENORM-LABEL: mul_fneg_mixed_uses:
-; P0-GFX9-SDAG-F32DENORM:       ; %bb.0:
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v2, -v0, v1, -v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v1, -v0, v1, v3
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32DENORM-LABEL: mul_fneg_mixed_uses:
+; GFX9-SDAG-F32DENORM:       ; %bb.0:
+; GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v2, -v0, v1, -v2
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v1, -v0, v1, v3
+; GFX9-SDAG-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32DENORM-LABEL: mul_fneg_mixed_uses:
-; P0-GFX9-GISEL-F32DENORM:       ; %bb.0:
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v2, v0, -v1, -v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v1, v0, -v1, v3
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32DENORM-LABEL: mul_fneg_mixed_uses:
+; GFX9-GISEL-F32DENORM:       ; %bb.0:
+; GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v2, v0, -v1, -v2
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v1, v0, -v1, v3
+; GFX9-GISEL-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul contract float %a, %b
   %neg = fneg contract float %mul
   %sub = fsub contract float %neg, %c       ; contractable
@@ -952,71 +946,55 @@ define { float, float } @mul_fneg_mixed_uses(float %a, float %b, float %c, float
 ; Should NOT contract -- one fneg user (fmul) is not contractable.
 ; Expected: v_mul + v_mul, no fma contraction.
 define { float, float } @mul_fneg_mixed_uses_2(float %a, float %b, float %c, float %d) {
-; P0-GFX9-SDAG-F32FLUSH-LABEL: mul_fneg_mixed_uses_2:
-; P0-GFX9-SDAG-F32FLUSH:       ; %bb.0:
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v0, v0, -v1, -v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: mul_fneg_mixed_uses_2:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_mul_f32_e64 v1, v0, -v1
+; GFX9-SDAG-NEXT:    v_sub_f32_e32 v0, v1, v2
+; GFX9-SDAG-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32FLUSH-LABEL: mul_fneg_mixed_uses_2:
-; P0-GFX9-GISEL-F32FLUSH:       ; %bb.0:
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v0, v0, -v1, -v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: mul_fneg_mixed_uses_2:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mul_f32_e64 v1, v0, -v1
+; GFX9-GISEL-NEXT:    v_sub_f32_e32 v0, v1, v2
+; GFX9-GISEL-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-SDAG-LABEL: mul_fneg_mixed_uses_2:
-; P0-GFX9_4-SDAG:       ; %bb.0:
-; P0-GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-SDAG-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v0, -v0, v1, -v2
-; P0-GFX9_4-SDAG-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-SDAG-LABEL: mul_fneg_mixed_uses_2:
+; GFX9_4-SDAG:       ; %bb.0:
+; GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-SDAG-NEXT:    v_mul_f32_e64 v1, v0, -v1
+; GFX9_4-SDAG-NEXT:    v_sub_f32_e32 v0, v1, v2
+; GFX9_4-SDAG-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-GISEL-LABEL: mul_fneg_mixed_uses_2:
-; P0-GFX9_4-GISEL:       ; %bb.0:
-; P0-GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-GISEL-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v0, v0, -v1, -v2
-; P0-GFX9_4-GISEL-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-GISEL-LABEL: mul_fneg_mixed_uses_2:
+; GFX9_4-GISEL:       ; %bb.0:
+; GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-GISEL-NEXT:    v_mul_f32_e64 v1, v0, -v1
+; GFX9_4-GISEL-NEXT:    v_sub_f32_e32 v0, v1, v2
+; GFX9_4-GISEL-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX12_5-SDAG-LABEL: mul_fneg_mixed_uses_2:
-; P0-GFX12_5-SDAG:       ; %bb.0:
-; P0-GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    v_dual_mul_f32 v4, v0, -v1 :: v_dual_fma_f32 v0, -v0, v1, -v2
-; P0-GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-SDAG-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-SDAG-LABEL: mul_fneg_mixed_uses_2:
+; GFX12_5-SDAG:       ; %bb.0:
+; GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-SDAG-NEXT:    v_mul_f32_e64 v1, v0, -v1
+; GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-SDAG-NEXT:    v_dual_sub_f32 v0, v1, v2 :: v_dual_mul_f32 v1, v1, v3
+; GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX12_5-GISEL-LABEL: mul_fneg_mixed_uses_2:
-; P0-GFX12_5-GISEL:       ; %bb.0:
-; P0-GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    v_dual_mul_f32 v4, v0, -v1 :: v_dual_fma_f32 v0, v0, -v1, -v2
-; P0-GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-GISEL-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
-;
-; P0-GFX9-SDAG-F32DENORM-LABEL: mul_fneg_mixed_uses_2:
-; P0-GFX9-SDAG-F32DENORM:       ; %bb.0:
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v0, -v0, v1, -v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
-;
-; P0-GFX9-GISEL-F32DENORM-LABEL: mul_fneg_mixed_uses_2:
-; P0-GFX9-GISEL-F32DENORM:       ; %bb.0:
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v0, v0, -v1, -v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX12_5-GISEL-LABEL: mul_fneg_mixed_uses_2:
+; GFX12_5-GISEL:       ; %bb.0:
+; GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-GISEL-NEXT:    v_mul_f32_e64 v1, v0, -v1
+; GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-GISEL-NEXT:    v_dual_sub_f32 v0, v1, v2 :: v_dual_mul_f32 v1, v1, v3
+; GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %mul = fmul contract float %a, %b
   %neg = fneg contract float %mul
   %sub = fsub contract float %neg, %c       ; contractable
@@ -1032,71 +1010,55 @@ define { float, float } @mul_fneg_mixed_uses_2(float %a, float %b, float %c, flo
 ; Should NOT contract -- one path (fneg -> fmul) is not contractable.
 ; Expected: v_mul shared by both paths, no fma contraction.
 define { float, float } @mul_fneg_nonfsub_noncontractable(float %a, float %b, float %c, float %d) {
-; P0-GFX9-SDAG-F32FLUSH-LABEL: mul_fneg_nonfsub_noncontractable:
-; P0-GFX9-SDAG-F32FLUSH:       ; %bb.0:
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mul_f32_e32 v4, v0, v1
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v0, v0, v1, v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mul_f32_e64 v1, -v4, v3
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: mul_fneg_nonfsub_noncontractable:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_mul_f32_e32 v1, v0, v1
+; GFX9-SDAG-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX9-SDAG-NEXT:    v_mul_f32_e64 v1, -v1, v3
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32FLUSH-LABEL: mul_fneg_nonfsub_noncontractable:
-; P0-GFX9-GISEL-F32FLUSH:       ; %bb.0:
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v0, v0, v1, v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: mul_fneg_nonfsub_noncontractable:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mul_f32_e32 v1, v0, v1
+; GFX9-GISEL-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX9-GISEL-NEXT:    v_mul_f32_e64 v1, -v1, v3
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-SDAG-LABEL: mul_fneg_nonfsub_noncontractable:
-; P0-GFX9_4-SDAG:       ; %bb.0:
-; P0-GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-SDAG-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v0, v0, v1, v2
-; P0-GFX9_4-SDAG-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-SDAG-LABEL: mul_fneg_nonfsub_noncontractable:
+; GFX9_4-SDAG:       ; %bb.0:
+; GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-SDAG-NEXT:    v_mul_f32_e32 v1, v0, v1
+; GFX9_4-SDAG-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX9_4-SDAG-NEXT:    v_mul_f32_e64 v1, -v1, v3
+; GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-GISEL-LABEL: mul_fneg_nonfsub_noncontractable:
-; P0-GFX9_4-GISEL:       ; %bb.0:
-; P0-GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-GISEL-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v0, v0, v1, v2
-; P0-GFX9_4-GISEL-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-GISEL-LABEL: mul_fneg_nonfsub_noncontractable:
+; GFX9_4-GISEL:       ; %bb.0:
+; GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-GISEL-NEXT:    v_mul_f32_e32 v1, v0, v1
+; GFX9_4-GISEL-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX9_4-GISEL-NEXT:    v_mul_f32_e64 v1, -v1, v3
+; GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX12_5-SDAG-LABEL: mul_fneg_nonfsub_noncontractable:
-; P0-GFX12_5-SDAG:       ; %bb.0:
-; P0-GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    v_dual_mul_f32 v4, v0, -v1 :: v_dual_fma_f32 v0, v0, v1, v2
-; P0-GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-SDAG-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-SDAG-LABEL: mul_fneg_nonfsub_noncontractable:
+; GFX12_5-SDAG:       ; %bb.0:
+; GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-SDAG-NEXT:    v_mul_f32_e32 v1, v0, v1
+; GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-SDAG-NEXT:    v_dual_add_f32 v0, v1, v2 :: v_dual_mul_f32 v1, -v1, v3
+; GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX12_5-GISEL-LABEL: mul_fneg_nonfsub_noncontractable:
-; P0-GFX12_5-GISEL:       ; %bb.0:
-; P0-GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    v_dual_mul_f32 v4, v0, -v1 :: v_dual_fma_f32 v0, v0, v1, v2
-; P0-GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-GISEL-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
-;
-; P0-GFX9-SDAG-F32DENORM-LABEL: mul_fneg_nonfsub_noncontractable:
-; P0-GFX9-SDAG-F32DENORM:       ; %bb.0:
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v0, v0, v1, v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
-;
-; P0-GFX9-GISEL-F32DENORM-LABEL: mul_fneg_nonfsub_noncontractable:
-; P0-GFX9-GISEL-F32DENORM:       ; %bb.0:
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_mul_f32_e64 v4, v0, -v1
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v0, v0, v1, v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_mul_f32_e32 v1, v4, v3
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX12_5-GISEL-LABEL: mul_fneg_nonfsub_noncontractable:
+; GFX12_5-GISEL:       ; %bb.0:
+; GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-GISEL-NEXT:    v_mul_f32_e32 v1, v0, v1
+; GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-GISEL-NEXT:    v_dual_add_f32 v0, v1, v2 :: v_dual_mul_f32 v1, -v1, v3
+; GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %mul = fmul contract float %a, %b
   %neg = fneg float %mul
   %add = fadd contract float %mul, %c       ; contractable
@@ -1112,71 +1074,71 @@ define { float, float } @mul_fneg_nonfsub_noncontractable(float %a, float %b, fl
 ; Should contract -- all paths are contractable.
 ; Expected: two fma/mad instructions, no v_mul.
 define { float, float } @mul_direct_and_fneg_contractable_uses(float %a, float %b, float %c, float %d) {
-; P0-GFX9-SDAG-F32FLUSH-LABEL: mul_direct_and_fneg_contractable_uses:
-; P0-GFX9-SDAG-F32FLUSH:       ; %bb.0:
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v2, v0, v1, v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v1, -v0, v1, -v3
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32FLUSH-LABEL: mul_direct_and_fneg_contractable_uses:
+; GFX9-SDAG-F32FLUSH:       ; %bb.0:
+; GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v2, v0, v1, v2
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v1, -v0, v1, -v3
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32FLUSH-LABEL: mul_direct_and_fneg_contractable_uses:
-; P0-GFX9-GISEL-F32FLUSH:       ; %bb.0:
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v2, v0, v1, v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, -v3
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32FLUSH-LABEL: mul_direct_and_fneg_contractable_uses:
+; GFX9-GISEL-F32FLUSH:       ; %bb.0:
+; GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v2, v0, v1, v2
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, -v3
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-SDAG-LABEL: mul_direct_and_fneg_contractable_uses:
-; P0-GFX9_4-SDAG:       ; %bb.0:
-; P0-GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v2, v0, v1, v2
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v1, -v0, v1, -v3
-; P0-GFX9_4-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-SDAG-LABEL: mul_direct_and_fneg_contractable_uses:
+; GFX9_4-SDAG:       ; %bb.0:
+; GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v2, v0, v1, v2
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v1, -v0, v1, -v3
+; GFX9_4-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-GISEL-LABEL: mul_direct_and_fneg_contractable_uses:
-; P0-GFX9_4-GISEL:       ; %bb.0:
-; P0-GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v2, v0, v1, v2
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v1, v0, -v1, -v3
-; P0-GFX9_4-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-GISEL-LABEL: mul_direct_and_fneg_contractable_uses:
+; GFX9_4-GISEL:       ; %bb.0:
+; GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v2, v0, v1, v2
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v1, v0, -v1, -v3
+; GFX9_4-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX12_5-SDAG-LABEL: mul_direct_and_fneg_contractable_uses:
-; P0-GFX12_5-SDAG:       ; %bb.0:
-; P0-GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    v_dual_fma_f32 v2, v0, v1, v2 :: v_dual_fma_f32 v1, -v0, v1, -v3
-; P0-GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-SDAG-LABEL: mul_direct_and_fneg_contractable_uses:
+; GFX12_5-SDAG:       ; %bb.0:
+; GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-SDAG-NEXT:    v_dual_fma_f32 v2, v0, v1, v2 :: v_dual_fma_f32 v1, -v0, v1, -v3
+; GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX12_5-GISEL-LABEL: mul_direct_and_fneg_contractable_uses:
-; P0-GFX12_5-GISEL:       ; %bb.0:
-; P0-GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    v_dual_fma_f32 v2, v0, v1, v2 :: v_dual_fma_f32 v1, v0, -v1, -v3
-; P0-GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-GISEL-LABEL: mul_direct_and_fneg_contractable_uses:
+; GFX12_5-GISEL:       ; %bb.0:
+; GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-GISEL-NEXT:    v_dual_fma_f32 v2, v0, v1, v2 :: v_dual_fma_f32 v1, v0, -v1, -v3
+; GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX9-SDAG-F32DENORM-LABEL: mul_direct_and_fneg_contractable_uses:
-; P0-GFX9-SDAG-F32DENORM:       ; %bb.0:
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v2, v0, v1, v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v1, -v0, v1, -v3
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32DENORM-LABEL: mul_direct_and_fneg_contractable_uses:
+; GFX9-SDAG-F32DENORM:       ; %bb.0:
+; GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v2, v0, v1, v2
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v1, -v0, v1, -v3
+; GFX9-SDAG-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32DENORM-LABEL: mul_direct_and_fneg_contractable_uses:
-; P0-GFX9-GISEL-F32DENORM:       ; %bb.0:
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v2, v0, v1, v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v1, v0, -v1, -v3
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32DENORM-LABEL: mul_direct_and_fneg_contractable_uses:
+; GFX9-GISEL-F32DENORM:       ; %bb.0:
+; GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v2, v0, v1, v2
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v1, v0, -v1, -v3
+; GFX9-GISEL-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul contract float %a, %b
   %add = fadd contract float %mul, %c       ; contractable
   %neg = fneg contract float %mul
@@ -1192,71 +1154,71 @@ define { float, float } @mul_direct_and_fneg_contractable_uses(float %a, float %
 ; Should contract -- all paths are contractable.
 ; Expected: two fma/mad instructions, no v_mul.
 define { float, float } @mul_fsub_and_fneg_fsub_contractable(float %a, float %b, float %c, float %d) {
-; P0-GFX9-SDAG-F32FLUSH-LABEL: mul_fsub_and_fneg_fsub_contractable:
-; P0-GFX9-SDAG-F32FLUSH:       ; %bb.0:
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v2, v0, v1, -v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v1, -v0, v1, -v3
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32FLUSH-LABEL: mul_fsub_and_fneg_fsub_contractable:
+; GFX9-SDAG-F32FLUSH:       ; %bb.0:
+; GFX9-SDAG-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v2, v0, v1, -v2
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mad_f32 v1, -v0, v1, -v3
+; GFX9-SDAG-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-SDAG-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32FLUSH-LABEL: mul_fsub_and_fneg_fsub_contractable:
-; P0-GFX9-GISEL-F32FLUSH:       ; %bb.0:
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v2, v0, v1, -v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, -v3
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32FLUSH-LABEL: mul_fsub_and_fneg_fsub_contractable:
+; GFX9-GISEL-F32FLUSH:       ; %bb.0:
+; GFX9-GISEL-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v2, v0, v1, -v2
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mad_f32 v1, v0, -v1, -v3
+; GFX9-GISEL-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-GISEL-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-SDAG-LABEL: mul_fsub_and_fneg_fsub_contractable:
-; P0-GFX9_4-SDAG:       ; %bb.0:
-; P0-GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v2, v0, v1, -v2
-; P0-GFX9_4-SDAG-NEXT:    v_fma_f32 v1, -v0, v1, -v3
-; P0-GFX9_4-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-SDAG-LABEL: mul_fsub_and_fneg_fsub_contractable:
+; GFX9_4-SDAG:       ; %bb.0:
+; GFX9_4-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v2, v0, v1, -v2
+; GFX9_4-SDAG-NEXT:    v_fma_f32 v1, -v0, v1, -v3
+; GFX9_4-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9_4-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9_4-GISEL-LABEL: mul_fsub_and_fneg_fsub_contractable:
-; P0-GFX9_4-GISEL:       ; %bb.0:
-; P0-GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v2, v0, v1, -v2
-; P0-GFX9_4-GISEL-NEXT:    v_fma_f32 v1, v0, -v1, -v3
-; P0-GFX9_4-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9_4-GISEL-LABEL: mul_fsub_and_fneg_fsub_contractable:
+; GFX9_4-GISEL:       ; %bb.0:
+; GFX9_4-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v2, v0, v1, -v2
+; GFX9_4-GISEL-NEXT:    v_fma_f32 v1, v0, -v1, -v3
+; GFX9_4-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9_4-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX12_5-SDAG-LABEL: mul_fsub_and_fneg_fsub_contractable:
-; P0-GFX12_5-SDAG:       ; %bb.0:
-; P0-GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-SDAG-NEXT:    v_dual_fma_f32 v2, v0, v1, -v2 :: v_dual_fma_f32 v1, -v0, v1, -v3
-; P0-GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-SDAG-LABEL: mul_fsub_and_fneg_fsub_contractable:
+; GFX12_5-SDAG:       ; %bb.0:
+; GFX12_5-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-SDAG-NEXT:    v_dual_fma_f32 v2, v0, v1, -v2 :: v_dual_fma_f32 v1, -v0, v1, -v3
+; GFX12_5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-SDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12_5-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX12_5-GISEL-LABEL: mul_fsub_and_fneg_fsub_contractable:
-; P0-GFX12_5-GISEL:       ; %bb.0:
-; P0-GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; P0-GFX12_5-GISEL-NEXT:    v_dual_fma_f32 v2, v0, v1, -v2 :: v_dual_fma_f32 v1, v0, -v1, -v3
-; P0-GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; P0-GFX12_5-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX12_5-GISEL-LABEL: mul_fsub_and_fneg_fsub_contractable:
+; GFX12_5-GISEL:       ; %bb.0:
+; GFX12_5-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12_5-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12_5-GISEL-NEXT:    v_dual_fma_f32 v2, v0, v1, -v2 :: v_dual_fma_f32 v1, v0, -v1, -v3
+; GFX12_5-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12_5-GISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12_5-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; P0-GFX9-SDAG-F32DENORM-LABEL: mul_fsub_and_fneg_fsub_contractable:
-; P0-GFX9-SDAG-F32DENORM:       ; %bb.0:
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v2, v0, v1, -v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v1, -v0, v1, -v3
-; P0-GFX9-SDAG-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-F32DENORM-LABEL: mul_fsub_and_fneg_fsub_contractable:
+; GFX9-SDAG-F32DENORM:       ; %bb.0:
+; GFX9-SDAG-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v2, v0, v1, -v2
+; GFX9-SDAG-F32DENORM-NEXT:    v_fma_f32 v1, -v0, v1, -v3
+; GFX9-SDAG-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-SDAG-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
-; P0-GFX9-GISEL-F32DENORM-LABEL: mul_fsub_and_fneg_fsub_contractable:
-; P0-GFX9-GISEL-F32DENORM:       ; %bb.0:
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v2, v0, v1, -v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v1, v0, -v1, -v3
-; P0-GFX9-GISEL-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
-; P0-GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-F32DENORM-LABEL: mul_fsub_and_fneg_fsub_contractable:
+; GFX9-GISEL-F32DENORM:       ; %bb.0:
+; GFX9-GISEL-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v2, v0, v1, -v2
+; GFX9-GISEL-F32DENORM-NEXT:    v_fma_f32 v1, v0, -v1, -v3
+; GFX9-GISEL-F32DENORM-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-GISEL-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul contract float %a, %b
   %sub1 = fsub contract float %mul, %c      ; contractable
   %neg = fneg contract float %mul

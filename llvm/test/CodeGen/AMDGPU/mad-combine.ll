@@ -960,12 +960,11 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_mul(ptr addrspace(1) 
 ; SI-STD-NEXT:    buffer_load_dword v5, v[0:1], s[4:7], 0 addr64 offset:12 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
 ; SI-STD-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; SI-STD-NEXT:    v_mul_f32_e32 v6, v2, v3
-; SI-STD-NEXT:    v_mad_f32 v2, -v2, v3, -v4
-; SI-STD-NEXT:    v_sub_f32_e32 v3, v6, v5
-; SI-STD-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; SI-STD-NEXT:    v_mad_f32 v4, -v2, v3, -v4
+; SI-STD-NEXT:    v_mad_f32 v2, v2, v3, -v5
+; SI-STD-NEXT:    buffer_store_dword v4, v[0:1], s[0:3], 0 addr64
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
-; SI-STD-NEXT:    buffer_store_dword v3, v[0:1], s[0:3], 0 addr64 offset:4
+; SI-STD-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64 offset:4
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
 ; SI-STD-NEXT:    s_endpgm
 ;
