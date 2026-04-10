@@ -688,6 +688,7 @@ TYPE_CONTEXT_PARSER("ENUMERATION TYPE statement"_en_US,
 
 // F2023 R768 enumeration-enumerator-stmt -> ENUMERATOR [ :: ]
 // enumerator-name-list
+//   (Note: distinct from R761 enumerator-def-stmt — no "= expr" allowed here)
 TYPE_CONTEXT_PARSER("ENUMERATOR statement in ENUMERATION TYPE"_en_US,
     construct<EnumerationEnumeratorStmt>(
         "ENUMERATOR" >> maybe("::"_tok) >> nonemptyList(name)))

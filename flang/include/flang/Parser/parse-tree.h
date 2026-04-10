@@ -393,9 +393,10 @@ struct OtherSpecificationStmt {
 };
 
 // R508 specification-construct ->
-//        derived-type-def | enum-def | generic-stmt | interface-block |
-//        parameter-stmt | procedure-declaration-stmt |
-//        other-specification-stmt | type-declaration-stmt
+//        derived-type-def | enum-def | enumeration-type-def |
+//        generic-stmt | interface-block | parameter-stmt |
+//        procedure-declaration-stmt | other-specification-stmt |
+//        type-declaration-stmt
 struct SpecificationConstruct {
   UNION_CLASS_BOILERPLATE(SpecificationConstruct);
   std::variant<common::Indirection<DerivedTypeDef>,
