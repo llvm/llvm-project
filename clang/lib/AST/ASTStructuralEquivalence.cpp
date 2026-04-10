@@ -2464,7 +2464,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (D1->getAccessControl() != D2->getAccessControl())
     return false;
 
-  return IsStructurallyEquivalent(Context, D1, D2, Owner2Type);
+  return IsStructurallyEquivalent(Context, cast<FieldDecl>(D1),
+                                  cast<FieldDecl>(D2), Owner2Type);
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
