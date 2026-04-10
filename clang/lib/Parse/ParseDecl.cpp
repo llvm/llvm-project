@@ -674,15 +674,28 @@ void Parser::ParseGNUAttributeArgs(
   // These may refer to the function arguments, but need to be parsed early to
   // participate in determining whether it's a redeclaration.
   std::optional<ParseScope> PrototypeScope;
-  if (normalizeAttrName(AttrName->getName()) == "enable_if" &&
-      D && D->isFunctionDeclarator()) {
-    const DeclaratorChunk::FunctionTypeInfo& FTI = D->getFunctionTypeInfo();
-    PrototypeScope.emplace(this, Scope::FunctionPrototypeScope |
-                                     Scope::FunctionDeclarationScope |
-                                     Scope::DeclScope);
-    for (unsigned i = 0; i != FTI.NumParams; ++i)
-      Actions.ActOnReenterCXXMethodParameter(
-          getCurScope(), dyn_cast_or_null<ParmVarDecl>(FTI.Params[i].Param));
+  if (D && (normalizeAttrName(AttrName->getName()) == "enable_if" ||
+            IsAttributeLateParsedStandard(*AttrName))) {
+    // Find the innermost function chunk to make its parameters available for
+    // attribute argument parsing. This is necessary for attributes like thread
+    // safety annotations on function pointers which reference their parameters.
+    for (unsigned i = 0; i < D->getNumTypeObjects(); ++i) {
+      if (D->getTypeObject(i).Kind == DeclaratorChunk::Function) {
+        const DeclaratorChunk::FunctionTypeInfo &FTI = D->getTypeObject(i).Fun;
+        // Inherit the class scope flag from the current context. This is safe
+        // because it only preserves existing struct/class visibility, which is
+        // required for attributes to resolve sibling members in C structs.
+        PrototypeScope.emplace(
+            this, Scope::FunctionPrototypeScope |
+                      Scope::FunctionDeclarationScope | Scope::DeclScope |
+                      (getCurScope()->getFlags() & Scope::ClassScope));
+        for (unsigned j = 0; j < FTI.NumParams; ++j)
+          Actions.ActOnReenterCXXMethodParameter(
+              getCurScope(),
+              dyn_cast_or_null<ParmVarDecl>(FTI.Params[j].Param));
+        break;
+      }
+    }
   }
 
   ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
