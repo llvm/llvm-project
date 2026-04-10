@@ -371,18 +371,50 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // assigned.
   RHSList = getRValueOrigins(RHSExpr, RHSList);
 
-  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
-    markUseAsWrite(DRE_LHS);
+  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
+    QualType QT = DRE_LHS->getDecl()->getType();
+    if (QT->isReferenceType()) {
+      if (hasOrigins(QT->getPointeeType())) {
+        // Writing through a reference uses the binding but overwrites the
+        // pointee. Model this as a Read of the outer origin (keeping the
+        // binding live) and a Write of the inner origins (killing the pointee's
+        // liveness).
+        if (UseFact *UF = UseFacts.lookup(DRE_LHS)) {
+          const OriginList *FullList = UF->getUsedOrigins();
+          assert(FullList);
+          UF->setUsedOrigins(FactMgr.getOriginMgr().createSingleOriginList(
+              FullList->getOuterOriginID()));
+          if (const OriginList *InnerList = FullList->peelOuterOrigin()) {
+            UseFact *WriteUF = FactMgr.createFact<UseFact>(DRE_LHS, InnerList);
+            WriteUF->markAsWritten();
+            CurrentBlockFacts.push_back(WriteUF);
+          }
+        }
+      }
+    } else
+      markUseAsWrite(DRE_LHS);
+  }
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
 }
 
+void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
+  if (Expr *RHS = BO->getRHS(); RHS->getType()->isPointerType()) {
+    killAndFlowOrigin(*BO, *RHS);
+    return;
+  }
+  Expr *LHS = BO->getLHS();
+  assert(LHS->getType()->isPointerType() &&
+         "Pointer arithmetic must have a pointer operand");
+  killAndFlowOrigin(*BO, *LHS);
+}
+
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
-  // TODO: Handle pointer arithmetic (e.g., `p + 1` or `1 + p`) where the
-  // result should have the same loans as the pointer operand.
   if (BO->isCompoundAssignmentOp())
     return;
+  if (BO->getType()->isPointerType() && BO->isAdditiveOp())
+    handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());

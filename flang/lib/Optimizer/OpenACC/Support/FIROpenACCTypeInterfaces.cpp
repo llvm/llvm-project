@@ -1012,23 +1012,9 @@ template <typename Op>
 static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Value value1,
                                       mlir::Value value2) {
-  mlir::Type i1 = builder.getI1Type();
-  mlir::Value v1 = fir::ConvertOp::create(builder, loc, i1, value1);
-  mlir::Value v2 = fir::ConvertOp::create(builder, loc, i1, value2);
-  mlir::Value combined = Op::create(builder, loc, v1, v2);
-  return fir::ConvertOp::create(builder, loc, value1.getType(), combined);
-}
-
-static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::arith::CmpIPredicate pred,
-                                         mlir::Value value1,
-                                         mlir::Value value2) {
-  mlir::Type i1 = builder.getI1Type();
-  mlir::Value v1 = fir::ConvertOp::create(builder, loc, i1, value1);
-  mlir::Value v2 = fir::ConvertOp::create(builder, loc, i1, value2);
-  mlir::Value add = mlir::arith::CmpIOp::create(builder, loc, pred, v1, v2);
-  return fir::ConvertOp::create(builder, loc, value1.getType(), add);
+  mlir::Type type = value1.getType();
+  mlir::Value v2 = builder.createConvert(loc, type, value2);
+  return Op::create(builder, loc, type, value1, v2);
 }
 
 static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
@@ -1098,19 +1084,16 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
     return mlir::arith::XOrIOp::create(builder, loc, value1, value2);
 
   if (op == mlir::acc::ReductionOperator::AccLand)
-    return genLogicalCombiner<mlir::arith::AndIOp>(builder, loc, value1,
-                                                   value2);
+    return genLogicalCombiner<fir::LogicalAndOp>(builder, loc, value1, value2);
 
   if (op == mlir::acc::ReductionOperator::AccLor)
-    return genLogicalCombiner<mlir::arith::OrIOp>(builder, loc, value1, value2);
+    return genLogicalCombiner<fir::LogicalOrOp>(builder, loc, value1, value2);
 
   if (op == mlir::acc::ReductionOperator::AccEqv)
-    return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::eq,
-                                 value1, value2);
+    return genLogicalCombiner<fir::EqvOp>(builder, loc, value1, value2);
 
   if (op == mlir::acc::ReductionOperator::AccNeqv)
-    return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::ne,
-                                 value1, value2);
+    return genLogicalCombiner<fir::NeqvOp>(builder, loc, value1, value2);
 
   TODO(loc, "reduction operator");
 }

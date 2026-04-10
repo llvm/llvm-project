@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the DeviceImpl class, which implements
+/// sycl::device functionality.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_DEVICE_IMPL
 #define _LIBSYCL_DEVICE_IMPL

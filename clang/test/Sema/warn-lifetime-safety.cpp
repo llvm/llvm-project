@@ -752,6 +752,18 @@ void no_error_if_dangle_then_rescue_gsl() {
   v.use();     // This is safe.
 }
 
+void no_error_if_dangle_then_rescue_via_ref() {
+  MyObj safe;
+  MyObj* p;
+  MyObj*& ref = p;
+  {
+    MyObj temp;
+    ref = &temp;  // p temporarily points to temp via ref.
+  }
+  ref = &safe;    // p is "rescued" via ref before use.
+  (void)*ref;     // This is safe.
+}
+
 void no_error_loan_from_current_iteration(bool cond) {
   // See https://github.com/llvm/llvm-project/issues/156959.
   MyObj b;
@@ -2069,14 +2081,19 @@ int* static_array() {
   return &a[1];
 }
 
-// FIXME: Pointer arithmetic is not yet tracked.
 void pointer_arithmetic_use_after_scope() {
   int* p;
+  int* p2;
+  int* p3;
   {
     int a[10]{};
-    p = a + 5;
-  }
-  (void)*p; // Should warn.
+    p = a + 5;  // expected-warning {{object whose reference is captured does not live long enough}}
+    p2 = a - 5; // expected-warning {{object whose reference is captured does not live long enough}}
+    p3 = 5 + a; // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note 3 {{destroyed here}}
+  (void)*p;     // expected-note {{later used here}}
+  (void)*p2;    // expected-note {{later used here}}
+  (void)*p3;    // expected-note {{later used here}}
 }
 
 // FIXME: Copying a pointer value out of an array element is not tracked.

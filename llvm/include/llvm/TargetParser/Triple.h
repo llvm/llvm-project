@@ -1206,6 +1206,13 @@ public:
     return getArch() == Triple::bpfel || getArch() == Triple::bpfeb;
   }
 
+  /// Tests whether MSVC linker or UEFI targets.
+  /// Used to default to -mincremental-linker-compatible if we are
+  /// targeting the MSVC linker or *-uefi triples.
+  bool isDefaultIncrementalLinkerCompatibleByDefault() const {
+    return isWindowsMSVCEnvironment() || isUEFI();
+  }
+
   /// Tests if the target forces 64-bit time_t on a 32-bit architecture.
   bool isTime64ABI() const {
     EnvironmentType Env = getEnvironment();
