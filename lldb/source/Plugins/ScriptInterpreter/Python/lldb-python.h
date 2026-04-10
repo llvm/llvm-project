@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
 
 // BEGIN FIXME
 // This declaration works around a clang module build failure.
@@ -16,12 +16,6 @@
 static llvm::Expected<bool> *g_fcxx_modules_workaround [[maybe_unused]];
 // END
 
-#include "lldb/Host/Config.h"
-
-// Python.h needs to be included before any system headers in order to avoid
-// redefinition of macros
-
-#if LLDB_ENABLE_PYTHON
 #include "llvm/Support/Compiler.h"
 #if defined(_WIN32)
 // If anyone #includes Host/PosixApi.h later, it will try to typedef pid_t.  We
@@ -66,6 +60,5 @@ static_assert(PY_VERSION_HEX >= LLDB_MINIMUM_PYTHON_VERSION,
 #ifndef PyBUF_READ
 #define PyBUF_READ 0x100
 #endif
-#endif
 
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H

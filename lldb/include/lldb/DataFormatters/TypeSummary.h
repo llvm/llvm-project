@@ -424,6 +424,11 @@ private:
 };
 
 /// A summary formatter that is defined in LLDB formmater bytecode.
+///
+/// See `BytecodeSyntheticChildren` for the corresponding synthetic formatter.
+///
+/// Formatter bytecode documentation can be found in
+/// lldb/docs/resources/formatterbytecode.rst
 class BytecodeSummaryFormat : public TypeSummaryImpl {
   std::unique_ptr<llvm::MemoryBuffer> m_bytecode;
 

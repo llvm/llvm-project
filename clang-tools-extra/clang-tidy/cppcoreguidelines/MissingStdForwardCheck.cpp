@@ -46,6 +46,16 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
 
   const QualType ParamType =
       Node.getType().getNonPackExpansionType()->getPointeeType();
+
+  // Explicit object parameters with a type constraint are still forwarding
+  // references per [temp.deduct.call]. We conservatively suppress warnings
+  // here to avoid false positives when constraints restrict the deduced type,
+  // accepting false negatives as a trade-off.
+  if (Node.isExplicitObjectParameter())
+    if (const auto *TTPT = ParamType->getAs<TemplateTypeParmType>())
+      if (const auto *Decl = TTPT->getDecl(); Decl && Decl->hasTypeConstraint())
+        return false;
+
   const auto *TemplateType = ParamType->getAsCanonical<TemplateTypeParmType>();
   if (!TemplateType)
     return false;
@@ -102,8 +112,10 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
       allOf(hasCaptureKind(LambdaCaptureKind::LCK_ByRef), RefToParm));
 
   auto CapturedInBody = lambdaExpr(anyOf(CaptureInRef, CaptureByRefExplicit));
-  auto CapturedInCaptureList = hasAnyCapture(capturesVar(
-      varDecl(hasInitializer(ignoringParenImpCasts(equalsBoundNode("call"))))));
+  auto IsBoundCall = ignoringParenImpCasts(equalsBoundNode("call"));
+  auto CapturedInCaptureList = hasAnyCapture(capturesVar(varDecl(
+      hasInitializer(anyOf(IsBoundCall, initListExpr(hasInit(0, IsBoundCall)),
+                           parenListExpr(has(expr(IsBoundCall))))))));
 
   auto CapturedInLambda = hasDeclContext(cxxRecordDecl(
       isLambda(),
@@ -133,7 +145,9 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
           hasAncestor(functionDecl().bind("func")),
           hasAncestor(functionDecl(
               isDefinition(), equalsBoundNode("func"), ToParam,
-              unless(anyOf(isDeleted(), hasDescendant(ForwardCallMatcher)))))),
+              unless(anyOf(
+                  isDeleted(),
+                  traverse(TK_AsIs, hasDescendant(ForwardCallMatcher))))))),
       this);
 }
 

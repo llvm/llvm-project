@@ -99,8 +99,7 @@ define void @diff_memcheck_known_false_for_vf_4(ptr %B, ptr %A, ptr %end) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], -8
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP7]], i64 -3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 -3
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

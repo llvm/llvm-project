@@ -239,8 +239,8 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
     %scalar_value = ... : f32
     %vector_value = ... : vector<4xf32>
     %id = ... : i32
-    %0 = spirv.GroupNonUniformBroadcast "Subgroup" %scalar_value, %id : f32, i32
-    %1 = spirv.GroupNonUniformBroadcast "Workgroup" %vector_value, %id :
+    %0 = spirv.GroupNonUniformBroadcast <Subgroup> %scalar_value, %id : f32, i32
+    %1 = spirv.GroupNonUniformBroadcast <Workgroup> %vector_value, %id :
       vector<4xf32>, i32
     ```
   }];
@@ -269,6 +269,60 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
 
 // -----
 
+def SPIRV_GroupNonUniformBroadcastFirstOp : SPIRV_Op<"GroupNonUniformBroadcastFirst",
+  [Pure, SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Broadcast the value from the active invocation with the lowest id in
+    the subgroup.
+  }];
+
+  let description = [{
+    Result is the Value of the invocation from the active invocations with
+    the lowest id within the Execution scope to all active invocations
+    within the Execution scope.
+
+    Result Type must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution must be Subgroup Scope.
+
+    The type of Value must be the same as Result Type.
+
+    #### Example:
+
+    ```mlir
+    %scalar_value = ... : f32
+    %vector_value = ... : vector<4xf32>
+    %0 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %scalar_value : f32
+    %1 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %vector_value : vector<4xf32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformBallot]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    $execution_scope operands attr-dict `:` type($value)
+  }];
+}
+
+// -----
+
 def SPIRV_GroupNonUniformElectOp : SPIRV_Op<"GroupNonUniformElect", []> {
   let summary = [{
     Result is true only in the active invocation with the lowest id in the
@@ -283,7 +337,7 @@ def SPIRV_GroupNonUniformElectOp : SPIRV_Op<"GroupNonUniformElect", []> {
     #### Example:
 
     ```mlir
-    %0 = spirv.GroupNonUniformElect : i1
+    %0 = spirv.GroupNonUniformElect <Workgroup> : i1
     ```
   }];
 
@@ -1406,7 +1460,7 @@ def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
     %four = spirv.Constant 4 : i32
     %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %value, %delta : f32, i32 -> f32
     %1 = spirv.GroupNonUniformRotateKHR <Workgroup> %value, %delta,
-         clustersize(%four) : f32, i32, i32 -> f32
+         cluster_size(%four) : f32, i32, i32 -> f32
     ```
   }];
 
@@ -1462,7 +1516,7 @@ def SPIRV_GroupNonUniformAllOp : SPIRV_Op<"GroupNonUniformAll", [
 
     ```mlir
     %predicate = ... : i1
-    %0 = spirv.GroupNonUniformAll "Subgroup" %predicate : i1
+    %0 = spirv.GroupNonUniformAll <Subgroup> %predicate : i1
     ```
   }];
 
@@ -1518,7 +1572,7 @@ def SPIRV_GroupNonUniformAnyOp : SPIRV_Op<"GroupNonUniformAny", [
 
     ```mlir
     %predicate = ... : i1
-    %0 = spirv.GroupNonUniformAny "Subgroup" %predicate : i1
+    %0 = spirv.GroupNonUniformAny <Subgroup> %predicate : i1
     ```
   }];
 
@@ -1657,8 +1711,8 @@ def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
     #### Example:
 
     ```mlir
-    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : f32, i32
-    %1 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : vector<4xf32>, i32
+    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %value : f32
+    %1 = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %value : vector<4xf32>
     ```
   }];
 
@@ -1672,7 +1726,7 @@ def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
     AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
-    SPIRV_SignlessOrUnsignedInt:$direction
+    SPIRV_QuadSwapDirectionAttr:$direction
   );
 
   let results = (outs
@@ -1682,7 +1736,7 @@ def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
   let hasVerifier = 0;
 
   let assemblyFormat = [{
-    $execution_scope $value $direction attr-dict `:` type($value) `,` type($direction)
+    $execution_scope $direction $value attr-dict `:` type($value)
   }];
 }
 

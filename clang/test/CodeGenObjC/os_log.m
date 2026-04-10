@@ -25,15 +25,15 @@ void os_log_pack_send(void *);
 // CHECK-O2: store ptr %[[V0]], ptr %[[A_ADDR]], align 8,
 // CHECK-O0: call void @llvm.objc.storeStrong(ptr %[[A_ADDR]], ptr %{{.*}})
 // CHECK-O2: %[[V3:.*]] = call ptr @GenString() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-O0: %call1 = call ptr @GenString() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-O0: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #1
-// CHECK: %[[V6:.*]] = call ptr @llvm.objc.retain(ptr %call1)
+// CHECK-O0: %[[CALL:.*]] = call ptr @GenString()
+// CHECK-O0: %[[V3:.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[CALL]])
+// CHECK: %[[V6:.*]] = call ptr @llvm.objc.retain(ptr %[[V3]])
 // CHECK: store ptr %[[V6]], ptr %[[OS_LOG_ARG]],
 // CHECK: %[[V8:.*]] = ptrtoint ptr %[[V6]] to i64
 // CHECK: %[[V9:.*]] = load ptr, ptr %[[A_ADDR]], align 8
 // CHECK: %[[V10:.*]] = ptrtoint ptr %[[V9]] to i64
 // CHECK: call void @__os_log_helper_1_2_2_8_64_8_64(ptr noundef %{{.*}}, i64 noundef %[[V8]], i64 noundef %[[V10]])
-// CHECK: call void @llvm.objc.release(ptr %call1)
+// CHECK: call void @llvm.objc.release(ptr %[[V3]])
 // CHECK: call void @os_log_pack_send(ptr noundef %{{.*}})
 // CHECK-O2: call void (...) @llvm.objc.clang.arc.use(ptr %[[V6]])
 // CHECK-O2: %[[V13:.*]] = load ptr, ptr %[[OS_LOG_ARG]], align 8
@@ -64,13 +64,13 @@ void test_builtin_os_log2(void *buf, id __unsafe_unretained a) {
 // CHECK: alloca ptr, align 8
 // CHECK: %[[OS_LOG_ARG:.*]] = alloca ptr, align 8
 // CHECK-O2: %[[V2:.*]] = call ptr @GenString() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-O0: %call1 = call ptr @GenString() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-O0: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #1
-// CHECK: %[[V5:.*]] = call ptr @llvm.objc.retain(ptr %call1)
+// CHECK-O0: %[[CALL:.*]] = call ptr @GenString()
+// CHECK-O0: %[[V2:.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[CALL]])
+// CHECK: %[[V5:.*]] = call ptr @llvm.objc.retain(ptr %[[V2]])
 // CHECK: store ptr %[[V5]], ptr %[[OS_LOG_ARG]], align 8
 // CHECK: %[[V6:.*]] = ptrtoint ptr %[[V5]] to i64
 // CHECK: call void @__os_log_helper_1_2_1_8_64(ptr noundef %{{.*}}, i64 noundef %[[V6]])
-// CHECK: call void @llvm.objc.release(ptr %call1)
+// CHECK: call void @llvm.objc.release(ptr %[[V2]])
 // CHECK: call void @os_log_pack_send(ptr noundef %{{.*}})
 // CHECK-O2: call void (...) @llvm.objc.clang.arc.use(ptr %[[V5]])
 // CHECK-O2: %[[V9:.*]] = load ptr, ptr %[[OS_LOG_ARG]], align 8
@@ -87,20 +87,20 @@ void test_builtin_os_log3(void *buf) {
 // CHECK: %[[OS_LOG_ARG:.*]] = alloca ptr, align 8
 // CHECK: %[[OS_LOG_ARG2:.*]] = alloca ptr, align 8
 // CHECK-O2: %[[V4:.*]] = call {{.*}} @objc_msgSend{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-O0: %call1 = call {{.*}} @objc_msgSend{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-O0: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #1
-// CHECK: %[[V5:.*]] = call ptr @llvm.objc.retain(ptr %call1)
+// CHECK-O0: %[[CALL:.*]] = call {{.*}} @objc_msgSend
+// CHECK-O0: %[[V4:.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[CALL]])
+// CHECK: %[[V5:.*]] = call ptr @llvm.objc.retain(ptr %[[V4]])
 // CHECK: store ptr %[[V5]], ptr %[[OS_LOG_ARG]], align 8
 // CHECK: %[[V6:.*]] = ptrtoint ptr %[[V5]] to i64
 // CHECK-O2: %[[V10:.*]] = call {{.*}} @objc_msgSend{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-O0: %call2 = call {{.*}} @objc_msgSend{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK-O0: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call2) #1
-// CHECK: %[[V11:.*]] = call ptr @llvm.objc.retain(ptr %call2)
+// CHECK-O0: %[[CALL1:.*]] = call {{.*}} @objc_msgSend
+// CHECK-O0: %[[V10:.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[CALL1]])
+// CHECK: %[[V11:.*]] = call ptr @llvm.objc.retain(ptr %[[V10]])
 // CHECK: store ptr %[[V11]], ptr %[[OS_LOG_ARG2]], align 8
 // CHECK: %[[V12:.*]] = ptrtoint ptr %[[V11]] to i64
 // CHECK: call void @__os_log_helper_1_2_2_8_64_8_64(ptr noundef %{{.*}}, i64 noundef %[[V6]], i64 noundef %[[V12]])
-// CHECK: call void @llvm.objc.release(ptr %call2)
-// CHECK: call void @llvm.objc.release(ptr %call1)
+// CHECK: call void @llvm.objc.release(ptr %[[V10]])
+// CHECK: call void @llvm.objc.release(ptr %[[V4]])
 // CHECK: call void @os_log_pack_send(ptr noundef %{{.*}})
 // CHECK-O2: call void (...) @llvm.objc.clang.arc.use(ptr %[[V11]])
 // CHECK-O2: %[[V14:.*]] = load ptr, ptr %[[OS_LOG_ARG2]], align 8

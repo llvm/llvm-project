@@ -42,17 +42,18 @@ private:
   static constexpr int MAX_UTF8_LENGTH = 4;
 
 public:
-  CharacterConverter(mbstate *mbstate) : state(mbstate) {}
+  explicit LIBC_INLINE CharacterConverter(mbstate *state_ptr)
+      : state(state_ptr) {}
 
-  void clear() {
+  LIBC_INLINE void clear() {
     state->partial = 0;
     state->bytes_stored = 0;
     state->total_bytes = 0;
   }
-  bool isFull() {
+  LIBC_INLINE bool isFull() {
     return state->bytes_stored == state->total_bytes && state->total_bytes != 0;
   }
-  bool isEmpty() { return state->bytes_stored == 0; }
+  LIBC_INLINE bool isEmpty() { return state->bytes_stored == 0; }
   bool isValidState();
 
   template <typename CharType> size_t sizeAs();
@@ -77,8 +78,7 @@ LIBC_INLINE bool CharacterConverter::isValidState() {
 }
 
 LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
-  uint8_t num_ones =
-      static_cast<uint8_t>(cpp::countl_one(static_cast<uint8_t>(utf8_byte)));
+  uint8_t num_ones = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
   // Checking the first byte if first push
   if (isEmpty()) {
     // UTF-8 char has 1 byte total

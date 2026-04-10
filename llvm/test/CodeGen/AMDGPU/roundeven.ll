@@ -821,46 +821,46 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; SDAG_GFX6-LABEL: v_roundeven_v4f16:
 ; SDAG_GFX6:       ; %bb.0:
 ; SDAG_GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; SDAG_GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
+; SDAG_GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; SDAG_GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; SDAG_GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG_GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SDAG_GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG_GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG_GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG_GFX6-NEXT:    v_rndne_f32_e32 v2, v2
 ; SDAG_GFX6-NEXT:    v_rndne_f32_e32 v3, v3
-; SDAG_GFX6-NEXT:    v_rndne_f32_e32 v0, v0
 ; SDAG_GFX6-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SDAG_GFX6-NEXT:    v_rndne_f32_e32 v1, v1
-; SDAG_GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG_GFX6-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SDAG_GFX6-NEXT:    v_rndne_f32_e32 v1, v1
+; SDAG_GFX6-NEXT:    v_rndne_f32_e32 v0, v0
+; SDAG_GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG_GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SDAG_GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SDAG_GFX6-NEXT:    v_or_b32_e32 v0, v0, v2
-; SDAG_GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; SDAG_GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SDAG_GFX6-NEXT:    v_or_b32_e32 v0, v0, v3
 ; SDAG_GFX6-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SDAG_GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX7-LABEL: v_roundeven_v4f16:
 ; SDAG_GFX7:       ; %bb.0:
 ; SDAG_GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX7-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; SDAG_GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
+; SDAG_GFX7-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; SDAG_GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; SDAG_GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG_GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SDAG_GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG_GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG_GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG_GFX7-NEXT:    v_rndne_f32_e32 v2, v2
 ; SDAG_GFX7-NEXT:    v_rndne_f32_e32 v3, v3
-; SDAG_GFX7-NEXT:    v_rndne_f32_e32 v0, v0
 ; SDAG_GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SDAG_GFX7-NEXT:    v_rndne_f32_e32 v1, v1
-; SDAG_GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG_GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SDAG_GFX7-NEXT:    v_rndne_f32_e32 v1, v1
+; SDAG_GFX7-NEXT:    v_rndne_f32_e32 v0, v0
+; SDAG_GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG_GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SDAG_GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SDAG_GFX7-NEXT:    v_or_b32_e32 v0, v0, v2
-; SDAG_GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; SDAG_GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SDAG_GFX7-NEXT:    v_or_b32_e32 v0, v0, v3
 ; SDAG_GFX7-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SDAG_GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1154,8 +1154,8 @@ define double @v_roundeven_f64(double %x) {
 ; SDAG_GFX6-NEXT:    v_mov_b32_e32 v2, 0x43300000
 ; SDAG_GFX6-NEXT:    v_bfi_b32 v3, s6, v2, v1
 ; SDAG_GFX6-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG_GFX6-NEXT:    s_mov_b32 s4, -1
 ; SDAG_GFX6-NEXT:    v_add_f64 v[4:5], v[0:1], v[2:3]
+; SDAG_GFX6-NEXT:    s_mov_b32 s4, -1
 ; SDAG_GFX6-NEXT:    s_mov_b32 s5, 0x432fffff
 ; SDAG_GFX6-NEXT:    v_add_f64 v[2:3], v[4:5], -v[2:3]
 ; SDAG_GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, s[4:5]

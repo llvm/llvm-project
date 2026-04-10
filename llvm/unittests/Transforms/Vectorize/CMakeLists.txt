@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(VectorizeTests
   VPlanTest.cpp
   VPDomTreeTest.cpp
+  VPPostDomFrontierTest.cpp
   VPlanHCFGTest.cpp
   VPlanPatternMatchTest.cpp
   VPlanSlpTest.cpp

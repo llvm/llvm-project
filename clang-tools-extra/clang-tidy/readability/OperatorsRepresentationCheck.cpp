@@ -36,8 +36,7 @@ static StringRef getOperatorSpelling(SourceLocation Loc, ASTContext &Context) {
 namespace {
 
 AST_MATCHER_P2(BinaryOperator, hasInvalidBinaryOperatorRepresentation,
-               BinaryOperatorKind, Kind, llvm::StringRef,
-               ExpectedRepresentation) {
+               BinaryOperatorKind, Kind, StringRef, ExpectedRepresentation) {
   if (Node.getOpcode() != Kind || ExpectedRepresentation.empty())
     return false;
 
@@ -47,8 +46,7 @@ AST_MATCHER_P2(BinaryOperator, hasInvalidBinaryOperatorRepresentation,
 }
 
 AST_MATCHER_P2(UnaryOperator, hasInvalidUnaryOperatorRepresentation,
-               UnaryOperatorKind, Kind, llvm::StringRef,
-               ExpectedRepresentation) {
+               UnaryOperatorKind, Kind, StringRef, ExpectedRepresentation) {
   if (Node.getOpcode() != Kind || ExpectedRepresentation.empty())
     return false;
 
@@ -58,7 +56,7 @@ AST_MATCHER_P2(UnaryOperator, hasInvalidUnaryOperatorRepresentation,
 }
 
 AST_MATCHER_P2(CXXOperatorCallExpr, hasInvalidOverloadedOperatorRepresentation,
-               OverloadedOperatorKind, Kind, llvm::StringRef,
+               OverloadedOperatorKind, Kind, StringRef,
                ExpectedRepresentation) {
   if (Node.getOperator() != Kind || ExpectedRepresentation.empty())
     return false;
@@ -70,10 +68,10 @@ AST_MATCHER_P2(CXXOperatorCallExpr, hasInvalidOverloadedOperatorRepresentation,
 
 } // namespace
 
-constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 2U>
-    UnaryRepresentation{{{"!", "not"}, {"~", "compl"}}};
+constexpr std::array<std::pair<StringRef, StringRef>, 2U> UnaryRepresentation{
+    {{"!", "not"}, {"~", "compl"}}};
 
-constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 9U>
+constexpr std::array<std::pair<StringRef, StringRef>, 9U>
     OperatorsRepresentation{{{"&&", "and"},
                              {"||", "or"},
                              {"^", "xor"},
@@ -84,7 +82,7 @@ constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 9U>
                              {"!=", "not_eq"},
                              {"^=", "xor_eq"}}};
 
-static llvm::StringRef translate(llvm::StringRef Value) {
+static StringRef translate(StringRef Value) {
   for (const auto &[Traditional, Alternative] : UnaryRepresentation) {
     if (Value == Traditional)
       return Alternative;
@@ -101,16 +99,16 @@ static llvm::StringRef translate(llvm::StringRef Value) {
   return {};
 }
 
-static bool isNotOperatorStr(llvm::StringRef Value) {
+static bool isNotOperatorStr(StringRef Value) {
   return translate(Value).empty();
 }
 
 static bool isSeparator(char C) noexcept {
-  constexpr llvm::StringRef Separators(" \t\r\n\0()<>{};,");
+  constexpr StringRef Separators(" \t\r\n\0()<>{};,");
   return Separators.contains(C);
 }
 
-static bool needEscaping(llvm::StringRef Operator) {
+static bool needEscaping(StringRef Operator) {
   switch (Operator[0]) {
   case '&':
   case '|':
@@ -123,9 +121,9 @@ static bool needEscaping(llvm::StringRef Operator) {
   }
 }
 
-static llvm::StringRef
-getRepresentation(const std::vector<llvm::StringRef> &Config,
-                  llvm::StringRef Traditional, llvm::StringRef Alternative) {
+static StringRef getRepresentation(const std::vector<StringRef> &Config,
+                                   StringRef Traditional,
+                                   StringRef Alternative) {
   if (llvm::is_contained(Config, Traditional))
     return Traditional;
   if (llvm::is_contained(Config, Alternative))
@@ -134,7 +132,7 @@ getRepresentation(const std::vector<llvm::StringRef> &Config,
 }
 
 template <typename T>
-static bool isAnyOperatorEnabled(const std::vector<llvm::StringRef> &Config,
+static bool isAnyOperatorEnabled(const std::vector<StringRef> &Config,
                                  const T &Operators) {
   return llvm::any_of(Operators, [&](const auto &Op) {
     return !getRepresentation(Config, Op.first, Op.second).empty();
@@ -177,7 +175,6 @@ void OperatorsRepresentationCheck::registerBinaryOperatorMatcher(
 
   Finder->addMatcher(
       binaryOperator(
-          unless(isExpansionInSystemHeader()),
           anyOf(hasInvalidBinaryOperatorRepresentation(
                     BO_LAnd, getRepresentation(BinaryOperators, "&&", "and")),
                 hasInvalidBinaryOperatorRepresentation(
@@ -210,7 +207,6 @@ void OperatorsRepresentationCheck::registerUnaryOperatorMatcher(
 
   Finder->addMatcher(
       unaryOperator(
-          unless(isExpansionInSystemHeader()),
           anyOf(hasInvalidUnaryOperatorRepresentation(
                     UO_LNot, getRepresentation(BinaryOperators, "!", "not")),
                 hasInvalidUnaryOperatorRepresentation(
@@ -227,7 +223,6 @@ void OperatorsRepresentationCheck::registerOverloadedOperatorMatcher(
 
   Finder->addMatcher(
       cxxOperatorCallExpr(
-          unless(isExpansionInSystemHeader()),
           anyOf(
               hasInvalidOverloadedOperatorRepresentation(
                   OO_AmpAmp,

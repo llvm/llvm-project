@@ -10,7 +10,6 @@
 #include "../ClangTidyModule.h"
 #include "AvoidEndlCheck.h"
 #include "EnumSizeCheck.h"
-#include "FasterStringFindCheck.h"
 #include "ForRangeCopyCheck.h"
 #include "ImplicitConversionInLoopCheck.h"
 #include "InefficientAlgorithmCheck.h"
@@ -23,11 +22,13 @@
 #include "NoexceptDestructorCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NoexceptSwapCheck.h"
+#include "PreferSingleCharOverloadsCheck.h"
 #include "StringViewConversionsCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitializationCheck.h"
 #include "UnnecessaryValueParamCheck.h"
+#include "UseStdMoveCheck.h"
 
 namespace clang::tidy {
 namespace performance {
@@ -38,7 +39,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidEndlCheck>("performance-avoid-endl");
     CheckFactories.registerCheck<EnumSizeCheck>("performance-enum-size");
-    CheckFactories.registerCheck<FasterStringFindCheck>(
+    CheckFactories.registerCheck<PreferSingleCharOverloadsCheck>(
         "performance-faster-string-find");
     CheckFactories.registerCheck<ForRangeCopyCheck>(
         "performance-for-range-copy");
@@ -63,6 +64,8 @@ public:
         "performance-noexcept-move-constructor");
     CheckFactories.registerCheck<NoexceptSwapCheck>(
         "performance-noexcept-swap");
+    CheckFactories.registerCheck<PreferSingleCharOverloadsCheck>(
+        "performance-prefer-single-char-overloads");
     CheckFactories.registerCheck<StringViewConversionsCheck>(
         "performance-string-view-conversions");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(
@@ -73,6 +76,7 @@ public:
         "performance-unnecessary-copy-initialization");
     CheckFactories.registerCheck<UnnecessaryValueParamCheck>(
         "performance-unnecessary-value-param");
+    CheckFactories.registerCheck<UseStdMoveCheck>("performance-use-std-move");
   }
 };
 

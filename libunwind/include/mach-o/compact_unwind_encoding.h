@@ -443,7 +443,7 @@ struct unwind_info_section_header_lsda_index_entry
 
 struct unwind_info_regular_second_level_entry
 {
-    uint32_t                    functionOffset;
+    uint32_t                     functionOffset;
     compact_unwind_encoding_t    encoding;
 };
 

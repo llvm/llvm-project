@@ -776,8 +776,8 @@ isl_bool isl_basic_map_has_defining_equality(
 		return isl_bool_error;
 	for (i = 0; i < bmap->n_eq; ++i) {
 		if (isl_int_is_zero(bmap->eq[i][offset + pos]) ||
-		    isl_seq_first_non_zero(bmap->eq[i]+offset+pos+1,
-					   1+total-offset-pos-1) != -1)
+		    isl_seq_any_non_zero(bmap->eq[i]+offset+pos+1,
+					   1+total-offset-pos-1))
 			continue;
 		if (c)
 			*c = isl_basic_map_constraint(isl_basic_map_copy(bmap),
@@ -825,8 +825,8 @@ isl_bool isl_basic_set_has_defining_inequalities(
 			continue;
 		if (isl_int_is_negone(bset->ineq[i][offset + pos]))
 			continue;
-		if (isl_seq_first_non_zero(bset->ineq[i]+offset+pos+1,
-						1+total-offset-pos-1) != -1)
+		if (isl_seq_any_non_zero(bset->ineq[i]+offset+pos+1,
+						1+total-offset-pos-1))
 			continue;
 		for (j = i + 1; j < bset->n_ineq; ++j) {
 			if (!isl_seq_is_neg(bset->ineq[i]+1, bset->ineq[j]+1,

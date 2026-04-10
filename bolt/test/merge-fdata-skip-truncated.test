@@ -1,0 +1,20 @@
+## Check that merge-fdata skips truncated lines with a warning
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: merge-fdata %t/a.fdata %t/b.fdata -o %t/merged.fdata 2>&1 | \
+# RUN:     FileCheck -check-prefix=CHECK-WARN %s
+# RUN: FileCheck %s --input-file %t/merged.fdata
+
+# CHECK-WARN: WARNING: {{.*}}b.fdata: ignoring malformed entry
+
+## Only the valid entry should appear in the merged output
+# CHECK: 1 main 0 1 main 2 1 3
+# CHECK-NOT: trunc
+
+#--- a.fdata
+1 main 0 1 main 2 0 1
+#--- b.fdata
+1 main 0 1 main 2 1 2
+1 trunc 0 1

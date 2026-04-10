@@ -42,10 +42,11 @@ static cl::opt<bool, true> DebugPrintingX(
     cl::desc("Add printf calls that show the values loaded/stored."),
     cl::location(PollyDebugPrinting), cl::Hidden, cl::cat(PollyCategory));
 
-static cl::opt<bool> TraceStmts(
+bool TraceStmts;
+static cl::opt<bool, true> TraceStmtsX(
     "polly-codegen-trace-stmts",
     cl::desc("Add printf calls that print the statement being executed"),
-    cl::Hidden, cl::cat(PollyCategory));
+    cl::location(TraceStmts), cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> TraceScalars(
     "polly-codegen-trace-scalars",
@@ -624,7 +625,7 @@ void BlockGenerator::generateConditionalExecution(
   DomTreeUpdater DTU(GenDT, DomTreeUpdater::UpdateStrategy::Eager);
   SplitBlockAndInsertIfThen(Cond, Builder.GetInsertPoint(), false, nullptr,
                             &DTU, GenLI);
-  BranchInst *Branch = cast<BranchInst>(HeadBlock->getTerminator());
+  CondBrInst *Branch = cast<CondBrInst>(HeadBlock->getTerminator());
   BasicBlock *ThenBlock = Branch->getSuccessor(0);
   BasicBlock *TailBlock = Branch->getSuccessor(1);
 
@@ -778,12 +779,12 @@ void BlockGenerator::generateScalarStores(
 
           Val = getNewValue(Stmt, Val, BBMap, LTS, L);
           assert((!isa<Instruction>(Val) ||
-                  DT.dominates(cast<Instruction>(Val)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Val)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           assert((!isa<Instruction>(Address) ||
-                  DT.dominates(cast<Instruction>(Address)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Address)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
 
           Builder.CreateStore(Val, Address);
@@ -1319,12 +1320,12 @@ void RegionGenerator::generateScalarStores(
           Value *Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS,
                                               BBMap, NewAccesses);
           assert((!isa<Instruction>(NewVal) ||
-                  DT.dominates(cast<Instruction>(NewVal)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(NewVal)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           assert((!isa<Instruction>(Address) ||
-                  DT.dominates(cast<Instruction>(Address)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Address)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           Builder.CreateStore(NewVal, Address);
         });

@@ -53,14 +53,12 @@ add_entrypoint_object(
     libc.src.__support.GPU.allocator
 )
 
-add_entrypoint_object(
-  abort
-  SRCS
-    abort.cpp
+add_header_library(
+  abort_utils
   HDRS
-    ../abort.h
+    abort_utils.h
   DEPENDS
-    libc.include.stdlib
+    libc.src.__support.GPU.utils
     libc.src.__support.RPC.rpc_client
 )
 

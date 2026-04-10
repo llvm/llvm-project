@@ -53,7 +53,7 @@ define void @_Z3fooPf(ptr %a) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %p = load float, ptr %arrayidx, align 4
@@ -63,7 +63,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -473,8 +473,8 @@ define void @widen_intrinsic_dbg(i64 %n, ptr %y, ptr %x) {
 ; CHECK-LABEL: define void @widen_intrinsic_dbg(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[Y:%.*]], ptr [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[Y2:%.*]] = ptrtoint ptr [[Y]] to i64
-; CHECK-NEXT:    [[X1:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[Y2:%.*]] = ptrtoaddr ptr [[Y]] to i64
+; CHECK-NEXT:    [[X1:%.*]] = ptrtoaddr ptr [[X]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
@@ -517,8 +517,8 @@ define void @widen_intrinsic_dbg(i64 %n, ptr %y, ptr %x) {
 ; DEBUGLOC-LABEL: define void @widen_intrinsic_dbg(
 ; DEBUGLOC-SAME: i64 [[N:%.*]], ptr [[Y:%.*]], ptr [[X:%.*]]) !dbg [[DBG85:![0-9]+]] {
 ; DEBUGLOC-NEXT:  [[ENTRY:.*]]:
-; DEBUGLOC-NEXT:    [[Y2:%.*]] = ptrtoint ptr [[Y]] to i64, !dbg [[DBG94:![0-9]+]]
-; DEBUGLOC-NEXT:    [[X1:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG94]]
+; DEBUGLOC-NEXT:    [[Y2:%.*]] = ptrtoaddr ptr [[Y]] to i64, !dbg [[DBG94:![0-9]+]]
+; DEBUGLOC-NEXT:    [[X1:%.*]] = ptrtoaddr ptr [[X]] to i64, !dbg [[DBG94]]
 ; DEBUGLOC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4, !dbg [[DBG94]]
 ; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]], !dbg [[DBG94]]
 ; DEBUGLOC:       [[VECTOR_MEMCHECK]]:

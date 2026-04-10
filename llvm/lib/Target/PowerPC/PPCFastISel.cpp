@@ -145,7 +145,7 @@ class PPCFastISel final : public FastISel {
       return RC->getID() == PPC::VSSRCRegClassID;
     }
     Register copyRegToRegClass(const TargetRegisterClass *ToRC, Register SrcReg,
-                               unsigned Flag = 0, unsigned SubReg = 0) {
+                               RegState Flag = {}, unsigned SubReg = 0) {
       Register TmpReg = createResultReg(ToRC);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(TargetOpcode::COPY), TmpReg).addReg(SrcReg, Flag, SubReg);
@@ -752,7 +752,7 @@ bool PPCFastISel::SelectStore(const Instruction *I) {
 
 // Attempt to fast-select a branch instruction.
 bool PPCFastISel::SelectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *BrBB = FuncInfo.MBB;
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
@@ -1884,7 +1884,7 @@ bool PPCFastISel::SelectTrunc(const Instruction *I) {
 
   // The only interesting case is when we need to switch register classes.
   if (SrcVT == MVT::i64)
-    SrcReg = copyRegToRegClass(&PPC::GPRCRegClass, SrcReg, 0, PPC::sub_32);
+    SrcReg = copyRegToRegClass(&PPC::GPRCRegClass, SrcReg, {}, PPC::sub_32);
 
   updateValueMap(I, SrcReg);
   return true;
@@ -1938,7 +1938,7 @@ bool PPCFastISel::fastSelectInstruction(const Instruction *I) {
       return SelectLoad(I);
     case Instruction::Store:
       return SelectStore(I);
-    case Instruction::Br:
+    case Instruction::CondBr:
       return SelectBranch(I);
     case Instruction::IndirectBr:
       return SelectIndirectBr(I);

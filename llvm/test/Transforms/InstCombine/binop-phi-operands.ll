@@ -777,3 +777,120 @@ f:
   %t21 = insertvalue { i64, i32 } %t20, i32 %t16, 1
   ret { i64, i32 } %t21
 }
+
+define i32 @sub_partial_fold_phi_operand1(i1 %which, i32 %x) {
+; CHECK-LABEL: @sub_partial_fold_phi_operand1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[CONST_IN:%.*]], label [[VAR_IN:%.*]]
+; CHECK:       const.in:
+; CHECK-NEXT:    br label [[FINAL:%.*]]
+; CHECK:       var.in:
+; CHECK-NEXT:    [[SUB_X:%.*]] = sub i32 122, [[X:%.*]]
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[P_NEG:%.*]] = phi i32 [ 113, [[CONST_IN]] ], [ [[SUB_X]], [[VAR_IN]] ]
+; CHECK-NEXT:    ret i32 [[P_NEG]]
+;
+entry:
+  br i1 %which, label %const.in, label %var.in
+
+const.in:
+  br label %final
+
+var.in:
+  %x1 = add i32 %x, 1
+  br label %final
+
+final:
+  %p = phi i32 [ 10, %const.in ], [ %x1, %var.in ]
+  %value = sub i32 123, %p
+  ret i32 %value
+}
+
+define i32 @sub_partial_fold_phi_operand1_phi_swapped(i1 %which, i32 %x) {
+; CHECK-LABEL: @sub_partial_fold_phi_operand1_phi_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[VAR_IN:%.*]], label [[CONST_IN:%.*]]
+; CHECK:       var.in:
+; CHECK-NEXT:    [[SUB_X:%.*]] = sub i32 122, [[X:%.*]]
+; CHECK-NEXT:    br label [[FINAL:%.*]]
+; CHECK:       const.in:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[P_NEG:%.*]] = phi i32 [ [[SUB_X]], [[VAR_IN]] ], [ 113, [[CONST_IN]] ]
+; CHECK-NEXT:    ret i32 [[P_NEG]]
+;
+entry:
+  br i1 %which, label %var.in, label %const.in
+
+var.in:
+  %x1 = add i32 %x, 1
+  br label %final
+
+const.in:
+  br label %final
+
+final:
+  %p = phi i32 [ %x1, %var.in ], [ 10, %const.in ]
+  %value = sub i32 123, %p
+  ret i32 %value
+}
+
+define i32 @sub_partial_fold_phi_operand0_binop_swapped(i1 %which, i32 %x) {
+; CHECK-LABEL: @sub_partial_fold_phi_operand0_binop_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[CONST_IN:%.*]], label [[VAR_IN:%.*]]
+; CHECK:       const.in:
+; CHECK-NEXT:    br label [[FINAL:%.*]]
+; CHECK:       var.in:
+; CHECK-NEXT:    [[ADD_X:%.*]] = add i32 [[X:%.*]], -122
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ -113, [[CONST_IN]] ], [ [[ADD_X]], [[VAR_IN]] ]
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  br i1 %which, label %const.in, label %var.in
+
+const.in:
+  br label %final
+
+var.in:
+  %x1 = add i32 %x, 1
+  br label %final
+
+final:
+  %p = phi i32 [ 10, %const.in ], [ %x1, %var.in ]
+  %value = sub i32 %p, 123
+  ret i32 %value
+}
+
+define i32 @sub_partial_fold_phi_operand0_phi_swapped_binop_swapped(i1 %which,
+                                                                     i32 %x) {
+; CHECK-LABEL: @sub_partial_fold_phi_operand0_phi_swapped_binop_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[VAR_IN:%.*]], label [[CONST_IN:%.*]]
+; CHECK:       var.in:
+; CHECK-NEXT:    [[ADD_X:%.*]] = add i32 [[X:%.*]], -122
+; CHECK-NEXT:    br label [[FINAL:%.*]]
+; CHECK:       const.in:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[ADD_X]], [[VAR_IN]] ], [ -113, [[CONST_IN]] ]
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  br i1 %which, label %var.in, label %const.in
+
+var.in:
+  %x1 = add i32 %x, 1
+  br label %final
+
+const.in:
+  br label %final
+
+final:
+  %p = phi i32 [ %x1, %var.in ], [ 10, %const.in ]
+  %value = sub i32 %p, 123
+  ret i32 %value
+}
