@@ -8384,18 +8384,53 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    // For AnyOf reductions, find the select among PhiR's users. This is used
-    // both to find NewVal for the final result and to adjust the reduction.
-    VPRecipeBase *AnyOfSelect = nullptr;
+    // For AnyOf reductions, find the select among PhiR's users and convert
+    // the reduction phi to operate on bools before creating the final
+    // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      AnyOfSelect = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
-        return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-      }));
+      auto *AnyOfSelect =
+          cast<VPSingleDefRecipe>(*find_if(PhiR->users(), [](VPUser *U) {
+            return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+          }));
       VPValue *Start = PhiR->getStartValue();
+      bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.
-      VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
-                            ? AnyOfSelect->getOperand(2)
-                            : AnyOfSelect->getOperand(1);
+      VPValue *NewVal = TrueValIsPhi ? AnyOfSelect->getOperand(2)
+                                     : AnyOfSelect->getOperand(1);
+
+      // Adjust AnyOf reductions; replace the reduction phi for the selected
+      // value with a boolean reduction phi node to check if the condition is
+      // true in any iteration. The final value is selected by the final
+      // ComputeReductionResult.
+      VPValue *Cmp = AnyOfSelect->getOperand(0);
+      // If the compare is checking the reduction PHI node, adjust it to check
+      // the start value.
+      if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe())
+        CmpR->replaceUsesOfWith(PhiR, PhiR->getStartValue());
+      Builder.setInsertPoint(AnyOfSelect);
+
+      // If the true value of the select is the reduction phi, the new value
+      // is selected if the negated condition is true in any iteration.
+      if (TrueValIsPhi)
+        Cmp = Builder.createNot(Cmp);
+      VPValue *Or = Builder.createOr(PhiR, Cmp);
+      // Only replace uses inside the vector region with Or. External uses
+      // (e.g. scalar preheader resume phis) must be replaced by the user
+      // update loop below with FinalReductionResult.
+      AnyOfSelect->replaceUsesWithIf(Or, [](VPUser &U, unsigned) {
+        return cast<VPRecipeBase>(&U)->getRegion();
+      });
+      ToDelete.push_back(AnyOfSelect);
+
+      // Convert the reduction phi to operate on bools.
+      PhiR->setOperand(0, Plan->getFalse());
+
+      // Update NewExitingVPV if it was pointing to the now-replaced select.
+      if (NewExitingVPV == AnyOfSelect)
+        NewExitingVPV = Or;
+
+      Builder.setInsertPoint(MiddleVPBB, IP);
+
       FinalReductionResult =
           Builder.createAnyOfReduction(NewExitingVPV, NewVal, Start, ExitDL);
     } else {
@@ -8458,32 +8493,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       if (match(U, m_CombineOr(m_ExtractLane(m_VPValue(), m_VPValue()),
                                m_ExtractLastLane(m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
-    }
-
-    // Adjust AnyOf reductions; replace the reduction phi for the selected value
-    // with a boolean reduction phi node to check if the condition is true in
-    // any iteration. The final value is selected by the final
-    // ComputeReductionResult.
-    if (AnyOfSelect) {
-      VPValue *Cmp = AnyOfSelect->getOperand(0);
-      // If the compare is checking the reduction PHI node, adjust it to check
-      // the start value.
-      if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe())
-        CmpR->replaceUsesOfWith(PhiR, PhiR->getStartValue());
-      Builder.setInsertPoint(AnyOfSelect);
-
-      // If the true value of the select is the reduction phi, the new value is
-      // selected if the negated condition is true in any iteration.
-      if (AnyOfSelect->getOperand(1) == PhiR)
-        Cmp = Builder.createNot(Cmp);
-      VPValue *Or = Builder.createOr(PhiR, Cmp);
-      AnyOfSelect->getVPSingleValue()->replaceAllUsesWith(Or);
-      // Delete AnyOfSelect now that it has invalid types.
-      ToDelete.push_back(AnyOfSelect);
-
-      // Convert the reduction phi to operate on bools.
-      PhiR->setOperand(0, Plan->getFalse());
-      continue;
     }
 
     RecurKind RK = PhiR->getRecurrenceKind();
@@ -9045,10 +9054,11 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
 
       RecurKind RK = ReductionPhi->getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) || IsFindIV) {
-        Value *StartV = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
+        auto *ResumePhi = cast<PHINode>(ResumeV);
+        Value *StartV = ResumePhi->getIncomingValueForBlock(
             EPI.MainLoopIterationCountCheck);
-        BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
-        IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
+        IRBuilder<> Builder(ResumePhi->getParent(),
+                            ResumePhi->getParent()->getFirstNonPHIIt());
 
         if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
           // VPReductionPHIRecipes for AnyOf reductions expect a boolean as

@@ -1268,7 +1268,7 @@ public:
     /// VPInstructions.
     Unpack,
     /// Reduce the operands to the final reduction result using the operation
-    /// specified via the operations VPIRFlags.
+    /// specified via the operation's VPIRFlags.
     ComputeReductionResult,
     // Extracts the last part of its operand. Removed during unrolling.
     ExtractLastPart,

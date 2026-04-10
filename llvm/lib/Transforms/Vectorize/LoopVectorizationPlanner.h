@@ -276,14 +276,7 @@ public:
   /// result, then select between \p TrueVal and \p FalseVal.
   VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
                                       VPValue *FalseVal,
-                                      DebugLoc DL = DebugLoc::getUnknown()) {
-    VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
-                    FastMathFlags());
-    auto *OrReduce = createNaryOp(VPInstruction::ComputeReductionResult,
-                                  {ChainOp}, Flags, DL);
-    auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce});
-    return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
-  }
+                                      DebugLoc DL = DebugLoc::getUnknown());
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
