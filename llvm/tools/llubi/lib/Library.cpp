@@ -106,11 +106,8 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
 
   bool Overflow = false;
   const APInt AllocSize = Count.umul_ov(Size, Overflow);
-  if (Overflow) {
-    Executor.reportImmediateUB(
-        "calloc() with allocation size that overflows size_t.");
-    return AnyValue::poison();
-  }
+  if (Overflow)
+    return AnyValue::getNullValue(Ctx, Type);
 
   const IntrusiveRefCntPtr<MemoryObject> Obj =
       Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL), Name, 0,
@@ -149,11 +146,11 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   }
 
   if (!Obj->isHeapAllocated()) {
-    Executor.reportImmediateUB("freeing an stack allocation.");
+    Executor.reportImmediateUB("freeing a non-heap allocation.");
     return AnyValue::poison();
   }
 
-  // Currently we don't for cases where a memory allocated with C
+  // Currently we don't check for cases where a memory allocated with C
   // allocation family (malloc, calloc, etc.) is freed with a different free
   // function comes from a different family (C++ delete, etc.)
 
@@ -292,12 +289,6 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
           "Unknown or unsupported format specifier in printf.");
       return AnyValue::poison();
     }
-  }
-
-  if (ArgIndex < Args.size()) {
-    Executor.reportImmediateUB(
-        "Too many arguments provided for the format string.");
-    return AnyValue::poison();
   }
 
   OS.flush();

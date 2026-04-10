@@ -11,5 +11,5 @@ define i32 @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %p = alloca i32, align 4 => ptr 0x8 [p]
-; CHECK-NEXT: Immediate UB detected: freeing an stack allocation.
+; CHECK-NEXT: Immediate UB detected: freeing a non-heap allocation.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

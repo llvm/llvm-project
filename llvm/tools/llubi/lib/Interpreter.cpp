@@ -78,9 +78,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   void setResult(Instruction &I, AnyValue V) {
-    if (!hasProgramExited())
-      if (!Handler.onInstructionExecuted(I, V))
-        requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+    if (!hasProgramExited() && !Handler.onInstructionExecuted(I, V))
+      setFailed();
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
   }
 
@@ -145,7 +144,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
   void jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
     if (!Handler.onBBJump(Terminator, *DestBB)) {
-      requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+      setFailed();
       return;
     }
     BasicBlock *From = CurrentFrame->BB;
@@ -271,7 +270,7 @@ public:
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
     if (!Handler.onInstructionExecuted(RI, None))
-      requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+      setFailed();
   }
 
   void visitUncondBrInst(UncondBrInst &BI) { jumpTo(BI, BI.getSuccessor()); }
@@ -316,7 +315,7 @@ public:
     }
 
     Handler.onUnrecognizedInstruction(CI);
-    requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+    setFailed();
   }
 
   void visitIndirectBrInst(IndirectBrInst &IBI) {
@@ -384,7 +383,7 @@ public:
     }
     default:
       Handler.onUnrecognizedInstruction(CB);
-      requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+      setFailed();
       return AnyValue();
     }
   }
@@ -396,7 +395,7 @@ public:
     if (CB.isNoBuiltin() ||
         !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
       Handler.onUnrecognizedInstruction(CB);
-      requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+      setFailed();
       return AnyValue();
     }
 
@@ -408,7 +407,7 @@ public:
       return AnyValue();
 
     Handler.onUnrecognizedInstruction(CB);
-    requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+    setFailed();
     return AnyValue();
   }
 
@@ -433,7 +432,7 @@ public:
 
       if (isa<InlineAsm>(CalledOperand)) {
         Handler.onUnrecognizedInstruction(CB);
-        requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+        setFailed();
         return;
       }
 
@@ -887,14 +886,13 @@ public:
     // TODO: track volatile stores
     // TODO: handle metadata
     store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
-    if (!hasProgramExited())
-      if (!Handler.onInstructionExecuted(SI, AnyValue()))
-        requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+    if (!hasProgramExited() && !Handler.onInstructionExecuted(SI, AnyValue()))
+      setFailed();
   }
 
   void visitInstruction(Instruction &I) {
     Handler.onUnrecognizedInstruction(I);
-    requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+    setFailed();
   }
 
   void visitExtractValueInst(ExtractValueInst &EVI) {

@@ -131,6 +131,10 @@ void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
   Handler.onProgramExit(*ExitInfo);
 }
 
+void ExecutorBase::setFailed() {
+  requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
+}
+
 bool ExecutorBase::hasProgramExited() const { return ExitInfo.has_value(); }
 
 std::optional<ProgramExitInfo> ExecutorBase::getExitInfo() const {

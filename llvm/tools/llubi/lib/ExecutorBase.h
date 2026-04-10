@@ -96,6 +96,7 @@ public:
 
   void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                           uint64_t ExitCode = 0);
+  void setFailed();
 
   bool hasProgramExited() const;
   std::optional<ProgramExitInfo> getExitInfo() const;
