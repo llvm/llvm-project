@@ -1402,7 +1402,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}}});
 
   addRulesForGOpcs({G_AMDGPU_S_BUFFER_PREFETCH})
-      .Any({{}, {{}, {SgprV4S32_WF, Imm, Sgpr32_WF}}});
+      .Any({{}, {{}, {SgprV4S32_ReadFirstLane, Imm, SgprB32_ReadFirstLane}}});
 
   addRulesForGOpcs({G_FPEXT})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})

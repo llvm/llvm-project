@@ -1441,6 +1441,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::fixed_vector(4, 16);
   case SgprV4S32:
   case SgprV4S32_WF:
+  case SgprV4S32_ReadFirstLane:
   case VgprV4S32:
   case UniInVgprV4S32:
     return LLT::fixed_vector(4, 32);
@@ -1562,6 +1563,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprV2S32:
   case SgprV4S32:
   case SgprV4S32_WF:
+  case SgprV4S32_ReadFirstLane:
   case SgprB32:
   case SgprB64:
   case SgprB96:
@@ -1931,8 +1933,8 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     }
     case SgprB32_M0:
     case SgprB32_ReadFirstLane:
-    case SgprB64_ReadFirstLane: {
-      assert(Ty == getBTyFromID(MethodIDs[i], Ty));
+    case SgprB64_ReadFirstLane:
+    case SgprV4S32_ReadFirstLane: {
       if (RB == SgprRB)
         break;
       assert(RB == VgprRB);
