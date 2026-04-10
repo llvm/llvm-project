@@ -119,6 +119,13 @@ cl::opt<bool> InferMissingFrames(
         "Infer missing call frames due to compiler tail call elimination."),
     cl::Optional, cl::cat(ProfGenCategory));
 
+cl::opt<bool> InferCallsiteSamples(
+    "infer-callsite-samples", llvm::cl::init(false),
+    llvm::cl::desc(
+        "Infer callsite body samples from callee entry samples for context "
+        "trie nodes that lack samples."),
+    llvm::cl::Optional);
+
 namespace sampleprof {
 
 // Initialize the MaxCompressionSize to -1 which means no size limit
@@ -936,6 +943,8 @@ void CSProfileGenerator::generateProfile() {
   if (SampleCounters) {
     if (Binary->usePseudoProbes()) {
       generateProbeBasedProfile();
+      if (InferCallsiteSamples)
+        inferCallsiteSamples();
     } else {
       generateLineNumBasedProfile();
     }
@@ -1370,6 +1379,102 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
     FunctionProfile.addCalledTargetSamples(CallProbe->getIndex(),
                                            CallProbe->getDiscriminator(),
                                            FunctionId(CalleeName), Count);
+  }
+}
+
+void CSProfileGenerator::inferCallsiteSamples() {
+  // Walk the context trie bottom-up and for each node, ensure that callsite
+  // body samples are at least as large as callee entry (head) samples. This
+  // handles three cases:
+  //
+  // 1. Probeless functions: inlined functions fully optimized away (e.g., thin
+  //    wrappers) that have no probes in the binary.
+  //
+  // 2. Cold functions: functions that have probes in the binary but no samples
+  //    landed on them.
+  //
+  // 3. Under-counted callsites: nodes that already have samples but callsite
+  //    counts is lower than callee entry counts.
+  //
+  // Note: cases 1 and 2 are not distinguished here — both result in a missing
+  // FunctionSamples from the trie node, but the pre-inliner separates them via
+  // size: probeless functions get size 0 from size tracker, while cold
+  // functions keep their real (non-zero) size.
+  SmallVector<ContextTrieNode *, 256> AllNodes;
+  for (auto *Node : ContextTracker)
+    AllNodes.push_back(Node);
+
+  for (auto It = AllNodes.rbegin(), End = AllNodes.rend(); It != End; ++It) {
+    ContextTrieNode *Node = *It;
+
+    if (Node == &getRootContext())
+      continue;
+
+    bool HasChildWithSamples = false;
+    for (auto &Child : Node->getAllChildContext()) {
+      if (Child.second.getFunctionSamples()) {
+        HasChildWithSamples = true;
+        break;
+      }
+    }
+    if (!HasChildWithSamples)
+      continue;
+
+    // Create FunctionSamples for nodes without them (probeless or cold).
+    FunctionSamples *FSamples = Node->getFunctionSamples();
+    if (!FSamples) {
+      FSamples = getOrCreateFunctionSamples(Node);
+      const auto *FuncDesc =
+          Binary->getFuncDescForGUID(Node->getFuncName().getHashCode());
+      FSamples->setFunctionHash(FuncDesc->FuncHash);
+    }
+
+    // Aggregate callee head samples per callsite, since multiple callees
+    // (e.g., indirect calls) can share the same callsite location. Also add
+    // each callee as a called target.
+    std::map<LineLocation, uint64_t> CallsiteHeadSum;
+    for (auto &Child : Node->getAllChildContext()) {
+      FunctionSamples *ChildSamples = Child.second.getFunctionSamples();
+      if (!ChildSamples)
+        continue;
+      uint64_t ChildHeadSamples = ChildSamples->getHeadSamplesEstimate();
+      if (ChildHeadSamples == 0)
+        continue;
+      LineLocation ChildCallsite = Child.second.getCallSiteLoc();
+      // Only add the delta to avoid double-counting if there are already
+      // called target samples from normal profile generation.
+      uint64_t ExistingTargetSamples = 0;
+      auto ExistingTargets = FSamples->findCallTargetMapAt(
+          ChildCallsite.LineOffset, ChildCallsite.Discriminator);
+      if (ExistingTargets) {
+        auto TargetIt = ExistingTargets->find(Child.second.getFuncName());
+        if (TargetIt != ExistingTargets->end())
+          ExistingTargetSamples = TargetIt->second;
+      }
+      // Use the max of head samples and existing target samples to compute
+      // the expected contribution of this callee to the callsite total.
+      CallsiteHeadSum[ChildCallsite] +=
+          std::max(ChildHeadSamples, ExistingTargetSamples);
+      if (ChildHeadSamples > ExistingTargetSamples)
+        FSamples->addCalledTargetSamples(
+            ChildCallsite.LineOffset, ChildCallsite.Discriminator,
+            Child.second.getFuncName(),
+            ChildHeadSamples - ExistingTargetSamples);
+    }
+
+    // Ensure callsite body samples >= sum of callee head samples.
+    for (auto &[Loc, HeadSum] : CallsiteHeadSum) {
+      uint64_t ExistingSamples = 0;
+      auto Existing =
+          FSamples->findSamplesAt(Loc.LineOffset, Loc.Discriminator);
+      if (Existing)
+        ExistingSamples = *Existing;
+      if (HeadSum > ExistingSamples) {
+        uint64_t Delta = HeadSum - ExistingSamples;
+        FSamples->addBodySamples(Loc.LineOffset, Loc.Discriminator, Delta);
+        FSamples->addTotalSamples(Delta);
+      }
+    }
   }
 }
 

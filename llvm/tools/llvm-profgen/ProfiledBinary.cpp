@@ -160,9 +160,12 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
       ProbeDecoder.getFuncDescForGUID(ProbeNode.Guid)->FuncName;
   ProbeContext.emplace_back(FuncName, 0);
 
-  // This ProbeContext has a probe, so it has code before inlining and
-  // optimization. Make sure we mark its size as known.
-  if (!ProbeNode.getProbes().empty()) {
+  // Mark the size of this inlinee as known (zero) if it was optimized away.
+  // A function was inlined and then optimized if it either:
+  // 1. Still has probes but no instructions, or
+  // 2. Has no probes left but still has children in the inline tree,
+  //    meaning it existed as a real function before optimization.
+  if (!ProbeNode.getProbes().empty() || !ProbeNode.getChildren().empty()) {
     ContextTrieNode *SizeContext = &RootContext;
     for (auto &ProbeFrame : reverse(ProbeContext)) {
       StringRef CallerName = ProbeFrame.first;

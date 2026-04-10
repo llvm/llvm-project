@@ -359,6 +359,8 @@ private:
   getFunctionProfileForLeafProbe(const AddrBasedCtxKey *CtxKey,
                                  const MCDecodedPseudoProbe *LeafProbe);
 
+  void inferCallsiteSamples();
+
   void convertToProfileMap(ContextTrieNode &Node,
                            SampleContextFrameVector &Context);
 
