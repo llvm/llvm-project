@@ -302,18 +302,18 @@ protected:
   /// Get the raw bytes for a required GlobalData section as a StringRef.
   ///
   /// \param Type The section type to retrieve.
-  /// \returns The section data or an error if the section is missing or
-  /// out of bounds.
+  /// \returns The section data, or an error if the section is not present or
+  /// any bytes are not present in the file.
   LLVM_ABI llvm::Expected<StringRef>
-  getRequiredGlobalData(GlobalInfoType Type) const;
+  getRequiredGlobalDataBytes(GlobalInfoType Type) const;
 
   /// Get the raw bytes for an optional GlobalData section as a StringRef.
   ///
   /// \param Type The section type to retrieve.
   /// \returns The section data, or std::nullopt if the section is not present
-  /// or out of bounds.
+  /// or any bytes are not present in the file.
   LLVM_ABI std::optional<StringRef>
-  getOptionalGlobalData(GlobalInfoType Type) const;
+  getOptionalGlobalDataBytes(GlobalInfoType Type) const;
 
   /// Parse the GSYM data from the memory buffer.
   ///

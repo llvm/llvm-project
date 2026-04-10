@@ -31,3 +31,23 @@ llvm::Expected<GlobalData> GlobalData::decode(DataExtractor &GsymData,
   GD.FileSize = GsymData.getU64(&Offset);
   return GD;
 }
+
+StringRef llvm::gsym::getNameForGlobalInfoType(GlobalInfoType Type) {
+  switch (Type) {
+  case GlobalInfoType::EndOfList:
+    return "EndOfList";
+  case GlobalInfoType::AddrOffsets:
+    return "AddrOffsets";
+  case GlobalInfoType::AddrInfoOffsets:
+    return "AddrInfoOffsets";
+  case GlobalInfoType::StringTable:
+    return "StringTable";
+  case GlobalInfoType::FileTable:
+    return "FileTable";
+  case GlobalInfoType::FunctionInfo:
+    return "FunctionInfo";
+  case GlobalInfoType::UUID:
+    return "UUID";
+  }
+  return "Unknown";
+}

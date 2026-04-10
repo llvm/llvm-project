@@ -50,7 +50,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "\n";
 
   // Print UUID if present.
-  if (auto UUIDBytes = getOptionalGlobalData(GlobalInfoType::UUID)) {
+  if (auto UUIDBytes = getOptionalGlobalDataBytes(GlobalInfoType::UUID)) {
     OS << "UUID:\n";
     for (uint8_t Byte : *UUIDBytes)
       OS << format_hex_no_prefix(Byte, 2);

@@ -136,25 +136,25 @@ llvm::Error GsymReader::parse() {
 
   // Step 3: Parse each global data section.
   llvm::Expected<StringRef> Bytes =
-      getRequiredGlobalData(GlobalInfoType::AddrOffsets);
+      getRequiredGlobalDataBytes(GlobalInfoType::AddrOffsets);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = parseAddrOffsets(*Bytes))
     return Err;
 
-  Bytes = getRequiredGlobalData(GlobalInfoType::AddrInfoOffsets);
+  Bytes = getRequiredGlobalDataBytes(GlobalInfoType::AddrInfoOffsets);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = setAddrInfoOffsetsData(*Bytes))
     return Err;
 
-  Bytes = getRequiredGlobalData(GlobalInfoType::StringTable);
+  Bytes = getRequiredGlobalDataBytes(GlobalInfoType::StringTable);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = setStringTableData(*Bytes))
     return Err;
 
-  Bytes = getRequiredGlobalData(GlobalInfoType::FileTable);
+  Bytes = getRequiredGlobalDataBytes(GlobalInfoType::FileTable);
   if (!Bytes)
     return Bytes.takeError();
   if (auto Err = setFileTableData(*Bytes))
@@ -289,8 +289,8 @@ std::optional<GlobalData> GsymReader::getGlobalData(GlobalInfoType Type) const {
 }
 
 llvm::Expected<StringRef>
-GsymReader::getRequiredGlobalData(GlobalInfoType Type) const {
-  if (auto Data = getOptionalGlobalData(Type))
+GsymReader::getRequiredGlobalDataBytes(GlobalInfoType Type) const {
+  if (auto Data = getOptionalGlobalDataBytes(Type))
     return *Data;
   const char *TypeName = getNameForGlobalInfoType(Type).data();
   std::optional<GlobalData> GD = getGlobalData(Type);
@@ -305,7 +305,7 @@ GsymReader::getRequiredGlobalData(GlobalInfoType Type) const {
 }
 
 std::optional<StringRef>
-GsymReader::getOptionalGlobalData(GlobalInfoType Type) const {
+GsymReader::getOptionalGlobalDataBytes(GlobalInfoType Type) const {
   std::optional<GlobalData> GD = getGlobalData(Type);
   if (!GD)
     return std::nullopt;
