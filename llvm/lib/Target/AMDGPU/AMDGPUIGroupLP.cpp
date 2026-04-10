@@ -696,8 +696,8 @@ void PipelineSolver::greedyFind(
 
   struct GroupInfo {
     SchedGroup *SG;
-    int Cost = 0;
     std::list<std::pair<SUnit *, SUnit *>> Edges;
+    int Cost = 0;
   };
   std::optional<GroupInfo> Best;
 
@@ -732,8 +732,8 @@ void PipelineSolver::greedyFind(
     int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
 
-    if (!Best.has_value() || TempCost < Best->Cost) {
-      Best = {Match, TempCost, TempEdges};
+    if (!Best || TempCost < Best->Cost) {
+      Best = {Match, TempEdges, TempCost};
       if (Best->Cost == 0)
         break;
     }
@@ -741,7 +741,7 @@ void PipelineSolver::greedyFind(
     removeEdges(TempEdges);
   }
 
-  if (Best.has_value()) {
+  if (Best) {
     SchedGroup *SG = Best->SG;
     std::list<std::pair<SUnit *, SUnit *>> &Edges = Best->Edges;
 
