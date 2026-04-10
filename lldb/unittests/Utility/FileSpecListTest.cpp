@@ -321,7 +321,7 @@ TEST(FileSpecListTest, AppendFileSpecList) {
   EXPECT_EQ(list_a.GetFileSpecAtIndex(1), PosixSpec("/a/bar.h"));
   EXPECT_EQ(list_a.GetFileSpecAtIndex(2), PosixSpec("/b/baz.h"));
   EXPECT_EQ(list_a.GetFileSpecAtIndex(3), PosixSpec("/b/qux.h"));
-  EXPECT_EQ(list_a.GetFileSpecAtIndex(3), PosixSpec("/a/foo.h"));
+  EXPECT_EQ(list_a.GetFileSpecAtIndex(4), PosixSpec("/a/foo.h"));
 }
 
 TEST(FileSpecListTest, AppendEmptyFileSpecList) {
