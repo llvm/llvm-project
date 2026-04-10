@@ -409,13 +409,6 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
   const Expr *FalseExpr = CO->getFalseExpr();
 
   const auto Preds = CurrentBlock->preds();
-  auto PredHasStmt = [](const CFGBlock::AdjacentBlock &Pred, const Stmt *S) {
-    return llvm::any_of(*Pred, [S](const CFGElement &Elt) {
-      if (auto CS = Elt.getAs<CFGStmt>())
-        return CS->getStmt() == S;
-      return false;
-    });
-  };
 
   // Skip origin flow from conditional operator arms that cannot produce the
   // result value: throw arms and calls to noreturn functions.
@@ -425,10 +418,17 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
   switch (CurrentBlock->pred_size()) {
   case 0:
     return;
-  case 1:
-    TBHasEdge = PredHasStmt(*Preds.begin(), TrueExpr->IgnoreParenImpCasts());
+  case 1: {
+    TBHasEdge = llvm::any_of(**Preds.begin(),
+                             [ExpectedStmt = TrueExpr->IgnoreParenImpCasts()](
+                                 const CFGElement &Elt) {
+                               if (auto CS = Elt.getAs<CFGStmt>())
+                                 return CS->getStmt() == ExpectedStmt;
+                               return false;
+                             });
     FBHasEdge = !TBHasEdge;
     break;
+  }
   case 2: {
     const auto *It = Preds.begin();
     TBHasEdge = It->isReachable();
@@ -445,8 +445,9 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
     if (FirstFlow) {
       killAndFlowOrigin(*CO, *E);
       FirstFlow = false;
-    } else
+    } else {
       flowOrigin(*CO, *E);
+    }
   };
 
   if (TBHasEdge)
