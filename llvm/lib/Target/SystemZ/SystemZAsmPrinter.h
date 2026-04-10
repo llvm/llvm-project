@@ -115,7 +115,7 @@ private:
     uint16_t SavedFPRMask = 0;
     uint8_t SavedVRMask = 0;
     uint8_t FrameReg = 0;
-    bool HasArgAreaLength = false;
+    uint8_t AllocaReg = 0;
     bool IsVarArg = false;
     bool HasStackProtector = false;
   };

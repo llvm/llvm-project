@@ -1499,6 +1499,19 @@ static void emitPPA1Name(std::unique_ptr<MCStreamer> &OutStreamer,
 void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
   assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
 
+  // Optional Argument Area Length.
+  // Note: This represents the length of the argument area that we reserve
+  //       in our stack for setting up arguments for calls to other
+  //       routines. If this optional field is not set, LE will reserve
+  //       128 bytes for the argument area. This optional field is
+  //       created if greater than 128 bytes is required - to guarantee
+  //       the required space is reserved on stack extension in the new
+  //       extension.  This optional field is also created if the
+  //       routine has alloca(). This may reduce stack space
+  //       if alloca() call causes a stack extension.
+  bool HasArgAreaLength =
+      (Info.AllocaReg != 0) || (Info.CallFrameSize > 128);
+
   // Emit PPA1 section.
   OutStreamer->AddComment("PPA1");
   OutStreamer->emitLabel(Info.PPA1);
@@ -1513,7 +1526,7 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
 
   emitPPA1Flags(OutStreamer, Info.IsVarArg, Info.HasStackProtector,
                 Info.SavedFPRMask != 0, Info.SavedVRMask != 0,
-                Info.PersonalityRoutine != nullptr, Info.HasArgAreaLength,
+                Info.PersonalityRoutine != nullptr, HasArgAreaLength,
                 Info.Name.size() > 0);
 
   OutStreamer->AddComment("Length/4 of Parms");
@@ -1522,7 +1535,7 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
   OutStreamer->AddComment("Length of Code");
   OutStreamer->emitAbsoluteSymbolDiff(Info.FnEnd, Info.EPMarker, 4);
 
-  if (Info.HasArgAreaLength) {
+  if (HasArgAreaLength) {
     OutStreamer->AddComment("Argument Area Length");
     OutStreamer->emitInt32(Info.CallFrameSize);
   }
@@ -1648,7 +1661,6 @@ void SystemZAsmPrinter::calculatePPA1() {
   uint8_t FrameReg = TRI->getEncodingValue(TRI->getFrameRegister(*MF));
   uint8_t AllocaReg = ZFL->hasFP(*MF) ? FrameReg : 0;
   assert(AllocaReg < 16 && "Can't have alloca register larger than 15");
-  (void)AllocaReg;
 
   MCSymbol *PersonalityRoutine = nullptr;
   MCSymbol *GCCEH = nullptr;
@@ -1684,21 +1696,9 @@ void SystemZAsmPrinter::calculatePPA1() {
   Info.SavedFPRMask = SavedFPRMask;
   Info.SavedVRMask = SavedVRMask;
   Info.FrameReg = FrameReg;
+  Info.AllocaReg = AllocaReg;
   Info.IsVarArg = MF->getFunction().isVarArg();
   Info.HasStackProtector = MFFrame.hasStackProtectorIndex();
-
-  // Optional Argument Area Length.
-  // Note: This represents the length of the argument area that we reserve
-  //       in our stack for setting up arguments for calls to other
-  //       routines. If this optional field is not set, LE will reserve
-  //       128 bytes for the argument area. This optional field is
-  //       created if greater than 128 bytes is required - to guarantee
-  //       the required space is reserved on stack extension in the new
-  //       extension.  This optional field is also created if the
-  //       routine has alloca(). This may reduce stack space
-  //       if alloca() call causes a stack extension.
-  Info.HasArgAreaLength =
-      (AllocaReg != 0) || (MFFrame.getMaxCallFrameSize() > 128);
 
   DeferredPPA1.push_back(Info);
 }
