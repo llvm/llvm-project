@@ -34,13 +34,9 @@ MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
 MCGOFFStreamer::~MCGOFFStreamer() = default;
 
 void MCGOFFStreamer::finishImpl() {
-  // The root SD symbol.
-  MCSectionGOFF *RootSD =
-      static_cast<MCSectionGOFF *>(
-          getContext().getObjectFileInfo()->getTextSection())
-          ->getParent();
-
-  getWriter().setRootSD(RootSD);
+  getWriter().setRootSD(static_cast<MCSectionGOFF *>(
+                            getContext().getObjectFileInfo()->getTextSection())
+                            ->getParent());
   MCObjectStreamer::finishImpl();
 }
 
