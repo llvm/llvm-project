@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --compact --doxygen --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --doxygen --output=%t --format=json --executor=standalone %s
 // RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV3Foo.json --check-prefix=CLASS
 // RUN: FileCheck %s < %t/json/index.json --check-prefix=INDEX
 
