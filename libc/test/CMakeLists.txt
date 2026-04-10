@@ -16,11 +16,6 @@ add_custom_target(libc-hermetic-tests-build)
 add_custom_target(libc-integration-tests-build)
 add_custom_target(libc_include_tests-build)
 
-# Resolve the GPU loader executable path for the lit site config.
-if(TARGET libc.utils.gpu.loader)
-  get_target_property(LIBC_GPU_LOADER_EXECUTABLE libc.utils.gpu.loader "EXECUTABLE")
-endif()
-
 # Configure the site config file for lit
 configure_lit_site_cfg(
   ${LIBC_SOURCE_DIR}/test/lit.site.cfg.py.in
@@ -34,7 +29,7 @@ configure_lit_site_cfg(
   "LLVM_LIBS_DIR"
   "LIBC_SOURCE_DIR"
   "LIBC_BUILD_DIR"
-  "LIBC_GPU_LOADER_EXECUTABLE"
+  "CMAKE_CROSSCOMPILING_EMULATOR"
 )
 
 add_lit_testsuite(check-libc-lit
@@ -46,8 +41,8 @@ add_lit_testsuite(check-libc-lit
 add_subdirectory(UnitTest)
 
 if(LIBC_TARGET_OS_IS_GPU)
-  if(NOT TARGET libc.utils.gpu.loader)
-    message(WARNING "Cannot build libc GPU tests, missing loader.")
+  if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
+    message(WARNING "Cannot build libc GPU tests, set CMAKE_CROSS_COMPILING_EMULATOR.")
     return()
   elseif(LIBC_GPU_TESTS_DISABLED)
     message(WARNING "Cannot build libc GPU tests, missing target architecture.")

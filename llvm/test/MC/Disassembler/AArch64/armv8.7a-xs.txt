@@ -28,7 +28,6 @@
 # CHECK: dsb	synxs
 # CHECK-NO-XS: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
-
 [0x21,0x90,0x0c,0xd5]
 # CHECK: tlbi	ipas2e1isnxs, x1
 # CHECK-NO-XS: sys	#4, c9, c0, #1, x1

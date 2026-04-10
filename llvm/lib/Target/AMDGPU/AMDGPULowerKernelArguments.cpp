@@ -113,53 +113,72 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
 
         PtrArgs.push_back(Arg);
       }
-    }
-
-    if (PtrArgs.empty())
+    } else {
+      // Not a memory access and not a call — nothing to annotate.
       continue;
+    }
 
     // Collect underlying objects of pointer arguments.
     SmallVector<Metadata *, 4u> Scopes;
     SmallPtrSet<const Value *, 4u> ObjSet;
     SmallVector<Metadata *, 4u> NoAliases;
 
-    for (const Value *Val : PtrArgs) {
-      SmallVector<const Value *, 4u> Objects;
-      getUnderlyingObjects(Val, Objects);
-      ObjSet.insert_range(Objects);
-    }
+    if (!PtrArgs.empty()) {
+      // Trace pointer arguments back to underlying objects and decide which
+      // noalias scopes apply based on provenance and capture analysis.
+      for (const Value *Val : PtrArgs) {
+        SmallVector<const Value *, 4u> Objects;
+        getUnderlyingObjects(Val, Objects);
+        ObjSet.insert_range(Objects);
+      }
 
-    bool RequiresNoCaptureBefore = false;
-    bool UsesUnknownObject = false;
-    bool UsesAliasingPtr = false;
+      bool RequiresNoCaptureBefore = false;
+      bool UsesUnknownObject = false;
+      bool UsesAliasingPtr = false;
 
-    for (const Value *Val : ObjSet) {
-      if (isa<ConstantData>(Val))
-        continue;
+      for (const Value *Val : ObjSet) {
+        if (isa<ConstantData>(Val))
+          continue;
 
-      if (const Argument *Arg = dyn_cast<Argument>(Val)) {
-        if (!Arg->hasAttribute(Attribute::NoAlias))
+        if (const Argument *Arg = dyn_cast<Argument>(Val)) {
+          if (!Arg->hasAttribute(Attribute::NoAlias))
+            UsesAliasingPtr = true;
+        } else
           UsesAliasingPtr = true;
-      } else
-        UsesAliasingPtr = true;
 
-      if (isEscapeSource(Val))
-        RequiresNoCaptureBefore = true;
-      else if (!isa<Argument>(Val) && isIdentifiedObject(Val))
-        UsesUnknownObject = true;
-    }
+        if (isEscapeSource(Val))
+          RequiresNoCaptureBefore = true;
+        else if (!isa<Argument>(Val) && isIdentifiedObject(Val))
+          UsesUnknownObject = true;
+      }
 
-    if (UsesUnknownObject)
-      continue;
-
-    // Collect noalias scopes for instruction.
-    for (const Argument *Arg : NoAliasArgs) {
-      if (ObjSet.contains(Arg))
+      if (UsesUnknownObject)
         continue;
 
-      if (!RequiresNoCaptureBefore ||
-          !capturesAnything(PointerMayBeCapturedBefore(
-              Arg, false, I, &DT, false, CaptureComponents::Provenance)))
+      // Collect noalias scopes for instruction.
+      for (const Argument *Arg : NoAliasArgs) {
+        if (ObjSet.contains(Arg))
+          continue;
+
+        if (!RequiresNoCaptureBefore ||
+            !capturesAnything(PointerMayBeCapturedBefore(
+                Arg, false, I, &DT, false, CaptureComponents::Provenance)))
+          NoAliases.push_back(NewScopes[Arg]);
+      }
+
+      // Collect scopes for alias.scope metadata.
+      if (!UsesAliasingPtr)
+        for (const Argument *Arg : NoAliasArgs) {
+          if (ObjSet.count(Arg))
+            Scopes.push_back(NewScopes[Arg]);
+        }
+    } else {
+      // The instruction accesses memory but has no pointer arguments.
+      // Since none of its operands derive from any noalias kernel argument,
+      // it cannot possibly alias them. Mark it as !noalias w.r.t. every
+      // noalias scope so that ScopedNoAliasAA can prove non-aliasing when
+      // other instructions reference those scopes via !alias.scope.
+      for (const Argument *Arg : NoAliasArgs)
         NoAliases.push_back(NewScopes[Arg]);
     }
 
@@ -170,13 +189,6 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
                               MDNode::get(F.getContext(), NoAliases));
       Inst->setMetadata(LLVMContext::MD_noalias, NewMD);
     }
-
-    // Collect scopes for alias.scope metadata.
-    if (!UsesAliasingPtr)
-      for (const Argument *Arg : NoAliasArgs) {
-        if (ObjSet.count(Arg))
-          Scopes.push_back(NewScopes[Arg]);
-      }
 
     // Add alias.scope metadata to instruction.
     if (!Scopes.empty()) {

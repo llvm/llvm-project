@@ -13,4 +13,3 @@
 # CHECK: mrs	x0, DIT
 # CHECK-NO-V84: mrs	x0, S3_3_C4_C2_5
 
-

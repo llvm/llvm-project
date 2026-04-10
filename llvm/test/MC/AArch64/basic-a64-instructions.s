@@ -2226,11 +2226,11 @@ _func:
 // CHECK: ldr     x10, #-1048576          // encoding: [0x0a,0x00,0x80,0x58]
 
         prfm pldl1strm, nowhere
-        prfm #22, somewhere
+        prfm #25, somewhere
 
 // CHECK: prfm    pldl1strm, nowhere      // encoding: [0bAAA00001,A,A,0xd8]
 // CHECK:                                 //   fixup A - offset: 0, value: nowhere, kind: fixup_aarch64_ldr_pcrel_imm19
-// CHECK: prfm    #22, somewhere          // encoding: [0bAAA10110,A,A,0xd8]
+// CHECK: prfm    #25, somewhere          // encoding: [0bAAA11001,A,A,0xd8]
 // CHECK:                                 //   fixup A - offset: 0, value: somewhere, kind: fixup_aarch64_ldr_pcrel_imm19
 
 //------------------------------------------------------------------------------
@@ -2478,7 +2478,7 @@ _func:
         prfm pstl2strm, [x2]
         prfm pstl3keep, [x5]
         prfm pstl3strm, [x6]
-        prfm #15, [sp]
+        prfm #25, [sp]
 // CHECK: prfm    pldl1keep, [sp, #8]     // encoding: [0xe0,0x07,0x80,0xf9]
 // CHECK: prfm    pldl1strm, [x3{{(, #0)?}}]     // encoding: [0x61,0x00,0x80,0xf9]
 // CHECK: prfm    pldl2keep, [x5, #16]    // encoding: [0xa2,0x08,0x80,0xf9]
@@ -2497,7 +2497,7 @@ _func:
 // CHECK: prfm    pstl2strm, [x2{{(, #0)?}}]     // encoding: [0x53,0x00,0x80,0xf9]
 // CHECK: prfm    pstl3keep, [x5{{(, #0)?}}]     // encoding: [0xb4,0x00,0x80,0xf9]
 // CHECK: prfm    pstl3strm, [x6{{(, #0)?}}]     // encoding: [0xd5,0x00,0x80,0xf9]
-// CHECK: prfm    #15, [sp{{(, #0)?}}]           // encoding: [0xef,0x03,0x80,0xf9]
+// CHECK: prfm    #25, [sp{{(, #0)?}}]           // encoding: [0xf9,0x03,0x80,0xf9]
 
 //// Floating-point versions
 
@@ -2597,7 +2597,7 @@ _func:
         ldr x17, [x23, w9, sxtw]
         ldr x18, [x22, w10, sxtw #0]
         str d19, [x21, wzr, sxtw #3]
-        prfm #6, [x0, x5]
+        prfm pldslckeep, [x0, x5]
 // CHECK: ldr      x3, [sp, x5]               // encoding: [0xe3,0x6b,0x65,0xf8]
 // CHECK: str      x9, [x27, x6]              // encoding: [0x69,0x6b,0x26,0xf8]
 // CHECK: ldr      d10, [x30, x7, lsl #3]     // encoding: [0xca,0x7b,0x67,0xfc]
@@ -2610,7 +2610,7 @@ _func:
 // CHECK: ldr      x17, [x23, w9, sxtw]       // encoding: [0xf1,0xca,0x69,0xf8]
 // CHECK: ldr      x18, [x22, w10, sxtw]      // encoding: [0xd2,0xca,0x6a,0xf8]
 // CHECK: str      d19, [x21, wzr, sxtw #3]   // encoding: [0xb3,0xda,0x3f,0xfc]
-// CHECK: prfm     #6, [x0, x5{{(, lsl #0)?}}]       // encoding: [0x06,0x68,0xa5,0xf8]
+// CHECK: prfm     pldslckeep, [x0, x5{{(, lsl #0)?}}]       // encoding: [0x06,0x68,0xa5,0xf8]
 
         ldr q3, [sp, x5]
         ldr q9, [x27, x6, lsl #0]

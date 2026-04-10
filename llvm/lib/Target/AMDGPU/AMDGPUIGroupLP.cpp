@@ -27,6 +27,7 @@
 #include <type_traits>
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "igrouplp"
 
@@ -819,13 +820,6 @@ void PipelineSolver::solve() {
   LLVM_DEBUG(DAG->dump());
 }
 
-enum IGLPStrategyID : int {
-  MFMASmallGemmOptID = 0,
-  MFMASmallGemmSingleWaveOptID = 1,
-  MFMAExpInterleaveID = 2,
-  MFMAExpSimpleInterleaveID = 3
-};
-
 // Implement a IGLP scheduling strategy.
 class IGLPStrategy {
 protected:
@@ -910,8 +904,6 @@ private:
   static unsigned ExpRequirement;
   // The count of independent "chains" of MFMA instructions in the pipeline
   static unsigned MFMAChains;
-  // The length of each independent "chain" of MFMA instructions
-  static unsigned MFMAChainLength;
   // Whether or not the pipeline has V_CVT instructions
   static bool HasCvt;
   // Whether or not there are instructions between the TRANS instruction and
@@ -1340,7 +1332,6 @@ unsigned MFMAExpInterleaveOpt::AddPipeCount = 0;
 unsigned MFMAExpInterleaveOpt::MFMAEnablement = 0;
 unsigned MFMAExpInterleaveOpt::ExpRequirement = 0;
 unsigned MFMAExpInterleaveOpt::MFMAChains = 0;
-unsigned MFMAExpInterleaveOpt::MFMAChainLength = 0;
 bool MFMAExpInterleaveOpt::HasCvt = false;
 bool MFMAExpInterleaveOpt::HasChainBetweenCvt = false;
 std::optional<unsigned> MFMAExpInterleaveOpt::FirstPipeDSR = std::nullopt;
@@ -1477,8 +1468,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
         Pred.getSUnit()->getInstr()->mayLoad())
       FirstPipeDSR = Pred.getSUnit()->NodeNum;
   }
-
-  MFMAChainLength = MFMAPipeCount / MFMAChains;
 
   // The number of bit pack operations that depend on a single V_EXP
   unsigned PackSuccCount =

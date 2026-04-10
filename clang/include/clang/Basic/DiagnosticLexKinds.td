@@ -377,9 +377,12 @@ class NonportablePath  : Warning<
   "non-portable path to file '%0'; specified path differs in case from file"
   " name on disk">;
 def pp_nonportable_path : NonportablePath,
-  InGroup<DiagGroup<"nonportable-include-path">>;
+  InGroup<NonportableIncludePath>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
   InGroup<DiagGroup<"nonportable-system-include-path">>;
+def pp_nonportable_path_separator : Warning<
+  "non-portable path to file '%0'; specified path contains backslashes">,
+  DefaultIgnore, InGroup<NonportableIncludePathSeparator>;
 
 def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">,
   InGroup<DiagGroup<"pragma-once-outside-header">>;
@@ -769,7 +772,9 @@ def err_paste_at_start : Error<
   "'##' cannot appear at start of macro expansion">;
 def err_paste_at_end : Error<"'##' cannot appear at end of macro expansion">;
 def ext_paste_comma : Extension<
-  "token pasting of ',' and __VA_ARGS__ is a GNU extension">, InGroup<GNUZeroVariadicMacroArguments>;
+  "token pasting of ',' and '__VA_ARGS__' is a GNU extension%select{|; "
+  "consider using '__VA_OPT__(,)' instead}0">,
+  InGroup<GNUZeroVariadicMacroArguments>;
 def err_unterm_macro_invoc : Error<
   "unterminated function-like macro invocation">;
 def err_too_many_args_in_macro_invoc : Error<
@@ -1000,6 +1005,13 @@ def warn_mmap_path_outside_directory : Warning<
   "path refers outside of the module directory; such paths in implicitly "
   "discovered module maps are deprecated">,
   InGroup<DiagGroup<"module-map-path-outside-directory">>, DefaultIgnore;
+def warn_mmap_deprecated_symlink_to_modular_header : Warning<
+  "header '%0' may be a symlink to '%1' owned by module '%2'; "
+  "symlinks to modular headers are deprecated, replace with a textual "
+  "forwarding header">,
+  InGroup<DiagGroup<"mmap-deprecated-symlink-to-modular-header">>,
+  DefaultIgnore;
+def note_mmap_module_defined_here : Note<"module defined here">;
 
 // C++20 modules
 def err_pp_module_name_is_macro : Error<

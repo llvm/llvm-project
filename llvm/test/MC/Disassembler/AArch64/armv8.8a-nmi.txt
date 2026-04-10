@@ -18,6 +18,11 @@
 [0x06,0x43,0x18,0xd5]
 # CHECK: msr	ALLINT, x6
 # NO-NMI: msr	S3_0_C4_C3_0, x6
+# Regression test for a defect, where the bit-pattern, which should have allowed
+# only ALLSTATE, allowed SPSel (and others).
+[0xbf,0x51,0x00,0xd5]
+# CHECK: msr	S0_0_C5_C1_5, xzr
+# NO-NMI: msr	S0_0_C5_C1_5, xzr
 
 [0xa7,0xc9,0x38,0xd5]
 # CHECK: mrs	x7, ICC_NMIAR1_EL1

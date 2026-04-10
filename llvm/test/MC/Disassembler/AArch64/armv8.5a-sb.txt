@@ -7,4 +7,3 @@
 0xff 0x30 0x03 0xd5
 # CHECK: sb
 # NOSB: :[[@LINE-2]]:1: warning: invalid instruction encoding
-
