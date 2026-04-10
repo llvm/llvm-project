@@ -461,7 +461,7 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
 
     if (field_found != 4) {
       LLDB_LOGF(
-          GetLog(LLDBLog::Process),
+          GetLog(LLDBLog::Object),
           "FreeBSD-Kernel-Core: Could not find all required fields for msgbuf");
       return;
     }
