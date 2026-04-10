@@ -45,6 +45,7 @@ define i32 @add_not_add_m1(i32 %a, i32 %b) {
   ret i32 %r
 }
 
+; Unfortunately not matched, because add converted to xor earlier
 define i32 @add_not_add_intmin(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_not_add_intmin(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
