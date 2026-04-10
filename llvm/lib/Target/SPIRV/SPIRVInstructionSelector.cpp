@@ -1605,7 +1605,8 @@ bool SPIRVInstructionSelector::selectPopCount16(Register ResVReg,
   bool IsVector = NumElems > 1;
   SPIRVTypeInst ExtType = IsVector ? I32VectorType : I32Type;
   Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  if (!selectOpWithSrcs(ExtReg, ExtType, I, {OpReg}, ExtOpcode))
+  // Always use OpUConvert to always use a 0 extend
+  if (!selectOpWithSrcs(ExtReg, ExtType, I, {OpReg}, SPIRV::OpUConvert))
     return false;
 
   Register PopCountReg = MRI->createVirtualRegister(GR.getRegClass(ExtType));
