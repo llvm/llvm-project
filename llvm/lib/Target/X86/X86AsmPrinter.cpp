@@ -963,9 +963,8 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   }
 
   // TODO: Support prefixed registers for the Intel syntax.
-  unsigned Dialect = TM.Options.MCOptions.OutputAsmVariant.value_or(
-      MAI->getAssemblerDialect());
-  const bool IntelSyntax = Dialect == InlineAsm::AD_Intel;
+  const bool IntelSyntax =
+      MAI->getOutputAssemblerDialect() == InlineAsm::AD_Intel;
   OutStreamer->emitSyntaxDirective(IntelSyntax ? "intel" : "att",
                                    IntelSyntax ? "noprefix" : "");
 

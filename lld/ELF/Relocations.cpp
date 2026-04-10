@@ -1184,11 +1184,9 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
   // copy relocations, etc. Note that relocations for non-alloc sections are
   // directly processed by InputSection::relocateNonAlloc.
 
-  // Deterministic parallellism needs sorting relocations which is unsuitable
-  // for -z nocombreloc. MIPS and PPC64 use global states which are not suitable
-  // for parallelism.
-  bool serial = !ctx.arg.zCombreloc || ctx.arg.emachine == EM_MIPS ||
-                ctx.arg.emachine == EM_PPC64;
+  // MIPS modifies MipsGotSection during relocation scanning, which is not
+  // suitable for parallelism.
+  bool serial = ctx.arg.emachine == EM_MIPS;
   parallel::TaskGroup tg;
   auto outerFn = [&]() {
     for (ELFFileBase *f : ctx.objectFiles) {
@@ -1405,6 +1403,8 @@ void elf::postScanRelocations(Ctx &ctx) {
       addTpOffsetGotEntry(ctx, sym);
     }
   };
+
+  ctx.target->finalizeRelocScan();
 
   GotSection *got = ctx.in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
@@ -1989,46 +1989,6 @@ bool ThunkCreator::createThunks(uint32_t pass,
   // Merge all created synthetic ThunkSections back into OutputSection
   mergeThunks(outputSections);
   return addressesChanged;
-}
-
-// The following aid in the conversion of call x@GDPLT to call __tls_get_addr
-// hexagonNeedsTLSSymbol scans for relocations would require a call to
-// __tls_get_addr.
-// hexagonTLSSymbolUpdate rebinds the relocation to __tls_get_addr.
-bool elf::hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
-  bool needTlsSymbol = false;
-  forEachInputSectionDescription(
-      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
-        for (InputSection *isec : isd->sections)
-          for (Relocation &rel : isec->relocs())
-            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
-              needTlsSymbol = true;
-              return;
-            }
-      });
-  return needTlsSymbol;
-}
-
-void elf::hexagonTLSSymbolUpdate(Ctx &ctx) {
-  Symbol *sym = ctx.symtab->find("__tls_get_addr");
-  if (!sym)
-    return;
-  bool needEntry = true;
-  forEachInputSectionDescription(
-      ctx.outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
-        for (InputSection *isec : isd->sections)
-          for (Relocation &rel : isec->relocs())
-            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
-              if (needEntry) {
-                if (sym->auxIdx == 0)
-                  sym->allocateAux(ctx);
-                addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
-                            ctx.target->pltRel, *sym);
-                needEntry = false;
-              }
-              rel.sym = sym;
-            }
-      });
 }
 
 static bool matchesRefTo(const NoCrossRefCommand &cmd, StringRef osec) {

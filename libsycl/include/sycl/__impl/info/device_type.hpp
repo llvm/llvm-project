@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the device_type enumeration.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL___IMPL_INFO_DEVICE_TYPE_HPP
 #define _LIBSYCL___IMPL_INFO_DEVICE_TYPE_HPP

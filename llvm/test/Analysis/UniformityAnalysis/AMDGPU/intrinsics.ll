@@ -239,9 +239,9 @@ define amdgpu_kernel void @wmma_bf16_16x16x32_bf16(<16 x bfloat> %A, <16 x bfloa
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16.v8f32(i1 false, <16 x bfloat> %A, i1 false, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
+; CHECK: DIVERGENT: %tmp0 = call <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16.v8f32(<16 x bfloat> %A, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
 define amdgpu_kernel void @wmma_bf16f32_16x16x32_bf16(<16 x bfloat> %A, <16 x bfloat> %B, <8 x float> %C, ptr addrspace(1) %out) {
-  %tmp0 = call <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16(i1 0, <16 x bfloat> %A, i1 0, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
+  %tmp0 = call <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16.v8f32(<16 x bfloat> %A, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
   store <8 x bfloat> %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -845,6 +845,20 @@ define amdgpu_cs void @call_whole_wave(ptr addrspace(1) %out) {
 }
 
 declare amdgpu_gfx_whole_wave i32 @wwf(i1, i32) #0
+
+; CHECK: DIVERGENT: %set_inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %in, i32 0)
+define amdgpu_kernel void @set_inactive(ptr addrspace(1) %out, i32 %in) #0 {
+  %set_inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %in, i32 0) #0
+  store i32 %set_inactive, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK: DIVERGENT: %set_inactive = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive)
+define amdgpu_cs_chain void @set_inactive_chain_arg(ptr addrspace(1) %out, i32 %inactive, i32 %active) #0 {
+  %set_inactive = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) #0
+  store i32 %set_inactive, ptr addrspace(1) %out, align 4
+  ret void
+}
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }
