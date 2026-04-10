@@ -1053,9 +1053,6 @@ public:
   }
 
 private:
-  std::int64_t GetNumAffectedLoopsFromLoopConstruct(
-      const parser::OpenMPLoopConstruct &);
-
   Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::OmpShared,
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
@@ -2062,8 +2059,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     IssueNonConformanceWarning(beginName.v, beginName.source, version);
   }
   ClearDataSharingAttributeObjects();
-  int64_t affectedDepth{GetNumAffectedLoopsFromLoopConstruct(x)};
-  SetContextAssociatedLoopLevel(affectedDepth);
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
     if (const parser::DoConstruct *doConstruct{x.GetNestedLoop()}) {
@@ -2159,16 +2154,6 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
   return true;
 }
 
-int64_t OmpAttributeVisitor::GetNumAffectedLoopsFromLoopConstruct(
-    const parser::OpenMPLoopConstruct &x) {
-  unsigned version{context_.langOptions().OpenMPVersion};
-  auto [depth, _]{
-      omp::GetAffectedNestDepthWithReason(x.BeginDir(), version, &context_)};
-  // If there was a problem obtaining the depth, it will be diagnosed in
-  // the semantic checks.
-  return depth.value.value_or(1);
-}
-
 // 2.15.1.1 Data-sharing Attribute Rules - Predetermined
 //   - The loop iteration variable(s) in the associated do-loop(s) of a do,
 //     parallel do, taskloop, or distribute construct is (are) private.
@@ -2179,12 +2164,17 @@ int64_t OmpAttributeVisitor::GetNumAffectedLoopsFromLoopConstruct(
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
-  int64_t level{GetContext().associatedLoopLevel};
-  if (level <= 0) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  auto [depth, _]{
+      omp::GetAffectedNestDepthWithReason(x.BeginDir(), version, &context_)};
+  // If there was a problem obtaining the depth, it will be diagnosed in
+  // the semantic checks.
+  if (!depth || *depth.value <= 0) {
     return;
   }
+
+  int64_t level{*depth.value};
   Symbol::Flag ivDSA;
-  unsigned version{context_.langOptions().OpenMPVersion};
   if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
   } else if (level == 1 && version < 60) {
