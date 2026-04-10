@@ -27,7 +27,6 @@
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Object/BBAddrMap.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -1267,7 +1266,7 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
 
 MCSection *
 MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
-  StringRef Name = object::BBAddrMapSectionName;
+  constexpr StringLiteral Name = ".llvm_bb_addr_map";
   if (Ctx->getObjectFileType() == MCContext::IsELF) {
     const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
     unsigned Flags = ELF::SHF_LINK_ORDER;
@@ -1291,6 +1290,9 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
                                COFF::IMAGE_SCN_MEM_READ;
     const auto &COFFSec = static_cast<const MCSectionCOFF &>(TextSec);
     if (const MCSymbol *COMDATSym = COFFSec.getCOMDATSymbol()) {
+      if (!Ctx->getAsmInfo()->hasCOFFAssociativeComdats())
+        report_fatal_error("BB address map requires associative COMDAT "
+                           "support for COMDAT functions");
       COMDATSymName = COMDATSym->getName();
       Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
       Selection = COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
