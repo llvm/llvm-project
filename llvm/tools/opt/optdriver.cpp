@@ -519,7 +519,10 @@ optMain(int argc, char **argv,
         TheTriple, SkipModuleCPU, codegen::getFeaturesStr(), Options,
         codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
         GetCodeGenOptLevel()));
-    assert(TM && "Could not allocate target machine!");
+    if (!TM) {
+      errs() << argv[0] << ": could not allocate target machine\n";
+      return 1;
+    }
 
     // If we don't have a module then just exit now. We do this down
     // here since the CPU/Feature help is underneath the target machine
