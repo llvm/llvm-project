@@ -15,24 +15,39 @@
 #define LLVM_SUPPORT_PATTERNMATCHHELPERS_H
 
 #include "llvm/Support/Casting.h"
-#include <tuple>
 
 namespace llvm::PatternMatchHelpers {
+/// Matching or combinator leaf case.
+template <typename... Tys> struct match_combine_or { // NOLINT
+  template <typename ITy> bool match(ITy *) const { return false; }
+};
+
 /// Matching or combinator.
-template <typename... Ty> struct match_combine_or { // NOLINT
-  std::tuple<Ty...> Ps;
-  match_combine_or(const Ty &...Ps) : Ps(Ps...) {}
+template <typename Ty, typename... Tys>
+struct match_combine_or<Ty, Tys...> : match_combine_or<Tys...> {
+  Ty P;
+  match_combine_or(const Ty &P, const Tys &...Ps)
+      : match_combine_or<Tys...>(Ps...), P(P) {}
+
   template <typename ITy> bool match(ITy *V) const {
-    return std::apply([V](auto &&...Ps) { return (Ps.match(V) || ...); }, Ps);
+    return P.match(V) || match_combine_or<Tys...>::match(V);
   }
 };
 
+/// Matching and combinator leaf case.
+template <typename... Tys> struct match_combine_and { // NOLINT
+  template <typename ITy> bool match(ITy *) const { return true; }
+};
+
 /// Matching and combinator.
-template <typename... Ty> struct match_combine_and { // NOLINT
-  std::tuple<Ty...> Ps;
-  match_combine_and(const Ty &...Ps) : Ps(Ps...) {}
+template <typename Ty, typename... Tys>
+struct match_combine_and<Ty, Tys...> : match_combine_and<Tys...> {
+  Ty P;
+  match_combine_and(const Ty &P, const Tys &...Ps)
+      : match_combine_and<Tys...>(Ps...), P(P) {}
+
   template <typename ITy> bool match(ITy *V) const {
-    return std::apply([V](auto &&...Ps) { return (Ps.match(V) && ...); }, Ps);
+    return P.match(V) && match_combine_and<Tys...>::match(V);
   }
 };
 
