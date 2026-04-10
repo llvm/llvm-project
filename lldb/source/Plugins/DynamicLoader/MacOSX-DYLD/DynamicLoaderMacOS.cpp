@@ -459,7 +459,7 @@ void DynamicLoaderMacOS::AddBinaries(
     image_infos.clear();
     StructuredData::ObjectSP binaries_info_sp =
         m_process->GetLoadedDynamicLibrariesInfos(fetch_binaries);
-    if (binaries_info_sp.get() && binaries_info_sp->GetAsDictionary() &&
+    if (binaries_info_sp && binaries_info_sp->GetAsDictionary() &&
         binaries_info_sp->GetAsDictionary()->HasKey("images") &&
         binaries_info_sp->GetAsDictionary()
             ->GetValueForKey("images")
