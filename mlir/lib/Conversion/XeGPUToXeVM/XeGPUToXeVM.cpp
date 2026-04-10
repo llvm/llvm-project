@@ -1197,9 +1197,9 @@ struct ConvertXeGPUToXeVMPass
       return {};
     };
 
-    // Materialization to convert
-    //   - bitcast vector of same rank
-    //   - shape vector of different rank but same element type
+    // Materialization to convert between vector types
+    //   - Add shape cast for different shapes
+    //   - Add bitcast for different element types
     // Applies to both source and target materialization.
     auto vectorToVectorMaterializationCast = [](OpBuilder &builder, Type type,
                                                 ValueRange inputs,
@@ -1209,17 +1209,22 @@ struct ConvertXeGPUToXeVMPass
       auto input = inputs.front();
       if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
         if (auto targetVecTy = dyn_cast<VectorType>(type)) {
-          // If the target type is a vector of same rank,
-          //   bitcast to the target type.
-          if (targetVecTy.getRank() == vecTy.getRank())
-            return vector::BitCastOp::create(builder, loc, targetVecTy, input)
-                .getResult();
-          else if (targetVecTy.getElementType() == vecTy.getElementType()) {
-            // If the target type is a vector of different rank but same element
-            // type, reshape to the target type.
-            return vector::ShapeCastOp::create(builder, loc, targetVecTy, input)
-                .getResult();
+          Value cast = input;
+          // If the target type has a different shape, add a shape cast
+          // If the target type has a different element type, add a bitcast
+          if (targetVecTy.getShape() != vecTy.getShape()) {
+            cast = vector::ShapeCastOp::create(
+                       builder, loc,
+                       VectorType::get(targetVecTy.getShape(),
+                                       vecTy.getElementType()),
+                       cast)
+                       .getResult();
           }
+          if (targetVecTy.getElementType() != vecTy.getElementType()) {
+            cast = vector::BitCastOp::create(builder, loc, targetVecTy, cast)
+                       .getResult();
+          }
+          return cast;
         }
       }
       return {};
