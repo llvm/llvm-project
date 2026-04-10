@@ -2478,14 +2478,14 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   LLVM_DEBUG(dbgs() << "RAOut after CSE reorder:\t"; PrintOps(I, Ops);
              dbgs() << '\n');
 
-  // For integer add trees with a single constant operand, hoist it outside to
-  // the outermost add:
+  // For scalar integer add trees with a single constant operand, hoist it
+  // outside to the outermost add:
   //   (X + C) + Y -> (X + Y) + C
-  if (I->getOpcode() == Instruction::Add && Ops.size() > 2 &&
-      isa<Constant>(Ops.back().Op)) {
+  if (I->getOpcode() == Instruction::Add && I->getType()->isIntegerTy() &&
+      Ops.size() > 2 && isa<ConstantInt>(Ops.back().Op)) {
     bool HasOtherConstant = false;
     for (unsigned Idx = 0, End = Ops.size() - 1; Idx != End; ++Idx) {
-      if (isa<Constant>(Ops[Idx].Op)) {
+      if (isa<ConstantInt>(Ops[Idx].Op)) {
         HasOtherConstant = true;
         break;
       }

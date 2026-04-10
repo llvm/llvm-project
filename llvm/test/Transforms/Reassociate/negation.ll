@@ -51,8 +51,8 @@ define <2 x i32> @PR57683(<2 x i32> %x) {
 ; CHECK-NEXT:    [[PARTIAL_NEG:%.*]] = sub <2 x i32> <i32 poison, i32 0>, [[X:%.*]]
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[PARTIAL_NEG]], <2 x i32> [[X]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[X_NEG:%.*]] = sub <2 x i32> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i32> [[SHUF]], [[X_NEG]]
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[SUB]], splat (i32 1)
+; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i32> [[X_NEG]], splat (i32 1)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[SUB]], [[SHUF]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %partial_neg = sub <2 x i32> <i32 poison, i32 0>, %x
