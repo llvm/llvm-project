@@ -3994,7 +3994,7 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
 
   MachineInstr *Result = XII.foldMemoryOperandImpl(
       *FuncInfo.MF, *MI, OpNo, AddrOps, FuncInfo.InsertPt, Size, LI->getAlign(),
-      /*AllowCommute=*/true, /*LIS=*/nullptr);
+      /*AllowCommute=*/true);
   if (!Result)
     return false;
 
