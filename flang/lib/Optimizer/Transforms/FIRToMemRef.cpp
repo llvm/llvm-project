@@ -383,6 +383,46 @@ static Value castTypeToIndexType(Value originalValue,
                                     originalValue);
 }
 
+static bool shouldUseBoundaryBitcast(mlir::Type fromTy, mlir::Type toTy) {
+  auto isBitcastCompatibleScalarType = [](mlir::Type ty) {
+    return mlir::isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>(
+               ty) ||
+           (mlir::isa<fir::CharacterType>(ty) &&
+            mlir::cast<fir::CharacterType>(ty).getLen() ==
+                fir::CharacterType::singleton());
+  };
+  auto getKnownScalarBitWidth = [](mlir::Type ty) -> std::optional<unsigned> {
+    if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
+      return intTy.getWidth();
+    if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(ty))
+      return floatTy.getWidth();
+    return std::nullopt;
+  };
+
+  if (fromTy == toTy)
+    return false;
+  const bool fromStd = fir::isa_std_type(fromTy);
+  const bool toStd = fir::isa_std_type(toTy);
+  if (fromStd == toStd)
+    return false;
+  if (!isBitcastCompatibleScalarType(fromTy) ||
+      !isBitcastCompatibleScalarType(toTy))
+    return false;
+  auto fromBits = getKnownScalarBitWidth(fromTy);
+  auto toBits = getKnownScalarBitWidth(toTy);
+  if (fromBits && toBits && *fromBits != *toBits)
+    return false;
+  return true;
+}
+
+static mlir::Value createTypeConversion(PatternRewriter &rewriter,
+                                        mlir::Location loc, mlir::Type toTy,
+                                        mlir::Value value) {
+  if (shouldUseBoundaryBitcast(value.getType(), toTy))
+    return fir::BitcastOp::create(rewriter, loc, toTy, value);
+  return fir::ConvertOp::create(rewriter, loc, toTy, value);
+}
+
 FailureOr<SmallVector<Value>>
 FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
                               PatternRewriter &rewriter, Value converted,
@@ -983,11 +1023,10 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
   LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: new memref.load op:\n";
              loadOp.dump(); assert(succeeded(verify(loadOp))));
 
-  if (isa<fir::LogicalType>(originalType)) {
-    Value logicalVal =
-        fir::ConvertOp::create(rewriter, loadOp.getLoc(), originalType, loadOp);
-    loadOp.getResult().replaceAllUsesExcept(logicalVal,
-                                            logicalVal.getDefiningOp());
+  if (loadOp.getType() != originalType) {
+    Value castVal =
+        createTypeConversion(rewriter, loadOp.getLoc(), originalType, loadOp);
+    loadOp.getResult().replaceAllUsesExcept(castVal, castVal.getDefiningOp());
   }
 
   if (!isa<fir::LogicalType>(originalType))
@@ -1019,11 +1058,10 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
   Value value = store.getValue();
   rewriter.setInsertionPointAfter(store);
 
-  if (isa<fir::LogicalType>(value.getType())) {
-    Type convertedType = typeConverter.convertType(value.getType());
+  Type convertedType = typeConverter.convertType(value.getType());
+  if (convertedType != value.getType())
     value =
-        fir::ConvertOp::create(rewriter, store.getLoc(), convertedType, value);
-  }
+        createTypeConversion(rewriter, store.getLoc(), convertedType, value);
 
   Attribute attr = (store.getOperation())->getAttr("tbaa");
   memref::StoreOp storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(

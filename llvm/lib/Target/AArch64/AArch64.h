@@ -84,7 +84,7 @@ void initializeAArch64A53Fix835769LegacyPass(PassRegistry &);
 void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
 void initializeAArch64AdvSIMDScalarLegacyPass(PassRegistry &);
 void initializeAArch64AsmPrinterPass(PassRegistry &);
-void initializeAArch64PointerAuthPass(PassRegistry&);
+void initializeAArch64PointerAuthLegacyPass(PassRegistry &);
 void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
 void initializeAArch64CFIFixupPass(PassRegistry&);
 void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
@@ -184,6 +184,12 @@ public:
 
 class AArch64ConditionOptimizerPass
     : public PassInfoMixin<AArch64ConditionOptimizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64PointerAuthPass : public PassInfoMixin<AArch64PointerAuthPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

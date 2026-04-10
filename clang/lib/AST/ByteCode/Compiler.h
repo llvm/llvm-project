@@ -230,6 +230,8 @@ public:
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
+  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
+  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);

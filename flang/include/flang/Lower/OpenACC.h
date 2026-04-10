@@ -138,6 +138,14 @@ void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
 
 void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, mlir::Location);
 
+/// If \p targetBlock is outside the ACC region containing the current
+/// insertion point, generate the appropriate region terminator
+/// (acc.terminator or acc.yield) instead of a cross-region branch.
+/// Returns true if the exit was handled, false if no ACC region boundary
+/// is crossed.
+bool genOpenACCRegionExitBranch(fir::FirOpBuilder &, mlir::Location,
+                                mlir::Block *targetBlock);
+
 /// Generates an OpenACC loop from a do construct in order to
 /// properly capture the loop bounds, parallelism determination mode,
 /// and to privatize the loop variables.

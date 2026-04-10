@@ -1307,12 +1307,12 @@ class MyInt(Dialect, name="myint"):
 
 class ConstantOp(MyInt.Operation, name="constant"):
     value: IntegerAttr
-    cst: Result[IntegerType[32]]
+    cst: Result[IntegerType[32]] = result(infer_type=True)
 
 class AddOp(MyInt.Operation, name="add"):
     lhs: Operand[IntegerType[32]]
     rhs: Operand[IntegerType[32]]
-    res: Result[IntegerType[32]]
+    res: Result[IntegerType[32]] = result(infer_type=True)
 
 # The code below requires an available MLIR context and location.
 

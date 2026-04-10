@@ -634,11 +634,13 @@ struct LinalgOpPartialReductionInterface
       IRMapping mapping;
       op->getRegion(0).cloneInto(&genericOp.getRegion(),
                                  genericOp.getRegion().begin(), mapping);
+      offsetIndices(b, genericOp, offsets);
       partialReductionOp = genericOp.getOperation();
     } else {
       SmallVector<Value> operands = std::move(tiledInputs);
       llvm::append_range(operands, tiledInits);
       partialReductionOp = mlir::clone(b, op, resultTypes, operands);
+      offsetIndices(b, cast<LinalgOp>(partialReductionOp), offsets);
     }
     return TilingResult{
         {partialReductionOp},

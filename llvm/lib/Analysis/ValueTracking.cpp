@@ -632,11 +632,9 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
       if (V == I || (!V->mayHaveSideEffects() && !V->isTerminator())) {
         EphValues.insert(V);
 
-        if (const User *U = dyn_cast<User>(V)) {
-          for (const Use &U : U->operands()) {
-            if (const auto *I = dyn_cast<Instruction>(U.get()))
-              WorkSet.push_back(I);
-          }
+        for (const Use &U : V->operands()) {
+          if (const auto *I = dyn_cast<Instruction>(U.get()))
+            WorkSet.push_back(I);
         }
       }
     }
@@ -5770,16 +5768,43 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     // sitofp and uitofp turn into +0.0 for zero.
     Known.knownNot(fcNegZero);
+
+    // UIToFP is always non-negative regardless of known bits.
     if (Op->getOpcode() == Instruction::UIToFP)
       Known.signBitMustBeZero();
 
+    // Only compute known bits if we can learn something useful from them.
+    if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
+      break;
+
+    KnownBits IntKnown =
+        computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
+
+    // If the integer is non-zero, the result cannot be +0.0
+    if (IntKnown.isNonZero())
+      Known.knownNot(fcPosZero);
+
+    if (Op->getOpcode() == Instruction::SIToFP) {
+      // If the signed integer is known non-negative, the result is
+      // non-negative. If the signed integer is known negative, the result is
+      // negative.
+      if (IntKnown.isNonNegative()) {
+        Known.signBitMustBeZero();
+      } else if (IntKnown.isNegative()) {
+        Known.signBitMustBeOne();
+      }
+    }
+
+    // Guard kept for ilogb()
     if (InterestedClasses & fcInf) {
-      // Get width of largest magnitude integer (remove a bit if signed).
+      // Get width of largest magnitude integer known.
       // This still works for a signed minimum value because the largest FP
       // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
-      int IntSize = Op->getOperand(0)->getType()->getScalarSizeInBits();
-      if (Op->getOpcode() == Instruction::SIToFP)
-        --IntSize;
+      int IntSize = IntKnown.getBitWidth();
+      if (Op->getOpcode() == Instruction::UIToFP)
+        IntSize -= IntKnown.countMinLeadingZeros();
+      else if (Op->getOpcode() == Instruction::SIToFP)
+        IntSize -= IntKnown.countMinSignBits();
 
       // If the exponent of the largest finite FP value can hold the largest
       // integer, the result of the cast must be finite.

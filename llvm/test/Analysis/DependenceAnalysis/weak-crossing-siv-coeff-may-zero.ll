@@ -9,7 +9,7 @@
 ;   A[-a*i] = 1;
 ; }
 ;
-; FIXME: When a == 0, there is a dependency with all directions between the two
+; When a == 0, there is a dependency with all directions between the two
 ; stores.
 ;
 define void @weak_crossing_siv_coeff_may_zero(ptr %A, i64 %a) {
@@ -19,7 +19,7 @@ define void @weak_crossing_siv_coeff_may_zero(ptr %A, i64 %a) {
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
 ; CHECK-ALL-NEXT:    Compare predicate: %a ne) 0
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - output [0|<]!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [0]!
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
@@ -29,7 +29,7 @@ define void @weak_crossing_siv_coeff_may_zero(ptr %A, i64 %a) {
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [0|<]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ;

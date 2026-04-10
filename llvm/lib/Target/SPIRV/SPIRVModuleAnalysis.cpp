@@ -182,6 +182,23 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     // Prevent Major part of OpenCL version to be 0
     MAI.SrcLangVersion =
         (std::max(1U, MajorNum) * 100 + MinorNum) * 1000 + RevNum;
+    // When opencl.cxx.version is also present, validate compatibility
+    // and use C++ for OpenCL as source language with the C++ version.
+    if (auto *CxxVerNode = M.getNamedMetadata("opencl.cxx.version")) {
+      assert(CxxVerNode->getNumOperands() > 0 && "Invalid SPIR");
+      auto *CxxMD = CxxVerNode->getOperand(0);
+      unsigned CxxVer =
+          (getMetadataUInt(CxxMD, 0) * 100 + getMetadataUInt(CxxMD, 1)) * 1000 +
+          getMetadataUInt(CxxMD, 2);
+      if ((MAI.SrcLangVersion == 200000 && CxxVer == 100000) ||
+          (MAI.SrcLangVersion == 300000 && CxxVer == 202100000)) {
+        MAI.SrcLang = SPIRV::SourceLanguage::CPP_for_OpenCL;
+        MAI.SrcLangVersion = CxxVer;
+      } else {
+        report_fatal_error(
+            "opencl cxx version is not compatible with opencl c version!");
+      }
+    }
   } else {
     // If there is no information about OpenCL version we are forced to generate
     // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling

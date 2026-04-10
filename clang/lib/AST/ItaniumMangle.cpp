@@ -643,8 +643,8 @@ static const CXXRecordDecl *getLambdaForInitCapture(const VarDecl *VD) {
     return nullptr;
 
   const auto *Method = cast<CXXMethodDecl>(VD->getDeclContext());
-  const auto *Lambda = dyn_cast<CXXRecordDecl>(Method->getParent());
-  if (!Lambda || !Lambda->isLambda())
+  const CXXRecordDecl *Lambda = Method->getParent();
+  if (!Lambda->isLambda())
     return nullptr;
 
   return Lambda;

@@ -105,6 +105,30 @@ def simm10_pli_w : RISCVOp {
   }];
 }
 
+class UImmPlus1AsmOperand<int width> : AsmOperandClass {
+  let Name = "UImm" # width # "Plus1";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidUImm" # width # "Plus1";
+}
+
+class RISCVUImmPlus1Op<int bitsNum>
+    : RISCVOp, ImmLeaf<XLenVT, "return Imm > 0 && isUInt<" # bitsNum # ">(Imm - 1);"> {
+  let ParserMatchClass = UImmPlus1AsmOperand<bitsNum>;
+  let EncoderMethod = "getImmOpValueMinus1";
+  let DecoderMethod = "decodeUImmPlus1Operand<" # bitsNum # ">";
+  let OperandType = "OPERAND_UIMM" # bitsNum # "_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return Imm > 0 && isUInt<}] # bitsNum # [{>(Imm - 1);
+  }];
+}
+
+def uimm4_plus1 : RISCVUImmPlus1Op<4>;
+def uimm5_plus1 : RISCVUImmPlus1Op<5>;
+def uimm6_plus1 : RISCVUImmPlus1Op<6>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -220,32 +244,36 @@ class RVPShift_ri<bits<3> f, bits<3> funct3, string opcodestr, Operand ImmType>
   let Inst{27}    = 0b0;
 }
 
-class RVPShiftD_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm6> {
+class RVPShiftD_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm6>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<6> shamt;
 
   let Inst{26} = 0b1;
   let Inst{25-20} = shamt;
 }
 
-class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm5> {
+class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm5>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<5> shamt;
 
   let Inst{26-25} = 0b01;
   let Inst{24-20} = shamt;
 }
 
-class RVPShiftH_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm4> {
+class RVPShiftH_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm4>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<4> shamt;
 
   let Inst{26-24} = 0b001;
   let Inst{23-20} = shamt;
 }
 
-class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
-    : RVPShift_ri<f, funct3, opcodestr, uimm3> {
+class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr,
+                   Operand ImmType = uimm3>
+    : RVPShift_ri<f, funct3, opcodestr, ImmType> {
   bits<3> shamt;
 
   let Inst{26-23} = 0b0001;
@@ -595,12 +623,24 @@ let Predicates = [HasStdExtP] in {
   def PADD_BS   : RVPBinaryScalar_rr<0b001, 0b10, 0b010, "padd.bs">;
 
   let Defs = [VXSAT] in
+  def PSSHL_HS  : RVPBinaryScalar_rr<0b010, 0b00, 0b010, "psshl.hs">;
+
+  let Defs = [VXSAT] in
+  def PSSHLR_HS : RVPBinaryScalar_rr<0b011, 0b00, 0b010, "psshlr.hs">;
+
+  let Defs = [VXSAT] in
   def PSSHA_HS  : RVPBinaryScalar_rr<0b110, 0b00, 0b010, "pssha.hs">;
 
   let Defs = [VXSAT] in
   def PSSHAR_HS : RVPBinaryScalar_rr<0b111, 0b00, 0b010, "psshar.hs">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
+  def SSHL      : RVPBinaryScalar_rr<0b010, 0b01, 0b010, "sshl">;
+
+  let Defs = [VXSAT] in
+  def SSHLR     : RVPBinaryScalar_rr<0b011, 0b01, 0b010, "sshlr">;
+
   let Defs = [VXSAT] in
   def SSHA      : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "ssha">;
 
@@ -611,6 +651,16 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PSLL_WS   : RVPBinaryScalar_rr<0b000, 0b01, 0b010, "psll.ws">;
 
   def PADD_WS   : RVPBinaryScalar_rr<0b001, 0b01, 0b010, "padd.ws">;
+
+  let Defs = [VXSAT] in {
+  def PSSHL_WS  : RVPBinaryScalar_rr<0b010, 0b01, 0b010, "psshl.ws">;
+  def SHL       : RVPBinaryScalar_rr<0b010, 0b11, 0b010, "shl">;
+  } // Defs = [VXSAT]
+
+  let Defs = [VXSAT] in {
+  def PSSHLR_WS : RVPBinaryScalar_rr<0b011, 0b01, 0b010, "psshlr.ws">;
+  def SHLR      : RVPBinaryScalar_rr<0b011, 0b11, 0b010, "shlr">;
+  } // Defs = [VXSAT]
 
   let Defs = [VXSAT] in {
   def PSSHA_WS  : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "pssha.ws">;
@@ -636,7 +686,7 @@ let Predicates = [HasStdExtP] in {
   def PSRARI_H   : RVPShiftH_ri<0b101, 0b100, "psrari.h">;
 
   let Defs = [VXSAT] in
-  def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h">;
+  def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h", uimm4_plus1>;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   let Defs = [VXSAT] in
@@ -645,7 +695,7 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def SRARI_RV32 : RVPShiftW_ri<0b101, 0b100, "srari">;
 
   let Defs = [VXSAT] in
-  def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati">;
+  def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati", uimm5_plus1>;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSRLI_W    : RVPShiftW_ri<0b000, 0b100, "psrli.w">;
@@ -660,8 +710,8 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def SRARI_RV64 : RVPShiftD_ri<0b101, 0b100, "srari">;
 
   let Defs = [VXSAT] in {
-  def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w">;
-  def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati">;
+  def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w", uimm5_plus1>;
+  def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati", uimm6_plus1>;
   } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP, IsRV64]
 
@@ -821,30 +871,42 @@ let Predicates = [HasStdExtP, IsRV64] in {
 // Note the spec has a 3-bit f field in bits 30:28 with 0 in bit 27.
 // Here we include the 0 in the f field to reduce number of tablegen classes.
 let Predicates = [HasStdExtP] in {
-  def PSH1ADD_H   : RVPBinary_rr<0b0100, 0b00, 0b010, "psh1add.h">;
+  def PSH1ADD_H    : RVPBinary_rr<0b0100, 0b00, 0b010, "psh1add.h">;
 
   let Defs = [VXSAT] in
-  def PSSH1SADD_H : RVPBinary_rr<0b0110, 0b00, 0b010, "pssh1sadd.h">;
+  def PSSH1SADD_H  : RVPBinary_rr<0b0110, 0b00, 0b010, "pssh1sadd.h">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   let Defs = [VXSAT] in
-  def SSH1SADD    : RVPBinary_rr<0b0110, 0b01, 0b010, "ssh1sadd">;
+  def SSH1SADD     : RVPBinary_rr<0b0110, 0b01, 0b010, "ssh1sadd">;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
-  def PSH1ADD_W   : RVPBinary_rr<0b0100, 0b01, 0b010, "psh1add.w">;
+  let Defs = [VXSAT] in {
+    def PNCLIPUP_B : RVPBinary_rr<0b0000, 0b00, 0b010, "pnclipup.b">;
+    def PNCLIPUP_H : RVPBinary_rr<0b0000, 0b01, 0b010, "pnclipup.h">;
+    def PNCLIPUP_W : RVPBinary_rr<0b0000, 0b11, 0b010, "pnclipup.w">;
+  }
+
+  def PSH1ADD_W    : RVPBinary_rr<0b0100, 0b01, 0b010, "psh1add.w">;
 
   let Defs = [VXSAT] in
-  def PSSH1SADD_W : RVPBinary_rr<0b0110, 0b01, 0b010, "pssh1sadd.w">;
+  def PSSH1SADD_W  : RVPBinary_rr<0b0110, 0b01, 0b010, "pssh1sadd.w">;
 
-  def UNZIP8P     : RVPBinary_rr<0b1100, 0b00, 0b010, "unzip8p">;
-  def UNZIP16P    : RVPBinary_rr<0b1100, 0b01, 0b010, "unzip16p">;
-  def UNZIP8HP    : RVPBinary_rr<0b1100, 0b10, 0b010, "unzip8hp">;
-  def UNZIP16HP   : RVPBinary_rr<0b1100, 0b11, 0b010, "unzip16hp">;
+  let Defs = [VXSAT] in {
+    def PNCLIPP_B  : RVPBinary_rr<0b1000, 0b00, 0b010, "pnclipp.b">;
+    def PNCLIPP_H  : RVPBinary_rr<0b1000, 0b01, 0b010, "pnclipp.h">;
+    def PNCLIPP_W  : RVPBinary_rr<0b1000, 0b11, 0b010, "pnclipp.w">;
+  }
 
-  def ZIP8P       : RVPBinary_rr<0b1110, 0b00, 0b010, "zip8p">;
-  def ZIP16P      : RVPBinary_rr<0b1110, 0b01, 0b010, "zip16p">;
-  def ZIP8HP      : RVPBinary_rr<0b1110, 0b10, 0b010, "zip8hp">;
-  def ZIP16HP     : RVPBinary_rr<0b1110, 0b11, 0b010, "zip16hp">;
+  def UNZIP8P      : RVPBinary_rr<0b1100, 0b00, 0b010, "unzip8p">;
+  def UNZIP16P     : RVPBinary_rr<0b1100, 0b01, 0b010, "unzip16p">;
+  def UNZIP8HP     : RVPBinary_rr<0b1100, 0b10, 0b010, "unzip8hp">;
+  def UNZIP16HP    : RVPBinary_rr<0b1100, 0b11, 0b010, "unzip16hp">;
+
+  def ZIP8P        : RVPBinary_rr<0b1110, 0b00, 0b010, "zip8p">;
+  def ZIP16P       : RVPBinary_rr<0b1110, 0b01, 0b010, "zip16p">;
+  def ZIP8HP       : RVPBinary_rr<0b1110, 0b10, 0b010, "zip8hp">;
+  def ZIP16HP      : RVPBinary_rr<0b1110, 0b11, 0b010, "zip16hp">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
@@ -1448,6 +1510,16 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PADD_DHS     : RVPPairShift_rr<0b001, 0b00, "padd.dhs">;
   def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, "padd.dws">;
   def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, "padd.dbs">;
+
+  let Defs = [VXSAT] in {
+  def PSSHL_DHS    : RVPPairShift_rr<0b010, 0b00, "psshl.dhs">;
+  def PSSHL_DWS    : RVPPairShift_rr<0b010, 0b01, "psshl.dws">;
+  } // Defs = [VXSAT]
+
+  let Defs = [VXSAT] in {
+  def PSSHLR_DHS   : RVPPairShift_rr<0b011, 0b00, "psshlr.dhs">;
+  def PSSHLR_DWS   : RVPPairShift_rr<0b011, 0b01, "psshlr.dws">;
+  } // Defs = [VXSAT]
 
   let Defs = [VXSAT] in {
   def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, "pssha.dhs">;

@@ -397,6 +397,43 @@ public:
   }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
+  cir::IntType getExtendedIntTy(cir::IntType ty, bool isSigned) {
+    switch (ty.getWidth()) {
+    case 8:
+      return isSigned ? typeCache.sInt16Ty : typeCache.uInt16Ty;
+    case 16:
+      return isSigned ? typeCache.sInt32Ty : typeCache.uInt32Ty;
+    case 32:
+      return isSigned ? typeCache.sInt64Ty : typeCache.uInt64Ty;
+    default:
+      llvm_unreachable("NYI");
+    }
+  }
+
+  cir::IntType getTruncatedIntTy(cir::IntType ty, bool isSigned) {
+    switch (ty.getWidth()) {
+    case 16:
+      return isSigned ? typeCache.sInt8Ty : typeCache.uInt8Ty;
+    case 32:
+      return isSigned ? typeCache.sInt16Ty : typeCache.uInt16Ty;
+    case 64:
+      return isSigned ? typeCache.sInt32Ty : typeCache.uInt32Ty;
+    default:
+      llvm_unreachable("NYI");
+    }
+  }
+
+  cir::VectorType
+  getExtendedOrTruncatedElementVectorType(cir::VectorType vt, bool isExtended,
+                                          bool isSigned = false) {
+    auto elementTy = mlir::dyn_cast_or_null<cir::IntType>(vt.getElementType());
+    assert(elementTy && "expected int vector");
+    return cir::VectorType::get(isExtended
+                                    ? getExtendedIntTy(elementTy, isSigned)
+                                    : getTruncatedIntTy(elementTy, isSigned),
+                                vt.getSize());
+  }
+
   // Fetch the type representing a pointer to unsigned int8 values.
   cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
 

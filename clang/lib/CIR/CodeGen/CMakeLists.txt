@@ -15,6 +15,7 @@ add_clang_library(clangCIR
   CIRGenBuiltinAArch64.cpp
   CIRGenBuiltinAMDGPU.cpp
   CIRGenAMDGPU.cpp
+  CIRGenBuiltinRISCV.cpp
   CIRGenBuiltinX86.cpp
   CIRGenCall.cpp
   CIRGenClass.cpp
@@ -51,6 +52,7 @@ add_clang_library(clangCIR
   CIRGenTypes.cpp
   CIRGenVTables.cpp
   TargetInfo.cpp
+  Targets/AMDGPU.cpp
 
   DEPENDS
   MLIRCIR

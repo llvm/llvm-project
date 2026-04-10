@@ -885,7 +885,7 @@ def int_swift_async_context_addr : Intrinsic<[llvm_ptr_ty], [], []>;
 
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
-def int_returnaddress : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty],
+def int_returnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
                                   [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 def int_addressofreturnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
 def int_frameaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
@@ -1849,6 +1849,7 @@ def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                               [IntrReadMem, IntrArgMemOnly,
                                ReadOnly<ArgIndex<1>>,
                                NoCapture<ArgIndex<1>>]>;
+def int_coro_dead : Intrinsic<[], [llvm_ptr_ty], [IntrNoMem]>;
 def int_coro_end : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_token_ty], []>;
 def int_coro_end_results : Intrinsic<[llvm_token_ty], [llvm_vararg_ty]>;
 def int_coro_end_async
@@ -1973,7 +1974,7 @@ def int_fptosi_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>
 
 // Clear cache intrinsic, default to ignore (ie. emit nothing)
 // maps to void __clear_cache() on supporting platforms
-def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
+def int_clear_cache : Intrinsic<[], [llvm_anyptr_ty, LLVMMatchType<0>],
                                 [], "llvm.clear_cache">;
 
 // Intrinsic to detect whether its argument is a constant.

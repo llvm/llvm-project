@@ -21,37 +21,25 @@
 #include <thread>
 #include <vector>
 
-llvm::ThreadPoolStrategy llvm::parallel::strategy;
+using namespace llvm;
+using namespace llvm::parallel;
 
-namespace llvm {
-namespace parallel {
+llvm::ThreadPoolStrategy parallel::strategy;
+
 #if LLVM_ENABLE_THREADS
 
 #ifdef _WIN32
 static thread_local unsigned threadIndex = UINT_MAX;
 
-unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
+unsigned parallel::getThreadIndex() { GET_THREAD_INDEX_IMPL; }
 #else
-thread_local unsigned threadIndex = UINT_MAX;
+thread_local unsigned parallel::threadIndex = UINT_MAX;
 #endif
-
-namespace detail {
 
 namespace {
 
-/// An abstract class that takes closures and runs them asynchronously.
-class Executor {
-public:
-  virtual ~Executor() = default;
-  virtual void add(std::function<void()> func) = 0;
-  virtual size_t getThreadCount() const = 0;
-
-  static Executor *getDefaultExecutor();
-};
-
-/// An implementation of an Executor that runs closures on a thread pool
-///   in filo order.
-class ThreadPoolExecutor : public Executor {
+/// Runs closures on a thread pool in filo order.
+class ThreadPoolExecutor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
     if (S.UseJobserver)
@@ -99,7 +87,7 @@ public:
         T.join();
   }
 
-  ~ThreadPoolExecutor() override { stop(); }
+  ~ThreadPoolExecutor() { stop(); }
 
   struct Creator {
     static void *call() { return new ThreadPoolExecutor(strategy); }
@@ -108,7 +96,7 @@ public:
     static void call(void *Ptr) { ((ThreadPoolExecutor *)Ptr)->stop(); }
   };
 
-  void add(std::function<void()> F) override {
+  void add(std::function<void()> F) {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
       WorkStack.push_back(std::move(F));
@@ -116,7 +104,7 @@ public:
     Cond.notify_one();
   }
 
-  size_t getThreadCount() const override { return ThreadCount; }
+  size_t getThreadCount() const { return ThreadCount; }
 
 private:
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
@@ -189,8 +177,9 @@ private:
 
   JobserverClient *TheJobserver = nullptr;
 };
+} // namespace
 
-Executor *Executor::getDefaultExecutor() {
+static ThreadPoolExecutor *getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() on Windows. This is important to avoid various race
@@ -210,11 +199,9 @@ Executor *Executor::getDefaultExecutor() {
   return &Exec;
 #endif
 }
-} // namespace
-} // namespace detail
 
-size_t getThreadCount() {
-  return detail::Executor::getDefaultExecutor()->getThreadCount();
+size_t parallel::getThreadCount() {
+  return getDefaultExecutor()->getThreadCount();
 }
 #endif
 
@@ -223,12 +210,14 @@ size_t getThreadCount() {
 // lock, only allow the root TaskGroup to run tasks parallelly. In the scenario
 // of nested parallel_for_each(), only the outermost one runs parallelly.
 TaskGroup::TaskGroup()
+    : Parallel(
 #if LLVM_ENABLE_THREADS
-    : Parallel((parallel::strategy.ThreadsRequested != 1) &&
-               (threadIndex == UINT_MAX)) {}
+          strategy.ThreadsRequested != 1 && threadIndex == UINT_MAX
 #else
-    : Parallel(false) {}
+          false
 #endif
+      ) {
+}
 TaskGroup::~TaskGroup() {
   // We must ensure that all the workloads have finished before decrementing the
   // instances count.
@@ -239,7 +228,7 @@ void TaskGroup::spawn(std::function<void()> F) {
 #if LLVM_ENABLE_THREADS
   if (Parallel) {
     L.inc();
-    detail::Executor::getDefaultExecutor()->add([&, F = std::move(F)] {
+    getDefaultExecutor()->add([&, F = std::move(F)] {
       F();
       L.dec();
     });
@@ -249,33 +238,35 @@ void TaskGroup::spawn(std::function<void()> F) {
   F();
 }
 
-} // namespace parallel
-} // namespace llvm
-
 void llvm::parallelFor(size_t Begin, size_t End,
-                       llvm::function_ref<void(size_t)> Fn) {
+                       function_ref<void(size_t)> Fn) {
 #if LLVM_ENABLE_THREADS
-  if (parallel::strategy.ThreadsRequested != 1) {
-    auto NumItems = End - Begin;
-    // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
-    // overhead on large inputs.
-    auto TaskSize = NumItems / parallel::detail::MaxTasksPerGroup;
-    if (TaskSize == 0)
-      TaskSize = 1;
+  if (strategy.ThreadsRequested != 1) {
+    size_t NumItems = End - Begin;
+    if (NumItems == 0)
+      return;
+    // Distribute work via an atomic counter shared by NumWorkers threads,
+    // keeping the task count (and thus Linux futex calls) at O(ThreadCount)
+    // For lld, per-file work is somewhat uneven, so a multipler > 1 is safer.
+    // While 2 vs 4 vs 8 makes no measurable difference, 4 is used as a
+    // reasonable default.
+    size_t NumWorkers = std::min<size_t>(NumItems, getThreadCount());
+    size_t ChunkSize = std::max(size_t(1), NumItems / (NumWorkers * 4));
+    std::atomic<size_t> Idx{Begin};
+    auto Worker = [&] {
+      while (true) {
+        size_t I = Idx.fetch_add(ChunkSize, std::memory_order_relaxed);
+        if (I >= End)
+          break;
+        size_t IEnd = std::min(I + ChunkSize, End);
+        for (; I < IEnd; ++I)
+          Fn(I);
+      }
+    };
 
-    parallel::TaskGroup TG;
-    for (; Begin + TaskSize < End; Begin += TaskSize) {
-      TG.spawn([=, &Fn] {
-        for (size_t I = Begin, E = Begin + TaskSize; I != E; ++I)
-          Fn(I);
-      });
-    }
-    if (Begin != End) {
-      TG.spawn([=, &Fn] {
-        for (size_t I = Begin; I != End; ++I)
-          Fn(I);
-      });
-    }
+    TaskGroup TG;
+    for (size_t I = 0; I != NumWorkers; ++I)
+      TG.spawn(Worker);
     return;
   }
 #endif

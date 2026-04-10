@@ -101,6 +101,10 @@
     "LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING": {
       "value": false,
       "doc": "Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled."
+    },
+    "LIBC_CONF_COPT_MEMCPY_X86_USE_NTA_STORES": {
+      "value": false,
+      "doc": "Use Non-temporal stores in memcpy on x86 to improve performance of large copies."
     }
   },
   "ctype": {

@@ -327,7 +327,6 @@ struct MissingFeatures {
   static bool setDLLStorageClass() { return false; }
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
-  static bool setTargetAttributes() { return false; }
   static bool shouldSplitConstantStore() { return false; }
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }

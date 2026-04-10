@@ -1952,4 +1952,37 @@ def AMDGPU_DsBarrierStatePhaseParity :
   }];
 }
 
+def AMDGPU_GlobalPrefetchOp :
+    AMDGPU_Op<"global_prefetch", [MemoryEffects<[MemWrite, MemRead]>]>,
+    Arguments<(ins AnyMemRef:$src,
+               Variadic<I64>:$indices,
+               AMDGPU_TemporalHintAttr:$temporalHint,
+               AMDGPU_CacheScopeAttr:$cacheScope,
+               UnitAttr:$speculative)>,
+    Results<(outs)> {
+
+  let summary = "Prefetch data to caches.";
+  let description = [{
+    Prefetches a cache line to high-level caches using the aligned address of
+    the source `memref` and an offset provided by the indices of the element
+    containing the cache line. This provides temporal hints (e.g., regular
+    or high-priority). Note that out-of-bounds access is allowed in
+    speculative mode. The provided memref must be in the global address space
+    (`#gpu.address_space<global>` or 1).
+
+    This operation was introduced in gfx1250.
+
+    Example:
+    ```mlir
+    amdgpu.global_prefetch %src[%i, %j] RT SE speculative : memref<64x64xf16, #gpu.address_space<global>>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUOPS_TD

@@ -15,6 +15,8 @@ import time
 # process scheduling can cause a massive (minutes) delay during this test.
 @skipIf(oslist=["linux"], archs=["arm$"])
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def spawn(self, program, args=None):
         return self.spawnSubprocess(
             executable=program,
