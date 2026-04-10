@@ -66,7 +66,7 @@ define i32 @foo_optsize() #0 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -77,7 +77,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 202
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -139,7 +139,7 @@ define i32 @foo_minsize() #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -150,7 +150,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 202
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -228,7 +228,7 @@ define i32 @foo_pgso() !prof !14 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 %i.08
   %0 = load i8, ptr %arrayidx, align 1
@@ -239,7 +239,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %i.08, 202
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -491,12 +491,12 @@ define i32 @pr45526() optsize {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -519,12 +519,12 @@ define i32 @pr45526() optsize {
 ; PGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
-; PGSO-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
-; PGSO-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; PGSO-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
+; PGSO-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
+; PGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
+; PGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
+; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
 ; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
+; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; PGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; PGSO-NEXT:    br label %[[EXIT:.*]]
 ; PGSO:       [[EXIT]]:
@@ -547,12 +547,12 @@ define i32 @pr45526() optsize {
 ; NPGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
-; NPGSO-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
-; NPGSO-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; NPGSO-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; NPGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
+; NPGSO-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
+; NPGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
+; NPGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
+; NPGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
 ; NPGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; NPGSO-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
+; NPGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; NPGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; NPGSO-NEXT:    br label %[[EXIT:.*]]
 ; NPGSO:       [[EXIT]]:
@@ -591,12 +591,12 @@ define i32 @pr45526_pgso() !prof !14 {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -619,12 +619,12 @@ define i32 @pr45526_pgso() !prof !14 {
 ; PGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
-; PGSO-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
-; PGSO-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; PGSO-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
+; PGSO-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
+; PGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
+; PGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
+; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
 ; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
+; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
 ; PGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; PGSO-NEXT:    br label %[[EXIT:.*]]
 ; PGSO:       [[EXIT]]:
@@ -975,7 +975,7 @@ define void @pr46652(i16 %stride) {
 entry:
   br label %for.body
 
-for.body:                                        ; preds = %for.body, %entry
+for.body:
   %l1.02 = phi i16 [ 1, %entry ], [ %inc9, %for.body ]
   %mul = mul nsw i16 %l1.02, %stride
   %arrayidx6 = getelementptr inbounds [1 x i16], ptr @g, i16 0, i16 %mul
@@ -984,7 +984,7 @@ for.body:                                        ; preds = %for.body, %entry
   %exitcond.not = icmp eq i16 %inc9, 16
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                        ; preds = %for.body
+for.end:
   ret void
 }
 

@@ -3144,7 +3144,7 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 }
 
 void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
-    bool dueToAmbiguity, bool isSubroutine, ActualArguments &arguments,
+    bool dueToAmbiguity, bool isSubroutine, const ActualArguments &arguments,
     const SymbolVector &tried, const AdjustActuals &adjustment) {
   if (auto *msg{Say(dueToAmbiguity
               ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
@@ -3158,16 +3158,12 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          ActualArguments *actuals{&arguments};
-          ActualArguments adjustedActuals;
+          ActualArguments adjusted{arguments};
           if (specific.has<semantics::ProcBindingDetails>() &&
               adjustment.has_value()) {
-            adjustedActuals = arguments;
-            if ((*adjustment)(specific, adjustedActuals)) {
-              actuals = &adjustedActuals;
-            }
+            (*adjustment)(specific, adjusted);
           }
-          auto reasons{semantics::CheckExplicitInterface(*procChars, *actuals,
+          auto reasons{semantics::CheckExplicitInterface(*procChars, adjusted,
               context_, /*scope=*/nullptr, /*intrinsic=*/nullptr,
               /*allocActualArgumentConversions=*/false,
               /*extentErrors=*/false,
@@ -3545,13 +3541,21 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       ProcedureDesignator *proc{std::get_if<ProcedureDesignator>(&callee->u)};
       CHECK(proc);
       bool isKernel{false};
+      bool isBindC{false};
       if (const Symbol * procSym{proc->GetSymbol()}) {
         const Symbol &ultimate{procSym->GetUltimate()};
+        isBindC = ultimate.attrs().test(semantics::Attr::BIND_C);
         if (const auto *subpDetails{
                 ultimate.detailsIf<semantics::SubprogramDetails>()}) {
           if (auto attrs{subpDetails->cudaSubprogramAttrs()}) {
             isKernel = *attrs == common::CUDASubprogramAttrs::Global ||
                 *attrs == common::CUDASubprogramAttrs::Grid_Global;
+          }
+          // Implicitly set the CUDA subprogram attributes to GLOBAL for bind(c)
+          // subprograms that are not marked as kernel.
+          if (!isKernel && isBindC && !chevrons->empty()) {
+            const_cast<semantics::SubprogramDetails *>(subpDetails)
+                ->set_cudaSubprogramAttrs(common::CUDASubprogramAttrs::Global);
           }
         } else if (const auto *procDetails{
                        ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
@@ -3562,7 +3566,7 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
               procSym->name());
         }
       }
-      if (!isKernel && !chevrons->empty()) {
+      if (!isKernel && !isBindC && !chevrons->empty()) {
         Say("Kernel launch parameters in chevrons may not be used unless calling a kernel subroutine"_err_en_US);
       }
       if (CheckCall(callStmt.source, *proc, callee->arguments)) {
@@ -3878,6 +3882,111 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::PercentLoc &x) {
   parser::CharBlock loc{at.begin() + 1, 3};
   CHECK(loc == "loc");
   return MakeFunctionRef(loc, ActualArguments{std::move(*arg)});
+}
+
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
+  // Chained else-expressions recurse automatically through Analyze(Expr).
+  MaybeExpr condExpr{Analyze(std::get<0>(x.t))};
+  MaybeExpr thenExpr{Analyze(std::get<1>(x.t).value())};
+  MaybeExpr elseExpr{Analyze(std::get<2>(x.t).value())};
+  if (!condExpr || !thenExpr || !elseExpr) {
+    return std::nullopt;
+  }
+  if (std::holds_alternative<BOZLiteralConstant>(thenExpr->u) ||
+      std::holds_alternative<BOZLiteralConstant>(elseExpr->u)) {
+    Say("BOZ literal constant in conditional expression must have explicit "
+        "type (e.g., INT(z'FF'), REAL(z'3F800000'))"_err_en_US);
+    return std::nullopt;
+  }
+  if (IsNullPointerOrAllocatable(&*thenExpr) ||
+      IsNullPointerOrAllocatable(&*elseExpr)) {
+    Say("NULL() not allowed in a conditional expression"_err_en_US);
+    return std::nullopt;
+  }
+  if (semantics::IsAssumedRank(*thenExpr) ||
+      semantics::IsAssumedRank(*elseExpr)) {
+    Say("An assumed-rank dummy argument may not be used as a value in a conditional expression"_err_en_US);
+    return std::nullopt;
+  }
+  if ((ExtractDataRef(thenExpr) &&
+          ExtractCoarrayRef(*ExtractDataRef(thenExpr))) ||
+      (ExtractDataRef(elseExpr) &&
+          ExtractCoarrayRef(*ExtractDataRef(elseExpr)))) {
+    Say("Conditional expression values may not be coindexed"_err_en_US);
+    return std::nullopt;
+  }
+  // F2023 C1004: then-expr and else-expr must have the same declared type,
+  // kind type parameters, and rank.
+  if (thenExpr->Rank() != elseExpr->Rank()) {
+    Say("All values in conditional expression must have the same rank; have rank %d and %d"_err_en_US,
+        thenExpr->Rank(), elseExpr->Rank());
+    return std::nullopt;
+  }
+  const std::optional<DynamicType> thenType{thenExpr->GetType()};
+  const std::optional<DynamicType> elseType{elseExpr->GetType()};
+  if (!thenType || !elseType) {
+    Say("Cannot determine type of conditional expression"_err_en_US);
+    return std::nullopt;
+  }
+  const TypeCategory thenCat{thenType->category()};
+  const TypeCategory elseCat{elseType->category()};
+  if (thenCat != elseCat ||
+      (thenCat != TypeCategory::Derived &&
+          thenType->kind() != elseType->kind())) {
+    Say("All values in conditional expression must have the same type and kind; have %s and %s"_err_en_US,
+        thenType->AsFortran(), elseType->AsFortran());
+    return std::nullopt;
+  }
+  if (thenCat == TypeCategory::Derived &&
+      (thenType->IsPolymorphic() || elseType->IsPolymorphic())) {
+    Say("Conditional expressions with polymorphic types (CLASS) are not yet supported"_todo_en_US);
+    return std::nullopt;
+  }
+  if (thenCat == TypeCategory::Derived &&
+      !AreSameDerivedType(
+          thenType->GetDerivedTypeSpec(), elseType->GetDerivedTypeSpec())) {
+    Say("All values in conditional expression must be the same derived type; have %s and %s"_err_en_US,
+        thenType->AsFortran(), elseType->AsFortran());
+    return std::nullopt;
+  }
+
+  // Dispatch on the else-expr to recover the concrete kind type T.
+  return common::visit(
+      common::visitors{
+          [&](Expr<SomeDerived> &&elseVal) -> MaybeExpr {
+            Expr<LogicalResult> cond{ConvertToType<LogicalResult>(
+                std::move(std::get<Expr<SomeLogical>>(condExpr->u)))};
+            Expr<SomeDerived> thenVal{
+                std::move(std::get<Expr<SomeDerived>>(thenExpr->u))};
+            return AsGenericExpr(
+                Expr<SomeDerived>{evaluate::ConditionalExpr<SomeDerived>{
+                    std::move(cond), std::move(thenVal), std::move(elseVal)}});
+          },
+          [&](auto &&elseCatExpr) -> MaybeExpr {
+            using CategoryType = std::decay_t<decltype(elseCatExpr)>;
+            if constexpr (std::is_same_v<CategoryType, BOZLiteralConstant> ||
+                std::is_same_v<CategoryType, NullPointer> ||
+                std::is_same_v<CategoryType, ProcedureDesignator> ||
+                std::is_same_v<CategoryType, ProcedureRef>) {
+              DIE("Invalid expression type in conditional expression");
+            } else {
+              return common::visit(
+                  [&](auto &&elseKindExpr) -> MaybeExpr {
+                    using T =
+                        typename std::decay_t<decltype(elseKindExpr)>::Result;
+                    Expr<LogicalResult> cond{ConvertToType<LogicalResult>(
+                        std::move(std::get<Expr<SomeLogical>>(condExpr->u)))};
+                    Expr<T> thenVal{std::move(std::get<Expr<T>>(
+                        std::get<CategoryType>(thenExpr->u).u))};
+                    return AsGenericExpr(CategoryType{
+                        Expr<T>{evaluate::ConditionalExpr<T>{std::move(cond),
+                            std::move(thenVal), std::move(elseKindExpr)}}});
+                  },
+                  elseCatExpr.u);
+            }
+          },
+      },
+      std::move(elseExpr->u));
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::DefinedUnary &x) {
@@ -5144,6 +5253,12 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
     }
     context_.SayAt(expr.source,
         "TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
+  } else if (isProcedureCall_ &&
+      std::holds_alternative<parser::ConditionalExpr>(expr.u)) {
+    // Check parse tree before analysis to avoid wasted work
+    context_.SayAt(expr.source,
+        "Conditional expressions are not yet supported as actual arguments"_todo_en_US);
+    return std::nullopt;
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
     if (isProcedureCall_ || !IsProcedureDesignator(*argExpr)) {
       // Pad Hollerith actual argument with spaces up to a multiple of 8

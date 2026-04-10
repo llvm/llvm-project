@@ -42,6 +42,27 @@ entry:
   ret i1 %ret
 }
 
+define noundef i32 @wave_bit_or(i32 %x) {
+entry:
+  ; CHECK: Function wave_bit_or : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.reduce.or(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_bit_xor(i32 %x) {
+entry:
+  ; CHECK: Function wave_bit_xor : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.reduce.xor(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_bit_and(i32 %x) {
+entry:
+  ; CHECK: Function wave_bit_and : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.reduce.and(i32 %x)
+  ret i32 %ret
+}
+
 define noundef i1 @wave_all_equal(i1 %x) {
 entry:
   ; CHECK: Function wave_all_equal : [[WAVE_FLAG]]
@@ -158,5 +179,19 @@ define noundef i32 @wave_prefix_uproduct(i32 noundef %x) {
 entry:
   ; CHECK: Function wave_prefix_uproduct : [[WAVE_FLAG]]
   %ret = call i32 @llvm.dx.wave.prefix.uproduct.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @quad_read_across_x_i32(i32 noundef %expr) {
+entry:
+  ; CHECK: Function quad_read_across_x_i32 : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.quad.read.across.x.i32(i32 %expr)
+  ret i32 %ret
+}
+
+define noundef i32 @quad_read_across_y_i32(i32 noundef %expr) {
+entry:
+  ; CHECK: Function quad_read_across_y_i32 : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.quad.read.across.y.i32(i32 %expr)
   ret i32 %ret
 }

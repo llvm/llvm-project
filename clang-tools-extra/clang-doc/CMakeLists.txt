@@ -32,10 +32,10 @@ clang_target_link_libraries(clangDoc
   clangASTMatchers
   clangBasic
   clangFrontend
-  clangIndex
   clangLex
   clangTooling
   clangToolingCore
+  clangUnifiedSymbolResolution
   )
 
 target_link_libraries(clangDoc

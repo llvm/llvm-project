@@ -27,6 +27,7 @@
 #include <type_traits>
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "igrouplp"
 
@@ -345,7 +346,7 @@ public:
         SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
 
     for (auto &PipelineInstrs : SyncedInstrs) {
-      if (PipelineInstrs.second.size() > 0) {
+      if (!PipelineInstrs.second.empty()) {
         NeedsSolver = true;
         break;
       }
@@ -359,7 +360,7 @@ public:
     CurrPipeline = BestPipeline;
 
     while (static_cast<size_t>(BeginSyncGroupIdx) < PipelineInstrs.size() &&
-           PipelineInstrs[BeginSyncGroupIdx].size() == 0)
+           PipelineInstrs[BeginSyncGroupIdx].empty())
       ++BeginSyncGroupIdx;
 
     if (static_cast<size_t>(BeginSyncGroupIdx) >= PipelineInstrs.size())
@@ -395,7 +396,7 @@ void PipelineSolver::convertSyncMapsToArrays() {
   PipelineInstrs.resize(SyncedInstrs.size());
   for (auto &SyncInstrMap : SyncedInstrs) {
     for (auto &SUsToCandSGs : SyncInstrMap.second) {
-      if (PipelineInstrs[PipelineIDx].size() == 0) {
+      if (PipelineInstrs[PipelineIDx].empty()) {
         PipelineInstrs[PipelineIDx].push_back(
             std::pair(SUsToCandSGs.first, SUsToCandSGs.second));
         continue;
@@ -511,7 +512,7 @@ void PipelineSolver::advancePosition() {
     ++CurrSyncGroupIdx;
     // Advance to next non-trivial pipeline
     while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size() &&
-           PipelineInstrs[CurrSyncGroupIdx].size() == 0)
+           PipelineInstrs[CurrSyncGroupIdx].empty())
       ++CurrSyncGroupIdx;
   }
 }
@@ -533,7 +534,7 @@ void PipelineSolver::retreatPosition() {
 
     --CurrSyncGroupIdx;
     // Go to previous non-trivial pipeline
-    while (PipelineInstrs[CurrSyncGroupIdx].size() == 0)
+    while (PipelineInstrs[CurrSyncGroupIdx].empty())
       --CurrSyncGroupIdx;
 
     CurrConflInstNo = PipelineInstrs[CurrSyncGroupIdx].size() - 1;
@@ -819,13 +820,6 @@ void PipelineSolver::solve() {
   LLVM_DEBUG(DAG->dump());
 }
 
-enum IGLPStrategyID : int {
-  MFMASmallGemmOptID = 0,
-  MFMASmallGemmSingleWaveOptID = 1,
-  MFMAExpInterleaveID = 2,
-  MFMAExpSimpleInterleaveID = 3
-};
-
 // Implement a IGLP scheduling strategy.
 class IGLPStrategy {
 protected:
@@ -910,8 +904,6 @@ private:
   static unsigned ExpRequirement;
   // The count of independent "chains" of MFMA instructions in the pipeline
   static unsigned MFMAChains;
-  // The length of each independent "chain" of MFMA instructions
-  static unsigned MFMAChainLength;
   // Whether or not the pipeline has V_CVT instructions
   static bool HasCvt;
   // Whether or not there are instructions between the TRANS instruction and
@@ -1340,7 +1332,6 @@ unsigned MFMAExpInterleaveOpt::AddPipeCount = 0;
 unsigned MFMAExpInterleaveOpt::MFMAEnablement = 0;
 unsigned MFMAExpInterleaveOpt::ExpRequirement = 0;
 unsigned MFMAExpInterleaveOpt::MFMAChains = 0;
-unsigned MFMAExpInterleaveOpt::MFMAChainLength = 0;
 bool MFMAExpInterleaveOpt::HasCvt = false;
 bool MFMAExpInterleaveOpt::HasChainBetweenCvt = false;
 std::optional<unsigned> MFMAExpInterleaveOpt::FirstPipeDSR = std::nullopt;
@@ -1477,8 +1468,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
         Pred.getSUnit()->getInstr()->mayLoad())
       FirstPipeDSR = Pred.getSUnit()->NodeNum;
   }
-
-  MFMAChainLength = MFMAPipeCount / MFMAChains;
 
   // The number of bit pack operations that depend on a single V_EXP
   unsigned PackSuccCount =

@@ -207,10 +207,10 @@ let IsDPMACCInstruction = 1 in
 defm V_MUL_F64 : VOP3Inst <"v_mul_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fmul>;
 } // End SubtargetPredicate = isNotGFX12Plus
 } // End FPDPRounding = 1
-let SubtargetPredicate = isNotGFX1170Plus in {
+let SubtargetPredicate = NotHasIEEEMinimumMaximumInsts in {
 defm V_MIN_F64 : VOP3Inst <"v_min_f64", VOP3_Profile<VOP_F64_F64_F64>, fminnum_like>;
 defm V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_like>;
-} // End SubtargetPredicate = isNotGFX1170Plus
+} // End SubtargetPredicate = NotHasIEEEMinimumMaximumInsts
 } // End SchedRW = [WriteDoubleAdd]
 
 let SchedRW = [WriteIntMul] in {
@@ -955,6 +955,26 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
+class ThreeOp_v2i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
+  // This matches (op2 (op1 v2i32:$src0, v2i32:$src1), v2i32:$src2) with conditions.
+  (ThreeOpFrag<op1, op2> v2i32:$src0, v2i32:$src1, v2i32:$src2),
+  (REG_SEQUENCE VReg_64,
+    (inst
+      (i32 (EXTRACT_SUBREG $src0, sub0)),
+      (i32 (EXTRACT_SUBREG $src1, sub0)),
+      (i32 (EXTRACT_SUBREG $src2, sub0))
+    ), sub0,
+    (inst
+      (i32 (EXTRACT_SUBREG $src0, sub1)),
+      (i32 (EXTRACT_SUBREG $src1, sub1)),
+      (i32 (EXTRACT_SUBREG $src2, sub1))
+    ), sub1
+  )
+>;
+
+def : ThreeOp_v2i32_Pats<and, or, V_AND_OR_B32_e64>;
+def : ThreeOp_v2i32_Pats<or, or, V_OR3_B32_e64>;
+
 let SubtargetPredicate = HasMadU32Inst, AddedComplexity = 10 in
   def : ThreeOp_i32_Pats<mul, add, V_MAD_U32_e64>;
 
@@ -1426,7 +1446,7 @@ let SubtargetPredicate = HasF16BF16ToFP6BF6ConversionScaleInsts, mayRaiseFPExcep
   defm V_CVT_SCALEF32_SR_PK32_FP6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk32_fp6_f32>;
 }
 
-let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0 in {
+let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0, Constraints = "@earlyclobber $vdst" in {
   defm V_CVT_SCALEF32_2XPK16_FP6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_fp6_f32>;
   defm V_CVT_SCALEF32_2XPK16_BF6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_bf6_f32>;
 }

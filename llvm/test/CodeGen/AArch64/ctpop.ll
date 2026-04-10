@@ -502,6 +502,17 @@ entry:
   ret <4 x i128> %s
 }
 
+define <8 x i4> @v8i4(<8 x i4> %a) {
+; CHECK-LABEL: v8i4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.8b, #15
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    ret
+  %r = call <8 x i4> @llvm.ctpop(<8 x i4> %a)
+  ret <8 x i4> %r
+}
+
 define i8 @i8(i8 %x) {
 ; CHECK-SD-LABEL: i8:
 ; CHECK-SD:       // %bb.0: // %entry
