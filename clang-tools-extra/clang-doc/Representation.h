@@ -97,8 +97,8 @@ llvm::ArrayRef<T> deepCopyArray(llvm::ArrayRef<T> V,
   if (V.empty())
     return llvm::ArrayRef<T>();
   T *Allocated = (T *)Alloc.Allocate<T>(V.size());
-  for (size_t i = 0; i < V.size(); ++i) {
-    new (Allocated + i) T(V[i], Alloc);
+  for (size_t Idx = 0; Idx < V.size(); ++Idx) {
+    new (Allocated + Idx) T(V[Idx], Alloc);
   }
   return llvm::ArrayRef<T>(Allocated, V.size());
 }

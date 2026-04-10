@@ -230,8 +230,8 @@ CommentInfo::CommentInfo(const CommentInfo &Other,
   Args = allocateArray(Other.Args, Arena);
   if (!Other.Children.empty()) {
     CommentInfo *NewArray = Arena.Allocate<CommentInfo>(Other.Children.size());
-    for (size_t i = 0; i < Other.Children.size(); ++i) {
-      new (NewArray + i) CommentInfo(Other.Children[i], Arena);
+    for (size_t Idx = 0; Idx < Other.Children.size(); ++Idx) {
+      new (NewArray + Idx) CommentInfo(Other.Children[Idx], Arena);
     }
     Children = llvm::ArrayRef<CommentInfo>(NewArray, Other.Children.size());
   }
