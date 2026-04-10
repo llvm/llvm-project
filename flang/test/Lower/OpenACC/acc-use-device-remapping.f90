@@ -1,6 +1,5 @@
 ! Test remapping of component references in data clauses.
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
-! XFAIL: *
 module mhdata_types
   type t_scalar
       integer :: x

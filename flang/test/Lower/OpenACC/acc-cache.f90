@@ -1,5 +1,4 @@
 ! This test checks lowering of OpenACC cache directive.
-! XFAIL: *
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_i32 : !fir.ref<i32> init {
