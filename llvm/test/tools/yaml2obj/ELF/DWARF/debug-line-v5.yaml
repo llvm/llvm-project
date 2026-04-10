@@ -20,6 +20,8 @@ DWARF:
       LineBase:            1
       LineRange:           14
       OpcodeBase:          13
+      DirectoryEntryFormat:
+      FileNameEntryFormat:
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB -DFORMAT=DWARF32 %s | \
 # RUN:   llvm-readelf --hex-dump=.debug_line - | \
@@ -126,3 +128,116 @@ DWARF:
 ##                                                       ^-       file_name_entry_format_count (1-byte)
 ##                                                         ^-     file_names_count (ULEB128)
 ##                                                           ^----EOF
+
+## Check file/directory entry format handling, particularly the interaction
+## between the count and array fields.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Format:              DWARF32
+      Version:             5
+      AddressSize:         8
+      SegmentSelectorSize: 4
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+      # DirectoryEntryFormatCount: 1  # Implicit
+      DirectoryEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+      FileNameEntryFormatCount: 1  # Explicit
+      FileNameEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+
+# RUN: yaml2obj --docnum=2 %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefix=FORMATCNT1
+
+# FORMATCNT1:      Hex dump of section '.debug_line':
+# FORMATCNT1-NEXT: 0x00000000 22000000 05000804 1a000000 01010101
+##                            ^-------                            unit_length (4-byte)
+##                                     ^---                       version (2-byte)
+##                                         ^-                     address_size (1-byte)
+##                                           ^-                   segment_selector_size (4-byte)
+##                                              ^-------          header_length (4-byte)
+##                                                       ^-       minimum_instruction_length (1-byte)
+##                                                         ^-     maximum_operations_per_instruction (1-byte)
+##                                                           ^-   default_is_stmt (1-byte)
+##                                                             ^- line_base (1-byte)
+# FORMATCNT1-NEXT: 0x00000010 0e0d0001 01010100 00000100 00010101
+##                            ^-                                  line_range (1-byte)
+##                              ^-                                opcode_base (1-byte)
+##                                ^--- -------- -------- ----     standard_opcode_lengths
+##                                                           ^-   directory_entry_format_count (1-byte)
+##                                                             ^- directories_entry_format[0].content_type (ULEB128)
+# FORMATCNT1-NEXT: 0x00000020 08000101 0800{{ }}
+##                            ^-                                  directories_entry_format[0].form (ULEB128)
+##                              ^-                                directories_count (ULEB128)
+##                                ^-                              file_name_entry_format_count (1-byte)
+##                                  ^-                            file_name_entry_format[0].content_type (ULEB128)
+##                                     ^-                         file_name_entry_format[0].form (ULEB128)
+##                                       ^-                       file_names_count (ULEB128)
+##                                         ^----                  EOF
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Format:              DWARF32
+      Version:             5
+      AddressSize:         8
+      SegmentSelectorSize: 4
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+      DirectoryEntryFormatCount: 0  # Smaller than the array length
+      DirectoryEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+      FileNameEntryFormatCount: 2  # Larger than the array length
+      FileNameEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+
+# RUN: yaml2obj --docnum=3 %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefix=FORMATCNT2
+
+# FORMATCNT2:      Hex dump of section '.debug_line':
+# FORMATCNT2-NEXT: 0x00000000 22000000 05000804 1a000000 01010101
+##                            ^-------                            unit_length (4-byte)
+##                                     ^---                       version (2-byte)
+##                                         ^-                     address_size (1-byte)
+##                                           ^-                   segment_selector_size (4-byte)
+##                                              ^-------          header_length (4-byte)
+##                                                       ^-       minimum_instruction_length (1-byte)
+##                                                         ^-     maximum_operations_per_instruction (1-byte)
+##                                                           ^-   default_is_stmt (1-byte)
+##                                                             ^- line_base (1-byte)
+# FORMATCNT2-NEXT: 0x00000010 0e0d0001 01010100 00000100 00010001
+##                            ^-                                  line_range (1-byte)
+##                              ^-                                opcode_base (1-byte)
+##                                ^--- -------- -------- ----     standard_opcode_lengths
+##                                                           ^-   directory_entry_format_count (1-byte)
+##                                                             ^- directories_entry_format[0].content_type (ULEB128)
+# FORMATCNT2-NEXT: 0x00000020 08000201 0800{{ }}
+##                            ^-                                  directories_entry_format[0].form (ULEB128)
+##                              ^-                                directories_count (ULEB128)
+##                                ^-                              file_name_entry_format_count (1-byte)
+##                                  ^-                            file_name_entry_format[0].content_type (ULEB128)
+##                                     ^-                         file_name_entry_format[0].form (ULEB128)
+##                                       ^-                       file_names_count (ULEB128)
+##                                         ^----                  EOF
