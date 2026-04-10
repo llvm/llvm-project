@@ -27,21 +27,62 @@ define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) 
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 123456
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[N]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_BODY_LR_PH_NEW:%.*]]
+; CHECK:       for.body.lr.ph.new:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i32 [[N]], 2147483644
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
+; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_EPIL_PREHEADER]]
+; CHECK:       for.body.epil.preheader:
+; CHECK-NEXT:    [[I_07_EPIL_INIT:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC_3:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[LCMP_MOD1]])
+; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
+; CHECK:       for.body.epil:
+; CHECK-NEXT:    [[I_07_EPIL:%.*]] = phi i32 [ [[I_07_EPIL_INIT]], [[FOR_BODY_EPIL_PREHEADER]] ], [ [[INC_EPIL:%.*]], [[FOR_INC_EPIL:%.*]] ]
+; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i32 [ 0, [[FOR_BODY_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], [[FOR_INC_EPIL]] ]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN_EPIL:%.*]], label [[FOR_INC_EPIL]]
+; CHECK:       if.then.epil:
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[I_07_EPIL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds nuw [4 x i8], ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP2]]
+; CHECK-NEXT:    store i32 [[I_07_EPIL]], ptr addrspace(1) [[ARRAYIDX_EPIL]], align 4
+; CHECK-NEXT:    br label [[FOR_INC_EPIL]]
+; CHECK:       for.inc.epil:
+; CHECK-NEXT:    [[INC_EPIL]] = add nuw nsw i32 [[I_07_EPIL]], 1
+; CHECK-NEXT:    [[EPIL_ITER_NEXT]] = add i32 [[EPIL_ITER]], 1
+; CHECK-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i32 [[EPIL_ITER_NEXT]], [[XTRAITER]]
+; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_EPIL]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH_NEW]] ], [ [[INC_3]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I_07]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP0]]
 ; CHECK-NEXT:    store i32 [[I_07]], ptr addrspace(1) [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = or disjoint i32 [[I_07]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[INC]] to i64
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP4]]
+; CHECK-NEXT:    store i32 [[INC]], ptr addrspace(1) [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[INC_1:%.*]] = or disjoint i32 [[I_07]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[INC_1]] to i64
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP5]]
+; CHECK-NEXT:    store i32 [[INC_1]], ptr addrspace(1) [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[INC_2:%.*]] = or disjoint i32 [[I_07]], 3
+; CHECK-NEXT:    [[TMP6:%.*]] = zext nneg i32 [[INC_2]] to i64
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP6]]
+; CHECK-NEXT:    store i32 [[INC_2]], ptr addrspace(1) [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
-; CHECK:       for.inc:
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+; CHECK:       for.inc.3:
+; CHECK-NEXT:    [[INC_3]] = add nuw nsw i32 [[I_07]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
+; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0
