@@ -7315,7 +7315,9 @@ TypeSystemClang::DoIntegralPromotion(CompilerType from,
 
   lldb::BasicType builtin_type =
       from.GetCanonicalType().GetBasicTypeEnumeration();
-  uint64_t from_size = 0;
+  llvm::Expected<uint64_t> from_size = from.GetByteSize(exe_scope);
+  if (!from_size)
+    return from_size.takeError();
   if (builtin_type == lldb::eBasicTypeWChar ||
       builtin_type == lldb::eBasicTypeSignedWChar ||
       builtin_type == lldb::eBasicTypeUnsignedWChar ||
@@ -7323,9 +7325,6 @@ TypeSystemClang::DoIntegralPromotion(CompilerType from,
       builtin_type == lldb::eBasicTypeChar32) {
     // Find the type that can hold the entire range of values for our type.
     bool is_signed = from.IsSigned();
-    llvm::Expected<uint64_t> from_size = from.GetByteSize(exe_scope);
-    if (!from_size)
-      return from_size.takeError();
     CompilerType promote_types[] = {
         GetBasicTypeFromAST(lldb::eBasicTypeInt),
         GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt),
@@ -7358,7 +7357,7 @@ TypeSystemClang::DoIntegralPromotion(CompilerType from,
   }
   // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
   // their entire value range.
-  return (from_size == *int_byte_size)
+  return (*from_size == *int_byte_size)
              ? GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt)
              : int_type;
 }
