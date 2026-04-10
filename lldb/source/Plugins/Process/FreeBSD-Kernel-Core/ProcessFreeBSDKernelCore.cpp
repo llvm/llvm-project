@@ -251,27 +251,23 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // by pid. Though new processes are added to the head of this list, process
     // ids may be reused as well. So we cannot rely on it being in a particular
     // order.
-    std::vector<std::pair<lldb::addr_t, int32_t>> process_addrs;
-    if (lldb::addr_t allproc_addr = FindSymbol("allproc");
-        allproc_addr != LLDB_INVALID_ADDRESS) {
-      for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
-           error.Success() && proc != 0 && proc != LLDB_INVALID_ADDRESS;
-           proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
-        int32_t pid =
-            ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
-        if (error.Fail())
-          return false;
-        process_addrs.emplace_back(proc, pid);
-      }
-    } else {
+    const lldb::addr_t allproc_addr = FindSymbol("allproc");
+    if (allproc_addr == LLDB_INVALID_ADDRESS)
       return false;
+
+    std::vector<std::pair<lldb::addr_t, int32_t>> process_addrs;
+    for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
+         error.Success() && proc != 0 && proc != LLDB_INVALID_ADDRESS;
+         proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
+      int32_t pid =
+          ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
+      if (error.Fail())
+        return false;
+      process_addrs.emplace_back(proc, pid);
     }
 
     std::sort(process_addrs.begin(), process_addrs.end(),
-              [](const std::pair<lldb::addr_t, int32_t> &a,
-                 const std::pair<lldb::addr_t, int32_t> &b) {
-                return a.second < b.second;
-              });
+              [](const auto &a, const auto &b) { return a.second < b.second; });
 
     for (auto [proc, pid] : process_addrs) {
       // process' command-line string
