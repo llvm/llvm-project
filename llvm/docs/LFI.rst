@@ -118,13 +118,13 @@ Compiler Options
 
 The LFI target has several configuration options, specified via ``-mattr=``:
 
-* ``+no-lfi-loads``: Disable sandboxing for load instructions (stores-only mode).
-* ``+no-lfi-stores``: Disable sandboxing for store instructions.
+* ``+lfi-loads``: enable sandboxing for loads (default: true).
+* ``+lfi-stores``: enable sandboxing for stores (default: true).
 
-Use ``+no-lfi-loads`` to create a "stores-only" sandbox that may read, but not
+Use ``+nolfi-loads`` to create a "stores-only" sandbox that may read, but not
 write, outside the sandbox region.
 
-Use ``+no-lfi-loads,+no-lfi-stores`` to create a "jumps-only" sandbox that may
+Use ``+nolfi-loads+nolfi-stores`` to create a "jumps-only" sandbox that may
 read/write outside the sandbox region but may not transfer control outside
 (e.g., may not execute system calls directly). This is primarily useful in
 combination with some other form of memory sandboxing, such as Intel MPK.
@@ -148,7 +148,7 @@ that must be maintained.
 * ``sp``: always holds an address within the sandbox.
 * ``x30``: always holds an address within the sandbox.
 * ``x26``: scratch register.
-* ``x25``: context register (see `Context Register`_).
+* ``x25``: points to a thread-local virtual register file for storing runtime context information.
 
 The current design only supports 4GiB sandboxes, which requires the sandbox
 base address to be 4GiB-aligned. This is because LFI's ABI stores pointers as
@@ -301,11 +301,8 @@ before moving it back into ``sp`` with a safe ``add``.
 Link register modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When the link register is modified, the guard is deferred until the next
-control flow instruction. This approach maintains compatibility with Pointer
-Authentication Code (PAC) instructions by keeping signed pointers intact until
-they are needed for control flow. The guard uses ``x30`` as both the source and
-destination (``add x30, x27, w30, uxtw``).
+When the link register is modified, we write the modified value to a
+temporary, before loading it back into ``x30`` with a safe ``add``.
 
 +---------------------------+-------------------------------+
 |         Original          |           Rewritten           |
@@ -330,42 +327,43 @@ System instructions
 
 System calls are rewritten into a sequence that loads the address of the first
 runtime call entrypoint and jumps to it. The runtime call entrypoint table is
-stored at a negative offset from the sandbox base, so it can be referenced by
-``x27``. The rewrite also saves and restores the link register, since it is
-used for branching into the runtime.
+stored at the start of the sandbox, so it can be referenced by ``x27``. The
+rewrite also saves and restores the link register, since it is used for
+branching into the runtime.
 
-+-----------------+------------------------------+
-|    Original     |          Rewritten           |
-+-----------------+------------------------------+
-| .. code-block:: | .. code-block::              |
-|                 |                              |
-|    svc #0       |    mov x26, x30              |
-|                 |    ldur x30, [x27, #-8]      |
-|                 |    blr x30                   |
-|                 |    add x30, x27, w26, uxtw   |
-|                 |                              |
-+-----------------+------------------------------+
++-----------------+----------------------------+
+|    Original     |         Rewritten          |
++-----------------+----------------------------+
+| .. code-block:: | .. code-block::            |
+|                 |                            |
+|    svc #0       |    mov w26, w30            |
+|                 |    ldr x30, [x27]          |
+|                 |    blr x30                 |
+|                 |    add x30, x27, w26, uxtw |
+|                 |                            |
++-----------------+----------------------------+
 
 Thread pointer (TP)
 ~~~~~~~~~~~~~~~~~~~
 
-TP accesses are rewritten into loads/stores from the context register
-(``x25``), which holds the virtual thread pointer at offset 16 (see
-`Context Register`_).
+TLS accesses are rewritten into accesses offset from ``x25``, which is a
+reserved register that points to a virtual register file, with a location for
+storing the sandbox's thread pointer. ``TP`` is the offset into that virtual
+register file where the thread pointer is stored.
 
-+----------------------+-------------------------+
-|       Original       |        Rewritten        |
-+----------------------+-------------------------+
-| .. code-block::      | .. code-block::         |
-|                      |                         |
-|    mrs xN, tpidr_el0 |    ldr xN, [x25, #16]   |
-|                      |                         |
-+----------------------+-------------------------+
-| .. code-block::      | .. code-block::         |
-|                      |                         |
-|    msr tpidr_el0, xN |    str xN, [x25, #16]   |
-|                      |                         |
-+----------------------+-------------------------+
++----------------------+-----------------------+
+|       Original       |       Rewritten       |
++----------------------+-----------------------+
+| .. code-block::      | .. code-block::       |
+|                      |                       |
+|    mrs xN, tpidr_el0 |    ldr xN, [x25, #TP] |
+|                      |                       |
++----------------------+-----------------------+
+| .. code-block::      | .. code-block::       |
+|                      |                       |
+|    mrs tpidr_el0, xN |    str xN, [x25, #TP] |
+|                      |                       |
++----------------------+-----------------------+
 
 Optimizations
 =============
@@ -403,6 +401,16 @@ generated via ``adrp`` followed by ``ldr``. Since the address generated by
 ``adrp`` can be statically guaranteed to be within the sandbox, it is safe to
 directly target ``x28`` for these sequences. This allows the omission of a
 guard instruction before the ``ldr``.
+
++----------------------+-----------------------+
+|       Original       |       Rewritten       |
++----------------------+-----------------------+
+| .. code-block::      | .. code-block::       |
+|                      |                       |
+|    adrp xN, target   |    adrp x28, target   |
+|    ldr xN, [xN, imm] |    ldr xN, [x28, imm] |
+|                      |                       |
++----------------------+-----------------------+
 
 Stack guard elimination
 ~~~~~~~~~~~~~~~~~~~~~~~
