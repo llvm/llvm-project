@@ -1,5 +1,5 @@
 C_SOURCES := main.c
 
-override ARCH := arm64e
+override TRIPLE := arm64e-apple-darwin
 
 include Makefile.rules
