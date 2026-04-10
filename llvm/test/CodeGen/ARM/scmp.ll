@@ -141,3 +141,29 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
+; CHECK-LABEL: scmp_i128_zero_to_i8:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    mov r12, #0
+; CHECK-NEXT:    rscs r0, r1, #0
+; CHECK-NEXT:    rscs r0, r2, #0
+; CHECK-NEXT:    rscs r0, r3, #0
+; CHECK-NEXT:    movwlt r12, #1
+; CHECK-NEXT:    sub r0, r12, r3, lsr #31
+; CHECK-NEXT:    bx lr
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+define i8 @scmp_i32_zero_to_i8(i32 %x) nounwind {
+; CHECK-LABEL: scmp_i32_zero_to_i8:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    subs r0, r0, #0
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
+; CHECK-NEXT:    bx lr
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}

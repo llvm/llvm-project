@@ -145,3 +145,21 @@ define i64 @ucmp.64.64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.ucmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
+; CHECK-LABEL: ucmp_i128_zero_to_i8:
+; CHECK:         .functype ucmp_i128_zero_to_i8 (i64, i64) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push6=, 0
+; CHECK-NEXT:    i64.const $push0=, 0
+; CHECK-NEXT:    i64.ne $push2=, $pop6, $pop0
+; CHECK-NEXT:    local.get $push7=, 1
+; CHECK-NEXT:    i64.const $push5=, 0
+; CHECK-NEXT:    i64.ne $push1=, $pop7, $pop5
+; CHECK-NEXT:    local.get $push8=, 1
+; CHECK-NEXT:    i64.eqz $push3=, $pop8
+; CHECK-NEXT:    i32.select $push4=, $pop2, $pop1, $pop3
+; CHECK-NEXT:    # fallthrough-return
+  %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}

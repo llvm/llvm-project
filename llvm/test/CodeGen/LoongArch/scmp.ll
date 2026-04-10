@@ -102,3 +102,31 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
+; CHECK-LABEL: scmp_i128_zero_to_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt $a2, $zero, $a1
+; CHECK-NEXT:    sltui $a3, $a1, 1
+; CHECK-NEXT:    masknez $a2, $a2, $a3
+; CHECK-NEXT:    sltu $a0, $zero, $a0
+; CHECK-NEXT:    maskeqz $a0, $a0, $a3
+; CHECK-NEXT:    or $a0, $a0, $a2
+; CHECK-NEXT:    slti $a1, $a1, 0
+; CHECK-NEXT:    sub.d $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+define i8 @scmp_i32_zero_to_i8(i32 %x) nounwind {
+; CHECK-LABEL: scmp_i32_zero_to_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.w $a0, $a0, 0
+; CHECK-NEXT:    slt $a1, $zero, $a0
+; CHECK-NEXT:    slti $a0, $a0, 0
+; CHECK-NEXT:    sub.d $a0, $a1, $a0
+; CHECK-NEXT:    ret
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}
