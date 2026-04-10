@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 class HiddenFrameMarkerTest(TestBase):
     @unicode_test
+    @expectedFailureWindows(bugnumber="https://github.com/llvm/llvm-project/issues/191459")
     def test_hidden_frame_markers(self):
         """Test that hidden frame markers are rendered in backtraces"""
         self.build()
@@ -49,6 +50,7 @@ class HiddenFrameMarkerTest(TestBase):
         )
 
     @unicode_test
+    @expectedFailureWindows(bugnumber="https://github.com/llvm/llvm-project/issues/191459")
     def test_nested_hidden_frame_markers(self):
         """Test that nested hidden frame markers are rendered in backtraces"""
         self.build()
