@@ -240,7 +240,7 @@ public:
   bool hasS2F6X2ConversionSupport() const {
     return hasPTXWithAccelSMs(91, {100, 103, 110, 120, 121});
   }
-  
+
   // Checks support for conversions from narrow FP types to bf16x2.
   bool hasNarrowFPToBF16x2ConversionSupport() const {
     return hasPTXWithFamilySMs(92, {100, 110, 120});
