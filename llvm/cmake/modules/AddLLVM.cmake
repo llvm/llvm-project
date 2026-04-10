@@ -107,6 +107,41 @@ function(llvm_update_pch name)
     set(ARG_DISABLE_PCH_REUSE ON)
   endif()
 
+  # Certain compile definitions change macro expansion in ways that conflict
+  # with a reused PCH (e.g. visibility macros, MSVC STL config, test-only
+  # code guards). Collect both target-level and directory-level definitions
+  # and disable PCH reuse when any of these are present but absent from the
+  # PCH source. Definitions may appear as "FOO" or "FOO=value".
+  set(_pch_conflict_defs
+    LLVM_BUILD_STATIC CLANG_BUILD_STATIC
+    _ENABLE_EXTENDED_ALIGNED_STORAGE
+    MLIR_INCLUDE_TESTS FLANG_INCLUDE_TESTS)
+  get_target_property(target_defs ${name} COMPILE_DEFINITIONS)
+  get_directory_property(dir_defs COMPILE_DEFINITIONS)
+  set(all_defs)
+  if(target_defs)
+    list(APPEND all_defs ${target_defs})
+  endif()
+  if(dir_defs)
+    list(APPEND all_defs ${dir_defs})
+  endif()
+  foreach(def ${_pch_conflict_defs})
+    if(def IN_LIST all_defs)
+      set(ARG_DISABLE_PCH_REUSE ON)
+      break()
+    endif()
+    # Also match "DEF=value" forms (e.g. FLANG_INCLUDE_TESTS=1).
+    foreach(actual_def ${all_defs})
+      if(actual_def MATCHES "^${def}=")
+        set(ARG_DISABLE_PCH_REUSE ON)
+        break()
+      endif()
+    endforeach()
+    if(ARG_DISABLE_PCH_REUSE)
+      break()
+    endif()
+  endforeach()
+
   # Find PCH with highest priority from dependencies. We reuse the first PCH
   # with the highest priority. If the target has its own set of PCH, we give it
   # a higher priority so that dependents will prefer the new PCH. We don't do
@@ -637,6 +672,9 @@ function(llvm_add_library name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
+    endif()
     llvm_update_pch(${obj_name})
     if(CMAKE_GENERATOR STREQUAL "Xcode")
       set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
@@ -682,10 +720,6 @@ function(llvm_add_library name)
           add_dependencies(${obj_name} ${link_lib})
         endif()
       endforeach()
-    endif()
-
-    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
     endif()
   endif()
 
@@ -772,6 +806,9 @@ function(llvm_add_library name)
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT obj_name)
     llvm_update_compile_flags(${name})
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+    endif()
     llvm_update_pch(${name})
   else()
     get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
@@ -1188,6 +1225,14 @@ macro(add_llvm_executable name)
     set(ARG_DISABLE_PCH_REUSE ON)
   endif()
 
+  # Executables in static builds get LLVM_BUILD_STATIC defined, but the PCH
+  # from LLVM component libraries does not have it. This macro changes the
+  # expansion of LLVM_ABI and similar visibility macros, causing a PCH
+  # mismatch that clang-cl warns about (-Wclang-cl-pch).
+  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
+    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+  endif()
+
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT LLVM_ENABLE_OBJLIB)
     llvm_update_compile_flags(${name})
@@ -1263,10 +1308,6 @@ macro(add_llvm_executable name)
 
   if (ARG_EXPORT_SYMBOLS)
     export_executable_symbols(${name})
-  endif()
-
-  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
-    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
   endif()
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND

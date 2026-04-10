@@ -34,6 +34,7 @@ add_mlir_dialect_library(MLIRNVVMTarget
   NVVM/Target.cpp
 
   OBJECT
+  DISABLE_PCH_REUSE
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
