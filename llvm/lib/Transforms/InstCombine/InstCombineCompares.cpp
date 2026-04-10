@@ -8774,7 +8774,8 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
 /// There are no values in the open interval (0, 1), so:
 ///   fabs(...) <  C  where 0 < C <= 1.0  -->  a == b  (strict lt: C=1.0 ok)
 ///   fabs(...) <= C  where 0 < C <  1.0  -->  a == b  (le: C must be < 1.0,
-///                                             since le 1.0 is true when diff=1)
+///                                             since le 1.0 is true when
+///                                             diff=1)
 ///
 /// The same logic applies to sitofp.
 static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I) {
