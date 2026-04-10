@@ -45,6 +45,27 @@ define <vscale x 2 x i64> @lrint_v2_i64_f64(<vscale x 2 x double> %x) {
   ret <vscale x 2 x i64> %a
 }
 
+define <vscale x 4 x i32> @lrint_v4_i32_f16(<vscale x 4 x half> %x) {
+; CHECK-LABEL: lrint_v4_i32_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #31743 // =0x7bff
+; CHECK-NEXT:    mov z2.s, #0x80000000
+; CHECK-NEXT:    frintx z0.h, p0/z, z0.h
+; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    fcvtzs z2.s, p1/m, z0.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.s, #0x7fffffff
+; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
+; CHECK-NEXT:    sel z0.s, p1, z1.s, z2.s
+; CHECK-NEXT:    mov z0.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 4 x i32> @llvm.lrint.nxv4i32.nxv4f16(<vscale x 4 x half> %x)
+  ret <vscale x 4 x i32> %a
+}
+
 define void @lrint_v4_i64_f32(<4 x float> %x, ptr %dst) vscale_range(2, 16) {
 ; CHECK-LABEL: lrint_v4_i64_f32:
 ; CHECK:       // %bb.0:
@@ -57,6 +78,53 @@ define void @lrint_v4_i64_f32(<4 x float> %x, ptr %dst) vscale_range(2, 16) {
 ; CHECK-NEXT:    ret
   %a = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> %x)
   store <4 x i64> %a, ptr %dst
+  ret void
+}
+
+define void @lrint_v8_i64_f16(<8 x half> %x, ptr %dst) vscale_range(2, 16) {
+; CHECK-LABEL: lrint_v8_i64_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #80
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    frintx v1.4h, v0.4h
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    mov h2, v1.h[3]
+; CHECK-NEXT:    frintx v0.4h, v0.4h
+; CHECK-NEXT:    mov h3, v1.h[2]
+; CHECK-NEXT:    mov h4, v1.h[1]
+; CHECK-NEXT:    fcvtzs x11, h1
+; CHECK-NEXT:    fcvtzs x8, h2
+; CHECK-NEXT:    mov h2, v0.h[3]
+; CHECK-NEXT:    fcvtzs x9, h3
+; CHECK-NEXT:    mov h3, v0.h[2]
+; CHECK-NEXT:    fcvtzs x10, h4
+; CHECK-NEXT:    mov h4, v0.h[1]
+; CHECK-NEXT:    fcvtzs x12, h2
+; CHECK-NEXT:    stp x9, x8, [sp, #48]
+; CHECK-NEXT:    fcvtzs x8, h3
+; CHECK-NEXT:    fcvtzs x9, h4
+; CHECK-NEXT:    stp x11, x10, [sp, #32]
+; CHECK-NEXT:    fcvtzs x10, h0
+; CHECK-NEXT:    stp x8, x12, [sp, #16]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    stp x10, x9, [sp]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]
+; CHECK-NEXT:    mov x8, #4 // =0x4
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %a = call <8 x i64> @llvm.lrint.v8i64.v8f16(<8 x half> %x)
+  store <8 x i64> %a, ptr %dst
   ret void
 }
 
@@ -82,6 +150,27 @@ define <vscale x 2 x i64> @llrint_v2_i64_f64(<vscale x 2 x double> %x) {
   ret <vscale x 2 x i64> %a
 }
 
+define <vscale x 4 x i32> @llrint_v4_i32_f16(<vscale x 4 x half> %x) {
+; CHECK-LABEL: llrint_v4_i32_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #-1025 // =0xfffffffffffffbff
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #31743 // =0x7bff
+; CHECK-NEXT:    mov z2.s, #0x80000000
+; CHECK-NEXT:    frintx z0.h, p0/z, z0.h
+; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    fcvtzs z2.s, p1/m, z0.h
+; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    mov z1.s, #0x7fffffff
+; CHECK-NEXT:    fcmuo p0.h, p0/z, z0.h, z0.h
+; CHECK-NEXT:    sel z0.s, p1, z1.s, z2.s
+; CHECK-NEXT:    mov z0.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 4 x i32> @llvm.llrint.nxv4i32.nxv4f16(<vscale x 4 x half> %x)
+  ret <vscale x 4 x i32> %a
+}
+
 define void @llrint_v4_i64_f32(<4 x float> %x, ptr %dst) vscale_range(2, 16) {
 ; CHECK-LABEL: llrint_v4_i64_f32:
 ; CHECK:       // %bb.0:
@@ -96,3 +185,51 @@ define void @llrint_v4_i64_f32(<4 x float> %x, ptr %dst) vscale_range(2, 16) {
   store <4 x i64> %a, ptr %dst
   ret void
 }
+
+define void @llrint_v8_i64_f16(<8 x half> %x, ptr %dst) vscale_range(2, 16) {
+; CHECK-LABEL: llrint_v8_i64_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #80
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    frintx v1.4h, v0.4h
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    mov h2, v1.h[3]
+; CHECK-NEXT:    frintx v0.4h, v0.4h
+; CHECK-NEXT:    mov h3, v1.h[2]
+; CHECK-NEXT:    mov h4, v1.h[1]
+; CHECK-NEXT:    fcvtzs x11, h1
+; CHECK-NEXT:    fcvtzs x8, h2
+; CHECK-NEXT:    mov h2, v0.h[3]
+; CHECK-NEXT:    fcvtzs x9, h3
+; CHECK-NEXT:    mov h3, v0.h[2]
+; CHECK-NEXT:    fcvtzs x10, h4
+; CHECK-NEXT:    mov h4, v0.h[1]
+; CHECK-NEXT:    fcvtzs x12, h2
+; CHECK-NEXT:    stp x9, x8, [sp, #48]
+; CHECK-NEXT:    fcvtzs x8, h3
+; CHECK-NEXT:    fcvtzs x9, h4
+; CHECK-NEXT:    stp x11, x10, [sp, #32]
+; CHECK-NEXT:    fcvtzs x10, h0
+; CHECK-NEXT:    stp x8, x12, [sp, #16]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    stp x10, x9, [sp]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]
+; CHECK-NEXT:    mov x8, #4 // =0x4
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %a = call <8 x i64> @llvm.llrint.v8i64.v8f16(<8 x half> %x)
+  store <8 x i64> %a, ptr %dst
+  ret void
+}
+
