@@ -21,7 +21,7 @@
 
 // compilers such as MSVC do not support `__has_feature`
 #ifndef __has_feature
-#define __has_feature(x) 0
+#  define __has_feature(x) 0
 #endif
 
 static volatile int one = 1;
@@ -29,6 +29,9 @@ static volatile int one = 1;
 int TestCrash() {
   long t[100];
   t[60] = 0;
+
+// MSVC defines __SANITIZE_ADDRESS__,
+// see :https://learn.microsoft.com/en-us/cpp/sanitizers/asan-building#language-specification
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
   __sanitizer_annotate_contiguous_container(&t[0], &t[0] + 100, &t[0] + 100,
                                             &t[0] + 50);
