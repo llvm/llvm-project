@@ -62,9 +62,8 @@ static PluginProperties &GetGlobalPluginProperties() {
 
 ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
                                                    ListenerSP listener_sp,
-                                                   kvm_t *kvm,
                                                    const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp, core_file), m_kvm(kvm) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file) {}
 
 ProcessFreeBSDKernelCore::~ProcessFreeBSDKernelCore() {
   m_thread_list.Clear();
@@ -84,9 +83,11 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
     kvm_t *kvm =
         kvm_open2(executable->GetFileSpec().GetPath().c_str(),
                   crash_file->GetPath().c_str(), O_RDONLY, nullptr, nullptr);
-    if (kvm)
+    if (kvm) {
+      kvm_close(kvm);
       return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
-                                                        kvm, *crash_file);
+                                                        *crash_file);
+    }
   }
   return nullptr;
 }
@@ -118,7 +119,21 @@ bool ProcessFreeBSDKernelCore::CanDebug(lldb::TargetSP target_sp,
 }
 
 Status ProcessFreeBSDKernelCore::DoLoadCore() {
-  // The core is already loaded by CreateInstance().
+  ModuleSP executable = GetTarget().GetExecutableModule();
+  if (!executable)
+    return Status::FromErrorString(
+        "ProcessFreeBSDKernelCore: no executable module set on target");
+
+  m_kvm = kvm_open2(executable->GetFileSpec().GetPath().c_str(),
+                    GetCoreFile().GetPath().c_str(), O_RDWR, nullptr, nullptr);
+
+  if (!m_kvm)
+    return Status::FromErrorStringWithFormat(
+        "ProcessFreeBSDKernelCore: kvm_open2 failed for core '%s' "
+        "with kernel '%s'",
+        GetCoreFile().GetPath().c_str(),
+        executable->GetFileSpec().GetPath().c_str());
+
   SetKernelDisplacement();
 
   return Status();
