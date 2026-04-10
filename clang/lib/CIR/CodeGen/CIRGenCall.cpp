@@ -1427,8 +1427,8 @@ void CIRGenFunction::emitCallArgs(
   }
 }
 
-bool CIRGenTypes::inheritingCtorHasParams(
-    const InheritedConstructor &inherited, CXXCtorType type) {
+bool CIRGenTypes::inheritingCtorHasParams(const InheritedConstructor &inherited,
+                                          CXXCtorType type) {
   // Parameters are unnecessary if we're constructing a base class subobject
   // and the inherited constructor lives in a virtual base.
   return type == Ctor_Complete ||
