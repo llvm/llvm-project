@@ -2737,13 +2737,12 @@ struct DiffContext {
   StringRef LineAfter;
 };
 
-// Provides the "surrounding context" seen in standard diff tools.
+// Provides the "surrounding context" for diff output.
 static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
                                   unsigned BufID) {
   const MemoryBuffer *Buffer = SM.getMemoryBuffer(BufID);
   StringRef BufText = Buffer->getBuffer();
 
-  /// Helper lambda to safely extract a single line's text from the buffer.
   auto getLineText = [&](unsigned L) -> StringRef {
     if (L == 0)
       return "";
@@ -2763,10 +2762,7 @@ static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
           getLineText(LineNo + 1)};
 }
 
-// Renders a diagnostic diff to llvm::errs().
-//
-// Supported mode:
-// Unified View: A standard top-to-bottom (-Expected / +Actual) format.
+// Renders a diagnostic diff via llvm::errs().
 static void renderDiff(unsigned ExpectedLineNo, unsigned ActualLineNo,
                        StringRef ExpectedLine, StringRef ActualLine,
                        const DiffContext &Ctx) {
@@ -2796,8 +2792,6 @@ static void renderDiff(unsigned ExpectedLineNo, unsigned ActualLineNo,
   }
 }
 
-// Prepares and prints a visual comparison between a CHECK pattern and the
-// input.
 static bool printDiff(const FileCheckString &CheckStr, StringRef ActualLine,
                       SourceMgr &SM, std::vector<FileCheckDiag> *Diags,
                       unsigned OverwriteActualLine = 0) {
@@ -2823,7 +2817,6 @@ static bool printDiff(const FileCheckString &CheckStr, StringRef ActualLine,
   if (ActualLine.empty() && ActualLineNo > 1)
     ActualLineNo--;
 
-  // Gather contextual diff to print (a line above and a line below).
   unsigned BufID = SM.FindBufferContainingLoc(InputLoc);
   DiffContext Context = getDiffContext(SM, ActualLineNo, BufID);
 
@@ -2839,7 +2832,7 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
                               std::vector<FileCheckDiag> *Diags,
                               raw_ostream &OS, bool &HeaderPrinted,
                               unsigned &TotalMismatches) {
-  // Print headers once per file.
+  // Print headers once per CheckRegion.
   if (!HeaderPrinted) {
     StringRef CheckFile =
         SM.getMemoryBuffer(SM.getMainFileID())->getBufferIdentifier();
@@ -2854,10 +2847,9 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
     HeaderPrinted = true;
   }
 
-  // Identify the line that failed to match.
   size_t EOL = CheckRegion.find('\n');
-  SMLoc CurrentLoc = SMLoc::getFromPointer(CheckRegion.data());
 
+  SMLoc CurrentLoc = SMLoc::getFromPointer(CheckRegion.data());
   StringRef TargetLine;
   unsigned TargetLineNo = 0;
 
@@ -2882,7 +2874,6 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
     TargetLineNo = SM.getLineAndColumn(CurrentLoc).first;
   }
 
-  // Render the diff for this specific line.
   printDiff(CheckStr, TargetLine, SM, Diags, TargetLineNo);
   TotalMismatches++;
 
@@ -2957,8 +2948,8 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
         break;
       }
       // In Diff Mode, while doing strick checking even if we found a match
-      // later, we must stop processing the current block and print the gap as
-      // mismatch.
+      // later i.e. MatchPos > 0, we must stop processing this block and print
+      // the gap as mismatch.
       if (IsDiffFormat && IsStrict && MatchPos > 0) {
         // Create a temporary view that starts with next new line.
         size_t CurrentLineEnd = CheckRegion.find_first_of("\n\r");
@@ -2972,6 +2963,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
         i = j;
         break;
       }
+
       CheckRegion = CheckRegion.substr(MatchPos + MatchLen);
     }
 
