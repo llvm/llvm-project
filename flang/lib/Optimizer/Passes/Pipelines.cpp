@@ -357,7 +357,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   // to access the data on the offload target device.
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createAutomapToTargetDataPass());
-  pm.addPass(flangomp::createMapInfoFinalizationPass());
+  pm.addPass(flangomp::createMapInfoFinalizationPass(opts.deferDescMap));
   pm.addPass(mlir::omp::createMarkDeclareTargetPass());
 
   // Delete unreachable target operations before FunctionFilteringPass
