@@ -21,11 +21,15 @@ function(add_python_test_target name test_script args comment)
   add_dependencies(${name} lldb-test-depends)
 endfunction()
 
-# The default triple with which to compile test executables is the
-# host triple.
+if (DEFINED LLVM_TARGET_TRIPLE)
+  set(default_lldb_test_triple ${LLVM_TARGET_TRIPLE})
+else()
+  set(default_lldb_test_triple ${LLVM_HOST_TRIPLE})
+endif()
+
 set(LLDB_TEST_TRIPLE
-  ${LLVM_HOST_TRIPLE}
-  CACHE STRING "Specify the triple to run LLDB tests with.")
+  ${default_lldb_test_triple}
+  CACHE STRING "The target triple used to build test inferiors.")
 
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
