@@ -796,10 +796,6 @@
 #    error "__cpp_lib_span_at should not be defined before c++26"
 #  endif
 
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_spanstream
 #    error "__cpp_lib_spanstream should not be defined before c++23"
 #  endif
@@ -1765,10 +1761,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -2916,10 +2908,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -4328,10 +4316,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -5947,10 +5931,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -7911,13 +7891,6 @@
 #  endif
 #  if __cpp_lib_span_at != 202311L
 #    error "__cpp_lib_span_at should have the value 202311L in c++26"
-#  endif
-
-#  ifndef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should be defined in c++26"
-#  endif
-#  if __cpp_lib_span_initializer_list != 202311L
-#    error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
