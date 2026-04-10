@@ -287,3 +287,33 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(frame.IsSynthetic(), "Frame is not synthetic")
         pc = frame.GetPCAddress().GetLoadAddress(target_0)
         self.assertEqual(pc, 0x0100001B00)
+
+        # Regression test: ScriptedFrame.__init__ used GetThreadByIndexID(tid)
+        # instead of GetThreadByID(tid). If the thread ID doesn't match any
+        # thread index, the lookup returns an invalid SBThread. Downstream,
+        # resolving the execution context from an SBFrame backed by this
+        # invalid thread yields a null Process, and calling
+        # ProcessModID::IsRunningExpression() on it crashes.
+        tid = thread.GetThreadID()
+        self.assertTrue(
+            process_0.GetThreadByID(tid).IsValid(),
+            "GetThreadByID(tid) should find the thread",
+        )
+        self.assertFalse(
+            process_0.GetThreadByIndexID(tid).IsValid(),
+            "GetThreadByIndexID(tid) should NOT find the thread "
+            "(index ID != thread ID)",
+        )
+
+        # Construct a new ScriptedFrame with the SBThread (which carries the
+        # real thread ID) and verify its thread member is valid. This exercises
+        # the SBThread branch in ScriptedFrame.__init__ where thread.id is
+        # used with GetThreadByID.
+        post_launch_frame = dummy_scripted_process.DummyScriptedFrame(
+            thread, lldb.SBStructuredData(), 42, "test_frame"
+        )
+        self.assertTrue(
+            post_launch_frame.thread.IsValid(),
+            "ScriptedFrame.thread should be valid after thread " "registration",
+        )
+        self.assertEqual(post_launch_frame.thread.GetThreadID(), tid)
