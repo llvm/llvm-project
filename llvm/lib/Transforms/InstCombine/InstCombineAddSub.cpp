@@ -1539,7 +1539,6 @@ foldAddWithMaskedOverwrite(BinaryOperator &Add,
     if (!AddOp->hasOneUse() && !AndOp->hasOneUse())
       return nullptr;
 
-
     Value *NewOr =
         Builder.CreateOr(Y, Constant::getIntegerValue(Add.getType(), *C));
     Instruction *NewAdd = cast<Instruction>(Builder.CreateAdd(X, NewOr));
