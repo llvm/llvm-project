@@ -54,12 +54,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-              doxygen \
               graphviz \
               python3-github \
               ninja-build \
-              texlive-font-utils
+              texlive-font-utils \
+              unzip
           pip3 install --user -r ./llvm/docs/requirements.txt
+
+      - name: Install Doxygen
+        run: |
+          curl -L https://github.com/vtjnash/doxygen/releases/download/Dev_1_17_0/Ubuntu.Latest.GCC.Release.Intel.build.artifacts.zip -o doxygen.zip
+          unzip doxygen.zip -d doxygen-install
+          sudo install -m 755 doxygen-install/doxygen /usr/local/bin/doxygen
 
       - name: Build Doxygen
         run: |
