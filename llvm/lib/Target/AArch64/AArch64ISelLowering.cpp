@@ -889,23 +889,25 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     auto V8Narrow = MVT::getVectorVT(ScalarVT, 8);
     setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
     setOperationPromotedToType(ISD::SETCC,         V8Narrow, MVT::v8f32);
+    setOperationPromotedToType(ISD::VECREDUCE_FADD, V8Narrow, MVT::v8f32);
+    setOperationPromotedToType(ISD::VECREDUCE_FMUL, V8Narrow, MVT::v8f32);
 
     setOperationAction(ISD::FABS,        V8Narrow, Legal);
-    setOperationAction(ISD::FADD,        V8Narrow, Legal);
-    setOperationAction(ISD::FCEIL,       V8Narrow, Legal);
+    setOperationAction(ISD::FADD,        V8Narrow, Expand);
+    setOperationAction(ISD::FCEIL,       V8Narrow, Expand);
     setOperationAction(ISD::FCOPYSIGN,   V8Narrow, Custom);
-    setOperationAction(ISD::FDIV,        V8Narrow, Legal);
-    setOperationAction(ISD::FFLOOR,      V8Narrow, Legal);
+    setOperationAction(ISD::FDIV,        V8Narrow, Expand);
+    setOperationAction(ISD::FFLOOR,      V8Narrow, Expand);
     setOperationAction(ISD::FMA,         V8Narrow, Expand);
-    setOperationAction(ISD::FMUL,        V8Narrow, Legal);
-    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Legal);
+    setOperationAction(ISD::FMUL,        V8Narrow, Expand);
+    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Expand);
     setOperationAction(ISD::FNEG,        V8Narrow, Legal);
-    setOperationAction(ISD::FROUND,      V8Narrow, Legal);
-    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Legal);
-    setOperationAction(ISD::FRINT,       V8Narrow, Legal);
+    setOperationAction(ISD::FROUND,      V8Narrow, Expand);
+    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Expand);
+    setOperationAction(ISD::FRINT,       V8Narrow, Expand);
     setOperationAction(ISD::FSQRT,       V8Narrow, Expand);
-    setOperationAction(ISD::FSUB,        V8Narrow, Legal);
-    setOperationAction(ISD::FTRUNC,      V8Narrow, Legal);
+    setOperationAction(ISD::FSUB,        V8Narrow, Expand);
+    setOperationAction(ISD::FTRUNC,      V8Narrow, Expand);
     setOperationAction(ISD::BR_CC,       V8Narrow, Expand);
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V8Narrow, Expand);
@@ -11710,9 +11712,50 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     assert((LHS.getValueType() == RHS.getValueType()) &&
            (LHS.getValueType() == MVT::i32 || LHS.getValueType() == MVT::i64));
 
+    // Normalize (LHS CC 1) -> (LHS NewCC 0) when LHS is known to be 0 or 1.
+    // This enables the CBZ/CBNZ matching below.
+    const ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
+    if (RHSC && RHSC->getZExtValue() == 1 && ProduceNonFlagSettingCondBr &&
+        // Don't do this when LHS is an overflow/carry result (resNo == 1)
+        // because we can fold cset + cmp #1 + b.cc into a direct
+        // flag-consuming branch, which CBZ/CBNZ would prevent.
+        LHS.getResNo() == 0 &&
+        // This is true only when we somehow know that it's either 0 or 1.
+        DAG.computeKnownBits(LHS).getMaxValue().ule(1)) {
+      // Output params unused; we only care whether it returns true.
+      bool CanNegate, MustBeFirst, PreferFirst;
+      // Also skip when LHS is a conjunction tree (AND/OR of SETCCs) --
+      // emitConjunction will lower it as a CCMP chain, which is better
+      // than materializing the boolean for CBZ.
+      if (!canEmitConjunction(DAG, LHS, CanNegate, MustBeFirst, PreferFirst,
+                              false)) {
+        ISD::CondCode NewCC = ISD::SETCC_INVALID;
+        switch (CC) {
+        // SETLT/SETGE are canonicalized away before reaching here, but
+        // handle them defensively.
+        case ISD::SETNE:
+        case ISD::SETULT:
+        case ISD::SETLT:
+          NewCC = ISD::SETEQ;
+          break;
+        case ISD::SETEQ:
+        case ISD::SETUGE:
+        case ISD::SETGE:
+          NewCC = ISD::SETNE;
+          break;
+        default:
+          break;
+        }
+        if (NewCC != ISD::SETCC_INVALID) {
+          CC = NewCC;
+          RHS = DAG.getConstant(0, DL, LHS.getValueType());
+          RHSC = cast<ConstantSDNode>(RHS);
+        }
+      }
+    }
+
     // If the RHS of the comparison is zero, we can potentially fold this
     // to a specialized branch.
-    const ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
     if (RHSC && RHSC->getZExtValue() == 0 && ProduceNonFlagSettingCondBr) {
       if (CC == ISD::SETEQ) {
         if (SDValue Result =
@@ -17258,6 +17301,10 @@ SDValue AArch64TargetLowering::LowerTRUNCATE(SDValue Op,
                                    !Subtarget->isNeonAvailable()))
     return LowerFixedLengthVectorTruncateToSVE(Op, DAG);
 
+  // We can select these directly.
+  if (VT.is64BitVector() && Op.getOperand(0).getValueType().is128BitVector())
+    return Op;
+
   return SDValue();
 }
 
@@ -18627,7 +18674,8 @@ static Function *getStructuredLoadFunction(Module *M, unsigned Factor,
                                              Intrinsic::aarch64_neon_ld3,
                                              Intrinsic::aarch64_neon_ld4};
   if (Scalable)
-    return Intrinsic::getOrInsertDeclaration(M, SVELoads[Factor - 2], {LDVTy});
+    return Intrinsic::getOrInsertDeclaration(M, SVELoads[Factor - 2],
+                                             {LDVTy, PtrTy});
 
   return Intrinsic::getOrInsertDeclaration(M, NEONLoads[Factor - 2],
                                            {LDVTy, PtrTy});
@@ -18644,7 +18692,8 @@ static Function *getStructuredStoreFunction(Module *M, unsigned Factor,
                                               Intrinsic::aarch64_neon_st3,
                                               Intrinsic::aarch64_neon_st4};
   if (Scalable)
-    return Intrinsic::getOrInsertDeclaration(M, SVEStores[Factor - 2], {STVTy});
+    return Intrinsic::getOrInsertDeclaration(M, SVEStores[Factor - 2],
+                                             {STVTy, PtrTy});
 
   return Intrinsic::getOrInsertDeclaration(M, NEONStores[Factor - 2],
                                            {STVTy, PtrTy});
@@ -31490,11 +31539,14 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
+    const Function *Caller = Base->getCaller();
     // Per-call SME attribute checks via SMECallAttrs are compile-time
     // expensive, avoid for non-SME targets. We do the checks even if the
     // target only has SVE, since streaming-mode changes might still be
     // required.
-    if (Subtarget->hasSME() || Subtarget->hasSVE()) {
+    if (Subtarget->hasSME() ||
+        Caller->hasFnAttribute("aarch64_pstate_sm_compatible") ||
+        Caller->hasFnAttribute("aarch64_za_state_agnostic")) {
       auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
       if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
           CallAttrs.requiresPreservingZT0() ||

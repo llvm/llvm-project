@@ -21,6 +21,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -48,6 +49,7 @@ public:
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
+  bool expandMulReduction(IntrinsicInst &I);
   bool widenVPMerge(Instruction *I);
   bool visitFreezeInst(FreezeInst &BO);
 };
@@ -228,6 +230,9 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
+  if (expandMulReduction(I))
+    return true;
+
   if (widenVPMerge(&I))
     return true;
 
@@ -256,6 +261,54 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
 
   PHI->eraseFromParent();
 
+  return true;
+}
+
+// Partially expand a vector_reduce_mul wider than M1 to reduce the
+// number of vsetvlis required when VLEN is exactly known, and
+// reducing register pressure in all cases.
+bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
+  if (II.getIntrinsicID() != Intrinsic::vector_reduce_mul)
+    return false;
+
+  if (!ST->hasVInstructions())
+    return false;
+
+  Value *TmpVec = II.getArgOperand(0);
+  auto *VecTy = dyn_cast<FixedVectorType>(TmpVec->getType());
+  if (!VecTy)
+    return false;
+
+  unsigned EltSize = VecTy->getScalarSizeInBits();
+  unsigned VF = VecTy->getNumElements();
+  unsigned MinVLen = ST->getRealMinVLen();
+  unsigned M1VF = MinVLen / EltSize;
+
+  if (!isPowerOf2_32(VF) || VF <= M1VF)
+    return false;
+
+  IRBuilder<> Builder(&II);
+
+  // Shuffle-reduce at the original vector width.  This just duplicates the
+  // default lowering down to m1.
+  SmallVector<int, 32> ShuffleMask(VF);
+  for (unsigned LiveElts = VF; LiveElts > M1VF; LiveElts /= 2) {
+    unsigned Half = LiveElts / 2;
+    std::iota(ShuffleMask.begin(), ShuffleMask.begin() + Half, Half);
+    std::fill(ShuffleMask.begin() + Half, ShuffleMask.end(), -1);
+    Value *Shuf = Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
+    TmpVec = Builder.CreateMul(TmpVec, Shuf, "bin.rdx");
+  }
+
+  // Extract the M1-sized subvector and emit the final reduction intrinsic.
+  // This is the reason we're here - to force a vsetvli toggle once at m1.
+  auto *M1Ty = FixedVectorType::get(VecTy->getElementType(), M1VF);
+  Value *Sub =
+      Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)0, "rdx.sub");
+  Value *Rdx =
+      Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul, {M1Ty}, {Sub});
+  II.replaceAllUsesWith(Rdx);
+  II.eraseFromParent();
   return true;
 }
 

@@ -20,6 +20,10 @@
 #define flockfile _lock_file
 #define funlockfile _unlock_file
 #define fwrite_unlocked _fwrite_nolock
+#elif defined(__APPLE__)
+// MacOS doesn't have an equivalent of fwrite_unlocked so we just use
+// fwrite.
+#define fwrite_unlocked fwrite
 #endif
 
 namespace rpc {
@@ -320,6 +324,16 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
   int star_vals[2];
   int num_stars = 0;
 
+  // Accumulate any errors so we correctly return on failure.
+  auto accum = [&](int rc) {
+    if (ret >= 0)
+      ret = (rc < 0) ? rc : ret + rc;
+  };
+  auto write = [&](const char *s, size_t n) -> int {
+    size_t w = ::fwrite_unlocked(s, 1, n, file);
+    return w == n ? static_cast<int>(w) : -1;
+  };
+
   for (Specifier spec = parser.get_next_specifier(); !spec.is_finished;
        spec = parser.get_next_specifier()) {
     if (spec.is_star) {
@@ -332,7 +346,7 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
     size_t end = parser.pos();
 
     if (start > prev)
-      ret += ::fwrite_unlocked(fmt + prev, 1, start - prev, file);
+      accum(write(fmt + prev, start - prev));
 
     // Null-terminated copy of the specifier substring for fprintf. Use a
     // stack buffer for the common case; heap-allocate only for overlong specs.
@@ -349,14 +363,14 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
         str = reinterpret_cast<const char *>(copied_strs.back());
         copied_strs.pop_back();
       }
-      ret += fprintf_with_stars(file, buf, num_stars, star_vals, str);
+      accum(fprintf_with_stars(file, buf, num_stars, star_vals, str));
       break;
     }
     case 'n':
       break;
     case 'p':
-      ret += fprintf_with_stars(file, buf, num_stars, star_vals,
-                                reinterpret_cast<void *>(spec.raw_value));
+      accum(fprintf_with_stars(file, buf, num_stars, star_vals,
+                               reinterpret_cast<void *>(spec.raw_value)));
       break;
     case 'f':
     case 'F':
@@ -369,19 +383,19 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
       double d;
       ::memcpy(&d, &spec.raw_value, sizeof(double));
       if (spec.is_long)
-        ret += fprintf_with_stars(file, buf, num_stars, star_vals,
-                                  static_cast<long double>(d));
+        accum(fprintf_with_stars(file, buf, num_stars, star_vals,
+                                 static_cast<long double>(d)));
       else
-        ret += fprintf_with_stars(file, buf, num_stars, star_vals, d);
+        accum(fprintf_with_stars(file, buf, num_stars, star_vals, d));
       break;
     }
     default:
       if (spec.is_long)
-        ret +=
-            fprintf_with_stars(file, buf, num_stars, star_vals, spec.raw_value);
+        accum(fprintf_with_stars(file, buf, num_stars, star_vals,
+                                 spec.raw_value));
       else
-        ret += fprintf_with_stars(file, buf, num_stars, star_vals,
-                                  static_cast<uint32_t>(spec.raw_value));
+        accum(fprintf_with_stars(file, buf, num_stars, star_vals,
+                                 static_cast<uint32_t>(spec.raw_value)));
       break;
     }
     if (buf != local_buf)
@@ -391,7 +405,7 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
   }
 
   if (parser.pos() > prev)
-    ret += ::fwrite_unlocked(fmt + prev, 1, parser.pos() - prev, file);
+    accum(write(fmt + prev, parser.pos() - prev));
 
   return ret;
 }

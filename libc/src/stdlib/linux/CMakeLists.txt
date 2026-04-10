@@ -8,15 +8,3 @@ add_header_library(
     libc.src.signal.linux.__restore
     libc.src.signal.linux.signal_utils
 )
-
-add_entrypoint_object(
-  abort
-  SRCS
-    abort.cpp
-  HDRS
-    ../abort.h
-  DEPENDS
-    .abort_utils
-    libc.src.signal.linux.__restore
-    libc.include.stdlib
-)
