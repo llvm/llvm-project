@@ -4755,20 +4755,10 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // Note that we do not instantiate a definition until we see an odr-use
   // in DoMarkVarDeclReferenced().
   // FIXME: LateAttrs et al.?
-  VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
-      Template, InstantiationPattern, PartialSpecArgs, CTAI.CanonicalConverted,
-      TemplateNameLoc /*, LateAttrs, StartingScope*/);
-  if (!Decl)
-    return true;
-  if (SetWrittenArgs)
-    Decl->setTemplateArgsAsWritten(TemplateArgs);
-
   if (AmbiguousPartialSpec) {
     // Partial ordering did not produce a clear winner. Complain.
-    Decl->setInvalidDecl();
     Diag(PointOfInstantiation, diag::err_partial_spec_ordering_ambiguous)
-        << Decl;
-
+        << Template;
     // Print the matching partial specializations.
     for (MatchResult P : Matched)
       Diag(P.Partial->getLocation(), diag::note_partial_spec_match)
@@ -4776,6 +4766,14 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
                                              *P.Args);
     return true;
   }
+
+  VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
+      Template, InstantiationPattern, PartialSpecArgs, CTAI.CanonicalConverted,
+      TemplateNameLoc /*, LateAttrs, StartingScope*/);
+  if (!Decl)
+    return true;
+  if (SetWrittenArgs)
+    Decl->setTemplateArgsAsWritten(TemplateArgs);
 
   if (VarTemplatePartialSpecializationDecl *D =
           dyn_cast<VarTemplatePartialSpecializationDecl>(InstantiationPattern))

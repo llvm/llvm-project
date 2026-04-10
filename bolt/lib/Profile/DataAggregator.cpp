@@ -22,6 +22,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -394,7 +395,10 @@ void DataAggregator::parsePreAggregated() {
   Line = 1;
 
   // When processing a shared object, filter pre-aggregated entries by buildid.
-  if (BC && !BC->HasFixedLoadAddress && BC->getFilename().ends_with(".so")) {
+  file_magic Magic;
+  if (BC && !BC->HasFixedLoadAddress &&
+      !identify_magic(BC->getFilename(), Magic) &&
+      Magic == file_magic::elf_shared_object && !BC->HasInterpHeader) {
     if (auto FileBID = BC->getFileBuildID()) {
       FilterBuildID = *FileBID;
       outs() << "PERF2BOLT: filtering pre-aggregated data for buildid "
