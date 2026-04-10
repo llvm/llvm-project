@@ -21,6 +21,10 @@ using Object = llvm::json::Object;
 
 static constexpr llvm::StringLiteral SummarySerializationKey = "UnsafeBuffers";
 
+EntityPointerLevel ssaf::buildEntityPointerLevel(EntityId Id, unsigned PtrLv) {
+  return EntityPointerLevel(Id, PtrLv);
+}
+
 UnsafeBufferUsageEntitySummary
 ssaf::buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers) {
   return UnsafeBufferUsageEntitySummary(std::move(UnsafeBuffers));
