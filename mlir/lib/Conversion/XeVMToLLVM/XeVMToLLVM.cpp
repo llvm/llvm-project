@@ -1128,6 +1128,12 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     }
     if (srcEtype == TruncfSrcElemTypes::F16 &&
         dstEtype == TruncfDstElemTypes::BF8) {
+      // BF8 is just F16 with lower 8 bits of mantessa discard.
+      //     Signbit Exponent Mantessa
+      // BF8 1       5        2
+      // F16 1       5        10
+      // Xe arch is Little Endian so BF8 is just the second byte of the two
+      // byte representation used for F16
       auto firstHalf =
           LLVM::ShuffleVectorOp::create(rewriter, op.getLoc(), op.getSrc(),
                                         op.getSrc(), {0, 1, 2, 3, 4, 5, 6, 7});
@@ -1140,6 +1146,7 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
       auto secondHalfCasted = LLVM::BitcastOp::create(
           rewriter, op.getLoc(), VectorType::get(16, rewriter.getI8Type()),
           secondHalf);
+      // Gather just the second bytes from every two byte F16 values
       auto resFirstHalf = LLVM::ShuffleVectorOp::create(
           rewriter, op.getLoc(), firstHalfCasted, firstHalfCasted,
           {1, 3, 5, 7, 9, 11, 13, 15});
