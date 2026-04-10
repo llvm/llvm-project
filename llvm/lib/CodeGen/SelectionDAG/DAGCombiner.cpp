@@ -17821,6 +17821,30 @@ static bool isFMulAdd(const MatchContextClass &Matcher, SDValue N) {
   return Matcher.match(N, ISD::FMA) || Matcher.match(N, ISD::FMAD);
 }
 
+/// Check if all uses of a multiply can be contracted into FMA operations.
+/// Returns true if all uses of the multiply are contractable, meaning the
+/// multiply can potentially be eliminated through FMA contraction.
+/// Returns false if any use cannot be contracted, which would mean contracting
+/// would duplicate the multiply without reducing the total number of
+/// operations.
+///
+/// Currently checks for the following pattern:
+///   - fmul --> fadd/fsub: Direct contraction
+static bool allMulUsesCanBeContracted(SDValue Mul) {
+  for (const auto *User : Mul->users()) {
+    unsigned Opcode = User->getOpcode();
+
+    // Direct FADD/FSUB - contractable.
+    if (Opcode == ISD::FADD || Opcode == ISD::FSUB)
+      continue;
+
+    // Any other use type is not currently recognized as contractable.
+    return false;
+  }
+
+  return true; // All uses can be contracted.
+}
+
 /// Try to perform FMA combining on a given FADD node.
 template <class MatchContextClass>
 SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
@@ -17882,14 +17906,16 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   }
 
   // fold (fadd (fmul x, y), z) -> (fma x, y, z)
-  if (isContractableFMUL(N0) && (Aggressive || N0->hasOneUse())) {
+  if (isContractableFMUL(N0) &&
+      (N0->hasOneUse() || (Aggressive && allMulUsesCanBeContracted(N0)))) {
     return matcher.getNode(PreferredFusedOpcode, SL, VT, N0.getOperand(0),
                            N0.getOperand(1), N1);
   }
 
   // fold (fadd x, (fmul y, z)) -> (fma y, z, x)
   // Note: Commutes FADD operands.
-  if (isContractableFMUL(N1) && (Aggressive || N1->hasOneUse())) {
+  if (isContractableFMUL(N1) &&
+      (N1->hasOneUse() || (Aggressive && allMulUsesCanBeContracted(N1)))) {
     return matcher.getNode(PreferredFusedOpcode, SL, VT, N1.getOperand(0),
                            N1.getOperand(1), N0);
   }
@@ -18105,7 +18131,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
 
   // fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
   auto tryToFoldXYSubZ = [&](SDValue XY, SDValue Z) {
-    if (isContractableFMUL(XY) && (Aggressive || XY->hasOneUse())) {
+    if (isContractableFMUL(XY) &&
+        (XY->hasOneUse() || (Aggressive && allMulUsesCanBeContracted(XY)))) {
       return matcher.getNode(PreferredFusedOpcode, SL, VT, XY.getOperand(0),
                              XY.getOperand(1),
                              matcher.getNode(ISD::FNEG, SL, VT, Z));
@@ -18116,7 +18143,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   // fold (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
   // Note: Commutes FSUB operands.
   auto tryToFoldXSubYZ = [&](SDValue X, SDValue YZ) {
-    if (isContractableFMUL(YZ) && (Aggressive || YZ->hasOneUse())) {
+    if (isContractableFMUL(YZ) &&
+        (YZ->hasOneUse() || (Aggressive && allMulUsesCanBeContracted(YZ)))) {
       return matcher.getNode(
           PreferredFusedOpcode, SL, VT,
           matcher.getNode(ISD::FNEG, SL, VT, YZ.getOperand(0)),

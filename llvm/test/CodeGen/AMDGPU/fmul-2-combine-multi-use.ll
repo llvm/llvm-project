@@ -113,7 +113,7 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f32(ptr addrspace(1) %out, flo
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_f32_e64 v1, s2, s2
-; GFX10-NEXT:    v_fma_f32 v2, s2, 2.0, s3
+; GFX10-NEXT:    v_mad_f32 v2, s2, 2.0, s3
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_store_dword v0, v2, s[0:1] offset:4
@@ -172,7 +172,7 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f32(ptr addrspace(1) %out, flo
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_f32_e64 v1, |s2|, |s2|
-; GFX10-NEXT:    v_fma_f32 v2, |s2|, 2.0, s3
+; GFX10-NEXT:    v_mad_f32 v2, |s2|, 2.0, s3
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_store_dword v0, v2, s[0:1] offset:4

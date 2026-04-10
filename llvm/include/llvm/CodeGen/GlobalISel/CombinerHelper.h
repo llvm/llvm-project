@@ -803,6 +803,10 @@ public:
   bool matchFsubToFneg(MachineInstr &MI, Register &MatchInfo) const;
   void applyFsubToFneg(MachineInstr &MI, Register &MatchInfo) const;
 
+  /// Check if all uses of a multiply can be contracted into fma/fmad
+  /// operations, so that duplicating the multiply is acceptable.
+  bool allMulUsesCanBeContracted(const MachineInstr &MI) const;
+
   bool canCombineFMadOrFMA(MachineInstr &MI, bool &AllowFusionGlobally,
                            bool &HasFMAD, bool &Aggressive,
                            bool CanReassociate = false) const;

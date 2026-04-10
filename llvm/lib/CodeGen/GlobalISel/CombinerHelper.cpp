@@ -6322,6 +6322,32 @@ static bool hasMoreUses(const MachineInstr &MI0, const MachineInstr &MI1,
                        MRI.use_instr_nodbg_end());
 }
 
+/// Check if all uses of a multiply can be contracted into FMA operations.
+/// Returns true if all uses of the multiply are contractable, meaning the
+/// multiply can potentially be eliminated through FMA contraction.
+/// Returns false if any use cannot be contracted, which would mean contracting
+/// would duplicate the multiply without reducing the total number of
+/// operations.
+///
+/// Currently checks for the following pattern:
+///   - fmul --> fadd/fsub: Direct contraction
+bool CombinerHelper::allMulUsesCanBeContracted(const MachineInstr &MI) const {
+  Register MulReg = MI.getOperand(0).getReg();
+
+  for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(MulReg)) {
+    unsigned Opcode = UseMI.getOpcode();
+
+    // Direct FADD/FSUB uses - contractable.
+    if (Opcode == TargetOpcode::G_FADD || Opcode == TargetOpcode::G_FSUB)
+      continue;
+
+    // Any other use type is not currently recognized as contractable.
+    return false;
+  }
+
+  return true; // All uses can be contracted.
+}
+
 bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
                                          bool &AllowFusionGlobally,
                                          bool &HasFMAD, bool &Aggressive,
@@ -6379,7 +6405,8 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
 
   // fold (fadd (fmul x, y), z) -> (fma x, y, z)
   if (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
-      (Aggressive || MRI.hasOneNonDBGUse(LHS.Reg))) {
+      (MRI.hasOneNonDBGUse(LHS.Reg) ||
+       (Aggressive && allMulUsesCanBeContracted(*LHS.MI)))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {LHS.MI->getOperand(1).getReg(),
@@ -6390,7 +6417,8 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
 
   // fold (fadd x, (fmul y, z)) -> (fma y, z, x)
   if (isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
-      (Aggressive || MRI.hasOneNonDBGUse(RHS.Reg))) {
+      (MRI.hasOneNonDBGUse(RHS.Reg) ||
+       (Aggressive && allMulUsesCanBeContracted(*RHS.MI)))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {RHS.MI->getOperand(1).getReg(),
@@ -6684,7 +6712,8 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
   // fold (fsub (fmul x, y), z) -> (fma x, y, -z)
   if (FirstMulHasFewerUses &&
       (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
-       (Aggressive || MRI.hasOneNonDBGUse(LHS.Reg)))) {
+       (MRI.hasOneNonDBGUse(LHS.Reg) ||
+        (Aggressive && allMulUsesCanBeContracted(*LHS.MI))))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       Register NegZ = B.buildFNeg(DstTy, RHS.Reg).getReg(0);
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
@@ -6694,8 +6723,9 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
     return true;
   }
   // fold (fsub x, (fmul y, z)) -> (fma -y, z, x)
-  else if ((isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
-            (Aggressive || MRI.hasOneNonDBGUse(RHS.Reg)))) {
+  if (isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
+      (MRI.hasOneNonDBGUse(RHS.Reg) ||
+       (Aggressive && allMulUsesCanBeContracted(*RHS.MI)))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       Register NegY =
           B.buildFNeg(DstTy, RHS.MI->getOperand(1).getReg()).getReg(0);
