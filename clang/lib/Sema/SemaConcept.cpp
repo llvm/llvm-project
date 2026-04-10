@@ -493,12 +493,6 @@ class ConstraintSatisfactionChecker {
       CachedTemplateArgs;
 
 private:
-  template <class Constraint>
-  UnsignedOrNone getOuterPackIndex(const Constraint &C) const {
-    return C.getPackSubstitutionIndex() ? C.getPackSubstitutionIndex()
-                                        : PackSubstitutionIndex;
-  }
-
   ExprResult
   EvaluateAtomicConstraint(const Expr *AtomicExpr,
                            const MultiLevelTemplateArgumentList &MLTAL);
@@ -812,11 +806,14 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   unsigned Size = Satisfaction.Details.size();
   llvm::FoldingSetNodeID ID;
+  UnsignedOrNone OuterPackSubstIndex =
+      Constraint.getPackSubstitutionIndex()
+          ? Constraint.getPackSubstitutionIndex()
+          : PackSubstitutionIndex;
+
   ID.AddPointer(Constraint.getConstraintExpr());
-  ID.AddInteger(
-      Constraint.getPackSubstitutionIndex().toInternalRepresentation());
-  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, getOuterPackIndex(Constraint))
+  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
@@ -1045,6 +1042,12 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const MultiLevelTemplateArgumentList &MLTAL) {
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
+
+  UnsignedOrNone OuterPackSubstIndex =
+      Constraint.getPackSubstitutionIndex()
+          ? Constraint.getPackSubstitutionIndex()
+          : PackSubstitutionIndex;
+
   Sema::InstantiatingTemplate InstTemplate(
       S, ConceptId->getBeginLoc(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
@@ -1080,10 +1083,8 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Constraint.getConceptId());
-  ID.AddInteger(
-      Constraint.getPackSubstitutionIndex().toInternalRepresentation());
-  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, getOuterPackIndex(Constraint))
+  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);

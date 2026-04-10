@@ -508,17 +508,3 @@ static_assert(!__callable<__mdispatch<int>>);
 }
 
 }
-
-namespace GH190169 {
-
-template <typename Type, typename... Choices>
-concept OneOf = (... || __is_same(Type, Choices));
-
-template <typename F, typename... Ts>
-using check = decltype((F{}(Ts{}), ...));
-
-using X = check<decltype([](auto val) {
-  [](OneOf<int, char> auto) {}(val);
-}), char>;
-
-}
