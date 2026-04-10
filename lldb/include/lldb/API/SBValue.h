@@ -69,8 +69,6 @@ public:
 
   lldb::addr_t GetValueAsAddress();
 
-  lldb::addr_t GetPointerValue();
-
   ValueType GetValueType();
 
   // If you call this on a newly created ValueObject, it will always return

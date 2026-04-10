@@ -346,11 +346,11 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
 
 bool ValuePointsToCode(lldb::SBValue v) {
   lldb::SBType type = v.GetType();
-  if (!(type.IsFunctionPointerType() || type.IsMemberFunctionPointerType() ||
-        type.GetReferenceType().IsFunctionType()))
+  if (!type.GetPointeeType().IsFunctionType())
     return false;
 
-  lldb::addr_t addr = v.GetPointerValue();
+  lldb::SBError error;
+  lldb::addr_t addr = v.GetData().GetAddress(error, 0);
   lldb::SBLineEntry line_entry =
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 

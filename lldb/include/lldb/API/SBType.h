@@ -158,10 +158,6 @@ public:
 
   bool IsFunctionType();
 
-  bool IsFunctionPointerType();
-
-  bool IsMemberFunctionPointerType();
-
   bool IsPolymorphicClass();
 
   bool IsArrayType();

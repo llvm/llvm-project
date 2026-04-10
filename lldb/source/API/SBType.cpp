@@ -258,22 +258,6 @@ bool SBType::IsFunctionType() {
   return m_opaque_sp->GetCompilerType(true).IsFunctionType();
 }
 
-bool SBType::IsFunctionPointerType() {
-  LLDB_INSTRUMENT_VA(this);
-
-  if (!IsValid())
-    return false;
-  return m_opaque_sp->GetCompilerType(true).IsFunctionPointerType();
-}
-
-bool SBType::IsMemberFunctionPointerType() {
-  LLDB_INSTRUMENT_VA(this);
-
-  if (!IsValid())
-    return false;
-  return m_opaque_sp->GetCompilerType(true).IsMemberFunctionPointerType();
-}
-
 bool SBType::IsPolymorphicClass() {
   LLDB_INSTRUMENT_VA(this);
 
