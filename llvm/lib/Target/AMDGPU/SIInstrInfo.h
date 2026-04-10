@@ -90,9 +90,6 @@ struct SIInstrWorklist {
 
   SetVector<MachineInstr *> &getDeferredList() { return DeferredList; }
 
-  DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
-  DenseMap<MachineInstr *, bool> V2SPhyCopiesToErase;
-
 private:
   /// InstrList contains the MachineInstrs.
   SetVector<MachineInstr *> InstrList;
@@ -1511,8 +1508,11 @@ public:
   /// updated.
   void moveToVALU(SIInstrWorklist &Worklist, MachineDominatorTree *MDT) const;
 
-  void moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
-                      MachineInstr &Inst) const;
+  void
+  moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
+                 MachineInstr &Inst,
+                 DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+                 DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
   /// Wrapper function for generating waterfall for instruction \p MI
   /// This function take into consideration of related pre & succ instructions
   /// (e.g. calling process) into consideratioin
@@ -1721,9 +1721,11 @@ public:
                                             Register DstReg,
                                             MachineInstr &Inst) const;
 
-  void handleCopyToPhysHelper(SIInstrWorklist &Worklist, Register DstReg,
-                              MachineInstr &Inst,
-                              MachineRegisterInfo &MRI) const;
+  void handleCopyToPhysHelper(
+      SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
+      MachineRegisterInfo &MRI,
+      DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+      DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
 
   // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.

@@ -7833,30 +7833,32 @@ void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
 
 void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
                              MachineDominatorTree *MDT) const {
-
+  DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
+  DenseMap<MachineInstr *, bool> V2SPhyCopiesToErase;
   while (!Worklist.empty()) {
     MachineInstr &Inst = *Worklist.top();
     Worklist.erase_top();
     // Skip MachineInstr in the deferred list.
     if (Worklist.isDeferred(&Inst))
       continue;
-    moveToVALUImpl(Worklist, MDT, Inst);
+    moveToVALUImpl(Worklist, MDT, Inst, WaterFalls, V2SPhyCopiesToErase);
   }
 
   // Deferred list of instructions will be processed once
   // all the MachineInstr in the worklist are done.
   for (MachineInstr *Inst : Worklist.getDeferredList()) {
-    moveToVALUImpl(Worklist, MDT, *Inst);
+    moveToVALUImpl(Worklist, MDT, *Inst, WaterFalls, V2SPhyCopiesToErase);
     assert(Worklist.empty() &&
            "Deferred MachineInstr are not supposed to re-populate worklist");
   }
 
-  for (std::pair<MachineInstr *, V2PhysSCopyInfo> &Entry : Worklist.WaterFalls)
+  for (std::pair<MachineInstr *, V2PhysSCopyInfo> &Entry : WaterFalls) {
     if (Entry.first->getOpcode() == AMDGPU::SI_CALL_ISEL)
       createWaterFallForSiCall(Entry.first, MDT, Entry.second.MOs,
                                Entry.second.SGPRs);
+  }
 
-  for (std::pair<MachineInstr *, bool> Entry : Worklist.V2SPhyCopiesToErase)
+  for (std::pair<MachineInstr *, bool> Entry : V2SPhyCopiesToErase)
     if (Entry.second)
       Entry.first->eraseFromParent();
 }
@@ -7865,8 +7867,8 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
   // If it's a copy of a VGPR to a physical SGPR, insert a V_READFIRSTLANE and
   // hope for the best.
   const TargetRegisterClass *DstRC = RI.getRegClassForReg(MRI, DstReg);
-  ArrayRef<int16_t> BaseIndices = RI.getRegSplitParts(DstRC, 4);
-  if (BaseIndices.empty() || BaseIndices.size() == 1) {
+  ArrayRef<int16_t> SubRegIndices = RI.getRegSplitParts(DstRC, 4);
+  if (SubRegIndices.size() <= 1) {
     Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
     BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
             get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
@@ -7876,30 +7878,32 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
         .addReg(NewDst);
   } else {
     SmallVector<Register, 8> DstRegs;
-    for (unsigned i = 0; i < BaseIndices.size(); ++i) {
+    for (int16_t Indice : SubRegIndices) {
       Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
               get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
-          .addReg(Inst.getOperand(1).getReg(), {}, BaseIndices[i]);
+          .addReg(Inst.getOperand(1).getReg(), {}, Indice);
 
       DstRegs.push_back(NewDst);
     }
     MachineInstrBuilder MIB =
         BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
                 get(AMDGPU::REG_SEQUENCE), DstReg);
-    for (unsigned i = 0; i < BaseIndices.size(); ++i) {
+    for (unsigned i = 0; i < SubRegIndices.size(); ++i) {
       MIB.addReg(DstRegs[i]);
       MIB.addImm(RI.getSubRegFromChannel(i));
     }
   }
 }
 
-void SIInstrInfo::handleCopyToPhysHelper(SIInstrWorklist &Worklist,
-                                         Register DstReg, MachineInstr &Inst,
-                                         MachineRegisterInfo &MRI) const {
+void SIInstrInfo::handleCopyToPhysHelper(
+    SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
+    MachineRegisterInfo &MRI,
+    DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+    DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
   if (DstReg == AMDGPU::M0) {
     createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-    Worklist.V2SPhyCopiesToErase.try_emplace(&Inst, true);
+    V2SPhyCopiesToErase.try_emplace(&Inst, true);
     return;
   }
   Register SrcReg = Inst.getOperand(1).getReg();
@@ -7908,7 +7912,8 @@ void SIInstrInfo::handleCopyToPhysHelper(SIInstrWorklist &Worklist,
   // Only search current block since phyreg's def & use cannot cross
   // blocks when MF.NoPhi = false.
   while (++I != E) {
-    // Currently, we only support waterfall on SI_CALL_ISEL.
+    // For SI_CALL_ISEL users, replace the phys SGPR with the VGPR source
+    // and record the operand for later waterfall loop generation.
     if (I->getOpcode() == AMDGPU::SI_CALL_ISEL) {
       MachineInstr *UseMI = &*I;
       for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
@@ -7916,29 +7921,30 @@ void SIInstrInfo::handleCopyToPhysHelper(SIInstrWorklist &Worklist,
             UseMI->getOperand(i).getReg() == DstReg) {
           MachineOperand *MO = &UseMI->getOperand(i);
           MO->setReg(SrcReg);
-          V2PhysSCopyInfo &V2SCopyInfo = Worklist.WaterFalls[UseMI];
+          V2PhysSCopyInfo &V2SCopyInfo = WaterFalls[UseMI];
           V2SCopyInfo.MOs.push_back(MO);
           V2SCopyInfo.SGPRs.push_back(DstReg);
-          Worklist.V2SPhyCopiesToErase.try_emplace(&Inst, true);
+          V2SPhyCopiesToErase.try_emplace(&Inst, true);
         }
       }
     } else if (I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
                I->getOperand(0).isReg() &&
                I->getOperand(0).getReg() == DstReg) {
       createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-      Worklist.V2SPhyCopiesToErase.try_emplace(&Inst, true);
+      V2SPhyCopiesToErase.try_emplace(&Inst, true);
     } else if (I->readsRegister(DstReg, &RI)) {
       // COPY cannot be erased if other type of inst uses it.
-      Worklist.V2SPhyCopiesToErase[&Inst] = false;
+      V2SPhyCopiesToErase[&Inst] = false;
     }
     if (I->findRegisterDefOperand(DstReg, &RI))
       break;
   }
 }
 
-void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
-                                 MachineDominatorTree *MDT,
-                                 MachineInstr &Inst) const {
+void SIInstrInfo::moveToVALUImpl(
+    SIInstrWorklist &Worklist, MachineDominatorTree *MDT, MachineInstr &Inst,
+    DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+    DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
 
   MachineBasicBlock *MBB = Inst.getParent();
   if (!MBB)
@@ -8439,7 +8445,8 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
 
     if (Inst.isCopy() && DstReg.isPhysical() &&
         Inst.getOperand(1).getReg().isVirtual()) {
-      handleCopyToPhysHelper(Worklist, DstReg, Inst, MRI);
+      handleCopyToPhysHelper(Worklist, DstReg, Inst, MRI, WaterFalls,
+                             V2SPhyCopiesToErase);
       return;
     }
 
