@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// Implement memref dialect interfaces that enable manipulating memref indexing
+// in passes like FoldMemRefAliasOps.
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/NVGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
 
