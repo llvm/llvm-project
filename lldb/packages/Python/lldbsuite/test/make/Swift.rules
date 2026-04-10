@@ -27,7 +27,7 @@ endif
 ifeq "$(MAKE_PDB)" "YES"
 	SWIFT_DEBUG_INFO_FLAG ?= -g -debug-info-format=codeview
 else ifeq "$(OS)" "Windows_NT"
-	SWIFT_DEBUG_INFO_FLAG ?= -g
+	SWIFT_DEBUG_INFO_FLAG ?= -g -use-ld=lld -Xlinker -debug:dwarf
 else
 	SWIFT_DEBUG_INFO_FLAG ?= $(DEBUG_INFO_FLAG)
 endif
