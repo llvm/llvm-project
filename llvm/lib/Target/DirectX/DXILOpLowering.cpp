@@ -248,10 +248,11 @@ public:
   }
 
   bool hasNonUniformIndex(Value *IndexOp) {
-    SmallVector<Value *> WorkList;
-    SmallPtrSet<Value *, 16> Visited;
+    if (isa<llvm::Constant>(IndexOp))
+      return false;
 
     SmallVector<Value *, 16> Worklist;
+    SmallPtrSet<Value *, 16> Visited;
     Worklist.push_back(IndexOp);
 
     while (!Worklist.empty()) {

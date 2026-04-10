@@ -1,7 +1,7 @@
 ; RUN: opt -S  -dxil-intrinsic-expansion -dxil-op-lower  -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
-; The goal of this test it to make sure compilation finishes successfully,
-; in bad case it should timeout.
+; Regression test for llvm/llvm-project#189438.
+; The goal of this test it to make sure compilation finishes successfully.
 
 
 @Out.str = private unnamed_addr constant [4 x i8] c"Out\00", align 1
