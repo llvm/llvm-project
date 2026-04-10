@@ -145,7 +145,7 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
 
   // Write out all zeros for the AddrInfoOffsets.
   O.alignTo(4);
-  const off_t AddrInfoOffsetsOffset = O.tell();
+  const uint64_t AddrInfoOffsetsOffset = O.tell();
   for (size_t i = 0, n = Funcs.size(); i < n; ++i)
     O.writeU32(0);
 
