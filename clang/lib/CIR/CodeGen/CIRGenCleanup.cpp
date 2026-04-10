@@ -319,7 +319,7 @@ static bool bodyHasBranchThroughExits(mlir::Region &bodyRegion) {
 /// Pop a cleanup block from the stack.
 ///
 /// \param forDeactivation - When true, this indicates that the cleanup block
-//  is being popped because it was deactivate while at the top of the stack.
+/// is being popped because it was deactivated while at the top of the stack.
 void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   assert(!ehStack.empty() && "cleanup stack is empty!");
   assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
