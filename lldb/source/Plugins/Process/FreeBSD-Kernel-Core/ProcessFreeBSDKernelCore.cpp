@@ -135,9 +135,11 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
     kvm_t *kvm =
         kvm_open2(executable->GetFileSpec().GetPath().c_str(),
                   crash_file->GetPath().c_str(), O_RDONLY, errbuf, nullptr);
-    if (kvm)
+    if (kvm) {
+      kvm_close(kvm);
       return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
-                                                        kvm, *crash_file);
+                                                        *crash_file);
+    }
     LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
   }
   return nullptr;
