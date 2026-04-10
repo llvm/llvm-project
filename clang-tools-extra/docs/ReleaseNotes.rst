@@ -227,8 +227,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-incorrect-enable-if
   <clang-tidy/checks/bugprone/incorrect-enable-if>` check to not
   insert an extraneous ``typename`` on code like
-  ``typename std::enable_if<...>``, where there's already a
-  ``typename`` and only the ``::type`` at the end is missing.
+  ``typename std::enable_if<...>``, where there's already a ``typename`` and
+  only the ``::type`` at the end is missing.
 
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
