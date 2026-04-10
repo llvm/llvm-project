@@ -2,10 +2,10 @@
 @ RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7m %t | FileCheck %s
 
 @ The three "b external" instructions relax from 2-byte tB to 4-byte t2B
-@ (unresolved fixup). The cumulative size growth must not cause the tLDRpci
-@ instructions to appear misaligned and spuriously relax to 4-byte t2LDRpci.
-@ The .p2align 2 before the constant pool absorbs the upstream growth, keeping
-@ the targets 4-byte aligned.
+@ (unresolved fixup). During the fused relaxation+layout pass, the cumulative
+@ Stretch must not cause the tLDRpci instructions to appear misaligned and
+@ spuriously relax to 4-byte t2LDRpci. The .p2align 2 before the constant pool
+@ absorbs the upstream growth, keeping the targets 4-byte aligned.
 @
 @ If tLDRpci spuriously widens, the extra bytes push the cbz target past the
 @ 126-byte range, causing "out of range pc-relative fixup value".
