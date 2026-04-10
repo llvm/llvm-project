@@ -102,6 +102,71 @@ static Value getLaneId(RewriterBase &rewriter, Location loc) {
   return laneId;
 }
 
+/// Maximum number of threads per block dimension on AMD GPUs.
+static constexpr int64_t kMaxThreadsPerBlockDim = 1024;
+
+/// Emits a call to an OCKL block/grid size function corresponding to
+/// `indexKind` with argument `dim`, except that if the context around
+/// `contextOp` gives an exact size for that dimension, return that as
+/// an `i64` constant instead.
+static Value getKnownOrOcklDim(RewriterBase &rewriter,
+                               gpu::index_lowering::IndexKind indexKind,
+                               gpu::Dimension dim, Operation *contextOp,
+                               std::optional<uint32_t> opUpperBound) {
+  Location loc = contextOp->getLoc();
+  MLIRContext *context = contextOp->getContext();
+
+  auto i32Ty = IntegerType::get(context, 32);
+  auto i64Ty = IntegerType::get(context, 64);
+
+  if (std::optional<uint32_t> knownDim =
+          gpu::getKnownDimensionSizeAround(contextOp, indexKind, dim))
+    return LLVM::ConstantOp::create(rewriter, loc,
+                                    rewriter.getI64IntegerAttr(*knownDim));
+
+  int32_t dimParam = static_cast<int32_t>(dim);
+
+  StringRef functionName;
+  switch (indexKind) {
+  case gpu::index_lowering::IndexKind::Block:
+    functionName = "__ockl_get_local_size";
+    break;
+  case gpu::index_lowering::IndexKind::Grid:
+    functionName = "__ockl_get_num_groups";
+    break;
+  case gpu::index_lowering::IndexKind::Cluster:
+  case gpu::index_lowering::IndexKind::Other:
+    llvm_unreachable("Not valid index kinds for ockl lookup");
+  }
+
+  // Declare the ockl function: i64 @functionName(i32).
+  auto fnType = LLVM::LLVMFunctionType::get(i64Ty, {i32Ty});
+  Operation *moduleOp = contextOp->getParentWithTrait<OpTrait::SymbolTable>();
+  LLVM::LLVMFuncOp funcOp =
+      getOrDefineFunction(moduleOp, loc, rewriter, functionName, fnType);
+
+  // Create the call.
+  Value dimConst = LLVM::ConstantOp::create(rewriter, loc, i32Ty, dimParam);
+  auto callOp =
+      LLVM::CallOp::create(rewriter, loc, funcOp, ValueRange{dimConst});
+
+  LLVM::ConstantRangeAttr range;
+  if (opUpperBound) {
+    range = LLVM::ConstantRangeAttr::get(
+        context, APInt(64, 1),
+        APInt(64, static_cast<uint64_t>(*opUpperBound) + 1));
+  } else if (indexKind == gpu::index_lowering::IndexKind::Block) {
+    // Set the hardware limit for block ranges as the bounds on block dim calls.
+    range = LLVM::ConstantRangeAttr::get(context, APInt(64, 1),
+                                         APInt(64, kMaxThreadsPerBlockDim + 1));
+  }
+  if (range) {
+    callOp.setResAttrsAttr(rewriter.getArrayAttr(rewriter.getDictionaryAttr(
+        rewriter.getNamedAttr(LLVM::LLVMDialect::getRangeAttrName(), range))));
+  }
+  return callOp.getResult();
+}
+
 static constexpr StringLiteral amdgcnDataLayout =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
     "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:"
@@ -110,6 +175,36 @@ static constexpr StringLiteral amdgcnDataLayout =
     "64-S32-A5-G1-ni:7:8:9";
 
 namespace {
+
+/// Lowers gpu.block_dim / gpu.grid_dim to direct __ockl_get_local_size /
+/// __ockl_get_num_groups function calls.
+template <typename OpTy>
+struct GPUDimOpToOcklCall final : ConvertOpToLLVMPattern<OpTy> {
+  GPUDimOpToOcklCall(const LLVMTypeConverter &converter,
+                     gpu::index_lowering::IndexKind indexKind)
+      : ConvertOpToLLVMPattern<OpTy>(converter), indexKind(indexKind) {}
+
+  LogicalResult
+  matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    std::optional<uint32_t> opUpperBound;
+    if (auto bound = op.getUpperBound())
+      opUpperBound = static_cast<uint32_t>(bound->getZExtValue());
+
+    Value ocklCall = getKnownOrOcklDim(rewriter, indexKind, op.getDimension(),
+                                       op, opUpperBound);
+    Value result = truncOrExtToLLVMType(rewriter, loc, ocklCall,
+                                        *this->getTypeConverter());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+
+private:
+  const gpu::index_lowering::IndexKind indexKind;
+};
+
 struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   using ConvertOpToLLVMPattern<gpu::LaneIdOp>::ConvertOpToLLVMPattern;
 
@@ -197,16 +292,37 @@ struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
       // For older architectures, compute:
       // subgroup_id = linearized_thread_id / subgroup_size
       // where linearized_thread_id = tid.x + dim.x * (tid.y + dim.y * tid.z)
-      Value tidX = ROCDL::ThreadIdXOp::create(rewriter, loc, int32Type);
-      Value tidY = ROCDL::ThreadIdYOp::create(rewriter, loc, int32Type);
-      Value tidZ = ROCDL::ThreadIdZOp::create(rewriter, loc, int32Type);
-      Value dimX = ROCDL::BlockDimXOp::create(rewriter, loc, int32Type);
-      Value dimY = ROCDL::BlockDimYOp::create(rewriter, loc, int32Type);
+      auto tidX = ROCDL::ThreadIdXOp::create(rewriter, loc, int32Type);
+      auto tidY = ROCDL::ThreadIdYOp::create(rewriter, loc, int32Type);
+      auto tidZ = ROCDL::ThreadIdZOp::create(rewriter, loc, int32Type);
+      auto setBoundFromContext = [&](Operation *tidOp, gpu::Dimension dim) {
+        if (LLVM::ConstantRangeAttr range =
+                gpu::index_lowering::getIndexOpRange(
+                    op, dim, std::nullopt,
+                    gpu::index_lowering::IndexKind::Block,
+                    gpu::index_lowering::IntrType::Id, 32))
+          tidOp->setAttr("range", range);
+      };
+      setBoundFromContext(tidX, gpu::Dimension::x);
+      setBoundFromContext(tidY, gpu::Dimension::y);
+      setBoundFromContext(tidZ, gpu::Dimension::z);
+
+      auto flags =
+          LLVM::IntegerOverflowFlags::nsw | LLVM::IntegerOverflowFlags::nuw;
+
+      auto getBlockDim = [&](gpu::Dimension dim) {
+        Value dim64 =
+            getKnownOrOcklDim(rewriter, gpu::index_lowering::IndexKind::Block,
+                              dim, op, std::nullopt);
+        Value dimTrunc =
+            LLVM::TruncOp::create(rewriter, loc, int32Type, dim64, flags);
+        return dimTrunc;
+      };
+      Value dimX = getBlockDim(gpu::Dimension::x);
+      Value dimY = getBlockDim(gpu::Dimension::y);
 
       // linearized = tid.x + dim.x * (tid.y + dim.y * tid.z)
       // Thread IDs and dimensions are non-negative and small, so use nuw+nsw.
-      auto flags =
-          LLVM::IntegerOverflowFlags::nsw | LLVM::IntegerOverflowFlags::nuw;
       Value dimYxTidZ =
           LLVM::MulOp::create(rewriter, loc, int32Type, dimY, tidZ, flags);
       Value tidYPlusDimYxTidZ =
@@ -271,8 +387,11 @@ struct GPUSubgroupBroadcastOpToROCDL
 
     Type i32 = rewriter.getI32Type();
     Location loc = op.getLoc();
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed,
+                                    /*permitVariablySizedScalars=*/true)))
+      return rewriter.notifyMatchFailure(op,
+                                         "Unexpected decomposition failure");
 
     SmallVector<Value> results;
     results.reserve(decomposed.size());
@@ -359,8 +478,11 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value dwordAlignedDstLane =
         LLVM::ShlOp::create(rewriter, loc, int32Type, selectDstLane, two);
 
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type,
+                                    decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
     SmallVector<Value> swizzled;
     for (Value v : decomposed) {
       Value res = ROCDL::DsBpermuteOp::create(rewriter, loc, int32Type,
@@ -620,13 +742,9 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::BlockIdOp, ROCDL::BlockIdXOp, ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>>(
       converter, IndexKind::Grid, IntrType::Id);
-  patterns.add<
-      gpu::index_lowering::OpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
-                                      ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>>(
-      converter, IndexKind::Block, IntrType::Dim);
-  patterns.add<gpu::index_lowering::OpLowering<
-      gpu::GridDimOp, ROCDL::GridDimXOp, ROCDL::GridDimYOp, ROCDL::GridDimZOp>>(
-      converter, IndexKind::Grid, IntrType::Dim);
+  patterns.add<GPUDimOpToOcklCall<gpu::BlockDimOp>>(converter,
+                                                    IndexKind::Block);
+  patterns.add<GPUDimOpToOcklCall<gpu::GridDimOp>>(converter, IndexKind::Grid);
   patterns.add<GPUReturnOpLowering>(converter);
   patterns.add<GPUFuncOpLowering>(
       converter,

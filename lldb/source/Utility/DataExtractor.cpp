@@ -127,12 +127,10 @@ DataExtractor::DataExtractor()
 // This constructor allows us to use data that is owned by someone else. The
 // data must stay around as long as this object is valid.
 DataExtractor::DataExtractor(const void *data, offset_t length,
-                             ByteOrder endian, uint32_t addr_size,
-                             uint32_t target_byte_size /*=1*/)
+                             ByteOrder endian, uint32_t addr_size)
     : m_start(const_cast<uint8_t *>(static_cast<const uint8_t *>(data))),
       m_end(const_cast<uint8_t *>(static_cast<const uint8_t *>(data)) + length),
-      m_byte_order(endian), m_addr_size(addr_size), m_data_sp(),
-      m_target_byte_size(target_byte_size) {
+      m_byte_order(endian), m_addr_size(addr_size), m_data_sp() {
   assert(addr_size >= 1 && addr_size <= 8);
 }
 
@@ -141,19 +139,16 @@ DataExtractor::DataExtractor(const void *data, offset_t length,
 // shared data reference will ensure the data lives as long as any
 // DataExtractor objects exist that have a reference to this data.
 DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
-                             uint32_t addr_size,
-                             uint32_t target_byte_size /*=1*/)
-    : m_byte_order(endian), m_addr_size(addr_size), m_data_sp(),
-      m_target_byte_size(target_byte_size) {
+                             uint32_t addr_size)
+    : m_byte_order(endian), m_addr_size(addr_size), m_data_sp() {
   assert(addr_size >= 1 && addr_size <= 8);
   SetData(data_sp);
 }
 
 // Make a shared pointer reference to the shared data in "data_sp".
-DataExtractor::DataExtractor(const DataBufferSP &data_sp,
-                             uint32_t target_byte_size)
+DataExtractor::DataExtractor(const DataBufferSP &data_sp)
     : m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
-      m_data_sp(data_sp), m_target_byte_size(target_byte_size) {
+      m_data_sp(data_sp) {
   if (data_sp)
     SetData(data_sp);
 }
@@ -164,9 +159,9 @@ DataExtractor::DataExtractor(const DataBufferSP &data_sp,
 // to that data. The endian swap and address size settings are copied from
 // "data".
 DataExtractor::DataExtractor(const DataExtractor &data, offset_t offset,
-                             offset_t length, uint32_t target_byte_size /*=1*/)
+                             offset_t length)
     : m_byte_order(data.m_byte_order), m_addr_size(data.m_addr_size),
-      m_data_sp(), m_target_byte_size(target_byte_size) {
+      m_data_sp() {
   assert(m_addr_size >= 1 && m_addr_size <= 8);
   if (data.ValidOffset(offset)) {
     offset_t bytes_available = data.GetByteSize() - offset;
@@ -178,8 +173,7 @@ DataExtractor::DataExtractor(const DataExtractor &data, offset_t offset,
 
 DataExtractor::DataExtractor(const DataExtractor &rhs)
     : m_start(rhs.m_start), m_end(rhs.m_end), m_byte_order(rhs.m_byte_order),
-      m_addr_size(rhs.m_addr_size), m_data_sp(rhs.m_data_sp),
-      m_target_byte_size(rhs.m_target_byte_size) {
+      m_addr_size(rhs.m_addr_size), m_data_sp(rhs.m_data_sp) {
   assert(m_addr_size >= 1 && m_addr_size <= 8);
 }
 

@@ -130,10 +130,13 @@ SymbolTable::SymbolTable(Operation *symbolTableOp)
     if (!name)
       continue;
 
-    auto inserted = symbolTable.insert({name, &op});
-    (void)inserted;
-    assert(inserted.second &&
-           "expected region to contain uniquely named symbol operations");
+    // Silently skip duplicate symbol names. Duplicate symbols are an
+    // invalid IR condition diagnosed by the SymbolTable trait's
+    // verifyRegionTrait. The constructor may be called before verification
+    // completes (e.g., when IsolatedFromAbove ops look up symbols in an
+    // ancestor symbol table during verification), so an assert here would
+    // crash instead of producing a proper diagnostic.
+    symbolTable.try_emplace(name, &op);
   }
 }
 

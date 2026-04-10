@@ -2939,10 +2939,16 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
   if (Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
     SrcExpr = Self.DefaultLvalueConversion(SrcExpr.get());
     const VectorType *VT = SrcTy->getAs<VectorType>();
+    const ConstantMatrixType *MT = SrcTy->getAs<ConstantMatrixType>();
     // change splat from vec1 case to splat from scalar
     if (VT && VT->getNumElements() == 1)
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    // change splat from 1x1 matrix case to splat from scalar
+    else if (MT && MT->getNumElementsFlattened() == 1)
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), MT->getElementType(), CK_HLSLMatrixTruncation,
           SrcExpr.get()->getValueKind(), nullptr, CCK);
     // Inserting a scalar cast here allows for a simplified codegen in
     // the case the destTy is a vector

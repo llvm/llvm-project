@@ -91,12 +91,18 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
 }
 
 def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
-  let options = [
-    Option<"useThunks", "use-thunks",
-           "bool", /*default=*/"true",
+  let options =
+      [Option<
+           "useThunks", "use-thunks", "bool", /*default=*/"true",
            "Convert procedure pointer abstractions to a single code pointer, "
-           "deploying thunks wherever required.">
-  ];
+           "deploying thunks wherever required.">,
+       Option<
+           "useSafeTrampoline", "use-safe-trampoline", "bool",
+           /*default=*/"false",
+           "Use runtime trampoline pool instead of stack-based trampolines "
+           "for W^X compliance. When enabled, internal procedure pointers "
+           "use a runtime-managed pool of executable trampolines with "
+           "separate data region, avoiding the need for an executable stack.">];
 }
 
 def LowerRepackArraysPass : Pass<"lower-repack-arrays", "mlir::ModuleOp"> {

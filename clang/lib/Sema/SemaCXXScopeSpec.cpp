@@ -792,7 +792,8 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
           << IdInfo.Identifier << getLangOpts().CPlusPlus;
       return true;
     }
-    if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
+    if (Found.getLookupKind() == LookupNestedNameSpecifierName &&
+        ::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
                                     IdInfo.CCLoc)) {
       const Type *T = SS.getScopeRep().getAsType();
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
