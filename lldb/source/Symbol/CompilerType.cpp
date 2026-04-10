@@ -1010,6 +1010,13 @@ CompilerType CompilerType::GetTypeForFormatters() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::GetPromotedIntegerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPromotedIntegerType(m_type);
+  return CompilerType();
+}
+
 LazyBool CompilerType::ShouldPrintAsOneLiner(ValueObject *valobj) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
