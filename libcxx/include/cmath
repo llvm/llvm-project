@@ -204,6 +204,14 @@ floating_point fmin (arithmetic x, arithmetic y);
 float          fminf(float x, float y);
 long double    fminl(long double x, long double y);
 
+constexpr float       fminimum_num(float x, float y);            // C++26 (from C23)
+constexpr double      fminimum_num(double x, double y);          // C++26 (from C23)
+constexpr long double fminimum_num(long double x, long double y); // C++26 (from C23)
+
+constexpr float       fmaximum_num(float x, float y);            // C++26 (from C23)
+constexpr double      fmaximum_num(double x, double y);          // C++26 (from C23)
+constexpr long double fmaximum_num(long double x, long double y); // C++26 (from C23)
+
 double         hermite(unsigned n, double x);                    // C++17
 float          hermite(unsigned n, float x);                     // C++17
 long double    hermite(unsigned n, long double x);               // C++17
@@ -317,6 +325,7 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #else
 #  include <__config>
 #  include <__math/hypot.h>
+#  include <__math/min_max.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_arithmetic.h>
 #  include <__type_traits/is_constant_evaluated.h>
@@ -607,6 +616,14 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr __promote_t<_A1, _A2, _A3> lerp(_A1 __a, 
   return std::__lerp((__result_type)__a, (__result_type)__b, (__result_type)__t);
 }
 #  endif // _LIBCPP_STD_VER >= 20
+
+#  if _LIBCPP_STD_VER >= 26
+// C++26 IEEE 754-2019 min/max functions (from C23)
+using __math::fmaximum;
+using __math::fmaximum_num;
+using __math::fminimum;
+using __math::fminimum_num;
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

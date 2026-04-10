@@ -241,6 +241,11 @@ export namespace std {
   using std::fminf _LIBCPP_USING_IF_EXISTS;
   using std::fminl _LIBCPP_USING_IF_EXISTS;
 
+  using std::fminimum _LIBCPP_USING_IF_EXISTS;
+  using std::fmaximum _LIBCPP_USING_IF_EXISTS;
+  using std::fminimum_num _LIBCPP_USING_IF_EXISTS;
+  using std::fmaximum_num _LIBCPP_USING_IF_EXISTS;
+
   using std::fma _LIBCPP_USING_IF_EXISTS;
   using std::fmaf _LIBCPP_USING_IF_EXISTS;
   using std::fmal _LIBCPP_USING_IF_EXISTS;

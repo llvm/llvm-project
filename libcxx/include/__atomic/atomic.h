@@ -18,6 +18,7 @@
 #include <__atomic/support.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__math/min_max.h>
 #include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_floating_point.h>
@@ -331,10 +332,15 @@ template <class _Tp>
   requires is_floating_point_v<_Tp>
 struct atomic<_Tp> : __atomic_base<_Tp> {
 private:
-  template <class _This, class _Operation, class _BuiltinOp>
+  template <class _This, class _Operation, class _BuiltinOp, bool _HasBuiltin = std::__has_rmw_builtin<_Tp>()>
   _LIBCPP_HIDE_FROM_ABI static _Tp
-  __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation, _BuiltinOp __builtin_op) {
-    if constexpr (std::__has_rmw_builtin<_Tp>()) {
+  __rmw_op(_This&& __self,
+           _Tp __operand,
+           memory_order __m,
+           _Operation __operation,
+           _BuiltinOp __builtin_op,
+           std::integral_constant<bool, _HasBuiltin> = {}) {
+    if constexpr (_HasBuiltin) {
       return __builtin_op(std::addressof(std::forward<_This>(__self).__a_), __operand, __m);
     } else {
       _Tp __old = __self.load(memory_order_relaxed);
@@ -371,6 +377,44 @@ private:
     auto __minus = [](auto __a, auto __b) { return __a - __b; };
     return __rmw_op(std::forward<_This>(__self), __operand, __m, __minus, __builtin_op);
   }
+
+  template <class _This>
+  _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_min(_This&& __self, _Tp __operand, memory_order __m) {
+    auto __op = [](_Tp __a, _Tp __b) { return std::__math::fmin(__a, __b); };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __op, __op, std::false_type{});
+  }
+
+  template <class _This>
+  _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_max(_This&& __self, _Tp __operand, memory_order __m) {
+    auto __op = [](_Tp __a, _Tp __b) { return std::__math::fmax(__a, __b); };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __op, __op, std::false_type{});
+  }
+
+#  if _LIBCPP_STD_VER >= 26
+  template <class _This>
+  _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_fminimum(_This&& __self, _Tp __operand, memory_order __m) {
+    auto __op = [](_Tp __a, _Tp __b) { return std::__math::fminimum(__a, __b); };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __op, __op, std::false_type{});
+  }
+
+  template <class _This>
+  _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_fmaximum(_This&& __self, _Tp __operand, memory_order __m) {
+    auto __op = [](_Tp __a, _Tp __b) { return std::__math::fmaximum(__a, __b); };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __op, __op, std::false_type{});
+  }
+
+  template <class _This>
+  _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_fminimum_num(_This&& __self, _Tp __operand, memory_order __m) {
+    auto __op = [](_Tp __a, _Tp __b) { return std::__math::fminimum_num(__a, __b); };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __op, __op, std::false_type{});
+  }
+
+  template <class _This>
+  _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_fmaximum_num(_This&& __self, _Tp __operand, memory_order __m) {
+    auto __op = [](_Tp __a, _Tp __b) { return std::__math::fmaximum_num(__a, __b); };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __op, __op, std::false_type{});
+  }
+#  endif // _LIBCPP_STD_VER >= 26
 
 public:
   using __base _LIBCPP_NODEBUG = __atomic_base<_Tp>;
@@ -414,6 +458,68 @@ public:
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
     return __fetch_sub(*this, __op, __m);
   }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
+    requires __base::is_always_lock_free
+  {
+    return __fetch_min(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
+    return __fetch_min(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
+    requires __base::is_always_lock_free
+  {
+    return __fetch_max(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
+    return __fetch_max(*this, __op, __m);
+  }
+
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fminimum(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
+    requires __base::is_always_lock_free
+  {
+    return __fetch_fminimum(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fminimum(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
+    return __fetch_fminimum(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fmaximum(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
+    requires __base::is_always_lock_free
+  {
+    return __fetch_fmaximum(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fmaximum(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
+    return __fetch_fmaximum(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fminimum_num(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
+    requires __base::is_always_lock_free
+  {
+    return __fetch_fminimum_num(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fminimum_num(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
+    return __fetch_fminimum_num(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fmaximum_num(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
+    requires __base::is_always_lock_free
+  {
+    return __fetch_fmaximum_num(*this, __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fmaximum_num(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
+    return __fetch_fmaximum_num(*this, __op, __m);
+  }
+#  endif // _LIBCPP_STD_VER >= 26
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) volatile noexcept
     requires __base::is_always_lock_free

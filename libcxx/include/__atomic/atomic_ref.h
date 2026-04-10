@@ -29,9 +29,11 @@
 #include <__config>
 #include <__cstddef/byte.h>
 #include <__cstddef/ptrdiff_t.h>
+#include <__math/min_max.h>
 #include <__memory/addressof.h>
 #include <__memory/is_sufficiently_aligned.h>
 #include <__type_traits/has_unique_object_representation.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <cstring>
 
@@ -354,6 +356,62 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
       return __old;
     }
   }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new = std::__math::fmin(__old, __arg);
+    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+      __new = std::__math::fmin(__old, __arg);
+    }
+    return __old;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new = std::__math::fmax(__old, __arg);
+    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+      __new = std::__math::fmax(__old, __arg);
+    }
+    return __old;
+  }
+
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fminimum(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new = std::__math::fminimum(__old, __arg);
+    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+      __new = std::__math::fminimum(__old, __arg);
+    }
+    return __old;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fmaximum(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new = std::__math::fmaximum(__old, __arg);
+    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+      __new = std::__math::fmaximum(__old, __arg);
+    }
+    return __old;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fminimum_num(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new = std::__math::fminimum_num(__old, __arg);
+    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+      __new = std::__math::fminimum_num(__old, __arg);
+    }
+    return __old;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_fmaximum_num(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new = std::__math::fmaximum_num(__old, __arg);
+    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+      __new = std::__math::fmaximum_num(__old, __arg);
+    }
+    return __old;
+  }
+#  endif // _LIBCPP_STD_VER >= 26
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __arg) const noexcept { return fetch_add(__arg) + __arg; }
   _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __arg) const noexcept { return fetch_sub(__arg) - __arg; }
