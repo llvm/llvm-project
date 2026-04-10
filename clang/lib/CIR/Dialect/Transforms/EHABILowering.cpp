@@ -17,6 +17,7 @@
 //   - cir.end_cleanup      → (removed)
 //   - cir.begin_catch      → call to __cxa_begin_catch
 //   - cir.end_catch        → call to __cxa_end_catch
+//   - cir.eh.terminate     → call to __clang_call_terminate + unreachable
 //   - cir.resume           → cir.resume.flat
 //   - !cir.eh_token values → (!cir.ptr<!void>, !u32i) value pairs
 //   - personality function set on functions requiring EH
@@ -116,11 +117,13 @@ private:
   cir::FuncOp personalityFunc;
   cir::FuncOp beginCatchFunc;
   cir::FuncOp endCatchFunc;
+  cir::FuncOp clangCallTerminateFunc;
 
   constexpr const static ::llvm::StringLiteral kGxxPersonality =
       "__gxx_personality_v0";
 
   void ensureRuntimeDecls(mlir::Location loc);
+  void ensureClangCallTerminate(mlir::Location loc);
   mlir::LogicalResult lowerFunc(cir::FuncOp funcOp);
   void lowerEhInitiate(cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
                        SmallVectorImpl<mlir::Operation *> &deadOps);
@@ -170,6 +173,61 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
     endCatchFunc =
         getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_end_catch", endCatchFuncTy);
   }
+}
+
+/// Ensure the __clang_call_terminate function exists in the module. This
+/// function is defined with a body that calls __cxa_begin_catch followed by
+/// std::terminate, matching the behavior of Clang's LLVM IR codegen.
+///
+///   void __clang_call_terminate(void *exn) nounwind noreturn {
+///     __cxa_begin_catch(exn);
+///     std::terminate();
+///     unreachable;
+///   }
+void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
+  if (clangCallTerminateFunc)
+    return;
+
+  ensureRuntimeDecls(loc);
+
+  if (auto existing = mod.lookupSymbol<cir::FuncOp>("__clang_call_terminate")) {
+    clangCallTerminateFunc = existing;
+    return;
+  }
+
+  auto funcTy = cir::FuncType::get({voidPtrType}, voidType, /*isVarArg=*/false);
+  builder.setInsertionPointToEnd(mod.getBody());
+  auto funcOp =
+      cir::FuncOp::create(builder, loc, "__clang_call_terminate", funcTy);
+  funcOp.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
+  funcOp.setGlobalVisibility(cir::VisibilityKind::Hidden);
+
+  mlir::Block *entryBlock = funcOp.addEntryBlock();
+  builder.setInsertionPointToStart(entryBlock);
+  mlir::Value exnArg = entryBlock->getArgument(0);
+
+  auto catchCall = cir::CallOp::create(
+      builder, loc, mlir::FlatSymbolRefAttr::get(beginCatchFunc), u8PtrType,
+      mlir::ValueRange{exnArg});
+  catchCall.setNothrowAttr(builder.getUnitAttr());
+
+  auto terminateFuncDecl = getOrCreateRuntimeFuncDecl(
+      mod, loc, "_ZSt9terminatev",
+      cir::FuncType::get({}, voidType, /*isVarArg=*/false));
+  terminateFuncDecl->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                             builder.getUnitAttr());
+  auto terminateCall = cir::CallOp::create(
+      builder, loc, mlir::FlatSymbolRefAttr::get(terminateFuncDecl), voidType,
+      mlir::ValueRange{});
+  terminateCall.setNothrowAttr(builder.getUnitAttr());
+  terminateCall->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                         builder.getUnitAttr());
+
+  cir::UnreachableOp::create(builder, loc);
+
+  funcOp->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                  builder.getUnitAttr());
+  clangCallTerminateFunc = funcOp;
 }
 
 /// Lower all EH operations in a single function.
@@ -259,6 +317,7 @@ void ItaniumEHLowering::lowerEhInitiate(
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
       builder, initiateOp.getLoc(), /*cleanup=*/initiateOp.getCleanup(),
+      /*catch_all=*/false,
       /*catch_type_list=*/mlir::ArrayAttr{});
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
@@ -353,6 +412,8 @@ void ItaniumEHLowering::lowerEhInitiate(
                 mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
           inflightOp.setCatchTypeListAttr(builder.getArrayAttr(typeSymbols));
         }
+        if (op.getDefaultIsCatchAll())
+          inflightOp.setCatchAllAttr(builder.getUnitAttr());
         // Only lower the dispatch once. A sibling initiate sharing the same
         // dispatch will still read its catch types (above), but the comparison
         // chain and branch replacement are only created the first time.
@@ -360,6 +421,19 @@ void ItaniumEHLowering::lowerEhInitiate(
           auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
           lowerDispatch(op, exnPtr, typeId, deadOps);
         }
+      } else if (auto op = mlir::dyn_cast<cir::EhTerminateOp>(user)) {
+        auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
+        ensureClangCallTerminate(op.getLoc());
+        builder.setInsertionPoint(op);
+        auto call = cir::CallOp::create(
+            builder, op.getLoc(),
+            mlir::FlatSymbolRefAttr::get(clangCallTerminateFunc), voidType,
+            mlir::ValueRange{exnPtr});
+        call.setNothrowAttr(builder.getUnitAttr());
+        call->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                      builder.getUnitAttr());
+        cir::UnreachableOp::create(builder, op.getLoc());
+        op.erase();
       } else if (auto op = mlir::dyn_cast<cir::ResumeOp>(user)) {
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         builder.setInsertionPoint(op);

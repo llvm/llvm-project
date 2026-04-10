@@ -2323,17 +2323,24 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Constant *C2;
 
     // C-(X+C2) --> (C-C2)-X
-    if (match(Op1, m_Add(m_Value(X), m_ImmConstant(C2)))) {
+    if (match(Op1, m_AddLike(m_Value(X), m_ImmConstant(C2)))) {
       // C-C2 never overflow, and C-(X+C2), (X+C2) has NSW/NUW
       // => (C-C2)-X can have NSW/NUW
       bool WillNotSOV = willNotOverflowSignedSub(C, C2, I);
       BinaryOperator *Res =
           BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
-      auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
-      Res->setHasNoSignedWrap(I.hasNoSignedWrap() && OBO1->hasNoSignedWrap() &&
-                              WillNotSOV);
-      Res->setHasNoUnsignedWrap(I.hasNoUnsignedWrap() &&
-                                OBO1->hasNoUnsignedWrap());
+
+      // or disjoint is equivalent to add nuw nsw.
+      bool Op1NSW = true;
+      bool Op1NUW = true;
+
+      if (auto *OBO1 = dyn_cast<OverflowingBinaryOperator>(Op1)) {
+        Op1NSW = OBO1->hasNoSignedWrap();
+        Op1NUW = OBO1->hasNoUnsignedWrap();
+      }
+
+      Res->setHasNoSignedWrap(I.hasNoSignedWrap() && Op1NSW && WillNotSOV);
+      Res->setHasNoUnsignedWrap(I.hasNoUnsignedWrap() && Op1NUW);
       return Res;
     }
   }
@@ -2656,9 +2663,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
              (C->getType()->getScalarSizeInBits() == 1);
     };
     if (m_SubXorCmp(Op0, Op1))
-      return SelectInst::Create(C, Builder.CreateNeg(X), X);
+      return createSelectInstWithUnknownProfile(C, Builder.CreateNeg(X), X);
     if (m_SubXorCmp(Op1, Op0))
-      return SelectInst::Create(C, X, Builder.CreateNeg(X));
+      return createSelectInstWithUnknownProfile(C, X, Builder.CreateNeg(X));
   }
 
   if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))

@@ -17,6 +17,7 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -746,11 +747,6 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ContextHash);
-  std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().computeContextHash());
-  }
-
   /// Create the AST context.
   void createASTContext();
 
@@ -872,7 +868,7 @@ public:
 
   void createASTReader();
 
-  bool loadModuleFile(StringRef FileName,
+  bool loadModuleFile(ModuleFileName FileName,
                       serialization::ModuleFile *&LoadedModuleFile);
 
   /// Configuration object for making the result of \c cloneForModuleCompile()
@@ -941,12 +937,14 @@ public:
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
-  /// provided by the importing compiler instance. Returns true if the module
-  /// was built without errors.
+  /// provided by the importing compiler instance. Returns the PCM file in
+  /// a buffer.
   // FIXME: This should be private, but it's called from static non-member
   // functions in the implementation file.
-  bool compileModule(SourceLocation ImportLoc, StringRef ModuleName,
-                     StringRef ModuleFileName, CompilerInstance &Instance);
+  std::unique_ptr<llvm::MemoryBuffer> compileModule(SourceLocation ImportLoc,
+                                                    StringRef ModuleName,
+                                                    StringRef ModuleFileName,
+                                                    CompilerInstance &Instance);
 
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,

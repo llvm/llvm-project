@@ -113,3 +113,23 @@ scheme vs the other.
 ## Operation definitions
 
 [include "Dialects/TosaOps.md"]
+
+### Operation purity
+Some TOSA operations may exhibit undefined behaviour. In the TOSA specification
+this is indicated by a `REQUIRE` condition in the operation pesudo-code. An
+implementation is not required to detect unpredictable behaviour, see
+[Section 4.3](https://www.mlplatform.org/tosa/tosa_spec_1_0_0.html#_operator_validation_helpers).
+
+If an operation can exhibit undefined behaviour, speculating or reordering it
+may change program behaviour. For example, `INTDIV` may exhibit undefined
+behaviour if the divisor is zero. If such an operation were speculated it could
+be executed in situations where the original program would not have executed
+it.
+
+Therefore, operations that may exhibit undefined behaviour must not declare
+the `AlwaysSpeculatable` trait and should not be treated as `Pure`.
+
+Conversely, most TOSA operations are functional tensor computations and do not
+mutate external system resources. These operations therefore typically declare
+the `NoMemoryEffect` trait. Variable operations are an example of an exception
+to this rule.

@@ -1361,11 +1361,19 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
   }
 
   if (auto *cb{name.symbol->detailsIf<CommonBlockDetails>()}) {
+    llvm::omp::Directive directive{GetContext().directive};
     for (const auto &obj : cb->objects()) {
       if (FindEquivalenceSet(*obj)) {
-        context_.Say(name.source,
-            "A variable in a %s directive cannot appear in an EQUIVALENCE statement (variable '%s' from common block '/%s/')"_err_en_US,
-            ContextDirectiveAsFortran(), obj->name(), name.symbol->name());
+        if (directive == llvm::omp::Directive::OMPD_threadprivate) {
+          context_.Warn(common::LanguageFeature::OpenMPThreadprivateEquivalence,
+              name.source,
+              "A variable in a %s directive used in an EQUIVALENCE statement is an OpenMP extension (variable '%s' from common block '/%s/')"_warn_en_US,
+              ContextDirectiveAsFortran(), obj->name(), name.symbol->name());
+        } else {
+          context_.Say(name.source,
+              "A variable in a %s directive cannot appear in an EQUIVALENCE statement (variable '%s' from common block '/%s/')"_err_en_US,
+              ContextDirectiveAsFortran(), obj->name(), name.symbol->name());
+        }
       }
     }
   }
@@ -1746,7 +1754,7 @@ static std::pair<const parser::AllocateStmt *, parser::CharBlock>
 getAllocateStmtAndSource(const parser::ExecutionPartConstruct *epc) {
   if (SourcedActionStmt as{GetActionStmt(epc)}) {
     using IndirectionAllocateStmt = common::Indirection<parser::AllocateStmt>;
-    if (auto *indirect{std::get_if<IndirectionAllocateStmt>(&as.stmt->u)}) {
+    if (auto *indirect{std::get_if<IndirectionAllocateStmt>(&as.stmt()->u)}) {
       return {&indirect->value(), as.source};
     }
   }
@@ -2250,11 +2258,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
   bool passChecks{false};
   omp::SourcedActionStmt action{omp::GetActionStmt(block)};
   if (const auto *assignStmt{
-          parser::Unwrap<parser::AssignmentStmt>(*action.stmt)}) {
+          parser::Unwrap<parser::AssignmentStmt>(*action.stmt())}) {
     if (parser::Unwrap<parser::FunctionReference>(assignStmt->t)) {
       passChecks = true;
     }
-  } else if (parser::Unwrap<parser::CallStmt>(*action.stmt)) {
+  } else if (parser::Unwrap<parser::CallStmt>(*action.stmt())) {
     passChecks = true;
   }
 
@@ -3974,6 +3982,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_private);
   CheckCrayPointee(x.v, "PRIVATE");
+  CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_private);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
@@ -4052,6 +4061,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   GetSymbolsInObjectList(x.v, currSymbols);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_firstprivate);
+  CheckAssumedSizeArray(currSymbols, llvm::omp::Clause::OMPC_firstprivate);
 
   DirectivesClauseTriple dirClauseTriple;
   // Check firstprivate variables in worksharing constructs
@@ -4396,7 +4406,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     }
 
     auto hasBasePointer{[&](const SomeExpr &item) {
-      evaluate::SymbolVector symbols{evaluate::GetSymbolVector(item)};
+      SymbolVector symbols{evaluate::GetSymbolVector(item)};
       return llvm::any_of(
           symbols, [](SymbolRef s) { return IsPointer(s.get()); });
     }};
@@ -4723,6 +4733,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckIntentInPointer(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_lastprivate);
+  CheckAssumedSizeArray(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
 
   // Check lastprivate variables in worksharing constructs
   dirClauseTriple.emplace(llvm::omp::Directive::OMPD_do,
@@ -5190,6 +5201,18 @@ void OmpStructureChecker::CheckIntentInPointer(
     if (IsPointer(*symbol) && IsIntentIn(*symbol)) {
       context_.Say(source,
           "Pointer '%s' with the INTENT(IN) attribute may not appear in a %s clause"_err_en_US,
+          symbol->name(), parser::omp::GetUpperName(clauseId, version));
+    }
+  }
+}
+
+void OmpStructureChecker::CheckAssumedSizeArray(
+    SymbolSourceMap &symbols, llvm::omp::Clause clauseId) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  for (auto &[symbol, source] : symbols) {
+    if (IsAssumedSizeArray(*symbol)) {
+      context_.Say(source,
+          "Assumed-size array '%s' may not appear in a %s clause"_err_en_US,
           symbol->name(), parser::omp::GetUpperName(clauseId, version));
     }
   }
@@ -5785,7 +5808,6 @@ CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(Order, OMPC_order)
 CHECK_SIMPLE_CLAUSE(Otherwise, OMPC_otherwise)
 CHECK_SIMPLE_CLAUSE(Partial, OMPC_partial)
-CHECK_SIMPLE_CLAUSE(Permutation, OMPC_permutation)
 CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
 CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)

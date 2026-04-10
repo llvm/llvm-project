@@ -94,7 +94,6 @@ if( NOT LIBCLC_USE_SPIRV_BACKEND )
   else()
     find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
     set( llvm-spirv_exe "${LLVM_SPIRV}" )
-    set( llvm-spirv_target )
   endif()
 endif()
 
@@ -137,8 +136,6 @@ add_custom_target( libclc ALL )
 
 add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
 add_dependencies( libclc libclc-opencl-builtins )
-
-enable_testing()
 
 foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   message( STATUS "libclc target '${t}' is enabled" )
@@ -192,7 +189,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     list(APPEND target_extra_defines CLC_SPIRV)
     set(opt_flags)
   elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
-    list(APPEND target_compile_flags -Wno-unknown-assumption)
+    list(APPEND target_compile_flags -Wno-unknown-assumption
+                                     -U__opencl_c_int64)
     list(APPEND target_extra_defines CLC_CLSPV)
   elseif(ARCH STREQUAL amdgcn)
     list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
@@ -279,3 +277,5 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     PARENT_TARGET libclc-opencl-builtins
   )
 endforeach()
+
+add_subdirectory(test)

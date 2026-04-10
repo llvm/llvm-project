@@ -22,16 +22,15 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
-; Function Attrs: nounwind uwtable
 define void @do_not_interleave(ptr noalias nocapture readonly %in, ptr noalias nocapture %out, i32 %size) #0 !dbg !4 {
 entry:
   %cmp.4 = icmp eq i32 %size, 0, !dbg !10
   br i1 %cmp.4, label %for.end, label %for.body.preheader, !dbg !11
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body, !dbg !12
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv, !dbg !12
   %0 = load ptr, ptr %arrayidx, align 8, !dbg !12
@@ -43,20 +42,19 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %size, !dbg !11
   br i1 %exitcond, label %for.end.loopexit, label %for.body, !dbg !11, !llvm.loop !16
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end, !dbg !19
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void, !dbg !19
 }
 
-; Function Attrs: nounwind uwtable
 define void @interleave_not_profitable(ptr noalias nocapture readonly %in, ptr noalias nocapture %out, i32 %size) #0 !dbg !6 {
 entry:
   %cmp.4 = icmp eq i32 %size, 0, !dbg !20
   br i1 %cmp.4, label %for.end, label %for.body, !dbg !21
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv, !dbg !22
   %0 = load ptr, ptr %arrayidx, align 8, !dbg !22
@@ -68,11 +66,11 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %size, !dbg !21
   br i1 %exitcond, label %for.end, label %for.body, !dbg !21, !llvm.loop !26
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void, !dbg !27
 }
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "use-soft-float"="false" }
+attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

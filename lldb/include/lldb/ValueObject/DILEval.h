@@ -40,8 +40,7 @@ class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
               std::shared_ptr<StackFrame> frame_sp,
-              lldb::DynamicValueType use_dynamic, bool use_synthetic,
-              bool fragile_ivar, bool check_ptr_vs_member);
+              lldb::DynamicValueType use_dynamic, uint32_t options);
 
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
@@ -89,6 +88,13 @@ private:
   llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                                     lldb::ValueObjectSP &rhs,
                                                     uint32_t location);
+  /// Add or subtract the offset to the pointer according to the pointee type
+  /// byte size.
+  /// \returns A new `ValueObject` with a new pointer value.
+  llvm::Expected<lldb::ValueObjectSP> PointerOffset(lldb::ValueObjectSP ptr,
+                                                    lldb::ValueObjectSP offset,
+                                                    BinaryOpKind operation,
+                                                    uint32_t location);
   llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
                                                        lldb::ValueObjectSP lhs,
                                                        lldb::ValueObjectSP rhs,
@@ -130,6 +136,8 @@ private:
   bool m_use_synthetic;
   bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
+  // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
+  [[maybe_unused]] bool m_allow_var_updates;
 };
 
 } // namespace lldb_private::dil

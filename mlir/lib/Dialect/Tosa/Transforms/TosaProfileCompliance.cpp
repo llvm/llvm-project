@@ -77,6 +77,17 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dOp op) {
   return success();
 }
 
+template <>
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dAdaptiveOp op) {
+  addValue(op.getInput());
+  addValue(op.getInputZp());
+  addValue(op.getOutputZp());
+  addType(op.getAccType());
+  addValue(op.getOutput());
+  return success();
+}
+
 template <typename T>
 LogicalResult ProfileInfoDepot::populateProfileInfoConv(T op) {
   addValue(op.getInput());
@@ -255,6 +266,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // Skip irrelevant operands when they are independent and not tied to any
   // specific profile/extension.
   POPULATE_PROFILE_INFO_CUSTOM(AvgPool2d)
+  POPULATE_PROFILE_INFO_CUSTOM(AvgPool2dAdaptive)
   POPULATE_PROFILE_INFO_CUSTOM(TransposeConv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Conv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Conv2DBlockScaled)
@@ -364,15 +376,15 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 template <typename T>
-FailureOr<OpComplianceInfo<T>>
-TosaProfileCompliance::getOperatorDefinition(Operation *op) {
+FailureOr<SmallVector<OpComplianceInfo<T>>>
+TosaProfileCompliance::getOperatorMatchedEntries(Operation *op) {
   const std::string opName = op->getName().getStringRef().str();
   const auto complianceMap = getProfileComplianceMap<T>();
   const auto it = complianceMap.find(opName);
   if (it == complianceMap.end())
     return {};
 
-  return findMatchedEntry<T>(op, it->second);
+  return findMatchedEntries<T>(op, it->second);
 }
 
 template <typename T>
@@ -384,8 +396,8 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   if (specRequiredModeSet.size() == 0)
     return success();
 
-  const auto maybeOpDefinition = getOperatorDefinition<T>(op);
-  if (failed(maybeOpDefinition)) {
+  const auto maybeOpEntries = getOperatorMatchedEntries<T>(op);
+  if (failed(maybeOpEntries)) {
     // Operators such as control-flow and shape ops do not have an operand type
     // restriction. When the profile compliance information of operation is not
     // found, confirm if the target have enabled the profile required from the
@@ -406,68 +418,76 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
     return failure();
   }
 
-  // Find the required profiles or extensions according to the operand type
-  // combination.
-  const auto opDefinition = maybeOpDefinition.value();
-  const SmallVector<T> opRequiredMode = opDefinition.mode;
-  const CheckCondition condition = opDefinition.condition;
-
-  if (opRequiredMode.size() == 0) {
+  const auto opEntries = maybeOpEntries.value();
+  if (opEntries.size() == 0) {
     // No matched restriction found.
     return success();
   }
 
-  if (condition == CheckCondition::allOf &&
-      !targetEnv.allowsAllOf(opRequiredMode)) {
-    op->emitOpError() << "illegal: requires"
-                      << (opRequiredMode.size() > 1 ? " all of " : " ") << "["
-                      << llvm::join(stringifyProfile<T>(opRequiredMode), ", ")
-                      << "] but not enabled in target\n";
-    return failure();
-  }
+  // Check the profile/extension requirement according to the current target
+  // profiles/extensions.
+  const auto isModeAllowed = [&](const OpComplianceInfo<T> &info) -> bool {
+    if (info.condition == CheckCondition::allOf)
+      return targetEnv.allowsAllOf(info.mode);
+    return targetEnv.allowsAnyOf(info.mode);
+  };
 
-  if (condition == CheckCondition::anyOf &&
-      !targetEnv.allowsAnyOf(opRequiredMode)) {
-    op->emitOpError() << "illegal: requires"
-                      << (opRequiredMode.size() > 1 ? " any of " : " ") << "["
-                      << llvm::join(stringifyProfile<T>(opRequiredMode), ", ")
-                      << "] but not enabled in target\n";
-    return failure();
-  }
-
-  // Ensure the profile inference match the profile knowledge of the
-  // specification.
-  for (const auto &cands : specRequiredModeSet) {
-    for (const auto &mode : opRequiredMode) {
-      if (!llvm::is_contained(cands, mode)) {
-        op->emitOpError() << "illegal: requires ["
-                          << llvm::join(stringifyProfile<T>(opRequiredMode),
-                                        ", ")
-                          << "] but not included in the profile compliance ["
-                          << llvm::join(
-                                 stringifyProfile<T>(specRequiredModeSet), ", ")
-                          << "]\n";
-        return failure();
-      }
-    }
-  }
-
-  // Ensure the matched op compliance version does not exceed the target
+  // Check the matched op compliance version does not exceed the target
   // specification version.
-  const VersionedTypeInfo versionedTypeInfo =
-      opDefinition.operandTypeInfoSet[0];
-  const TosaSpecificationVersion complianceVersion{versionedTypeInfo.second};
   const TosaSpecificationVersion targetVersion{targetEnv.getSpecVersion()};
-  if (!targetVersion.isBackwardsCompatibleWith(complianceVersion)) {
-    op->emitOpError() << "illegal: the target specification version ("
-                      << stringifyVersion(targetVersion)
-                      << ") is not backwards compatible with the op compliance "
-                         "specification version ("
-                      << stringifyVersion(complianceVersion) << ")\n";
-    return failure();
+  const auto isVersionCompatible =
+      [&targetVersion](const OpComplianceInfo<T> &info) -> bool {
+    const TosaSpecificationVersion complianceVersion{
+        info.operandTypeInfoSet.front().second};
+    return targetVersion.isBackwardsCompatibleWith(complianceVersion);
+  };
+
+  for (const auto &info : opEntries) {
+    // Ensure the profile compliance is compatible with the profile knowledge of
+    // the op definition.
+    assert(llvm::all_of(info.mode,
+                        [&specRequiredModeSet](const T &mode) {
+                          return llvm::is_contained(specRequiredModeSet.front(),
+                                                    mode);
+                        }) &&
+           "the profile/extension requirement of the operator should be "
+           "included in the profile compliance information");
+
+    if (isModeAllowed(info) && isVersionCompatible(info))
+      return success();
   }
 
-  return success();
+  // No valid entry was found, now emit appropriate error message and return
+  // failure
+  std::string message;
+  llvm::raw_string_ostream os(message);
+
+  os << "illegal: ";
+  const size_t numOpEntries = opEntries.size();
+  for (const auto &[index, info] : llvm::enumerate(opEntries)) {
+    bool mismatchedVersion = false;
+    if (!isVersionCompatible(info)) {
+      mismatchedVersion = true;
+      os << "requires specification version compatible with "
+         << stringifyVersion(info.operandTypeInfoSet.front().second) << " (got "
+         << stringifyVersion(targetVersion) << ") ";
+    }
+
+    if (!isModeAllowed(info)) {
+      if (mismatchedVersion)
+        os << "and ";
+      os << "requires "
+         << (info.condition == CheckCondition::allOf ? "all of " : "any of ")
+         << "[" << llvm::join(stringifyProfile<T>(info.mode), ", ")
+         << "] profiles/extensions ";
+    }
+
+    if (index != numOpEntries - 1)
+      os << "OR ";
+  }
+  os << "to be specified in the target environment";
+
+  return op->emitOpError(message);
 }
 
 LogicalResult
@@ -491,14 +511,15 @@ TosaProfileCompliance::checkExtension(Operation *op,
 }
 
 LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
-  const auto maybeProfDef = getOperatorDefinition<Profile>(op);
-  const auto maybeExtDef = getOperatorDefinition<Extension>(op);
-  if (failed(maybeProfDef) && failed(maybeExtDef))
+  const auto maybeProfEntries = getOperatorMatchedEntries<Profile>(op);
+  const auto maybeExtEntries = getOperatorMatchedEntries<Extension>(op);
+  if (failed(maybeProfEntries) && failed(maybeExtEntries))
     return success();
 
   const bool hasEntry =
-      (succeeded(maybeProfDef) && !maybeProfDef->mode.empty()) ||
-      (succeeded(maybeExtDef) && !maybeExtDef->mode.empty());
+      (succeeded(maybeProfEntries) && !maybeProfEntries.value().empty()) ||
+      (succeeded(maybeExtEntries) && !maybeExtEntries.value().empty());
+
   if (!hasEntry) {
     std::string message;
     llvm::raw_string_ostream os(message);
@@ -552,7 +573,7 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
 // Find the profiles or extensions requirement according to the signature of
 // type of the operand list.
 template <typename T>
-OpComplianceInfo<T> TosaProfileCompliance::findMatchedEntry(
+SmallVector<OpComplianceInfo<T>> TosaProfileCompliance::findMatchedEntries(
     Operation *op, SmallVector<OpComplianceInfo<T>> compInfo) {
   assert(compInfo.size() != 0 &&
          "profile-based compliance information is empty");
@@ -563,6 +584,7 @@ OpComplianceInfo<T> TosaProfileCompliance::findMatchedEntry(
   if (present.size() == 0)
     return {};
 
+  SmallVector<OpComplianceInfo<T>> matchedInfos;
   for (size_t i = 0; i < compInfo.size(); i++) {
     SmallVector<VersionedTypeInfo> sets = compInfo[i].operandTypeInfoSet;
     for (const auto &set : sets) {
@@ -587,12 +609,12 @@ OpComplianceInfo<T> TosaProfileCompliance::findMatchedEntry(
         SmallVector<VersionedTypeInfo> typeInfoSet{set};
         OpComplianceInfo<T> info{compInfo[i].mode, typeInfoSet,
                                  compInfo[i].condition};
-        return info;
+        matchedInfos.push_back(info);
       }
     }
   }
 
-  return {};
+  return matchedInfos;
 }
 
 // Debug utilites.

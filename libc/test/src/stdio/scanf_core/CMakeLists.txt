@@ -1,6 +1,6 @@
 if(NOT(LLVM_LIBC_FULL_BUILD))
   # in overlay mode, use the system's file to test the reader.
-  set(use_system_file "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
+  libc_set_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_libc_unittest(

@@ -46,8 +46,7 @@
 source_filename = "/tmp/s.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: norecurse nounwind ssp uwtable
-define void @cold(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !7 !prof !56 {
+define void @cold(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !7 !prof !56 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !9
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !10, !prof !58
@@ -80,8 +79,7 @@ for.cond.cleanup:
   ret void, !dbg !11
 }
 
-; Function Attrs: norecurse nounwind ssp uwtable
-define void @hot(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !26 !prof !57 {
+define void @hot(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !26 !prof !57 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !27
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !28, !prof !58
@@ -114,16 +112,15 @@ for.cond.cleanup:
   ret void, !dbg !29
 }
 
-; Function Attrs: norecurse nounwind ssp uwtable
-define void @unknown(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) local_unnamed_addr #0 !dbg !41 {
+define void @unknown(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !41 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !42
   br i1 %cmp28, label %for.body, label %for.cond.cleanup, !dbg !43
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void, !dbg !44
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !45
   %0 = load i8, ptr %arrayidx, align 1, !dbg !45, !tbaa !13
@@ -145,7 +142,7 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !43, !llvm.loop !55
 }
 
-attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3,+x87" "use-soft-float"="false" }
+attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3,+x87" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

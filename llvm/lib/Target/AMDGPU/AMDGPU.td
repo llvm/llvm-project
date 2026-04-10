@@ -186,6 +186,10 @@ defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-inst
   "v_pk_minimum/maximum_f16 instructions"
 >;
 
+defm SALUMinimumMaximumInsts : AMDGPUSubtargetFeature<"salu-minimum-maximum-insts",
+  "Has s_minimum/maximum_f16/f32 instructions"
+>;
+
 defm Minimum3Maximum3F32 : AMDGPUSubtargetFeature<"minimum3-maximum3-f32",
   "Has v_minimum3_f32 and v_maximum3_f32 instructions"
 >;
@@ -810,6 +814,14 @@ defm WMMA128bInsts : AMDGPUSubtargetFeature<"wmma-128b-insts",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
 >;
 
+defm SWMMACGfx1200Insts : AMDGPUSubtargetFeature<"swmmac-gfx1200-insts",
+  "Has GFX1200 SWMMAC instructions"
+>;
+
+defm SWMMACGfx1250Insts : AMDGPUSubtargetFeature<"swmmac-gfx1250-insts",
+  "Has GFX1250 SWMMAC instructions"
+>;
+
 defm PkFmacF16Inst : AMDGPUSubtargetFeature<"pk-fmac-f16-inst",
   "Has v_pk_fmac_f16 instruction"
 >;
@@ -987,6 +999,11 @@ defm Vscnt : AMDGPUSubtargetFeature<"vscnt",
   /*GenPredicate=*/0
 >;
 
+defm Asynccnt : AMDGPUSubtargetFeature<"asynccnt",
+  "Has separate asynccnt counter",
+  /*GenPredicate=*/0
+>;
+
 defm GetWaveIdInst : AMDGPUSubtargetFeature<"get-wave-id-inst",
   "Has s_get_waveid_in_workgroup instruction"
 >;
@@ -1023,10 +1040,10 @@ defm NoDataDepHazard : AMDGPUSubtargetFeature<"no-data-dep-hazard",
   /*GenPredicate=*/0
 >;
 
-// Allocate 1536 VGPRs for wave32 and 768 VGPRs for wave64
+// 1536 physical VGPRs for wave32 and 768 VGPRs for wave64
 // with allocation granularity 24 for wave32 and 12 for wave64
-defm 1_5xVGPRs : AMDGPUSubtargetFeature<"allocate1_5xvgprs",
-  "Has 50% more physical VGPRs and 50% larger allocation granule",
+defm 1536VGPRs : AMDGPUSubtargetFeature<"1536-physical-vgprs",
+  "Has 1536 physical VGPRs per SIMD",
   /*GenPredicate=*/0
 >;
 
@@ -1046,6 +1063,11 @@ defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
 
 defm PseudoScalarTrans : AMDGPUSubtargetFeature<"pseudo-scalar-trans",
   "Has Pseudo Scalar Transcendental instructions"
+>;
+
+defm NoF16PseudoScalarTransInlineConstants : AMDGPUSubtargetFeature<"no-f16-pseudo-scalar-trans-inline-constants",
+  "Inline constants are not supported for F16 pseudo scalar transcendentals",
+  /*GenPredicate=*/0
 >;
 
 defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",
@@ -1308,6 +1330,9 @@ defm VMemToLDSLoad : AMDGPUSubtargetFeature<"vmem-to-lds-load-insts",
   "w/lds bit set or global_load_lds. This does not include scratch_load_lds."
 >;
 
+// Manual predicate for hasAsyncMark() which combines HasVMemToLDSLoad and GFX1250Plus
+def HasAsyncMark : Predicate<"Subtarget->hasAsyncMark()">;
+
 defm LdsBarrierArriveAtomic : AMDGPUSubtargetFeature<"lds-barrier-arrive-atomic",
   "Has LDS barrier-arrive atomic instructions"
 >;
@@ -1488,9 +1513,10 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
-   FeatureFlatOffsetBits24, FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
   ]
 >;
 
@@ -1513,9 +1539,10 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
-   FeatureFlatOffsetBits24, FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -1869,7 +1896,7 @@ def FeatureISAVersion11_Common : FeatureSet<
 
 // There are few workarounds that need to be added to all targets. This
 // pessimizes codegen a bit on the generic GFX11 target. This generic target
-// does not include GFX1170 due to incompatible changes.
+// does not include GFX11_7 due to incompatible changes.
 def FeatureISAVersion11_Generic: FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
@@ -1895,12 +1922,12 @@ def FeatureISAVersion11_0_Common : FeatureSet<
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [Feature1_5xVGPRs,
+    [Feature1536VGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [Feature1_5xVGPRs])>;
+    [Feature1536VGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1925,7 +1952,7 @@ def FeatureISAVersion11_5_0 : FeatureSet<
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
-    [Feature1_5xVGPRs,
+    [Feature1536VGPRs,
      FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
@@ -1936,7 +1963,7 @@ def FeatureISAVersion11_5_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
     [])>;
 
-def FeatureISAVersion11_7_0 : FeatureSet<
+def FeatureISAVersion11_7_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureGFX11_7Insts,
      FeatureSALUFloatInsts,
@@ -1944,9 +1971,11 @@ def FeatureISAVersion11_7_0 : FeatureSet<
      FeatureFP8ConversionInsts,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
+     FeatureSWMMACGfx1200Insts,
      FeatureIEEEMinimumMaximumInsts,
      FeatureMinimum3Maximum3F32,
-     FeatureMinimum3Maximum3F16])>;
+     FeatureMinimum3Maximum3F16,
+     FeatureNoF16PseudoScalarTransInlineConstants])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1977,6 +2006,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
    FeatureWMMA128bInsts,
+   FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -1986,7 +2016,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
-   Feature1_5xVGPRs,
+   Feature1536VGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureBVHDualAndBVH8Insts,
    FeatureWaitsBeforeSystemScopeStores,
@@ -1997,7 +2027,9 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts
+   FeatureCvtPkNormVOP3Insts,
+   FeatureNoF16PseudoScalarTransInlineConstants,
+   FeatureRealTrue16Insts,
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<
@@ -2053,6 +2085,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
+   FeatureAsynccnt,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
@@ -2074,7 +2107,8 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
-   FeatureMcastLoadInsts
+   FeatureMcastLoadInsts,
+   FeatureNoF16PseudoScalarTransInlineConstants,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2087,7 +2121,9 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts])>;
+   FeatureCvtPkNormVOP3Insts,
+   FeatureSWMMACGfx1200Insts,
+   FeatureSWMMACGfx1250Insts])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -2099,7 +2135,9 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts])>;
+   FeatureCvtPkNormVOP3Insts,
+   FeatureSWMMACGfx1200Insts,
+   FeatureSWMMACGfx1250Insts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2145,7 +2183,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
    FeatureTransposeLoadF4F6Insts,
-   Feature1_5xVGPRs,
+   Feature1536VGPRs,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,

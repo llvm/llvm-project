@@ -88,10 +88,10 @@ entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.08.in = phi i64 [ %i.08, %for.inc ], [ %N, %entry ]
   %i.08 = add nsw i64 %i.08.in, -1
   %arrayidx = getelementptr inbounds double, ptr %cond, i64 %i.08
@@ -99,14 +99,14 @@ for.body:                                         ; preds = %for.body, %entry
   %tobool = fcmp une double %0, 0.000000e+00
   br i1 %tobool, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx1 = getelementptr inbounds double, ptr %a, i64 %i.08
   %1 = load double, ptr %arrayidx1, align 8
   %add = fadd double %1, 1.000000e+00
   store double %add, ptr %arrayidx1, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %cmp = icmp sgt i64 %i.08.in, 1
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
 }

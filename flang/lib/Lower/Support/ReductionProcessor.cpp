@@ -322,42 +322,27 @@ mlir::Value ReductionProcessor::createScalarCombiner(
                               fir::MulcOp>(builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::AND: {
-    mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
-    mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
-
-    mlir::Value andiOp =
-        mlir::arith::AndIOp::create(builder, loc, op1I1, op2I1);
-
-    reductionOp = builder.createConvert(loc, type, andiOp);
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    reductionOp = fir::LogicalAndOp::create(builder, loc, type, v1, v2);
     break;
   }
   case ReductionIdentifier::OR: {
-    mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
-    mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
-
-    mlir::Value oriOp = mlir::arith::OrIOp::create(builder, loc, op1I1, op2I1);
-
-    reductionOp = builder.createConvert(loc, type, oriOp);
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    reductionOp = fir::LogicalOrOp::create(builder, loc, type, v1, v2);
     break;
   }
   case ReductionIdentifier::EQV: {
-    mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
-    mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
-
-    mlir::Value cmpiOp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::eq, op1I1, op2I1);
-
-    reductionOp = builder.createConvert(loc, type, cmpiOp);
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    reductionOp = fir::EqvOp::create(builder, loc, type, v1, v2);
     break;
   }
   case ReductionIdentifier::NEQV: {
-    mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
-    mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
-
-    mlir::Value cmpiOp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::ne, op1I1, op2I1);
-
-    reductionOp = builder.createConvert(loc, type, cmpiOp);
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    reductionOp = fir::NeqvOp::create(builder, loc, type, v1, v2);
     break;
   }
   default:
