@@ -120,6 +120,9 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     // SVC expands to 4 instructions.
     return 16;
   default:
+    // Default case: instructions that don't cause expansion.
+    // - TP accesses in LFI are a single load/store, so no expansion.
+    // - All remaining instructions are not rewritten.
     return std::nullopt;
   }
 }
