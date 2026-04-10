@@ -4607,6 +4607,61 @@ void __kmpc_end_scope(ident_t *loc, kmp_int32 gtid, void *reserved) {
 #endif // OMPT_SUPPORT && OMPT_OPTIONAL
 }
 
+const char *__kmpc_get_uid_from_device(int device_num) {
+#ifndef KMP_STUB
+  const char *(*fn)(int);
+  if ((*(void **)(&fn) = KMP_DLSYM("omp_get_uid_from_device")))
+    return (*fn)(device_num);
+#endif
+  return NULL;
+}
+
+void *__kmpc_get_interop_ptr(void *interop, int property_id, int *ret_code) {
+#ifndef KMP_STUB
+  void *(*fn)(void *, int, int *);
+  if ((*(void **)(&fn) = KMP_DLSYM("omp_get_interop_ptr")))
+    return (*fn)(interop, property_id, ret_code);
+#endif
+  return NULL;
+}
+
+const char *__kmpc_get_interop_str(void *interop, int property_id,
+                                   int *ret_code) {
+#ifndef KMP_STUB
+  const char *(*fn)(void *, int, int *);
+  if ((*(void **)(&fn) = KMP_DLSYM("omp_get_interop_str")))
+    return (*fn)(interop, property_id, ret_code);
+#endif
+  return NULL;
+}
+
+const char *__kmpc_get_interop_name(void *interop, int property_id) {
+#ifndef KMP_STUB
+  const char *(*fn)(void *, int);
+  if ((*(void **)(&fn) = KMP_DLSYM("omp_get_interop_name")))
+    return (*fn)(interop, property_id);
+#endif
+  return NULL;
+}
+
+const char *__kmpc_get_interop_type_desc(void *interop, int property_id) {
+#ifndef KMP_STUB
+  const char *(*fn)(void *, int);
+  if ((*(void **)(&fn) = KMP_DLSYM("omp_get_interop_type_desc")))
+    return (*fn)(interop, property_id);
+#endif
+  return NULL;
+}
+
+const char *__kmpc_get_interop_rc_desc(void *interop, int ret_code) {
+#ifndef KMP_STUB
+  const char *(*fn)(void *, int);
+  if ((*(void **)(&fn) = KMP_DLSYM("omp_get_interop_rc_desc")))
+    return (*fn)(interop, ret_code);
+#endif
+  return NULL;
+}
+
 #ifdef KMP_USE_VERSION_SYMBOLS
 // For GOMP compatibility there are two versions of each omp_* API.
 // One is the plain C symbol and one is the Fortran symbol with an appended
