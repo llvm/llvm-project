@@ -4796,9 +4796,15 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   GetSplitVector(N->getOperand(isStrict ? 1 : 0), Lo0, Hi0);
   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
 
+  LLVMContext &Context = *DAG.getContext();
   EVT VT = N->getValueType(0);
-  EVT PartResVT = Lo0.getValueType().changeElementType(*DAG.getContext(),
-                                                       VT.getScalarType());
+  EVT PartResVT =
+      Lo0.getValueType().changeElementType(Context, VT.getScalarType());
+
+  // If splitting the operand is going to cause the result to be widened, we're
+  // better of using an i1 vector that can be promoted instead.
+  if (getTypeAction(PartResVT) == TargetLowering::TypeWidenVector)
+    PartResVT = PartResVT.changeElementType(Context, MVT::i1);
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
@@ -4823,7 +4829,15 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
                         N->getOperand(2), MaskHi, EVLHi);
   }
 
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoRes, HiRes);
+  EVT ConcatVT = PartResVT.getDoubleNumVectorElementsVT(Context);
+  SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, LoRes, HiRes);
+  if (ConcatVT == VT)
+    return Con;
+
+  EVT OpVT = N->getOperand(0).getValueType();
+  ISD::NodeType ExtendCode =
+      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
+  return DAG.getNode(ExtendCode, DL, VT, Con);
 }
 
 
