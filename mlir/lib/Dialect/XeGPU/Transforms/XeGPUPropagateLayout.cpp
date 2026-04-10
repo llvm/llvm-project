@@ -1374,22 +1374,22 @@ LogicalResult ResolveLayoutConflicts::run() {
         }
       }
     }
-    if (isa<RegionBranchOpInterface>(op)) {
-      auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op);
-      unsigned numResults = regionBranchOp->getNumResults();
-      for (unsigned i = 0; i < numResults; ++i) {
-        OpResult result = regionBranchOp->getResult(i);
-        if (result.use_empty()) {
-          auto res = assignResultLayout(result);
-          if (failed(res)) {
-            DBGS() << "Failed to resolve vector consumer for loop/switch "
-                      "result with no use: "
-                   << *op << "\n";
-            return WalkResult::interrupt();
-          }
-        }
-      }
-    }
+    // if (isa<RegionBranchOpInterface>(op)) {
+    //   auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op);
+    //   unsigned numResults = regionBranchOp->getNumResults();
+    //   for (unsigned i = 0; i < numResults; ++i) {
+    //     OpResult result = regionBranchOp->getResult(i);
+    //     if (result.use_empty()) {
+    //       auto res = assignResultLayout(result);
+    //       if (failed(res)) {
+    //         DBGS() << "Failed to resolve vector consumer for loop/switch "
+    //                   "result with no use: "
+    //                << *op << "\n";
+    //         return WalkResult::interrupt();
+    //       }
+    //     }
+    //   }
+    // }
     for (OpOperand &operand : op->getOpOperands()) {
       // Handle conflicts in tensor descriptor operands.
       Type operandType = operand.get().getType();
@@ -1403,8 +1403,9 @@ LogicalResult ResolveLayoutConflicts::run() {
         }
       }
       // Handle conflicts in vector operands.
-      LLVM_DEBUG(DBGS() << "Handling vector operand #" << operand.getOperandNumber()
-                        << ": " << operand.get() << " in operation: " << *op << "\n");
+      LLVM_DEBUG(DBGS() << "Handling vector operand #"
+                        << operand.getOperandNumber() << ": " << operand.get()
+                        << " in operation: " << *op << "\n");
       if (isa<VectorType>(operandType)) {
         auto res = resolveVectorConsumer(operand);
         if (failed(res)) {
@@ -1758,8 +1759,7 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::DistributeLayoutAttr {
     LayoutInfo layout = analysis.getLayoutInfo(val);
-    if (!layout.isAssigned())
-      return {};
+
     if (auto opResult = dyn_cast<OpResult>(val)) {
 
       Operation *defOp = opResult.getDefiningOp();
@@ -1773,6 +1773,8 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
       if (requiredResLayoutAttr != nullptr)
         return requiredResLayoutAttr;
     }
+    if (!layout.isAssigned())
+      return {};
     xegpu::DistributeLayoutAttr layoutAttr =
         cast<xegpu::DistributeLayoutAttr>(layout.get());
     if (layout.isSliceLayout())
@@ -1787,6 +1789,21 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
   auto walkResult = op->walk([&](mlir::Block *block) -> WalkResult {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
       LogicalResult r = success();
+
+      //  for (OpOperand &operand : op.getOpOperands()) {
+      //    Type operandType = operand.get().getType();
+      //    // We only need to operate on tensor descriptor or vector types.
+      //    if (!isa<xegpu::TensorDescType, VectorType>(operandType))
+      //      continue;
+      //    xegpu::DistributeLayoutAttr consumerLayout =
+      //        getXeGPULayoutForValue(operand.get());
+      //    // dump the layout info for debugging
+      //    // dump operation and operand info for debugging
+      //    DBGS() << "Processing operation: " << op << "\n";
+      //    llvm::outs() << "operand #" << operand.getOperandNumber() << " = "
+      //                 << operand.get() << "\n";
+      //    DBGS() << "Layout: " << consumerLayout << "\n";
+      //  }
       TypeSwitch<Operation *>(&op)
           .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
             r = updateControlFlowOps(builder, branchTermOp,
