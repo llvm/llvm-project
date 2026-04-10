@@ -7,19 +7,19 @@ from lldbsuite.test import configuration
 import lldbsuite.test.lldbutil as lldbutil
 
 TRIPLE_RE = re.compile(
-    r"^(?P<arch>[a-zA-Z0-9_]+)"  # arch (required)
-    r"(?:-(?P<vendor>[a-zA-Z0-9_]+))?"  # vendor (optional)
-    r"(?:-(?P<os>[a-zA-Z_]+)(?P<os_version>[\d.]+)?)?"  # os + version (optional)
-    r"(?:-(?P<env>[a-zA-Z0-9_]+))?"  # env/abi (optional)
-    r"$"
+    r"""^(?P<arch>[a-zA-Z0-9_]+) # arch (required)
+        (?:-(?P<vendor>[a-zA-Z0-9_]+))? # vendor (optional)
+        (?:-(?P<os>[a-zA-Z_]+)(?P<os_version>[\d.]+)?)? # os + version (optional)
+        (?:-(?P<env>[a-zA-Z0-9_]+))? # env/abi (optional)
+        $""",
+    re.X,
 )
 
 
 def split_triple(triple):
-    m = TRIPLE_RE.match(triple)
-    if m:
-        return m["arch"], m["vendor"], m["os"], m["os_version"], m["env"]
-    return None, None, None, None, None
+    if m := TRIPLE_RE.match(triple):
+        return m.groups()
+    return [None] * TRIPLE_RE.groups
 
 
 class BuilderDarwin(Builder):
@@ -41,8 +41,7 @@ class BuilderDarwin(Builder):
                 )
                 args["FRAMEWORK_INCLUDES"] = "-F{}".format(private_frameworks)
 
-        triple = self.getTriple()
-        if triple:
+        if triple := self.getTriple():
             _, _, operating_system, _, env = split_triple(triple)
 
             builder_dir = os.path.dirname(os.path.abspath(__file__))
@@ -61,7 +60,6 @@ class BuilderDarwin(Builder):
         return ["{}={}".format(key, value) for key, value in args.items()]
 
     def getArchCFlags(self):
-        """Returns the ARCH_CFLAGS for the make system."""
         # Get the triple components.
         triple = self.getTriple()
         if not triple:

@@ -90,7 +90,7 @@ def create_parser():
         "-E",
         metavar="extra-flags",
         help=textwrap.dedent(
-            """Specify the extra flags to be passed to the toolchain when building the inferior programs to be debugged"""
+            """Specify the extra flags to be passed to the toolchain when building the inferior programs to be debugged."""
         ),
     )
 

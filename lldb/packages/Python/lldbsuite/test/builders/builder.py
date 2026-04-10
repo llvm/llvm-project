@@ -25,7 +25,6 @@ class Builder:
         return os.path.abspath(compiler)
 
     def getTriple(self):
-        """Returns the triple."""
         return configuration.triple
 
     def getExtraMakeArgs(self):
