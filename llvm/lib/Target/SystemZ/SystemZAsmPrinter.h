@@ -121,8 +121,7 @@ private:
   };
   SmallVector<PPA1Info, 0> DeferredPPA1;
 
-  void calculatePPA1(MCSymbol *CurrentFnPPA1Sym,
-                     MCSymbol *CurrentFnEPMarkerSym);
+  void calculatePPA1();
   void emitPPA1(PPA1Info &Info);
   void emitPPA2(Module &M);
   void emitADASection();

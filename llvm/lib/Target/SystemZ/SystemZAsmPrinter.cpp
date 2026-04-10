@@ -1587,14 +1587,13 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
   OutStreamer->emitAbsoluteSymbolDiff(Info.EPMarker, Info.PPA1, 4);
 }
 
-void SystemZAsmPrinter::calculatePPA1(MCSymbol *CurrentFnPPA1Sym, MCSymbol *CurrentFnEPMarkerSym) {
+void SystemZAsmPrinter::calculatePPA1() {
   assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
 
   PPA1Info Info;
 
   const TargetRegisterInfo *TRI = MF->getRegInfo().getTargetRegisterInfo();
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
-  //const auto TargetHasVector = Subtarget.hasVector();
 
   const SystemZMachineFunctionInfo *ZFI =
       MF->getInfo<SystemZMachineFunctionInfo>();
@@ -1664,12 +1663,18 @@ void SystemZAsmPrinter::calculatePPA1(MCSymbol *CurrentFnPPA1Sym, MCSymbol *Curr
                                                Twine(MF->getFunctionNumber()));
   }
 
+  // Get the name of the function, with suffix _.
+  std::string N(MF->getFunction().hasName()
+                    ? Twine(MF->getFunction().getName()).concat("_").str()
+                    : "");
+
   // Save the calculated values.
   if (MF->getFunction().hasName())
     Info.Name = MF->getFunction().getName();
-  Info.PPA1 = CurrentFnPPA1Sym;
-  Info.EPMarker = CurrentFnEPMarkerSym;
-  Info.FnEnd = createTempSymbol("func_end");
+  Info.PPA1 = OutContext.createTempSymbol(Twine("PPA1_").concat(N).str(), true);
+  Info.EPMarker =
+      OutContext.createTempSymbol(Twine("EPM_").concat(N).str(), true);
+  Info.FnEnd = OutContext.createTempSymbol("func_end");
   Info.PersonalityRoutine = PersonalityRoutine;
   Info.GCCEH = GCCEH;
   Info.OffsetFPR = OffsetFPR;
@@ -1873,18 +1878,7 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
 
   if (Subtarget.getTargetTriple().isOSzOS()) {
-    MCContext &OutContext = OutStreamer->getContext();
-
-    // Save information for later use.
-    std::string N(MF->getFunction().hasName()
-                      ? Twine(MF->getFunction().getName()).concat("_").str()
-                      : "");
-
-    MCSymbol *CurrentFnEPMarkerSym =
-        OutContext.createTempSymbol(Twine("EPM_").concat(N).str(), true);
-    MCSymbol *CurrentFnPPA1Sym =
-        OutContext.createTempSymbol(Twine("PPA1_").concat(N).str(), true);
-    calculatePPA1(CurrentFnPPA1Sym, CurrentFnEPMarkerSym);
+    calculatePPA1();
 
     // EntryPoint Marker
     const MachineFrameInfo &MFFrame = MF->getFrameInfo();
@@ -1905,14 +1899,14 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
 
     // Emit entry point marker section.
     OutStreamer->AddComment("XPLINK Routine Layout Entry");
-    OutStreamer->emitLabel(CurrentFnEPMarkerSym);
+    OutStreamer->emitLabel(DeferredPPA1.back().EPMarker);
     OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
     OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
     OutStreamer->AddComment("Mark Type C'1'");
     OutStreamer->emitInt8(0xF1); // Mark Type.
     OutStreamer->AddComment("Offset to PPA1");
-    OutStreamer->emitAbsoluteSymbolDiff(CurrentFnPPA1Sym, CurrentFnEPMarkerSym,
-                                        4);
+    OutStreamer->emitAbsoluteSymbolDiff(DeferredPPA1.back().PPA1,
+                                        DeferredPPA1.back().EPMarker, 4);
     if (OutStreamer->isVerboseAsm()) {
       OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
       OutStreamer->AddComment("Entry Flags");
