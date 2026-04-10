@@ -2089,7 +2089,8 @@ def SubSmaxSub: GICombineRule<
    (match (G_SUB $sub, 0, $A),
           (G_SMAX $max, $A, $sub),
           (G_SUB $root, 0, $max),
-          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) && MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
    (apply (G_SUB $sub1, 0, $A), 
           (G_SMIN $root, $A, $sub1))>;
               
@@ -2099,7 +2100,8 @@ def SubUmaxSub: GICombineRule<
    (match (G_SUB $sub, 0, $A),
           (G_UMAX $max, $A, $sub),
           (G_SUB $root, 0, $max),
-          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) && MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
    (apply (G_SUB $sub1, 0, $A), 
           (G_UMIN $root, $A, $sub1))>;
    
