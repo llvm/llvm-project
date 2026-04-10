@@ -254,11 +254,11 @@ LLVM_ABI InlineParams getInlineParams(int Threshold);
 
 /// Generate the parameters to tune the inline cost analysis based on command
 /// line options. If -inline-threshold option is not explicitly passed,
-/// the default threshold is computed from \p OptLevel and \p SizeOptLevel.
+/// the default threshold is computed from \p OptLevel.
 /// An \p OptLevel value above 3 is considered an aggressive optimization mode.
-/// \p SizeOptLevel of 1 corresponds to the -Os flag and 2 corresponds to
-/// the -Oz flag.
-LLVM_ABI InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
+/// Optimization for size is handled via separate thresholds for
+/// optsize/minsize, rather than changes to the default threshold.
+LLVM_ABI InlineParams getInlineParamsFromOptLevel(unsigned OptLevel);
 
 /// Return the cost associated with a callsite, including parameter passing
 /// and the call/return instruction.
