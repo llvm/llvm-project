@@ -229,11 +229,12 @@ WithReason<int64_t> GetRectangularNestDepthWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version,
     SemanticsContext *semaCtx = nullptr);
 
-// Count the required loop count from range. If count == -1, return -1,
-// indicating all loops in the sequence.
-std::optional<int64_t> GetRequiredCount(
+/// Calculate the minimum length of a sequence that contains the specified
+/// range. If the range's count is -1, return -1 indicating all loops in the
+/// sequence.
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<int64_t> first, std::optional<int64_t> count);
-std::optional<int64_t> GetRequiredCount(
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<std::pair<int64_t, int64_t>> range);
 
 struct LoopSequence {
