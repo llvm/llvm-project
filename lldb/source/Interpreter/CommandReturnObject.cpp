@@ -33,6 +33,12 @@ static llvm::raw_ostream &note(Stream &strm) {
          << "note: ";
 }
 
+static llvm::StringRef validate(llvm::StringRef diagnostic) {
+  assert(!diagnostic.ends_with('\n') && !diagnostic.ends_with('.') &&
+         "diagnostics should end without a period/newline");
+  return diagnostic.trim("\n.");
+}
+
 static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
   bool add_newline = false;
   if (!s.empty()) {
@@ -75,12 +81,14 @@ void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
 }
 
 void CommandReturnObject::AppendNote(llvm::StringRef in_string) {
+  in_string = validate(in_string);
   if (in_string.empty())
     return;
   note(GetOutputStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
+  in_string = validate(in_string);
   if (in_string.empty())
     return;
   warning(GetErrorStream()) << in_string.rtrim() << '\n';
@@ -93,6 +101,8 @@ void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   // Workaround to deal with already fully formatted compiler diagnostics.
   llvm::StringRef msg(in_string.rtrim());
   msg.consume_front("error: ");
+
+  // FIXME: We should call validate here.
   error(GetErrorStream()) << msg << '\n';
 }
 
