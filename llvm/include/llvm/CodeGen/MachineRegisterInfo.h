@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
@@ -126,6 +127,11 @@ private:
   /// registers that should NOT be allocated to the same or overlapping physical
   /// registers.
   IndexedMap<SmallVector<Register, 4>, VirtReg2IndexFunctor> AntiHintRegs;
+
+  /// ChainHints - This equivalence class stores hints that are meant to only be
+  /// applied if all of the involved register classes are compatible, otherwise
+  /// none of them are applied.
+  EquivalenceClasses<Register> ChainHints;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
@@ -891,6 +897,17 @@ public:
     if (RegAllocHints.inBounds(VReg))
       RegAllocHints[VReg].second.clear();
   }
+
+  /// addChainHint - Union the sets of chain hints containing VReg and PrefReg
+  /// and also add bidirectional hints to all members of the unioned set.
+  LLVM_ABI void addChainHint(Register VReg, Register PrefReg);
+
+  /// removeIncompatibleChainHints - Check that all sets of chain hints have
+  /// compatible register classes with all other members of their set. If they
+  /// do not, remove those hints and then delete that set. If a register has
+  /// non-chain simple hints and its set is deleted, those non-chain hints will
+  /// not be removed.
+  LLVM_ABI void removeIncompatibleChainHints();
 
   /// getRegAllocationHint - Return the register allocation hint for the
   /// specified virtual register. If there are many hints, this returns the
