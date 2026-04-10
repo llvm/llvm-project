@@ -622,9 +622,9 @@ def XeVM_TruncfDstElemTypeAttr : XeVM_Attr<"TruncfDstElemType", "dst_etype"> {
 
 def XeVM_TruncfOp
     : XeVM_Op<"truncf">,
-      Results<(outs AnyTypeOf<[VectorOfRankAndType<[1], [I8, I<4>]>, I8,
+      Results<(outs AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8, I<4>]>, I8,
                                I<4>]>:$dst)>,
-      Arguments<(ins AnyTypeOf<[VectorOfRankAndType<[1], [F16, BF16]>, F16,
+      Arguments<(ins AnyTypeOf<[FixedVectorOfRankAndType<[1], [F16, BF16]>, F16,
                                 BF16]>:$src,
           XeVM_TruncfSrcElemTypeAttr:$src_etype,
           XeVM_TruncfDstElemTypeAttr:$dst_etype)> {
@@ -646,8 +646,8 @@ def XeVM_MMAMxOp
       Results<(outs FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$d)>,
       Arguments<(ins FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$a,
           FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$b,
-          AnyTypeOf<[VectorOfRankAndType<[1], [I8]>, I8]>:$scale_a,
-          AnyTypeOf<[VectorOfRankAndType<[1], [I8]>, I8]>:$scale_b,
+          AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8]>, I8]>:$scale_a,
+          AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8]>, I8]>:$scale_b,
           Optional<FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>>:$c,
           XeVM_MMAShapeAttr:$shape, XeVM_MMATypesAttr:$types)> {
 
