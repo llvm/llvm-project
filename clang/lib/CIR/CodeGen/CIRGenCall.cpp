@@ -19,6 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/TypeSize.h"
 
 using namespace clang;
@@ -589,9 +590,17 @@ void CIRGenModule::constructFunctionReturnAttributes(
     retAttrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                  mlir::UnitAttr::get(&getMLIRContext()));
 
-  // TODO(cir): classic codegen adds a bunch of attributes based on
-  // calling-convention lowering results.  However, since calling conventions
-  // haven't happened yet, this work likely has to happen there.
+  // nofpclass(nan inf) when -menable-no-infs / -menable-no-nans.
+  if (retTy->hasFloatingRepresentation()) {
+    unsigned mask = 0;
+    if (getLangOpts().NoHonorInfs)
+      mask |= llvm::fcInf;
+    if (getLangOpts().NoHonorNaNs)
+      mask |= llvm::fcNan;
+    if (mask)
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
+                   builder.getI64IntegerAttr(mask));
+  }
 
   if (!isThunk) {
     // TODO(cir): following comment taken from classic codegen, so if anything
@@ -699,6 +708,17 @@ void CIRGenModule::constructFunctionArgumentAttributes(
             mlir::LLVM::LLVMDialect::getAlignAttrName(),
             builder.getI64IntegerAttr(
                 getNaturalPointeeTypeAlignment(argType).getQuantity()));
+    }
+
+    if (argType->hasFloatingRepresentation()) {
+      unsigned mask = 0;
+      if (getLangOpts().NoHonorInfs)
+        mask |= llvm::fcInf;
+      if (getLangOpts().NoHonorNaNs)
+        mask |= llvm::fcNan;
+      if (mask)
+        argAttrList.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
+                        builder.getI64IntegerAttr(mask));
     }
   }
 }
