@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/CharInfo.h"
-#include "clang/Basic/CharInfo.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
