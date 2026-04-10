@@ -23,6 +23,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -33,12 +34,15 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -241,6 +245,20 @@ static bool profDataReferencedByCode(const Module &M) {
   return enablesValueProfiling(M);
 }
 
+// Extract CUID (Compilation Unit ID) from the module.
+// HIP/CUDA modules have a global variable __hip_cuid_<hash> that uniquely
+// identifies each translation unit. Returns empty string if not found.
+static std::string getCUIDFromModule(const Module &M) {
+  for (const GlobalVariable &GV : M.globals()) {
+    if (!GV.hasExternalLinkage())
+      continue;
+    StringRef Name = GV.getName();
+    if (Name.consume_front("__hip_cuid_"))
+      return Name.str();
+  }
+  return "";
+}
+
 class InstrLowerer final {
 public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
@@ -265,7 +283,7 @@ private:
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
-    GlobalVariable *DataVar = nullptr;
+    GlobalValue *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
     uint32_t NumBitmapBytes = 0;
 
@@ -286,6 +304,9 @@ private:
   std::vector<GlobalVariable *> ReferencedVTables;
   GlobalVariable *NamesVar = nullptr;
   size_t NamesSize = 0;
+
+  StructType *ProfileDataTy = nullptr;
+  std::string CachedCUID; // CUID cached for consistent section naming
 
   // vector of counter load/store pairs to be register promoted.
   std::vector<LoadStorePair> PromotionCandidates;
@@ -323,6 +344,9 @@ private:
 
   /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
+
+  /// AMDGPU specific implementation of lowerIncrement.
+  void lowerIncrementAMDGPU(InstrProfIncrementInst *Inc);
 
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
@@ -407,6 +431,25 @@ private:
   /// Create a static initializer for our data, on platforms that need it,
   /// and for any profile output file that was specified.
   void emitInitialization();
+
+  /// For GPU targets: cache the CUID for consistent section naming.
+  void cacheGPUCUID();
+
+  /// Return the __llvm_profile_data struct type.
+  StructType *getProfileDataTy();
+
+  /// Create __llvm_offload_prf structure for GPU targets.
+  /// All sections use linker-defined __start_/__stop_ bounds.
+  void createProfileSectionSymbols();
+
+  /// Create HIP device variable registration for profile symbols
+  void createHIPDeviceVariableRegistration();
+
+  /// Create HIP dynamic module registration call
+  void createHIPDynamicModuleRegistration();
+
+  /// Create HIP dynamic module unregistration call
+  void createHIPDynamicModuleUnregistration();
 };
 
 ///
@@ -938,6 +981,8 @@ bool InstrLowerer::lower() {
   if (!ContainsProfiling && !CoverageNamesVar)
     return MadeChange;
 
+  cacheGPUCUID();
+
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented
   // target value sites to enter it as field in the profile data variable.
@@ -985,6 +1030,16 @@ bool InstrLowerer::lower() {
   emitVNodes();
   emitNameData();
   emitVTableNames();
+
+  // Create start/stop symbols for device code profile sections
+  createProfileSectionSymbols();
+
+  // Create host shadow variables and registration calls for HIP device profile
+  // symbols
+  createHIPDeviceVariableRegistration();
+
+  createHIPDynamicModuleRegistration();
+  createHIPDynamicModuleUnregistration();
 
   // Emit runtime hook for the cases where the target does not unconditionally
   // require pulling in profile runtime, and coverage is enabled on code that is
@@ -1045,7 +1100,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   assert(It != ProfileDataMap.end() && It->second.DataVar &&
          "value profiling detected in function with no counter increment");
 
-  GlobalVariable *DataVar = It->second.DataVar;
+  GlobalValue *DataVar = It->second.DataVar;
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
   uint64_t Index = Ind->getIndex()->getZExtValue();
   for (uint32_t Kind = IPVK_First; Kind < ValueKind; ++Kind)
@@ -1057,7 +1112,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
   auto *NormalizedDataVarPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-      DataVar, PointerType::get(M.getContext(), 0));
+      cast<Constant>(DataVar), PointerType::get(M.getContext(), 0));
 
   // To support value profiling calls within Windows exception handlers, funclet
   // information contained within operand bundles needs to be copied over to
@@ -1107,6 +1162,8 @@ GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
 }
 
 Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
+  // Note: For AMDGPU targets, lowerIncrementAMDGPU handles counter addressing
+  // directly. This function is called for non-AMDGPU targets.
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
 
@@ -1189,6 +1246,10 @@ void InstrLowerer::lowerTimestamp(
 }
 
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
+  if (TT.isAMDGPU()) {
+    lowerIncrementAMDGPU(Inc);
+    return;
+  }
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
@@ -1215,6 +1276,35 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
+  Inc->eraseFromParent();
+}
+
+void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
+  IRBuilder<> Builder(Inc);
+  LLVMContext &Context = M.getContext();
+  auto *Int64Ty = Type::getInt64Ty(Context);
+
+  auto *CounterIdx = Inc->getIndex();
+
+  // --- Counter address ---
+  GlobalVariable *Counters = getOrCreateRegionCounters(Inc);
+  Value *Indices[] = {Builder.getInt32(0), CounterIdx};
+  Value *Addr = Builder.CreateInBoundsGEP(Counters->getValueType(), Counters,
+                                          Indices, "ctr.addr");
+
+  auto *PtrTy = PointerType::getUnqual(Context);
+  Value *UniformAddrArg = ConstantPointerNull::get(cast<PointerType>(PtrTy));
+  Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
+
+  Value *IncStep = Inc->getStep();
+  Value *StepI64 = Builder.CreateZExtOrTrunc(IncStep, Int64Ty, "step.i64");
+
+  auto *CalleeTy = FunctionType::get(Type::getVoidTy(Context),
+                                     {PtrTy, PtrTy, Int64Ty}, false);
+  FunctionCallee IncrFn =
+      M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
+  Builder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
+
   Inc->eraseFromParent();
 }
 
@@ -1398,6 +1488,12 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
   // If we can't use an alias, we must use the public symbol, even though this
   // may require a symbolic relocation.
   if (shouldUsePublicSymbol(Fn))
+    return Fn;
+
+  // For GPU targets, weak functions cannot use private aliases because
+  // LTO may pick a different TU's copy, leaving the alias undefined
+  if (isGPUProfTarget(*Fn->getParent()) &&
+      GlobalValue::isWeakForLinker(Fn->getLinkage()))
     return Fn;
 
   // When possible use a private alias to avoid symbolic relocations.
@@ -1623,11 +1719,15 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
   }
 
   Ptr->setVisibility(Visibility);
-  // Put the counters and bitmaps in their own sections so linkers can
-  // remove unneeded sections.
   Ptr->setSection(getInstrProfSectionName(IPSK, TT.getObjectFormat()));
   Ptr->setLinkage(Linkage);
-  maybeSetComdat(Ptr, Fn, VarName);
+  if (isGPUProfTarget(M) && !Ptr->hasComdat()) {
+    Ptr->setComdat(M.getOrInsertComdat(VarName));
+    Ptr->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    Ptr->setVisibility(GlobalValue::ProtectedVisibility);
+  } else {
+    maybeSetComdat(Ptr, Fn, VarName);
+  }
   return Ptr;
 }
 
@@ -1799,7 +1899,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
-  auto *CounterPtr = PD.RegionCounters;
+
+  Constant *CounterPtr = PD.RegionCounters;
 
   uint64_t NumBitmapBytes = PD.NumBitmapBytes;
 
@@ -1807,11 +1908,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   auto *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
   auto *Int16Ty = Type::getInt16Ty(Ctx);
   auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
-  Type *DataTypes[] = {
-#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
-#include "llvm/ProfileData/InstrProfData.inc"
-  };
-  auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
+  auto *DataTy = getProfileDataTy();
 
   Constant *FunctionAddr = getFuncAddrForProfData(Fn);
 
@@ -1819,6 +1916,15 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
+  if (isGPUProfTarget(M)) {
+    // For GPU targets, weak functions need weak linkage for their profile data
+    // aliases to allow linker deduplication across TUs
+    if (GlobalValue::isWeakForLinker(Fn->getLinkage()))
+      Linkage = Fn->getLinkage();
+    else
+      Linkage = GlobalValue::ExternalLinkage;
+    Visibility = GlobalValue::ProtectedVisibility;
+  }
   // If the data variable is not referenced by code (if we don't emit
   // @llvm.instrprof.value.profile, NS will be 0), and the counter keeps the
   // data variable live under linker GC, the data variable can be private. This
@@ -1830,7 +1936,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // If profd is in a deduplicate comdat, NS==0 with a hash suffix guarantees
   // that other copies must have the same CFG and cannot have value profiling.
   // If no hash suffix, other profd copies may be referenced by code.
-  if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
+  if (!isGPUProfTarget(M) && NS == 0 &&
+      !(DataReferencedByCode && NeedComdat && !Renamed) &&
       (TT.isOSBinFormatELF() ||
        (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
     Linkage = GlobalValue::PrivateLinkage;
@@ -1843,6 +1950,9 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Visibility = GlobalValue::ProtectedVisibility;
   auto *Data =
       new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
+  GlobalValue *DataVar = Data;
+  Constant *DataAddr = Data;
+
   Constant *RelativeCounterPtr;
   GlobalVariable *BitmapPtr = PD.RegionBitmaps;
   Constant *RelativeBitmapPtr = ConstantInt::get(IntPtrTy, 0);
@@ -1855,9 +1965,6 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     if (BitmapPtr != nullptr)
       RelativeBitmapPtr = ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy);
   } else if (TT.isNVPTX()) {
-    // The NVPTX target cannot handle self-referencing constant expressions in
-    // global initializers at all. Use absolute pointers and have the runtime
-    // registration convert them to relative offsets.
     DataSectionKind = IPSK_data;
     RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
   } else {
@@ -1866,29 +1973,36 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     DataSectionKind = IPSK_data;
     RelativeCounterPtr =
         ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
-                             ConstantExpr::getPtrToInt(Data, IntPtrTy));
+                             ConstantExpr::getPtrToInt(DataAddr, IntPtrTy));
     if (BitmapPtr != nullptr)
       RelativeBitmapPtr =
           ConstantExpr::getSub(ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy),
-                               ConstantExpr::getPtrToInt(Data, IntPtrTy));
+                               ConstantExpr::getPtrToInt(DataAddr, IntPtrTy));
   }
 
   Constant *DataVals[] = {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  Data->setInitializer(ConstantStruct::get(DataTy, DataVals));
+  auto *DataInit = ConstantStruct::get(DataTy, DataVals);
 
-  Data->setVisibility(Visibility);
-  Data->setSection(
+  auto *DataGV = cast<GlobalVariable>(DataVar);
+  DataGV->setInitializer(DataInit);
+  DataGV->setVisibility(Visibility);
+  DataGV->setSection(
       getInstrProfSectionName(DataSectionKind, TT.getObjectFormat()));
-  Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
-  maybeSetComdat(Data, Fn, CntsVarName);
+  DataGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
+  if (isGPUProfTarget(M) && !DataGV->hasComdat()) {
+    DataGV->setComdat(M.getOrInsertComdat(CntsVarName));
+    DataGV->setLinkage(GlobalValue::LinkOnceODRLinkage);
+  } else {
+    maybeSetComdat(DataGV, Fn, CntsVarName);
+  }
 
-  PD.DataVar = Data;
+  PD.DataVar = DataVar;
 
   // Mark the data variable as used so that it isn't stripped out.
-  CompilerUsedVars.push_back(Data);
+  CompilerUsedVars.push_back(DataVar);
   // Now that the linkage set by the FE has been passed to the data and counter
   // variables, reset Name variable's linkage and visibility to private so that
   // it can be removed later by the compiler.
@@ -1948,6 +2062,102 @@ void InstrLowerer::emitVNodes() {
   UsedVars.push_back(VNodesVar);
 }
 
+void InstrLowerer::createHIPDynamicModuleRegistration() {
+  if (isGPUProfTarget(M))
+    return;
+  StringRef FuncNames[] = {"hipModuleLoad", "hipModuleLoadData",
+                           "hipModuleLoadDataEx"};
+  for (StringRef FuncName : FuncNames) {
+    Function *F = M.getFunction(FuncName);
+    if (!F)
+      continue;
+
+    for (User *U : F->users()) {
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        Instruction *InsertPt = nullptr;
+        // If the call is an invoke instruction, we should insert the
+        // registration call in the normal destination block.
+        if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
+          InsertPt = &*Invoke->getNormalDest()->getFirstInsertionPt();
+        } else if (CB->isTerminator()) {
+          // If it's another kind of terminator (e.g., callbr), we don't
+          // know the semantics of the successors, so we conservatively
+          // skip it. The hipModuleLoad* functions are not expected to be
+          // used in other terminator instructions.
+          continue;
+        } else {
+          // This is a normal call instruction, so we can insert after it.
+          InsertPt = CB->getNextNode();
+        }
+
+        // If there's no valid insertion point (e.g., a malformed block),
+        // skip.
+        if (!InsertPt)
+          continue;
+
+        IRBuilder<> Builder(InsertPt);
+        auto *VoidTy = Type::getVoidTy(M.getContext());
+        auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
+        auto *Int32Ty = Type::getInt32Ty(M.getContext());
+        // register(int rc, void **modulePtr, const void *image)
+        auto *RegisterDynamicModuleTy =
+            FunctionType::get(VoidTy, {Int32Ty, VoidPtrTy, VoidPtrTy}, false);
+        FunctionCallee RegisterFunc = M.getOrInsertFunction(
+            "__llvm_profile_offload_register_dynamic_module",
+            RegisterDynamicModuleTy);
+
+        // Arg 0: return value of the hipModuleLoad* call (hipError_t / i32).
+        Value *ReturnValue = CB;
+        // Arg 1: module handle (out-parameter, hipModule_t*).
+        Value *ModuleHandle = CB->getArgOperand(0);
+        // Arg 2: code object image pointer.
+        // For hipModuleLoadData(module, image) and
+        // hipModuleLoadDataEx(module, image, ...), image is arg 1.
+        // For hipModuleLoad(module, fname), arg 1 is a filename — pass NULL.
+        Value *ImagePtr;
+        if (FuncName == "hipModuleLoad")
+          ImagePtr =
+              ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
+        else
+          ImagePtr = CB->getArgOperand(1);
+
+        Builder.CreateCall(RegisterFunc, {ReturnValue, ModuleHandle, ImagePtr});
+      }
+    }
+  }
+}
+
+void InstrLowerer::createHIPDynamicModuleUnregistration() {
+  Function *F = M.getFunction("hipModuleUnload");
+  if (!F)
+    return;
+
+  for (User *U : F->users()) {
+    if (auto *CB = dyn_cast_or_null<CallBase>(U)) {
+      // The insertion point is right before the call to hipModuleUnload.
+      Instruction *InsertPt = CB;
+
+      IRBuilder<> Builder(InsertPt);
+      auto *VoidTy = Type::getVoidTy(M.getContext());
+      auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
+
+      auto *UnregisterDynamicModuleTy =
+          FunctionType::get(VoidTy, {VoidPtrTy}, false);
+      FunctionCallee UnregisterFunc = M.getOrInsertFunction(
+          "__llvm_profile_offload_unregister_dynamic_module",
+          UnregisterDynamicModuleTy);
+
+      // The argument is the module handle, which is the first
+      // argument to the hipModuleUnload call.
+      Value *ModuleHandle = CB->getArgOperand(0);
+      Value *CastedModuleHandle =
+          Builder.CreatePointerCast(ModuleHandle, VoidPtrTy);
+
+      Builder.CreateCall(UnregisterFunc, {CastedModuleHandle});
+    }
+  }
+}
+
 void InstrLowerer::emitNameData() {
   if (ReferencedNames.empty())
     return;
@@ -1961,16 +2171,23 @@ void InstrLowerer::emitNameData() {
   auto &Ctx = M.getContext();
   auto *NamesVal =
       ConstantDataArray::getString(Ctx, StringRef(CompressedNameStr), false);
-  NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
-                                GlobalValue::PrivateLinkage, NamesVal,
-                                getInstrProfNamesVarName());
+  std::string NamesVarName = std::string(getInstrProfNamesVarName());
+  if (isGPUProfTarget(M)) {
+    std::string CUID = CachedCUID.empty() ? getCUIDFromModule(M) : CachedCUID;
+    if (!CUID.empty())
+      NamesVarName = NamesVarName + "_" + CUID;
+  }
+  NamesVar =
+      new GlobalVariable(M, NamesVal->getType(), true,
+                         GlobalValue::PrivateLinkage, NamesVal, NamesVarName);
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
-  NamesVar->setSection(
+  std::string NamesSectionName =
       ProfileCorrelate == InstrProfCorrelator::BINARY
           ? getInstrProfSectionName(IPSK_covname, TT.getObjectFormat())
-          : getInstrProfSectionName(IPSK_name, TT.getObjectFormat()));
+          : getInstrProfSectionName(IPSK_name, TT.getObjectFormat());
+  NamesVar->setSection(NamesSectionName);
   // On COFF, it's important to reduce the alignment down to 1 to prevent the
   // linker from inserting padding before the start of the names section or
   // between names entries.
@@ -2179,3 +2396,188 @@ void createProfileSamplingVar(Module &M) {
   appendToCompilerUsed(M, SamplingVar);
 }
 } // namespace llvm
+
+namespace {
+
+// For GPU targets: Allocate contiguous arrays for all profile data.
+// This solves the linker reordering problem by using ONE symbol per section
+// type, so there's nothing for the linker to reorder.
+StructType *InstrLowerer::getProfileDataTy() {
+  if (ProfileDataTy)
+    return ProfileDataTy;
+
+  auto &Ctx = M.getContext();
+  auto *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
+  auto *Int16Ty = Type::getInt16Ty(Ctx);
+  auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
+  Type *DataTypes[] = {
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+  ProfileDataTy = StructType::get(Ctx, ArrayRef(DataTypes));
+  return ProfileDataTy;
+}
+
+void InstrLowerer::cacheGPUCUID() {
+  if (!isGPUProfTarget(M))
+    return;
+  CachedCUID = getCUIDFromModule(M);
+}
+
+// Create CUID-suffixed pointer to __llvm_profile_sections for GPU targets.
+// The basic HIP/offload runtime exposes the original 7-entry section table:
+//   names_start, names_stop, cnts_start, cnts_stop, data_start, data_stop,
+//   raw_version.
+// We create a per-TU global that points to it, giving the host a unique
+// symbol for shadow variable registration.
+void InstrLowerer::createProfileSectionSymbols() {
+  if (!isGPUProfTarget(M) || CachedCUID.empty())
+    return;
+
+  auto &Ctx = M.getContext();
+  unsigned AS = M.getDataLayout().getDefaultGlobalsAddressSpace();
+  auto *Int8PtrTy = PointerType::get(Ctx, AS);
+
+  // __llvm_profile_sections is an array of 7 pointers defined in the GPU
+  // profile runtime (InstrProfilingPlatformGPU.c). Declare it as external.
+  auto *SectionsTy = ArrayType::get(Int8PtrTy, 7);
+  auto *SectionsGV = M.getGlobalVariable("__llvm_profile_sections");
+  if (!SectionsGV) {
+    SectionsGV = new GlobalVariable(M, SectionsTy, /*isConstant=*/true,
+                                    GlobalValue::ExternalLinkage, nullptr,
+                                    "__llvm_profile_sections", nullptr,
+                                    GlobalValue::NotThreadLocal, AS);
+    SectionsGV->setVisibility(GlobalValue::HiddenVisibility);
+  }
+
+  // Create a CUID-suffixed global that stores a pointer to the sections
+  // struct. Aliases can't point to declarations, so we use a pointer global.
+  // The host reads through this indirection: hipGetSymbolAddress gives the
+  // pointer global's device address, then one DtoH copy yields the sections
+  // struct address, then another DtoH copy reads the actual sections.
+  auto *PtrTy = PointerType::get(Ctx, AS);
+  auto *PtrInit =
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(SectionsGV, PtrTy);
+  std::string PtrName = "__llvm_offload_prf_" + CachedCUID;
+  auto *PtrGV = new GlobalVariable(
+      M, PtrTy, /*isConstant=*/true, GlobalValue::ExternalLinkage, PtrInit,
+      PtrName, nullptr, GlobalValue::NotThreadLocal, AS);
+  PtrGV->setVisibility(GlobalValue::DefaultVisibility);
+  CompilerUsedVars.push_back(PtrGV);
+}
+
+void InstrLowerer::createHIPDeviceVariableRegistration() {
+  if (isGPUProfTarget(M))
+    return;
+
+  std::string CUID = CachedCUID.empty() ? getCUIDFromModule(M) : CachedCUID;
+  if (CUID.empty())
+    return;
+
+  auto &Ctx = M.getContext();
+  auto *VoidTy = Type::getVoidTy(Ctx);
+  auto *VoidPtrTy = PointerType::getUnqual(Ctx);
+
+  std::string OffloadPrfName = "__llvm_offload_prf_" + CUID;
+  auto *OffloadPrfShadow = new GlobalVariable(
+      M, VoidPtrTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+      ConstantPointerNull::get(cast<PointerType>(VoidPtrTy)), OffloadPrfName);
+  CompilerUsedVars.push_back(OffloadPrfShadow);
+
+  auto *RegisterShadowTy = FunctionType::get(VoidTy, {VoidPtrTy}, false);
+  FunctionCallee RegisterShadowFunc = M.getOrInsertFunction(
+      "__llvm_profile_offload_register_shadow_variable", RegisterShadowTy);
+
+  Function *Ctor = M.getFunction("__hip_module_ctor");
+  if (!Ctor) {
+    // RDC mode: no __hip_module_ctor per-TU. Emit an offloading entry so the
+    // linker wrapper generates __hipRegisterVar in the final module ctor.
+    llvm::offloading::emitOffloadingEntry(
+        M, llvm::object::OffloadKind::OFK_HIP, OffloadPrfShadow, OffloadPrfName,
+        M.getDataLayout().getPointerSize(),
+        llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
+
+    auto *CtorFn = Function::Create(FunctionType::get(VoidTy, false),
+                                    GlobalValue::InternalLinkage,
+                                    "__llvm_pgo_register_" + CUID, &M);
+    auto *Entry = BasicBlock::Create(Ctx, "entry", CtorFn);
+    IRBuilder<> B(Entry);
+    B.CreateCall(RegisterShadowFunc, {OffloadPrfShadow});
+    B.CreateRetVoid();
+    appendToGlobalCtors(M, CtorFn, 65535);
+    return;
+  }
+
+  // Locate the HIP fat-binary registration call and capture its return value
+  Value *Handle = nullptr;
+  for (BasicBlock &BB : *Ctor)
+    for (Instruction &I : BB)
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (Function *Callee = CB->getCalledFunction())
+          if (Callee->getName() == "__hipRegisterFatBinary") {
+            Handle = &I; // call result
+            break;
+          }
+  if (!Handle)
+    return;
+  GlobalVariable *FatbinHandleGV = nullptr;
+  if (auto *HandleInst = dyn_cast<Instruction>(Handle))
+    for (Instruction *Cur = HandleInst->getNextNode(); Cur;
+         Cur = Cur->getNextNode()) {
+      auto *SI = dyn_cast<StoreInst>(Cur);
+      if (!SI || SI->getValueOperand() != Handle)
+        continue;
+      if (auto *GV = dyn_cast<GlobalVariable>(
+              SI->getPointerOperand()->stripPointerCasts())) {
+        FatbinHandleGV = GV;
+        break;
+      }
+    }
+
+  if (!FatbinHandleGV) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "store of __hipRegisterFatBinary call not found\n");
+  }
+
+  // Insert the new registration just before the ctor’s return
+  ReturnInst *RetInst = nullptr;
+  for (auto &BB : llvm::reverse(*Ctor))
+    if ((RetInst = dyn_cast<ReturnInst>(BB.getTerminator())))
+      break;
+  if (!RetInst)
+    return;
+  IRBuilder<> Builder(RetInst);
+
+  LLVM_DEBUG(
+      llvm::dbgs() << "Found __hip_module_ctor, registering anchors for CUID="
+                   << CUID << "\n");
+
+  auto *Int32Ty = Type::getInt32Ty(Ctx);
+  auto *Int64Ty = Type::getInt64Ty(Ctx);
+  auto *RegisterVarTy =
+      FunctionType::get(VoidTy,
+                        {VoidPtrTy, VoidPtrTy, VoidPtrTy, VoidPtrTy, Int32Ty,
+                         Int64Ty, Int32Ty, Int32Ty},
+                        false);
+  FunctionCallee RegisterVarFunc =
+      M.getOrInsertFunction("__hipRegisterVar", RegisterVarTy);
+  Value *HipHandle =
+      FatbinHandleGV ? Builder.CreateLoad(VoidPtrTy, FatbinHandleGV) : Handle;
+
+  auto *NameStr = ConstantDataArray::getString(Ctx, OffloadPrfName, true);
+  auto *NameGV = new GlobalVariable(M, NameStr->getType(), true,
+                                    GlobalValue::PrivateLinkage, NameStr,
+                                    OffloadPrfName + ".name");
+
+  Builder.CreateCall(RegisterVarFunc,
+                     {HipHandle, OffloadPrfShadow,
+                      Builder.CreatePointerCast(NameGV, VoidPtrTy),
+                      Builder.CreatePointerCast(NameGV, VoidPtrTy),
+                      Builder.getInt32(0),
+                      Builder.getInt64(M.getDataLayout().getPointerSize()),
+                      Builder.getInt32(0), Builder.getInt32(0)});
+
+  Builder.CreateCall(RegisterShadowFunc, {OffloadPrfShadow});
+}
+
+} // namespace

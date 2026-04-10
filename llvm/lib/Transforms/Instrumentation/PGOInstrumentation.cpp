@@ -379,8 +379,10 @@ class FunctionInstrumenter final {
   // values. Supporting other values is relatively straight-forward - just
   // another counter range within the context.
   bool isValueProfilingDisabled() const {
+    const Triple &TT = M.getTargetTriple();
     return DisableValueProfiling ||
-           InstrumentationType == PGOInstrumentationType::CTXPROF;
+           InstrumentationType == PGOInstrumentationType::CTXPROF ||
+           TT.isAMDGPU() || TT.isNVPTX();
   }
 
   bool shouldInstrumentEntryBB() const {
@@ -470,7 +472,7 @@ createIRLevelProfileFlagVar(Module &M,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
   IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
 
-  Triple TT(M.getTargetTriple());
+  const Triple &TT = M.getTargetTriple();
   if (TT.supportsCOMDAT()) {
     IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
     IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
@@ -1959,7 +1961,7 @@ static bool InstrumentAllFunctions(
   if (InstrumentationType == PGOInstrumentationType::FDO)
     createIRLevelProfileFlagVar(M, InstrumentationType);
 
-  Triple TT(M.getTargetTriple());
+  const Triple &TT = M.getTargetTriple();
   LLVMContext &Ctx = M.getContext();
   if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
     Ctx.diagnose(DiagnosticInfoPGOProfile(
@@ -2406,8 +2408,7 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
                            uint64_t MaxCount) {
   auto Weights = downscaleWeights(EdgeCounts, MaxCount);
 
-  LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W
-                                           : Weights) {
+  LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W : Weights) {
     dbgs() << W << " ";
   } dbgs() << "\n";);
 
