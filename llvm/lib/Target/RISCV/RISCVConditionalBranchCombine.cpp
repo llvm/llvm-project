@@ -1,39 +1,38 @@
-//===--RISCVConditionalBranchCombine.cpp - RISC-V conditional branch combine
-// pass--===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------===
-//
-// This file implements a pass that detects consecutive conditional branches and
-// uses logical operations to reduce branch density. On out-of-order machines
-// with high branch costs, developers can set the maximum allowed consecutive
-// conditional branches using -riscv-bbc-max-branch=N. This pass aims
-// to break sequences of up to N consecutive branches as much as
-// possible, thereby reducing front-end stalls.
-//
-// For example, -riscv-bbc-max-branch=4
-//
-// beqz a1, .L1
-// beqz t1, .L1
-// beqz a5, .L1
-// beqz a6, .L1
-// beqz t0, .L1
-//
-// is transformed to
-//
-// beqz a1, .L1
-// beqz t1, .L1
-// beqz a5, .L1
-// seqz t2, a6
-// seqz t3, t0
-// or t2, t2, t3
-// bne t2, zero, .L1
-//
-// This pass should be run before register allocation.
-//===----------------------------------------------------------------------===
+//===----------------------------------------------------------------------===//
+///
+/// This file implements a pass that detects consecutive conditional branches
+/// and uses logical operations to reduce branch density. On out-of-order
+/// machines with high branch costs, developers can set the maximum allowed
+/// consecutive conditional branches using -riscv-bbc-max-branch=N. This pass
+/// aims to break sequences of up to N consecutive branches as much as possible,
+/// thereby reducing front-end stalls.
+///
+/// For example, -riscv-bbc-max-branch=4
+///
+/// beqz a1, .L1
+/// beqz t1, .L1
+/// beqz a5, .L1
+/// beqz a6, .L1
+/// beqz t0, .L1
+///
+/// is transformed to
+///
+/// beqz a1, .L1
+/// beqz t1, .L1
+/// beqz a5, .L1
+/// seqz t2, a6
+/// seqz t3, t0
+/// or t2, t2, t3
+/// bne t2, zero, .L1
+///
+/// This pass should be run before register allocation.
+//===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
@@ -102,20 +101,6 @@ char RISCVConditionalBranchCombine::ID = 0;
 INITIALIZE_PASS(RISCVConditionalBranchCombine, DEBUG_TYPE,
                 "RISC-V Conditional Branch Combine", false, false)
 
-static bool isIgnorableInstr(const MachineInstr &MI) {
-  return MI.isDebugInstr() || MI.getOpcode() == RISCV::PseudoBR ||
-         MI.isMetaInstruction();
-}
-
-/// find the last non-pseudo instruction of the basic block.
-static MachineInstr *getLastNonPseudo(MachineBasicBlock &MBB) {
-  for (auto I = MBB.rbegin(); I != MBB.rend(); ++I) {
-    if (!isIgnorableInstr(*I))
-      return &*I;
-  }
-  return nullptr;
-}
-
 /// Determine whether the basic block contains only one branch.
 bool isSingleCondBranchBlock(const MachineBasicBlock &MBB) {
   SmallVector<const MachineInstr *, 4> Terms;
@@ -150,7 +135,10 @@ void RISCVConditionalBranchCombine::findBranchChains(
 
     // The first branch instruction must be the last instruction of the bb or
     // the only instruction in the bb.
-    MachineInstr *LastInstr = getLastNonPseudo(MBB);
+    auto It = MBB.getFirstTerminator();
+    if (It == MBB.end())
+      continue;
+    MachineInstr *LastInstr = &*It;
 
     if (!LastInstr || !LastInstr->isConditionalBranch())
       continue;
@@ -160,7 +148,10 @@ void RISCVConditionalBranchCombine::findBranchChains(
 
     while (true) {
 
-      MachineInstr *Br = getLastNonPseudo(*CurBB);
+      auto It = CurBB->getFirstTerminator();
+      if (It == CurBB->end())
+        break;
+      MachineInstr *Br = &*It;
 
       if (!Br || !Br->isConditionalBranch())
         break;
