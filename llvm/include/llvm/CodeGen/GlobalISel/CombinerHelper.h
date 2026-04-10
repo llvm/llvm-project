@@ -805,7 +805,8 @@ public:
 
   /// Check if all uses of a multiply can be contracted into fma/fmad
   /// operations, so that duplicating the multiply is acceptable.
-  bool allMulUsesCanBeContracted(const MachineInstr &MI) const;
+  bool allMulUsesCanBeContracted(const MachineInstr &MI,
+                                 unsigned PreferredFusedOpcode) const;
 
   bool canCombineFMadOrFMA(MachineInstr &MI, bool &AllowFusionGlobally,
                            bool &HasFMAD, bool &Aggressive,
