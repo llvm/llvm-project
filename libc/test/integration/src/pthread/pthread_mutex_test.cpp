@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h" // uintptr_t
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
 #include "src/pthread/pthread_mutex_destroy.h"
 #include "src/pthread/pthread_mutex_init.h"
 #include "src/pthread/pthread_mutex_lock.h"
+#include "src/pthread/pthread_mutex_trylock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
 #include "test/IntegrationTest/test.h"
 
@@ -128,6 +130,19 @@ void wait_and_step() {
   LIBC_NAMESPACE::pthread_mutex_destroy(&step_lock);
 }
 
+void trylock_test() {
+  pthread_mutex_t trylock_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&trylock_mutex, nullptr), 0);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&trylock_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&trylock_mutex), EBUSY);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&trylock_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&trylock_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&trylock_mutex), 0);
+
+  LIBC_NAMESPACE::pthread_mutex_destroy(&trylock_mutex);
+}
+
 static constexpr int THREAD_COUNT = 10;
 static pthread_mutex_t multiple_waiter_lock;
 static pthread_mutex_t counter_lock;
@@ -191,6 +206,7 @@ static pthread_mutex_t test_initializer = PTHREAD_MUTEX_INITIALIZER;
 TEST_MAIN() {
   relay_counter();
   wait_and_step();
+  trylock_test();
   multiple_waiters();
   return 0;
 }
