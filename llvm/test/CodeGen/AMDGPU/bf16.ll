@@ -18860,9 +18860,9 @@ define bfloat @v_fdiv_bf16(bfloat %a, bfloat %b) {
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
 ; GFX7-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX7-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
-; GFX7-NEXT:    v_fma_f32 v3, v4, v3, v3
 ; GFX7-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
+; GFX7-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX7-NEXT:    v_fma_f32 v3, v5, v3, v3
 ; GFX7-NEXT:    v_mul_f32_e32 v5, v4, v3
 ; GFX7-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX7-NEXT:    v_fma_f32 v5, v6, v3, v5
@@ -18929,10 +18929,9 @@ define bfloat @v_fdiv_bf16(bfloat %a, bfloat %b) {
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX950-NEXT:    v_div_scale_f32 v2, s[0:1], v1, v1, v0
 ; GFX950-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_fma_f32 v4, -v2, v3, 1.0
-; GFX950-NEXT:    v_fmac_f32_e32 v3, v4, v3
 ; GFX950-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
+; GFX950-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX950-NEXT:    v_fmac_f32_e32 v3, v5, v3
 ; GFX950-NEXT:    v_mul_f32_e32 v5, v4, v3
 ; GFX950-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX950-NEXT:    v_fmac_f32_e32 v5, v6, v3
