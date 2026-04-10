@@ -3181,6 +3181,8 @@ static Constant *ConstantFoldNextToward(const APFloat &Op0, const APFloat &Op1,
   assert(RetTy != nullptr);
   bool LosesInfo;
 
+  if (Op1.isSignaling())
+    return nullptr;
   if (Op1.isNaN()) {
     APFloat Ret(Op1);
     Ret.convert(RetTy->getFltSemantics(), detail::rmNearestTiesToEven,
@@ -3208,8 +3210,7 @@ static Constant *ConstantFoldNextToward(const APFloat &Op0, const APFloat &Op1,
 
   APFloat Next(Op0);
   Next.next(/*nextDown=*/Result == APFloat::cmpGreaterThan);
-  const bool DidOverflow = !Op0.isInfinity() && Next.isInfinity();
-  if (Next.isZero() || Next.isDenormal() || DidOverflow)
+  if (Next.isZero() || Next.isDenormal() || Next.isSignaling())
     return nullptr;
   return ConstantFP::get(RetTy->getContext(), Next);
 }

@@ -11,6 +11,7 @@
 @flt_neg_max = constant float 0xC7EFFFFFE0000000, align 4
 @flt_neg_infinity = constant float 0xFFF0000000000000, align 4
 @dbl_nan = constant double 0x7FF8000000000000, align 8
+@dbl_snan = constant double 0x7FF0000000000001, align 8
 @dbl_pos_min_subnormal = constant double 4.940660e-324, align 8
 @dbl_pos_min_normal = constant double 0x10000000000000, align 8
 @dbl_pos_max = constant double 0x7FEFFFFFFFFFFFFF, align 8
@@ -122,6 +123,25 @@ define double @nextafter_nan_with_payload_2() {
   ret double %next
 }
 
+define double @nextafter_snan() {
+; CHECK-LABEL: define double @nextafter_snan() {
+; CHECK-NEXT:    ret double 0x7FF8000000000000
+;
+  %arg1 = load double, ptr @dbl_snan
+  %next = call double @nextafter(double %arg1, double 1.0)
+  ret double %next
+}
+
+define double @nextafter_snan_2() {
+; CHECK-LABEL: define double @nextafter_snan_2() {
+; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 1.000000e+00, double 0x7FF0000000000001)
+; CHECK-NEXT:    ret double [[NEXT]]
+;
+  %arg2 = load double, ptr @dbl_snan
+  %next = call double @nextafter(double 1.0, double %arg2)
+  ret double %next
+}
+
 define float @nextafterf_nan_with_payload() {
 ; CHECK-LABEL: define float @nextafterf_nan_with_payload() {
 ; CHECK-NEXT:    ret float 0x7FF8000020000000
@@ -135,8 +155,7 @@ define float @nextafterf_nan_with_payload() {
 
 define double @nextafter_pos_overflow () {
 ; CHECK-LABEL: define double @nextafter_pos_overflow() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 0x7FEFFFFFFFFFFFFF, double 0x7FF0000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 0x7FF0000000000000
 ;
   %arg1 = load double, ptr @dbl_pos_max
   %arg2 = load double, ptr @dbl_pos_infinity
@@ -146,8 +165,7 @@ define double @nextafter_pos_overflow () {
 
 define float @nextafterf_pos_overflow() {
 ; CHECK-LABEL: define float @nextafterf_pos_overflow() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call float @nextafterf(float 0x47EFFFFFE0000000, float 0x7FF0000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %arg1 = load float, ptr @flt_pos_max
   %arg2 = load float, ptr @flt_pos_infinity
@@ -157,8 +175,7 @@ define float @nextafterf_pos_overflow() {
 
 define double @nextafter_neg_overflow() {
 ; CHECK-LABEL: define double @nextafter_neg_overflow() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 0xFFEFFFFFFFFFFFFF, double 0xFFF0000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 0xFFF0000000000000
 ;
   %arg1 = load double, ptr @dbl_neg_max
   %arg2 = load double, ptr @dbl_neg_infinity
@@ -168,8 +185,7 @@ define double @nextafter_neg_overflow() {
 
 define float @nextafterf_neg_overflow() {
 ; CHECK-LABEL: define float @nextafterf_neg_overflow() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call float @nextafterf(float 0xC7EFFFFFE0000000, float 0xFFF0000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
   %arg1 = load float, ptr @flt_neg_max
   %arg2 = load float, ptr @flt_neg_infinity
