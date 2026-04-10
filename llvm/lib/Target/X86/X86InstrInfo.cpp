@@ -7595,6 +7595,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
     if (NoNDDM && !IsTwoAddr) {
       Register SrcReg = MI.getOperand(1).getReg();
+      unsigned SrcSub = MI.getOperand(1).getSubReg();
       if (MI.killsRegister(SrcReg, /*TRI=*/nullptr))
         return NewMI;
 
@@ -7613,7 +7614,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
                    .addReg(NewSrc, RegState::Define, SubReg)
-                   .addReg(SrcReg);
+                   .addReg(SrcReg, {}, SrcSub);
       NewMI->getOperand(1).setReg(NewSrc);
       NewMI->getOperand(1).setSubReg(SubReg);
     }
