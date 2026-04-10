@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/UniqueBBID.h"
 
@@ -250,6 +251,37 @@ struct PGOAnalysisMap {
            std::tie(Other.FuncEntryCount, Other.BBEntries, Other.FeatEnable);
   }
 };
+
+/// Extracts addresses from a data stream.
+/// The base implementation reads the address directly.
+/// Subclasses can override to handle format-specific details such as relocation
+/// resolution.
+class AddressExtractor {
+  const DataExtractor &Data;
+
+public:
+  AddressExtractor(const DataExtractor &Data) : Data(Data) {}
+  virtual ~AddressExtractor() = default;
+
+  const DataExtractor &getDataExtractor() const { return Data; }
+
+  /// Extract and resolve an address at the current \p Cur position.
+  virtual Expected<uint64_t> extractAddress(DataExtractor::Cursor &Cur) {
+    uint64_t Address = Data.getAddress(Cur);
+    if (!Cur)
+      return Cur.takeError();
+    return Address;
+  }
+};
+
+/// Decodes one BB address map section payload.
+///
+/// \p Extractor provides address extraction and the underlying DataExtractor.
+/// \p PGOAnalyses if non-null, receives the decoded PGO analysis data. On
+///   error, \p PGOAnalyses may be partially populated.
+Expected<std::vector<BBAddrMap>>
+decodeBBAddrMapPayload(AddressExtractor &Extractor,
+                       std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
 
 } // end namespace object.
 } // end namespace llvm.
