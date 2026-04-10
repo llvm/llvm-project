@@ -3298,6 +3298,7 @@ static llvm::Error DoEnableBreakpointSite(ProcessGDBRemote &proc,
     LLDB_LOG(log, "Software breakpoints are unsupported");
   }
 
+  // Like above, this is also queried twice.
   if (gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     uint8_t error_no = gdb_comm.SendGDBStoppointTypePacket(
         eBreakpointHardware, true, addr, bp_op_size,
@@ -3359,7 +3360,6 @@ static llvm::Error DoDisableBreakpointSite(ProcessGDBRemote &proc,
 }
 
 Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
-  Status error;
   assert(bp_site != nullptr);
 
   // Get logging info
@@ -3381,14 +3381,13 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
               "ProcessGDBRemote::EnableBreakpointSite (size_id = %" PRIu64
               ") address = 0x%" PRIx64 " -- SUCCESS (already enabled)",
               site_id, (uint64_t)addr);
-    return error;
+    return Status();
   }
 
   return Status::FromError(DoEnableBreakpointSite(*this, *bp_site));
 }
 
 Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
-  Status error;
   assert(bp_site != nullptr);
   addr_t addr = bp_site->GetLoadAddress();
   user_id_t site_id = bp_site->GetID();
@@ -3403,7 +3402,7 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
               "ProcessGDBRemote::DisableBreakpointSite (site_id = %" PRIu64
               ") addr = 0x%8.8" PRIx64 " -- SUCCESS (already disabled)",
               site_id, (uint64_t)addr);
-    return error;
+    return Status();
   }
 
   return Status::FromError(DoDisableBreakpointSite(*this, *bp_site));
