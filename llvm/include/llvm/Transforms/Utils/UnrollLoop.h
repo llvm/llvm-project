@@ -115,6 +115,7 @@ LLVM_ABI void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                       ScalarEvolution *SE, DominatorTree *DT,
                                       AssumptionCache *AC,
                                       const TargetTransformInfo *TTI,
+                                      ArrayRef<BasicBlock *> Blocks,
                                       AAResults *AA = nullptr);
 
 LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
