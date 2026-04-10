@@ -172,6 +172,92 @@ struct M68kISelAddressMode {
 
 namespace {
 
+// Helper type used by isSafeStoreLoad. Used to determine if
+// it is safe to fold a load and store into a single operation.
+struct CallSeqChainInfo {
+  // The nearest callseq_{start/end} (or lowered equivalent)
+  // in the chain of the load or store currently being analyzed.
+  SDNode *Node = nullptr;
+  // True when a TokenFactor introduces a dependency on more than one
+  // chain with a callseq_{start/end} (or lowered equivalent) to the load
+  // or store currently being analyzed
+  bool Multiple = false;
+};
+
+static bool isCallSeqNode(const SDNode *N) {
+  if (N->getOpcode() == ISD::CALLSEQ_START ||
+      N->getOpcode() == ISD::CALLSEQ_END)
+    return true;
+  if (N->isMachineOpcode()) {
+    unsigned Opc = N->getMachineOpcode();
+    return Opc == M68k::ADJCALLSTACKDOWN || Opc == M68k::ADJCALLSTACKUP;
+  }
+  return false;
+}
+
+static CallSeqChainInfo getCallSeqChainInfo(SDValue Chain) {
+  SmallVector<SDValue, 8> Worklist = {Chain};
+  SmallPtrSet<SDNode *, 16> Visited;
+  SDNode *Found = nullptr;
+
+  while (!Worklist.empty()) {
+    SDNode *CN = Worklist.pop_back_val().getNode();
+    if (!CN || !Visited.insert(CN).second)
+      continue;
+
+    if (isCallSeqNode(CN)) {
+      if (!Found)
+        Found = CN;
+      else if (Found != CN)
+        return CallSeqChainInfo{nullptr, true};
+    }
+
+    if (CN->getOpcode() == ISD::TokenFactor) {
+      for (const SDValue &Op : CN->op_values())
+        if (Op.getValueType() == MVT::Other)
+          Worklist.push_back(Op);
+      continue;
+    }
+
+    for (const SDValue &Op : CN->op_values()) {
+      if (Op.getValueType() == MVT::Other) {
+        if (Worklist.size() == 8) {
+          // We can't actually evaluate all branches,
+          // be pessimistic and fail out.
+          return CallSeqChainInfo{nullptr, true};
+        }
+        Worklist.push_back(Op);
+        break;
+      }
+    }
+  }
+
+  return CallSeqChainInfo{Found, false};
+}
+
+// Helper for use in TableGen. We can't safely use a combined load/store in the
+// case where a token factor can cause a chain dep on a different call sequence.
+// Look for that case and return false if we can't confirm it's safe. This is
+// necessary due to the nesting level tracking in
+// ScheduleDAGRRList::FindCallSeqStart.
+static bool isSafeStoreLoad(SDNode *N) {
+  auto *ST = dyn_cast<StoreSDNode>(N);
+  if (!ST)
+    return false;
+  auto *LD = dyn_cast<LoadSDNode>(ST->getValue());
+  if (!LD)
+    return false;
+  // Load and store chains can be unrelated; guard against either side
+  // depending on a different call sequence boundary.
+  CallSeqChainInfo LoadInfo = getCallSeqChainInfo(LD->getChain());
+  CallSeqChainInfo StoreInfo = getCallSeqChainInfo(ST->getChain());
+  if (LoadInfo.Multiple || StoreInfo.Multiple)
+    return false;
+  if (!LoadInfo.Node && !StoreInfo.Node)
+    return true;
+  return LoadInfo.Node && StoreInfo.Node && LoadInfo.Node == StoreInfo.Node;
+}
+
 class M68kDAGToDAGISel : public SelectionDAGISel {
 public:
   M68kDAGToDAGISel() = delete;

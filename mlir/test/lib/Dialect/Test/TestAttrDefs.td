@@ -248,6 +248,39 @@ def TestAttrParams: Test_Attr<"TestAttrParams"> {
   let assemblyFormat = "`<` params `>`";
 }
 
+// Test roundtrip of ArrayRefParameter in struct format (issue #156623).
+// An ArrayRefParameter without a custom printer in a non-last struct position
+// must be wrapped in `[...]` to be parseable.
+def TestAttrArrayRefStruct : Test_Attr<"TestAttrArrayRefStruct"> {
+  let parameters = (ins
+    ArrayRefParameter<"int64_t">:$elements,
+    "int64_t":$count
+  );
+  let mnemonic = "arr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// Test that ArrayRefParameter in the LAST struct position is NOT wrapped:
+// no ambiguity exists because there is no following comma separator.
+def TestAttrArrayRefStructLast : Test_Attr<"TestAttrArrayRefStructLast"> {
+  let parameters = (ins
+    "int64_t":$count,
+    ArrayRefParameter<"int64_t">:$elements
+  );
+  let mnemonic = "arr_struct_last";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// Test roundtrip of OptionalArrayRefParameter in non-last struct position.
+def TestAttrOptArrayRefStruct : Test_Attr<"TestAttrOptArrayRefStruct"> {
+  let parameters = (ins
+    OptionalArrayRefParameter<"int64_t">:$elements,
+    "int64_t":$count
+  );
+  let mnemonic = "opt_arr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Test types can be parsed/printed.
 def TestAttrWithTypeParam : Test_Attr<"TestAttrWithTypeParam"> {
   let parameters = (ins "::mlir::IntegerType":$int_type,
@@ -319,6 +352,13 @@ def TestArrayOfUglyAttrs : ArrayOfAttr<Test_Dialect, "ArrayOfUglyAttrs",
 def TestArrayOfInts : ArrayOfAttr<Test_Dialect, "ArrayOfInts",
     "array_of_ints", "int32_t">;
 
+def TestSimpleEnum8Attr : EnumAttr<Test_Dialect, TestSimpleEnum8, "simple_enum_8"> {
+  let assemblyFormat = "`` $value";
+}
+
+def TestSimpleEnum16Attr : EnumAttr<Test_Dialect, TestSimpleEnum16, "simple_enum_16"> {
+  let assemblyFormat = "`` $value";
+}
 // An array of enum attributes.
 def TestSimpleEnumAttr : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum"> {
   let assemblyFormat = "`` $value";
@@ -357,6 +397,14 @@ def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
   let parameters = (ins "mlir::StringAttr":$value);
   let assemblyFormat = [{
     `<` custom<ConditionalAlias>($value) `>`
+  }];
+}
+
+def TestNestedAliasAttr : Test_Attr<"TestNestedAlias"> {
+  let mnemonic = "nested_alias";
+  let parameters = (ins "mlir::StringAttr":$value, OptionalParameter<"TestNestedAliasAttr">:$nested);
+  let assemblyFormat = [{
+    `<` $value (`,` $nested^)? `>`
   }];
 }
 
@@ -468,6 +516,12 @@ def TestSymbolRefAttr : Test_Attr<"TestSymbolRef",
   }];
   let parameters = (ins "::mlir::FlatSymbolRefAttr":$symbol);
   let assemblyFormat = "`<` $symbol `>`";
+}
+
+def TestAttrNewlineAndIndent : Test_Attr<"TestAttrNewlineAndIndent"> {
+  let mnemonic = "newline_and_indent";
+  let parameters = (ins "::mlir::Type":$indentType);
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // TEST_ATTRDEFS

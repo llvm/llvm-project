@@ -971,7 +971,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
         reg_offs, llvm::ConstantInt::get(CGF.Int32Ty, Align - 1),
         "align_regoffs");
     reg_offs = CGF.Builder.CreateAnd(
-        reg_offs, llvm::ConstantInt::get(CGF.Int32Ty, -Align),
+        reg_offs, llvm::ConstantInt::getSigned(CGF.Int32Ty, -Align),
         "aligned_regoffs");
   }
 

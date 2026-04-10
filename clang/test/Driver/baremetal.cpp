@@ -4,6 +4,18 @@
 // RUN:   | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
 // CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
 
+// RUN: %clang %s -### --target=arm-none-eabi -o %t.out 2>&1 \
+// RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM %s
+// CHECK-ARM: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}arm-unknown-none-eabi{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-ARM: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}arm-unknown-none-eabi{{[/\\]+}}include"
+
+// RUN: %clang %s -### --target=aarch64-none-elf -o %t.out 2>&1 \
+// RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
+// RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
+// CHECK-AARCH64: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}aarch64-unknown-none-elf{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-AARCH64: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}aarch64-unknown-none-elf{{[/\\]+}}include"
+
 // RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
 // RUN:     -T semihosted.lds \
 // RUN:     -L some/directory/user/asked/for \
@@ -19,8 +31,9 @@
 // CHECK-V6M-C-SAME: "--sysroot={{.*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm"
 // CHECK-V6M-C-SAME: "-Bstatic" "-m" "armelf" "-EL"
 // CHECK-V6M-C-SAME: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
-// CHECK-V6M-C-SAME: "-T" "semihosted.lds" "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
+// CHECK-V6M-C-SAME: "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-V6M-C-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
+// CHECK-V6M-C-SAME: "-T" "semihosted.lds"
 // CHECK-V6M-C-SAME: "{{.*}}.o"
 // CHECK-V6M-C-SAME: {{[^"]*}}libclang_rt.builtins.a"
 // CHECK-V6M-C-SAME: "-lc"
@@ -249,6 +262,22 @@
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=i386-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PCX86-NO-HOST-INC %s
+// CHECK-PCX86-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PCX86-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PCX86-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PCX86-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PCX86-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=x86_64-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PCX86_64-NO-HOST-INC %s
+// CHECK-PCX86_64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PCX86_64-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PCX86_64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PCX86_64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PCX86_64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 
 // RUN: %clang %s -### --target=riscv64-unknown-elf -o %t.out -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
@@ -566,6 +595,36 @@
 // CHECK-PPC64LEEABI-SAME: "-lc"
 // CHECK-PPC64LEEABI-SAME: "-o" "a.out"
 
+// RUN: %clang -no-canonical-prefixes %s -### --target=i386-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PCX86ELF %s
+// CHECK-PCX86ELF: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PCX86ELF: "-nostdsysteminc"
+// CHECK-PCX86ELF-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PCX86ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PCX86ELF-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PCX86ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PCX86ELF-NEXT: ld{{(.exe)?}}" "-Bstatic" "-m" "elf_i386"
+// CHECK-PCX86ELF-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-PCX86ELF-SAME:"{{.*}}.o"
+// CHECK-PCX86ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-PCX86ELF-SAME: "-lc"
+// CHECK-PCX86ELF-SAME: "-o" "a.out"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=x86_64-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PCX86_64ELF %s
+// CHECK-PCX86_64ELF: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PCX86_64ELF: "-nostdsysteminc"
+// CHECK-PCX86_64ELF-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PCX86_64ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PCX86_64ELF-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PCX86_64ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PCX86_64ELF-NEXT: ld{{(.exe)?}}" "-Bstatic" "-m" "elf_x86_64"
+// CHECK-PCX86_64ELF-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-PCX86_64ELF-SAME:"{{.*}}.o"
+// CHECK-PCX86_64ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-PCX86_64ELF-SAME: "-lc"
+// CHECK-PCX86_64ELF-SAME: "-o" "a.out"
+
 // Check that compiler-rt library without the arch filename suffix will
 // be used if present.
 // RUN: rm -rf %t.dir/baremetal_clang_rt_noarch
@@ -601,3 +660,12 @@
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
 // RUN:   | FileCheck --check-prefix=CHECK-RV64-RELAX %s
 // CHECK-RV64-RELAX-NOT: "--no-relax"
+
+// Check that "-T" follows after "-L" for RISC-V
+// RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf \
+// RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
+// RUN:     -T linker_script.lds -Lsearch_path \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-LINKER-SCRIPT %s
+// CHECK-RV64-LINKER-SCRIPT: ld{{(.exe)?}}"
+// CHECK-RV64-LINKER-SCRIPT-SAME: "-Lsearch_path"
+// CHECK-RV64-LINKER-SCRIPT-SAME: "-T" "linker_script.lds"

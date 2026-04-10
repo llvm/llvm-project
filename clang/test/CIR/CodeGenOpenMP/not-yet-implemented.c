@@ -10,7 +10,9 @@ void do_things() {
   {}
 
   int i;
-  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPParallelDirective}}
+  // TODO(OMP): We might consider overloading operator<< for OMPClauseKind in
+  // the future if we want to improve this.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMPClause : if}}
 #pragma omp parallel if(i)
   {}
 }

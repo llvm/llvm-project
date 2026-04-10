@@ -20,6 +20,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Hash.h"
 #include "llvm/Support/Regex.h"
@@ -72,6 +73,7 @@ public:
   using DebugTemplateNamesKind = llvm::codegenoptions::DebugTemplateNamesKind;
   using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
   using DebuggerKind = llvm::DebuggerKind;
+  using RelocSectionSymType = llvm::RelocSectionSymType;
 
 #define CODEGENOPT(Name, Bits, Default, Compatibility) unsigned Name : Bits;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)
@@ -521,7 +523,7 @@ public:
   /// Name of the stack usage file (i.e., .su file) if user passes
   /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
   /// passed on the command line.
-  std::string StackUsageOutput;
+  std::string StackUsageFile;
 
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.

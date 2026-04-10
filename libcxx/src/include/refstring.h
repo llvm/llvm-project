@@ -15,7 +15,7 @@
 #include <cstring>
 #include <stdexcept>
 
-// MacOS used to ship with libstdc++, and still support old applications
+// macOS and iOS used to ship with libstdc++, and still support old applications
 // linking against libstdc++. The libc++ and libstdc++ exceptions are supposed
 // to be ABI compatible, such that they can be thrown from one library and caught
 // in the other.
@@ -25,7 +25,7 @@
 // string singleton before manipulating the reference count. This is done so that
 // if an exception is created with a zero-length string in libstdc++, libc++abi
 // won't try to delete the memory.
-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) || defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
 #  define _LIBCPP_CHECK_FOR_GCC_EMPTY_STRING_STORAGE
 #  include <dlfcn.h>
 #  include <mach-o/dyld.h>

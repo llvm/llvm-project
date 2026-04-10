@@ -74,6 +74,7 @@ static bool createElementwiseOp(ConversionPatternRewriter &builder,
     builder.replaceOpWithNewOp<spirv::SNegateOp>(op, coopType, operands);
     return true;
   case gpu::MMAElementwiseOp::EXTF:
+  case gpu::MMAElementwiseOp::TRUNCF:
     builder.replaceOpWithNewOp<spirv::FConvertOp>(op, coopType, operands);
     return true;
   default:

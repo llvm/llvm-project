@@ -1,0 +1,9 @@
+static_library("DTLTO") {
+  output_name = "LLVMDTLTO"
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/LTO",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "DTLTO.cpp" ]
+}

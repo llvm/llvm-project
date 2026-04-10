@@ -1090,7 +1090,7 @@ define double @test73(ptr %p, i128 %i) {
 
 define double @test74(ptr %p, i64 %i) {
 ; ALL-LABEL: @test74(
-; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[I:%.*]]
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds [8 x i8], ptr [[P:%.*]], i64 [[I:%.*]]
 ; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
@@ -1438,10 +1438,10 @@ define i32 @test89() {
 
 define <2 x i32> @test90() {
 ; BE-LABEL: @test90(
-; BE-NEXT:    ret <2 x i32> <i32 0, i32 15360>
+; BE-NEXT:    ret <2 x i32> <i32 poison, i32 15360>
 ;
 ; LE-LABEL: @test90(
-; LE-NEXT:    ret <2 x i32> <i32 0, i32 1006632960>
+; LE-NEXT:    ret <2 x i32> <i32 poison, i32 1006632960>
 ;
   %t6 = bitcast <4 x half> <half poison, half poison, half poison, half 0xH3C00> to <2 x i32>
   ret <2 x i32> %t6

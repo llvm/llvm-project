@@ -927,6 +927,11 @@ public:
     return builder.createNullConstant(getLoc());
   }
 
+  template <typename A>
+  ExtValue genval(const Fortran::evaluate::ConditionalExpr<A> &) {
+    fir::emitFatalError(getLoc(), "ConditionalExpr should be lowered to HLFIR");
+  }
+
   static bool
   isDerivedTypeWithLenParameters(const Fortran::semantics::Symbol &sym) {
     if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
@@ -2907,10 +2912,8 @@ public:
       }
     }
 
-    auto loweredResult =
-        Fortran::lower::genCallOpAndResult(loc, converter, symMap, stmtCtx,
-                                           caller, callSiteType, resultType)
-            .first;
+    auto loweredResult = std::get<0>(Fortran::lower::genCallOpAndResult(
+        loc, converter, symMap, stmtCtx, caller, callSiteType, resultType));
     auto &result = std::get<ExtValue>(loweredResult);
 
     // Sync pointers and allocatables that may have been modified during the
@@ -4946,10 +4949,9 @@ private:
         caller.placeInput(argIface, arg);
       }
       Fortran::lower::LoweredResult res =
-          Fortran::lower::genCallOpAndResult(loc, converter, symMap,
-                                             getElementCtx(), caller,
-                                             callSiteType, retTy)
-              .first;
+          std::get<0>(Fortran::lower::genCallOpAndResult(
+              loc, converter, symMap, getElementCtx(), caller, callSiteType,
+              retTy));
       return std::get<ExtValue>(res);
     };
   }
@@ -5367,6 +5369,11 @@ private:
           .createAssign(temp, lf(iters));
       return temp;
     };
+  }
+
+  template <typename A>
+  CC genarr(const Fortran::evaluate::ConditionalExpr<A> &) {
+    fir::emitFatalError(getLoc(), "ConditionalExpr should be lowered to HLFIR");
   }
 
   template <typename T>

@@ -35,8 +35,7 @@ AST_MATCHER_P(CXXCatchStmt, hasCaughtType, Matcher<QualType>, InnerMatcher) {
   return InnerMatcher.matches(Node.getCaughtType(), Finder, Builder);
 }
 
-AST_MATCHER_P(CompoundStmt, hasAnyTextFromList, std::vector<llvm::StringRef>,
-              List) {
+AST_MATCHER_P(CompoundStmt, hasAnyTextFromList, std::vector<StringRef>, List) {
   if (List.empty())
     return false;
 
@@ -77,8 +76,8 @@ std::optional<TraversalKind> EmptyCatchCheck::getCheckTraversalKind() const {
 }
 
 void EmptyCatchCheck::registerMatchers(MatchFinder *Finder) {
-  auto AllowedNamedExceptionDecl =
-      namedDecl(matchers::matchesAnyListedName(AllowEmptyCatchForExceptions));
+  auto AllowedNamedExceptionDecl = namedDecl(
+      matchers::matchesAnyListedRegexName(AllowEmptyCatchForExceptions));
   auto AllowedNamedExceptionTypes =
       qualType(anyOf(hasDeclaration(AllowedNamedExceptionDecl),
                      references(AllowedNamedExceptionDecl),
@@ -88,7 +87,7 @@ void EmptyCatchCheck::registerMatchers(MatchFinder *Finder) {
                      hasCanonicalType(AllowedNamedExceptionTypes)));
 
   Finder->addMatcher(
-      cxxCatchStmt(unless(isExpansionInSystemHeader()), unless(isInMacro()),
+      cxxCatchStmt(unless(isInMacro()),
                    unless(hasCaughtType(IgnoredExceptionType)),
                    hasHandler(compoundStmt(
                        statementCountIs(0),

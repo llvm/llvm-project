@@ -92,7 +92,9 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
         expected_report = textwrap.dedent(
             """\
-            Error: Duplicate entries in 'Changes in existing checks':
+            Error: Duplicate entries in 'Changes in existing checks'.
+
+            Please merge these entries into a single bullet point.
 
             -- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters
 
@@ -107,6 +109,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
               ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+
             """
         )
         self.assertEqual(report_str, expected_report)
@@ -158,7 +161,6 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                   <clang-tidy/checks/readability/redundant-parentheses>` check.
 
                   Detect redundant parentheses.
-
 
                 """
             )
@@ -227,7 +229,6 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                   exceptions from captures are now diagnosed, exceptions in the bodies of
                   lambdas that aren't actually invoked are not.
 
-
                 """
             )
             self.assertEqual(out, expected_out)
@@ -269,7 +270,9 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             self.assertEqual(rc, 3)
             expected_report = textwrap.dedent(
                 """\
-                Error: Duplicate entries in 'Changes in existing checks':
+                Error: Duplicate entries in 'Changes in existing checks'.
+
+                Please merge these entries into a single bullet point.
 
                 -- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters
 
@@ -349,8 +352,49 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
               - ``for`` loops are supported.
 
-
            """
+        )
+        self.assertEqual(out, expected_out)
+
+    def test_release_notes_handles_multiline_doc(self) -> None:
+        rn_text = textwrap.dedent(
+            """\
+            Changes in existing checks
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+            - Renamed :doc:`performance-faster-string-find
+              <clang-tidy/checks/performance/faster-string-find>` to
+              :doc:`performance-faster-string-operation
+              <clang-tidy/checks/performance/faster-string-operation>`.
+              The `performance-faster-string-find` name is kept as an alias.
+
+            - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
+              to :doc:`portability-no-assembler
+              <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
+              name is kept as an alias.
+
+            """
+        )
+
+        out = _mod.normalize_release_notes(rn_text.splitlines(True))
+
+        expected_out = textwrap.dedent(
+            """\
+            Changes in existing checks
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+            - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
+              to :doc:`portability-no-assembler
+              <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
+              name is kept as an alias.
+
+            - Renamed :doc:`performance-faster-string-find
+              <clang-tidy/checks/performance/faster-string-find>` to
+              :doc:`performance-faster-string-operation
+              <clang-tidy/checks/performance/faster-string-operation>`.
+              The `performance-faster-string-find` name is kept as an alias.
+
+            """
         )
         self.assertEqual(out, expected_out)
 

@@ -133,7 +133,7 @@ void bar() {
 // CLANG21: arraydestroy.body:
 // CLANG21-NEXT:   %arraydestroy.elementPast = phi ptr [ %delete.end, %delete.notnull ], [ %arraydestroy.element, %arraydestroy.body ]
 // CLANG21-NEXT:   %arraydestroy.element = getelementptr inbounds %struct.Bird, ptr %arraydestroy.elementPast, i64 -1
-// CLANG21-NEXT:   call void @"??1Bird@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
+// CLANG21-NEXT:   call void @"??1Bird@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %arraydestroy.element)
 // CLANG21-NEXT:   %arraydestroy.done = icmp eq ptr %arraydestroy.element, %0
 // CLANG21-NEXT:   br i1 %arraydestroy.done, label %arraydestroy.done1, label %arraydestroy.body
 // CLANG21: arraydestroy.done1:
@@ -206,8 +206,8 @@ void bar() {
 // CHECK-NEXT:   %[[PASTELEM:.*]] = phi ptr [ %delete.end, %dtor.vector ], [ %arraydestroy.element, %arraydestroy.body ]
 // X64-NEXT:   %[[CURELEM:.*]] = getelementptr inbounds %struct.Parrot, ptr %[[PASTELEM]], i64 -1
 // X86-NEXT:   %[[CURELEM:.*]] = getelementptr inbounds %struct.Parrot, ptr %[[PASTELEM]], i32 -1
-// X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[CURELEM]])
-// X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %[[CURELEM]])
+// X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[CURELEM]])
+// X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[CURELEM]])
 // CHECK-NEXT:   %[[DONE:.*]] = icmp eq ptr %[[CURELEM]], %[[LTHIS]]
 // CHECK-NEXT:   br i1 %[[DONE]], label %arraydestroy.done3, label %arraydestroy.body
 // CHECK: arraydestroy.done3:
@@ -217,12 +217,16 @@ void bar() {
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete_after_array_destroy
 // CHECK: dtor.call_delete_after_array_destroy:
-// X64-NEXT:     call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef 8)
-// X86-NEXT:     call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef 4)
-// CHECK-NEXT:   br label %dtor.continue
+// X64-NEXT:  %[[ARRSZ:.*]] = mul i64 8, %[[HOWMANY]]
+// X86-NEXT:  %[[ARRSZ:.*]] = mul i32 4, %[[HOWMANY]]
+// X64-NEXT:  %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
+// X86-NEXT:  %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[TOTALSZ]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[TOTALSZ]])
+// CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
-// X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[LTHIS]])
-// X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %[[LTHIS]])
+// X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[LTHIS]])
+// X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[LTHIS]])
 // CHECK-NEXT:   %[[FIRSTBIT:.*]] = and i32 %[[LIP]], 1
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete
@@ -252,8 +256,12 @@ void bar() {
 // X86-NEXT: call void @"??_VHasOperatorDelete@@SAXPAX@Z"
 // CHECK-NEXT:   br label %dtor.continue
 // CHECK: dtor.call_glob_delete_after_array_destroy:
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef 8)
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef 4)
+// X64-NEXT: %[[ARRSZ:.*]] = mul i64 8, %[[COOKIE:.*]]
+// X86-NEXT: %[[ARRSZ:.*]] = mul i32 4, %[[COOKIE:.*]]
+// X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
+// X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
+// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT: call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:   br label %dtor.continue
 
 
@@ -303,8 +311,8 @@ void foobartest() {
 // CHECK-NEXT:  %arraydestroy.elementPast = phi ptr [ %delete.end, %dtor.vector ], [ %arraydestroy.element, %arraydestroy.body ]
 // X64-NEXT:  %arraydestroy.element = getelementptr inbounds %struct.Derived, ptr %arraydestroy.elementPast, i64 -1
 // X86-NEXT:  %arraydestroy.element = getelementptr inbounds %struct.Derived, ptr %arraydestroy.elementPast, i32 -1
-// X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %arraydestroy.element)
-// X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(8) %arraydestroy.element)
+// X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(16) dereferenceable(16) %arraydestroy.element)
+// X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) %arraydestroy.element)
 // CHECK-NEXT:  %arraydestroy.done = icmp eq ptr %arraydestroy.element, %this1
 // CHECK-NEXT:  br i1 %arraydestroy.done, label %arraydestroy.done3, label %arraydestroy.body
 // CHECK: arraydestroy.done3:
@@ -314,22 +322,26 @@ void foobartest() {
 // CHECK-NEXT:  %5 = icmp eq i32 %4, 0
 // CHECK-NEXT:  br i1 %5, label %dtor.continue, label %dtor.call_delete_after_array_destroy
 // CHECK: dtor.call_delete_after_array_destroy:
-// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef 16)
-// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef 8)
+// X64-NEXT: %[[ARRSZ:.*]] = mul i64 16, %[[COOKIE:.*]]
+// X86-NEXT: %[[ARRSZ:.*]] = mul i32 8, %[[COOKIE:.*]]
+// X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
+// X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
-// X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %this1)
-// X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(8) %this1)
-// CHECK-NEXT:  %6 = and i32 %should_call_delete2, 1
-// CHECK-NEXT:  %7 = icmp eq i32 %6, 0
-// CHECK-NEXT:  br i1 %7, label %dtor.continue, label %dtor.call_delete
+// X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(16) dereferenceable(16) %this1)
+// X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) %this1)
+// CHECK-NEXT:  %8 = and i32 %should_call_delete2, 1
+// CHECK-NEXT:  %9 = icmp eq i32 %8, 0
+// CHECK-NEXT:  br i1 %9, label %dtor.continue, label %dtor.call_delete
 // CHECK: dtor.call_delete:
 // X64-NEXT:  call void @"??3@YAXPEAX_K@Z"(ptr noundef %this1, i64 noundef 16)
 // X86-NEXT:  call void @"??3@YAXPAXI@Z"(ptr noundef %this1, i32 noundef 8)
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.continue:
-// CHECK-NEXT:  %8 = load ptr, ptr %retval
-// CHECK-NEXT:  ret ptr %8
+// CHECK-NEXT:  %10 = load ptr, ptr %retval
+// CHECK-NEXT:  ret ptr %10
 
 // X64: define weak dso_local noundef ptr @"??_EAllocatedAsArray@@UEAAPEAXI@Z"
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EAllocatedAsArray@@UAEPAXI@Z"

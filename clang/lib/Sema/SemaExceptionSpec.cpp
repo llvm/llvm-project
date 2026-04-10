@@ -15,6 +15,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -1250,6 +1251,18 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     return CT;
   }
 
+  case Stmt::SYCLKernelCallStmtClass: {
+    auto *SKCS = cast<SYCLKernelCallStmt>(S);
+    if (getLangOpts().SYCLIsDevice)
+      return canSubStmtsThrow(*this,
+                              SKCS->getOutlinedFunctionDecl()->getBody());
+    assert(getLangOpts().SYCLIsHost);
+    return canSubStmtsThrow(*this, SKCS->getKernelLaunchStmt());
+  }
+
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
+    return CT_Dependent;
+
     // ObjC message sends are like function calls, but never have exception
     // specs.
   case Expr::ObjCMessageExprClass:
@@ -1276,6 +1289,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::DesignatedInitUpdateExprClass:
   case Expr::ExprWithCleanupsClass:
   case Expr::ExtVectorElementExprClass:
+  case Expr::MatrixElementExprClass:
   case Expr::InitListExprClass:
   case Expr::ArrayInitLoopExprClass:
   case Expr::MemberExprClass:
@@ -1303,6 +1317,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     // Some might be dependent for other reasons.
   case Expr::ArraySubscriptExprClass:
   case Expr::MatrixSubscriptExprClass:
+  case Expr::MatrixSingleSubscriptExprClass:
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
@@ -1379,6 +1394,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::CXXNoexceptExprClass:
   case Expr::CXXNullPtrLiteralExprClass:
   case Expr::CXXPseudoDestructorExprClass:
+  case Expr::CXXReflectExprClass:
   case Expr::CXXScalarValueInitExprClass:
   case Expr::CXXThisExprClass:
   case Expr::CXXUuidofExprClass:
@@ -1430,7 +1446,6 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:
-  case Stmt::SYCLKernelCallStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::CompoundStmtClass:
   case Stmt::ContinueStmtClass:

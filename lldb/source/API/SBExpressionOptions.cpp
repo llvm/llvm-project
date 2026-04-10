@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBExpressionOptions.h"
 #include "Utils.h"
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -254,6 +255,38 @@ void SBExpressionOptions::SetAllowJIT(bool allow) {
 
   m_opaque_up->SetExecutionPolicy(allow ? m_opaque_up->default_execution_policy
                                         : eExecutionPolicyNever);
+}
+
+// FIXME: the language plugin should expression options dynamically and
+// we should validate here (by asking the language plugin) that the options
+// being set/retrieved are actually valid options.
+
+bool SBExpressionOptions::GetBooleanLanguageOption(const char *option_name,
+                                                   SBError &error) const {
+  LLDB_INSTRUMENT_VA(this, option_name, error);
+
+  error.Clear();
+
+  auto value_or_err = m_opaque_up->GetBooleanLanguageOption(option_name);
+  if (!value_or_err) {
+    error.SetErrorString(llvm::toString(value_or_err.takeError()).c_str());
+    return false;
+  }
+
+  return *value_or_err;
+}
+
+SBError SBExpressionOptions::SetBooleanLanguageOption(const char *option_name,
+                                                      bool value) {
+  LLDB_INSTRUMENT_VA(this, option_name, value);
+
+  SBError error;
+
+  if (llvm::Error err =
+          m_opaque_up->SetBooleanLanguageOption(option_name, value))
+    error.SetErrorString(llvm::toString(std::move(err)).c_str());
+
+  return error;
 }
 
 EvaluateExpressionOptions *SBExpressionOptions::get() const {

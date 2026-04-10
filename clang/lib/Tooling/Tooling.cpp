@@ -108,13 +108,14 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
         // tooling will consider host-compilation only. For tooling on device
         // compilation, device compilation only option, such as
         // `--cuda-device-only`, needs specifying.
-        assert(Actions.size() > 1);
-        assert(
-            isa<driver::CompileJobAction>(Actions.front()) ||
-            // On MacOSX real actions may end up being wrapped in
-            // BindArchAction.
-            (isa<driver::BindArchAction>(Actions.front()) &&
-             isa<driver::CompileJobAction>(*Actions.front()->input_begin())));
+        if (Actions.size() > 1) {
+          assert(
+              isa<driver::CompileJobAction>(Actions.front()) ||
+              // On MacOSX real actions may end up being wrapped in
+              // BindArchAction.
+              (isa<driver::BindArchAction>(Actions.front()) &&
+               isa<driver::CompileJobAction>(*Actions.front()->input_begin())));
+        }
         OffloadCompilation = true;
         break;
       }
@@ -447,18 +448,13 @@ bool FrontendActionFactory::runInvocation(
   CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
   Compiler.setVirtualFileSystem(Files->getVirtualFileSystemPtr());
   Compiler.setFileManager(Files);
+  Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+  Compiler.createSourceManager();
 
   // The FrontendAction can have lifetime requirements for Compiler or its
   // members, and we need to ensure it's deleted earlier than Compiler. So we
   // pass it to an std::unique_ptr declared after the Compiler variable.
   std::unique_ptr<FrontendAction> ScopedToolAction(create());
-
-  // Create the compiler's actual diagnostics engine.
-  Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
-  if (!Compiler.hasDiagnostics())
-    return false;
-
-  Compiler.createSourceManager();
 
   const bool Success = Compiler.ExecuteAction(*ScopedToolAction);
 

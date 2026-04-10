@@ -165,9 +165,6 @@ endif()
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
-# Don't build libarcher due to:
-# https://github.com/llvm/llvm-project/issues/170138
-set_final_stage_var(LIBOMP_ARCHER_SUPPORT "OFF" BOOL)
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   set_final_stage_var(CLANG_BOLT "INSTRUMENT" STRING)
 endif()
@@ -175,6 +172,10 @@ set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
 set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  set_final_stage_var(LLVM_USE_STATIC_LIBXML2 "ON" BOOL)
+endif()
+
 if (LLVM_RELEASE_ENABLE_LTO)
   set_final_stage_var(LLVM_ENABLE_FATLTO "ON" BOOL)
   set_final_stage_var(CPACK_PRE_BUILD_SCRIPTS "${CMAKE_CURRENT_LIST_DIR}/release_cpack_pre_build_strip_lto.cmake" STRING)

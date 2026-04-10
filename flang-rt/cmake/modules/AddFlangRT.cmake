@@ -122,12 +122,18 @@ function (add_flangrt_library name)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
+  # Include the RPC utilities from the `libc` project.
+  if (TARGET llvm-libc-common-utilities)
+    set(extra_deps llvm-libc-common-utilities)
+  endif()
+
   # Also add header files to IDEs to list as part of the library.
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
   # Create selected library types.
   if (build_object)
     add_library("${name_object}" OBJECT ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    target_link_libraries(${name_object} PRIVATE ${extra_deps})
     set_target_properties(${name_object} PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         FOLDER "Flang-RT/Object Libraries"
@@ -139,11 +145,11 @@ function (add_flangrt_library name)
   endif ()
   if (build_static)
     add_library("${name_static}" STATIC ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static)
+    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static ${extra_deps})
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared)
+    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared  ${extra_deps})
     if (Threads_FOUND) 
       target_link_libraries(${name_shared} PUBLIC Threads::Threads)
     endif ()
@@ -232,42 +238,39 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
 
-      # We define our own _GLIBCXX_THROW_OR_ABORT here because, as of
-      # GCC 15.1, the libstdc++ header file <bits/c++config> uses
-      # (void)_EXC in its definition of _GLIBCXX_THROW_OR_ABORT to
-      # silence a warning.
-      #
-      # This is a problem for us because some compilers, specifically
-      # clang, do not always optimize away that (void)_EXC even though
-      # it is unreachable since it occurs after a call to
-      # _builtin_abort().  Because _EXC is typically an object derived
-      # from std::exception, (void)_EXC, when not optimized away,
-      # calls std::exception methods defined in the libstdc++ shared
-      # library.  We shouldn't link against that library since our
-      # build version may conflict with the version used by a hybrid
-      # Fortran/C++ application.
-      #
-      # Redefining _GLIBCXX_THROW_OR_ABORT in this manner is not
-      # supported by the maintainers of libstdc++, so future changes
-      # to libstdc++ may require future changes to this build script
-      # and/or future changes to the Fortran runtime source code.
-      target_compile_options(${tgtname} PUBLIC "-D_GLIBCXX_THROW_OR_ABORT(_EXC)=(__builtin_abort())")
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:-include${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
+        )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
+        )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:/FI${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
         )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:-qinclude=${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
+        )
     endif ()
 
     # Add target specific options if necessary.
-    if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
+    if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
         )
-    elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+    elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
@@ -344,13 +347,13 @@ function (add_flangrt_library name)
     if (ARG_INSTALL_WITH_TOOLCHAIN)
       set_target_properties(${tgtname}
         PROPERTIES
-          ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
-          LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
+          ARCHIVE_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
+          LIBRARY_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
         )
 
       install(TARGETS ${tgtname}
-          ARCHIVE DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
-          LIBRARY DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
+          ARCHIVE DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
+          LIBRARY DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
         )
     endif ()
 

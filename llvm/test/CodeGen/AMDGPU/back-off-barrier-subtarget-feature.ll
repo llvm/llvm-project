@@ -5,6 +5,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=-back-off-barrier < %s | FileCheck --check-prefixes=GFX9-NO-BACKOFF %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck --check-prefixes=GFX10-BACKOFF %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11-BACKOFF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-BACKOFF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250-BACKOFF %s
 
 ; Subtargets must wait for outstanding memory instructions before a barrier if
 ; they cannot back off of the barrier.
@@ -59,6 +61,33 @@ define void @back_off_barrier_no_fence(ptr %in, ptr %out) #0 {
 ; GFX11-BACKOFF-NEXT:    flat_store_b32 v[2:3], v0
 ; GFX11-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-BACKOFF-LABEL: back_off_barrier_no_fence:
+; GFX12-BACKOFF:       ; %bb.0:
+; GFX12-BACKOFF-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_expcnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_samplecnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_kmcnt 0x0
+; GFX12-BACKOFF-NEXT:    flat_load_b32 v0, v[0:1]
+; GFX12-BACKOFF-NEXT:    s_barrier_signal -1
+; GFX12-BACKOFF-NEXT:    s_barrier_wait -1
+; GFX12-BACKOFF-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-BACKOFF-NEXT:    flat_store_b32 v[2:3], v0
+; GFX12-BACKOFF-NEXT:    s_wait_dscnt 0x0
+; GFX12-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-BACKOFF-LABEL: back_off_barrier_no_fence:
+; GFX1250-BACKOFF:       ; %bb.0:
+; GFX1250-BACKOFF-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-BACKOFF-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-BACKOFF-NEXT:    flat_load_b32 v0, v[0:1]
+; GFX1250-BACKOFF-NEXT:    s_barrier_signal -1
+; GFX1250-BACKOFF-NEXT:    s_barrier_wait -1
+; GFX1250-BACKOFF-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-BACKOFF-NEXT:    flat_store_b32 v[2:3], v0
+; GFX1250-BACKOFF-NEXT:    s_wait_dscnt 0x0
+; GFX1250-BACKOFF-NEXT:    s_set_pc_i64 s[30:31]
   %load = load i32, ptr %in
   call void @llvm.amdgcn.s.barrier()
   store i32 %load, ptr %out
@@ -121,6 +150,36 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 ; GFX11-BACKOFF-NEXT:    flat_store_b32 v[2:3], v0
 ; GFX11-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-BACKOFF-LABEL: back_off_barrier_with_fence:
+; GFX12-BACKOFF:       ; %bb.0:
+; GFX12-BACKOFF-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_expcnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_samplecnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_kmcnt 0x0
+; GFX12-BACKOFF-NEXT:    flat_load_b32 v0, v[0:1]
+; GFX12-BACKOFF-NEXT:    s_wait_storecnt 0x0
+; GFX12-BACKOFF-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-BACKOFF-NEXT:    s_barrier_signal -1
+; GFX12-BACKOFF-NEXT:    s_barrier_wait -1
+; GFX12-BACKOFF-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-BACKOFF-NEXT:    flat_store_b32 v[2:3], v0
+; GFX12-BACKOFF-NEXT:    s_wait_dscnt 0x0
+; GFX12-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-BACKOFF-LABEL: back_off_barrier_with_fence:
+; GFX1250-BACKOFF:       ; %bb.0:
+; GFX1250-BACKOFF-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-BACKOFF-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-BACKOFF-NEXT:    flat_load_b32 v0, v[0:1]
+; GFX1250-BACKOFF-NEXT:    s_wait_storecnt 0x0
+; GFX1250-BACKOFF-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-BACKOFF-NEXT:    s_barrier_signal -1
+; GFX1250-BACKOFF-NEXT:    s_barrier_wait -1
+; GFX1250-BACKOFF-NEXT:    flat_store_b32 v[2:3], v0
+; GFX1250-BACKOFF-NEXT:    s_wait_dscnt 0x0
+; GFX1250-BACKOFF-NEXT:    s_set_pc_i64 s[30:31]
   %load = load i32, ptr %in
   fence syncscope("workgroup") release
   call void @llvm.amdgcn.s.barrier()

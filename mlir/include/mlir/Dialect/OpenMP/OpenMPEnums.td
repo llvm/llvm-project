@@ -123,7 +123,7 @@ def ClauseMapFlagsPresent : I32BitEnumAttrCaseBit<"present", 10>;
 def ClauseMapFlagsOMPXHold : I32BitEnumAttrCaseBit<"ompx_hold", 11>;
 def ClauseMapFlagsAttach : I32BitEnumAttrCaseBit<"attach", 12>;
 def ClauseMapFlagsAttachAlways : I32BitEnumAttrCaseBit<"attach_always", 13>;
-def ClauseMapFlagsAttachNone : I32BitEnumAttrCaseBit<"attach_none", 14>;
+def ClauseMapFlagsAttachNever : I32BitEnumAttrCaseBit<"attach_never", 14>;
 def ClauseMapFlagsAttachAuto : I32BitEnumAttrCaseBit<"attach_auto", 15>;
 def ClauseMapFlagsRefPtr : I32BitEnumAttrCaseBit<"ref_ptr", 16>;
 def ClauseMapFlagsRefPtee : I32BitEnumAttrCaseBit<"ref_ptee", 17>;
@@ -148,7 +148,7 @@ def ClauseMapFlags : OpenMP_BitEnumAttr<
       ClauseMapFlagsOMPXHold,
       ClauseMapFlagsAttach,
       ClauseMapFlagsAttachAlways,
-      ClauseMapFlagsAttachNone,
+      ClauseMapFlagsAttachNever,
       ClauseMapFlagsAttachAuto,
       ClauseMapFlagsRefPtr,
       ClauseMapFlagsRefPtee,
@@ -236,6 +236,22 @@ def OrderModifier
 }
 def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
                                     "order_mod">;
+
+//===----------------------------------------------------------------------===//
+// linear_modifier enum.
+//===----------------------------------------------------------------------===//
+
+def LinearModifierVal : I32EnumAttrCase<"val", 0>;
+def LinearModifierRef : I32EnumAttrCase<"ref", 1>;
+def LinearModifierUval : I32EnumAttrCase<"uval", 2>;
+
+def LinearModifier : OpenMP_I32EnumAttr<"LinearModifier", "linear modifier",
+                                        [LinearModifierVal, LinearModifierRef,
+                                         LinearModifierUval]>;
+
+def LinearModifierAttr : OpenMP_EnumAttr<LinearModifier, "linear_modifier"> {
+  let assemblyFormat = "`(` $value `)`";
+}
 
 //===----------------------------------------------------------------------===//
 // reduction_modifier enum.

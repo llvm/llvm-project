@@ -4,8 +4,6 @@
 define { <vscale x 8 x half>, <vscale x 8 x half> } @multi_vec_mul_single_x2_f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zm) {
 ; CHECK-LABEL: multi_vec_mul_single_x2_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmul { z0.h, z1.h }, { z0.h, z1.h }, z2.h
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fmul.single.x2.nxv8f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zm)
@@ -15,10 +13,6 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @multi_vec_mul_single_x2_f16
 define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>  } @multi_vec_mul_single_x4_f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zdn3, <vscale x 8 x half> %zdn4, <vscale x 8 x half> %zm) {
 ; CHECK-LABEL: multi_vec_mul_single_x4_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmul { z0.h - z3.h }, { z0.h - z3.h }, z4.h
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>  } @llvm.aarch64.sve.fmul.single.x4.nxv8f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zdn3, <vscale x 8 x half> %zdn4, <vscale x 8 x half> %zm)
@@ -28,10 +22,6 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 define { <vscale x 8 x half>, <vscale x 8 x half> } @multi_vec_mul_x2_f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zm1, <vscale x 8 x half> %zm2) {
 ; CHECK-LABEL: multi_vec_mul_x2_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    fmul { z0.h, z1.h }, { z0.h, z1.h }, { z2.h, z3.h }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fmul.x2.nxv8f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zm1, <vscale x 8 x half> %zm2)
@@ -41,14 +31,6 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @multi_vec_mul_x2_f16(<vscal
 define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>  } @multi_vec_mul_x4_f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zdn3, <vscale x 8 x half> %zdn4, <vscale x 8 x half> %zm1, <vscale x 8 x half> %zm2, <vscale x 8 x half> %zm3, <vscale x 8 x half> %zm4) {
 ; CHECK-LABEL: multi_vec_mul_x4_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
 ; CHECK-NEXT:    fmul { z0.h - z3.h }, { z0.h - z3.h }, { z4.h - z7.h }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>  } @llvm.aarch64.sve.fmul.x4.nxv8f16(<vscale x 8 x half> %zdn1, <vscale x 8 x half> %zdn2, <vscale x 8 x half> %zdn3, <vscale x 8 x half> %zdn4, <vscale x 8 x half> %zm1, <vscale x 8 x half> %zm2, <vscale x 8 x half> %zm3, <vscale x 8 x half> %zm4)
@@ -58,8 +40,6 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 define { <vscale x 4 x float>, <vscale x 4 x float> } @multi_vec_mul_single_x2_f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zm) {
 ; CHECK-LABEL: multi_vec_mul_single_x2_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmul { z0.s, z1.s }, { z0.s, z1.s }, z2.s
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.fmul.single.x2.nxv4f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zm)
@@ -69,10 +49,6 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @multi_vec_mul_single_x2_f
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>  } @multi_vec_mul_single_x4_f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zdn3, <vscale x 4 x float> %zdn4, <vscale x 4 x float> %zm) {
 ; CHECK-LABEL: multi_vec_mul_single_x4_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmul { z0.s - z3.s }, { z0.s - z3.s }, z4.s
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>  } @llvm.aarch64.sve.fmul.single.x4.nxv4f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zdn3, <vscale x 4 x float> %zdn4, <vscale x 4 x float> %zm)
@@ -82,10 +58,6 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 define { <vscale x 4 x float>, <vscale x 4 x float> } @multi_vec_mul_x2_f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zm1, <vscale x 4 x float> %zm2) {
 ; CHECK-LABEL: multi_vec_mul_x2_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    fmul { z0.s, z1.s }, { z0.s, z1.s }, { z2.s, z3.s }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.fmul.x2.nxv4f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zm1, <vscale x 4 x float> %zm2)
@@ -95,14 +67,6 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @multi_vec_mul_x2_f32(<vsc
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>  } @multi_vec_mul_x4_f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zdn3, <vscale x 4 x float> %zdn4, <vscale x 4 x float> %zm1, <vscale x 4 x float> %zm2, <vscale x 4 x float> %zm3, <vscale x 4 x float> %zm4) {
 ; CHECK-LABEL: multi_vec_mul_x4_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
 ; CHECK-NEXT:    fmul { z0.s - z3.s }, { z0.s - z3.s }, { z4.s - z7.s }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>  } @llvm.aarch64.sve.fmul.x4.nxv4f32(<vscale x 4 x float> %zdn1, <vscale x 4 x float> %zdn2, <vscale x 4 x float> %zdn3, <vscale x 4 x float> %zdn4, <vscale x 4 x float> %zm1, <vscale x 4 x float> %zm2, <vscale x 4 x float> %zm3, <vscale x 4 x float> %zm4)
@@ -112,8 +76,6 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 define { <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_mul_single_x2_f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zm) {
 ; CHECK-LABEL: multi_vec_mul_single_x2_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmul { z0.d, z1.d }, { z0.d, z1.d }, z2.d
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.fmul.single.x2.nxv2f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zm)
@@ -123,10 +85,6 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_mul_single_x2
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>  } @multi_vec_mul_single_x4_f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4, <vscale x 2 x double> %zm) {
 ; CHECK-LABEL: multi_vec_mul_single_x4_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmul { z0.d - z3.d }, { z0.d - z3.d }, z4.d
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>  } @llvm.aarch64.sve.fmul.single.x4.nxv2f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4, <vscale x 2 x double> %zm)
@@ -136,10 +94,6 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 define { <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_mul_x2_f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zm1, <vscale x 2 x double> %zm2) {
 ; CHECK-LABEL: multi_vec_mul_x2_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
 ; CHECK-NEXT:    fmul { z0.d, z1.d }, { z0.d, z1.d }, { z2.d, z3.d }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.fmul.x2.nxv2f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zm1, <vscale x 2 x double> %zm2)
@@ -149,14 +103,6 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @multi_vec_mul_x2_f64(<v
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>  } @multi_vec_mul_x4_f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4, <vscale x 2 x double> %zm1, <vscale x 2 x double> %zm2, <vscale x 2 x double> %zm3, <vscale x 2 x double> %zm4) {
 ; CHECK-LABEL: multi_vec_mul_x4_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
 ; CHECK-NEXT:    fmul { z0.d - z3.d }, { z0.d - z3.d }, { z4.d - z7.d }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>  } @llvm.aarch64.sve.fmul.x4.nxv2f64(<vscale x 2 x double> %zdn1, <vscale x 2 x double> %zdn2, <vscale x 2 x double> %zdn3, <vscale x 2 x double> %zdn4, <vscale x 2 x double> %zm1, <vscale x 2 x double> %zm2, <vscale x 2 x double> %zm3, <vscale x 2 x double> %zm4)

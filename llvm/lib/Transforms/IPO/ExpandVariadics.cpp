@@ -53,6 +53,7 @@
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -128,6 +129,15 @@ public:
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
 
+  // Per-target overrides of special symbols.
+  virtual bool ignoreFunction(const Function *F) { return false; }
+
+  // Any additional address spaces used in va intrinsics that should be
+  // expanded.
+  virtual SmallVector<unsigned> getTargetSpecificVaIntrinAddrSpaces() const {
+    return {};
+  }
+
   virtual ~VariadicABIInfo() = default;
 };
 
@@ -152,6 +162,11 @@ public:
   StringRef getPassName() const override { return "Expand variadic functions"; }
 
   bool rewriteABI() { return Mode == ExpandVariadicsMode::Lowering; }
+
+  template <typename T> bool isValidCallingConv(T *F) {
+    return F->getCallingConv() == CallingConv::C ||
+           F->getCallingConv() == CallingConv::SPIR_FUNC;
+  }
 
   bool runOnModule(Module &M) override;
 
@@ -230,7 +245,10 @@ public:
         F->hasFnAttribute(Attribute::Naked))
       return false;
 
-    if (F->getCallingConv() != CallingConv::C)
+    if (ABI->ignoreFunction(F))
+      return false;
+
+    if (!isValidCallingConv(F))
       return false;
 
     if (rewriteABI())
@@ -249,7 +267,7 @@ public:
         return false;
       }
 
-      if (CI->getCallingConv() != CallingConv::C)
+      if (!isValidCallingConv(CI))
         return false;
 
       return true;
@@ -299,9 +317,7 @@ public:
     }
 
     void initializeStructAlloca(const DataLayout &DL, IRBuilder<> &Builder,
-                                AllocaInst *Alloced) {
-
-      StructType *VarargsTy = cast<StructType>(Alloced->getAllocatedType());
+                                AllocaInst *Alloced, StructType *VarargsTy) {
 
       for (size_t I = 0; I < size(); I++) {
 
@@ -355,13 +371,21 @@ bool ExpandVariadics::runOnModule(Module &M) {
   // variadic functions have also been replaced.
 
   {
-    // 0 and AllocaAddrSpace are sufficient for the targets implemented so far
     unsigned Addrspace = 0;
     Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, Addrspace);
 
     Addrspace = DL.getAllocaAddrSpace();
     if (Addrspace != 0)
       Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, Addrspace);
+
+    // Process any addrspaces targets declare to be important.
+    const SmallVector<unsigned> &TargetASVec =
+        ABI->getTargetSpecificVaIntrinAddrSpaces();
+    for (unsigned TargetAS : TargetASVec) {
+      if (TargetAS == 0 || TargetAS == DL.getAllocaAddrSpace())
+        continue;
+      Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, TargetAS);
+    }
   }
 
   if (Mode != ExpandVariadicsMode::Lowering)
@@ -609,6 +633,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
+  if (ABI->ignoreFunction(CB->getCalledFunction()))
+    return Changed;
+
   if (!expansionApplicableToFunctionCall(CB)) {
     if (rewriteABI())
       report_fatal_error("Cannot lower callbase instruction");
@@ -744,7 +771,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // Initialize the fields in the struct
   Builder.SetInsertPoint(CB);
   Builder.CreateLifetimeStart(Alloced);
-  Frame.initializeStructAlloca(DL, Builder, Alloced);
+  Frame.initializeStructAlloca(DL, Builder, Alloced, VarargsTy);
 
   const unsigned NumArgs = FuncType->getNumParams();
   SmallVector<Value *> Args(CB->arg_begin(), CB->arg_begin() + NumArgs);
@@ -940,6 +967,54 @@ struct NVPTX final : public VariadicABIInfo {
   }
 };
 
+struct SPIRV final : public VariadicABIInfo {
+
+  bool enableForTarget() override { return true; }
+
+  bool vaListPassedInSSARegister() override { return true; }
+
+  Type *vaListType(LLVMContext &Ctx) override {
+    return PointerType::getUnqual(Ctx);
+  }
+
+  Type *vaListParameterType(Module &M) override {
+    return PointerType::getUnqual(M.getContext());
+  }
+
+  Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
+                          AllocaInst *, Value *Buffer) override {
+    return Builder.CreateAddrSpaceCast(Buffer, vaListParameterType(M));
+  }
+
+  VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) override {
+    // Expects natural alignment in all cases. The variadic call ABI will handle
+    // promoting types to their appropriate size and alignment.
+    Align A = DL.getABITypeAlign(Parameter);
+    return {A, false};
+  }
+
+  // The SPIR-V backend has special handling for builtins.
+  bool ignoreFunction(const Function *F) override {
+    if (!F->isDeclaration())
+      return false;
+
+    std::string Demangled = llvm::demangle(F->getName());
+    StringRef DemangledName(Demangled);
+
+    // Skip any SPIR-V builtins.
+    if (DemangledName.starts_with("__spirv_") ||
+        DemangledName.starts_with("printf("))
+      return true;
+
+    return false;
+  }
+
+  // We will likely see va intrinsics in the generic addrspace (4).
+  SmallVector<unsigned> getTargetSpecificVaIntrinAddrSpaces() const override {
+    return {4};
+  }
+};
+
 struct Wasm final : public VariadicABIInfo {
 
   bool enableForTarget() override {
@@ -993,6 +1068,12 @@ std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
   case Triple::nvptx:
   case Triple::nvptx64: {
     return std::make_unique<NVPTX>();
+  }
+
+  case Triple::spirv:
+  case Triple::spirv32:
+  case Triple::spirv64: {
+    return std::make_unique<SPIRV>();
   }
 
   default:

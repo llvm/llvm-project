@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/BPSectionOrdererBase.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -59,13 +60,10 @@ class BssSection;
 class GdbIndexSection;
 class GotPltSection;
 class GotSection;
-class IBTPltSection;
 class IgotPltSection;
 class InputSection;
 class IpltSection;
 class MipsGotSection;
-class MipsRldMapSection;
-class PPC32Got2Section;
 class PPC64LongBranchTargetSection;
 class PltSection;
 class RelocationBaseSection;
@@ -253,9 +251,11 @@ struct Config {
   llvm::StringRef cmseInputLib;
   llvm::StringRef cmseOutputLib;
   ReportPolicy zBtiReport = ReportPolicy::None;
+  llvm::StringRef zBtiReportSource;
   ReportPolicy zCetReport = ReportPolicy::None;
   ReportPolicy zPauthReport = ReportPolicy::None;
   ReportPolicy zGcsReport = ReportPolicy::None;
+  llvm::StringRef zGcsReportSource;
   ReportPolicy zGcsReportDynamic = ReportPolicy::None;
   ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
   ReportPolicy zZicfilpUnlabeledReport = ReportPolicy::None;
@@ -306,6 +306,7 @@ struct Config {
   bool bpCompressionSortStartupFunctions = false;
   bool bpFunctionOrderForCompression = false;
   bool bpDataOrderForCompression = false;
+  llvm::SmallVector<BPCompressionSortSpec> bpCompressionSortSpecs;
   bool bpVerboseSectionOrderer = false;
   bool branchToBranch = false;
   bool checkSections;
@@ -486,11 +487,6 @@ struct Config {
   // if that's true.)
   bool isMips64EL;
 
-  // True if we need to set the DF_STATIC_TLS flag to an output file, which
-  // works as a hint to the dynamic loader that the shared object contains code
-  // compiled with the initial-exec TLS model.
-  bool hasTlsIe = false;
-
   // Holds set of ELF header flags for the target.
   uint32_t eflags = 0;
 
@@ -516,17 +512,18 @@ struct Config {
   // 4 for ELF32, 8 for ELF64.
   int wordsize;
 
-  // Mode of MTE to write to the ELF note. Should be one of NT_MEMTAG_ASYNC (for
-  // async), NT_MEMTAG_SYNC (for sync), or NT_MEMTAG_LEVEL_NONE (for none). If
-  // async or sync is enabled, write the ELF note specifying the default MTE
-  // mode.
-  int androidMemtagMode;
+  // Mode of MTE to write to the dynamic array. Should be one of NT_MEMTAG_ASYNC
+  // (for async), NT_MEMTAG_SYNC (for sync), or NT_MEMTAG_LEVEL_NONE (for none).
+  // If async or sync is enabled, write the tag specifying the default MTE mode.
+  int memtagMode;
   // Signal to the dynamic loader to enable heap MTE.
-  bool androidMemtagHeap;
+  bool memtagHeap;
   // Signal to the dynamic loader that this binary expects stack MTE. Generally,
   // this means to map the primary and thread stacks as PROT_MTE. Note: This is
   // not supported on Android 11 & 12.
-  bool androidMemtagStack;
+  bool memtagStack;
+  // Whether to emit the Android-specific legacy memtag note.
+  bool memtagAndroidNote;
 
   // When using a unified pre-link LTO pipeline, specify the backend LTO mode.
   LtoKind ltoKind = LtoKind::Default;
@@ -586,13 +583,13 @@ struct InStruct {
   std::unique_ptr<MipsGotSection> mipsGot;
   std::unique_ptr<SyntheticSection> mipsOptions;
   std::unique_ptr<SyntheticSection> mipsReginfo;
-  std::unique_ptr<MipsRldMapSection> mipsRldMap;
+  std::unique_ptr<SyntheticSection> mipsRldMap;
   std::unique_ptr<SyntheticSection> partEnd;
   std::unique_ptr<SyntheticSection> partIndex;
   std::unique_ptr<PltSection> plt;
   std::unique_ptr<IpltSection> iplt;
-  std::unique_ptr<PPC32Got2Section> ppc32Got2;
-  std::unique_ptr<IBTPltSection> ibtPlt;
+  std::unique_ptr<SyntheticSection> ppc32Got2;
+  std::unique_ptr<SyntheticSection> ibtPlt;
   std::unique_ptr<RelocationBaseSection> relaPlt;
   // Non-SHF_ALLOC sections
   std::unique_ptr<SyntheticSection> debugNames;
@@ -668,6 +665,9 @@ struct Ctx : CommonLinkerContext {
   ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
   SmallVector<Symbol *, 0> synthesizedSymbols;
+  // ifunc resolver symbol clones for IRELATIVE. Linker relaxation adjusts
+  // these.
+  SmallVector<Defined *, 0> irelativeSyms;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;

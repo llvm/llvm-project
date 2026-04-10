@@ -330,6 +330,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                   {v2s64, v2s64}})
       .clampScalar(0, s32, s128)
       .widenScalarToNextPow2(0)
+      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
       .minScalarEltSameAsIf(always, 1, 0)
       .maxScalarEltSameAsIf(always, 1, 0)
       .clampNumElements(0, v8s8, v16s8)
@@ -339,7 +340,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
-  getActionDefinitionsBuilder(G_CTLZ)
+  getActionDefinitionsBuilder({G_CTLZ, G_CTLS})
       .legalFor({{s32, s32},
                  {s64, s64},
                  {v8s8, v8s8},
@@ -350,6 +351,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v4s32, v4s32}})
       .widenScalarToNextPow2(1, /*Min=*/32)
       .clampScalar(1, s32, s64)
+      .widenScalarOrEltToNextPow2OrMinSize(1, /*Min=*/8)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -810,7 +812,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .alwaysLegal();
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
-      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}});
+      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .clampNumElements(0, v2s32, v2s32);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({s32, s64})
@@ -1261,6 +1264,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             return Query.Types[0].isFixedVector() &&
                    Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getScalarSizeInBits() >= 8 &&
+                   isPowerOf2_64(Query.Types[0].getScalarSizeInBits()) &&
                    Query.Types[0].getSizeInBits() <= 128 &&
                    Query.Types[1].getSizeInBits() <= 64;
           },
@@ -1755,6 +1760,26 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_range_prefetch: {
+    auto &AddrVal = MI.getOperand(1);
+
+    int64_t IsWrite = MI.getOperand(2).getImm();
+    int64_t IsStream = MI.getOperand(3).getImm();
+    unsigned PrfOp = (IsStream << 2) | IsWrite;
+
+    MIB.buildInstr(AArch64::G_AARCH64_RANGE_PREFETCH)
+        .addImm(PrfOp)
+        .add(AddrVal)
+        .addUse(MI.getOperand(4).getReg()); // Metadata
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_prefetch_ir: {
+    auto &AddrVal = MI.getOperand(1);
+    MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(24).add(AddrVal);
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::aarch64_neon_uaddv:
   case Intrinsic::aarch64_neon_saddv:
   case Intrinsic::aarch64_neon_umaxv:
@@ -1863,6 +1888,106 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_SAVGFLOOR);
   case Intrinsic::aarch64_neon_srhadd:
     return LowerBinOp(TargetOpcode::G_SAVGCEIL);
+  case Intrinsic::aarch64_neon_sqshrn: {
+    if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return true;
+    // Create right shift instruction. Store the output register in Shr.
+    auto Shr = MIB.buildInstr(AArch64::G_VASHR,
+                              {MRI.getType(MI.getOperand(2).getReg())},
+                              {MI.getOperand(2), MI.getOperand(3).getImm()});
+    // Build the narrow intrinsic, taking in Shr.
+    MIB.buildInstr(TargetOpcode::G_TRUNC_SSAT_S, {MI.getOperand(0)}, {Shr});
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_sqshrun: {
+    if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return true;
+    // Create right shift instruction. Store the output register in Shr.
+    auto Shr = MIB.buildInstr(AArch64::G_VASHR,
+                              {MRI.getType(MI.getOperand(2).getReg())},
+                              {MI.getOperand(2), MI.getOperand(3).getImm()});
+    // Build the narrow intrinsic, taking in Shr.
+    MIB.buildInstr(TargetOpcode::G_TRUNC_SSAT_U, {MI.getOperand(0)}, {Shr});
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_sqrshrn: {
+    if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return true;
+    // Create right shift instruction. Store the output register in Shr.
+    auto Shr = MIB.buildInstr(AArch64::G_SRSHR_I,
+                              {MRI.getType(MI.getOperand(2).getReg())},
+                              {MI.getOperand(2), MI.getOperand(3).getImm()});
+    // Build the narrow intrinsic, taking in Shr.
+    MIB.buildInstr(TargetOpcode::G_TRUNC_SSAT_S, {MI.getOperand(0)}, {Shr});
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_sqrshrun: {
+    if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return true;
+    // Create right shift instruction. Store the output register in Shr.
+    auto Shr = MIB.buildInstr(AArch64::G_SRSHR_I,
+                              {MRI.getType(MI.getOperand(2).getReg())},
+                              {MI.getOperand(2), MI.getOperand(3).getImm()});
+    // Build the narrow intrinsic, taking in Shr.
+    MIB.buildInstr(TargetOpcode::G_TRUNC_SSAT_U, {MI.getOperand(0)}, {Shr});
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_uqrshrn: {
+    if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return true;
+    // Create right shift instruction. Store the output register in Shr.
+    auto Shr = MIB.buildInstr(AArch64::G_URSHR_I,
+                              {MRI.getType(MI.getOperand(2).getReg())},
+                              {MI.getOperand(2), MI.getOperand(3).getImm()});
+    // Build the narrow intrinsic, taking in Shr.
+    MIB.buildInstr(TargetOpcode::G_TRUNC_USAT_U, {MI.getOperand(0)}, {Shr});
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_uqshrn: {
+    if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return true;
+    // Create right shift instruction. Store the output register in Shr.
+    auto Shr = MIB.buildInstr(AArch64::G_VLSHR,
+                              {MRI.getType(MI.getOperand(2).getReg())},
+                              {MI.getOperand(2), MI.getOperand(3).getImm()});
+    // Build the narrow intrinsic, taking in Shr.
+    MIB.buildInstr(TargetOpcode::G_TRUNC_USAT_U, {MI.getOperand(0)}, {Shr});
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_sqshlu: {
+    // Check if last operand is constant vector dup
+    auto ShiftAmount = isConstantOrConstantSplatVector(
+        *MRI.getVRegDef(MI.getOperand(3).getReg()), MRI);
+    if (ShiftAmount) {
+      // If so, create a new intrinsic with the correct shift amount
+      MIB.buildInstr(AArch64::G_SQSHLU_I, {MI.getOperand(0)},
+                     {MI.getOperand(2)})
+          .addImm(ShiftAmount->getSExtValue());
+      MI.eraseFromParent();
+      return true;
+    }
+    return false;
+  }
+  case Intrinsic::aarch64_neon_vsli: {
+    MIB.buildInstr(
+        AArch64::G_SLI, {MI.getOperand(0)},
+        {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4).getImm()});
+    MI.eraseFromParent();
+    break;
+  }
+  case Intrinsic::aarch64_neon_vsri: {
+    MIB.buildInstr(
+        AArch64::G_SRI, {MI.getOperand(0)},
+        {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4).getImm()});
+    MI.eraseFromParent();
+    break;
+  }
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
@@ -1901,6 +2026,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_U);
   case Intrinsic::aarch64_neon_uqxtn:
     return LowerUnaryOp(TargetOpcode::G_TRUNC_USAT_U);
+  case Intrinsic::aarch64_neon_fcvtzu:
+    return LowerUnaryOp(TargetOpcode::G_FPTOUI_SAT);
+  case Intrinsic::aarch64_neon_fcvtzs:
+    return LowerUnaryOp(TargetOpcode::G_FPTOSI_SAT);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse

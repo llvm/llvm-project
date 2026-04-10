@@ -1,13 +1,13 @@
 # RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
 # RUN:   -stop-after=prologepilog | FileCheck %s
 
-# Check that lr isn't paired with a GPR if it's the first pair, as
-# that can't be described as a SEH opcode if combined with predecrement.
+# Check that when LR is paired with a GPR, we don't combine it into a
+# predecrement that can't be described as a SEH opcode.
 
-# CHECK: early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -16
-# CHECK-NEXT: frame-setup SEH_SaveReg_X 19, -16
-# CHECK-NEXT: frame-setup STRXui killed $lr, $sp, 1
-# CHECK-NEXT: frame-setup SEH_SaveReg 30, 8
+# CHECK:      $sp = frame-setup SUBXri $sp, 16, 0
+# CHECK-NEXT: frame-setup SEH_StackAlloc 16
+# CHECK-NEXT: frame-setup STPXi killed $x19, killed $lr, $sp, 0
+# CHECK-NEXT: frame-setup SEH_SaveRegP 19, 30, 0
 # CHECK-NEXT: frame-setup SEH_PrologEnd
 
 --- |

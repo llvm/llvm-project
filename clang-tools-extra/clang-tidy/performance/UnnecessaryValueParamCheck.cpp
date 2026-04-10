@@ -51,11 +51,11 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
-      hasType(qualType(
-          hasCanonicalType(matchers::isExpensiveToCopy()),
-          unless(anyOf(hasCanonicalType(referenceType()),
-                       hasDeclaration(namedDecl(
-                           matchers::matchesAnyListedName(AllowedTypes))))))),
+      hasType(qualType(hasCanonicalType(matchers::isExpensiveToCopy()),
+                       unless(anyOf(hasCanonicalType(referenceType()),
+                                    hasDeclaration(namedDecl(
+                                        matchers::matchesAnyListedRegexName(
+                                            AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
       traverse(TK_AsIs,
@@ -149,7 +149,7 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
   // 1. the ParmVarDecl is in a macro, since we cannot place them correctly
   // 2. the function is virtual as it might break overrides
   // 3. the function is an explicit template/ specialization.
-  const auto *Method = llvm::dyn_cast<CXXMethodDecl>(&Function);
+  const auto *Method = dyn_cast<CXXMethodDecl>(&Function);
   if (Param.getBeginLoc().isMacroID() || (Method && Method->isVirtual()) ||
       Function.getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;

@@ -6,14 +6,14 @@ define void @stride7_i32(ptr noalias nocapture %dst, i64 %n) #0 {
 ; CHECK:      vector.body
 ; CHECK:        %[[VEC_IND:.*]] = phi <vscale x 4 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
 ; CHECK-NEXT:   %[[PTR_INDICES:.*]] = mul nuw nsw <vscale x 4 x i64> %[[VEC_IND]], splat (i64 7)
-; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds i32, ptr %dst, <vscale x 4 x i64> %[[PTR_INDICES]]
+; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds [4 x i8], ptr %dst, <vscale x 4 x i64> %[[PTR_INDICES]]
 ; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 %[[PTRS]]
 ; CHECK-NEXT:   %[[VALS:.*]] = add nsw <vscale x 4 x i32> %[[GLOAD]],
 ; CHECK-NEXT:   call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %[[VALS]], <vscale x 4 x ptr> align 4 %[[PTRS]]
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.05 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i64 %i.05, 7
   %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %mul
@@ -24,7 +24,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -33,14 +33,14 @@ define void @stride7_f64(ptr noalias nocapture %dst, i64 %n) #0 {
 ; CHECK:      vector.body
 ; CHECK:        %[[VEC_IND:.*]] = phi <vscale x 2 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
 ; CHECK-NEXT:   %[[PTR_INDICES:.*]] = mul nuw nsw <vscale x 2 x i64> %[[VEC_IND]], splat (i64 7)
-; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds double, ptr %dst, <vscale x 2 x i64> %[[PTR_INDICES]]
+; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds [8 x i8], ptr %dst, <vscale x 2 x i64> %[[PTR_INDICES]]
 ; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> align 8 %[[PTRS]],
 ; CHECK-NEXT:   %[[VALS:.*]] = fadd <vscale x 2 x double> %[[GLOAD]],
 ; CHECK-NEXT:  call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> %[[VALS]], <vscale x 2 x ptr> align 8 %[[PTRS]],
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.05 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i64 %i.05, 7
   %arrayidx = getelementptr inbounds double, ptr %dst, i64 %mul
@@ -51,7 +51,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !6
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -60,21 +60,21 @@ define void @cond_stride7_f64(ptr noalias nocapture %dst, ptr noalias nocapture 
 ; CHECK-LABEL: @cond_stride7_f64(
 ; CHECK:      vector.body
 ; CHECK:        %[[MASK:.*]] = icmp ne <vscale x 2 x i64>
-; CHECK:        %[[PTRS:.*]] = getelementptr inbounds double, ptr %dst, <vscale x 2 x i64> %{{.*}}
+; CHECK:        %[[PTRS:.*]] = getelementptr inbounds [8 x i8], ptr %dst, <vscale x 2 x i64> %{{.*}}
 ; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> align 8 %[[PTRS]], <vscale x 2 x i1> %[[MASK]]
 ; CHECK-NEXT:   %[[VALS:.*]] = fadd <vscale x 2 x double> %[[GLOAD]],
 ; CHECK-NEXT:  call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> %[[VALS]], <vscale x 2 x ptr> align 8 %[[PTRS]], <vscale x 2 x i1> %[[MASK]])
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %i.07 = phi i64 [ %inc, %for.inc ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %cond, i64 %i.07
   %0 = load i64, ptr %arrayidx, align 8
   %tobool.not = icmp eq i64 %0, 0
   br i1 %tobool.not, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %mul = mul nsw i64 %i.07, 7
   %arrayidx1 = getelementptr inbounds double, ptr %dst, i64 %mul
   %1 = load double, ptr %arrayidx1, align 8
@@ -82,12 +82,12 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx1, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !6
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 

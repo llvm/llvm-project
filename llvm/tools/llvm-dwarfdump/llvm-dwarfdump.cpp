@@ -334,6 +334,21 @@ static opt<bool> Verbose("verbose",
                          cat(DwarfDumpCategory));
 static alias VerboseAlias("v", desc("Alias for --verbose."), aliasopt(Verbose),
                           cat(DwarfDumpCategory), cl::NotHidden);
+static opt<bool>
+    ShowVariableCoverage("show-variable-coverage",
+                         desc("Show per-variable coverage metrics."),
+                         cat(DwarfDumpCategory));
+static opt<std::string>
+    CoverageBaseline("coverage-baseline",
+                     desc("File to use as the baseline for variable coverage "
+                          "statistics (implies --show-variable-coverage)"),
+                     value_desc("filename"), cat(DwarfDumpCategory));
+static opt<bool> CombineInstances(
+    "combine-inline-variable-instances",
+    desc(
+        "Use with --show-variable-coverage to average variable coverage across "
+        "inlined subroutine instances instead of printing them separately."),
+    cat(DwarfDumpCategory));
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 } // namespace
@@ -905,7 +920,8 @@ int main(int argc, char **argv) {
     DumpType |= DIDT_UUID;
   if (DumpAll)
     DumpType = DIDT_All;
-  if (DumpType == DIDT_Null) {
+  if (DumpType == DIDT_Null && !ShowVariableCoverage &&
+      CoverageBaseline.empty()) {
     if (Verbose || Verify)
       DumpType = DIDT_All;
     else
@@ -955,6 +971,30 @@ int main(int argc, char **argv) {
   } else {
     for (StringRef Object : Objects)
       Success &= handleFile(Object, dumpObjectFile, OutputFile.os());
+  }
+
+  if (!CoverageBaseline.empty()) {
+    auto handleBaseline = [&](ObjectFile &BaselineObj,
+                              DWARFContext &BaselineCtx, const Twine &Filename,
+                              raw_ostream &OS) {
+      auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
+                              const Twine &Filename, raw_ostream &OS) {
+        return showVariableCoverage(Obj, DICtx, &BaselineObj, &BaselineCtx,
+                                    CombineInstances, OS);
+      };
+      for (StringRef Object : Objects)
+        Success &= handleFile(Object, showCoverage, OutputFile.os());
+      return true;
+    };
+    Success &= handleFile(CoverageBaseline, handleBaseline, OutputFile.os());
+  } else if (ShowVariableCoverage) {
+    auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
+                            const Twine &Filename, raw_ostream &OS) {
+      return showVariableCoverage(Obj, DICtx, nullptr, nullptr,
+                                  CombineInstances, OS);
+    };
+    for (StringRef Object : Objects)
+      Success &= handleFile(Object, showCoverage, OutputFile.os());
   }
 
   return Success ? EXIT_SUCCESS : EXIT_FAILURE;

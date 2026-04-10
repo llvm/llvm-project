@@ -215,6 +215,13 @@ struct InitializeParams {
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   std::optional<TraceLevel> trace;
+
+  /// The root URI of the workspace. Is null if no folder is open.
+  std::optional<std::string> rootUri;
+
+  /// The root path of the workspace. Is null if no folder is open.
+  /// This is deprecated, use rootUri instead, but kept for more compatibility.
+  std::optional<std::string> rootPath;
 };
 
 /// Add support for JSON serialization.
@@ -493,6 +500,18 @@ struct DidCloseTextDocumentParams {
 LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
                                 DidCloseTextDocumentParams &result,
                                 llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
+// DidSaveTextDocumentParams
+//===----------------------------------------------------------------------===//
+
+struct DidSaveTextDocumentParams {
+  /// The document that was saved.
+  TextDocumentIdentifier textDocument;
+};
+
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &,
+                                DidSaveTextDocumentParams &, llvm::json::Path);
 
 //===----------------------------------------------------------------------===//
 // DidChangeTextDocumentParams

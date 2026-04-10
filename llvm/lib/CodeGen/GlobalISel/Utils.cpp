@@ -152,7 +152,7 @@ Register llvm::constrainOperandRegClass(
                                   RegMO);
 }
 
-bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
+void llvm::constrainSelectedInstRegOperands(MachineInstr &I,
                                             const TargetInstrInfo &TII,
                                             const TargetRegisterInfo &TRI,
                                             const RegisterBankInfo &RBI) {
@@ -170,7 +170,6 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
       continue;
 
     LLVM_DEBUG(dbgs() << "Converting operand: " << MO << '\n');
-    assert(MO.isReg() && "Unsupported non-reg operand");
 
     Register Reg = MO.getReg();
     // Physical registers don't need to be constrained.
@@ -195,7 +194,6 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
         I.tieOperands(DefIdx, OpI);
     }
   }
-  return true;
 }
 
 bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
@@ -452,8 +450,10 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
           VReg, MRI, LookThroughInstrs);
   if (!Reg)
     return std::nullopt;
-  return FPValueAndVReg{getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF(),
-                        Reg->VReg};
+
+  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
+                   Reg->Value);
+  return FPValueAndVReg{FloatVal, Reg->VReg};
 }
 
 const ConstantFP *
@@ -769,17 +769,17 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
     C1.copySign(C2);
     return C1;
   case TargetOpcode::G_FMINNUM:
-    if (C1.isSignaling() || C2.isSignaling())
-      return std::nullopt;
     return minnum(C1, C2);
   case TargetOpcode::G_FMAXNUM:
-    if (C1.isSignaling() || C2.isSignaling())
-      return std::nullopt;
     return maxnum(C1, C2);
   case TargetOpcode::G_FMINIMUM:
     return minimum(C1, C2);
   case TargetOpcode::G_FMAXIMUM:
     return maximum(C1, C2);
+  case TargetOpcode::G_FMINIMUMNUM:
+    return minimumnum(C1, C2);
+  case TargetOpcode::G_FMAXIMUMNUM:
+    return maximumnum(C1, C2);
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not
@@ -794,15 +794,35 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
   return std::nullopt;
 }
 
+static GBuildVector *getBuildVectorLikeDef(Register Reg,
+                                           const MachineRegisterInfo &MRI) {
+  if (auto *BV = getOpcodeDef<GBuildVector>(Reg, MRI))
+    return BV;
+
+  auto *Bitcast = getOpcodeDef(TargetOpcode::G_BITCAST, Reg, MRI);
+  if (!Bitcast)
+    return nullptr;
+
+  auto [Dst, DstTy, Src, SrcTy] = Bitcast->getFirst2RegLLTs();
+  if (!SrcTy.isVector() || !DstTy.isVector())
+    return nullptr;
+  if (SrcTy.getElementCount() != DstTy.getElementCount())
+    return nullptr;
+  if (SrcTy.getScalarSizeInBits() != DstTy.getScalarSizeInBits())
+    return nullptr;
+
+  return getOpcodeDef<GBuildVector>(Src, MRI);
+}
+
 SmallVector<APInt>
 llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
                               const Register Op2,
                               const MachineRegisterInfo &MRI) {
-  auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+  auto *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
   if (!SrcVec2)
     return SmallVector<APInt>();
 
-  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+  auto *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
   if (!SrcVec1)
     return SmallVector<APInt>();
 
@@ -1875,6 +1895,7 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
     return true;
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTLS:
   case TargetOpcode::G_ABS:
   case TargetOpcode::G_CTPOP:
   case TargetOpcode::G_BSWAP:

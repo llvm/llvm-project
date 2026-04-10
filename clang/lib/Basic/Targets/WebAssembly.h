@@ -46,6 +46,8 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // hlsl_private
     0,  // hlsl_device
     0,  // hlsl_input
+    0,  // hlsl_output
+    0,  // hlsl_push_constant
     20, // wasm_funcref
 };
 
@@ -61,6 +63,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
+  bool HasCompactImports = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
@@ -70,6 +73,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
+  bool HasRelaxedAtomics = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;
@@ -80,6 +84,7 @@ public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
       : TargetInfo(T) {
     AddrSpaceMap = &WebAssemblyAddrSpaceMap;
+    UseAddrSpaceMapMangling = true;
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;

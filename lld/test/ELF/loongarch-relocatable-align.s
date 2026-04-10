@@ -57,8 +57,8 @@
 # CHECK-REL:  Relocation section '.rela.text1' at offset {{.*}} contains 5 entries:
 
 ## Test LA32.
-# RUN: llvm-mc -filetype=obj -triple=loongarch32 -mattr=+relax a.s -o a.32.o
-# RUN: llvm-mc -filetype=obj -triple=loongarch32 -mattr=+relax b.s -o b.32.o
+# RUN: llvm-mc -filetype=obj -triple=loongarch32 -mattr=+32s,+relax a.s -o a.32.o
+# RUN: llvm-mc -filetype=obj -triple=loongarch32 -mattr=+32s,+relax b.s -o b.32.o
 # RUN: ld.lld -r a.32.o b.32.o -o out.32.ro
 # RUN: ld.lld -Ttext=0x10000 out.32.ro -o out32
 # RUN: llvm-objdump -dr --no-show-raw-insn out32 | FileCheck %s --check-prefix=CHECK32

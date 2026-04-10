@@ -628,3 +628,5 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
 REGISTER_CHECKER(StackAddrEscape)
 REGISTER_CHECKER(StackAddrAsyncEscape)
+
+#undef REGISTER_CHECKER

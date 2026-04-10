@@ -250,7 +250,7 @@ namespace subobject {
 namespace lifetime {
   constexpr int &&id(int &&n) { return static_cast<int&&>(n); }
   constexpr int &&dead() { return id(0); } // expected-note {{temporary created here}}
-  constexpr int bad() { int &&n = dead(); n = 1; return n; } // expected-note {{assignment to temporary whose lifetime has ended}}
+  constexpr int bad() { int &&n = dead(); n = 1; return n; } // expected-note {{assignment to object outside its lifetime}}
   static_assert(bad(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
 
@@ -1455,4 +1455,30 @@ constexpr bool missingCase() {
   switch (1) {
     1u: return false; // expected-error {{expected 'case' keyword before expression}}
   }
+}
+
+namespace GH183290 {
+struct A {
+  constexpr char a() const { return 'Z'; }
+  char b = a();
+};
+
+// expected-error@+1 {{expected class name}}
+struct B : sizeof(int[c]) {};
+
+struct C {
+  B b;
+  // expected-note@+1 {{overridden virtual function is here}}
+  virtual const A *d() const;
+};
+
+struct D : C {
+  // expected-error@+1 {{return type of virtual function 'd' is not covariant with the return type of the function it overrides ('const B *' is not derived from 'const A *')}}
+  constexpr virtual const B *d() const { return &this->b; }
+};
+
+constexpr D e;
+constexpr const C *f = &e;
+// expected-error@+1 {{static assertion expression is not an integral constant expression}}
+static_assert(f->d()->b == 'Z', "");
 }

@@ -1,0 +1,354 @@
+# RUN: llc -mtriple=riscv32 -enable-machine-outliner -start-before=machine-outliner \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define i8 @test1(ptr %var1, ptr %0, ptr %var12, ptr %var2, ptr %var3, ptr %var11, ptr %var6, ptr %var7, ptr %var8, ptr %var9, ptr %1, ptr %var10, ptr %2) #0 {
+  ; CHECK-LABEL: test1:
+  ; CHECK:       # %bb.0: # %entry
+  ; CHECK-NEXT:    addi sp, sp, -32
+  ; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    mv s0, a7
+  ; CHECK-NEXT:    mv t0, a6
+  ; CHECK-NEXT:    mv t1, a5
+  ; CHECK-NEXT:    mv s1, a4
+  ; CHECK-NEXT:    mv a1, a3
+  ; CHECK-NEXT:    lw s2, 48(sp)
+  ; CHECK-NEXT:    lw s3, 40(sp)
+  ; CHECK-NEXT:    lw a5, 32(sp)
+  ; CHECK-NEXT:    li a6, 1
+  ; CHECK-NEXT:    li a7, 1
+  ; CHECK-NEXT:    li t2, 0
+  ; CHECK-NEXT:    mv a2, a0
+  ; CHECK-NEXT:    mv      a3, t1
+  ; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+  entry:
+    %var4 = alloca ptr, align 4
+    %var5 = alloca ptr, align 4
+    %call = call fastcc i8 null(ptr %var1, ptr %var2, ptr %var1, ptr %var11, ptr %var6, ptr %var8, i32 1, i8 1)
+    store ptr %1, ptr %var3, align 4
+    store ptr %2, ptr %var7, align 4
+    ret i8 1
+  }
+
+  define i8 @test2(ptr %var1, ptr %0, ptr %var12, ptr %var2, ptr %var3, ptr %var11, ptr %var6, ptr %var7, ptr %var8, ptr %var9, ptr %1, ptr %var10, ptr %2) #0 {
+  ; CHECK-LABEL: test2:
+  ; CHECK:       # %bb.0: # %entry
+  ; CHECK-NEXT:    addi sp, sp, -32
+  ; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    mv s0, a7
+  ; CHECK-NEXT:    mv t0, a6
+  ; CHECK-NEXT:    mv t1, a5
+  ; CHECK-NEXT:    mv s1, a4
+  ; CHECK-NEXT:    mv a2, a3
+  ; CHECK-NEXT:    lw s2, 48(sp)
+  ; CHECK-NEXT:    lw s3, 40(sp)
+  ; CHECK-NEXT:    lw a5, 32(sp)
+  ; CHECK-NEXT:    li a6, 1
+  ; CHECK-NEXT:    li a7, 1
+  ; CHECK-NEXT:    li t2, 0
+  ; CHECK-NEXT:    mv a1, a0
+  ; CHECK-NEXT:    mv      a3, t1
+  ; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+  entry:
+    %var4 = alloca ptr, align 4
+    %var5 = alloca ptr, align 4
+    %call = call fastcc i8 null(ptr %var1, ptr %var1, ptr %var2, ptr %var11, ptr %var6, ptr %var8, i32 1, i8 1)
+    store ptr %1, ptr %var3, align 4
+    store ptr %2, ptr %var7, align 4
+    ret i8 1
+  }
+
+  ; NOTE: the utils/update_llc_test_checks.py script does not produce checks for the outlined function
+  ; so this is manually specified.
+  ; CHECK-LABEL: OUTLINED_FUNCTION_0:
+  ; CHECK:       # %bb.0:
+  ; CHECK-NEXT:      mv      a4, t0
+  ; CHECK-NEXT:      jalr    t2
+  ; CHECK-NEXT:      sw      s3, 0(s1)
+  ; CHECK-NEXT:      li      a0, 1
+  ; CHECK-NEXT:      sw      s2, 0(s0)
+  ; CHECK-NEXT:      lw      ra, 28(sp)
+  ; CHECK-NEXT:      lw      s0, 24(sp)
+  ; CHECK-NEXT:      lw      s1, 20(sp)
+  ; CHECK-NEXT:      lw      s2, 16(sp)
+  ; CHECK-NEXT:      lw      s3, 12(sp)
+  ; CHECK-NEXT:      addi    sp, sp, 32
+  ; CHECK-NEXT:      ret
+
+  attributes #0 = { minsize nounwind }
+...
+---
+name:            test1
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$x10', virtual-reg: '' }
+  - { reg: '$x13', virtual-reg: '' }
+  - { reg: '$x14', virtual-reg: '' }
+  - { reg: '$x15', virtual-reg: '' }
+  - { reg: '$x16', virtual-reg: '' }
+  - { reg: '$x17', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: true
+  localFrameSize:  8
+fixedStack:
+  - { id: 0, type: default, offset: 16, size: 4, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: 12, size: 4, alignment: 4, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: var4, type: default, offset: -24, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: var5, type: default, offset: -28, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x1', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x8', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x9', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: -16, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x18', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -20, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x13, $x14, $x15, $x16, $x17, $x1, $x8, $x9, $x18, $x19
+
+    $x2 = frame-setup ADDI $x2, -32
+    frame-setup SW killed $x1, $x2, 28 :: (store (s32) into %stack.2)
+    frame-setup SW killed $x8, $x2, 24 :: (store (s32) into %stack.3)
+    frame-setup SW killed $x9, $x2, 20 :: (store (s32) into %stack.4)
+    frame-setup SW killed $x18, $x2, 16 :: (store (s32) into %stack.5)
+    frame-setup SW killed $x19, $x2, 12 :: (store (s32) into %stack.6)
+    $x8 = ADDI $x17, 0
+    $x5 = ADDI $x16, 0
+    $x6 = ADDI $x15, 0
+    $x9 = ADDI $x14, 0
+    $x11 = ADDI $x13, 0
+    renamable $x18 = LW $x2, 48 :: (load (s32) from %fixed-stack.0, align 16)
+    renamable $x19 = LW $x2, 40 :: (load (s32) from %fixed-stack.2, align 8)
+    renamable $x15 = LW $x2, 32 :: (load (s32) from %fixed-stack.4, align 16)
+    $x16 = ADDI $x0, 1
+    $x17 = ADDI $x0, 1
+    $x7 = ADDI $x0, 0
+    $x12 = ADDI renamable $x10, 0
+    $x13 = ADDI killed renamable $x6, 0
+    $x14 = ADDI killed renamable $x5, 0
+    PseudoCALLIndirect killed renamable $x7, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x2, implicit-def dead $x10
+    SW killed renamable $x19, killed renamable $x9, 0 :: (store (s32) into %ir.var3)
+    $x10 = ADDI $x0, 1
+    SW killed renamable $x18, killed renamable $x8, 0 :: (store (s32) into %ir.var7)
+    $x1 = frame-destroy LW $x2, 28 :: (load (s32) from %stack.2)
+    $x8 = frame-destroy LW $x2, 24 :: (load (s32) from %stack.3)
+    $x9 = frame-destroy LW $x2, 20 :: (load (s32) from %stack.4)
+    $x18 = frame-destroy LW $x2, 16 :: (load (s32) from %stack.5)
+    $x19 = frame-destroy LW $x2, 12 :: (load (s32) from %stack.6)
+    $x2 = frame-destroy ADDI $x2, 32
+    PseudoRET implicit $x10
+...
+---
+name:            test2
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$x10', virtual-reg: '' }
+  - { reg: '$x13', virtual-reg: '' }
+  - { reg: '$x14', virtual-reg: '' }
+  - { reg: '$x15', virtual-reg: '' }
+  - { reg: '$x16', virtual-reg: '' }
+  - { reg: '$x17', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: true
+  localFrameSize:  8
+fixedStack:
+  - { id: 0, type: default, offset: 16, size: 4, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: 12, size: 4, alignment: 4, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: var4, type: default, offset: -24, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: var5, type: default, offset: -28, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x1', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x8', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x9', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: -16, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x18', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -20, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x13, $x14, $x15, $x16, $x17, $x1, $x8, $x9, $x18, $x19
+
+    $x2 = frame-setup ADDI $x2, -32
+    frame-setup SW killed $x1, $x2, 28 :: (store (s32) into %stack.2)
+    frame-setup SW killed $x8, $x2, 24 :: (store (s32) into %stack.3)
+    frame-setup SW killed $x9, $x2, 20 :: (store (s32) into %stack.4)
+    frame-setup SW killed $x18, $x2, 16 :: (store (s32) into %stack.5)
+    frame-setup SW killed $x19, $x2, 12 :: (store (s32) into %stack.6)
+    $x8 = ADDI $x17, 0
+    $x5 = ADDI $x16, 0
+    $x6 = ADDI $x15, 0
+    $x9 = ADDI $x14, 0
+    $x12 = ADDI $x13, 0
+    renamable $x18 = LW $x2, 48 :: (load (s32) from %fixed-stack.0, align 16)
+    renamable $x19 = LW $x2, 40 :: (load (s32) from %fixed-stack.2, align 8)
+    renamable $x15 = LW $x2, 32 :: (load (s32) from %fixed-stack.4, align 16)
+    $x16 = ADDI $x0, 1
+    $x17 = ADDI $x0, 1
+    $x7 = ADDI $x0, 0
+    $x11 = ADDI renamable $x10, 0
+    $x13 = ADDI killed renamable $x6, 0
+    $x14 = ADDI killed renamable $x5, 0
+    PseudoCALLIndirect killed renamable $x7, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x2, implicit-def dead $x10
+    SW killed renamable $x19, killed renamable $x9, 0 :: (store (s32) into %ir.var3)
+    $x10 = ADDI $x0, 1
+    SW killed renamable $x18, killed renamable $x8, 0 :: (store (s32) into %ir.var7)
+    $x1 = frame-destroy LW $x2, 28 :: (load (s32) from %stack.2)
+    $x8 = frame-destroy LW $x2, 24 :: (load (s32) from %stack.3)
+    $x9 = frame-destroy LW $x2, 20 :: (load (s32) from %stack.4)
+    $x18 = frame-destroy LW $x2, 16 :: (load (s32) from %stack.5)
+    $x19 = frame-destroy LW $x2, 12 :: (load (s32) from %stack.6)
+    $x2 = frame-destroy ADDI $x2, 32
+    PseudoRET implicit $x10
+...

@@ -28,6 +28,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
@@ -129,7 +130,7 @@ struct PrologEpilogTracker {
       PrologEpilogSet.insert(I.first);
       InstructionPointer IP(Binary, I.first);
       if (!IP.advance())
-        break;
+        continue;
       PrologEpilogSet.insert(IP.Address);
     }
   }
@@ -140,7 +141,7 @@ struct PrologEpilogTracker {
       PrologEpilogSet.insert(Addr);
       InstructionPointer IP(Binary, Addr);
       if (!IP.backward())
-        break;
+        continue;
       PrologEpilogSet.insert(IP.Address);
     }
   }
@@ -203,6 +204,8 @@ class ProfiledBinary {
   std::string Path;
   // Path of the debug info binary.
   std::string DebugBinaryPath;
+  // Path of the pseudo probe binary, either Path or DebugBinaryPath if present.
+  StringRef PseudoProbeBinPath;
   // The target triple.
   Triple TheTriple;
   // Path of symbolizer path which should be pointed to binary with debug info.
@@ -319,8 +322,6 @@ class ProfiledBinary {
   // Function name to probe frame map for top-level outlined functions.
   StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
 
-  bool UsePseudoProbes = false;
-
   bool UseFSDiscriminator = false;
 
   // Whether we need to symbolize all instructions to get function context size.
@@ -336,6 +337,16 @@ class ProfiledBinary {
   bool MissingMMapWarned = false;
 
   bool IsCOFF = false;
+
+  // Whether the binary has a PT_INTERP program header (PIE executables do,
+  // true shared libraries don't). Used to distinguish PIE from .so since
+  // both are ET_DYN.
+  bool HasInterp = false;
+
+  // Build ID used to filter perfscript addresses in [buildid:]addr format.
+  // For shared libraries, set to the binary's build ID.
+  // For main executables, kept empty (addresses have no buildid prefix).
+  std::string FilterBuildID;
 
   void setPreferredTextSegmentAddresses(const object::ObjectFile *O);
 
@@ -355,7 +366,8 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const object::ObjectFile *Obj);
+  // Return true if pseudo probe in Obj is usable.
+  bool checkPseudoProbe(const object::ObjectFile *Obj, StringRef ObjPath);
 
   void decodePseudoProbe(const object::ObjectFile *Obj);
 
@@ -424,6 +436,9 @@ public:
 
   bool isCOFF() const { return IsCOFF; }
 
+  // Return the build ID used for filtering perfscript addresses.
+  StringRef getFilterBuildID() const { return FilterBuildID; }
+
   // Canonicalize to use preferred load address as base address.
   uint64_t canonicalizeVirtualAddress(uint64_t Address) {
     return Address - BaseAddress + getPreferredBaseAddress();
@@ -482,7 +497,7 @@ public:
 
   size_t getCodeAddrVecSize() const { return CodeAddressVec.size(); }
 
-  bool usePseudoProbes() const { return UsePseudoProbes; }
+  bool usePseudoProbes() const { return !PseudoProbeBinPath.empty(); }
   bool useFSDiscriminator() const { return UseFSDiscriminator; }
   bool isKernel() const { return IsKernel; }
 

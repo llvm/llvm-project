@@ -31,8 +31,8 @@ void test0(void) {
 // CHECK-LABEL:define{{.*}} void @test1()
 // CHECK:      [[TEMP:%.*]] = alloca float, align 4
 // CHECK-NEXT: store float 3.000000e+00, ptr [[TEMP]]
-// CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[TEMP]], align 4
-// CHECK-NEXT: store atomic i32 [[T1]], ptr @a_float seq_cst, align 4
+// CHECK-NEXT: [[T1:%.*]] = load float, ptr [[TEMP]], align 4
+// CHECK-NEXT: store atomic float [[T1]], ptr @a_float seq_cst, align 4
 void test1(void) {
   __c11_atomic_store(&a_float, 3, memory_order_seq_cst);
 }
@@ -40,8 +40,8 @@ void test1(void) {
 // CHECK-LABEL:define{{.*}} void @test2()
 // CHECK:      [[TEMP:%.*]] = alloca ptr, align 8
 // CHECK-NEXT: store ptr @a_bool, ptr [[TEMP]]
-// CHECK-NEXT: [[T1:%.*]] = load i64, ptr [[TEMP]], align 8
-// CHECK-NEXT: store atomic i64 [[T1]], ptr @a_pointer seq_cst, align 8
+// CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[TEMP]], align 8
+// CHECK-NEXT: store atomic ptr [[T1]], ptr @a_pointer seq_cst, align 8
 void test2(void) {
   __c11_atomic_store(&a_pointer, &a_bool, memory_order_seq_cst);
 }
@@ -57,7 +57,7 @@ void test3(pointer_pair_t pair) {
 }
 
 // CHECK-LABEL:define{{.*}} void @test4(
-// CHECK-SAME: ptr dead_on_return noundef [[QUAD:%.*]])
+// CHECK-SAME: ptr noundef dead_on_return [[QUAD:%.*]])
 // CHECK:      [[QUAD_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT: [[TEMP:%.*]] = alloca [[QUAD_T:%.*]], align 8
 // CHECK-NEXT: store ptr [[QUAD]], ptr [[QUAD_INDIRECT_ADDR]]

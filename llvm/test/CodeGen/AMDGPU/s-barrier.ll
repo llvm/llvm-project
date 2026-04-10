@@ -99,8 +99,8 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX12-SDAG-NEXT:    s_barrier_signal -1
 ; GFX12-SDAG-NEXT:    s_barrier_join m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX12-SDAG-NEXT:    s_barrier_signal_isfirst -1
+; GFX12-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_barrier_leave
@@ -255,6 +255,37 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(3) %in) 
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
 
     call void @func2()
+    ret void
+}
+
+define void @signal_var_cnt0_const_bar() {
+; GFX12-LABEL: signal_var_cnt0_const_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_barrier_signal 2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar, i32 0)
+    ret void
+}
+
+define void @signal_var_cnt0_dynamic_bar(ptr addrspace(3) inreg %bar) {
+; GFX12-LABEL: signal_var_cnt0_dynamic_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 s0, s0, 4
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_and_b32 m0, s0, 63
+; GFX12-NEXT:    s_barrier_signal m0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %bar, i32 0)
     ret void
 }
 

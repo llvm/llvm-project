@@ -47,7 +47,7 @@ using namespace mlir::sparse_tensor;
 // Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
 // well.
 namespace mlir::sparse_tensor {
-llvm::hash_code hash_value(LevelType lt) {
+static llvm::hash_code hash_value(LevelType lt) {
   return llvm::hash_value(static_cast<uint64_t>(lt));
 }
 } // namespace mlir::sparse_tensor
@@ -826,6 +826,15 @@ LogicalResult SparseTensorEncodingAttr::verify(
     return emitError() << "SoA is only applicable to singleton lvlTypes.";
   }
 
+  // Dense levels cannot follow a non-unique level. The iteration model for
+  // dense levels requires exactly one parent position to linearize into a
+  // contiguous range, but a non-unique parent provides two cursor values
+  // (segment start and end), which the dense level cannot handle.
+  for (auto [i, lt] : llvm::drop_begin(llvm::enumerate(lvlTypes))) {
+    if (isDenseLT(lt) && !isUniqueLT(lvlTypes[i - 1]))
+      return emitError() << "dense level cannot follow a non-unique level";
+  }
+
   // TODO: audit formats that actually are supported by backend.
   if (auto it = llvm::find_if(lvlTypes, isNOutOfMLT);
       it != std::end(lvlTypes)) {
@@ -1596,8 +1605,7 @@ OpFoldResult ReinterpretMapOp::fold(FoldAdaptor adaptor) {
 
 template <typename ToBufferOp>
 static LogicalResult inferSparseBufferType(ValueRange ops, DictionaryAttr attr,
-                                           OpaqueProperties prop,
-                                           RegionRange region,
+                                           PropertyRef prop, RegionRange region,
                                            SmallVectorImpl<mlir::Type> &ret) {
   typename ToBufferOp::Adaptor adaptor(ops, attr, prop, region);
   SparseTensorType stt = getSparseTensorType(adaptor.getTensor());
@@ -1638,7 +1646,7 @@ LogicalResult ToPositionsOp::verify() {
 LogicalResult
 ToPositionsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                                 ValueRange ops, DictionaryAttr attr,
-                                OpaqueProperties prop, RegionRange region,
+                                PropertyRef prop, RegionRange region,
                                 SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToPositionsOp>(ops, attr, prop, region, ret);
 }
@@ -1655,7 +1663,7 @@ LogicalResult ToCoordinatesOp::verify() {
 LogicalResult
 ToCoordinatesOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                                   ValueRange ops, DictionaryAttr attr,
-                                  OpaqueProperties prop, RegionRange region,
+                                  PropertyRef prop, RegionRange region,
                                   SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToCoordinatesOp>(ops, attr, prop, region, ret);
 }
@@ -1669,7 +1677,7 @@ LogicalResult ToCoordinatesBufferOp::verify() {
 
 LogicalResult ToCoordinatesBufferOp::inferReturnTypes(
     MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
-    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    DictionaryAttr attr, PropertyRef prop, RegionRange region,
     SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToCoordinatesBufferOp>(ops, attr, prop, region,
                                                       ret);
@@ -1686,8 +1694,7 @@ LogicalResult ToValuesOp::verify() {
 LogicalResult ToValuesOp::inferReturnTypes(MLIRContext *ctx,
                                            std::optional<Location> loc,
                                            ValueRange ops, DictionaryAttr attr,
-                                           OpaqueProperties prop,
-                                           RegionRange region,
+                                           PropertyRef prop, RegionRange region,
                                            SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToValuesOp>(ops, attr, prop, region, ret);
 }
@@ -1746,7 +1753,12 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
       return op->emitError() << regionName << " region argument " << (i + 1)
                              << " type mismatch";
   }
-  Operation *term = region.front().getTerminator();
+  Block &block = region.front();
+  if (!block.mightHaveTerminator())
+    return op->emitError() << regionName
+                           << " region must end with a terminator";
+
+  Operation *term = block.getTerminator();
   YieldOp yield = dyn_cast<YieldOp>(term);
   if (!yield)
     return op->emitError() << regionName
@@ -2353,7 +2365,7 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
 
 LogicalResult ExtractIterSpaceOp::inferReturnTypes(
     MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
-    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    DictionaryAttr attr, PropertyRef prop, RegionRange region,
     SmallVectorImpl<mlir::Type> &ret) {
 
   ExtractIterSpaceOp::Adaptor adaptor(ops, attr, prop, region);
@@ -2605,9 +2617,14 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // Both the operation itself and the region may be branching into the body
   // or back into the operation itself.
-  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(&getRegion()));
   // It is possible for loop not to enter the body.
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange IterateOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults())
+                              : ValueRange(getRegionIterArgs());
 }
 
 void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,

@@ -15,9 +15,11 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -74,6 +76,9 @@ cl::opt<unsigned> VAGroupCountLimit("hvc-va-group-count-limit", cl::Hidden,
                                     cl::init(~0));
 cl::opt<unsigned> VAGroupSizeLimit("hvc-va-group-size-limit", cl::Hidden,
                                    cl::init(~0));
+cl::opt<unsigned>
+    MinLoadGroupSizeForAlignment("hvc-ld-min-group-size-for-alignment",
+                                 cl::Hidden, cl::init(4));
 
 class HexagonVectorCombine {
 public:
@@ -208,11 +213,11 @@ private:
 
   struct AddrInfo {
     AddrInfo(const AddrInfo &) = default;
+    AddrInfo &operator=(const AddrInfo &) = default;
     AddrInfo(const HexagonVectorCombine &HVC, Instruction *I, Value *A, Type *T,
              Align H)
         : Inst(I), Addr(A), ValTy(T), HaveAlign(H),
           NeedAlign(HVC.getTypeAlignment(ValTy)) {}
-    AddrInfo &operator=(const AddrInfo &) = default;
 
     // XXX: add Size member?
     Instruction *Inst;
@@ -350,19 +355,55 @@ private:
                         int ScLen, Value *AlignVal, Value *AlignAddr) const;
   void realignStoreGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
                          int ScLen, Value *AlignVal, Value *AlignAddr) const;
-  bool realignGroup(const MoveGroup &Move) const;
-
+  bool realignGroup(const MoveGroup &Move);
   Value *makeTestIfUnaligned(IRBuilderBase &Builder, Value *AlignVal,
                              int Alignment) const;
 
+  using AddrGroupMap = MapVector<Instruction *, AddrList>;
+  AddrGroupMap AddrGroups;
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const AddrList &L);
   friend raw_ostream &operator<<(raw_ostream &OS, const AddrInfo &AI);
   friend raw_ostream &operator<<(raw_ostream &OS, const MoveGroup &MG);
+  friend raw_ostream &operator<<(raw_ostream &OS, const MoveList &L);
   friend raw_ostream &operator<<(raw_ostream &OS, const ByteSpan::Block &B);
   friend raw_ostream &operator<<(raw_ostream &OS, const ByteSpan &BS);
+  friend raw_ostream &operator<<(raw_ostream &OS, const AddrGroupMap &AG);
+  friend raw_ostream &operator<<(raw_ostream &OS, const AddrList &L);
+  friend raw_ostream &operator<<(raw_ostream &OS, const AddrInfo &AI);
+  friend raw_ostream &operator<<(raw_ostream &OS, const MoveGroup &MG);
+  friend raw_ostream &operator<<(raw_ostream &OS, const MoveList &L);
+  friend raw_ostream &operator<<(raw_ostream &OS, const ByteSpan::Block &B);
+  friend raw_ostream &operator<<(raw_ostream &OS, const ByteSpan &BS);
+  friend raw_ostream &operator<<(raw_ostream &OS, const AddrGroupMap &AG);
 
-  std::map<Instruction *, AddrList> AddrGroups;
   const HexagonVectorCombine &HVC;
 };
+
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                         const AlignVectors::AddrGroupMap &AG) {
+  OS << "Printing AddrGroups:"
+     << "\n";
+  for (auto &It : AG) {
+    OS << "\n\tInstruction: ";
+    It.first->dump();
+    OS << "\n\tAddrInfo: ";
+    for (auto &AI : It.second)
+      OS << AI << "\n";
+  }
+  return OS;
+}
+
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                         const AlignVectors::AddrList &AL) {
+  OS << "\n *** Addr List: ***\n";
+  for (auto &AG : AL) {
+    OS << "\n *** Addr Group: ***\n";
+    OS << AG;
+    OS << "\n";
+  }
+  return OS;
+}
 
 [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
                                          const AlignVectors::AddrInfo &AI) {
@@ -372,6 +413,17 @@ private:
   OS << "HaveAlign: " << AI.HaveAlign.value() << '\n';
   OS << "NeedAlign: " << AI.NeedAlign.value() << '\n';
   OS << "Offset: " << AI.Offset;
+  return OS;
+}
+
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                         const AlignVectors::MoveList &ML) {
+  OS << "\n *** Move List: ***\n";
+  for (auto &MG : ML) {
+    OS << "\n *** Move Group: ***\n";
+    OS << MG;
+    OS << "\n";
+  }
   return OS;
 }
 
@@ -485,6 +537,18 @@ private:
   auto createMulLong(IRBuilderBase &Builder, ArrayRef<Value *> WordX,
                      Signedness SgnX, ArrayRef<Value *> WordY,
                      Signedness SgnY) const -> SmallVector<Value *>;
+
+  bool matchMLoad(Instruction &In) const;
+  bool matchMStore(Instruction &In) const;
+  Value *processMLoad(Instruction &In) const;
+  Value *processMStore(Instruction &In) const;
+  std::optional<uint64_t> getAlignment(Instruction &In, Value *ptr) const;
+  std::optional<uint64_t>
+  getAlignmentImpl(Instruction &In, Value *ptr,
+                   SmallPtrSet<Value *, 16> &Visited) const;
+  std::optional<uint64_t> getPHIBaseMinAlignment(Instruction &In,
+                                                 PHINode *PN) const;
+
   // Vector manipulations for Ripple
   bool matchScatter(Instruction &In) const;
   bool matchGather(Instruction &In) const;
@@ -529,25 +593,6 @@ template <> LoadInst *isCandidate<LoadInst>(Instruction *In) {
 }
 template <> StoreInst *isCandidate<StoreInst>(Instruction *In) {
   return getIfUnordered(dyn_cast<StoreInst>(In));
-}
-
-#if !defined(_MSC_VER) || _MSC_VER >= 1926
-// VS2017 and some versions of VS2019 have trouble compiling this:
-// error C2976: 'std::map': too few template arguments
-// VS 2019 16.x is known to work, except for 16.4/16.5 (MSC_VER 1924/1925)
-template <typename Pred, typename... Ts>
-void erase_if(std::map<Ts...> &map, Pred p)
-#else
-template <typename Pred, typename T, typename U>
-void erase_if(std::map<T, U> &map, Pred p)
-#endif
-{
-  for (auto i = map.begin(), e = map.end(); i != e;) {
-    if (p(*i))
-      i = map.erase(i);
-    else
-      i = std::next(i);
-  }
 }
 
 // Forward other erase_ifs to the LLVM implementations.
@@ -626,6 +671,16 @@ auto AlignVectors::ByteSpan::values() const -> SmallVector<Value *, 8> {
   for (int i = 0, e = Blocks.size(); i != e; ++i)
     Values[i] = Blocks[i].Seg.Val;
   return Values;
+}
+
+// Turn a requested integer alignment into the effective Align to use.
+// If Requested == 0 -> use ABI alignment of the value type (old semantics).
+// 0 means "ABI alignment" in old IR.
+static Align effectiveAlignForValueTy(const DataLayout &DL, Type *ValTy,
+                                      int Requested) {
+  if (Requested > 0)
+    return Align(static_cast<uint64_t>(Requested));
+  return Align(DL.getABITypeAlign(ValTy).value());
 }
 
 auto AlignVectors::getAddrInfo(Instruction &In) const
@@ -723,14 +778,13 @@ auto AlignVectors::createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                               Value *Predicate, int Alignment, Value *Mask,
                               Value *PassThru,
                               ArrayRef<Value *> MDSources) const -> Value * {
-  bool HvxHasPredLoad = HVC.HST.useHVXV62Ops();
   // Predicate is nullptr if not creating predicated load
   if (Predicate) {
     assert(!Predicate->getType()->isVectorTy() &&
            "Expectning scalar predicate");
     if (HVC.isFalse(Predicate))
       return UndefValue::get(ValTy);
-    if (!HVC.isTrue(Predicate) && HvxHasPredLoad) {
+    if (!HVC.isTrue(Predicate)) {
       Value *Load = createPredicatedLoad(Builder, ValTy, Ptr, Predicate,
                                          Alignment, MDSources);
       return Builder.CreateSelect(Mask, Load, PassThru);
@@ -740,11 +794,14 @@ auto AlignVectors::createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
   assert(!HVC.isUndef(Mask)); // Should this be allowed?
   if (HVC.isZero(Mask))
     return PassThru;
-  if (HVC.isTrue(Mask))
-    return createSimpleLoad(Builder, ValTy, Ptr, Alignment, MDSources);
 
-  Instruction *Load = Builder.CreateMaskedLoad(ValTy, Ptr, Align(Alignment),
-                                               Mask, PassThru, "mld");
+  Align EffA = effectiveAlignForValueTy(HVC.DL, ValTy, Alignment);
+  if (HVC.isTrue(Mask))
+    return createSimpleLoad(Builder, ValTy, Ptr, EffA.value(), MDSources);
+
+  Instruction *Load =
+      Builder.CreateMaskedLoad(ValTy, Ptr, EffA, Mask, PassThru, "mld");
+  LLVM_DEBUG(dbgs() << "\t[Creating masked Load:] "; Load->dump());
   propagateMetadata(Load, MDSources);
   return Load;
 }
@@ -753,9 +810,10 @@ auto AlignVectors::createSimpleLoad(IRBuilderBase &Builder, Type *ValTy,
                                     Value *Ptr, int Alignment,
                                     ArrayRef<Value *> MDSources) const
     -> Value * {
-  Instruction *Load =
-      Builder.CreateAlignedLoad(ValTy, Ptr, Align(Alignment), "ald");
+  Align EffA = effectiveAlignForValueTy(HVC.DL, ValTy, Alignment);
+  Instruction *Load = Builder.CreateAlignedLoad(ValTy, Ptr, EffA, "ald");
   propagateMetadata(Load, MDSources);
+  LLVM_DEBUG(dbgs() << "\t[Creating Load:] "; Load->dump());
   return Load;
 }
 
@@ -768,11 +826,13 @@ auto AlignVectors::createPredicatedLoad(IRBuilderBase &Builder, Type *ValTy,
          "Predicates 'scalar' vector loads not yet supported");
   assert(Predicate);
   assert(!Predicate->getType()->isVectorTy() && "Expectning scalar predicate");
-  assert(HVC.getSizeOf(ValTy, HVC.Alloc) % Alignment == 0);
+  Align EffA = effectiveAlignForValueTy(HVC.DL, ValTy, Alignment);
+  assert(HVC.getSizeOf(ValTy, HVC.Alloc) % EffA.value() == 0);
+
   if (HVC.isFalse(Predicate))
     return UndefValue::get(ValTy);
   if (HVC.isTrue(Predicate))
-    return createSimpleLoad(Builder, ValTy, Ptr, Alignment, MDSources);
+    return createSimpleLoad(Builder, ValTy, Ptr, EffA.value(), MDSources);
 
   auto V6_vL32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vL32b_pred_ai);
   // FIXME: This may not put the offset from Ptr into the vmem offset.
@@ -826,7 +886,9 @@ auto AlignVectors::createSimpleStore(IRBuilderBase &Builder, Value *Val,
                                      Value *Ptr, int Alignment,
                                      ArrayRef<Value *> MDSources) const
     -> Value * {
-  Instruction *Store = Builder.CreateAlignedStore(Val, Ptr, Align(Alignment));
+  Align EffA = effectiveAlignForValueTy(HVC.DL, Val->getType(), Alignment);
+  Instruction *Store = Builder.CreateAlignedStore(Val, Ptr, EffA);
+  LLVM_DEBUG(dbgs() << "\t[Creating store:] "; Store->dump());
   propagateMetadata(Store, MDSources);
   return Store;
 }
@@ -836,15 +898,16 @@ auto AlignVectors::createPredicatedStore(IRBuilderBase &Builder, Value *Val,
                                          int Alignment,
                                          ArrayRef<Value *> MDSources) const
     -> Value * {
+  Align EffA = effectiveAlignForValueTy(HVC.DL, Val->getType(), Alignment);
   assert(HVC.HST.isTypeForHVX(Val->getType()) &&
          "Predicates 'scalar' vector stores not yet supported");
   assert(Predicate);
   if (HVC.isFalse(Predicate))
     return UndefValue::get(Val->getType());
   if (HVC.isTrue(Predicate))
-    return createSimpleStore(Builder, Val, Ptr, Alignment, MDSources);
+    return createSimpleStore(Builder, Val, Ptr, EffA.value(), MDSources);
 
-  assert(HVC.getSizeOf(Val, HVC.Alloc) % Alignment == 0);
+  assert(HVC.getSizeOf(Val, HVC.Alloc) % EffA.value() == 0);
   auto V6_vS32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vS32b_pred_ai);
   // FIXME: This may not put the offset from Ptr into the vmem offset.
   return HVC.createHvxIntrinsic(Builder, V6_vS32b_pred_ai, nullptr,
@@ -918,15 +981,15 @@ auto AlignVectors::createAddressGroups() -> bool {
   assert(WorkStack.empty());
 
   // AddrGroups are formed.
-
   // Remove groups of size 1.
-  erase_if(AddrGroups, [](auto &G) { return G.second.size() == 1; });
+  AddrGroups.remove_if([](auto &G) { return G.second.size() == 1; });
   // Remove groups that don't use HVX types.
-  erase_if(AddrGroups, [&](auto &G) {
+  AddrGroups.remove_if([&](auto &G) {
     return llvm::none_of(
         G.second, [&](auto &I) { return HVC.HST.isTypeForHVX(I.ValTy); });
   });
 
+  LLVM_DEBUG(dbgs() << AddrGroups);
   return !AddrGroups.empty();
 }
 
@@ -975,13 +1038,17 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
       LoadGroups.emplace_back(Info, Group.front().Inst, isHvx(Info), true);
   }
 
-  // Erase singleton groups.
-  erase_if(LoadGroups, [](const MoveGroup &G) { return G.Main.size() <= 1; });
+  // Erase groups smaller than the minimum load group size.
+  unsigned LoadGroupSizeLimit = MinLoadGroupSizeForAlignment;
+  erase_if(LoadGroups, [LoadGroupSizeLimit](const MoveGroup &G) {
+    return G.Main.size() < LoadGroupSizeLimit;
+  });
 
   // Erase HVX groups on targets < HvxV62 (due to lack of predicated loads).
   if (!HVC.HST.useHVXV62Ops())
     erase_if(LoadGroups, [](const MoveGroup &G) { return G.IsHvx; });
 
+  LLVM_DEBUG(dbgs() << "LoadGroups list: " << LoadGroups);
   return LoadGroups;
 }
 
@@ -1412,7 +1479,7 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
   }
 }
 
-auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
+auto AlignVectors::realignGroup(const MoveGroup &Move) -> bool {
   LLVM_DEBUG(dbgs() << "Realigning group:\n" << Move << '\n');
 
   // TODO: Needs support for masked loads/stores of "scalar" vectors.
@@ -1427,7 +1494,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     });
   };
 
-  const AddrList &BaseInfos = AddrGroups.at(Move.Base);
+  AddrList &BaseInfos = AddrGroups[Move.Base];
 
   // Conceptually, there is a vector of N bytes covering the addresses
   // starting from the minimum offset (i.e. Base.Addr+Start). This vector
@@ -1439,11 +1506,12 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
   // of this conceptual vector.
   //
   // This vector will be loaded/stored starting at the nearest down-aligned
-  // address and the amount od the down-alignment will be AlignVal:
+  // address and the amount of the down-alignment will be AlignVal:
   //   valign(load_vector(align_down(Base+Start)), AlignVal)
 
   std::set<Instruction *> TestSet(Move.Main.begin(), Move.Main.end());
   AddrList MoveInfos;
+
   llvm::copy_if(
       BaseInfos, std::back_inserter(MoveInfos),
       [&TestSet](const AddrInfo &AI) { return TestSet.count(AI.Inst); });
@@ -1828,6 +1896,20 @@ inline bool HvxIdioms::matchGather(Instruction &In) const {
   return (II->getIntrinsicID() == Intrinsic::masked_gather);
 }
 
+inline bool HvxIdioms::matchMLoad(Instruction &In) const {
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(&In);
+  if (!II)
+    return false;
+  return (II->getIntrinsicID() == Intrinsic::masked_load);
+}
+
+inline bool HvxIdioms::matchMStore(Instruction &In) const {
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(&In);
+  if (!II)
+    return false;
+  return (II->getIntrinsicID() == Intrinsic::masked_store);
+}
+
 Instruction *locateDestination(Instruction *In, HvxIdioms::DstQualifier &Qual);
 
 // Binary instructions we want to handle as users of gather/scatter.
@@ -2157,13 +2239,13 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
   Value *CastIndex = nullptr;
   if (cstDataVector) {
     // Our indexes are represented as a constant. We need it in a reg.
-    AllocaInst *IndexesAlloca =
-        Builder.CreateAlloca(HVC.getHvxTy(HVC.getIntTy(32), false));
+    Type *IndexVectorType = HVC.getHvxTy(HVC.getIntTy(32), false);
+    AllocaInst *IndexesAlloca = Builder.CreateAlloca(IndexVectorType);
     [[maybe_unused]] auto *StoreIndexes =
         Builder.CreateStore(cstDataVector, IndexesAlloca);
     LLVM_DEBUG(dbgs() << "  StoreIndexes     : " << *StoreIndexes << "\n");
-    CastIndex = Builder.CreateLoad(IndexesAlloca->getAllocatedType(),
-                                   IndexesAlloca, "reload_index");
+    CastIndex =
+        Builder.CreateLoad(IndexVectorType, IndexesAlloca, "reload_index");
   } else {
     if (ElemWidth == 2)
       CastIndex = getReinterpretiveCast_i16_to_i32(HVC, Builder, Ctx, Indexes);
@@ -2540,8 +2622,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         [[maybe_unused]] auto *StoreIndexes =
             Builder.CreateStore(cstDataVector, IndexesAlloca);
         LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
-        Value *LoadedIndex = Builder.CreateLoad(
-            IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
+        Value *LoadedIndex =
+            Builder.CreateLoad(NT, IndexesAlloca, "reload_index");
         AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
         LLVM_DEBUG(dbgs() << "  ResultAlloca   : " << *ResultAlloca << "\n");
 
@@ -2621,8 +2703,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         [[maybe_unused]] auto *StoreIndexes =
             Builder.CreateStore(cstDataVector, IndexesAlloca);
         LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
-        Value *LoadedIndex = Builder.CreateLoad(
-            IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
+        Value *LoadedIndex =
+            Builder.CreateLoad(NT, IndexesAlloca, "reload_index");
         AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
         LLVM_DEBUG(dbgs() << "  ResultAlloca   : " << *ResultAlloca
                           << "\n  AddressSpace: "
@@ -2652,6 +2734,189 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
     llvm_unreachable("Unhandled Qual enum");
 
   return Gather;
+}
+
+// Go through all PHI incomming values and find minimal alignment for non GEP
+// members.
+std::optional<uint64_t> HvxIdioms::getPHIBaseMinAlignment(Instruction &In,
+                                                          PHINode *PN) const {
+  if (!PN)
+    return std::nullopt;
+
+  SmallVector<Value *, 16> Worklist;
+  SmallPtrSet<Value *, 16> Visited;
+  uint64_t minPHIAlignment = Value::MaximumAlignment;
+  Worklist.push_back(PN);
+
+  while (!Worklist.empty()) {
+    Value *V = Worklist.back();
+    Worklist.pop_back();
+    if (!Visited.insert(V).second)
+      continue;
+
+    if (PHINode *PN = dyn_cast<PHINode>(V)) {
+      for (unsigned i = 0; i < PN->getNumIncomingValues(); ++i) {
+        Worklist.push_back(PN->getIncomingValue(i));
+      }
+    } else if (isa<GetElementPtrInst>(V)) {
+      // Ignore geps for now.
+      continue;
+    } else {
+      Align KnownAlign = getKnownAlignment(V, HVC.DL, &In, &HVC.AC, &HVC.DT);
+      if (KnownAlign.value() < minPHIAlignment)
+        minPHIAlignment = KnownAlign.value();
+    }
+  }
+  if (minPHIAlignment != Value::MaximumAlignment)
+    return minPHIAlignment;
+  return std::nullopt;
+}
+
+// Helper function to discover alignment for a ptr.
+std::optional<uint64_t> HvxIdioms::getAlignment(Instruction &In,
+                                                Value *ptr) const {
+  SmallPtrSet<Value *, 16> Visited;
+  return getAlignmentImpl(In, ptr, Visited);
+}
+
+std::optional<uint64_t>
+HvxIdioms::getAlignmentImpl(Instruction &In, Value *ptr,
+                            SmallPtrSet<Value *, 16> &Visited) const {
+  LLVM_DEBUG(dbgs() << "[getAlignment] for : " << *ptr << "\n");
+  // Prevent infinite recursion
+  if (!Visited.insert(ptr).second)
+    return std::nullopt;
+  // Try AssumptionCache.
+  Align KnownAlign = getKnownAlignment(ptr, HVC.DL, &In, &HVC.AC, &HVC.DT);
+  // This is the most formal and reliable source of information.
+  if (KnownAlign.value() > 1) {
+    LLVM_DEBUG(dbgs() << "  VC align(" << KnownAlign.value() << ")\n");
+    return KnownAlign.value();
+  }
+
+  // If it is a PHI try to iterate through inputs
+  if (PHINode *PN = dyn_cast<PHINode>(ptr)) {
+    // See if we have a common base to which we know alignment.
+    auto baseAlignmentOpt = getPHIBaseMinAlignment(In, PN);
+    if (!baseAlignmentOpt)
+      return std::nullopt;
+
+    uint64_t minBaseAlignment = *baseAlignmentOpt;
+    // If it is 1, there is no point to keep on looking.
+    if (minBaseAlignment == 1)
+      return 1;
+    // No see if all other incomming phi nodes are just loop carried constants.
+    uint64_t minPHIAlignment = minBaseAlignment;
+    LLVM_DEBUG(dbgs() << "  It is a PHI with(" << PN->getNumIncomingValues()
+                      << ")nodes and min base aligned to (" << minBaseAlignment
+                      << ")\n");
+    for (unsigned i = 0; i < PN->getNumIncomingValues(); ++i) {
+      Value *IV = PN->getIncomingValue(i);
+      // We have already looked at all other values.
+      if (!isa<GetElementPtrInst>(IV))
+        continue;
+      uint64_t MemberAlignment = Value::MaximumAlignment;
+      if (auto res = getAlignment(*PN, IV))
+        MemberAlignment = *res;
+      else
+        return std::nullopt;
+      // Adjust total PHI alignment.
+      if (minPHIAlignment > MemberAlignment)
+        minPHIAlignment = MemberAlignment;
+    }
+    LLVM_DEBUG(dbgs() << "  total PHI alignment(" << minPHIAlignment << ")\n");
+    return minPHIAlignment;
+  }
+
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(ptr)) {
+    auto *GEPPtr = GEP->getPointerOperand();
+    // Only if this is the induction variable with const offset
+    // Implicit assumption is that induction variable itself is a PHI
+    if (&In == GEPPtr) {
+      APInt Offset(HVC.DL.getPointerSizeInBits(
+                       GEPPtr->getType()->getPointerAddressSpace()),
+                   0);
+      if (GEP->accumulateConstantOffset(HVC.DL, Offset)) {
+        LLVM_DEBUG(dbgs() << "  Induction GEP with const step of ("
+                          << Offset.getZExtValue() << ")\n");
+        return Offset.getZExtValue();
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
+Value *HvxIdioms::processMStore(Instruction &In) const {
+  [[maybe_unused]] auto *InpTy =
+      dyn_cast<VectorType>(In.getOperand(0)->getType());
+  assert(InpTy && "Cannot handle no vector type for llvm.masked.store");
+
+  LLVM_DEBUG(dbgs() << "\n[Process mstore](" << In << ")\n"
+                    << *In.getParent() << "\n");
+  LLVM_DEBUG(dbgs() << "  Input type(" << *InpTy << ") elements("
+                    << HVC.length(InpTy) << ") VecLen(" << HVC.getSizeOf(InpTy)
+                    << ") type(" << *InpTy->getElementType() << ") of size("
+                    << InpTy->getScalarSizeInBits() << ")bits\n");
+  auto *CI = dyn_cast<CallBase>(&In);
+  assert(CI && "Expected llvm.masked.store to be a call");
+  Align HaveAlign = CI->getParamAlign(1).valueOrOne();
+
+  uint64_t KA = 1;
+  if (auto res = getAlignment(In, In.getOperand(1))) // ptr operand
+    KA = *res;
+  LLVM_DEBUG(dbgs() << "  HaveAlign(" << HaveAlign.value() << ") KnownAlign("
+                    << KA << ")\n");
+  // Normalize 0 -> ABI alignment of the stored value type (operand 0).
+  Type *ValTy = In.getOperand(0)->getType();
+  Align EffA =
+      (KA > 0) ? Align(KA) : Align(HVC.DL.getABITypeAlign(ValTy).value());
+
+  if (EffA < HaveAlign)
+    return nullptr;
+
+  // Attach/replace the param attribute on pointer param #1.
+  AttrBuilder AttrB(CI->getContext());
+  AttrB.addAlignmentAttr(EffA);
+  CI->setAttributes(
+      CI->getAttributes().addParamAttributes(CI->getContext(), 1, AttrB));
+  return CI;
+}
+
+Value *HvxIdioms::processMLoad(Instruction &In) const {
+  [[maybe_unused]] auto *InpTy = dyn_cast<VectorType>(In.getType());
+  assert(InpTy && "Cannot handle non vector type for llvm.masked.store");
+  LLVM_DEBUG(dbgs() << "\n[Process mload](" << In << ")\n"
+                    << *In.getParent() << "\n");
+  LLVM_DEBUG(dbgs() << "  Input type(" << *InpTy << ") elements("
+                    << HVC.length(InpTy) << ") VecLen(" << HVC.getSizeOf(InpTy)
+                    << ") type(" << *InpTy->getElementType() << ") of size("
+                    << InpTy->getScalarSizeInBits() << ")bits\n");
+  auto *CI = dyn_cast<CallBase>(&In);
+  assert(CI && "Expected to be a call to llvm.masked.load");
+  // The pointer is operand #0, and its param attribute index is also 0.
+  Align HaveAlign = CI->getParamAlign(0).valueOrOne();
+
+  // Compute best-known alignment KA from analysis.
+  uint64_t KA = 1;
+  if (auto res = getAlignment(In, In.getOperand(0))) // ptr operand
+    KA = *res;
+
+  // Normalize 0 → ABI alignment of the loaded value type.
+  Type *ValTy = In.getType();
+  Align EffA =
+      (KA > 0) ? Align(KA) : Align(HVC.DL.getABITypeAlign(ValTy).value());
+  if (EffA < HaveAlign)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "  HaveAlign(" << HaveAlign.value() << ") KnownAlign("
+                    << KA << ")\n");
+
+  // Attach/replace the param attribute on pointer param #0.
+  AttrBuilder AttrB(CI->getContext());
+  AttrB.addAlignmentAttr(EffA);
+  CI->setAttributes(
+      CI->getAttributes().addParamAttributes(CI->getContext(), 0, AttrB));
+  return CI;
 }
 
 auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
@@ -2695,7 +2960,8 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
     // Do full-precision multiply and shift.
     Value *Prod32 = createMul16(Builder, Op.X, Op.Y);
     if (Rounding) {
-      Value *RoundVal = ConstantInt::get(Prod32->getType(), 1 << *Op.RoundAt);
+      Value *RoundVal =
+          ConstantInt::get(Prod32->getType(), 1ull << *Op.RoundAt);
       Prod32 = Builder.CreateAdd(Prod32, RoundVal, "add");
     }
 
@@ -2721,7 +2987,7 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
     Value *Zero = Constant::getNullValue(WordX[0]->getType());
     SmallVector<Value *> RoundV(WordP.size(), Zero);
     RoundV[*Op.RoundAt / 32] =
-        ConstantInt::get(HvxWordTy, 1 << (*Op.RoundAt % 32));
+        ConstantInt::get(HvxWordTy, 1ull << (*Op.RoundAt % 32));
     WordP = createAddLong(Builder, WordP, RoundV);
   }
 
@@ -3015,6 +3281,18 @@ auto HvxIdioms::run() -> bool {
         It = cast<Instruction>(New)->getReverseIterator();
         RecursivelyDeleteTriviallyDeadInstructions(&*It, &HVC.TLI);
         Changed = true;
+      } else if (matchMLoad(*It)) {
+        Value *New = processMLoad(*It);
+        if (!New)
+          continue;
+        LLVM_DEBUG(dbgs() << "  MLoad : " << *New << "\n");
+        Changed = true;
+      } else if (matchMStore(*It)) {
+        Value *New = processMStore(*It);
+        if (!New)
+          continue;
+        LLVM_DEBUG(dbgs() << "  MStore : " << *New << "\n");
+        Changed = true;
       }
     }
   }
@@ -3071,7 +3349,7 @@ auto HexagonVectorCombine::getConstInt(int Val, unsigned Width) const
 
 auto HexagonVectorCombine::isZero(const Value *Val) const -> bool {
   if (auto *C = dyn_cast<Constant>(Val))
-    return C->isZeroValue();
+    return C->isNullValue();
   return false;
 }
 
