@@ -18,6 +18,90 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
+using namespace cir;
+
+static mlir::Value emitBinaryExpMaybeConstrainedFPBuiltin(
+    CIRGenFunction &CGF, const CallExpr *E, llvm::StringRef IntrinsicName,
+    llvm::StringRef ConstrainedIntrinsicName) {
+  mlir::Value Src0 = CGF.emitScalarExpr(E->getArg(0));
+  mlir::Value Src1 = CGF.emitScalarExpr(E->getArg(1));
+
+  auto &Builder = CGF.getBuilder();
+
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, E);
+
+  if (Builder.getIsFPConstrained()) {
+    return cir::LLVMIntrinsicCallOp::create(
+               Builder, CGF.getLoc(E->getExprLoc()),
+               Builder.getStringAttr(ConstrainedIntrinsicName), Src0.getType(),
+               {Src0, Src1})
+        .getResult();
+  }
+
+  return cir::LLVMIntrinsicCallOp::create(Builder, CGF.getLoc(E->getExprLoc()),
+                                          Builder.getStringAttr(IntrinsicName),
+                                          Src0.getType(), {Src0, Src1})
+      .getResult();
+}
+
+static mlir::Value emitLogbBuiltin(CIRGenFunction &CGF, const CallExpr *E,
+                                   bool IsFloat) {
+  auto &Builder = CGF.getBuilder();
+  mlir::Location Loc = CGF.getLoc(E->getExprLoc());
+
+  mlir::Value Src0 = CGF.emitScalarExpr(E->getArg(0));
+  mlir::Type SrcTy = Src0.getType();
+  mlir::Type Int32Ty = Builder.getSInt32Ty();
+
+  cir::RecordType FrExpResTy =
+      Builder.getAnonRecordTy({SrcTy, Int32Ty}, false, false);
+
+  mlir::Value FrExpResult =
+      cir::LLVMIntrinsicCallOp::create(
+          Builder, Loc, Builder.getStringAttr("llvm.frexp"), FrExpResTy, {Src0})
+          .getResult();
+
+  mlir::Value Exp =
+      cir::ExtractMemberOp::create(Builder, Loc, Int32Ty, FrExpResult, 1);
+
+  mlir::Value NegativeOne =
+      Builder.getConstant(Loc, cir::IntAttr::get(Int32Ty, -1));
+  mlir::Value ExpMinus1 = Builder.createAdd(Loc, Exp, NegativeOne);
+
+  mlir::Value SIToFP = cir::CastOp::create(
+      Builder, Loc, SrcTy, cir::CastKind::int_to_float, ExpMinus1);
+
+  mlir::Value Fabs = cir::FAbsOp::create(Builder, Loc, SrcTy, Src0);
+
+  llvm::APFloat InfVal =
+      IsFloat ? llvm::APFloat::getInf(llvm::APFloat::IEEEsingle())
+              : llvm::APFloat::getInf(llvm::APFloat::IEEEdouble());
+  mlir::Value Inf = Builder.getConstant(Loc, cir::FPAttr::get(SrcTy, InfVal));
+
+  mlir::Value FabsNegInf =
+      Builder.createCompare(Loc, cir::CmpOpKind::ne, Fabs, Inf);
+
+  mlir::Value Sel = Builder.createSelect(Loc, FabsNegInf, SIToFP, Fabs);
+
+  llvm::APFloat ZeroValue =
+      IsFloat ? llvm::APFloat::getZero(llvm::APFloat::IEEEsingle())
+              : llvm::APFloat::getZero(llvm::APFloat::IEEEdouble());
+  mlir::Value Zero =
+      Builder.getConstant(Loc, cir::FPAttr::get(SrcTy, ZeroValue));
+
+  mlir::Value SrcEqZero =
+      Builder.createCompare(Loc, cir::CmpOpKind::eq, Src0, Zero);
+
+  llvm::APFloat NegInfVal =
+      IsFloat ? llvm::APFloat::getInf(llvm::APFloat::IEEEsingle(), true)
+              : llvm::APFloat::getInf(llvm::APFloat::IEEEdouble(), true);
+  mlir::Value NegInf =
+      Builder.getConstant(Loc, cir::FPAttr::get(SrcTy, NegInfVal));
+
+  mlir::Value Result = Builder.createSelect(Loc, SrcEqZero, NegInf, Sel);
+
+  return Result;
+}
 
 std::optional<mlir::Value>
 CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
@@ -837,20 +921,15 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case Builtin::BIlogbf:
-  case Builtin::BI__builtin_logbf: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case Builtin::BI__builtin_logbf:
+    return emitLogbBuiltin(*this, expr, true);
   case Builtin::BIscalbnf:
   case Builtin::BI__builtin_scalbnf:
+    return emitLogbBuiltin(*this, expr, false);
   case Builtin::BIscalbn:
   case Builtin::BI__builtin_scalbn: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBinaryExpMaybeConstrainedFPBuiltin(
+        *this, expr, "llvm.ldexp", "llvm.experimental.constrained.ldexp");
   }
   default:
     return std::nullopt;
