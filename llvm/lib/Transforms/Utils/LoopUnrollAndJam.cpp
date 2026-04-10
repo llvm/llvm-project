@@ -587,8 +587,10 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   // Update LoopInfo if the loop is completely removed, and store the loop
   // blocks before they become unavailable after the update.
   std::vector<BasicBlock *> Blocks = L->getBlocks();
-  if (CompletelyUnroll)
+  if (CompletelyUnroll) {
     LI->erase(L);
+    L = nullptr;
+  }
 
   // At this point, the code is well formed.  We now do a quick sweep over the
   // inserted code, doing constant propagation and dead code elimination as we
@@ -596,7 +598,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   simplifyLoopAfterUnroll(SubLoop, true, LI, SE, DT, AC, TTI,
                           SubLoop->getBlocks());
   simplifyLoopAfterUnroll(L, !CompletelyUnroll && Count > 1, LI, SE, DT, AC,
-                          TTI, std::move(Blocks));
+                          TTI, Blocks);
 
   NumCompletelyUnrolledAndJammed += CompletelyUnroll;
   ++NumUnrolledAndJammed;

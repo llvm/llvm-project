@@ -345,7 +345,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    AssumptionCache *AC,
                                    const TargetTransformInfo *TTI,
-                                   std::vector<BasicBlock *> &&Blocks,
+                                   ArrayRef<BasicBlock *> Blocks,
                                    AAResults *AA) {
   using namespace llvm::PatternMatch;
 
