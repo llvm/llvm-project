@@ -1246,26 +1246,31 @@ struct ConvertXeGPUToXeVMPass
         return {};
       auto input = inputs.front();
       if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
-        if (type == vecTy.getElementType() ||
-            ((vecTy.getElementType() == builder.getIndexType()) &&
-             type.isInteger())) {
-          // If the vector rank is 0 or has a single element,
-          // extract scalar of target type.
-          auto rank = vecTy.getRank();
-          Value cast;
-          if (rank == 0) {
-            cast =
-                vector::ExtractOp::create(builder, loc, input, {}).getResult();
-          } else {
-            cast = vector::ExtractOp::create(builder, loc, input,
-                                             SmallVector<int64_t>(rank, 0))
-                       .getResult();
-          }
-          if (type != vecTy.getElementType())
-            cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
-                       .getResult();
-          return cast;
+        // Source needs to be single element vector
+        auto rank = vecTy.getRank();
+        if (rank != 0 && vecTy.getNumElements() != 1)
+          return {};
+        auto inElemTy = vecTy.getElementType();
+        // extract scalar
+        Value cast = input;
+        if (rank == 0) {
+          cast = vector::ExtractOp::create(builder, loc, cast, {}).getResult();
+        } else {
+          cast = vector::ExtractOp::create(builder, loc, cast,
+                                           SmallVector<int64_t>(rank, 0))
+                     .getResult();
         }
+        // Extracted element type may need conversion
+        // Two cases
+        // 1. Index type to integer type
+        // 2. Other element type mismatch
+        if (inElemTy.isIndex()) {
+          cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
+                     .getResult();
+        } else if (inElemTy != type) {
+          cast = arith::BitcastOp::create(builder, loc, type, cast).getResult();
+        }
+        return cast;
       }
       return {};
     };
@@ -1274,7 +1279,8 @@ struct ConvertXeGPUToXeVMPass
     //   - single element of vector element type to single element vector
     // If result type of original op is single element vector and lowered type
     // is scalar. This materialization cast creates a single element vector by
-    // broadcasting the scalar value.
+    // First convert element type if needed and then broadcasting to single
+    // element vector.
     // Applies only to source materialization.
     auto singleElementToVectorMaterializationCast =
         [](OpBuilder &builder, Type type, ValueRange inputs,
@@ -1282,21 +1288,26 @@ struct ConvertXeGPUToXeVMPass
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
+      auto inTy = input.getType();
+      if (!inTy.isIntOrFloat())
+        return {};
       // If the target type is a vector of rank 0 or single element vector
       // of element type matching input type, broadcast input to target type.
       if (auto vecTy = dyn_cast<VectorType>(type)) {
-        if (vecTy.getRank() == 0 || vecTy.getNumElements() == 1) {
-          if (input.getType() == vecTy.getElementType()) {
-            return vector::BroadcastOp::create(builder, loc, vecTy, input)
-                .getResult();
-          } else if (vecTy.getElementType() == builder.getIndexType()) {
-            Value cast = arith::IndexCastUIOp::create(
-                             builder, loc, builder.getIndexType(), input)
-                             .getResult();
-            return vector::BroadcastOp::create(builder, loc, vecTy, cast)
-                .getResult();
-          }
+        if (vecTy.getRank() != 0 && vecTy.getNumElements() != 1)
+          return {};
+        auto outElemTy = vecTy.getElementType();
+        Value cast = input;
+        if (outElemTy.isIndex()) {
+          cast = arith::IndexCastUIOp::create(builder, loc,
+                                              builder.getIndexType(), cast)
+                     .getResult();
+        } else if (inTy != outElemTy) {
+          cast = arith::BitcastOp::create(builder, loc, outElemTy, cast)
+                     .getResult();
         }
+        return vector::BroadcastOp::create(builder, loc, vecTy, cast)
+            .getResult();
       }
       return {};
     };
