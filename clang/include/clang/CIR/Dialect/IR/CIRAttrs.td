@@ -111,6 +111,68 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArgPassingKind + RecordLayoutAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_ArgPassingKind : CIR_I32EnumAttr<
+    "ArgPassingKind", "record argument passing eligibility", [
+  I32EnumAttrCase<"CanPassInRegs", 0, "can_pass_in_regs">,
+  I32EnumAttrCase<"CannotPassInRegs", 1, "cannot_pass_in_regs">,
+  I32EnumAttrCase<"CanNeverPassInRegs", 2, "can_never_pass_in_regs">
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout"> {
+  let summary = "ABI layout metadata for a record type";
+  let description = [{
+    Holds AST-derived ABI metadata for a named record type.  These
+    properties are translation-unit / target properties, not intrinsic
+    to the type, so they live on the module rather than on RecordType.
+
+    Fields:
+    - `arg_passing_kind`: whether the record can be passed in registers
+      per the C++ ABI (mirrors `RecordDecl::getArgPassingRestrictions()`).
+    - `has_trivial_destructor`: from `CXXRecordDecl::hasTrivialDestructor()`.
+    - `record_align_in_bytes`: from `ASTRecordLayout::getAlignment()`.
+      Needed because CIR's DataLayout cannot account for
+      `__attribute__((aligned(N)))`.
+
+    Example:
+    ```
+    module attributes {
+      cir.record_layouts = {
+        "Trivial" = #cir.record_layout<
+          arg_passing_kind = can_pass_in_regs,
+          has_trivial_dtor = true,
+          record_align = 4>,
+        "NonTrivialDtor" = #cir.record_layout<
+          arg_passing_kind = cannot_pass_in_regs,
+          has_trivial_dtor = false,
+          record_align = 4>
+      }
+    }
+    ```
+  }];
+
+  let parameters = (ins
+    EnumParameter<CIR_ArgPassingKind>:$arg_passing_kind,
+    "bool":$has_trivial_dtor,
+    "uint64_t":$record_align
+  );
+
+  let assemblyFormat = [{
+    `<`
+      `arg_passing_kind` `=` $arg_passing_kind `,`
+      `has_trivial_dtor` `=` $has_trivial_dtor `,`
+      `record_align` `=` $record_align
+    `>`
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // OptInfoAttr
 //===----------------------------------------------------------------------===//
 

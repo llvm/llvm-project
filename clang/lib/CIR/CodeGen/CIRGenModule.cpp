@@ -3100,6 +3100,11 @@ void CIRGenModule::release() {
   theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
                      builder.getArrayAttr(globalScopeAsm));
 
+  if (!recordLayoutEntries.empty())
+    theModule->setAttr(
+        cir::CIRDialect::getRecordLayoutsAttrName(),
+        mlir::DictionaryAttr::get(&getMLIRContext(), recordLayoutEntries));
+
   if (getTriple().isAMDGPU() ||
       (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD))
     emitAMDGPUMetadata();
