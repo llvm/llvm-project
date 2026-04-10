@@ -1654,10 +1654,8 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
     return lv;
   }
 
-  if (isa<FunctionDecl>(nd)) {
-    cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: FunctionDecl");
-    return LValue();
-  }
+  if (const auto *fd = dyn_cast<FunctionDecl>(nd))
+    return emitFunctionDeclLValue(*this, e, fd);
 
   llvm_unreachable("Unhandled member declaration!");
 }
@@ -1897,10 +1895,9 @@ LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
 LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
   RValue rv = emitCallExpr(e);
 
-  if (!rv.isScalar()) {
-    cgm.errorNYI(e->getSourceRange(), "emitCallExprLValue: non-scalar return");
-    return {};
-  }
+  if (!rv.isScalar())
+    return makeAddrLValue(rv.getAggregateAddress(), e->getType(),
+                          AlignmentSource::Decl);
 
   assert(e->getCallReturnType(getContext())->isReferenceType() &&
          "Can't have a scalar return unless the return type is a "

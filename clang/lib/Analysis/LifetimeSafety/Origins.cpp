@@ -181,6 +181,10 @@ OriginList *OriginManager::createNode(const Expr *E, QualType QT) {
   return new (ListAllocator.Allocate<OriginList>()) OriginList(NewID);
 }
 
+OriginList *OriginManager::createSingleOriginList(OriginID OID) {
+  return new (ListAllocator.Allocate<OriginList>()) OriginList(OID);
+}
+
 template <typename T>
 OriginList *OriginManager::buildListForType(QualType QT, const T *Node) {
   assert(hasOrigins(QT) && "buildListForType called for non-pointer type");

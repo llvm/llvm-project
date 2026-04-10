@@ -232,6 +232,35 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   }
 }
 
+void OmpStructureChecker::CheckRectangularNest(
+    const parser::OmpDirectiveSpecification &spec, const LoopSequence &nest) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  auto depth{GetRectangularNestDepthWithReason(spec, version)};
+  if (!depth || *depth.value == 0) {
+    return;
+  }
+
+  int64_t height{0};
+  std::vector<const LoopSequence *> outer;
+  for (const LoopSequence *n{&nest}; n;) {
+    if (n->owner()) {
+      WithReason<bool> rect{n->isRectangular(outer)};
+      if (!rect.value.value_or(true)) {
+        auto &msg{context_.Say(spec.DirName().source,
+            "This construct requires a rectangular loop nest, but the associated nest is not"_err_en_US)};
+        depth.reason.AttachTo(msg);
+        rect.reason.AttachTo(msg);
+      }
+      outer.push_back(n);
+    }
+    height += n->height().value.value_or(1);
+    if (height >= *depth.value) {
+      break;
+    }
+    n = n->children().empty() ? nullptr : &n->children().front();
+  }
+}
+
 void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
@@ -266,8 +295,9 @@ void OmpStructureChecker::CheckNestedConstruct(
     }
   }
 
+  // The loop sequence will correspond to the nest associated with the
+  // loop-associated construct being visited.
   LoopSequence sequence(body, version, true);
-
   auto assoc{llvm::omp::getDirectiveAssociation(dir)};
   auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
   auto haveLength{sequence.length()};
@@ -301,6 +331,14 @@ void OmpStructureChecker::CheckNestedConstruct(
     auto haveDepth{needPerfect ? havePerf : haveSema};
     std::string_view perfectTxt{needPerfect ? " perfect" : ""};
 
+    if (needDepth.value > 1 && IsDoConcurrentLegal(version)) {
+      if (auto *conc{sequence.getNestedDoConcurrent()}) {
+        auto &msg{context_.Say(*parser::GetSource(*conc->owner()),
+            "DO CONCURRENT must be the only affected loop in a loop nest"_err_en_US)};
+        needDepth.reason.AttachTo(msg);
+      }
+    }
+
     // If the present depth is 0, it's likely that the construct doesn't
     // have any loops in it, which would be diagnosed above.
     if (needDepth && haveDepth.value > 0) {
@@ -312,6 +350,8 @@ void OmpStructureChecker::CheckNestedConstruct(
             perfectTxt, *needDepth.value, perfectTxt, *haveDepth.value)};
         haveDepth.reason.AttachTo(msg);
         needDepth.reason.AttachTo(msg);
+      } else {
+        CheckRectangularNest(beginSpec, sequence);
       }
     }
 
@@ -648,6 +688,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
+  CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_linear);
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
     if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {

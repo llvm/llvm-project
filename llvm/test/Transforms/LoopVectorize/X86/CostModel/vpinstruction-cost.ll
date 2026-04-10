@@ -57,8 +57,8 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 0 for VF 4: IR %c = icmp ule i64 %l, 128
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<%2>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<%2>
+; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
 ;
 entry:
   br label %loop.header
