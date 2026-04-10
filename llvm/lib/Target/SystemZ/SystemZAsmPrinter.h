@@ -105,6 +105,8 @@ private:
     MCSymbol *EPMarker = nullptr; // Symbol marking entry point.
     MCSymbol *PersonalityRoutine = nullptr;
     MCSymbol *GCCEH = nullptr;
+    int64_t OffsetFPR = 0;
+    int64_t OffsetVR = 0;
     uint64_t CallFrameSize = 0;
     unsigned SizeOfFnParams = 0;
     uint32_t FrameAndFPROffset;
@@ -112,6 +114,7 @@ private:
     uint16_t SavedGPRMask = 0;
     uint16_t SavedFPRMask = 0;
     uint8_t SavedVRMask = 0;
+    uint8_t FrameReg = 0;
     bool HasArgAreaLength = false;
     bool IsVarArg = false;
     bool HasStackProtector = false;

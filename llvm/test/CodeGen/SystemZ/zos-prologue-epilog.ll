@@ -417,7 +417,7 @@ define void @large_stack3() {
 ; CHECK: aghik	3,1,-4
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: lmg
-; CHECK-LABEL: L#func_end20 DS 0H
+; CHECK-LABEL: L#func_end22 DS 0H
 define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
   %n = add i64 %a, %b
   %m = mul i64 %n, %c

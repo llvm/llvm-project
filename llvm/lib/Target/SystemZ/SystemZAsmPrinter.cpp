@@ -1534,16 +1534,18 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
     OutStreamer->AddComment("AR mask");
     OutStreamer->emitInt16(0); // AR Mask, unused currently.
     OutStreamer->AddComment("FPR Save Area Locator");
-    OutStreamer->AddComment(Twine("  Bit 0-3: Register R")
-                                .concat(utostr(Info.FrameAndFPROffset >> 28))
-                                .str());
+    uint64_t FPRSaveAreaOffset = Info.OffsetFPR;
+    assert(FPRSaveAreaOffset < 0x10000000 && "Offset out of range");
+    FPRSaveAreaOffset &= 0x0FFFFFFF; // Lose top 4 bits.
     OutStreamer->AddComment(
-        Twine("  Bit 4-31: Offset ")
-            .concat(utostr(Info.FrameAndFPROffset & 0x0FFFFFFF))
-            .str());
-    OutStreamer->emitInt32(Info.FrameAndFPROffset); // Offset to FPR save area
-                                                    // with register to add
-                                                    // value to (alloca reg).
+        Twine("  Bit 0-3: Register R").concat(utostr(Info.FrameReg)).str());
+    OutStreamer->AddComment(Twine("  Bit 4-31: Offset ")
+                                .concat(utostr(FPRSaveAreaOffset))
+                                .str());
+    OutStreamer->emitInt32(FPRSaveAreaOffset |
+                           (Info.FrameReg << 28)); // Offset to FPR save area
+                                                   // with register to add
+                                                   // value to (alloca reg).
   }
 
   // Emit saved VR mask to VR save area.
@@ -1552,15 +1554,15 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
     OutStreamer->emitInt8(Info.SavedVRMask);
     OutStreamer->emitInt8(0);  // Reserved.
     OutStreamer->emitInt16(0); // Also reserved.
+    uint64_t VRSaveAreaOffset = Info.OffsetVR;
+    assert(VRSaveAreaOffset < 0x10000000 && "Offset out of range");
+    VRSaveAreaOffset &= 0x0FFFFFFF; // Lose top 4 bits.
     OutStreamer->AddComment("VR Save Area Locator");
-    OutStreamer->AddComment(Twine("  Bit 0-3: Register R")
-                                .concat(utostr(Info.FrameAndVROffset >> 28))
-                                .str());
     OutStreamer->AddComment(
-        Twine("  Bit 4-31: Offset ")
-            .concat(utostr(Info.FrameAndVROffset & 0x0FFFFFFF))
-            .str());
-    OutStreamer->emitInt32(Info.FrameAndVROffset);
+        Twine("  Bit 0-3: Register R").concat(utostr(Info.FrameReg)).str());
+    OutStreamer->AddComment(
+        Twine("  Bit 4-31: Offset ").concat(utostr(VRSaveAreaOffset)).str());
+    OutStreamer->emitInt32(VRSaveAreaOffset | (Info.FrameReg << 28));
   }
 
   // Emit C++ EH information block.
@@ -1592,7 +1594,7 @@ void SystemZAsmPrinter::calculatePPA1(MCSymbol *CurrentFnPPA1Sym, MCSymbol *Curr
 
   const TargetRegisterInfo *TRI = MF->getRegInfo().getTargetRegisterInfo();
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
-  const auto TargetHasVector = Subtarget.hasVector();
+  //const auto TargetHasVector = Subtarget.hasVector();
 
   const SystemZMachineFunctionInfo *ZFI =
       MF->getInfo<SystemZMachineFunctionInfo>();
@@ -1650,26 +1652,6 @@ void SystemZAsmPrinter::calculatePPA1(MCSymbol *CurrentFnPPA1Sym, MCSymbol *Curr
   assert(AllocaReg < 16 && "Can't have alloca register larger than 15");
   (void)AllocaReg;
 
-  // Build FPR save area offset.
-  uint32_t FrameAndFPROffset = 0;
-  if (SavedFPRMask) {
-    uint64_t FPRSaveAreaOffset = OffsetFPR;
-    assert(FPRSaveAreaOffset < 0x10000000 && "Offset out of range");
-
-    FrameAndFPROffset = FPRSaveAreaOffset & 0x0FFFFFFF; // Lose top 4 bits.
-    FrameAndFPROffset |= FrameReg << 28;                // Put into top 4 bits.
-  }
-
-  // Build VR save area offset.
-  uint32_t FrameAndVROffset = 0;
-  if (TargetHasVector && SavedVRMask) {
-    uint64_t VRSaveAreaOffset = OffsetVR;
-    assert(VRSaveAreaOffset < 0x10000000 && "Offset out of range");
-
-    FrameAndVROffset = VRSaveAreaOffset & 0x0FFFFFFF; // Lose top 4 bits.
-    FrameAndVROffset |= FrameReg << 28;               // Put into top 4 bits.
-  }
-
   MCSymbol *PersonalityRoutine = nullptr;
   MCSymbol *GCCEH = nullptr;
   if (!MF->getLandingPads().empty()) {
@@ -1690,13 +1672,14 @@ void SystemZAsmPrinter::calculatePPA1(MCSymbol *CurrentFnPPA1Sym, MCSymbol *Curr
   Info.FnEnd = createTempSymbol("func_end");
   Info.PersonalityRoutine = PersonalityRoutine;
   Info.GCCEH = GCCEH;
+  Info.OffsetFPR = OffsetFPR;
+  Info.OffsetVR = OffsetVR;
   Info.CallFrameSize = MFFrame.getMaxCallFrameSize();
   Info.SizeOfFnParams = ZFI->getSizeOfFnParams();
-  Info.FrameAndFPROffset = FrameAndFPROffset;
-  Info.FrameAndVROffset = FrameAndVROffset;
   Info.SavedGPRMask = SavedGPRMask;
   Info.SavedFPRMask = SavedFPRMask;
   Info.SavedVRMask = SavedVRMask;
+  Info.FrameReg = FrameReg;
   Info.IsVarArg = MF->getFunction().isVarArg();
   Info.HasStackProtector = MFFrame.hasStackProtectorIndex();
 
