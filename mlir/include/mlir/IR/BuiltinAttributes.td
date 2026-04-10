@@ -474,16 +474,16 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     ```
 
     A dense resource elements attribute is an elements attribute backed by a
-    handle to a builtin dialect resource containing a densely packed array of
-    values. This class provides the low-level attribute, which should only be
+    handle to a dialect resource containing a densely packed array of values.
+    The resource blob may be owned by any dialect, not just BuiltinDialect.
+    This class provides the low-level attribute, which should only be
     interacted with in very generic terms, actual access to the underlying
     resource data is intended to be managed through one of the subclasses, such
     as; `DenseBoolResourceElementsAttr`, `DenseUI64ResourceElementsAttr`,
     `DenseI32ResourceElementsAttr`, `DenseF32ResourceElementsAttr`,
     `DenseF64ResourceElementsAttr`, etc.
 
-    Examples:
-
+    For resources owned by BuiltinDialect (the default):
     ```mlir
     "example.user_op"() {attr = dense_resource<blob1> : tensor<3xi64> } : () -> ()
 
@@ -495,14 +495,27 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
       }
     #-}
     ```
+
+    For resources owned by a custom dialect:
+    ```mlir
+    "example.user_op"() {attr = dense_resource<"my_dialect::blob1"> : tensor<3xi64> } : () -> ()
+
+    {-#
+    dialect_resources: {
+        my_dialect: {
+          blob1: "0x08000000010000000000000002000000000000000300000000000000"
+        }
+      }
+    #-}
+    ```
   }];
   let parameters = (ins
     AttributeSelfTypeParameter<"", "ShapedType">:$type,
-    ResourceHandleParameter<"DenseResourceElementsHandle">:$rawHandle
+    ResourceHandleParameter<"DenseResourceBlobHandle">:$resourceHandle
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
-      "ShapedType":$type, "DenseResourceElementsHandle":$handle
+      "ShapedType":$type, "DenseResourceBlobHandle":$handle
     )>,
     /// A builder that inserts a new resource into the builtin dialect's blob
     /// manager using the provided blob. The handle of the inserted blob is used
@@ -514,11 +527,24 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     /// generic operations.
     AttrBuilderWithInferredContext<(ins
       "ShapedType":$type, "StringRef":$blobName, "AsmResourceBlob":$blob
+    )>,
+    /// A builder that inserts a new resource into the specified dialect's blob
+    /// manager. The dialect must have registered a
+    /// ResourceBlobManagerDialectInterface.
+    AttrBuilderWithInferredContext<(ins
+      "ShapedType":$type, "StringRef":$blobName, "AsmResourceBlob":$blob,
+      "Dialect *":$dialect
     )>
   ];
   let extraClassDeclaration = [{
     /// BlobAttrInterface method.
     ArrayRef<char> getData();
+
+    /// Legacy accessor. Returns the handle cast to DenseResourceElementsHandle
+    /// (DialectResourceBlobHandle<BuiltinDialect>). Asserts that the owning
+    /// dialect is BuiltinDialect; use getResourceHandle() for dialect-generic
+    /// access.
+    DenseResourceElementsHandle getRawHandle() const;
   }];
 
   let skipDefaultBuilders = 1;
