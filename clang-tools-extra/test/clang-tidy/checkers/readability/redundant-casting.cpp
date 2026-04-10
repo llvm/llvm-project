@@ -14,6 +14,8 @@
 // RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}' \
 // RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
 
+#include <cstdint>
+
 struct A {};
 struct B : A {};
 A getA();
@@ -166,6 +168,20 @@ void testFunctionalCastWithPrimitive(int a) {
 void testFunctionalCastWithInitExpr(unsigned a) {
   unsigned b = ~unsigned{!a};
   unsigned c = unsigned{0};
+}
+
+void testBinaryOperatorRedundantCasting() {
+  const auto diff_types_operands1 { static_cast<float>(1.0f + 1) };
+  // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: redundant explicit casting to the same type 'float' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-FIXES: const auto diff_types_operands1 { (1.0f + 1) };
+
+  const auto diff_types_operands2 { static_cast<float>(2 + 3.0f) };
+  // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: redundant explicit casting to the same type 'float' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-FIXES: const auto diff_types_operands2 { (2 + 3.0f) };
+
+  const auto diff_types_operands3 { static_cast<int>(1 + static_cast<uint8_t>(1)) };
+  // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: redundant explicit casting to the same type 'int' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-FIXES: const auto diff_types_operands3 { (1 + static_cast<uint8_t>(1)) };
 }
 
 void testBinaryOperator(char c) {

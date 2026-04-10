@@ -50,7 +50,7 @@ static bool areTypesEqual(QualType TypeS, QualType TypeD,
                                             TypeD.getLocalUnqualifiedType());
 }
 
-static bool areBinaryOperatorOperandsTypesEqualToOperatorResultType(
+static bool anyBinaryOperatorOperandsTypesEqualToOperatorResultType(
     const Expr *E, bool IgnoreTypeAliases) {
   if (!E)
     return true;
@@ -64,12 +64,15 @@ static bool areBinaryOperatorOperandsTypesEqualToOperatorResultType(
 
     const QualType NonReferenceType = Type.getNonReferenceType();
     const QualType LHSType = B->getLHS()->IgnoreImplicit()->getType();
-    if (LHSType.isNull() || !areTypesEqual(LHSType.getNonReferenceType(),
-                                           NonReferenceType, IgnoreTypeAliases))
-      return false;
     const QualType RHSType = B->getRHS()->IgnoreImplicit()->getType();
-    if (RHSType.isNull() || !areTypesEqual(RHSType.getNonReferenceType(),
-                                           NonReferenceType, IgnoreTypeAliases))
+    const bool LHSMatches =
+        !LHSType.isNull() && areTypesEqual(LHSType.getNonReferenceType(),
+                                           NonReferenceType, IgnoreTypeAliases);
+    const bool RHSMatches =
+        !RHSType.isNull() && areTypesEqual(RHSType.getNonReferenceType(),
+                                           NonReferenceType, IgnoreTypeAliases);
+    if (!LHSMatches && !RHSMatches)
+      // neither of the operand matches => casting is needed for readability
       return false;
   }
   return true;
@@ -145,7 +148,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   if (!areTypesEqual(TypeS, TypeD, IgnoreTypeAliases))
     return;
 
-  if (!areBinaryOperatorOperandsTypesEqualToOperatorResultType(
+  if (!anyBinaryOperatorOperandsTypesEqualToOperatorResultType(
           SourceExpr, IgnoreTypeAliases))
     return;
 
