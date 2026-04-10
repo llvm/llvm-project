@@ -770,8 +770,11 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
   IO.mapRequired("NumThreadsY", Info.NumThreadsY);
   IO.mapRequired("NumThreadsZ", Info.NumThreadsZ);
 
-  if (Version == 2)
+  if (Version == 2) {
+    if (!IO.outputting())
+      IO.mapOptional("EntryName", EntryName);
     return;
+  }
 
   IO.mapRequired("EntryName", EntryName);
 }

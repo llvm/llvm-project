@@ -76,7 +76,7 @@ struct PSVRuntimeInfo {
   void write(raw_ostream &OS,
              uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
 
-  void finalize(Triple::EnvironmentType Stage);
+  void finalize(Triple::EnvironmentType Stage, uint32_t Version);
 
 private:
   SmallVector<uint32_t, 64> IndexBuffer;
