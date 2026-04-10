@@ -196,10 +196,8 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
   int OldVAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
   assert(OldSAddrIdx >= 0 && OldVAddrIdx >= 0);
 
-  MachineOperand &SAddr = MI.getOperand(OldSAddrIdx);
-  MachineOperand &VAddr = MI.getOperand(OldVAddrIdx);
-  Register SAddrReg = SAddr.getReg();
-  Register OldVAddrReg = VAddr.getReg();
+  Register SAddrReg = MI.getOperand(OldSAddrIdx).getReg();
+  Register OldVAddrReg = MI.getOperand(OldVAddrIdx).getReg();
   DebugLoc DL = MI.getDebugLoc();
 
   bool VAddrIsZero = isZeroVAddr(OldVAddrReg, *MRI);
@@ -215,8 +213,8 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
   } else {
     // new_vaddr = saddr + sext(old_vaddr_32)
     Register TmpVAddr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    auto CopyVAddr =
-        BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), TmpVAddr).add(VAddr);
+    auto CopyVAddr = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), TmpVAddr)
+                         .add(MI.getOperand(OldVAddrIdx));
 
     Register HiExt = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     auto Ashr = BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ASHRREV_I32_e64), HiExt)
@@ -227,13 +225,12 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
     LIS->InsertMachineInstrInMaps(*Ashr);
 
     Register SextVAddr = MRI->createVirtualRegister(VAddrRC);
-    auto CopyLo = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), SextVAddr)
+    auto CopyLo = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY))
+                      .addDef(SextVAddr, RegState::Undef, AMDGPU::sub0)
                       .addReg(TmpVAddr);
-    CopyLo->getOperand(0).setSubReg(AMDGPU::sub0);
-    CopyLo->getOperand(0).setIsUndef(true);
-    auto CopyHi =
-        BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), SextVAddr).addReg(HiExt);
-    CopyHi->getOperand(0).setSubReg(AMDGPU::sub1);
+    auto CopyHi = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY))
+                      .addDef(SextVAddr, {}, AMDGPU::sub1)
+                      .addReg(HiExt);
     LIS->InsertMachineInstrInMaps(*CopyLo);
     LIS->InsertMachineInstrInMaps(*CopyHi);
 
@@ -247,19 +244,31 @@ MachineInstr *SIFixXcntStallSAddrReuse::convertToVAddr(MachineInstr &MI,
     LIS->createAndComputeVirtRegInterval(HiExt);
   }
 
-  MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII->get(NewOpc));
-  for (unsigned i = 0, e = MI.getNumOperands(); i < e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
-    if (MO.isReg() && MO.isImplicit())
-      continue;
-    if (i == (unsigned)OldSAddrIdx)
-      continue;
-    if (i == (unsigned)OldVAddrIdx)
-      MIB.addReg(NewVAddr);
-    else
-      MIB.add(MO);
-  }
+  const MCInstrDesc &NewDesc = TII->get(NewOpc);
+  MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, NewDesc);
+
+  auto addOpIfPresent = [&](AMDGPU::OpName OpName) {
+    int Idx = AMDGPU::getNamedOperandIdx(Opc, OpName);
+    if (Idx != -1)
+      MIB.add(MI.getOperand(Idx));
+  };
+
+  addOpIfPresent(AMDGPU::OpName::vdst);
+  addOpIfPresent(AMDGPU::OpName::vdst_in);
+
+  MIB.addReg(NewVAddr);
+
+  addOpIfPresent(AMDGPU::OpName::vdata);
+
+  addOpIfPresent(AMDGPU::OpName::offset);
+  addOpIfPresent(AMDGPU::OpName::cpol);
+
   MIB.cloneMemRefs(MI);
+
+  int NewVDst = AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vdst);
+  int NewVDstIn = AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vdst_in);
+  if (NewVDst != -1 && NewVDstIn != -1)
+    MIB->tieOperands(NewVDst, NewVDstIn);
 
   LIS->ReplaceMachineInstrInMaps(MI, *MIB);
   LIS->createAndComputeVirtRegInterval(NewVAddr);
