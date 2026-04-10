@@ -712,7 +712,8 @@ public:
 
   /// Convenience method to copy supported exact, fast-math, and (optionally)
   /// wrapping flags from V to this instruction.
-  LLVM_ABI void copyIRFlags(const Value *V, bool IncludeWrapFlags = true);
+  LLVM_ABI void copyIRFlags(const Value *V, bool IncludeWrapFlags = true,
+                            bool IncludeFastMathFlags = true);
 
   /// Logical 'and' of any supported wrapping, exact, and fast-math flags of
   /// V and this instruction.

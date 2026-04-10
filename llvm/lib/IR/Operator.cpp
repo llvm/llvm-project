@@ -300,3 +300,51 @@ void FastMathFlags::print(raw_ostream &O) const {
       O << " afn";
   }
 }
+
+unsigned short &FPMathOperator::getFMFValue() {
+  auto *V = static_cast<Value *>(this);
+  auto *I = dyn_cast<Instruction>(V);
+
+  if (FastMathFlagsStorage *Op = dyn_cast<UnaryOperator>(I))
+    return Op->FMFValue;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPBinaryOperator>(I))
+    return Op->FMFValue;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPTruncInst>(I))
+    return Op->FMFValue;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPExtInst>(I))
+    return Op->FMFValue;
+  if (FastMathFlagsStorage *Op = dyn_cast<FCmpInst>(I))
+    return Op->FMFValue;
+  if (FastMathFlagsStorage *Op = dyn_cast<PHINode>(I))
+    return Op->FMFValue;
+  if (FastMathFlagsStorage *Op = dyn_cast<SelectInst>(I))
+    return Op->FMFValue;
+  if (FastMathFlagsStorage *Op = dyn_cast<CallInst>(I))
+    return Op->FMFValue;
+
+  llvm_unreachable("Unknown FPMathOperator!");
+}
+
+unsigned short FPMathOperator::getFMFValue() const {
+  const auto *V = static_cast<const Value *>(this);
+  const auto *I = dyn_cast<Instruction>(V);
+
+  if (const FastMathFlagsStorage *Op = dyn_cast<UnaryOperator>(I))
+    return Op->FMFValue;
+  if (const FastMathFlagsStorage *Op = dyn_cast<FPBinaryOperator>(I))
+    return Op->FMFValue;
+  if (const FastMathFlagsStorage *Op = dyn_cast<FPTruncInst>(I))
+    return Op->FMFValue;
+  if (const FastMathFlagsStorage *Op = dyn_cast<FPExtInst>(I))
+    return Op->FMFValue;
+  if (const FastMathFlagsStorage *Op = dyn_cast<FCmpInst>(I))
+    return Op->FMFValue;
+  if (const FastMathFlagsStorage *Op = dyn_cast<PHINode>(I))
+    return Op->FMFValue;
+  if (const FastMathFlagsStorage *Op = dyn_cast<SelectInst>(I))
+    return Op->FMFValue;
+  if (const FastMathFlagsStorage *Op = dyn_cast<CallInst>(I))
+    return Op->FMFValue;
+
+  llvm_unreachable("Unknown FPMathOperator!");
+}

@@ -51,6 +51,15 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
+/// Provide fast-math flags storage, instructions that support fast-math flags
+/// should inherit from this class.
+class FastMathFlagsStorage {
+  friend class FPMathOperator;
+
+protected:
+  unsigned short FMFValue = 0;
+};
+
 //===----------------------------------------------------------------------===//
 //                          UnaryInstruction Class
 //===----------------------------------------------------------------------===//
@@ -98,7 +107,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UnaryInstruction, Value)
 //                                UnaryOperator Class
 //===----------------------------------------------------------------------===//
 
-class UnaryOperator : public UnaryInstruction {
+class UnaryOperator : public UnaryInstruction, public FastMathFlagsStorage {
   void AssertOK();
 
 protected:
@@ -203,16 +212,12 @@ public:
   /// statically know what type of instruction you're going to create.  These
   /// helpers just save some typing.
 #define HANDLE_BINARY_INST(N, OPC, CLASS)                                      \
-  static BinaryOperator *Create##OPC(Value *V1, Value *V2,                     \
-                                     const Twine &Name = "") {                 \
-    return Create(Instruction::OPC, V1, V2, Name);                             \
-  }
+  static inline BinaryOperator *Create##OPC(Value *V1, Value *V2,              \
+                                            const Twine &Name = "");
 #include "llvm/IR/Instruction.def"
 #define HANDLE_BINARY_INST(N, OPC, CLASS)                                      \
-  static BinaryOperator *Create##OPC(Value *V1, Value *V2, const Twine &Name,  \
-                                     InsertPosition InsertBefore) {            \
-    return Create(Instruction::OPC, V1, V2, Name, InsertBefore);               \
-  }
+  static inline BinaryOperator *Create##OPC(                                   \
+      Value *V1, Value *V2, const Twine &Name, InsertPosition InsertBefore);
 #include "llvm/IR/Instruction.def"
 
   static BinaryOperator *
@@ -434,6 +439,66 @@ BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
   cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
   return BO;
 }
+
+/// Binary operators support fast-math flags, users should not use this
+/// class directly, BinaryOperator can automatic create instructions with
+/// correct type.
+class FPBinaryOperator : public BinaryOperator, public FastMathFlagsStorage {
+  friend class Instruction;
+  friend class BinaryOperator;
+  LLVM_ABI FPBinaryOperator *cloneImpl() const;
+  using BinaryOperator::BinaryOperator;
+
+  LLVM_ABI static FPBinaryOperator *
+  Create(BinaryOps Op, Value *S1, Value *S2, const Twine &Name = Twine(),
+         InsertPosition InsertBefore = nullptr);
+
+public:
+  static bool classof(const Instruction *I) {
+    switch (I->getOpcode()) {
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
+    case Instruction::FDiv:
+    case Instruction::FRem:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+#define HANDLE_BINARY_INST(N, OPC, CLASS)                                      \
+  BinaryOperator *BinaryOperator::Create##OPC(Value *V1, Value *V2,            \
+                                              const Twine &Name) {             \
+    if constexpr (Instruction::OPC == Instruction::FAdd ||                     \
+                  Instruction::OPC == Instruction::FSub ||                     \
+                  Instruction::OPC == Instruction::FMul ||                     \
+                  Instruction::OPC == Instruction::FDiv ||                     \
+                  Instruction::OPC == Instruction::FRem)                       \
+      return FPBinaryOperator::Create(Instruction::OPC, V1, V2, Name);         \
+    else                                                                       \
+      return Create(Instruction::OPC, V1, V2, Name);                           \
+  }
+#include "llvm/IR/Instruction.def"
+#define HANDLE_BINARY_INST(N, OPC, CLASS)                                      \
+  BinaryOperator *BinaryOperator::Create##OPC(                                 \
+      Value *V1, Value *V2, const Twine &Name, InsertPosition InsertBefore) {  \
+    if constexpr (Instruction::OPC == Instruction::FAdd ||                     \
+                  Instruction::OPC == Instruction::FSub ||                     \
+                  Instruction::OPC == Instruction::FMul ||                     \
+                  Instruction::OPC == Instruction::FDiv ||                     \
+                  Instruction::OPC == Instruction::FRem)                       \
+      return FPBinaryOperator::Create(Instruction::OPC, V1, V2, Name,          \
+                                      InsertBefore);                           \
+    else                                                                       \
+      return Create(Instruction::OPC, V1, V2, Name, InsertBefore);             \
+  }
+#include "llvm/IR/Instruction.def"
 
 //===----------------------------------------------------------------------===//
 //                               CastInst Class

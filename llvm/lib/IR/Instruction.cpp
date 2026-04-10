@@ -708,7 +708,8 @@ void Instruction::copyFastMathFlags(const Instruction *I) {
   copyFastMathFlags(I->getFastMathFlags());
 }
 
-void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
+void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags,
+                              bool IncludeFastMathFlags) {
   // Copy the wrapping flags.
   if (IncludeWrapFlags && isa<OverflowingBinaryOperator>(this)) {
     if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
@@ -734,9 +735,11 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
       DestPD->setIsDisjoint(SrcPD->isDisjoint());
 
   // Copy the fast-math flags.
-  if (auto *FP = dyn_cast<FPMathOperator>(V))
-    if (isa<FPMathOperator>(this))
-      copyFastMathFlags(FP->getFastMathFlags());
+  if (IncludeFastMathFlags) {
+    if (auto *FP = dyn_cast<FPMathOperator>(V))
+      if (isa<FPMathOperator>(this))
+        copyFastMathFlags(FP->getFastMathFlags());
+  }
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
