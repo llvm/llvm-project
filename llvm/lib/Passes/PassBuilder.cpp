@@ -808,13 +808,14 @@ Expected<bool> parseLintOptions(StringRef Params) {
 
 /// Parser of parameters for FunctionPropertiesStatistics pass.
 Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
+  return PassBuilder::parseSinglePassOption(Params, "pre-passes",
                                             "FunctionPropertiesStatisticsPass");
 }
 
 /// Parser of parameters for InstCount pass.
 Expected<bool> parseInstCountOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
+  return PassBuilder::parseSinglePassOption(Params, "pre-passes",
+                                            "InstCountPass");
 }
 
 /// Parser of parameters for LoopUnroll pass.
@@ -2646,9 +2647,8 @@ Error PassBuilder::parsePassPipeline(ModulePassManager &MPM,
                                  std::move(*Pipeline)}}}};
     } else if (isLoopPassName(FirstName, LoopPipelineParsingCallbacks,
                               UseMemorySSA)) {
-      Pipeline = {
-          {"function",
-           {{UseMemorySSA ? "loop-mssa" : "loop", std::move(*Pipeline)}}}};
+      Pipeline = {{"function", {{UseMemorySSA ? "loop-mssa" : "loop",
+                                 std::move(*Pipeline)}}}};
     } else if (isMachineFunctionPassName(
                    FirstName, MachineFunctionPipelineParsingCallbacks)) {
       Pipeline = {{"function", {{"machine-function", std::move(*Pipeline)}}}};

@@ -30,15 +30,11 @@ using namespace llvm;
 #define DEBUG_TYPE "func-properties-stats"
 
 #define FUNCTION_PROPERTY(Name, Description)                                   \
-  STATISTIC(Num##Name##PreOptimizations,                                       \
-            Description " (before optimizations)");                            \
-  STATISTIC(Num##Name, Description " (after "                                  \
-                                   "optimizations)");
+  STATISTIC(Num##Name##PrePasses, Description " (before passes)");             \
+  STATISTIC(Num##Name, Description);
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  STATISTIC(Num##Name##PreOptimizations,                                       \
-            Description " (before optimizations)");                            \
-  STATISTIC(Num##Name, Description " (after "                                  \
-                                   "optimizations)");
+  STATISTIC(Num##Name##PrePasses, Description " (before passes)");             \
+  STATISTIC(Num##Name, Description);
 #include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
@@ -385,11 +381,11 @@ FunctionPropertiesStatisticsPass::run(Function &F,
   LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
                     << "\n");
   auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
-  if (IsPreOptimizations) {
+  if (IsPrePasses) {
 #define FUNCTION_PROPERTY(Name, Description)                                   \
-  Num##Name##PreOptimizations += AnalysisResults.Name;
+  Num##Name##PrePasses += AnalysisResults.Name;
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  Num##Name##PreOptimizations += AnalysisResults.Name;
+  Num##Name##PrePasses += AnalysisResults.Name;
 #include "llvm/IR/FunctionProperties.def"
 #undef FUNCTION_PROPERTY
 #undef DETAILED_FUNCTION_PROPERTY

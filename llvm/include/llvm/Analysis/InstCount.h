@@ -21,11 +21,10 @@ class Function;
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class InstCountPass : public PassInfoMixin<InstCountPass> {
-  bool IsPreOptimizations;
+  bool IsPrePasses;
 
 public:
-  explicit InstCountPass(bool IsPreOptimizations = false)
-      : IsPreOptimizations(IsPreOptimizations) {}
+  explicit InstCountPass(bool IsPrePasses = false) : IsPrePasses(IsPrePasses) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
