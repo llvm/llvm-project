@@ -38,7 +38,7 @@ define void @foo() {
 ; CHECK: DC XL1'00'
 ; CHECK: DC XL1'81'
 ; CHECK: DC XL2'0000'
-; CHECK: DC AD(L#func_end0-L#EPM_foo_0)
+; CHECK: DC AD(L#foo_end_0-L#EPM_foo_0)
 ; CHECK: DC XL2'0003'
 ; CHECK: DC XL3'869696'
 ; CHECK: DC AD(L#EPM_foo_0-L#PPA1_foo_0)

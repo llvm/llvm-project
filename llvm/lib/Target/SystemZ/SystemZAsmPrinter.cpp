@@ -1673,7 +1673,7 @@ void SystemZAsmPrinter::calculatePPA1() {
   Info.PPA1 = OutContext.createTempSymbol(Twine("PPA1_").concat(N).str(), true);
   Info.EPMarker =
       OutContext.createTempSymbol(Twine("EPM_").concat(N).str(), true);
-  Info.FnEnd = OutContext.createTempSymbol("func_end");
+  Info.FnEnd = OutContext.createTempSymbol(Twine(N).concat("end_").str());
   Info.PersonalityRoutine = PersonalityRoutine;
   Info.GCCEH = GCCEH;
   Info.OffsetFPR = OffsetFPR;
