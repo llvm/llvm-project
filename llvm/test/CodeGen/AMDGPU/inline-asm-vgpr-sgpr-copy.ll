@@ -157,7 +157,7 @@ define amdgpu_kernel void @multiple_divergent_sgpr_inputs(ptr addrspace(1) %out)
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_add_u32 s2, s2, s3
-; CHECK-NEXT:    s_add_u32 s2, s2, s4
+; CHECK-NEXT:  s_add_u32 s2, s2, s4
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
@@ -184,7 +184,7 @@ define amdgpu_kernel void @same_value_repeated_sgpr_inputs(ptr addrspace(1) %out
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_add_u32 s3, s2, s2
-; CHECK-NEXT:    s_add_u32 s3, s3, s2
+; CHECK-NEXT:  s_add_u32 s3, s3, s2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
@@ -223,5 +223,61 @@ entry:
   %result = call i32 asm sideeffect "s_add_u32 $0, $0, 1", "={s0},{s0}"(i32 %tid)
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   store i32 %result, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @sgpr_tuple_i64_constraint(ptr addrspace(1) %out) {
+; CHECK-LABEL: sgpr_tuple_i64_constraint:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_mov_b32 s3, 0
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid64 = zext i32 %tid to i64
+  %result = call i64 asm sideeffect "s_nop 0", "=s,s"(i64 %tid64)
+  %trunc = trunc i64 %result to i32
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %trunc, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @sgpr_tuple_v2i32_constraint(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+; CHECK-LABEL: sgpr_tuple_v2i32_constraint:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; CHECK-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 3, v2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s3, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v2
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s2
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep_in = getelementptr <2 x i32>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x i32>, ptr addrspace(1) %gep_in
+  %result = call <2 x i32> asm sideeffect "s_nop 0", "=s,s"(<2 x i32> %val)
+  %elem = extractelement <2 x i32> %result, i32 0
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %elem, ptr addrspace(1) %gep
   ret void
 }
