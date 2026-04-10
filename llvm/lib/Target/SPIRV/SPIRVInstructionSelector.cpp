@@ -1777,6 +1777,9 @@ bool SPIRVInstructionSelector::selectPopCount(Register ResVReg,
                                               SPIRVTypeInst ResType,
                                               MachineInstr &I,
                                               unsigned Opcode) const {
+  if (!STI.isShader())
+    return selectUnOp(ResVReg, ResType, I, Opcode);
+
   Register OpReg = I.getOperand(1).getReg();
   SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpReg);
   unsigned ExtOpcode = GR.isScalarOrVectorSigned(ResType) ? SPIRV::OpSConvert
