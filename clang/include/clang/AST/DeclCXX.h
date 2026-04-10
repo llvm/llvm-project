@@ -759,17 +759,6 @@ public:
            needsImplicitDefaultConstructor();
   }
 
-  // Used by HLSL to determine if implicit constructors and operators should
-  // be allowed for structs. This is required for HLSL's resource classes.
-  /// Determines whether this class has any user provided special members.
-  bool hasUserProvidedSpecialMembers() const {
-    return data().UserDeclaredSpecialMembers &
-               (SMF_MoveConstructor | SMF_MoveAssignment | SMF_Destructor |
-                SMF_CopyAssignment | SMF_CopyConstructor) ||
-           data().UserDeclaredConstructor ||
-           data().UserProvidedDefaultConstructor;
-  }
-
   /// Determine if we need to declare a default constructor for
   /// this class.
   ///
@@ -785,7 +774,7 @@ public:
              !(data().DeclaredSpecialMembers & SMF_DefaultConstructor))) &&
            (!getLangOpts().HLSL ||
             (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) ||
-            hasUserProvidedSpecialMembers());
+            isImplicit());
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -812,8 +801,7 @@ public:
   /// constructor to be lazily declared.
   bool needsImplicitCopyConstructor() const {
     return !(data().DeclaredSpecialMembers & SMF_CopyConstructor) &&
-           (!getLangOpts().HLSL || isLambda() ||
-            hasUserProvidedSpecialMembers());
+           (!getLangOpts().HLSL || isLambda() || isImplicit());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -941,8 +929,7 @@ public:
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
     return !(data().DeclaredSpecialMembers & SMF_CopyAssignment) &&
-           (!getLangOpts().HLSL || isLambda() ||
-            hasUserProvidedSpecialMembers());
+           (!getLangOpts().HLSL || isLambda() || isImplicit());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -1007,7 +994,7 @@ public:
            (!isLambda() || lambdaIsDefaultConstructibleAndAssignable()) &&
            (!getLangOpts().HLSL ||
             (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) ||
-            hasUserProvidedSpecialMembers());
+            isImplicit());
   }
 
   /// Determine whether we need to eagerly declare a move assignment

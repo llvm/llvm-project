@@ -1602,7 +1602,7 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
         Context, Ty.getNonReferenceType(), TInfo, LParenOrBraceLoc, Exprs,
         RParenOrBraceLoc, ListInitialization);
 
-  // HLSL doesn't support constructors or c++ functional cast for structs
+  // HLSL doesn't support constructors or c++ functional casts for structs.
   if (getLangOpts().HLSL && Ty->isRecordType())
     return ExprError(
         Diag(TyBeginLoc, diag::err_hlsl_constructors_functional_cast));

@@ -15443,7 +15443,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
         InitializedEntity::InitializeTemporary(LHSExpr->getType());
     InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
 
-    // If this is HLSL and LHS is a record we transform the init list
+    // If this is HLSL and LHS is a record we transform the init list.
     if (getLangOpts().HLSL && LHSExpr->getType()->isRecordType()) {
       InitListExpr *ILE = cast<InitListExpr>(RHSExpr);
       if (!HLSL().transformInitList(Entity, ILE))
@@ -15505,21 +15505,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     // initialization.
     if (getLangOpts().HLSL && LHSExpr->getType()->isRecordType()) {
       ResultTy = LHSExpr->getType();
-      InitListExpr *ILE =
-          new (Context) InitListExpr(getASTContext(), RHSExpr->getBeginLoc(),
-                                     {RHSExpr}, RHSExpr->getEndLoc());
-      ILE->setType(getASTContext().VoidTy);
-      InitializationKind Kind = InitializationKind::CreateDirectList(
-          RHSExpr->getBeginLoc(), RHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
-      InitializedEntity Entity =
-          InitializedEntity::InitializeTemporary(ResultTy);
-      RHSExpr = ILE;
-      InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
-      if (!HLSL().transformInitList(Entity, ILE))
-        InitSeq.SetFailed(
-            InitializationSequence::FK_HLSLInitListFlatteningFailed);
-
-      ExprResult Init = InitSeq.Perform(*this, Entity, Kind, RHSExpr);
+      ExprResult Init =
+          HLSL().tryAggregateInitialization(*this, ResultTy, RHSExpr);
       if (Init.isInvalid())
         return Init;
       RHS = Init.get();

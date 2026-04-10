@@ -233,6 +233,9 @@ public:
   bool initGlobalResourceDecl(VarDecl *VD);
   bool initGlobalResourceArrayDecl(VarDecl *VD);
 
+  ExprResult tryAggregateInitialization(Sema &S, QualType DestTy,
+                                        Expr *RHSExpr);
+
 private:
   // HLSL resource type attributes need to be processed all at once.
   // This is a list to collect them.

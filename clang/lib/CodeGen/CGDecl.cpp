@@ -1528,8 +1528,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         (D.isConstexpr() ||
          ((Ty.isPODType(getContext()) ||
            getContext().getBaseElementType(Ty)->isObjCObjectPointerType() ||
-           // check if it is a constant initializer if HLSL because PODness
-           // will no longer be true for any user defined structs
+           // If HLSL, then check if it is a constant initializer because
+           // PODness will no longer be true for any user defined structs.
            getLangOpts().HLSL) &&
           D.getInit()->isConstantInitializer(getContext(), false)))) {
 

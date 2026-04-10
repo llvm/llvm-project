@@ -988,8 +988,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       SemanticValue = Result.first;
       if (!SemanticValue)
         return;
-      // if this is a ptr to a record and it does'nt have byval attr
-      // we still need the record type not just 'ptr'
+      // If this is a 'ptr' to a record and it doesn't have byval attribute,
+      // we still need the record type, not just 'ptr'.
       if (Param.hasByValAttr() || PD->getType()->isRecordType()) {
         llvm::Value *Var = B.CreateAlloca(ParamType);
         B.CreateStore(SemanticValue, Var);

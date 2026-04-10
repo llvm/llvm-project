@@ -4837,16 +4837,16 @@ static void TryConstructorOrParenListInitialization(
   TryConstructorInitialization(S, Entity, Kind, Args, DestType, DestType,
                                Sequence, /*IsListInit=*/false, IsAggrListInit);
 
-  // Try list initialization if this is hlsl
+  // Try list initialization if this is HLSL.
   if (S.getLangOpts().HLSL && Sequence.Failed()) {
     InitListExpr *ILE = new (S.Context)
         InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args,
                      Args.back()->getEndLoc());
     ILE->setType(S.getASTContext().VoidTy);
     Args[0] = ILE;
-    // reset sequence as normal
+    // Reset the sequence as normal.
     Sequence.setSequenceKind(InitializationSequence::NormalSequence);
-    // don't want the diagnostics to appear if list initialization fails.
+    // We don't want the diagnostics to appear if list initialization fails.
     Sema::TentativeAnalysisScope DisableDiag(S);
     TryListInitialization(S, Entity, Kind, ILE, Sequence,
                           /*TreatUnavailableAsInvalid=*/true);
