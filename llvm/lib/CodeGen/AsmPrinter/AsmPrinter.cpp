@@ -2336,7 +2336,7 @@ void AsmPrinter::emitFunctionBody() {
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol()) {
-        // The weak symbol attribute used for the prefetch target fallback.
+        // Emit the weak symbol attribute used for the prefetch target fallback.
         if (TM.getTargetTriple().isOSBinFormatELF()) {
           MCSymbolELF *ESym = static_cast<MCSymbolELF *>(S);
           if (ESym->getBinding() == ELF::STB_WEAK)
