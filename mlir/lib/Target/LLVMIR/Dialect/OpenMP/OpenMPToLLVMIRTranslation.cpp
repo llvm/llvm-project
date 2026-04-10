@@ -7318,48 +7318,28 @@ public:
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
 
-  /// Emits pending __kmpc_free calls just before the block's terminator.
-  void preTranslateTerminator(
-      Block &block, llvm::IRBuilderBase &builder,
-      LLVM::ModuleTranslation &moduleTranslation) const final;
+  /// Records the LLVM alloc pointer produced for an OMP ALLOCATE variable so
+  /// that the paired omp.allocate_free op can generate the matching
+  /// __kmpc_free call.
+  void registerAllocatedPtr(Value var, llvm::Value *ptr) const {
+    ompAllocatedPtrs[var] = ptr;
+  }
 
-  /// Registers a deferred __kmpc_free call to be emitted before the
-  /// terminator of the given block.
-  void registerPendingOmpAllocateFree(Block *block, llvm::Value *ptr,
-                                      llvm::Value *allocator) const {
-    pendingOmpAllocateFrees[block].push_back({ptr, allocator});
+  /// Returns the LLVM alloc pointer previously registered for var, or
+  /// nullptr if no allocation was recorded.
+  llvm::Value *lookupAllocatedPtr(Value var) const {
+    auto it = ompAllocatedPtrs.find(var);
+    return it != ompAllocatedPtrs.end() ? it->second : nullptr;
   }
 
 private:
-  /// Pending __kmpc_free calls per block, emitted via preTranslateTerminator.
-  mutable DenseMap<Block *,
-                   llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>>>
-      pendingOmpAllocateFrees;
+  /// Maps each MLIR variable value that appeared in an omp.allocate_dir op to
+  /// the LLVM pointer returned by the corresponding __kmpc_alloc call.  The
+  /// paired omp.allocate_free op looks up these pointers to emit __kmpc_free.
+  mutable DenseMap<Value, llvm::Value *> ompAllocatedPtrs;
 };
 
 } // namespace
-
-void OpenMPDialectLLVMIRTranslationInterface::preTranslateTerminator(
-    Block &block, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  auto it = pendingOmpAllocateFrees.find(&block);
-  if (it == pendingOmpAllocateFrees.end() || it->second.empty())
-    return;
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  if (!ompBuilder)
-    return;
-  llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(&block);
-  if (!llvmBB)
-    return;
-  if (!llvmBB->empty() && llvmBB->back().isTerminator())
-    builder.SetInsertPoint(&llvmBB->back());
-  else
-    builder.SetInsertPoint(llvmBB);
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  for (auto it2 = it->second.rbegin(); it2 != it->second.rend(); ++it2)
-    ompBuilder->createOMPFree(ompLoc, it2->first, it2->second, "");
-  pendingOmpAllocateFrees.erase(it);
-}
 
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
     Operation *op, ArrayRef<llvm::Instruction *> instructions,
@@ -7559,8 +7539,6 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     allocator = llvm::ConstantPointerNull::get(builder.getPtrTy());
   }
 
-  SmallVector<std::pair<llvm::CallInst *, llvm::Value *>> allocatedVars;
-
   for (Value var : vars) {
     llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
 
@@ -7612,14 +7590,41 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
       allocCall =
           ompBuilder->createOMPAlloc(ompLoc, size, allocator, allocName);
     }
-    allocatedVars.push_back({allocCall, allocator});
+    // Record the alloc pointer keyed by the MLIR variable value.
+    ompIface.registerAllocatedPtr(var, allocCall);
   }
 
-  // Register __kmpc_free calls to be emitted before the block terminator via
-  // preTranslateTerminator()
-  Block *block = allocateDirOp->getBlock();
-  for (auto &alloc : allocatedVars)
-    ompIface.registerPendingOmpAllocateFree(block, alloc.first, alloc.second);
+  return success();
+}
+
+static LogicalResult
+convertAllocateFreeOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      const OpenMPDialectLLVMIRTranslationInterface &ompIface) {
+  auto freeOp = cast<omp::AllocateFreeOp>(opInst);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+
+  llvm::Value *allocator;
+  if (auto allocatorVar = freeOp.getAllocator()) {
+    allocator = moduleTranslation.lookupValue(allocatorVar);
+    if (allocator->getType()->isIntegerTy())
+      allocator = builder.CreateIntToPtr(allocator, builder.getPtrTy());
+    else if (allocator->getType()->isPointerTy())
+      allocator = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocator, builder.getPtrTy());
+  } else {
+    allocator = llvm::ConstantPointerNull::get(builder.getPtrTy());
+  }
+
+  // Emit __kmpc_free for each variable in reverse allocation order.
+  SmallVector<Value> vars = freeOp.getVarList();
+  for (Value var : llvm::reverse(vars)) {
+    llvm::Value *allocPtr = ompIface.lookupAllocatedPtr(var);
+    if (!allocPtr)
+      return opInst.emitError("omp.allocate_free: no allocation recorded");
+    ompBuilder->createOMPFree(ompLoc, allocPtr, allocator, "");
+  }
 
   return success();
 }
@@ -7871,6 +7876,10 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::AllocateDirOp) {
             return convertAllocateDirOp(*op, builder, moduleTranslation, *this);
+          })
+          .Case([&](omp::AllocateFreeOp) {
+            return convertAllocateFreeOp(*op, builder, moduleTranslation,
+                                         *this);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()

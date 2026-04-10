@@ -3491,6 +3491,30 @@ func.func @omp_allocate_dir(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_allocate_free(
+// CHECK-SAME: %[[ARG0:.*]]: memref<i32>,
+// CHECK-SAME: %[[ARG1:.*]]: memref<i32>) {
+func.func @omp_allocate_free(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
+
+  // Test free with no allocator
+  // CHECK: omp.allocate_free(%[[ARG0]] : memref<i32>)
+  omp.allocate_free (%arg0 : memref<i32>)
+
+  // Test free with allocator clause
+  // CHECK: %[[VAL_1:.*]] = arith.constant 1 : i64
+  %omp_default_mem_alloc = arith.constant 1 : i64
+  // CHECK: omp.allocate_free(%[[ARG0]] : memref<i32>) allocator(%[[VAL_1:.*]] : i64)
+  omp.allocate_free (%arg0 : memref<i32>) allocator(%omp_default_mem_alloc : i64)
+
+  // Test free with two variables and allocator clause
+  // CHECK: %[[VAL_3:.*]] = arith.constant 6 : i64
+  %omp_cgroup_mem_alloc = arith.constant 6 : i64
+  // CHECK: omp.allocate_free(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) allocator(%[[VAL_3:.*]] : i64)
+  omp.allocate_free (%arg0, %arg1 : memref<i32>, memref<i32>) allocator(%omp_cgroup_mem_alloc : i64)
+
+  return
+}
+
 // CHECK-LABEL: func.func @omp_workdistribute
 func.func @omp_workdistribute() {
   // CHECK: omp.teams

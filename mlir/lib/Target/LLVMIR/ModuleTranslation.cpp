@@ -1048,11 +1048,6 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
 
   // Traverse operations.
   for (auto &op : bb) {
-    // Give registered dialect interfaces a chance to inject IR before the
-    // terminator.
-    if (op.hasTrait<OpTrait::IsTerminator>())
-      iface.preTranslateTerminator(bb, builder, *this);
-
     // Set the current debug location within the builder.
     builder.SetCurrentDebugLocation(
         debugTranslation->translateLoc(op.getLoc(), subprogram));

@@ -1952,9 +1952,19 @@ static mlir::omp::AllocateDirOp genAllocateDirOp(
   genAllocateClauses(converter, semaCtx, stmtCtx, objects, item->clauses, loc,
                      operandRange, clauseOps);
 
-  return mlir::omp::AllocateDirOp::create(converter.getFirOpBuilder(), loc,
-                                          operandRange, clauseOps.align,
-                                          clauseOps.allocator);
+  auto allocDirOp = mlir::omp::AllocateDirOp::create(
+      converter.getFirOpBuilder(), loc, operandRange, clauseOps.align,
+      clauseOps.allocator);
+
+  // Register a cleanup at the Fortran scope exit.
+  fir::FirOpBuilder *builder = &converter.getFirOpBuilder();
+  mlir::Value allocator = clauseOps.allocator;
+  converter.getFctCtx().attachCleanup([builder, loc, operandRange,
+                                       allocator]() {
+    mlir::omp::AllocateFreeOp::create(*builder, loc, operandRange, allocator);
+  });
+
+  return allocDirOp;
 }
 
 static mlir::omp::BarrierOp

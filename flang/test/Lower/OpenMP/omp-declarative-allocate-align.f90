@@ -4,6 +4,7 @@
 !   - allocator(1) only (no align)
 !   - align(64) allocator(6) (both clauses, array variable)
 !   - align(32) allocator(3) (both clauses, multiple variables)
+! Each omp.allocate_dir must be paired with a matching omp.allocate_free
 
 ! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 %s -o - 2>&1 | FileCheck %s
 
@@ -43,3 +44,8 @@ end program
 ! CHECK: omp.allocate_dir(%[[Z_DECL]]#0 : !fir.ref<!fir.array<10xi32>>) align(64) allocator(%[[ALLOC6]] : i32)
 ! CHECK: %[[ALLOC3:.*]] = arith.constant 3 : i32
 ! CHECK: omp.allocate_dir(%[[C_DECL]]#0, %[[R_DECL]]#0, %[[CMPLX_DECL]]#0 : !fir.ref<!fir.char<1>>, !fir.ref<f32>, !fir.ref<complex<f32>>) align(32) allocator(%[[ALLOC3]] : i32)
+! CHECK: omp.allocate_free(%[[C_DECL]]#0, %[[R_DECL]]#0, %[[CMPLX_DECL]]#0 : !fir.ref<!fir.char<1>>, !fir.ref<f32>, !fir.ref<complex<f32>>) allocator(%[[ALLOC3]] : i32)
+! CHECK: omp.allocate_free(%[[Z_DECL]]#0 : !fir.ref<!fir.array<10xi32>>) allocator(%[[ALLOC6]] : i32)
+! CHECK: omp.allocate_free(%[[Y_DECL]]#0 : !fir.ref<i32>) allocator(%[[ALLOC1]] : i32)
+! CHECK: omp.allocate_free(%[[X_DECL]]#0 : !fir.ref<i32>)
+! CHECK: return
