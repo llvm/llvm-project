@@ -90,7 +90,7 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
       return true;
     }
 
-    return Helper.lower(MI, 0, DstType);
+    return Helper.lower(MI, 0, DstType) != LegalizerHelper::UnableToLegalize;
   }
   default:
     break;
