@@ -111,3 +111,25 @@ template <typename T> void f12() {
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: forwarding reference passed to
   // CHECK-FIXES: [] (auto&& x) { T SomeT(std::forward<decltype(x)>(x)); };
 }
+
+// Ignore the case of captured variables where an implicit copy already
+// happened. Explicit capture version.
+template <typename T, typename U> void f13(U&& SomeU) {
+  [SomeU] () { T SomeT(std::move(SomeU)); };
+}
+
+// Ignore the case of captured variables where an implicit copy already
+// happened. Implicit capture version.
+template <typename T, typename U> void f14(U&& SomeU) {
+  [=] () { T SomeT(std::move(SomeU)); };
+}
+
+#if 0
+// FIXME: we currently ignore that case.
+//
+// Handle the case of captured variables where no copy already
+// happened.
+template <typename T, typename U> void f15(U&& SomeU) {
+  [&SomeU] () { T SomeT(std::move(SomeU)); };
+}
+#endif

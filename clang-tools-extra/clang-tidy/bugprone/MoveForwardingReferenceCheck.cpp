@@ -13,6 +13,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
+AST_MATCHER(DeclRefExpr, refersToEnclosingVariableOrCapture) {
+  return Node.refersToEnclosingVariableOrCapture();
+}
+
+}
+
 static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
                                    const ParmVarDecl *ParmVar,
                                    const TemplateTypeParmDecl *TypeParmDecl,
@@ -86,7 +94,9 @@ void MoveForwardingReferenceCheck::registerMatchers(MatchFinder *Finder) {
                           .bind("lookup")),
                argumentCountIs(1),
                hasArgument(0, ignoringParenImpCasts(declRefExpr(
-                                  to(ForwardingReferenceParmMatcher)))))
+                                  to(ForwardingReferenceParmMatcher),
+                                  // FIXME: allow capture by reference
+                                  unless(refersToEnclosingVariableOrCapture())))))
           .bind("call-move"),
       this);
 }
