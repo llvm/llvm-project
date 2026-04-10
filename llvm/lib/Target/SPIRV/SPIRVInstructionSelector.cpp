@@ -514,15 +514,6 @@ bool sampledTypeIsSignedInteger(const llvm::Type *HandleType) {
 #include "SPIRVGenGlobalISel.inc"
 #undef GET_GLOBALISEL_IMPL
 
-static unsigned getVectorSizeOrOne(SPIRVTypeInst Type) {
-
-  if (Type->getOpcode() != SPIRV::OpTypeVector)
-    return 1;
-
-  // Operand(2) is the vector size
-  return Type->getOperand(2).getImm();
-}
-
 SPIRVInstructionSelector::SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                                    const SPIRVSubtarget &ST,
                                                    const RegisterBankInfo &RBI)
@@ -1593,9 +1584,7 @@ bool SPIRVInstructionSelector::selectPopCount16(Register ResVReg,
                                                 unsigned ExtOpcode,
                                                 unsigned Opcode) const {
   Register OpReg = I.getOperand(1).getReg();
-  SPIRVTypeInst OpRegType = GR.getSPIRVTypeForVReg(OpReg);
-
-  unsigned NumElems = getVectorSizeOrOne(OpRegType);
+  unsigned NumElems = GR.getScalarOrVectorComponentCount(OpReg);
 
   MachineIRBuilder MIRBuilder(I);
   SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
@@ -1604,7 +1593,7 @@ bool SPIRVInstructionSelector::selectPopCount16(Register ResVReg,
 
   bool IsVector = NumElems > 1;
   SPIRVTypeInst ExtType = IsVector ? I32VectorType : I32Type;
-  Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(ExtType));
   // Always use OpUConvert to always use a 0 extend
   if (!selectOpWithSrcs(ExtReg, ExtType, I, {OpReg}, SPIRV::OpUConvert))
     return false;
@@ -1716,8 +1705,6 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
   if (!selectPopCount32(PopCountReg, VecI32Type, I, BitcastReg, Opcode))
     return false;
 
-  bool IsScalarRes = ResType->getOpcode() != SPIRV::OpTypeVector;
-
   Register HighReg, LowReg;
   SPIRVTypeInst PartsType;
 
@@ -1725,7 +1712,7 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
       GR.getOrCreateConstInt(0, I, I32Type, TII, ZeroAsNull);
   Register ConstIntOne = GR.getOrCreateConstInt(1, I, I32Type, TII, ZeroAsNull);
 
-  if (IsScalarRes) {
+  if (ComponentCount == 1) {
     PartsType = I32Type;
     HighReg = MRI->createVirtualRegister(GR.getRegClass(PartsType));
     LowReg = MRI->createVirtualRegister(GR.getRegClass(PartsType));
@@ -1764,7 +1751,7 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
     MIB.constrainAllUses(TII, TRI, RBI);
   }
 
-  unsigned OpAdd = IsScalarRes ? SPIRV::OpIAddS : SPIRV::OpIAddV;
+  unsigned OpAdd = ComponentCount == 1 ? SPIRV::OpIAddS : SPIRV::OpIAddV;
   Register AddReg = MRI->createVirtualRegister(GR.getRegClass(PartsType));
   if (!selectOpWithSrcs(AddReg, PartsType, I, {HighReg, LowReg}, OpAdd))
     return false;
@@ -1778,7 +1765,11 @@ bool SPIRVInstructionSelector::selectPopCount(Register ResVReg,
                                               SPIRVTypeInst ResType,
                                               MachineInstr &I,
                                               unsigned Opcode) const {
-  if (!STI.isShader())
+  // Vulkan restricts OpBitCount to 32-bit integers or vectors of 32-bit 
+  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintaince9 
+  // is core we will not generate OpBitCount with any other types when 
+  // targeting Vulkan.
+  if (!STI.getTargetTriple().isVulkanOS())
     return selectUnOp(ResVReg, ResType, I, Opcode);
 
   Register OpReg = I.getOperand(1).getReg();
@@ -3204,6 +3195,15 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
       .constrainAllUses(TII, TRI, RBI);
 
   return true;
+}
+
+unsigned getVectorSizeOrOne(SPIRVTypeInst Type) {
+
+  if (Type->getOpcode() != SPIRV::OpTypeVector)
+    return 1;
+
+  // Operand(2) is the vector size
+  return Type->getOperand(2).getImm();
 }
 
 bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
