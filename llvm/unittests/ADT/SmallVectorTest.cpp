@@ -533,6 +533,50 @@ TYPED_TEST(SmallVectorTest, AppendNonIterTest) {
   assertValuesInOrder(V, 3u, 1, 7, 7);
 }
 
+struct input_iterator {
+  using iterator_category = std::input_iterator_tag;
+  using value_type = int;
+  using difference_type = int;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+  const int **State;
+  int operator*() const { return **State; }
+  input_iterator &operator++() {
+    (*State)++;
+    return *this;
+  }
+  bool operator!=(const input_iterator &Other) const {
+    return *State != *Other.State;
+  }
+};
+
+TYPED_TEST(SmallVectorTest, AppendInputIterator) {
+  auto &V = this->theVector;
+  V.push_back(1);
+  static constexpr int Src[] = {5, 6, 7, 8};
+  // Construct an input iterator that actually returns different results on the
+  // second iteration.
+  const int *BeginState = &Src[0];
+  const int *EndState = &Src[2];
+  V.append(input_iterator{&BeginState}, input_iterator{&EndState});
+  assertValuesInOrder(V, 3u, 1, 5, 6);
+}
+
+TYPED_TEST(SmallVectorTest, InsertInputIterator) {
+  auto &V = this->theVector;
+  V.push_back(1);
+  V.push_back(2);
+  static constexpr int Src[] = {5, 6, 7, 8};
+  // Construct an input iterator that actually returns different results on the
+  // second iteration.
+  const int *BeginState = &Src[0];
+  const int *EndState = &Src[2];
+  V.insert(V.begin() + 1, input_iterator{&BeginState},
+           input_iterator{&EndState});
+  assertValuesInOrder(V, 4u, 1, 5, 6, 2);
+}
+
 struct output_iterator {
   using iterator_category = std::output_iterator_tag;
   using value_type = int;

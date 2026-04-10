@@ -14,7 +14,7 @@ entry:
   tail call void @llvm.dbg.value(metadata i32 0, metadata !19, metadata !21), !dbg !22
   br label %for.body, !dbg !22
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   ;CHECK: load <4 x i32>
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %indvars.iv, !dbg !23
@@ -30,15 +30,12 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp ne i32 %lftr.wideiv, 1024, !dbg !22
   br i1 %exitcond, label %for.body, label %for.end, !dbg !22
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0, !dbg !25
 }
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { readnone }
 
 !llvm.dbg.cu = !{!11}
 !llvm.module.flags = !{!14}
