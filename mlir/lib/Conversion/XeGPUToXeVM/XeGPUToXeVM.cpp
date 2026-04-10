@@ -1279,7 +1279,7 @@ struct ConvertXeGPUToXeVMPass
     //   - single element of vector element type to single element vector
     // If result type of original op is single element vector and lowered type
     // is scalar. This materialization cast creates a single element vector by
-    // First convert element type if needed and then broadcasting to single
+    // First convert element type if needed and then broadcast to single
     // element vector.
     // Applies only to source materialization.
     auto singleElementToVectorMaterializationCast =
