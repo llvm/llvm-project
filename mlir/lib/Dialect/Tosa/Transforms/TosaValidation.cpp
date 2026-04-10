@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 
 #include <string>
+#include <type_traits>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
@@ -122,6 +123,17 @@ static LogicalResult checkConstantOperandAvgPool2d(Operation *op,
   return success();
 }
 
+static LogicalResult
+checkConstantOperandAvgPool2dAdaptive(Operation *op, const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dAdaptiveOp>(op)) {
+    // Check 'input_zp' and 'output_zp'.
+    // Note: 'kernel', 'stride', and 'pad' (operands 3, 4, 5) are not checked
+    // as they are tosa.shape types.
+    return checkConstantOperands(op, {1, 2});
+  }
+  return success();
+}
+
 static LogicalResult checkConstantOperandNegate(Operation *op,
                                                 const TargetEnv &env) {
   if (!env.allows(Extension::dynamic) && isa<tosa::NegateOp>(op)) {
@@ -164,6 +176,7 @@ public:
     return success();
   }
 
+  LogicalResult applyFunctionSignatureCheck(func::FuncOp op);
   LogicalResult applyLevelCheck(Operation *op);
   LogicalResult applyAttributeCheck(Operation *op);
 
@@ -187,6 +200,7 @@ private:
         checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
     constCheckers.emplace_back(checkConstantOperandMatMul);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
+    constCheckers.emplace_back(checkConstantOperandAvgPool2dAdaptive);
     constCheckers.emplace_back(checkConstantOperandNegate);
     constCheckers.emplace_back(checkConstantOperandSilceShape);
   }
@@ -341,6 +355,44 @@ private:
         }
       }
     }
+    return success();
+  }
+
+  template <typename T>
+  static constexpr bool IsSupportedAdaptivePoolOp =
+      std::is_same_v<T, tosa::AvgPool2dAdaptiveOp> ||
+      std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>;
+
+  template <typename T, typename std::enable_if<IsSupportedAdaptivePoolOp<T>,
+                                                int>::type = 0>
+  LogicalResult levelCheckAdaptivePool(Operation *op) {
+    auto poolOp = dyn_cast<T>(op);
+    if (!poolOp)
+      return success();
+
+    SmallVector<int64_t> kernelValues;
+    if (tosa::getConstShapeValues(poolOp.getKernel().getDefiningOp(),
+                                  kernelValues)) {
+      for (const auto k : kernelValues)
+        if (failed(levelCheckKernel(op, k, "kernel")))
+          return failure();
+    }
+
+    SmallVector<int64_t> strideValues;
+    if (tosa::getConstShapeValues(poolOp.getStride().getDefiningOp(),
+                                  strideValues)) {
+      for (const auto s : strideValues)
+        if (failed(levelCheckStride(op, s, "stride")))
+          return failure();
+    }
+
+    SmallVector<int64_t> padValues;
+    if (tosa::getConstShapeValues(poolOp.getPad().getDefiningOp(), padValues)) {
+      for (const auto p : padValues)
+        if (failed(levelCheckKernel(op, p, "pad")))
+          return failure();
+    }
+
     return success();
   }
 
@@ -755,6 +807,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
   // Tensor Operators
   CHECK_SIZES(AvgPool2d);
+  CHECK_SIZES(AvgPool2dAdaptive);
   CHECK_SIZES(Conv2D);
   CHECK_SIZES(Conv2DBlockScaled);
   CHECK_SIZES(Conv3D);
@@ -764,6 +817,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(MatMul);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
+  CHECK_SIZES(MaxPool2dAdaptive);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
   CHECK_SIZES(Gather);
@@ -859,11 +913,13 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return failure();
 
   if (failed(levelCheckPool<tosa::AvgPool2dOp>(op)) ||
+      failed(levelCheckAdaptivePool<tosa::AvgPool2dAdaptiveOp>(op)) ||
       failed(levelCheckConv<tosa::Conv2DOp>(op)) ||
       failed(levelCheckConv<tosa::Conv3DOp>(op)) ||
       failed(levelCheckConv<tosa::DepthwiseConv2DOp>(op)) ||
       failed(levelCheckFFT<tosa::FFT2dOp>(op)) ||
       failed(levelCheckPool<tosa::MaxPool2dOp>(op)) ||
+      failed(levelCheckAdaptivePool<tosa::MaxPool2dAdaptiveOp>(op)) ||
       failed(levelCheckFFT<tosa::RFFT2dOp>(op)) ||
       failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op)) ||
       failed(levelCheckConv2DBlockScaled(op))) {
@@ -1373,6 +1429,19 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   return success();
 }
 
+LogicalResult TosaValidation::applyFunctionSignatureCheck(func::FuncOp op) {
+  const auto isShapeType = [](Type type) { return isa<tosa::shapeType>(type); };
+  if (llvm::any_of(op.getArgumentTypes(), isShapeType))
+    return op.emitOpError()
+           << "Function argument types must be a tensor type to be TOSA "
+              "compliant, got !tosa.shape type";
+  if (llvm::any_of(op.getResultTypes(), isShapeType))
+    return op.emitOpError()
+           << "Function return types must be a tensor type to be TOSA "
+              "compliant, got !tosa.shape type";
+  return success();
+}
+
 bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
@@ -1417,6 +1486,12 @@ void TosaValidation::runOnOperation() {
   if (failed(maybeTargetEnv))
     return signalPassFailure();
   targetEnv = *maybeTargetEnv;
+
+  const auto functions = modOp.getOps<func::FuncOp>();
+  if (llvm::any_of(functions, [&](func::FuncOp func) {
+        return failed(applyFunctionSignatureCheck(func));
+      }))
+    return signalPassFailure();
 
   modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)

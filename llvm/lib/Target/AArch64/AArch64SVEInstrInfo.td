@@ -677,6 +677,10 @@ let Predicates = [HasSVE_or_SME] in {
   defm SQSUB_ZI : sve_int_arith_imm0_ssat<0b110, "sqsub", ssubsat, saddsat>;
   defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub", usubsat>;
 
+  // NOT (x) = SUBR (x, -1).
+  foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in
+    def : Pat<(VT (vnot VT:$op)), (SUBR_ZI_B_PSEUDO ZPR8:$op, (i32 255), (i32 0))>;
+
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", AArch64mad_m1, "MLA_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", AArch64msb_m1, "MLS_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", AArch64mla_m1, "MLA_ZPZZZ", "MAD_ZPmZZ">;
@@ -4590,16 +4594,16 @@ let Predicates = [HasSVE_or_SME] in {
   }
 
   // Arith operations: ADD
-  def : PromoteNEONToSVEImmWithShift<add, v2i64, NEONSplatOfSVEAddSubImm, ADD_ZI_D>;
-  def : PromoteNEONToSVEImmWithShift<add, v4i32, NEONSplatOfSVEAddSubImm, ADD_ZI_S>;
-  def : PromoteNEONToSVEImmWithShift<add, v8i16, NEONSplatOfSVEAddSubImm, ADD_ZI_H>;
-  def : PromoteNEONToSVEImmWithShift<add, v16i8, NEONSplatOfSVEAddSubImm, ADD_ZI_B>;
+  def : PromoteNEONToSVEImmWithShift<add, v2i64, NEONSplatOfSVEAddSubImm, ADD_ZI_D_PSEUDO>;
+  def : PromoteNEONToSVEImmWithShift<add, v4i32, NEONSplatOfSVEAddSubImm, ADD_ZI_S_PSEUDO>;
+  def : PromoteNEONToSVEImmWithShift<add, v8i16, NEONSplatOfSVEAddSubImm, ADD_ZI_H_PSEUDO>;
+  def : PromoteNEONToSVEImmWithShift<add, v16i8, NEONSplatOfSVEAddSubImm, ADD_ZI_B_PSEUDO>;
 
   // Arith operations: SUB
-  def : PromoteNEONToSVEImmWithShift<sub, v2i64, NEONSplatOfSVEAddSubImm, SUB_ZI_D>;
-  def : PromoteNEONToSVEImmWithShift<sub, v4i32, NEONSplatOfSVEAddSubImm, SUB_ZI_S>;
-  def : PromoteNEONToSVEImmWithShift<sub, v8i16, NEONSplatOfSVEAddSubImm, SUB_ZI_H>;
-  def : PromoteNEONToSVEImmWithShift<sub, v16i8, NEONSplatOfSVEAddSubImm, SUB_ZI_B>;
+  def : PromoteNEONToSVEImmWithShift<sub, v2i64, NEONSplatOfSVEAddSubImm, SUB_ZI_D_PSEUDO>;
+  def : PromoteNEONToSVEImmWithShift<sub, v4i32, NEONSplatOfSVEAddSubImm, SUB_ZI_S_PSEUDO>;
+  def : PromoteNEONToSVEImmWithShift<sub, v8i16, NEONSplatOfSVEAddSubImm, SUB_ZI_H_PSEUDO>;
+  def : PromoteNEONToSVEImmWithShift<sub, v16i8, NEONSplatOfSVEAddSubImm, SUB_ZI_B_PSEUDO>;
 
   // Arith operations: MUL
   def : PromoteNEONToSVEImm<mul, v2i64, NEONSplatOfSVEAddSubImm, MUL_ZI_D, i32>;

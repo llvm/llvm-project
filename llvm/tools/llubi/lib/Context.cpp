@@ -28,7 +28,8 @@ bool Context::initGlobalValues() {
     if (F.hasAddressTaken()) {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
-                              DL.getProgramAddressSpace(), MemInitKind::Zeroed);
+                              DL.getProgramAddressSpace(), MemInitKind::Zeroed,
+                              MemAllocKind::Global);
       if (!FuncObj)
         return false;
       ValidFuncTargets.try_emplace(FuncObj->getAddress(),
@@ -40,7 +41,7 @@ bool Context::initGlobalValues() {
       if (!BB.hasAddressTaken())
         continue;
       auto BlockObj = allocate(0, 1, BB.getName(), DL.getProgramAddressSpace(),
-                               MemInitKind::Zeroed);
+                               MemInitKind::Zeroed, MemAllocKind::Global);
       if (!BlockObj)
         return false;
       ValidBlockTargets.try_emplace(BlockObj->getAddress(),
@@ -421,10 +422,12 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
 
 MemoryObject::~MemoryObject() = default;
 MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
-                           unsigned AS, MemInitKind InitKind)
+                           unsigned AS, MemInitKind InitKind,
+                           MemAllocKind AllocKind)
     : Address(Addr), Size(Size), Name(Name), AS(AS),
       State(InitKind != MemInitKind::Poisoned ? MemoryObjectState::Alive
-                                              : MemoryObjectState::Dead) {
+                                              : MemoryObjectState::Dead),
+      AllocKind(AllocKind) {
   switch (InitKind) {
   case MemInitKind::Zeroed:
     Bytes.resize(Size, Byte::concrete(0));
@@ -438,29 +441,30 @@ MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
   }
 }
 
-IntrusiveRefCntPtr<MemoryObject> Context::allocate(uint64_t Size,
-                                                   uint64_t Align,
-                                                   StringRef Name, unsigned AS,
-                                                   MemInitKind InitKind) {
+IntrusiveRefCntPtr<MemoryObject>
+Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
+                  MemInitKind InitKind, MemAllocKind AllocKind) {
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);
   if (MaxMem != 0 && SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
-  auto MemObj =
-      makeIntrusiveRefCnt<MemoryObject>(AlignedAddr, Size, Name, AS, InitKind);
+  auto MemObj = makeIntrusiveRefCnt<MemoryObject>(AlignedAddr, Size, Name, AS,
+                                                  InitKind, AllocKind);
   MemoryObjects[AlignedAddr] = MemObj;
   AllocationBase = AlignedAddr + AllocateSize;
   UsedMem += AllocateSize;
   return MemObj;
 }
 
-bool Context::free(uint64_t Address) {
+bool Context::free(const MemoryObject &Obj) {
+  uint64_t Address = Obj.getAddress();
   auto It = MemoryObjects.find(Address);
-  if (It == MemoryObjects.end())
+  if (It == MemoryObjects.end() || It->second.get() != &Obj)
     return false;
-  UsedMem -= std::max(It->second->getSize(), (uint64_t)1);
+
+  UsedMem -= std::max(It->second->getSize(), static_cast<uint64_t>(1));
   It->second->markAsFreed();
   MemoryObjects.erase(It);
   return true;
@@ -502,6 +506,28 @@ uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
 void MemoryObject::markAsFreed() {
   State = MemoryObjectState::Freed;
   Bytes.clear();
+}
+
+bool MemoryObject::isGlobal() const {
+  return AllocKind == MemAllocKind::Global;
+}
+
+bool MemoryObject::isStackAllocated() const {
+  return AllocKind == MemAllocKind::Stack;
+}
+
+bool MemoryObject::isHeapAllocated() const {
+  switch (AllocKind) {
+  case MemAllocKind::Global:
+  case MemAllocKind::Stack:
+    return false;
+  case MemAllocKind::Malloc:
+  case MemAllocKind::New:
+  case MemAllocKind::NewArray:
+    return true;
+  }
+
+  llvm_unreachable("Unknown MemAllocKind");
 }
 
 } // namespace llvm::ubi

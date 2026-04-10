@@ -112,6 +112,9 @@ using namespace std::placeholders;
 #define DEBUG_TYPE "SLP"
 
 STATISTIC(NumVectorInstructions, "Number of vector instructions generated");
+STATISTIC(NumStridedStoreChains, "Number of vectorized stride stores");
+STATISTIC(NumStoreChains, "Number of vector stores created");
+STATISTIC(NumVectorizedStores, "Number of vectorized stores");
 
 DEBUG_COUNTER(VectorizedGraphs, "slp-vectorized",
               "Controls which SLP graphs should be vectorized.");
@@ -190,9 +193,21 @@ static cl::opt<unsigned> MinProfitableStridedLoads(
     cl::desc("The minimum number of loads, which should be considered strided, "
              "if the stride is > 1 or is runtime value"));
 
-static cl::opt<unsigned> MaxProfitableLoadStride(
+static cl::opt<unsigned> MinProfitableStridedStores(
+    "slp-min-strided-stores", cl::init(2), cl::Hidden,
+    cl::desc(
+        "The minimum number of stores, which should be considered strided, "
+        "if the stride is > 1 or is runtime value"));
+
+static cl::opt<unsigned> MaxProfitableStride(
     "slp-max-stride", cl::init(8), cl::Hidden,
     cl::desc("The maximum stride, considered to be profitable."));
+
+static cl::opt<bool>
+    EnableStridedStores("slp-enable-strided-stores", cl::init(false),
+                        cl::Hidden,
+                        cl::desc("Enable SLP trees to be built from strided "
+                                 "store chains."));
 
 static cl::opt<bool>
     DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
@@ -2347,10 +2362,11 @@ public:
   /// `0, 1, 2, 3, ...` we return empty vector for `SortedIndicies`.
   /// \param SPtrInfo If the function return `true`, it also sets all the fields
   /// of `SPtrInfo` necessary to generate the strided load later.
+  /// \param IsLoad Is this a strided load (true) or strided store (false)
   bool analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps, Type *ScalarTy,
                                 Align CommonAlignment,
                                 SmallVectorImpl<unsigned> &SortedIndices,
-                                StridedPtrInfo &SPtrInfo) const;
+                                StridedPtrInfo &SPtrInfo, bool IsLoad) const;
 
   /// Checks if the given array of loads can be represented as a vectorized,
   /// scatter or just simple gather.
@@ -7136,7 +7152,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// PointerOps:
 /// 1. Target with strided load support is detected.
 /// 2. The number of loads is greater than MinProfitableStridedLoads, or the
-/// potential stride <= MaxProfitableLoadStride and the potential stride is
+/// potential stride <= MaxProfitableStride and the potential stride is
 /// power-of-2 (to avoid perf regressions for the very small number of loads)
 /// and max distance > number of loads, or potential stride is -1.
 /// 3. The loads are ordered, or number of unordered loads <=
@@ -7163,8 +7179,8 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
   if (IsAnyPointerUsedOutGraph ||
       (AbsoluteDiff > Sz &&
        (Sz > MinProfitableStridedLoads ||
-        (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
-         AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
+        (AbsoluteDiff <= MaxProfitableStride * Sz && AbsoluteDiff % Sz == 0 &&
+         has_single_bit(AbsoluteDiff / Sz)))) ||
       Diff == -(static_cast<int64_t>(Sz) - 1)) {
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
     if (Diff != Stride * static_cast<int64_t>(Sz - 1))
@@ -7278,7 +7294,8 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
 bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
                                        Type *ScalarTy, Align CommonAlignment,
                                        SmallVectorImpl<unsigned> &SortedIndices,
-                                       StridedPtrInfo &SPtrInfo) const {
+                                       StridedPtrInfo &SPtrInfo,
+                                       bool IsLoad) const {
   // If each value in `PointerOps` is of the form `%x + Offset` where `Offset`
   // is constant, we partition `PointerOps` sequence into subsequences of
   // pointers with the same offset. For each offset we record values from
@@ -7325,7 +7342,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * NumOffsets);
   }
   FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
-  if (Sz <= MinProfitableStridedLoads || !TTI->isTypeLegal(StridedLoadTy) ||
+  unsigned MinProfitableStridedOps =
+      IsLoad ? MinProfitableStridedLoads : MinProfitableStridedStores;
+  if (Sz <= MinProfitableStridedOps || !TTI->isTypeLegal(StridedLoadTy) ||
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
     return false;
 
@@ -7523,7 +7542,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted) {
     if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment, Order,
-                                 SPtrInfo))
+                                 SPtrInfo, /*isLoad=*/true))
       return LoadsState::StridedVectorize;
 
     if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
@@ -8855,8 +8874,9 @@ void BoUpSLP::buildReorderableOperands(
         continue;
       if (UserTE->getOpcode() == Instruction::InsertElement && I == 0)
         continue;
-      if (UserTE->getOpcode() == Instruction::Store &&
-          UserTE->State == TreeEntry::Vectorize && I == 1)
+      if (UserTE->getOpcode() == Instruction::Store && I == 1 &&
+          (UserTE->State == TreeEntry::Vectorize ||
+           UserTE->State == TreeEntry::StridedVectorize))
         continue;
       if (UserTE->getOpcode() == Instruction::Load &&
           (UserTE->State == TreeEntry::Vectorize ||
@@ -9270,7 +9290,6 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         Data.first->reorderOperands(Mask);
       if (!isa<InsertElementInst, StoreInst>(Data.first->getMainOp()) ||
           IsNotProfitableAltCodeNode(*Data.first) ||
-          Data.first->State == TreeEntry::StridedVectorize ||
           Data.first->State == TreeEntry::CompressVectorize) {
         reorderScalars(Data.first->Scalars, Mask);
         reorderOrder(Data.first->ReorderIndices, MaskOrder,
@@ -10487,7 +10506,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     case LoadsState::Vectorize:
       return TreeEntry::Vectorize;
     case LoadsState::CompressVectorize:
-      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -10495,7 +10514,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return IsGatheredNode() ? TreeEntry::NeedToGather
                               : TreeEntry::CompressVectorize;
     case LoadsState::ScatterVectorize:
-      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -10696,11 +10715,16 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         Ptr0 = PointerOps[CurrentOrder.front()];
         PtrN = PointerOps[CurrentOrder.back()];
       }
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
       std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
       // Check that the sorted pointer operands are consecutive.
       if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
+      if (EnableStridedStores && analyzeConstantStrideCandidate(
+                                     PointerOps, ScalarTy, CommonAlignment,
+                                     CurrentOrder, *Dist, Ptr0, PtrN, SPtrInfo))
+        return TreeEntry::StridedVectorize;
     }
 
     LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
@@ -12586,18 +12610,24 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       return;
     }
     case Instruction::Store: {
-      bool Consecutive = CurrentOrder.empty();
-      if (!Consecutive)
-        fixupOrderingIndices(CurrentOrder);
+      assert(CurrentOrder.empty() &&
+             "Expected ordered store during tree building");
+      if (State == TreeEntry::StridedVectorize) {
+        TreeEntry *TE =
+            newTreeEntry(VL, TreeEntry::StridedVectorize, Bundle, S,
+                         UserTreeIdx, ReuseShuffleIndices, CurrentOrder);
+        TreeEntryToStridedPtrInfoMap[TE] = SPtrInfo;
+        LLVM_DEBUG(
+            dbgs() << "SLP: added a new TreeEntry (strided StoreInst).\n";
+            TE->dump());
+        TE->setOperands(Operands);
+        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
+        return;
+      }
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices, CurrentOrder);
-      if (Consecutive)
-        LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (StoreInst).\n";
-                   TE->dump());
-      else
-        LLVM_DEBUG(
-            dbgs() << "SLP: added a new TreeEntry (jumbled StoreInst).\n";
-            TE->dump());
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (StoreInst).\n";
+                 TE->dump());
       TE->setOperands(Operands);
       buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
       return;
@@ -14250,10 +14280,18 @@ void BoUpSLP::transformNodes() {
                                        /*VariableMask=*/false, CommonAlignment,
                                        BaseSI),
             CostKind);
-        if (StridedCost < OriginalVecCost)
+        if (StridedCost < OriginalVecCost) {
           // Strided store is more profitable than reverse + consecutive store -
           // transform the node to strided store.
           E.State = TreeEntry::StridedVectorize;
+          Type *StrideTy = DL->getIndexType(cast<StoreInst>(E.Scalars.front())
+                                                ->getPointerOperand()
+                                                ->getType());
+          StridedPtrInfo SPtrInfo;
+          SPtrInfo.StrideVal = ConstantInt::getSigned(StrideTy, -1);
+          SPtrInfo.Ty = VecTy;
+          TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
+        }
       } else if (!E.ReorderIndices.empty()) {
         // Check for interleaved stores.
         auto IsInterleaveMask = [&, &TTI = *TTI](ArrayRef<int> Mask) {
@@ -14350,6 +14388,22 @@ void BoUpSLP::transformNodes() {
       // Check if possible to convert (a*b)+c to fma.
       if (E.State != TreeEntry::Vectorize ||
           !E.getOperations().isAddSubLikeOp())
+        break;
+      const TreeEntry *LHS = getOperandEntry(&E, 0);
+      const TreeEntry *RHS = getOperandEntry(&E, 1);
+      auto IsOneUseVectorFMulOperand = [](const TreeEntry *TE) {
+        return TE->State == TreeEntry::Vectorize &&
+               TE->ReorderIndices.empty() && TE->ReuseShuffleIndices.empty() &&
+               TE->getOpcode() == Instruction::FMul && !TE->isAltShuffle() &&
+               all_of(TE->Scalars, [&](Value *V) {
+                 return (TE->hasCopyableElements() &&
+                         TE->isCopyableElement(V)) ||
+                        V->hasOneUse();
+               });
+      };
+      if (!IsOneUseVectorFMulOperand(LHS) &&
+          (E.getOpcode() == Instruction::FSub ||
+           !IsOneUseVectorFMulOperand(RHS)))
         break;
       if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI)
                .isValid())
@@ -18082,11 +18136,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     LLVM_DEBUG(dbgs() << "Scale " << Scale << " For entry " << TE.Idx << "\n");
     return C * Scale;
   };
-  Instruction *ReductionRoot = nullptr;
+  Instruction *ReductionRoot = RdxRoot;
   if (UserIgnoreList) {
     // Scale reduction cost to the factor of the loop nest trip count.
     ReductionCost = ScaleCost(ReductionCost, *VectorizableTree.front().get(),
-                              /*Scalar=*/nullptr, RdxRoot);
+                              /*Scalar=*/nullptr, ReductionRoot);
   }
 
   // Add the cost for reduction.
@@ -22021,12 +22075,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
         Align CommonAlignment = computeCommonAlignment<StoreInst>(E->Scalars);
         Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
+
+        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        Value *Stride = SPtrInfo.StrideVal;
+        assert(Stride && "Missing StridedPointerInfo for tree entry.");
+        Value *StrideVal =
+            Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
+        // vp_strided_store::stride is defined in bytes
+        StrideVal = Builder.CreateMul(
+            StrideVal,
+            ConstantInt::getSigned(
+                StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
         auto *Inst = Builder.CreateIntrinsic(
             Intrinsic::experimental_vp_strided_store,
             {VecTy, Ptr->getType(), StrideTy},
-            {VecValue, Ptr,
-             ConstantInt::getSigned(
-                 StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
+            {VecValue, Ptr, StrideVal,
              Builder.getAllOnesMask(VecTy->getElementCount()),
              Builder.getInt32(E->Scalars.size())});
         Inst->addParamAttr(
@@ -25376,17 +25439,22 @@ public:
 
   explicit StoreChainContext(ArrayRef<Value *> Ops,
                              ArrayRef<SizePair> RangeSizes,
-                             SmallVector<unsigned> &RangeSizesByIdx)
+                             SmallVector<unsigned> &RangeSizesByIdx,
+                             unsigned Stride)
       : Operands(Ops), RangeSizesStorage(RangeSizes),
-        RangeSizesByIdx(RangeSizesByIdx) {}
+        RangeSizesByIdx(RangeSizesByIdx), Stride(Stride) {}
 
   /// Set up initial values using the already set Operands
-  bool initializeContext(BoUpSLP &R, const DataLayout &DL,
-                         const TargetTransformInfo &TTI);
+  bool initializeContext(
+      BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
+      DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
+          &Visited);
   /// Get the current VF
   std::optional<unsigned> getCurrentVF() const;
   /// Return the maximum VF for the context
   unsigned getMaxVF() const { return MaxVF; }
+  /// Return the stride of the context
+  unsigned getStride() const { return Stride; }
   /// Attempt to vectorize Operands for the given VF
   /// Returns false if no more attempts should be made for the context
   bool vectorizeOneVF(const TargetTransformInfo &TTI, unsigned VF,
@@ -25394,6 +25462,10 @@ public:
                       llvm::function_ref<std::optional<bool>(
                           ArrayRef<Value *>, unsigned, unsigned, unsigned &)>
                           VectorizeStoreChain);
+  /// Add an additional store to the chain
+  /// \p Store store too append to Operands
+  /// \p Idx position within TryToVectorize::StoreSeq
+  void addOperand(Value *Store, unsigned Idx);
 
 private:
   bool isNotVectorized(const SizePair &P) const {
@@ -25490,9 +25562,16 @@ private:
   unsigned Repeat = 1;
   /// Did any vectorization occur for the current iteration over CandidateVFs
   bool RepeatChanged = false;
+  /// For constant strided stores, what is the stride amount
+  const unsigned Stride = 0;
   /// Store information about failed vectorization attempts due to scheduling
   SmallDenseMap<Value *, SizePair> NonSchedulable;
 };
+
+void StoreChainContext::addOperand(Value *Store, unsigned Idx) {
+  Operands.push_back(Store);
+  RangeSizesStorage.push_back({Idx, 1});
+}
 
 void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
                                             unsigned &FirstUnvecStore,
@@ -25519,8 +25598,21 @@ void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
   }
 }
 
-bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
-                                          const TargetTransformInfo &TTI) {
+bool StoreChainContext::initializeContext(
+    BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
+    DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
+        &Visited) {
+  assert((Stride == 1 || !SLPReVec) &&
+         "Strided stores not supported for revectorization");
+  if (!Visited
+           .insert({Operands.front(),
+                    cast<StoreInst>(Operands.front())->getValueOperand(),
+                    Operands.back(),
+                    cast<StoreInst>(Operands.back())->getValueOperand(),
+                    Operands.size()})
+           .second)
+    return false;
+
   // Initialize range tracking in context.
   RangeSizes = MutableArrayRef(RangeSizesStorage);
 
@@ -25547,6 +25639,8 @@ bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
       Store->getPointerAddressSpace()));
   MinVF /= getNumElements(StoreTy);
   MinVF = std::max<unsigned>(2, MinVF);
+  if (Stride > 1)
+    MinVF = std::max<unsigned>(MinVF, MinProfitableStridedStores);
 
   if (MaxVF < MinVF) {
     LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
@@ -25763,6 +25857,10 @@ bool StoreChainContext::vectorizeOneVF(
         // it again.
         markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
         SliceStartIdx += VF;
+        ++NumStoreChains;
+        if (Stride > 1)
+          ++NumStridedStoreChains;
+        NumVectorizedStores += VF;
         continue;
       }
       if (VF > 2 && Res && !allOfRangeProfitable(SliceStartIdx, VF, TreeSize)) {
@@ -25912,45 +26010,96 @@ bool SLPVectorizerPass::vectorizeStores(
   bool Changed = false;
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    int64_t PrevDist = -1;
-    unsigned GlobalMaxVF = 0;
     SmallVector<unsigned> RangeSizesByIdx(StoreSeq.size(), 1);
     SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
     BoUpSLP::ValueList Operands;
     SmallVector<StoreChainContext::SizePair> RangeSizes;
+    const unsigned MaxStride = EnableStridedStores ? MaxProfitableStride : 1;
+
+    // All chains that we're still building
+    struct PartialChainStatus {
+      // Has been added to AllContexts
+      // Wait to add to AllContexts until at least two stores are found
+      bool AddedToAllContexts;
+      union {
+        // If added, index into AllContexts
+        unsigned AllContextsIdx;
+        // Index into StoreSeq if not added to AllContexts yet
+        unsigned StoreSeqIdx;
+      };
+      // If not added to AllContexts, what is the single store in the chain
+      Value *FirstStore;
+      // What is the Stride of this chain
+      unsigned Stride;
+    };
+    SmallVector<SmallVector<PartialChainStatus, 1>> Chains(MaxStride + 1);
+    auto GetChainsKey = [&](int64_t Query) -> unsigned {
+      // Just modulo function, get the index into Chains for a given query
+      int64_t Rem = (Query % (int64_t)Chains.size());
+      if (Rem < 0)
+        Rem += (int64_t)Chains.size();
+      return (unsigned)Rem;
+    };
+    int64_t LastDist;
     for (auto [Idx, Data] : enumerate(StoreSeq)) {
       auto &[Dist, InstIdx] = Data;
-      if (Operands.empty() || Dist - PrevDist == 1) {
-        Operands.push_back(Stores[InstIdx]);
-        RangeSizes.emplace_back(Idx, 1);
-        PrevDist = Dist;
-        if (Idx != StoreSeq.size() - 1)
-          continue;
-      }
+      // Clean up chains that can't be continued
+      if (Idx > 0)
+        for (int64_t D = LastDist;
+             D < std::min(Dist, LastDist + (int64_t)Chains.size()); ++D)
+          Chains[GetChainsKey(D)].clear();
+      LastDist = Dist;
 
-      if (Operands.size() > 1 &&
-          Visited
-              .insert({Operands.front(),
-                       cast<StoreInst>(Operands.front())->getValueOperand(),
-                       Operands.back(),
-                       cast<StoreInst>(Operands.back())->getValueOperand(),
-                       Operands.size()})
-              .second) {
-        AllContexts.emplace_back(std::make_unique<StoreChainContext>(
-            Operands, RangeSizes, RangeSizesByIdx));
-        if (!AllContexts.back()->initializeContext(R, *DL, *TTI))
-          AllContexts.pop_back();
-        else
-          GlobalMaxVF = std::max(GlobalMaxVF, AllContexts.back()->getMaxVF());
+      // Track which stride lengths we found existing chains for
+      // Don't have to add new entries for these
+      SmallVector<bool> FoundStrides(MaxProfitableStride + 1, false);
+      for (auto &Status : Chains[GetChainsKey(Dist)]) {
+        if (Status.AddedToAllContexts) {
+          // Chain already in AllContexts()
+          AllContexts[Status.AllContextsIdx]->addOperand(Stores[InstIdx], Idx);
+        } else {
+          // Chain just a single element, not yet in AllContexts()
+          SmallVector<StoreChainContext::SizePair> RS = {
+              {Status.StoreSeqIdx, 1}, {Idx, 1}};
+          BoUpSLP::ValueList Ops = {Status.FirstStore, Stores[InstIdx]};
+          AllContexts.emplace_back(std::make_unique<StoreChainContext>(
+              Ops, RS, RangeSizesByIdx, Status.Stride));
+          Status.AllContextsIdx = AllContexts.size() - 1;
+        }
+        unsigned Key = GetChainsKey(Status.Stride + Dist);
+        Chains[Key].push_back({/*AddedToAllContexts=*/true,
+                               {Status.AllContextsIdx},
+                               /*FirstStore=*/nullptr,
+                               Status.Stride});
+        FoundStrides[Status.Stride] = true;
       }
-      Operands.clear();
-      RangeSizes.clear();
-      if (Idx != StoreSeq.size() - 1) {
-        Operands.push_back(Stores[InstIdx]);
-        RangeSizes.emplace_back(Idx, 1);
-        PrevDist = Dist;
+      Chains[GetChainsKey(Dist)].clear();
+      // For any stride lengths that we didn't append to a chain for,
+      // instead start a new chain
+      for (auto Stride : seq<unsigned>(1, MaxStride + 1)) {
+        if (FoundStrides[Stride])
+          continue;
+        unsigned Key = GetChainsKey(Dist + Stride);
+        Chains[Key].push_back({/*AddedToAllContexts=*/false,
+                               {/*StoreSeqIdx=*/(unsigned)Idx},
+                               Stores[InstIdx],
+                               Stride});
       }
     }
+
+    unsigned GlobalMaxVF = 0;
+    for (auto &CtxPtr : AllContexts)
+      if (CtxPtr->initializeContext(R, *DL, *TTI, Visited))
+        GlobalMaxVF = std::max(GlobalMaxVF, CtxPtr->getMaxVF());
+      else
+        CtxPtr.reset();
+
+    // Prioritize non-strided chains (Stride = 1)
+    llvm::stable_sort(AllContexts,
+                      [](const std::unique_ptr<StoreChainContext> &A,
+                         const std::unique_ptr<StoreChainContext> &B) {
+                        return A && (!B || A->getStride() < B->getStride());
+                      });
 
     for (unsigned LimitVF = GlobalMaxVF; LimitVF > 0;
          LimitVF = bit_ceil(LimitVF) / 2) {
@@ -27100,7 +27249,7 @@ public:
       InstructionsState S = States[I];
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
-      DenseMap<Value *, Value *> TrackedToOrig(2 * OrigReducedVals.size());
+      SmallVector<Value *> TrackedToOrig;
       for (Value *ReducedVal : OrigReducedVals) {
         Value *RdxVal = TrackedVals.at(ReducedVal);
         // Check if the reduction value was not overriden by the extractelement
@@ -27117,7 +27266,7 @@ public:
              !S.isCopyableElement(RdxVal)))
           continue;
         Candidates.push_back(RdxVal);
-        TrackedToOrig.try_emplace(RdxVal, ReducedVal);
+        TrackedToOrig.push_back(ReducedVal);
       }
       bool ShuffledExtracts = false;
       // Try to handle shuffled extractelements.
@@ -27133,7 +27282,7 @@ public:
           if (!Inst)
             continue;
           CommonCandidates.push_back(RdxVal);
-          TrackedToOrig.try_emplace(RdxVal, RV);
+          TrackedToOrig.push_back(RV);
         }
         SmallVector<int> Mask;
         if (isFixedVectorShuffle(CommonCandidates, Mask, AC)) {
@@ -27148,11 +27297,12 @@ public:
         if (RK == ReductionOrdering::Ordered)
           continue;
         Value *Res = Candidates.front();
-        Value *OrigV = TrackedToOrig.at(Candidates.front());
+        Value *OrigV = TrackedToOrig.front();
         ++VectorizedVals.try_emplace(OrigV).first->getSecond();
-        for (Value *VC : ArrayRef(Candidates).drop_front()) {
+        for (const auto [Idx, VC] :
+             enumerate(ArrayRef(Candidates).drop_front())) {
           Res = createOp(Builder, RdxKind, Res, VC, "const.rdx", ReductionOps);
-          Value *OrigV = TrackedToOrig.at(VC);
+          Value *OrigV = TrackedToOrig[Idx + 1];
           ++VectorizedVals.try_emplace(OrigV).first->getSecond();
           if (auto *ResI = dyn_cast<Instruction>(Res))
             V.analyzedReductionRoot(ResI);
@@ -27174,8 +27324,8 @@ public:
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
-        for (Value *V : Candidates) {
-          Value *OrigV = TrackedToOrig.at(V);
+        for (const auto [Idx, V] : enumerate(Candidates)) {
+          Value *OrigV = TrackedToOrig[Idx];
           ++SameValuesCounter.try_emplace(OrigV).first->second;
         }
       // Used to check if the reduced values used same number of times. In this
@@ -27201,12 +27351,15 @@ public:
                      return P.second == SameValuesCounter.front().second;
                    });
         Candidates.resize(SameValuesCounter.size());
+        TrackedToOrig.resize(SameValuesCounter.size());
         transform(SameValuesCounter, Candidates.begin(),
                   [&](const auto &P) { return TrackedVals.at(P.first); });
+        transform(SameValuesCounter, TrackedToOrig.begin(),
+                  [](const auto &P) { return P.first; });
         NumReducedVals = Candidates.size();
         // Have a reduction of the same element.
         if (NumReducedVals == 1) {
-          Value *OrigV = TrackedToOrig.at(Candidates.front());
+          Value *OrigV = TrackedToOrig.front();
           unsigned Cnt = At(SameValuesCounter, OrigV);
           Value *RedVal =
               emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
@@ -27344,8 +27497,7 @@ public:
           for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
             if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
               continue;
-            Value *V = Candidates[Cnt];
-            Value *OrigV = TrackedToOrig.at(V);
+            Value *OrigV = TrackedToOrig[Cnt];
             ++SameValuesCounter.try_emplace(OrigV).first->second;
           }
         }
@@ -27370,7 +27522,7 @@ public:
             LocalExternallyUsedValues.insert(RdxVal);
             continue;
           }
-          Value *OrigV = TrackedToOrig.at(RdxVal);
+          Value *OrigV = TrackedToOrig[Cnt];
           unsigned NumOps =
               VectorizedVals.lookup(OrigV) + At(SameValuesCounter, OrigV);
           if (NumOps != ReducedValsToOps.at(OrigV).size())
@@ -27450,14 +27602,6 @@ public:
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(
             LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
-        // Update TrackedToOrig mapping, since the tracked values might be
-        // updated.
-        for (Value *RdxVal : Candidates) {
-          Value *OrigVal = TrackedToOrig.at(RdxVal);
-          Value *TransformedRdxVal = TrackedVals.at(OrigVal);
-          if (TransformedRdxVal != RdxVal)
-            TrackedToOrig.try_emplace(TransformedRdxVal, OrigVal);
-        }
 
         if (RK == ReductionOrdering::Ordered) {
           // No need to generate reduction here, emit extractelements instead in
@@ -27486,8 +27630,20 @@ public:
 
         // Emit code to correctly handle reused reduced values, if required.
         if (OptReusedScalars && !SameScaleFactor) {
+          // Build TrackedToOrig aligned with the root node scalars order,
+          // which may differ from Candidates order due to tree reordering.
+          ArrayRef<Value *> RootVL = V.getRootNodeScalars();
+          ArrayRef<Value *> CandSlice(Candidates.begin() + Pos, ReduxWidth);
+          SmallVector<Value *> RootTrackedToOrig(RootVL.size());
+          for (auto [Idx, V] : enumerate(RootVL)) {
+            auto *It = find(CandSlice, V);
+            assert(It != CandSlice.end() &&
+                   "Root scalar not found in candidates");
+            RootTrackedToOrig[Idx] =
+                TrackedToOrig[Pos + std::distance(CandSlice.begin(), It)];
+          }
           VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, V,
-                                         SameValuesCounter, TrackedToOrig);
+                                         SameValuesCounter, RootTrackedToOrig);
         }
 
         Type *ScalarTy = VL.front()->getType();
@@ -27504,8 +27660,8 @@ public:
             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot());
 
         // Count vectorized reduced values to exclude them from final reduction.
-        for (Value *RdxVal : VL) {
-          Value *OrigV = TrackedToOrig.at(RdxVal);
+        for (const auto [Idx, RdxVal] : enumerate(VL)) {
+          Value *OrigV = TrackedToOrig[Pos + Idx];
           if (IsSupportedHorRdxIdentityOp) {
             VectorizedVals.try_emplace(OrigV, At(SameValuesCounter, OrigV));
             continue;
@@ -28216,7 +28372,7 @@ private:
   Value *
   emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder, BoUpSLP &R,
                 const SmallMapVector<Value *, unsigned, 16> &SameValuesCounter,
-                const DenseMap<Value *, Value *> &TrackedToOrig) {
+                ArrayRef<Value *> TrackedToOrig) {
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
@@ -28232,8 +28388,8 @@ private:
     case RecurKind::Add: {
       // root = mul prev_root, <1, 1, n, 1>
       SmallVector<Constant *> Vals;
-      for (Value *V : VL) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.at(V));
+      for (const auto [Idx, V] : enumerate(VL)) {
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
         Vals.push_back(ConstantInt::get(V->getType(), Cnt, /*IsSigned=*/false));
       }
       auto *Scale = ConstantVector::get(Vals);
@@ -28269,11 +28425,10 @@ private:
           PoisonMaskElem);
       std::iota(Mask.begin(), Mask.end(), 0);
       bool NeedShuffle = false;
-      for (unsigned I = 0, VF = VL.size(); I < VF; ++I) {
-        Value *V = VL[I];
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.at(V));
+      for (const auto [Idx, V] : enumerate(VL)) {
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
         if (Cnt % 2 == 0) {
-          Mask[I] = VF;
+          Mask[Idx] = VL.size();
           NeedShuffle = true;
         }
       }
@@ -28290,8 +28445,8 @@ private:
     case RecurKind::FAdd: {
       // root = fmul prev_root, <1.0, 1.0, n.0, 1.0>
       SmallVector<Constant *> Vals;
-      for (Value *V : VL) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.at(V));
+      for (const auto [Idx, V] : enumerate(VL)) {
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
         Vals.push_back(ConstantFP::get(V->getType(), Cnt));
       }
       auto *Scale = ConstantVector::get(Vals);

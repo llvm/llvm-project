@@ -4261,12 +4261,10 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
     const AArch64TLBIP::TLBIP *TLBIP = AArch64TLBIP::lookupTLBIPByName(Op);
     if (!TLBIP)
       return TokError("invalid operand for TLBIP instruction");
-    if (!getSTI().hasFeature(AArch64::FeatureD128) &&
-        !getSTI().hasFeature(AArch64::FeatureAll))
-      return TokError("instruction requires: d128");
+
     if (!TLBIP->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str("instruction requires: ");
-      setRequiredFeatureString(TLBIP->getRequiredFeatures(), Str);
+      Str += TLBIP->AllowWithTLBID ? "tlbid or d128" : "d128";
       return TokError(Str);
     }
     createSysAlias(TLBIP->Encoding, Operands, S);
