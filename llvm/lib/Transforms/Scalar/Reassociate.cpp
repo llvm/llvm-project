@@ -2357,6 +2357,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     return;
   }
 
+  bool PreserveCSEPair = false;
   if (Ops.size() > 2 && Ops.size() <= GlobalReassociateLimit) {
     // Find the pair with the highest count in the pairmap and move it to the
     // back of the list so that it can later be CSE'd.
@@ -2473,6 +2474,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
       Ops.erase(&Ops[BestPair.first]);
       Ops.push_back(Op0);
       Ops.push_back(Op1);
+      PreserveCSEPair = true;
     }
   }
   LLVM_DEBUG(dbgs() << "RAOut after CSE reorder:\t"; PrintOps(I, Ops);
@@ -2481,8 +2483,13 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   // For scalar integer add trees with a single constant operand, hoist it
   // outside to the outermost add:
   //   (X + C) + Y -> (X + Y) + C
-  if (I->getOpcode() == Instruction::Add && I->getType()->isIntegerTy() &&
-      Ops.size() > 2 && isa<ConstantInt>(Ops.back().Op)) {
+  //
+  // If the CSE-driven reordering already picked a profitable first
+  // sub-expression, keep that materialization instead of overriding it with
+  // the add-specific canonical form.
+  if (!PreserveCSEPair && I->getOpcode() == Instruction::Add &&
+      Ops.size() > 2 && I->getType()->isIntegerTy() &&
+      isa<ConstantInt>(Ops.back().Op)) {
     bool HasOtherConstant = false;
     for (unsigned Idx = 0, End = Ops.size() - 1; Idx != End; ++Idx) {
       if (isa<ConstantInt>(Ops[Idx].Op)) {
