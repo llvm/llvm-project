@@ -4,9 +4,13 @@
 // RUN: %clang -### -g --target=amdgcn-amd-amdpal -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
 // RUN: %clang -### --target=amdgcn-mesa-mesa3d -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
 // RUN: %clang -### -g --target=amdgcn-mesa-mesa3d -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
+// RUN: %clang -### --target=amdgcn-- -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=BARE %s
+// RUN: %clang -### -g --target=amdgcn-- -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
 
 // AS_LINK: "-cc1as"
 // AS_LINK: ld.lld{{.*}} "--no-undefined" "-shared"
+
+// BARE: ld.lld{{.*}} "--no-undefined" "-shared"
 
 // DWARF_VER: "-dwarf-version=5"
 
