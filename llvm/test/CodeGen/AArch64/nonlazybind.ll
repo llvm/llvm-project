@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64-apple-ios %s -o - -aarch64-macho-enable-nonlazybind | FileCheck %s --check-prefix=MACHO
 ; RUN: llc -mtriple=aarch64-apple-ios %s -o - | FileCheck %s --check-prefix=MACHO-NORMAL
 ; RUN: llc -mtriple=arm64e-apple-ios -global-isel=false %s -o - | FileCheck %s --check-prefix=ARM64E-SDAG
-; RUN: llc -mtriple=arm64e-apple-ios -global-isel %s -o - | FileCheck %s --check-prefix=ARM64E-GI
+; RUN: not llc -mtriple=arm64e-apple-ios -global-isel %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ARM64E-GI-ERR
 ; RUN: llc -mtriple=aarch64 -fast-isel %s -o - | FileCheck %s --check-prefixes=ELF,ELF-FI
 ; RUN: llc -mtriple=aarch64 -global-isel %s -o - | FileCheck %s --check-prefixes=ELF,ELF-GI
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s --check-prefixes=ELF,ELF-SDAG
@@ -68,19 +68,7 @@ define void @test_laziness(ptr %a) nounwind {
 ; ARM64E-SDAG-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; ARM64E-SDAG-NEXT:    ret
 ;
-; ARM64E-GI-LABEL: test_laziness:
-; ARM64E-GI:       ; %bb.0:
-; ARM64E-GI-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; ARM64E-GI-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; ARM64E-GI-NEXT:    mov x19, x0
-; ARM64E-GI-NEXT:    bl _external
-; ARM64E-GI-NEXT:    mov x0, x19
-; ARM64E-GI-NEXT:    mov w1, #1 ; =0x1
-; ARM64E-GI-NEXT:    mov w2, #1000 ; =0x3e8
-; ARM64E-GI-NEXT:    bl _memset
-; ARM64E-GI-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; ARM64E-GI-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; ARM64E-GI-NEXT:    ret
+; ARM64E-GI-ERR: error: {{.*}}: nonlazybind attribute is not compatible with arm64e
 ;
 ; ELF-LABEL: test_laziness:
 ; ELF:       // %bb.0:
@@ -120,9 +108,6 @@ define void @test_laziness_tail() nounwind {
 ; ARM64E-SDAG:       ; %bb.0:
 ; ARM64E-SDAG-NEXT:    b _external
 ;
-; ARM64E-GI-LABEL: test_laziness_tail:
-; ARM64E-GI:       ; %bb.0:
-; ARM64E-GI-NEXT:    b _external
 ;
 ; ELF-LABEL: test_laziness_tail:
 ; ELF:       // %bb.0:
