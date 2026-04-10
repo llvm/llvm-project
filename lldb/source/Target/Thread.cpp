@@ -372,14 +372,14 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   // from completed plan stack - m_stop_info_sp (trace stop reason is OK now) -
   // ask GetPrivateStopInfo to set stop info
 
-  bool have_valid_stop_info = m_stop_info_sp && m_stop_info_sp->IsValid() &&
-                              m_stop_info_stop_id == stop_id;
-  bool have_valid_completed_plan =
-      completed_plan_sp && completed_plan_sp->PlanSucceeded();
+  bool have_valid_stop_info = m_stop_info_sp &&
+      m_stop_info_sp ->IsValid() &&
+      m_stop_info_stop_id == stop_id;
+  bool have_valid_completed_plan = completed_plan_sp && completed_plan_sp->PlanSucceeded();
   bool plan_failed = completed_plan_sp && !completed_plan_sp->PlanSucceeded();
   bool plan_overrides_trace =
-      have_valid_stop_info && have_valid_completed_plan &&
-      (m_stop_info_sp->GetStopReason() == eStopReasonTrace);
+    have_valid_stop_info && have_valid_completed_plan
+    && (m_stop_info_sp->GetStopReason() == eStopReasonTrace);
 
   if (have_valid_stop_info && !plan_overrides_trace && !plan_failed) {
     return m_stop_info_sp;
@@ -415,8 +415,8 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo(bool calculate) {
       // 4) If this thread wasn't allowed to run the last time round.
       if (m_stop_info_sp) {
         if (m_stop_info_sp->IsValid() || IsStillAtLastBreakpointHit() ||
-            GetCurrentPlan()->IsVirtualStep() ||
-            GetTemporaryResumeState() == eStateSuspended)
+            GetCurrentPlan()->IsVirtualStep()
+            || GetTemporaryResumeState() == eStateSuspended)
           SetStopInfo(m_stop_info_sp);
         else
           m_stop_info_sp.reset();
@@ -1204,7 +1204,7 @@ bool Thread::CompletedPlanOverridesBreakpoint() const {
   return GetPlans().AnyCompletedPlans();
 }
 
-ThreadPlan *Thread::GetPreviousPlan(ThreadPlan *current_plan) const {
+ThreadPlan *Thread::GetPreviousPlan(ThreadPlan *current_plan) const{
   return GetPlans().GetPreviousPlan(current_plan);
 }
 
@@ -2332,7 +2332,7 @@ Status Thread::StepOut(uint32_t frame_idx) {
   return error;
 }
 
-Status Thread::StepBack() {
+Status Thread::StepBackInstruction() {
   Process *process = GetProcess().get();
   if (!StateIsStoppedState(process->GetState(), true)) {
     return Status::FromErrorString("process not stopped");
@@ -2411,9 +2411,7 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
     return ValueObjectConstResult::Create(&target,
                                           Status::FromError(data.takeError()));
 
-  DataExtractor data_extractor{
-      data.get()->getBufferStart(), data.get()->getBufferSize(),
-      process_sp->GetByteOrder(), arch.GetAddressByteSize()};
-  return ValueObjectConstResult::Create(
-      &target, type, ConstString("__lldb_siginfo"), data_extractor);
+  DataExtractor data_extractor{data.get()->getBufferStart(), data.get()->getBufferSize(),
+    process_sp->GetByteOrder(), arch.GetAddressByteSize()};
+  return ValueObjectConstResult::Create(&target, type, ConstString("__lldb_siginfo"), data_extractor);
 }

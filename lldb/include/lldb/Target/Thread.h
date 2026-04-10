@@ -634,7 +634,7 @@ public:
   /// This function is designed to be used by commands where the
   /// process is publicly stopped.
   ///
-  virtual Status StepBack();
+  virtual Status StepBackInstruction();
 
   /// Retrieves the per-thread data area.
   /// Most OSs maintain a per-thread pointer (e.g. the FS register on

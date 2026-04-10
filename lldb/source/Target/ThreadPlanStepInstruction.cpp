@@ -28,8 +28,6 @@ ThreadPlanStepInstruction::ThreadPlanStepInstruction(
                  report_run_vote),
       m_instruction_addr(0), m_stop_other_threads(stop_other_threads),
       m_step_over(step_over), m_direction(direction) {
-  // We don't support step_over when the direction equals eRunReverse.
-  assert(!step_over || direction == eRunForward);
   m_takes_iteration_count = true;
   SetUpState();
 }
@@ -81,8 +79,11 @@ void ThreadPlanStepInstruction::GetDescription(Stream *s,
 }
 
 bool ThreadPlanStepInstruction::ValidatePlan(Stream *error) {
-  // Since we read the instruction we're stepping over from the thread, this
-  // plan will always work.
+  if (m_direction == eRunReverse && m_step_over) {
+    error->PutCString("Step over not supported when reverse executing");
+    return false;
+  }
+
   return true;
 }
 
