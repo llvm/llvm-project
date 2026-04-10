@@ -16,6 +16,7 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
@@ -71,10 +72,8 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     target = dap.CreateTarget(error);
   }
 
-  if (error.Fail())
-    return ToError(error);
-
-  dap.SetTarget(target);
+  if (target.IsValid())
+    dap.SetTarget(target);
 
   // Run any pre run LLDB commands the user specified in the launch.json
   if (Error err = dap.RunPreRunCommands())
@@ -82,11 +81,12 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
 
   if ((args.pid == LLDB_INVALID_PROCESS_ID ||
        args.gdbRemotePort == LLDB_DAP_INVALID_PORT) &&
-      args.waitFor)
-    dap.SendOutput(OutputType::Console,
-                   llvm::formatv("Waiting to attach to \"{0}\"...\n",
-                                 dap.target.GetExecutable().GetFilename())
-                       .str());
+      args.waitFor && !args.configuration.program.empty())
+    dap.SendOutput(
+        OutputType::Console,
+        llvm::formatv("Waiting to attach to \"{0}\"...\n",
+                      llvm::sys::path::filename(dap.configuration.program))
+            .str());
 
   {
     // Perform the launch in synchronous mode so that we don't have to worry
@@ -127,7 +127,11 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       else if (!dap.configuration.program.empty())
         attach_info.SetExecutable(dap.configuration.program.data());
       attach_info.SetWaitForLaunch(args.waitFor, /*async=*/false);
-      dap.target.Attach(attach_info, error);
+      auto process = dap.target.Attach(attach_info, error);
+      // If we attached by name then we were using the 'Dummy' target, ensure
+      // we update to the real target.
+      if (process.IsValid())
+        dap.SetTarget(process.GetTarget());
     }
 
     if (error.Fail())

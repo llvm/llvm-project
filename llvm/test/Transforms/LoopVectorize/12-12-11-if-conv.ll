@@ -6,19 +6,19 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: icmp eq <4 x i32>
 ;CHECK: select <4 x i1>
 ;CHECK: ret void
-define void @foo(i32 %x, i32 %t, ptr nocapture %A) nounwind uwtable ssp {
+define void @foo(i32 %x, i32 %t, ptr nocapture %A) {
 entry:
   %cmp10 = icmp sgt i32 %x, 0
   br i1 %cmp10, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %if.end
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %if.end ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %1 = add nsw i64 %indvars.iv, 45
   %2 = trunc i64 %indvars.iv to i32
   %mul = mul nsw i32 %2, %t
@@ -26,7 +26,7 @@ if.then:                                          ; preds = %for.body
   %add1 = add nsw i32 %3, %mul
   br label %if.end
 
-if.end:                                           ; preds = %for.body, %if.then
+if.end:
   %z.0 = phi i32 [ %add1, %if.then ], [ 9, %for.body ]
   store i32 %z.0, ptr %arrayidx, align 4
   %indvars.iv.next = add nsw i64 %indvars.iv, 1
@@ -34,6 +34,6 @@ if.end:                                           ; preds = %for.body, %if.then
   %exitcond = icmp eq i32 %lftr.wideiv, %x
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %if.end, %entry
+for.end:
   ret void
 }

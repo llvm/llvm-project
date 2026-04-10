@@ -54,16 +54,16 @@ entry:
   %cmp1 = icmp slt i32 0, %Len
   br i1 %cmp1, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   br label %for.body
 
-for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.inc
+for.cond.for.cond.cleanup_crit_edge:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
+for.cond.cleanup:
   br label %for.end
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.inc
+for.body:
   %i.02 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
   %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32, ptr %Arr, i64 %idxprom
@@ -74,14 +74,12 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   store i32 %1, ptr %arrayidx2, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body
+for.inc:
   %inc = add nsw i32 %i.02, 1
   %cmp = icmp slt i32 %inc, %Len
   br i1 %cmp, label %for.body, label %for.cond.for.cond.cleanup_crit_edge
 
-for.end:                                          ; preds = %for.cond.cleanup
+for.end:
   ret void
 }
 
-; Function Attrs: nounwind readnone speculatable willreturn
-declare i32 @llvm.bswap.i32(i32)
