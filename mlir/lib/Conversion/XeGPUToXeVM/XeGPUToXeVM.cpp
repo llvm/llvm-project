@@ -1053,7 +1053,7 @@ struct ConvertXeGPUToXeVMPass
 
     // XeVM type converter is based on LLVM type converter with the
     // following customizations.
-    // First, type conversion rules are added for xegpu custome types,
+    // First, type conversion rules are added for xegpu custom types,
     // TensorDescType and MemDescType.
     // Second, MemRefType is lowered to single integer type
     // Third, VectorType of single element or 0D is converted to vector
