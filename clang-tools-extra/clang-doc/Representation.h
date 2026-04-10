@@ -747,7 +747,7 @@ struct ConceptInfo : public SymbolInfo, public llvm::ilist_node<ConceptInfo> {
 
   void merge(ConceptInfo &&I);
 
-  bool IsType;
+  bool IsType = false;
   TemplateInfo Template;
   StringRef ConstraintExpression;
 };
