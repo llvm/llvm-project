@@ -4461,7 +4461,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   VPValue *VecOp = Red->getVecOp();
 
   assert(!Red->isPartialReduction() &&
-         "This path no longer supports partial reductions");
+         "This path does not support partial reductions");
 
   // Clamp the range if using extended-reduction is profitable.
   auto IsExtendedRedValidAndClampRange =
@@ -4519,7 +4519,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     return nullptr;
 
   assert(!Red->isPartialReduction() &&
-         "This path no longer supports partial reductions");
+         "This path does not support partial reductions");
   Type *RedTy = Ctx.Types.inferScalarType(Red);
 
   // Clamp the range if using multiply-accumulate-reduction is profitable.
@@ -4700,7 +4700,7 @@ static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
   // Creation of VPExpressions for partial reductions is entirely handled in
   // transformToPartialReduction.
   assert(!Red->isPartialReduction() &&
-         "This path no longer supports partial reductions");
+         "This path does not support partial reductions");
 
   VPExpressionRecipe *AbstractR = nullptr;
   auto IP = std::next(Red->getIterator());
@@ -6140,9 +6140,7 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
 
   // reduce.[f]add(ext(op))
   //  -> VPExpressionRecipe(op, red)
-  if (isa<VPWidenCastRecipe>(VecOp) &&
-      (match(VecOp, m_ZExtOrSExt(m_VPValue())) ||
-       match(VecOp, m_FPExt(m_VPValue()))))
+  if (match(VecOp, m_WidenAnyExtend(m_VPValue())))
     return new VPExpressionRecipe(cast<VPWidenCastRecipe>(VecOp), Red);
 
   // reduce.[f]add([f]mul(ext(a), ext(b)))
