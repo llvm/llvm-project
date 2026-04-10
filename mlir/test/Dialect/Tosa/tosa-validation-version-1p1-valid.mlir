@@ -352,19 +352,19 @@ func.func @test_dynamic_dims(%arg0: tensor<?x8x16xi8>) -> tensor<?x16xi32> {
 // -----
 
 // CHECK-LABEL: test_add_shape
-func.func @test_add_shape() -> !tosa.shape<4> {
+func.func @test_add_shape() {
   %a = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
   %b = tosa.const_shape {values = dense<[5, 6, 7, 8]> : tensor<4xindex>} : () -> !tosa.shape<4>
   %c = tosa.add_shape %a, %b : (!tosa.shape<4>, !tosa.shape<4>) -> !tosa.shape<4>
-  return %c : !tosa.shape<4>
+  return
 }
 
 // -----
 
 // CHECK-LABEL: test_dim
-func.func @test_dim(%arg0: tensor<1x2x3x4xi32>) -> !tosa.shape<1> {
+func.func @test_dim(%arg0: tensor<1x2x3x4xi32>) {
   %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<1x2x3x4xi32>) -> !tosa.shape<1>
-  return %0 : !tosa.shape<1>
+  return
 }
 
 // -----
@@ -377,28 +377,28 @@ func.func @test_dim_bf16(%0: tensor<6x4x6x9xbf16>) {
 
 // -----
 // CHECK-LABEL: test_exp2_shape
-func.func @test_exp2_shape() -> !tosa.shape<4> {
+func.func @test_exp2_shape() {
   %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
   %b = tosa.exp2_shape %a : (!tosa.shape<4>) -> !tosa.shape<4>
-  return %b : !tosa.shape<4>
+  return
 }
 
 // -----
 // CHECK-LABEL: test_log2_ceil_shape
-func.func @test_log2_ceil_shape() -> !tosa.shape<4> {
+func.func @test_log2_ceil_shape() {
   %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
   %b = tosa.log2_ceil_shape %a : (!tosa.shape<4>) -> !tosa.shape<4>
-  return %b : !tosa.shape<4>
+  return
 }
 
 // -----
 
 // CHECK-LABEL: test_mod_shape
-func.func @test_mod_shape() -> !tosa.shape<3> {
+func.func @test_mod_shape() {
   %a = tosa.const_shape {values = dense<[10, 11, 12]> : tensor<3xindex>} : () -> !tosa.shape<3>
   %b = tosa.const_shape {values = dense<[3, 5, 2]> : tensor<3xindex>} : () -> !tosa.shape<3>
   %c = tosa.mod_shape %a, %b : (!tosa.shape<3>, !tosa.shape<3>) -> !tosa.shape<3>
-  return %c : !tosa.shape<3>
+  return
 }
 
 // -----
@@ -420,4 +420,14 @@ func.func @test_assert_equal_shape() {
   %1 = tosa.const_shape {values = dense<[5, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
   tosa.assert_equal_shape %0, %1 {allow_broadcast = true} : (!tosa.shape<2>, !tosa.shape<2>) -> ()
   return
+}
+
+// -----
+func.func @test_maxpool2d_adaptive(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> { 
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
+         (tensor<1x32x32x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
 }

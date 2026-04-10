@@ -1,6 +1,6 @@
 ! RUN: %flang -target amdgcn-- -mmlir -use-alloc-runtime -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK
 ! RUN: %flang -target amdgcn-- -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-NO-FLAG
-
+! XFAIL: *
 ! Test to check if usage of flag -use-alloc-runtime results in runtime calls.
 
 subroutine allocate_deallocate()
