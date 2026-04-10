@@ -105,17 +105,6 @@ static llvm::Expected<OwnedPtr<Info>> reduce(OwningPtrArray<Info> &Values) {
   return std::move(Merged);
 }
 
-// Return the index of the matching child in the vector, or -1 if merge is not
-// necessary.
-template <typename T>
-static int getChildIndexIfExists(OwningVec<T> &Children, T &ChildToMerge) {
-  for (unsigned long I = 0; I < Children.size(); I++) {
-    if (ChildToMerge.USR == Children[I].USR)
-      return I;
-  }
-  return -1;
-}
-
 template <typename T>
 static void reduceChildren(llvm::simple_ilist<T> &Children,
                            llvm::simple_ilist<T> &&ChildrenToMerge) {
@@ -133,24 +122,13 @@ static void reduceChildren(llvm::simple_ilist<T> &Children,
   }
 }
 
-template <typename T>
-static void reduceChildren(OwningVec<T> &Children,
-                           OwningVec<T> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int MergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (MergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
-    }
-    Children[MergeIdx].merge(std::move(ChildToMerge));
-  }
-}
-
 template <typename Container>
 static void mergeUnkeyed(Container &Target, Container &&Source) {
-  for (auto &Item : Source) {
+  while (!Source.empty()) {
+    auto &Item = Source.front();
+    Source.pop_front();
     if (llvm::none_of(Target, [&](const auto &E) { return E == Item; }))
-      Target.push_back(std::move(Item));
+      Target.push_back(Item);
   }
 }
 
@@ -484,8 +462,8 @@ bool Index::operator<(const Index &Other) const {
   return Name < Other.Name;
 }
 
-OwningVec<const Index *> Index::getSortedChildren() const {
-  OwningVec<const Index *> SortedChildren;
+std::vector<const Index *> Index::getSortedChildren() const {
+  std::vector<const Index *> SortedChildren;
   SortedChildren.reserve(Children.size());
   for (const auto &[_, C] : Children)
     SortedChildren.push_back(&C);
@@ -529,12 +507,12 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 
 void ScopeChildren::sort() {
   Namespaces.sort();
-  llvm::sort(Records);
-  llvm::sort(Functions);
-  llvm::sort(Enums);
-  llvm::sort(Typedefs);
-  llvm::sort(Concepts);
-  llvm::sort(Variables);
+  Records.sort();
+  Functions.sort();
+  Enums.sort();
+  Typedefs.sort();
+  Concepts.sort();
+  Variables.sort();
 }
 } // namespace doc
 } // namespace clang
