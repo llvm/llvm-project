@@ -106,12 +106,8 @@ define i64 @ucmp.64.64(i64 %x, i64 %y) nounwind {
 define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
 ; CHECK-LABEL: ucmp_i128_zero_to_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltui $a2, $a1, 1
-; CHECK-NEXT:    sltu $a1, $zero, $a1
-; CHECK-NEXT:    masknez $a1, $a1, $a2
-; CHECK-NEXT:    sltu $a0, $zero, $a0
-; CHECK-NEXT:    maskeqz $a0, $a0, $a2
 ; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    sltu $a0, $zero, $a0
 ; CHECK-NEXT:    ret
   %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)
   ret i8 %r

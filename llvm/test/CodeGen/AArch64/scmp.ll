@@ -322,11 +322,11 @@ entry:
 define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
 ; CHECK-SD-LABEL: scmp_i128_zero_to_i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmp xzr, x0
-; CHECK-SD-NEXT:    ngcs xzr, x1
-; CHECK-SD-NEXT:    cset w8, lt
-; CHECK-SD-NEXT:    cmp x1, #0
-; CHECK-SD-NEXT:    csinv w0, w8, wzr, pl
+; CHECK-SD-NEXT:    orr x8, x0, x1
+; CHECK-SD-NEXT:    cmp x8, #0
+; CHECK-SD-NEXT:    asr x8, x1, #63
+; CHECK-SD-NEXT:    cset w9, ne
+; CHECK-SD-NEXT:    orr w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: scmp_i128_zero_to_i8:

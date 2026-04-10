@@ -378,43 +378,28 @@ define i64 @ucmp_64_64(i64 %x, i64 %y) nounwind {
 define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
 ; THUMB1-LABEL: ucmp_i128_zero_to_i8:
 ; THUMB1:       @ %bb.0:
-; THUMB1-NEXT:    .save {r4, lr}
-; THUMB1-NEXT:    push {r4, lr}
-; THUMB1-NEXT:    mov r4, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    rsbs r4, r4, #0
-; THUMB1-NEXT:    mov r4, r0
-; THUMB1-NEXT:    sbcs r4, r1
-; THUMB1-NEXT:    mov r1, r0
-; THUMB1-NEXT:    sbcs r1, r2
-; THUMB1-NEXT:    mov r1, r0
-; THUMB1-NEXT:    sbcs r1, r3
-; THUMB1-NEXT:    bhs .LBB8_2
-; THUMB1-NEXT:  @ %bb.1:
-; THUMB1-NEXT:    movs r0, #1
-; THUMB1-NEXT:  .LBB8_2:
-; THUMB1-NEXT:    pop {r4, pc}
+; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    subs r1, r0, #1
+; THUMB1-NEXT:    sbcs r0, r1
+; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: ucmp_i128_zero_to_i8:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    rsbs r0, r0, #0
-; THUMB2-NEXT:    mov.w r9, #0
-; THUMB2-NEXT:    sbcs.w r0, r9, r1
-; THUMB2-NEXT:    sbcs.w r0, r9, r2
-; THUMB2-NEXT:    sbcs.w r0, r9, r3
-; THUMB2-NEXT:    it lo
-; THUMB2-NEXT:    movlo.w r9, #1
-; THUMB2-NEXT:    mov r0, r9
+; THUMB2-NEXT:    orrs r1, r3
+; THUMB2-NEXT:    orrs r0, r2
+; THUMB2-NEXT:    orrs r0, r1
+; THUMB2-NEXT:    it ne
+; THUMB2-NEXT:    movne r0, #1
 ; THUMB2-NEXT:    bx lr
 ;
 ; V81M-LABEL: ucmp_i128_zero_to_i8:
 ; V81M:       @ %bb.0:
-; V81M-NEXT:    rsbs r0, r0, #0
-; V81M-NEXT:    mov.w r12, #0
-; V81M-NEXT:    sbcs.w r0, r12, r1
-; V81M-NEXT:    sbcs.w r0, r12, r2
-; V81M-NEXT:    sbcs.w r0, r12, r3
-; V81M-NEXT:    cset r0, lo
+; V81M-NEXT:    orrs r1, r3
+; V81M-NEXT:    orrs r0, r2
+; V81M-NEXT:    orrs r0, r1
+; V81M-NEXT:    cset r0, ne
 ; V81M-NEXT:    bx lr
   %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)
   ret i8 %r

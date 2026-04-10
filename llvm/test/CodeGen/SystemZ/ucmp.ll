@@ -113,18 +113,14 @@ define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vgbm %v1, 0
-; CHECK-NEXT:    veclg %v1, %v0
+; CHECK-NEXT:    vceqgs %v2, %v0, %v1
+; CHECK-NEXT:    lhi %r2, 0
+; CHECK-NEXT:    lochinhe %r2, 1
+; CHECK-NEXT:    veclg %v0, %v1
 ; CHECK-NEXT:    jlh .LBB8_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    vchlgs %v2, %v0, %v1
-; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    lhi %r2, 0
-; CHECK-NEXT:    lochil %r2, 1
-; CHECK-NEXT:    veclg %v0, %v1
-; CHECK-NEXT:    jlh .LBB8_4
-; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    vchlgs %v0, %v1, %v0
-; CHECK-NEXT:  .LBB8_4:
+; CHECK-NEXT:  .LBB8_2:
 ; CHECK-NEXT:    lochil %r2, -1
 ; CHECK-NEXT:    br %r14
   %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)

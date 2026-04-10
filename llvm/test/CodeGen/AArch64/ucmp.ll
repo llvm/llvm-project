@@ -360,9 +360,9 @@ entry:
 define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
 ; CHECK-SD-LABEL: ucmp_i128_zero_to_i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmp xzr, x0
-; CHECK-SD-NEXT:    ngcs xzr, x1
-; CHECK-SD-NEXT:    cset w0, lo
+; CHECK-SD-NEXT:    orr x8, x0, x1
+; CHECK-SD-NEXT:    cmp x8, #0
+; CHECK-SD-NEXT:    cset w0, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: ucmp_i128_zero_to_i8:

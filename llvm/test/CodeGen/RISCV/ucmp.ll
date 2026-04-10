@@ -262,17 +262,13 @@ define i64 @ucmp.64.64(i64 %x, i64 %y) nounwind {
 define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
 ; RV32I-LABEL: ucmp_i128_zero_to_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a1, 8(a0)
-; RV32I-NEXT:    lw a2, 12(a0)
-; RV32I-NEXT:    or a1, a1, a2
-; RV32I-NEXT:    beqz a1, .LBB10_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    snez a0, a1
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB10_2:
-; RV32I-NEXT:    lw a1, 0(a0)
-; RV32I-NEXT:    lw a0, 4(a0)
-; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    lw a1, 4(a0)
+; RV32I-NEXT:    lw a2, 8(a0)
+; RV32I-NEXT:    lw a3, 12(a0)
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;

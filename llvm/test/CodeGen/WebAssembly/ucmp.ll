@@ -150,15 +150,11 @@ define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
 ; CHECK-LABEL: ucmp_i128_zero_to_i8:
 ; CHECK:         .functype ucmp_i128_zero_to_i8 (i64, i64) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push6=, 0
-; CHECK-NEXT:    i64.const $push0=, 0
-; CHECK-NEXT:    i64.ne $push2=, $pop6, $pop0
-; CHECK-NEXT:    local.get $push7=, 1
-; CHECK-NEXT:    i64.const $push5=, 0
-; CHECK-NEXT:    i64.ne $push1=, $pop7, $pop5
-; CHECK-NEXT:    local.get $push8=, 1
-; CHECK-NEXT:    i64.eqz $push3=, $pop8
-; CHECK-NEXT:    i32.select $push4=, $pop2, $pop1, $pop3
+; CHECK-NEXT:    local.get $push4=, 0
+; CHECK-NEXT:    local.get $push3=, 1
+; CHECK-NEXT:    i64.or $push0=, $pop4, $pop3
+; CHECK-NEXT:    i64.const $push1=, 0
+; CHECK-NEXT:    i64.ne $push2=, $pop0, $pop1
 ; CHECK-NEXT:    # fallthrough-return
   %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)
   ret i8 %r

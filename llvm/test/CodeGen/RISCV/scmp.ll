@@ -226,39 +226,24 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind {
 define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
 ; RV32I-LABEL: scmp_i128_zero_to_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a1, 12(a0)
-; RV32I-NEXT:    lw a3, 8(a0)
-; RV32I-NEXT:    beqz a1, .LBB8_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sgtz a2, a1
-; RV32I-NEXT:    or a3, a3, a1
-; RV32I-NEXT:    beqz a3, .LBB8_3
-; RV32I-NEXT:    j .LBB8_4
-; RV32I-NEXT:  .LBB8_2:
-; RV32I-NEXT:    snez a2, a3
-; RV32I-NEXT:    or a3, a3, a1
-; RV32I-NEXT:    bnez a3, .LBB8_4
-; RV32I-NEXT:  .LBB8_3:
-; RV32I-NEXT:    lw a2, 0(a0)
-; RV32I-NEXT:    lw a0, 4(a0)
-; RV32I-NEXT:    or a0, a2, a0
-; RV32I-NEXT:    snez a2, a0
-; RV32I-NEXT:  .LBB8_4:
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    sub a0, a2, a1
+; RV32I-NEXT:    lw a1, 4(a0)
+; RV32I-NEXT:    lw a2, 8(a0)
+; RV32I-NEXT:    lw a3, 12(a0)
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    srai a3, a3, 31
+; RV32I-NEXT:    or a0, a3, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: scmp_i128_zero_to_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    beqz a1, .LBB8_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    sgtz a0, a1
-; RV64I-NEXT:    j .LBB8_3
-; RV64I-NEXT:  .LBB8_2:
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:  .LBB8_3:
-; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
   %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
   ret i8 %r

@@ -3847,57 +3847,44 @@ define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
 ; X64-LABEL: scmp_i128_zero_to_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    negq %rdi
-; X64-NEXT:    sbbq %rsi, %rax
-; X64-NEXT:    setl %al
-; X64-NEXT:    testq %rsi, %rsi
-; X64-NEXT:    sets %cl
-; X64-NEXT:    subb %cl, %al
+; X64-NEXT:    orq %rsi, %rdi
+; X64-NEXT:    setne %al
+; X64-NEXT:    sarq $63, %rsi
+; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: scmp_i128_zero_to_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 20(%ebp), %ecx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl 8(%ebp), %eax
-; X86-NEXT:    movl $0, %edx
-; X86-NEXT:    sbbl 12(%ebp), %edx
-; X86-NEXT:    movl $0, %edx
-; X86-NEXT:    sbbl 16(%ebp), %edx
-; X86-NEXT:    sbbl %ecx, %eax
-; X86-NEXT:    setl %al
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    sets %cl
-; X86-NEXT:    subb %cl, %al
-; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    movl 8(%ebp), %edx
+; X86-NEXT:    movl 20(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %esi
+; X86-NEXT:    orl %eax, %esi
+; X86-NEXT:    orl 16(%ebp), %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    setne %cl
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    leal -4(%ebp), %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
-; SETZUCC-LABEL: scmp_i128_zero_to_i8:
-; SETZUCC:       # %bb.0:
-; SETZUCC-NEXT:    xorl %eax, %eax
-; SETZUCC-NEXT:    negq %rdi
-; SETZUCC-NEXT:    sbbq %rsi, %rax
-; SETZUCC-NEXT:    setzul %al
-; SETZUCC-NEXT:    testq %rsi, %rsi
-; SETZUCC-NEXT:    setzus %cl
-; SETZUCC-NEXT:    subb %cl, %al
-; SETZUCC-NEXT:    retq
-;
-; NO-SETZUCC-LABEL: scmp_i128_zero_to_i8:
-; NO-SETZUCC:       # %bb.0:
-; NO-SETZUCC-NEXT:    xorl %eax, %eax
-; NO-SETZUCC-NEXT:    negq %rdi
-; NO-SETZUCC-NEXT:    sbbq %rsi, %rax
-; NO-SETZUCC-NEXT:    setl %al
-; NO-SETZUCC-NEXT:    testq %rsi, %rsi
-; NO-SETZUCC-NEXT:    sets %cl
-; NO-SETZUCC-NEXT:    subb %cl, %al
-; NO-SETZUCC-NEXT:    retq
+; ZU-LABEL: scmp_i128_zero_to_i8:
+; ZU:       # %bb.0:
+; ZU-NEXT:    orq %rsi, %rdi
+; ZU-NEXT:    setzune %al
+; ZU-NEXT:    sarq $63, %rsi
+; ZU-NEXT:    orl %esi, %eax
+; ZU-NEXT:    # kill: def $al killed $al killed $eax
+; ZU-NEXT:    retq
   %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
   ret i8 %r
 }
