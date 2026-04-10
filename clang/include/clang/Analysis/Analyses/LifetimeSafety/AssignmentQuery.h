@@ -46,7 +46,6 @@ void FormatSrcExprForSema(
 namespace clang::lifetimes::internal {
 
 struct AliasAssignmentSearchResult {
-  const llvm::SmallVector<AssignmentPair> Payload;
   bool SearchComplete;
   const std::optional<OriginDestExpr> LastDestDecl;
   std::optional<OriginID> LastOrigin;

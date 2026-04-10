@@ -17,6 +17,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/CFG.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <cstddef>
 
@@ -74,91 +75,114 @@ const MemberExpr *getFieldFromAssignmentExpr(const Expr *RHS,
   return nullptr;
 }
 
+const DeclRefExpr *getLHSExpr(const UseFact *UF, const OriginID OID) {
+  for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+       Cur = Cur->peelOuterOrigin()) {
+    if (Cur->getOuterOriginID() != OID || !UF->isWritten())
+      continue;
+    std::optional<const Expr *> UExpr = GetPureSrcExpr(UF->getUseExpr());
+    if (UExpr) {
+      if (const auto *UDExpr = llvm::dyn_cast<DeclRefExpr>(UExpr.value())) {
+        return UDExpr;
+      }
+    }
+  }
+  return nullptr;
+}
+
+std::optional<OriginDestExpr>
+getLHSDeclOrExpr(const AssignmentQueryContext &Context,
+                 const OriginFlowFact *OFF) {
+  const Origin TargetOrigin =
+      Context.FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
+  if (const ValueDecl *DVecl = TargetOrigin.getDecl();
+      DVecl && !DVecl->getLocation().isInvalid()) {
+    if (llvm::isa<FieldDecl>(DVecl)) {
+      const Expr *CurrExpr = Context.FactMgr.getOriginMgr()
+                                 .getOrigin(OFF->getSrcOriginID())
+                                 .getExpr();
+      if (CurrExpr)
+        return getFieldFromAssignmentExpr(CurrExpr, Context.ADC.getParentMap());
+    } else {
+      return DVecl;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<const Expr *>
+getRHSDeclOrExpr(const AssignmentQueryContext &Context,
+                 const OriginFlowFact *OFF) {
+  const Origin TargetOrigin =
+      Context.FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
+  std::optional<const Expr *> SExpr = GetPureSrcExpr(TargetOrigin.getExpr());
+  if (!SExpr) {
+    const Origin SrcOrigin =
+        Context.FactMgr.getOriginMgr().getOrigin(OFF->getSrcOriginID());
+    SExpr = GetPureSrcExpr(SrcOrigin.getExpr());
+  }
+
+  return SExpr;
+}
+
 AliasAssignmentSearchResult getAliasListCore(
-    const AssignmentQueryContext &Context, const CFGBlock *Block,
-    const LoanID EndLoanID, OriginID *TargetOID,
+    const AssignmentQueryContext &Context,
+    llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
+    const CFGBlock *Block, const LoanID EndLoanID, OriginID *TargetOID,
     const std::optional<OriginDestExpr> LastDestExpr = std::nullopt,
     const std::optional<OriginID> LastOriginID = std::nullopt) {
-  llvm::SmallVector<AssignmentPair> AliasStmts;
   llvm::ArrayRef<const Fact *> Facts = Context.FactMgr.getFacts(Block);
   std::optional<OriginID> IssueOriginID = LastOriginID;
-  std::optional<OriginDestExpr> DestExpr = LastDestExpr;
+  std::optional<OriginDestExpr> CurrDestExpr = LastDestExpr;
   std::optional<OriginID> CurrOrigin = std::nullopt;
-  std::optional<const Expr *> SrcExpr = std::nullopt;
+
+  const auto InsertAssignmentList = [&](const OriginFlowFact *OFF) {
+    if (!CurrDestExpr) {
+      std::optional<OriginDestExpr> DestExpr = getLHSDeclOrExpr(Context, OFF);
+      if (DestExpr) {
+        if (llvm::isa<const ValueDecl *>(DestExpr.value()))
+          CurrOrigin = *TargetOID;
+        CurrDestExpr = DestExpr;
+      }
+    } else {
+      std::optional<const Expr *> CurrSrcExpr = getRHSDeclOrExpr(Context, OFF);
+      if (CurrSrcExpr) {
+        AssignmentList.push_back({CurrDestExpr.value(), CurrSrcExpr.value()});
+        CurrDestExpr = std::nullopt;
+        CurrOrigin = std::nullopt;
+      }
+    }
+  };
 
   for (const Fact *F : llvm::reverse(Facts)) {
     if (const auto *OFF = F->getAs<OriginFlowFact>()) {
       if (IssueOriginID && OFF->getDestOriginID() == IssueOriginID.value())
-        return {AliasStmts, true, DestExpr, IssueOriginID};
-      if (OFF->getDestOriginID() == *TargetOID) {
-        const LoanSet HeldLoans =
-            Context.LoanPropagation.getLoans(OFF->getSrcOriginID(), OFF);
-
-        if (HeldLoans.contains(EndLoanID)) {
-          const Origin TargetOrigin =
-              Context.FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
-
-          if (!DestExpr.has_value()) {
-            if (const ValueDecl *DVecl = TargetOrigin.getDecl();
-                DVecl && !DVecl->getLocation().isInvalid()) {
-              if (llvm::isa<FieldDecl>(DVecl)) {
-                const auto *CurrExpr = Context.FactMgr.getOriginMgr()
-                                           .getOrigin(OFF->getSrcOriginID())
-                                           .getExpr();
-                if (CurrExpr)
-                  DestExpr = getFieldFromAssignmentExpr(
-                      CurrExpr, Context.ADC.getParentMap());
-              } else {
-                CurrOrigin = *TargetOID;
-                DestExpr = DVecl;
-              }
-            }
-          } else {
-            auto SExpr = GetPureSrcExpr(TargetOrigin.getExpr());
-            if (!SExpr) {
-              const auto SrcOrigin = Context.FactMgr.getOriginMgr().getOrigin(
-                  OFF->getSrcOriginID());
-              SExpr = GetPureSrcExpr(SrcOrigin.getExpr());
-            }
-
-            if (SExpr) {
-              AliasStmts.push_back({DestExpr.value(), SExpr.value()});
-              SrcExpr = SExpr.value();
-              DestExpr = std::nullopt;
-              CurrOrigin = std::nullopt;
-            }
-          }
-          *TargetOID = OFF->getSrcOriginID();
-        }
+        return {true, CurrDestExpr, IssueOriginID};
+      if (OFF->getDestOriginID() == *TargetOID &&
+          Context.LoanPropagation.getLoans(OFF->getSrcOriginID(), OFF)
+              .contains(EndLoanID)) {
+        InsertAssignmentList(OFF);
+        *TargetOID = OFF->getSrcOriginID();
       }
     } else if (const auto *IF = F->getAs<IssueFact>()) {
       if (IF->getLoanID() == EndLoanID)
         IssueOriginID = IF->getOriginID();
     } else if (const auto *UF = F->getAs<UseFact>()) {
-      if (CurrOrigin.has_value()) {
-        for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
-             Cur = Cur->peelOuterOrigin()) {
-          if (Cur->getOuterOriginID() != CurrOrigin.value() || !UF->isWritten())
-            continue;
-          std::optional<const Expr *> UExpr = GetPureSrcExpr(UF->getUseExpr());
-          if (UExpr.has_value()) {
-            if (const auto *UDExpr =
-                    llvm::dyn_cast<DeclRefExpr>(UExpr.value())) {
-              DestExpr = UDExpr;
-              break;
-            }
-          }
-        }
+      if (CurrOrigin) {
+        const DeclRefExpr *LHSExpr = getLHSExpr(UF, CurrOrigin.value());
+        if (LHSExpr)
+          CurrDestExpr = LHSExpr;
       }
     }
   }
-  return {AliasStmts, false, DestExpr, IssueOriginID};
+
+  return {false, CurrDestExpr, IssueOriginID};
 }
 
-std::optional<llvm::SmallVector<AssignmentPair>>
-getAliasListInMultiBlock(const AssignmentQueryContext &Context,
-                         const CFGBlock *StartBlock, const LoanID EndLoanID,
-                         OriginID *StartOID) {
+void getAliasListInMultiBlock(
+    const AssignmentQueryContext &Context,
+    llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
+    const CFGBlock *StartBlock, const LoanID EndLoanID, OriginID *StartOID) {
   std::optional<OriginDestExpr> LastDestDecl = std::nullopt;
   llvm::SmallVector<const CFGBlock *> PendingBlocks;
   std::optional<AssignmentPair> StartStmt = std::nullopt;
@@ -167,12 +191,14 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
   llvm::SmallPtrSet<const CFGBlock *, 32> VistedBlocks;
   llvm::DenseMap<AssignmentPair, AssignmentPair> VistedExprs;
 
-  const auto AliasStmtFilter = [&VistedExprs](const AssignmentPair StartStmt,
-                                              const AssignmentPair EndStmt) {
+  const auto AliasStmtFilter = [&VistedExprs,
+                                &AssignmentList](const AssignmentPair StartStmt,
+                                                 const AssignmentPair EndStmt) {
     llvm::SmallVector<AssignmentPair> AliasStmts;
-    for (auto Stmt = StartStmt; Stmt != EndStmt; Stmt = VistedExprs.at(Stmt))
-      AliasStmts.push_back(Stmt);
-    AliasStmts.push_back(EndStmt);
+    for (AssignmentPair Stmt = StartStmt; Stmt != EndStmt;
+         Stmt = VistedExprs.at(Stmt))
+      AssignmentList.push_back(Stmt);
+    AssignmentList.push_back(EndStmt);
     return AliasStmts;
   };
 
@@ -180,14 +206,15 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
 
   for (size_t i = 0; i < PendingBlocks.size(); ++i) {
     const CFGBlock *CurrBlock = PendingBlocks[i];
+    llvm::SmallVector<AssignmentPair> BlockAliasList;
 
-    const auto [BlockAliasList, Success, CurrLastDestDecl, CurrLastOriginID] =
-        getAliasListCore(Context, CurrBlock, EndLoanID, StartOID, LastDestDecl,
-                         LastOriginID);
-    if (CurrLastDestDecl)
-      LastDestDecl = CurrLastDestDecl;
-    if (CurrLastOriginID.has_value())
-      LastOriginID = CurrLastOriginID;
+    const AliasAssignmentSearchResult Result =
+        getAliasListCore(Context, BlockAliasList, CurrBlock, EndLoanID,
+                         StartOID, LastDestDecl, LastOriginID);
+    if (Result.LastDestDecl)
+      LastDestDecl = Result.LastDestDecl;
+    if (Result.LastOrigin)
+      LastOriginID = Result.LastOrigin;
 
     if (!BlockAliasList.empty()) {
       if (VistedExprs.empty())
@@ -196,28 +223,27 @@ getAliasListInMultiBlock(const AssignmentQueryContext &Context,
       for (size_t i = 0; i < BlockAliasList.size() - 1; ++i)
         VistedExprs.insert({BlockAliasList[i], BlockAliasList[i + 1]});
 
-      if (EndStmt.has_value())
+      if (EndStmt)
         VistedExprs.insert({EndStmt.value(), BlockAliasList[0]});
 
       EndStmt = BlockAliasList[BlockAliasList.size() - 1];
     }
 
-    if (Success && StartStmt.has_value() && EndStmt.has_value())
-      return AliasStmtFilter(StartStmt.value(), EndStmt.value());
+    // TODO: The number of CFGBlocks is limited to 32 to minmize performance
+    // impact. Note that is not a magic number derived from extensive
+    // engineering practice. If this limit proves unnecessary or overly
+    // restrictive, the boundary conditions should be adjusted.
+    // https://github.com/llvm/llvm-project/pull/188467#discussion_r3050068533
+    if (Result.SearchComplete || VistedBlocks.size() >= 32)
+      break;
 
-    for (const auto &Block : CurrBlock->preds())
+    for (const CFGBlock *Block : CurrBlock->preds())
       if (Block && VistedBlocks.insert(Block).second)
         PendingBlocks.push_back(Block);
-
-    if (VistedBlocks.size() >= 32 && StartStmt.has_value() &&
-        EndStmt.has_value())
-      return AliasStmtFilter(StartStmt.value(), EndStmt.value());
   }
 
-  if (StartStmt.has_value() && EndStmt.has_value())
-    return AliasStmtFilter(StartStmt.value(), EndStmt.value());
-
-  return std::nullopt;
+  if (StartStmt && EndStmt)
+    AliasStmtFilter(StartStmt.value(), EndStmt.value());
 }
 
 void FormatRHSValueDeclForSema(const ValueDecl *TargetValue,
@@ -258,7 +284,7 @@ void FormatSrcExprForSema(
     llvm::SmallVectorImpl<ExprPrintingResult> &SrcMsgList) {
   if (!SrcExpr)
     return;
-  const auto *PureExpr = SrcExpr->IgnoreParenCasts();
+  const Expr *PureExpr = SrcExpr->IgnoreParenCasts();
   if (!PureExpr)
     return;
 
@@ -329,15 +355,10 @@ void getAliasList(const AssignmentQueryContext &Context,
 
   for (OriginID TargetOID : TargetOIDList) {
     if (StartBlock == EndBlock) {
-      AliasAssignmentSearchResult Result =
-          getAliasListCore(Context, StartBlock, End, &TargetOID);
-      if (!Result.Payload.empty())
-        AssignmentList = Result.Payload;
+      getAliasListCore(Context, AssignmentList, StartBlock, End, &TargetOID);
     } else {
-      std::optional<llvm::SmallVector<AssignmentPair>> Result =
-          getAliasListInMultiBlock(Context, StartBlock, End, &TargetOID);
-      if (Result)
-        AssignmentList = Result.value();
+      getAliasListInMultiBlock(Context, AssignmentList, StartBlock, End,
+                               &TargetOID);
     }
   }
 }
