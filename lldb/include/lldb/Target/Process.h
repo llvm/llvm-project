@@ -1347,7 +1347,7 @@ public:
   ///
   /// \return
   ///     A StructuredData object with the information that could be
-  ///     retrieved..
+  ///     retrieved.
   virtual lldb_private::StructuredData::ObjectSP
   GetLoadedDynamicLibrariesInfos(bool include_mh_and_load_commands) {
     return StructuredData::ObjectSP();
