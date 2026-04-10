@@ -24,6 +24,7 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCDirectives.h"
@@ -1239,11 +1240,8 @@ void SystemZAsmPrinter::emitExternalGlobalVariableEnd(MCSymbol *Sym) {
     // symbol, for which we use the the ED of the ADA. We also need to mark the
     // reference as being to data, otherwise we cannot bind with code generated
     // by XL.
-    MCSymbolGOFF *EmittedSym = static_cast<MCSymbolGOFF *>(Sym);
-    EmittedSym->setADA(static_cast<MCSectionGOFF *>(
-                           OutContext.getObjectFileInfo()->getADASection())
-                           ->getParent());
-    OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_ELF_TypeObject);
+    getTargetStreamer()->emitADA(Sym, OutContext.getObjectFileInfo()->getADASection());
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
   }
 }
 

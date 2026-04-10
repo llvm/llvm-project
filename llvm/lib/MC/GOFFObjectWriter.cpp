@@ -361,7 +361,7 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
   if (Symbol.getCodeData() == GOFF::ESD_EXE_DATA) {
-    MCSectionGOFF *ED = Symbol.getADA();
+    MCSectionGOFF *ED = Symbol.getADA()->getParent();
     GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
                   ED->getEDAttributes(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
