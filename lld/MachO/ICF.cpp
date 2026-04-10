@@ -119,10 +119,10 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     if (ra.hasAuth != rb.hasAuth)
       return false;
     if (ra.hasAuth) {
-      AuthInfo aiA = ra.getAuthInfo();
-      AuthInfo aiB = rb.getAuthInfo();
-      if (aiA.diversity != aiB.diversity || aiA.key != aiB.key ||
-          aiA.addrDiv != aiB.addrDiv)
+      const AuthInfo *aiA = ra.getAuthInfo();
+      const AuthInfo *aiB = rb.getAuthInfo();
+      if (aiA->diversity != aiB->diversity || aiA->key != aiB->key ||
+          aiA->addrDiv != aiB->addrDiv)
         return false;
     }
     if (isa<Symbol *>(ra.referent) != isa<Symbol *>(rb.referent))

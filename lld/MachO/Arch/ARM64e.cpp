@@ -26,19 +26,10 @@ namespace {
 struct ARM64e : ARM64Common {
   ARM64e();
   void writeStub(uint8_t *buf, const Symbol &, uint64_t) const override;
-  void writeStubHelperHeader(uint8_t *buf) const override;
-  void writeStubHelperEntry(uint8_t *buf, const Symbol &,
-                            uint64_t entryAddr) const override;
 
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
                             uint64_t &stubOffset, uint64_t selrefVA,
                             Symbol *objcMsgSend) const override;
-  void populateThunk(InputSection *thunk, Symbol *funcSym) override;
-
-  void initICFSafeThunkBody(InputSection *thunk,
-                            Symbol *targetSym) const override;
-  Symbol *getThunkBranchTarget(InputSection *thunk) const override;
-  uint32_t getICFSafeThunkSize() const override;
 };
 
 } // namespace
@@ -85,7 +76,7 @@ static constexpr uint32_t stubCode[] = {
 void ARM64e::writeStub(uint8_t *buf8, const Symbol &sym,
                        uint64_t pointerVA) const {
   auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
-  constexpr size_t stubCodeSize = 4 * sizeof(uint32_t);
+  constexpr size_t stubCodeSize = sizeof(stubCode);
   SymbolDiagnostic d = {&sym, "stub"};
   uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * stubCodeSize;
   uint64_t pcPageBits = pageBits(stubAddr);
@@ -99,30 +90,6 @@ void ARM64e::writeStub(uint8_t *buf8, const Symbol &sym,
   buf32[2] = stubCode[2];
   // braa x16, x17
   buf32[3] = stubCode[3];
-}
-
-static constexpr uint32_t stubHelperHeaderCode[] = {
-    0x90000011, // 00: adrp  x17, _dyld_private@page
-    0x91000231, // 04: add   x17, x17, _dyld_private@pageoff
-    0xa9bf47f0, // 08: stp   x16/x17, [sp, #-16]!
-    0x90000010, // 0c: adrp  x16, dyld_stub_binder@page
-    0xf9400210, // 10: ldr   x16, [x16, dyld_stub_binder@pageoff]
-    0xd61f0200, // 14: br    x16
-};
-
-void ARM64e::writeStubHelperHeader(uint8_t *buf8) const {
-  ::writeStubHelperHeader<LP64>(buf8, stubHelperHeaderCode);
-}
-
-static constexpr uint32_t stubHelperEntryCode[] = {
-    0x18000050, // 00: ldr  w16, l0
-    0x14000000, // 04: b    stubHelperHeader
-    0x00000000, // 08: l0: .long 0
-};
-
-void ARM64e::writeStubHelperEntry(uint8_t *buf8, const Symbol &sym,
-                                  uint64_t entryVA) const {
-  ::writeStubHelperEntry(buf8, stubHelperEntryCode, sym, entryVA);
 }
 
 // ARM64e uses authenticated ObjC stubs with braa instruction.
@@ -177,61 +144,6 @@ void ARM64e::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
   stubOffset += objcStubSize;
 }
 
-// A thunk is the relaxed variation of stubCode. We don't need the
-// extra indirection through a lazy pointer because the target address
-// is known at link time.
-static constexpr uint32_t thunkCode[] = {
-    0x90000010, // 00: adrp  x16, <thunk.ptr>@page
-    0x91000210, // 04: add   x16, [x16,<thunk.ptr>@pageoff]
-    0xd61f0200, // 08: br    x16
-};
-
-void ARM64e::populateThunk(InputSection *thunk, Symbol *funcSym) {
-  thunk->align = 4;
-  thunk->data = {reinterpret_cast<const uint8_t *>(thunkCode),
-                 sizeof(thunkCode)};
-  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGEOFF12,
-                             /*pcrel=*/false, /*length=*/2,
-                             /*offset=*/4, /*addend=*/0,
-                             /*referent=*/funcSym);
-  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGE21,
-                             /*pcrel=*/true, /*length=*/2,
-                             /*offset=*/0, /*addend=*/0,
-                             /*referent=*/funcSym);
-}
-
-// Just a single direct branch to the target function.
-static constexpr uint32_t icfSafeThunkCode[] = {
-    0x14000000, // 00: b    target
-};
-
-void ARM64e::initICFSafeThunkBody(InputSection *thunk,
-                                  Symbol *targetSym) const {
-  // The base data here will not be itself modified, we'll just be adding a
-  // reloc below. So we can directly use the constexpr above as the data.
-  thunk->data = {reinterpret_cast<const uint8_t *>(icfSafeThunkCode),
-                 sizeof(icfSafeThunkCode)};
-
-  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_BRANCH26,
-                             /*pcrel=*/true, /*length=*/2,
-                             /*offset=*/0, /*addend=*/0,
-                             /*referent=*/targetSym);
-}
-
-Symbol *ARM64e::getThunkBranchTarget(InputSection *thunk) const {
-  assert(thunk->relocs.size() == 1 &&
-         "expected a single reloc on ARM64 ICF thunk");
-  auto &reloc = thunk->relocs[0];
-  assert(isa<Symbol *>(reloc.referent) &&
-         "ARM64 thunk reloc is expected to point to a Symbol");
-
-  return cast<Symbol *>(reloc.referent);
-}
-
-uint32_t ARM64e::getICFSafeThunkSize() const {
-  return sizeof(icfSafeThunkCode);
-}
-
 ARM64e::ARM64e() : ARM64Common(LP64()) {
   cpuType = CPU_TYPE_ARM64;
   // ARM64e-specific: Use ARM64E subtype with pointer authentication ABI version
@@ -240,7 +152,7 @@ ARM64e::ARM64e() : ARM64Common(LP64()) {
                                                        /*kernel*/ false);
 
   stubSize = sizeof(stubCode);
-  thunkSize = sizeof(thunkCode);
+  thunkSize = sizeof(arm64ThunkCode);
 
   objcStubsFastSize = sizeof(objcStubsFastCode);
   objcStubsFastAlignment = 32;
@@ -257,8 +169,8 @@ ARM64e::ARM64e() : ARM64Common(LP64()) {
   subtractorRelocType = ARM64_RELOC_SUBTRACTOR;
   unsignedRelocType = ARM64_RELOC_UNSIGNED;
 
-  stubHelperHeaderSize = sizeof(stubHelperHeaderCode);
-  stubHelperEntrySize = sizeof(stubHelperEntryCode);
+  stubHelperHeaderSize = sizeof(arm64StubHelperHeaderCode);
+  stubHelperEntrySize = sizeof(arm64StubHelperEntryCode);
 
   relocAttrs = {relocAttrsArray.data(), relocAttrsArray.size()};
 }

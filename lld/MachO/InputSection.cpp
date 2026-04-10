@@ -277,14 +277,8 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       referentVA = referentIsec->getVA(r.getAddend());
 
       if (needsFixup) {
-        AuthInfo aiStorage;
-        const AuthInfo *ai = nullptr;
-        if (r.hasAuth) {
-          aiStorage = r.getAuthInfo();
-          ai = &aiStorage;
-        }
         uint64_t segmentBase = referentIsec->parent->parent->addr;
-        writeChainedRebase(loc, referentVA, segmentBase, ai);
+        writeChainedRebase(loc, referentVA, segmentBase, r.getAuthInfo());
         continue;
       }
     }

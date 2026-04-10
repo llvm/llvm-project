@@ -518,12 +518,7 @@ static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
 void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym,
                               const Relocation &r) {
   int64_t addend = r.getAddend();
-  const AuthInfo *ai = nullptr;
-  AuthInfo aiStorage;
-  if (r.hasAuth) {
-    aiStorage = r.getAuthInfo();
-    ai = &aiStorage;
-  }
+  const AuthInfo *ai = r.getAuthInfo();
   if (needsBinding(sym))
     writeChainedBind(buf, sym, addend, ai);
   else

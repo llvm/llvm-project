@@ -53,7 +53,7 @@ uint64_t Symbol::getGotVA() const {
   // On arm64e a symbol can land in both __got and __auth_got; prefer the
   // signed slot (used by POINTER_TO_GOT for eh_frame personalities).
   if (isInAuthGot())
-    return in.authgot->getVA(authGotIndex);
+    return getAuthGotVA();
   if (isInGot())
     return in.got->getVA(gotIndex);
   llvm_unreachable("symbol not in any GOT section");

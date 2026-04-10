@@ -217,6 +217,15 @@ void UnwindInfoSectionImpl::prepare() {
     }
 }
 
+// On arm64e, personality pointers go in the authenticated GOT;
+// on other architectures they go in the regular GOT.
+static void addPersonalityGotEntry(Symbol *s) {
+  if (config->arch() == AK_arm64e)
+    in.authgot->addEntry(s);
+  else
+    in.got->addEntry(s);
+}
+
 // Compact unwind relocations have different semantics, so we handle them in a
 // separate code path from regular relocations. First, we do not wish to add
 // rebase opcodes for __LD,__compact_unwind, because that section doesn't
@@ -280,11 +289,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
             personalityTable[{defined->isec(), defined->value}];
         if (personality == nullptr) {
           personality = defined;
-          // For arm64e, personality pointers go in the authenticated GOT
-          if (config->arch() == AK_arm64e)
-            in.authgot->addEntry(defined);
-          else
-            in.got->addEntry(defined);
+          addPersonalityGotEntry(defined);
         } else if (personality != defined) {
           r.referent = personality;
         }
@@ -292,11 +297,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       }
 
       assert(isa<DylibSymbol>(s));
-      // For arm64e, personality pointers go in the authenticated GOT
-      if (config->arch() == AK_arm64e)
-        in.authgot->addEntry(s);
-      else
-        in.got->addEntry(s);
+      addPersonalityGotEntry(s);
       continue;
     }
 
@@ -327,11 +328,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
                             /*isReferencedDynamically=*/false,
                             /*noDeadStrip=*/false);
           s->used = true;
-          // For arm64e, personality pointers go in the authenticated GOT
-          if (config->arch() == AK_arm64e)
-            in.authgot->addEntry(s);
-          else
-            in.got->addEntry(s);
+          addPersonalityGotEntry(s);
         }
       }
       r.referent = s;

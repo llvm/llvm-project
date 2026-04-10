@@ -64,7 +64,8 @@ struct AuthReloc {
   int32_t addend;
   AuthInfo info;
 };
-static_assert(sizeof(AuthReloc) == 8, "AuthReloc must match int64_t size");
+static_assert(sizeof(AuthReloc) == sizeof(int64_t),
+              "AuthReloc must match int64_t size");
 
 struct Relocation {
   uint8_t type = llvm::MachO::GENERIC_RELOC_INVALID;
@@ -91,9 +92,8 @@ struct Relocation {
         addend(addend), referent(referent) {}
 
   // Convenience accessors for auth metadata.
-  AuthInfo getAuthInfo() const {
-    assert(hasAuth);
-    return authData.info;
+  const AuthInfo *getAuthInfo() const {
+    return hasAuth ? &authData.info : nullptr;
   }
   int64_t getAddend() const {
     return hasAuth ? static_cast<int64_t>(authData.addend) : addend;
