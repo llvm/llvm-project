@@ -301,6 +301,11 @@ public:
 
   LoadScriptFromSymFile GetLoadScriptFromSymbolFile() const;
 
+  /// Set the target-wide target.load-script-from-symbol-file setting.
+  /// See \c SetAutoLoadScriptsForModule for overriding this setting
+  /// per-module.
+  void SetLoadScriptFromSymbolFile(LoadScriptFromSymFile load_style);
+
   LoadCWDlldbinitFile GetLoadCWDlldbinitFile() const;
 
   Disassembler::HexImmediateStyle GetHexImmediateStyle() const;
@@ -346,6 +351,16 @@ public:
   /// automatically filtering out trampolines as possible breakpoint locations
   /// when set by name.
   bool GetEnableTrampolineSupport() const;
+
+  std::optional<LoadScriptFromSymFile>
+  GetAutoLoadScriptsForModule(llvm::StringRef module_name) const;
+
+  /// Set the \c LoadScriptFromSymFile for a module called \c module_name
+  /// (excluding file extension). LLDB will prefer this over the target-wide
+  /// target.load-script-from-symbol-file setting
+  /// (see \c SetLoadScriptFromSymbolFile).
+  void SetAutoLoadScriptsForModule(llvm::StringRef module_name,
+                                   LoadScriptFromSymFile load_style);
 
 private:
   std::optional<bool>
