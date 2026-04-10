@@ -65,7 +65,7 @@ static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
                           "MinInstrCount strategy.")));
 
 static cl::opt<bool> OutlinerEnableRegSave(
-    "riscv-outliner-regsave", cl::init(false), cl::Hidden,
+    "riscv-outliner-regsave", cl::init(true), cl::Hidden,
     cl::desc("Enable RegSave strategy in machine outliner (save X5 to a "
              "temporary register when X5 is live across outlined calls)."));
 
