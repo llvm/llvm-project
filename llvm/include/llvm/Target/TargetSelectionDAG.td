@@ -282,6 +282,11 @@ def SDTMaskedScatter : SDTypeProfile<0, 4, [
   SDTCisSameNumEltsAs<0, 1>, SDTCisSameNumEltsAs<0, 3>
 ]>;
 
+def SDTMaskedIntBinOp: SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisSameAs<0, 1>,  SDTCisSameAs<0, 2>,
+  SDTCisSameNumEltsAs<0,3>, SDTCisInt<0>, SDTCisInt<3>
+]>;
+
 def SDTVectorCompress : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisSameAs<0, 1>,
   SDTCisVec<2>, SDTCisSameNumEltsAs<1, 2>,
@@ -455,6 +460,10 @@ def sdiv       : SDNode<"ISD::SDIV"      , SDTIntBinOp>;
 def udiv       : SDNode<"ISD::UDIV"      , SDTIntBinOp>;
 def srem       : SDNode<"ISD::SREM"      , SDTIntBinOp>;
 def urem       : SDNode<"ISD::UREM"      , SDTIntBinOp>;
+def masked_udiv : SDNode<"ISD::MASKED_UDIV", SDTMaskedIntBinOp>;
+def masked_sdiv : SDNode<"ISD::MASKED_SDIV", SDTMaskedIntBinOp>;
+def masked_urem : SDNode<"ISD::MASKED_UREM", SDTMaskedIntBinOp>;
+def masked_srem : SDNode<"ISD::MASKED_SREM", SDTMaskedIntBinOp>;
 def sdivrem    : SDNode<"ISD::SDIVREM"   , SDTIntBinHiLoOp>;
 def udivrem    : SDNode<"ISD::UDIVREM"   , SDTIntBinHiLoOp>;
 def srl        : SDNode<"ISD::SRL"       , SDTIntShiftOp>;

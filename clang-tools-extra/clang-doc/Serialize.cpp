@@ -244,18 +244,38 @@ void ClangDocCommentVisitor::visitTextComment(const TextComment *C) {
 void ClangDocCommentVisitor::visitInlineCommandComment(
     const InlineCommandComment *C) {
   CurrentCI.Name = internString(getCommandName(C->getCommandID()));
+  llvm::SmallVector<StringRef> Args;
   for (unsigned I = 0, E = C->getNumArgs(); I != E; ++I)
-    CurrentCI.Args.push_back(internString(C->getArgText(I).trim()));
+    Args.push_back(internString(C->getArgText(I).trim()));
+  if (!Args.empty()) {
+    StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
+    std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
+    CurrentCI.Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
+  }
 }
 
 void ClangDocCommentVisitor::visitHTMLStartTagComment(
     const HTMLStartTagComment *C) {
   CurrentCI.Name = internString(C->getTagName());
   CurrentCI.SelfClosing = C->isSelfClosing();
+  llvm::SmallVector<StringRef> AttrKeys;
+  llvm::SmallVector<StringRef> AttrValues;
   for (unsigned I = 0, E = C->getNumAttrs(); I < E; ++I) {
     const HTMLStartTagComment::Attribute &Attr = C->getAttr(I);
-    CurrentCI.AttrKeys.push_back(internString(Attr.Name));
-    CurrentCI.AttrValues.push_back(internString(Attr.Value));
+    AttrKeys.push_back(internString(Attr.Name));
+    AttrValues.push_back(internString(Attr.Value));
+  }
+  if (!AttrKeys.empty()) {
+    StringRef *KeysMem = TransientArena.Allocate<StringRef>(AttrKeys.size());
+    std::uninitialized_copy(AttrKeys.begin(), AttrKeys.end(), KeysMem);
+    CurrentCI.AttrKeys = llvm::ArrayRef<StringRef>(KeysMem, AttrKeys.size());
+  }
+  if (!AttrValues.empty()) {
+    StringRef *ValuesMem =
+        TransientArena.Allocate<StringRef>(AttrValues.size());
+    std::uninitialized_copy(AttrValues.begin(), AttrValues.end(), ValuesMem);
+    CurrentCI.AttrValues =
+        llvm::ArrayRef<StringRef>(ValuesMem, AttrValues.size());
   }
 }
 
@@ -268,8 +288,14 @@ void ClangDocCommentVisitor::visitHTMLEndTagComment(
 void ClangDocCommentVisitor::visitBlockCommandComment(
     const BlockCommandComment *C) {
   CurrentCI.Name = internString(getCommandName(C->getCommandID()));
+  llvm::SmallVector<StringRef> Args;
   for (unsigned I = 0, E = C->getNumArgs(); I < E; ++I)
-    CurrentCI.Args.push_back(internString(C->getArgText(I).trim()));
+    Args.push_back(internString(C->getArgText(I).trim()));
+  if (!Args.empty()) {
+    StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
+    std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
+    CurrentCI.Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
+  }
 }
 
 void ClangDocCommentVisitor::visitParamCommandComment(
@@ -432,8 +458,10 @@ bool Serializer::shouldSerializeInfo(bool PublicOnly,
 //
 // See MakeAndInsertIntoParent().
 void Serializer::InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
-  Scope.Namespaces.emplace_back(Info.USR, Info.Name, InfoType::IT_namespace,
-                                Info.Name, getInfoRelativePath(Info.Namespace));
+  Reference *R = allocatePtr<Reference>(TransientArena, Info.USR, Info.Name,
+                                        InfoType::IT_namespace, Info.Name,
+                                        getInfoRelativePath(Info.Namespace));
+  Scope.Namespaces.push_back(*R);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
@@ -987,8 +1015,7 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
     if (auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(ActualDecl)) {
       FunctionInfo TempInfo;
       parseParameters(TempInfo, FuncDecl);
-      F.Params.emplace();
-      F.Params = std::move(TempInfo.Params);
+      F.Params = allocateArray<FieldTypeInfo>(TempInfo.Params, TransientArena);
       F.ReturnType = getTypeInfoForType(FuncDecl->getReturnType(),
                                         FuncDecl->getLangOpts());
     }

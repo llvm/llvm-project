@@ -175,6 +175,7 @@ TUSummaryExtractorFrontendAction::CreateASTConsumer(CompilerInstance &CI,
     return nullptr;
 
   if (auto Runner = TUSummaryRunner::create(CI, InFile)) {
+    CI.getCodeGenOpts().ClearASTBeforeBackend = false;
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
     Consumers.reserve(2);
     Consumers.push_back(std::move(WrappedConsumer));

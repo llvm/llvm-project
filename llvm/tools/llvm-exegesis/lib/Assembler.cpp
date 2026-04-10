@@ -381,7 +381,8 @@ Expected<ExecutableFunction> ExecutableFunction::create(
          "Cannot find the symbol for FunctionID");
   uintptr_t CodeSize = SymbolIt->second;
 
-  auto EJITOrErr = orc::LLJITBuilder().create();
+  auto EJITOrErr =
+      orc::LLJITBuilder().setDataLayout(TM->createDataLayout()).create();
   if (!EJITOrErr)
     return EJITOrErr.takeError();
 
