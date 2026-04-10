@@ -1082,6 +1082,12 @@ struct ConvertXeGPUToXeVMPass
         return xevmIndexType;
       return VectorType::get(8, i32Type);
     });
+    // SLM access related type conversions.
+    // TODO: LLVM DLTI provides clean way of representing different pointer size
+    // based on address space. Currently pointer size of SLM access is hard
+    // coded to 32bit. Update to use DLTI when switching overall XeGPU lowering
+    // to use DLTI instead of use64bitIndex option used above.
+
     // Convert MemDescType into i32 for SLM
     typeConverter.addConversion(
         [&](xegpu::MemDescType type) -> Type { return i32Type; });
