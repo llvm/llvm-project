@@ -17,6 +17,7 @@
 
 ## Check that the predecessor of Ltail-dup0 is .LBB00, not itself.
 # CHECK-NOLOOP-LABEL: .Ltail-dup0 (1 instructions, align : 1)
+# CHECK-NOLOOP-NEXT:   Exec Count : {{.*}}
 # CHECK-NOLOOP-NEXT:   Predecessors: .LBB00
 # CHECK-NOLOOP-NEXT:   ret
     .text
