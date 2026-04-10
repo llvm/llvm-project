@@ -1303,6 +1303,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
       return SK_Function;
   }
 
+  // Ignore template wrapper decls. Their underlying decls are checked with the
+  // right naming kind, checking the wrappers too can fall back to DefaultCase
+  // and emit diagnostic for the same identifier.
   if (isa<FunctionTemplateDecl, ClassTemplateDecl, VarTemplateDecl,
           TypeAliasTemplateDecl>(D))
     return SK_Invalid;
