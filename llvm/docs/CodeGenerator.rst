@@ -2498,5 +2498,5 @@ The Lightweight Fault Isolation (LFI) sub-architecture
 
 LFI is a sub-architecture available for certain backends that allows programs
 compiled for the target to run in a sandboxed environment that is within the
-same address space as host code. Refer to :doc:`LightweightFaultIsolation` for
-more information about LFI.
+same address space as host code. Refer to :doc:`LFI` for more information about
+LFI.
