@@ -4545,7 +4545,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           APInt ValMinusOne = V - 1;
           unsigned LeadingZeros = ValMinusOne.countl_zero();
           if (LeadingZeros == 0)
-            return V; // would overflow; return input unchanged
+            return APInt(BitWidth, 0); // overflows; wrap to 0
           return APInt::getOneBitSet(BitWidth, BitWidth - LeadingZeros);
         });
 

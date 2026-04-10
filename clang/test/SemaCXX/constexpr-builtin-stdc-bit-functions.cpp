@@ -259,8 +259,8 @@ static_assert(__builtin_stdc_bit_ceil(0U) == 1U, "");
 static_assert(__builtin_stdc_bit_ceil(1U) == 1U, "");
 static_assert(__builtin_stdc_bit_ceil(7U) == 8U, "");
 static_assert(__builtin_stdc_bit_ceil(0x80000000U) == 0x80000000U, "");
-// Overflow: next power of 2 exceeds type width; implementation wraps.
-static_assert(__builtin_stdc_bit_ceil(0xFFFFFFFFU) == 0xFFFFFFFFU, "");
+// Overflow: next power of 2 exceeds type width; wraps to zero.
+static_assert(__builtin_stdc_bit_ceil(0xFFFFFFFFU) == 0U, "");
 static_assert(__builtin_stdc_bit_ceil(0ULL) == 1ULL, "");
 static_assert(__builtin_stdc_bit_ceil(1ULL) == 1ULL, "");
 static_assert(__builtin_stdc_bit_ceil(7ULL) == 8ULL, "");
@@ -351,9 +351,9 @@ static_assert(__builtin_stdc_bit_width((unsigned _BitInt(37))0) == 0, "");
 static_assert(__builtin_stdc_bit_width((unsigned _BitInt(37))-1) == 37, "");
 static_assert(__builtin_stdc_bit_floor((unsigned _BitInt(37))0x1F) == 0x10, "");
 static_assert(__builtin_stdc_bit_ceil((unsigned _BitInt(37))0x11) == 0x20, "");
-// Overflow: next power of 2 exceeds _BitInt(17) width; implementation wraps.
+// Overflow: next power of 2 exceeds _BitInt(17) width; wraps to zero.
 static_assert(__builtin_stdc_bit_ceil((unsigned _BitInt(17))(-1)) ==
-              (unsigned _BitInt(17))(-1), "");
+              (unsigned _BitInt(17))(0), "");
 
 // _BitInt(128): sparse pattern, leading zero count, popcount.
 constexpr unsigned _BitInt(128) bi128_pattern = 0x123456789ABCDEF0ULL;

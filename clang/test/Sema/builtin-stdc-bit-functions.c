@@ -210,18 +210,27 @@ _Static_assert(__builtin_stdc_bit_ceil((unsigned char)3) == 4, "");
 _Static_assert(__builtin_stdc_bit_ceil((unsigned char)4) == 4, "");
 _Static_assert(__builtin_stdc_bit_ceil((unsigned char)5) == 8, "");
 _Static_assert(__builtin_stdc_bit_ceil((unsigned char)0x80) == 0x80, "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned char)0x81) == 0, "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned char)0xFE) == 0, "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned char)0xFF) == 0, "");
 _Static_assert(__builtin_stdc_bit_ceil((unsigned short)0) == 1, "");
 _Static_assert(__builtin_stdc_bit_ceil((unsigned short)1) == 1, "");
 _Static_assert(__builtin_stdc_bit_ceil((unsigned short)7) == 8, "");
 _Static_assert(__builtin_stdc_bit_ceil((unsigned short)0x8000) == 0x8000, "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned short)0x8001) == 0, "");
+_Static_assert(__builtin_stdc_bit_ceil((unsigned short)0xFFFF) == 0, "");
 _Static_assert(__builtin_stdc_bit_ceil(0U) == 1U, "");
 _Static_assert(__builtin_stdc_bit_ceil(1U) == 1U, "");
 _Static_assert(__builtin_stdc_bit_ceil(7U) == 8U, "");
 _Static_assert(__builtin_stdc_bit_ceil(0x80000000U) == 0x80000000U, "");
+_Static_assert(__builtin_stdc_bit_ceil(0x80000001U) == 0U, "");
+_Static_assert(__builtin_stdc_bit_ceil(0xFFFFFFFFU) == 0U, "");
 _Static_assert(__builtin_stdc_bit_ceil(0ULL) == 1ULL, "");
 _Static_assert(__builtin_stdc_bit_ceil(1ULL) == 1ULL, "");
 _Static_assert(__builtin_stdc_bit_ceil(7ULL) == 8ULL, "");
 _Static_assert(__builtin_stdc_bit_ceil(0x8000000000000000ULL) == 0x8000000000000000ULL, "");
+_Static_assert(__builtin_stdc_bit_ceil(0x8000000000000001ULL) == 0ULL, "");
+_Static_assert(__builtin_stdc_bit_ceil(0xFFFFFFFFFFFFFFFFULL) == 0ULL, "");
 
 // Test with _BitInt types - cover all 14 builtins
 _Static_assert(__builtin_stdc_leading_zeros((unsigned _BitInt(37))0) == 37, "");
@@ -331,6 +340,32 @@ _Static_assert(__builtin_stdc_bit_ceil(0UL) == 1UL, "");
 _Static_assert(__builtin_stdc_bit_ceil(1UL) == 1UL, "");
 _Static_assert(__builtin_stdc_bit_ceil(7UL) == 8UL, "");
 _Static_assert(__builtin_stdc_bit_ceil(1UL << (ULONG_WIDTH - 1)) == (1UL << (ULONG_WIDTH - 1)), "");
+_Static_assert(__builtin_stdc_bit_ceil((1UL << (ULONG_WIDTH - 1)) + 1) == 0UL, "");
+_Static_assert(__builtin_stdc_bit_ceil(~0UL) == 0UL, "");
+
+// alternating bit patterns
+_Static_assert(__builtin_stdc_leading_zeros(0x55555555U) == 1, "");
+_Static_assert(__builtin_stdc_leading_ones(0xAAAAAAAAU) == 1, "");
+_Static_assert(__builtin_stdc_trailing_zeros(0xAAAAAAAAU) == 1, "");
+_Static_assert(__builtin_stdc_trailing_ones(0x55555555U) == 1, "");
+_Static_assert(__builtin_stdc_count_zeros(0x55555555U) == 16, "");
+_Static_assert(__builtin_stdc_count_ones(0x55555555U) == 16, "");
+_Static_assert(__builtin_stdc_count_zeros(0xAAAAAAAAU) == 16, "");
+_Static_assert(__builtin_stdc_count_ones(0xAAAAAAAAU) == 16, "");
+_Static_assert(__builtin_stdc_bit_width(0x55555555U) == 31, "");
+_Static_assert(__builtin_stdc_bit_width(0xAAAAAAAAU) == 32, "");
+_Static_assert(__builtin_stdc_bit_floor(0x55555555U) == 0x40000000U, "");
+_Static_assert(__builtin_stdc_bit_floor(0xAAAAAAAAU) == 0x80000000U, "");
+_Static_assert(__builtin_stdc_bit_ceil(0x55555555U) == 0x80000000U, "");
+_Static_assert(__builtin_stdc_bit_ceil(0xAAAAAAAAU) == 0U, "");
+
+// nibble patterns
+_Static_assert(__builtin_stdc_leading_zeros(0x0F0F0F0FU) == 4, "");
+_Static_assert(__builtin_stdc_leading_zeros(0xF0F0F0F0U) == 0, "");
+_Static_assert(__builtin_stdc_count_ones(0x0F0F0F0FU) == 16, "");
+_Static_assert(__builtin_stdc_count_ones(0xF0F0F0F0U) == 16, "");
+_Static_assert(__builtin_stdc_bit_ceil(0x0F0F0F0FU) == 0x10000000U, "");
+_Static_assert(__builtin_stdc_bit_ceil(0xF0F0F0F0U) == 0U, "");
 
 // Error cases - all 14 builtins reject bool and enumeration arguments
 enum UnsignedEnum { UE_A = 0, UE_B = 1 };

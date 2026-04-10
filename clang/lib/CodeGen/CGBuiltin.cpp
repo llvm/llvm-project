@@ -3873,7 +3873,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *ShiftAmt =
         Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), LZ);
     Value *Tmp = Builder.CreateShl(One, ShiftAmt);
-    Tmp = Builder.CreateSelect(LZIsZero, ArgValue, Tmp);
+    Tmp = Builder.CreateSelect(LZIsZero, Zero, Tmp);
     Builder.CreateBr(MergeBB);
 
     Builder.SetInsertPoint(MergeBB);
