@@ -266,6 +266,9 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
       process_addrs.emplace_back(proc, pid);
     }
 
+    if (error.Fail())
+      return false;
+
     std::sort(process_addrs.begin(), process_addrs.end(),
               [](const auto &a, const auto &b) { return a.second < b.second; });
 
