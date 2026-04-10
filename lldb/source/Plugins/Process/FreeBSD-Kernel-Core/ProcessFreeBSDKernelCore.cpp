@@ -89,7 +89,7 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
       return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
                                                         kvm, *crash_file);
     else
-      LLDB_LOGF(GetLog(LLDBLog::Object), "FreeBSD-Kernel-Core: %s", errbuf);
+      LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
   }
   return nullptr;
 }
@@ -461,7 +461,7 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
 
     if (field_found != 4) {
       LLDB_LOGF(
-          GetLog(LLDBLog::Object),
+          GetLog(LLDBLog::Process),
           "FreeBSD-Kernel-Core: Could not find all required fields for msgbuf");
       return;
     }
