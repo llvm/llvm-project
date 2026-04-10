@@ -749,6 +749,8 @@ public:
   CGNode(const NodeKind K) : Kind(K) {}
   CGNode(const CGNode &) = delete;
   CGNode(CGNode &&) = delete;
+  CGNode &operator=(const CGNode &) = delete;
+  CGNode &operator=(CGNode &&) = delete;
   virtual ~CGNode() = 0;
 
   NodeKind getKind() const { return Kind; }
@@ -893,6 +895,10 @@ public:
   };
 
   CGEdge(CGNode &N, EdgeKind K) : CGEdgeBase(N), Kind(K) {}
+  CGEdge(const CGEdge &) = delete;
+  CGEdge &operator=(const CGEdge &) = delete;
+  CGEdge(CGEdge &&) = delete;
+  CGEdge &operator=(CGEdge &&) = delete;
 
   EdgeKind getKind() const { return Kind; }
 
@@ -909,7 +915,10 @@ class CompilationGraph : public CGBase {
 public:
   CompilationGraph() = default;
   CompilationGraph(const CompilationGraph &) = delete;
+  CompilationGraph &operator=(const CompilationGraph &) = delete;
   CompilationGraph(CompilationGraph &&G) = default;
+  CompilationGraph &operator=(CompilationGraph &&) = default;
+  ~CompilationGraph() = default;
 
   CGNode &getRoot() const {
     assert(Root && "Root node has not yet been created!");
