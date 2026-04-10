@@ -222,6 +222,12 @@ let Definition = "target", Path = "target" in {
   def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
     DefaultTrue,
     Desc<"Enable loading of modules in parallel for the dynamic loader.">;
+  def AutoLoadScriptsForModules
+      : Property<"auto-load-scripts-for-modules", "Dictionary">,
+        ElementType<"Enum">,
+        EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
+        Desc<"A list of module/image names and whether LLDB should auto-load scripting "
+             "resources for it from safe paths.">;
 }
 
 let Definition = "process_experimental", Path = "target.process.experimental" in {

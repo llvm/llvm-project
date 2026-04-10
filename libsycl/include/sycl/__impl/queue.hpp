@@ -35,12 +35,10 @@ class QueueImpl;
 class _LIBSYCL_EXPORT queue {
 public:
   queue(const queue &rhs) = default;
-
   queue(queue &&rhs) = default;
-
   queue &operator=(const queue &rhs) = default;
-
   queue &operator=(queue &&rhs) = default;
+  ~queue() = default;
 
   friend bool operator==(const queue &lhs, const queue &rhs) {
     return lhs.impl == rhs.impl;
@@ -135,6 +133,11 @@ public:
   /// The return type depends on the information being queried.
   template <typename Param>
   typename Param::return_type get_backend_info() const;
+
+  /// Blocks the calling thread until all commands previously submitted to this
+  /// queue have completed. Synchronous errors are reported through SYCL
+  /// exceptions.
+  void wait();
 
 private:
   queue(const std::shared_ptr<detail::QueueImpl> &Impl) : impl(Impl) {}

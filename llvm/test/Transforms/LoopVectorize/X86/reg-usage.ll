@@ -77,11 +77,11 @@ define i32 @goo() {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %s.015 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %tmp1 = add nsw i64 %indvars.iv, 3
@@ -150,7 +150,7 @@ define void @hoo(i32 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [0 x i64], ptr @d, i64 0, i64 %indvars.iv
   %tmp = load i64, ptr %arrayidx, align 8
@@ -162,6 +162,6 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }

@@ -247,10 +247,14 @@ the `abi::Type*` type system, the `ABIInfo` base and target-specific
 implementations (e.g.  X86_64, AArch64), and the classification result types
 (e.g.  ABIArgInfo, ABIFunctionInfo).  **ABITypeMapper** maps `mlir::Type` to
 `abi::Type*` so that MLIR dialect types can be classified by the ABI library.
-Dialects with custom types do not need a new interface for this: the mapper
-relies on existing MLIR type interfaces (e.g.  `DataLayoutTypeInterface`) for
-size and alignment, and pattern-matches on standard type categories (integers,
-floats, pointers, structs, arrays, vectors) to build `abi::Type*`.
+The generic mapper relies on existing MLIR type interfaces (e.g.
+`DataLayoutTypeInterface`) for size and alignment, and pattern-matches on
+standard type categories (integers, floats, pointers, structs, arrays,
+vectors) to build `abi::Type*`.  Dialects whose types do not conform to
+standard MLIR type categories (e.g.  CIR's `cir::IntType` is not
+`mlir::IntegerType`) may need dialect-aware mapping alongside the generic
+mapper to preserve semantics such as signedness, pointer identity, and
+record field structure.
 The **MLIR ABI lowering pass** orchestrates the flow: it uses ABITypeMapper,
 calls the library's ABIInfo, and drives rewriting from the classification
 result.  **ABIRewriteContext** is the dialect-specific interface for operation
@@ -377,52 +381,62 @@ Value result = ctx.createLoad(loc, sretPtr);
 
 #### Complete Flow Diagram
 
+The diagram below combines the three-layer architecture (Section
+4.1) with the step-by-step flow, showing which layer owns each
+step.
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ Input: High-Level Function (CIR/FIR/other dialect)              │
-│         func @foo(%arg0: i32, %arg1: struct<i64,i64>) -> i32    │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 1: Extract Types                                           │
-│   For each parameter: mlir::Type                                │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 2: Map Types (ABITypeMapper → abi::Type*)                  │
-│   abiTypeMapper.map(argType) → abi::Type*                       │
-│   └─> Dialect types converted for ABI library                   │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 3: Classify (ABIInfo)                                      │
-│   abiInfo->computeInfo(abiFI, ...) on abi::Type*                │
-│   Applies target rules (e.g. x86_64 System V)                   │
-│   └─> Produces: ABIFunctionInfo / ABIArgInfo                    │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 4: Rewrite Function (ABIRewriteContext)                    │
-│   Use ABI classification to build lowered signature             │
-│   └─> ctx.createFunction(loc, name, newType); (i32, i64, i64)   │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 5: Rewrite Call Sites (ABIRewriteContext)                  │
-│   ctx.createExtractValue() - expand struct; ctx.createCall()    │
-│   └─> Dialect-specific operation creation                       │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Output: ABI-Lowered Function                                    │
-│         func @foo(%arg0: i32, %arg1: i64, %arg2: i64) -> i32    │
-└─────────────────────────────────────────────────────────────────┘
+   ┌─────────────────────────────────────────────────────────┐
+   │ Input: High-Level Function (CIR/FIR/other dialect)      │
+   │   func @foo(%arg0: i32, %arg1: struct<i64,i64>) -> i32  │
+   └──────────────────────────┬──────────────────────────────┘
+                              │
+  ╔═══════════════════════════╪═══════════════════════════════╗
+  ║  MLIR Adapter Layer       │                               ║
+  ║                           ▼                               ║
+  ║  Step 1: Extract types from FunctionOpInterface           ║
+  ║            arg0: mlir::Type, arg1: mlir::Type, ret: …     ║
+  ║                           │                               ║
+  ║                           ▼                               ║
+  ║  Step 2: ABITypeMapper    │                               ║
+  ║            mlir::Type ──> abi::Type*                      ║
+  ║            (uses DataLayoutTypeInterface for size/align)  ║
+  ╚═══════════════════════════╪═══════════════════════════════╝
+                              │
+  ╔═══════════════════════════╪═══════════════════════════════╗
+  ║  LLVM ABI Library         │  (llvm/lib/ABI/)              ║
+  ║                           ▼                               ║
+  ║  Step 3: ABIInfo::computeInfo() on abi::Type*             ║
+  ║            Applies target rules (e.g. x86_64 System V)    ║
+  ║            Produces: ABIArgInfo per arg/return            ║
+  ║              arg0 (i32)   → Direct                        ║
+  ║              arg1 (struct)→ Expand (two i64 fields)       ║
+  ║              return (i32) → Direct                        ║
+  ╚═══════════════════════════╪═══════════════════════════════╝
+                              │
+  ╔═══════════════════════════╪═══════════════════════════════╗
+  ║  Dialect-Specific Layer   │  (ABIRewriteContext)          ║
+  ║                           ▼                               ║
+  ║  Step 4: Rewrite function signature                       ║
+  ║            (i32, struct) -> i32                           ║
+  ║            becomes (i32, i64, i64) -> i32                 ║
+  ║                           │                               ║
+  ║                           ▼                               ║
+  ║  Step 5: Rewrite call sites                               ║
+  ║            createExtractValue() to expand struct args     ║
+  ║            createCall() with lowered arg list             ║
+  ║                           │                               ║
+  ║                           ▼                               ║
+  ║  Step 6: Handle return values                             ║
+  ║            Indirect: createAlloca + sret pointer          ║
+  ║            Coerced: memory-based reinterpretation         ║
+  ╚═══════════════════════════╪═══════════════════════════════╝
+                              │
+                              ▼
+   ┌─────────────────────────────────────────────────────────┐
+   │ Output: ABI-Lowered Function                            │
+   │   func @foo(%arg0: i32, %arg1: i64, %arg2: i64) -> i32  │
+   └─────────────────────────────────────────────────────────┘
 ```
 
 #### Key Interactions Between Components
@@ -451,26 +465,23 @@ In a module with mixed dialect content, the pass selects the appropriate
 ABIRewriteContext for each function based on the dialect of its operations.  Classification is
 performed by the library's ABIInfo and produces the library's result (e.g.  ABIFunctionInfo,
 ABIArgInfo); ABIRewriteContext consumes that classification to perform the
-actual IR rewriting.  The interface defines the operations needed for lowering
-(createFunction, createCall, createExtractValue, createLoad, etc.); each dialect
-implements these to produce its own operations.  ABIRewriteContext is also
-responsible for updating ABI-related attributes (e.g.  sret, byval, signext,
-zeroext, inreg) on the rewritten function signatures and call sites as
-indicated by the classification result.
+actual IR rewriting.  ABIRewriteContext is also responsible for updating
+ABI-related attributes (e.g.  sret, byval, signext, zeroext, inreg) on the
+rewritten function signatures and call sites as indicated by the classification
+result.
 
-The interface defines approximately 15-20 methods covering function operations
-(`createFunction`, `createCall`), value manipulation (`createCast`,
-`createLoad`, `createStore`, `createAlloca`), type coercion (`createBitcast`,
-`createTrunc`, `createZExt`, `createSExt`), aggregate operations
-(`createExtractValue`, `createInsertValue`, `createGEP`), and housekeeping
-(`createFunctionType`, `replaceOp`).  This set was chosen based on analyzing the
-operations actually needed by existing ABI lowering code: struct expansion
-requires extract/insert operations, indirect passing requires alloca and pointer
-operations, and coercion requires bitcasts and truncations.
+The interface defines two high-level methods:
+`rewriteFunctionDefinition(funcOp, classification, builder)` rewrites a
+function's signature and body (coercing return values, adapting arguments,
+handling sret), and `rewriteCallSite(callOp, classification, builder)` rewrites
+a call to match the lowered callee (coercing arguments, handling coerced
+returns).  Each method encapsulates the full rewriting logic for its scope,
+using the dialect's own builder operations internally (e.g.  `cir::CastOp`,
+`cir::AllocaOp`, `cir::StoreOp`).  Each dialect handles operation creation
+using its own builder internally.
 
 Each dialect implementing ABI lowering must provide a concrete
-`ABIRewriteContext` subclass—estimated at 800-1000 lines of implementation code
-that wraps the dialect's builder API.  This is a significant but one-time cost:
+`ABIRewriteContext` subclass.  This is a significant but one-time cost:
 CIR implements `CIRABIRewriteContext`, FIR implements `FIRABIRewriteContext`,
 and any future dialect reuses the shared classification infrastructure by
 providing its own context implementation.  The alternative—reimplementing the

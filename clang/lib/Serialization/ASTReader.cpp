@@ -242,9 +242,10 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
 }
 
 void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
-                                               ModuleKind Kind) {
-  First->visitModuleFile(Filename, Kind);
-  Second->visitModuleFile(Filename, Kind);
+                                               ModuleKind Kind,
+                                               bool DirectlyImported) {
+  First->visitModuleFile(Filename, Kind, DirectlyImported);
+  Second->visitModuleFile(Filename, Kind, DirectlyImported);
 }
 
 bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
@@ -496,7 +497,10 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
   SmallVector<StringRef, 4> ReadFeatures(TargetOpts.FeaturesAsWritten.begin(),
                                          TargetOpts.FeaturesAsWritten.end());
   llvm::sort(ExistingFeatures);
+  ExistingFeatures.erase(llvm::unique(ExistingFeatures),
+                         ExistingFeatures.end());
   llvm::sort(ReadFeatures);
+  ReadFeatures.erase(llvm::unique(ReadFeatures), ReadFeatures.end());
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
@@ -3308,7 +3312,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       }
 
       if (Listener)
-        Listener->visitModuleFile(F.FileName, F.Kind);
+        Listener->visitModuleFile(F.FileName, F.Kind, F.isDirectlyImported());
 
       if (Listener && Listener->needsInputFileVisitation()) {
         unsigned N = Listener->needsSystemInputFileVisitation() ? NumInputs
@@ -7283,6 +7287,18 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
         T.push_back({CurState, 0});
       else
         T[0].State = CurState;
+    }
+
+    // Restore the push stack so that unmatched pushes from a preamble are
+    // visible when the main file is parsed, allowing the corresponding
+    // `#pragma diagnostic pop` to succeed.
+    assert(Idx < Record.size() &&
+           "Invalid data, missing diagnostic push stack");
+    unsigned NumPushes = Record[Idx++];
+    for (unsigned I = 0; I != NumPushes; ++I) {
+      auto *State = ReadDiagState(*FirstState, false);
+      if (!F.isModule())
+        Diag.DiagStateOnPushStack.push_back(State);
     }
 
     // Don't try to read these mappings again.
