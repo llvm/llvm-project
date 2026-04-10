@@ -1,4 +1,4 @@
-//===-- ConfigurationDoneRequestHandler..cpp ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -74,6 +74,8 @@ void ConfigurationDoneRequestHandler::PostRun() const {
   dap.on_configuration_done();
   // Clear the callback to ensure any captured resources are released.
   dap.on_configuration_done = nullptr;
+
+  dap.ActivateRepl();
 }
 
 } // namespace lldb_dap

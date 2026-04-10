@@ -21,12 +21,10 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         expected_not_in_message=None,
         only_verify_first_update=False,
     ):
-        self.dap_server.wait_for_event(["progressEnd"])
-        self.assertTrue(len(self.dap_server.progress_events) > 0)
         start_found = False
         update_found = False
         end_found = False
-        for event in self.dap_server.progress_events:
+        for event in self.dap_server.collect_progress(expected_title):
             event_type = event["event"]
             if "progressStart" in event_type:
                 title = event["body"]["title"]
@@ -55,6 +53,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
     def test(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
+        self.verify_stop_on_entry()
         progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
         self.dap_server.request_evaluate(
             f"`command script import {progress_emitter}", context="repl"
