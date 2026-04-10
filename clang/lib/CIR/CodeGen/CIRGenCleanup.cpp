@@ -303,6 +303,23 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
   }
 }
 
+/// Check whether a cleanup scope body contains any non-yield exits that branch
+/// through the cleanup. These exits branch through the cleanup and require
+/// the normal cleanup to be executed even when the cleanup has been
+/// deactivated.
+static bool bodyHasBranchThroughExits(mlir::Region &bodyRegion) {
+  bool found = false;
+  bodyRegion.walk([&](mlir::Operation *op) {
+    if (isa<cir::ReturnOp, cir::GotoOp>(op))
+      found = true;
+  });
+  return found;
+}
+
+/// Pop a cleanup block from the stack.
+///
+/// \param forDeactivation - When true, this indicates that the cleanup block
+//  is being popped because it was deactivate while at the top of the stack.
 void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   assert(!ehStack.empty() && "cleanup stack is empty!");
   assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
@@ -311,7 +328,59 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   cir::CleanupScopeOp cleanupScope = scope.getCleanupScopeOp();
   assert(cleanupScope && "CleanupScopeOp is nullptr");
 
-  // Remember activation information.
+  bool requiresNormalCleanup = scope.isNormalCleanup();
+  bool requiresEHCleanup = scope.isEHCleanup();
+
+  // When we're popping a cleanup to deactivate it, we need to know if anything
+  // in the cleanup scope body region branches through the cleanup handler
+  // before the entire cleanup scope body has executed. If the cleanup scope
+  // body falls through, we don't want to emit normal cleanup code. However,
+  // if the cleanup body region contains early exits (return or goto), we do
+  // need to execute the normal cleanup when the early exit is taken. To handle
+  // that case, we guard the cleanup with an "active" flag so that it executes
+  // conditionally and set the flag to false when the cleanup body falls
+  // through. Classic codegen tracks this state with "hasBranches" and
+  // "getFixupDepth" on the cleanup scope, but because CIR uses structured
+  // control flow, we need to check for early exits and insert the active
+  // flag handling here. Note that when a cleanup is deactivated while not at
+  // the top of the stack, the active flag gets created in
+  // setupCleanupBlockDeactivation.
+  if (forDeactivation && requiresNormalCleanup) {
+    if (bodyHasBranchThroughExits(cleanupScope.getBodyRegion())) {
+      // The active flag shouldn't exist if the scope was at the top of the
+      // stack when it was deactivated.
+      assert(!scope.getActiveFlag().isValid() && "active flag already set");
+
+      // Create the flag.
+      mlir::Location loc = builder.getUnknownLoc();
+      Address activeFlag = createTempAllocaWithoutCast(
+          builder.getBoolTy(), CharUnits::One(), loc, "cleanup.isactive");
+
+      // Initialize the flag to true before the cleanup scope (the point where
+      // the cleanup becomes active).
+      {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPoint(cleanupScope);
+        builder.createFlagStore(loc, true, activeFlag.getPointer());
+      }
+
+      // Set the flag to false at the end of the cleanup scope body region.
+      assert(builder.getInsertionBlock() ==
+                 &cleanupScope.getBodyRegion().back() &&
+             "expected insertion point in cleanup body");
+      builder.createFlagStore(loc, false, activeFlag.getPointer());
+
+      scope.setActiveFlag(activeFlag);
+      scope.setTestFlagInNormalCleanup();
+    } else {
+      // If the cleanup was pushed on the stack as normal+eh, downgrade it to
+      // eh-only.
+      if (requiresEHCleanup)
+        cleanupScope.setCleanupKind(cir::CleanupKind::EH);
+      requiresNormalCleanup = false;
+    }
+  }
+
   Address normalActiveFlag = scope.shouldTestFlagInNormalCleanup()
                                  ? scope.getActiveFlag()
                                  : Address::invalid();
@@ -319,28 +388,12 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
                              ? scope.getActiveFlag()
                              : Address::invalid();
 
-  // When deactivating, suppress normal cleanup emission. The cleanup should
-  // not fire on the normal exit path. EH cleanup is still needed so that
-  // exceptions during the body are handled.
-  bool requiresNormalCleanup = scope.isNormalCleanup() && !forDeactivation;
-  bool requiresEHCleanup = scope.isEHCleanup();
-
-  // When deactivating a cleanup that still needs EH protection, downgrade
-  // the scope's cleanup kind from All to EH so that FlattenCFG only emits
-  // the cleanup on the exception path. This prevents the destroyer from
-  // firing on normal exit (which would double-destroy, since the enclosing
-  // scope's destructor already handles the normal path).
-  if (forDeactivation && requiresEHCleanup)
-    cleanupScope.setCleanupKind(cir::CleanupKind::EH);
-
   // If we don't need the cleanup at all, we're done.
   if (!requiresNormalCleanup && !requiresEHCleanup) {
-    // If we get here, it means we added a cleanup scope that ended up not
-    // being needed, probably because the cleanup we're popping is being
-    // deactivated. Rather than try to move the contents of its body region out
-    // of the cleanup and erase it, we just add a yield to the cleanup region
-    // to make it valid but still a no-op. It will be erased during
-    // canonicalization.
+    // If we get here, the cleanup scope isn't needed. Rather than try to move
+    // the contents of its body region out of the cleanup and erase it, we just
+    // add a yield to the cleanup region to make it valid but no-op. It will be
+    // erased during canonicalization.
     mlir::Block &cleanupBlock = cleanupScope.getCleanupRegion().back();
     if (!cleanupBlock.mightHaveTerminator()) {
       mlir::OpBuilder::InsertionGuard guard(builder);

@@ -7,6 +7,7 @@
 
 struct S {
   S();
+  S(int);
   S(const S &);
   ~S();
   int x;
@@ -207,6 +208,90 @@ void capture_local() {
 // OGCG:   call void @_ZN1SD1Ev(ptr {{.*}} %[[S_LOCAL]])
 // OGCG:   ret void
 
+// This test uses a GNU statement expression inside a lambda init-capture to
+// exercise the case where a cleanup is deactivated while its body region
+// contains a non-yield exit (cir.return). The cleanup for capture 'a' must
+// fire on the early return path but be skipped on normal fallthrough. CIR
+// handles this by guarding the cleanup with an active flag that is set to true
+// when the cleanup is pushed and false at the deactivation point.
+void stmt_expr_return(bool cond) {
+  auto lam = [a = S(0), b = S(({
+      if (cond) return;
+      42;
+  }))]() {};
+}
+
+// CIR-LABEL: @_Z16stmt_expr_returnb
+// CIR:         %[[LAM5:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
+// CIR:         cir.scope {
+// CIR:           %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
+// CIR:           %[[FA5:.*]] = cir.get_member %[[LAM5]][0] {name = "a"}
+// CIR:           cir.call @_ZN1SC1Ei(%[[FA5]],
+// CIR:           %[[TRUE:.*]] = cir.const #true
+// CIR:           cir.store %[[TRUE]], %[[ACTIVE]]
+// CIR:           cir.cleanup.scope {
+// CIR:             %[[FB5:.*]] = cir.get_member %[[LAM5]][1] {name = "b"}
+// CIR:             cir.if
+// CIR:               cir.return
+// CIR:             cir.call @_ZN1SC1Ei(%[[FB5]],
+// CIR:             %[[FALSE:.*]] = cir.const #false
+// CIR:             cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR:             cir.yield
+// CIR:           } cleanup all {
+// CIR:             %[[FLAG:.*]] = cir.load{{.*}} %[[ACTIVE]]
+// CIR:             cir.if %[[FLAG]] {
+// CIR:               cir.call @_ZN1SD1Ev(%[[FA5]]){{.*}}
+// CIR:             }
+// CIR:             cir.yield
+// CIR:           }
+// CIR:         }
+// CIR:         cir.cleanup.scope {
+// CIR:           cir.yield
+// CIR:         } cleanup all {
+// CIR:           cir.call @_ZZ16stmt_expr_returnbEN3$_0D1Ev(%[[LAM5]]){{.*}}
+// CIR:           cir.yield
+// CIR:         }
+
+// LLVM-LABEL: define internal void @"_ZZ16stmt_expr_returnbEN3$_0D2Ev"(
+// LLVM:   %[[THIS5:.*]] = load ptr, ptr
+// LLVM:   %[[FB5_D:.*]] = getelementptr %[[LAM_TY_5:.*]], ptr %[[THIS5]], i32 0, i32 1
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FB5_D]])
+// LLVM:   %[[FA5_D:.*]] = getelementptr %[[LAM_TY_5]], ptr %[[THIS5]], i32 0, i32 0
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA5_D]])
+// LLVM:   ret void
+
+// LLVM-LABEL: define dso_local void @_Z16stmt_expr_returnb({{.*}}) {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM:   %[[ACTIVE_ALLOCA:.*]] = alloca i8
+// LLVM:   %[[LAM5:.*]] = alloca %[[LAM_TY_5]]
+// LLVM:   %[[FA5:.*]] = getelementptr %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 0
+// LLVM:   call void @_ZN1SC1Ei(ptr {{.*}} %[[FA5]], i32 {{.*}} 0)
+// LLVM:   store i8 1, ptr %[[ACTIVE_ALLOCA]]
+// LLVM:   %[[FB5:.*]] = getelementptr %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 1
+// LLVM:   br i1 %{{.*}},
+// The early return path — the active flag is still true, so the cleanup fires.
+// LLVM:   invoke void @_ZN1SC1Ei(ptr {{.*}} %[[FB5]],
+// LLVM:           to label %{{.*}} unwind label %{{.*}}
+// LLVM:   store i8 0, ptr %[[ACTIVE_ALLOCA]]
+// The active flag is checked and the cleanup conditionally fires.
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA5]])
+// LLVM:   ret void
+// Normal fallthrough path completes with the lambda destructor.
+// LLVM:   call void @"_ZZ16stmt_expr_returnbEN3$_0D1Ev"(ptr {{.*}} %[[LAM5]])
+// LLVM:   ret void
+
+// OGCG-LABEL: define dso_local void @_Z16stmt_expr_returnb(i1 noundef zeroext %cond){{.*}} personality ptr @__gxx_personality_v0
+// OGCG:   %[[LAM5:.*]] = alloca %[[LAM_TY_5:.*]], align 4
+// OGCG:   %[[FA5:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 0
+// OGCG:   call void @_ZN1SC1Ei(ptr {{.*}} %[[FA5]], i32 {{.*}} 0)
+// OGCG:   %[[FB5:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 1
+// OGCG:   br i1 %{{.*}},
+// The early return path correctly destroys capture 'a' in classic codegen.
+// OGCG:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA5]])
+// OGCG:   invoke void @_ZN1SC1Ei(ptr {{.*}} %[[FB5]],
+// OGCG:           to label %{{.*}} unwind label %{{.*}}
+// OGCG:   call void @"_ZZ16stmt_expr_returnbEN3$_0D1Ev"(ptr {{.*}} %[[LAM5]])
+// OGCG:   ret void
+
 // The D2 destructors are emitted after all other functions in OGCG.
 
 // OGCG-LABEL: define internal void @"_ZZ11capture_one1SEN3$_0D2Ev"(
@@ -233,4 +318,12 @@ void capture_local() {
 // OGCG:   %[[THIS4:.*]] = load ptr, ptr %this.addr
 // OGCG:   %[[FL_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_4]], ptr %[[THIS4]], i32 0, i32 0
 // OGCG:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FL_D]])
+// OGCG:   ret void
+
+// OGCG-LABEL: define internal void @"_ZZ16stmt_expr_returnbEN3$_0D2Ev"(
+// OGCG:   %[[THIS5:.*]] = load ptr, ptr %this.addr
+// OGCG:   %[[FB5_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[THIS5]], i32 0, i32 1
+// OGCG:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FB5_D]])
+// OGCG:   %[[FA5_D:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[THIS5]], i32 0, i32 0
+// OGCG:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA5_D]])
 // OGCG:   ret void
