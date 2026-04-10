@@ -4651,8 +4651,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     return nullptr;
 
   // Match reduce.add(ext(mul(A, B))).
-  if (!Red->isPartialReduction() &&
-      match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
+  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp);
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A);
@@ -4699,9 +4698,9 @@ static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
                                                VPCostContext &Ctx,
                                                VFRange &Range) {
   // Creation of VPExpressions for partial reductions is entirely handled in
-  // `transformToPartialReduction`.
-  if (Red->isPartialReduction())
-    return;
+  // transformToPartialReduction.
+  assert(!Red->isPartialReduction() &&
+         "This path no longer supports partial reductions");
 
   VPExpressionRecipe *AbstractR = nullptr;
   auto IP = std::next(Red->getIterator());
