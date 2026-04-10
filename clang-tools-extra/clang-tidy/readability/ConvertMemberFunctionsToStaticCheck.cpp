@@ -64,6 +64,11 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
       return false; // Stop traversal.
     }
 
+    bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *E) {
+      Used = true;
+      return false;
+    }
+
     // If we enter a class declaration, don't traverse into it as any usages of
     // `this` will correspond to the nested class.
     bool TraverseCXXRecordDecl(CXXRecordDecl *RD) { return true; }
