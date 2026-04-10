@@ -615,7 +615,6 @@ body:             |
   bb.0:
     liveins: $x0
 
-
     ; CHECK-LABEL: name: ASubMaxOneUse
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -628,7 +627,6 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY %mul(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
-
     %zero:_(s64) = G_CONSTANT i64 0
     %sub1:_(s64) = G_SUB %zero, %a
     %max:_(s64) = G_SMAX %a, %sub1
@@ -636,4 +634,4 @@ body:             |
     %mul:_(s64) = G_MUL %max, %sub2
     $x0 = COPY %mul
     RET_ReallyLR implicit $x0
-    
+
