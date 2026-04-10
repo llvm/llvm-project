@@ -131,6 +131,8 @@ bool SwiftArrayNativeBufferHandler::IsValid() {
 }
 
 size_t SwiftArrayBridgedBufferHandler::GetCount() {
+  if (!m_frontend)
+    return 0;
   return m_frontend->CalculateNumChildrenIgnoringErrors();
 }
 
@@ -142,6 +144,8 @@ lldb_private::CompilerType SwiftArrayBridgedBufferHandler::GetElementType() {
 
 lldb::ValueObjectSP
 SwiftArrayBridgedBufferHandler::GetElementAtIndex(size_t idx) {
+  if (!m_frontend)
+    return {};
   return m_frontend->GetChildAtIndex(idx);
 }
 
@@ -283,10 +287,14 @@ SwiftArrayInlineBufferHandler::SwiftArrayInlineBufferHandler(
 bool SwiftArrayInlineBufferHandler::IsValid() { return m_valobj_sp.get(); }
 
 size_t SwiftSyntheticFrontEndBufferHandler::GetCount() {
+  if (!m_frontend)
+    return 0;
   return m_frontend->CalculateNumChildrenIgnoringErrors();
 }
 
 size_t SwiftSyntheticFrontEndBufferHandler::GetCapacity() {
+  if (!m_frontend)
+    return 0;
   return m_frontend->CalculateNumChildrenIgnoringErrors();
 }
 
@@ -298,6 +306,8 @@ SwiftSyntheticFrontEndBufferHandler::GetElementType() {
 
 lldb::ValueObjectSP
 SwiftSyntheticFrontEndBufferHandler::GetElementAtIndex(size_t idx) {
+  if (!m_frontend)
+    return {};
   return m_frontend->GetChildAtIndex(idx);
 }
 
