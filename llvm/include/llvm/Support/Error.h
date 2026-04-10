@@ -1098,13 +1098,6 @@ template <typename T> std::optional<T> expectedToOptional(Expected<T> &&E) {
   return std::nullopt;
 }
 
-template <typename T> std::optional<T> expectedToStdOptional(Expected<T> &&E) {
-  if (E)
-    return std::move(*E);
-  consumeError(E.takeError());
-  return std::nullopt;
-}
-
 /// Helper for converting an Error to a bool.
 ///
 /// This method returns true if Err is in an error state, or false if it is
