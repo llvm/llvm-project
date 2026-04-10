@@ -73,9 +73,6 @@ Exit:
 
 attributes #0 = { "use-soft-float"="false" }
 
-!llvm.ident = !{!0}
-
-!0 = !{!"clang version 10.0.0 (https://github.com/llvm/llvm-project.git 0fedc26a0dc0066f3968b9fea6a4e1f746c8d5a4)"}
 !1 = !{!2, !2, i64 0}
 !2 = !{!"omnipotent char", !3, i64 0}
 !3 = !{!"Simple C/C++ TBAA"}

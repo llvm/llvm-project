@@ -57,17 +57,12 @@ for.body:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
-!llvm.ident = !{!7}
+!llvm.module.flags = !{!4}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, nameTableKind: None)
 !1 = !DIFile(filename: "src.cpp", directory: "")
 !2 = !{}
-!3 = !{i32 2, !"CodeView", i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = !{i32 1, !"wchar_size", i32 2}
-!6 = !{i32 7, !"PIC Level", i32 2}
-!7 = !{!""}
 !8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !9, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !2)
 !10 = !DILocation(line: 5, scope: !8)

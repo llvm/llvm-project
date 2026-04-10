@@ -69,11 +69,9 @@ for.body:
 
 !llvm.dbg.cu = !{!28}
 !llvm.module.flags = !{!0, !1}
-!llvm.ident = !{!2}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !{i32 1, !"PIC Level", i32 2}
-!2 = !{!"clang version 3.7.0"}
 !3 = !DILocation(line: 5, column: 20, scope: !4)
 !4 = distinct !DISubprogram(name: "cond_sum", scope: !5, file: !5, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !28, retainedNodes: !7)
 !5 = !DIFile(filename: "no_fpmath.c", directory: "")

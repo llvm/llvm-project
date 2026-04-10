@@ -53,14 +53,12 @@ attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
-!llvm.ident = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0 (trunk 281293) (llvm/trunk 281290)", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !2)
 !1 = !DIFile(filename: "/tmp/s.c", directory: "/tmp")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"PIC Level", i32 2}
-!5 = !{!"clang version 4.0.0 (trunk 281293) (llvm/trunk 281290)"}
 !6 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !7, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !2)
 !8 = !DILocation(line: 5, column: 21, scope: !6)

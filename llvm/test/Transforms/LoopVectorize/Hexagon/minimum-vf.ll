@@ -150,9 +150,6 @@ b2:
 
 attributes #1 = { "target-cpu"="hexagonv60" "target-features"="+hvx-length64b,+hvxv60" }
 
-!llvm.module.flags = !{!0}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!2, !2, i64 0}
 !2 = !{!"any pointer", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}

@@ -122,11 +122,6 @@ for.end19:
   ret void
 }
 
-!llvm.module.flags = !{!0}
-!llvm.ident = !{!1}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{!"clang version 6.0.0"}
 !2 = !{!3, !3, i64 0}
 !3 = !{!"int", !4, i64 0}
 !4 = !{!"omnipotent char", !5, i64 0}

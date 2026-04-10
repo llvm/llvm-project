@@ -30,7 +30,6 @@ for.end:
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
-!llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0", isOptimized: true, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "source.c", directory: ".")
@@ -40,7 +39,6 @@ for.end:
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 2}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
-!9 = !{!"clang version 3.6.0"}
 !10 = !DILocation(line: 2, column: 8, scope: !11)
 !11 = distinct !DILexicalBlock(line: 2, column: 3, file: !1, scope: !4)
 !12 = !DILocation(line: 3, column: 9, scope: !13)

@@ -306,7 +306,6 @@ declare i32 @foo(...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
-!llvm.ident = !{!11}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, runtimeVersion: 6, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "source.cpp", directory: ".")
@@ -318,7 +317,6 @@ declare i32 @foo(...)
 !8 = distinct !DISubprogram(name: "test_array_bounds", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 16, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !9 = !{i32 2, !"Dwarf Version", i32 2}
 !10 = !{i32 2, !"Debug Info Version", i32 3}
-!11 = !{!"clang version 3.5.0"}
 !12 = !DILocation(line: 3, column: 8, scope: !13)
 !13 = distinct !DILexicalBlock(line: 3, column: 3, file: !1, scope: !4)
 !14 = !{!14, !15, !15}

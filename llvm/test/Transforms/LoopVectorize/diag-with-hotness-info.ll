@@ -146,7 +146,6 @@ attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "fra
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}
-!llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 273572) (llvm/trunk 273585)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
 !1 = !DIFile(filename: "/tmp/s.c", directory: "/tmp")
@@ -154,7 +153,6 @@ attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "fra
 !3 = !{i32 2, !"Dwarf Version", i32 2}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
-!6 = !{!"clang version 3.9.0 (trunk 273572) (llvm/trunk 273585)"}
 !7 = distinct !DISubprogram(name: "cold", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 2, column: 20, scope: !7)

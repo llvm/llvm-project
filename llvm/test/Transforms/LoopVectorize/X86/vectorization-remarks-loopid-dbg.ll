@@ -40,7 +40,6 @@ for.end:
 declare void @ibar(ptr) #1
 
 !llvm.module.flags = !{!7, !8}
-!llvm.ident = !{!9}
 !llvm.dbg.cu = !{!24}
 
 !1 = !DIFile(filename: "vectorization-remarks.c", directory: ".")
@@ -51,7 +50,6 @@ declare void @ibar(ptr) #1
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 1, !"Debug Info Version", i32 3}
-!9 = !{!"clang version 3.5.0 "}
 !10 = !DILocation(line: 8, column: 3, scope: !4)
 !11 = !{!12, !12, i64 0}
 !12 = !{!"int", !13, i64 0}

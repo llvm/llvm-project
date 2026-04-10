@@ -665,9 +665,6 @@ for.cond.cleanup:
 
 attributes #0 = { "target-cpu"="core-avx2" "target-features"="+avx,+avx2,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3" }
 
-!llvm.ident = !{!0}
-
-!0 = !{!"clang version 4.0.0 (cfe/trunk 284570)"}
 !1 = !{!2, !2, i64 0}
 !2 = !{!"int", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}
