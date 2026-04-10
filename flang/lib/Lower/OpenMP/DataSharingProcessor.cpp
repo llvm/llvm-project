@@ -345,7 +345,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     return;
 
   if (mlir::isa<mlir::omp::WsloopOp>(op) || mlir::isa<mlir::omp::SimdOp>(op) ||
-      mlir::isa<mlir::omp::TaskloopOp>(op)) {
+      mlir::isa<mlir::omp::TaskloopWrapperOp>(op)) {
     mlir::omp::LoopRelatedClauseOps result;
     llvm::SmallVector<const semantics::Symbol *> iv;
     collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,
@@ -535,10 +535,9 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   };
 
   llvm::SetVector<const semantics::Scope *> clauseScopes;
-  const semantics::Scope *curScope = collectScopes(semaCtx, eval, clauseScopes);
+  (void)collectScopes(semaCtx, eval, clauseScopes);
 
   for (const auto *sym : allSymbols) {
-    assert(curScope && "couldn't find current scope");
     if (semantics::omp::IsPrivatizable(*sym) &&
         !symbolsInNestedRegions.contains(sym) &&
         !explicitlyPrivatizedSymbols.contains(sym) &&

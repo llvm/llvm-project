@@ -52,6 +52,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     10, // hlsl_private
     11, // hlsl_device
     7,  // hlsl_input
+    8,  // hlsl_output
     13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -89,6 +90,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     10, // hlsl_private
     11, // hlsl_device
     7,  // hlsl_input
+    8,  // hlsl_output
     13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -349,6 +351,7 @@ public:
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
+    VectorsAreElementAligned = true;
     resetDataLayout();
   }
 
@@ -478,6 +481,11 @@ public:
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
+
+  // This is only needed for validating arguments passed to
+  // __builtin_amdgcn_processor_is
+  bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64IntelTargetInfo final

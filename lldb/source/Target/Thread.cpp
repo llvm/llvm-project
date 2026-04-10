@@ -267,6 +267,10 @@ void Thread::DestroyThread() {
   m_frame_providers.clear();
   m_provider_chain_ids.clear();
   m_frame_lists_by_id.clear();
+  {
+    std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
+    m_active_frame_providers_by_thread.clear();
+  }
   m_prev_framezero_pc.reset();
 }
 
@@ -1084,14 +1088,15 @@ Vote Thread::ShouldReportRun(Event *event_ptr) {
   if (GetPlans().AnyCompletedPlans()) {
     // Pass skip_private = false to GetCompletedPlan, since we want to ask
     // the last plan, regardless of whether it is private or not.
+    ThreadPlanSP plan = GetPlans().GetCompletedPlan(/*skip_private=*/false);
+
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
               ", %s): %s being asked whether we should report run.",
               GetIndexID(), static_cast<void *>(this), GetID(),
-              StateAsCString(GetTemporaryResumeState()),
-              GetCompletedPlan()->GetName());
+              StateAsCString(GetTemporaryResumeState()), plan->GetName());
 
-    return GetPlans().GetCompletedPlan(false)->ShouldReportRun(event_ptr);
+    return plan->ShouldReportRun(event_ptr);
   } else {
     LLDB_LOGF(log,
               "Current Plan for thread %d(%p) (0x%4.4" PRIx64
@@ -1410,10 +1415,10 @@ ThreadPlanSP Thread::QueueThreadPlanForRunToAddress(bool abort_other_plans,
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
-    bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
+    bool abort_other_plans, llvm::ArrayRef<addr_t> address_list,
     bool stop_other_threads, uint32_t frame_idx, Status &status) {
-  ThreadPlanSP thread_plan_sp(new ThreadPlanStepUntil(
-      *this, address_list, num_addresses, stop_other_threads, frame_idx));
+  ThreadPlanSP thread_plan_sp = std::make_shared<ThreadPlanStepUntil>(
+      *this, address_list, stop_other_threads, frame_idx);
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
@@ -1451,8 +1456,69 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
   exe_ctx.SetContext(shared_from_this());
 }
 
+void Thread::PushProviderFrameList(StackFrameListSP frames) {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  HostThread current(Host::GetCurrentThread());
+  auto &stack = m_active_frame_providers_by_thread[current];
+  LLDB_LOG(GetLog(LLDBLog::Thread),
+           "Thread::PushProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           GetID(), stack.size(), stack.size() + 1);
+  stack.push_back(std::move(frames));
+}
+
+void Thread::PopProviderFrameList() {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  HostThread current(Host::GetCurrentThread());
+  auto it = m_active_frame_providers_by_thread.find(current);
+  size_t pre_pop_depth =
+      (it != m_active_frame_providers_by_thread.end()) ? it->second.size() : 0;
+  LLDB_LOG(GetLog(LLDBLog::Thread),
+           "Thread::PopProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           GetID(), pre_pop_depth, pre_pop_depth ? pre_pop_depth - 1 : 0);
+  assert(it != m_active_frame_providers_by_thread.end() && !it->second.empty());
+  if (it == m_active_frame_providers_by_thread.end() || it->second.empty())
+    return;
+  it->second.pop_back();
+  if (it->second.empty())
+    m_active_frame_providers_by_thread.erase(it);
+}
+
+bool Thread::IsAnyProviderActive() {
+  std::lock_guard<std::mutex> guard(m_provider_frames_mutex);
+  return !m_active_frame_providers_by_thread.empty();
+}
+
 StackFrameListSP Thread::GetStackFrameList() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  // If a provider is currently fetching frames, return the provider's input
+  // frames instead of m_curr_frames_sp. m_curr_frames_sp IS the
+  // SyntheticStackFrameList, and accessing it would trigger provider code on
+  // THIS thread too. That is dangerous because:
+  //  - On the provider's own host thread: circular dependency / deadlock.
+  //  - On the private state thread: the provider may call EvaluateExpression
+  //    which needs the private state thread to process events -> deadlock.
+  //  - On any other thread: would run the provider concurrently.
+  // Returning the input (parent) frames is always safe.
+  {
+    std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
+    if (!m_active_frame_providers_by_thread.empty()) {
+      // Check if the current host thread is inside a provider call.
+      HostThread current(Host::GetCurrentThread());
+      auto it = m_active_frame_providers_by_thread.find(current);
+      if (it != m_active_frame_providers_by_thread.end() && !it->second.empty())
+        return it->second.back();
+
+      // If the private state thread calls GetStackFrameList while a provider
+      // is active on another thread, return parent frames too. The provider
+      // may call EvaluateExpression which needs the private state thread to
+      // process events — touching m_curr_frames_sp (the synthetic list) would
+      // trigger the provider and deadlock.
+      ProcessSP process_sp = GetProcess();
+      if (process_sp && process_sp->CurrentThreadIsPrivateStateThread())
+        return m_active_frame_providers_by_thread.begin()->second.back();
+    }
+  }
 
   if (m_curr_frames_sp)
     return m_curr_frames_sp;
@@ -1472,15 +1538,16 @@ StackFrameListSP Thread::GetStackFrameList() {
           thread_descriptors.push_back(&descriptor);
       }
 
-      // Sort by priority (lower number = higher priority).
-      llvm::sort(thread_descriptors,
-                 [](const ScriptedFrameProviderDescriptor *a,
-                    const ScriptedFrameProviderDescriptor *b) {
-                   // nullopt (no priority) sorts last (UINT32_MAX).
-                   uint32_t priority_a = a->GetPriority().value_or(UINT32_MAX);
-                   uint32_t priority_b = b->GetPriority().value_or(UINT32_MAX);
-                   return priority_a < priority_b;
-                 });
+      // Stable sort by priority so equal-priority providers keep
+      // their registration (insertion) order.
+      llvm::stable_sort(
+          thread_descriptors, [](const ScriptedFrameProviderDescriptor *a,
+                                 const ScriptedFrameProviderDescriptor *b) {
+            // nullopt (no priority) sorts last (UINT32_MAX).
+            uint32_t priority_a = a->GetPriority().value_or(UINT32_MAX);
+            uint32_t priority_b = b->GetPriority().value_or(UINT32_MAX);
+            return priority_a < priority_b;
+          });
 
       // Load ALL matching providers in priority order.
       for (const auto *descriptor : thread_descriptors) {
@@ -1537,8 +1604,14 @@ Thread::GetFrameListByIdentifier(lldb::frame_list_id_t id) {
 
   auto it = m_frame_lists_by_id.find(id);
   if (it != m_frame_lists_by_id.end()) {
-    return it->second.lock();
+    auto sp = it->second.lock();
+    LLDB_LOG(GetLog(LLDBLog::Thread),
+             "GetFrameListByIdentifier({0}): found={1}, locked={2}", id, true,
+             sp != nullptr);
+    return sp;
   }
+  LLDB_LOG(GetLog(LLDBLog::Thread), "GetFrameListByIdentifier({0}): found={1}",
+           id, false);
   return nullptr;
 }
 
@@ -1558,25 +1631,35 @@ llvm::Error Thread::LoadScriptedFrameProvider(
     auto [last_desc, last_id] = m_provider_chain_ids.back();
     auto it = m_frame_providers.find(last_id);
     if (it == m_frame_providers.end())
-      return llvm::createStringError("Previous frame provider not found");
+      return llvm::createStringError("previous frame provider not found");
     SyntheticFrameProviderSP last_provider = it->second;
     StackFrameListSP last_provider_frames = last_provider->GetInputFrames();
     input_frames = std::make_shared<SyntheticStackFrameList>(
         *this, last_provider_frames, m_prev_frames_sp, true, last_provider,
         last_id);
+    // Register this intermediate frame list so 'bt --provider <id>' can
+    // show each provider's output independently.
+    m_frame_lists_by_id.insert({last_id, input_frames});
+    LLDB_LOG(GetLog(LLDBLog::Thread),
+             "Registered intermediate frame list for provider id={0}, "
+             "use_count={1}",
+             last_id, input_frames.use_count());
   }
 
+  // Protect provider construction (__init__) from re-entrancy. If the
+  // provider calls back into the frame machinery (e.g. HandleCommand("bt"))
+  // during __init__, GetStackFrameList() will find this thread in the
+  // active-provider map and return input_frames instead of trying to
+  // build a new synthetic list — preventing infinite recursion.
+  PushProviderFrameList(input_frames);
   auto provider_or_err =
       SyntheticFrameProvider::CreateInstance(input_frames, descriptor);
+  PopProviderFrameList();
   if (!provider_or_err)
     return provider_or_err.takeError();
 
-  if (m_next_provider_id == std::numeric_limits<lldb::frame_list_id_t>::max())
-    m_next_provider_id = 1;
-  else
-    m_next_provider_id++;
+  lldb::frame_list_id_t provider_id = descriptor.GetID();
 
-  lldb::frame_list_id_t provider_id = m_next_provider_id;
   m_frame_providers.insert({provider_id, *provider_or_err});
 
   // Add to the provider chain.
@@ -1609,7 +1692,7 @@ void Thread::ClearScriptedFrameProvider() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_frame_providers.clear();
   m_provider_chain_ids.clear();
-  m_next_provider_id = 1; // Reset counter.
+  m_frame_lists_by_id.clear();
   m_unwinder_frames_sp.reset();
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
@@ -1621,6 +1704,15 @@ std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
 
 void Thread::ClearStackFrames() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  // If any host thread is inside a frame provider call (e.g. the provider
+  // called EvaluateExpression which resumes the process), don't tear down the
+  // frame state. The synthetic frame list is still being constructed and the
+  // thread will stop right back where it was after the expression finishes.
+  // This must be a global check (not per-host-thread) because the frame state
+  // is shared and clearing it would destroy in-progress provider work.
+  if (IsAnyProviderActive())
+    return;
 
   GetUnwinder().Clear();
   m_prev_framezero_pc.reset();
@@ -1636,9 +1728,9 @@ void Thread::ClearStackFrames() {
   m_curr_frames_sp.reset();
   m_unwinder_frames_sp.reset();
 
-  // Clear the provider instances, but keep the chain configuration
-  // (m_provider_chain_ids and m_next_provider_id) so provider IDs
-  // remain stable across ClearStackFrames() calls.
+  // Clear the provider instances and reset the ID counter, but keep the
+  // chain configuration (m_provider_chain_ids) so providers are re-loaded
+  // with consistent IDs on the next GetStackFrameList() call.
   m_frame_providers.clear();
   m_frame_lists_by_id.clear();
   m_extended_info.reset();
@@ -1783,19 +1875,17 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   // Check if we got anything.
   if (candidates.empty()) {
     if (outside_function.empty()) {
-      return Status::FromErrorStringWithFormat(
-          "Cannot locate an address for %s:%i.", file.GetFilename().AsCString(),
-          line);
+      return Status::FromErrorStringWithFormatv(
+          "Cannot locate an address for {0}:{1}.", file.GetFilename(), line);
     } else if (outside_function.size() == 1) {
-      return Status::FromErrorStringWithFormat(
-          "%s:%i is outside the current function.",
-          file.GetFilename().AsCString(), line);
+      return Status::FromErrorStringWithFormatv(
+          "{0}:{1} is outside the current function.", file.GetFilename(), line);
     } else {
       StreamString sstr;
       DumpAddressList(sstr, outside_function, target);
-      return Status::FromErrorStringWithFormat(
-          "%s:%i has multiple candidate locations:\n%s",
-          file.GetFilename().AsCString(), line, sstr.GetData());
+      return Status::FromErrorStringWithFormatv(
+          "{0}:{1} has multiple candidate locations:\n{2}", file.GetFilename(),
+          line, sstr.GetData());
     }
   }
 
@@ -1803,9 +1893,10 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   Address dest = candidates[0];
   if (warnings && candidates.size() > 1) {
     StreamString sstr;
-    sstr.Printf("%s:%i appears multiple times in this function, selecting the "
-                "first location:\n",
-                file.GetFilename().AsCString(), line);
+    sstr.Format(
+        "{0}:{1} appears multiple times in this function, selecting the "
+        "first location:\n",
+        file.GetFilename(), line);
     DumpAddressList(sstr, candidates, target);
     *warnings = std::string(sstr.GetString());
   }

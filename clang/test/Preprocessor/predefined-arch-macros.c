@@ -4619,6 +4619,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_NONE
 // CHECK_AMDGCN: #define FP_FAST_FMA 1
 // CHECK_AMDGCN_900: #define FP_FAST_FMAF 1
+// CHECK_AMDGCN: #define FP_FAST_FMA_HALF 1
 // CHECK_AMDGCN_NONE-NOT: FP_FAST_FMAF
 // CHECK_AMDGCN: #define __AMDGCN__ 1
 // CHECK_AMDGCN: #define __HAS_FMAF__ 1

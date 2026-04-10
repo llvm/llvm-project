@@ -215,6 +215,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     return TRI->getSGPRClassForBitWidth(MRI.getType(Reg).getSizeInBits());
   }
+  case BRC: {
+    // Check if there is SGPR and VGPR register class of same size as the LLT.
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    unsigned LLTSize = MRI.getType(Reg).getSizeInBits();
+    return LLTSize >= 32 && TRI->getSGPRClassForBitWidth(LLTSize) &&
+           TRI->getVGPRClassForBitWidth(LLTSize);
+  }
   case _:
     return true;
   default:
@@ -670,6 +678,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgprGPHI}})
       .Any({{DivBRC}, {{}, {}, VerifyAllSgprOrVgprGPHI}});
 
+  addRulesForGOpcs({G_EXTRACT_VECTOR_ELT})
+      .Any({{UniB32, UniBRC, UniS32}, {{SgprB32}, {SgprBRC, Sgpr32}}})
+      .Any({{DivB32, DivBRC, UniS32}, {{VgprB32}, {VgprBRC, Sgpr32}}})
+      .Any({{DivB32, BRC, DivS32},
+            {{VgprB32}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}})
+      .Any({{UniB64, UniBRC, UniS32}, {{SgprB64}, {SgprBRC, Sgpr32}}})
+      .Any({{DivB64, DivBRC, UniS32},
+            {{VgprB64}, {VgprBRC, Sgpr32}, ExtrVecEltTo32}})
+      .Any({{DivB64, BRC, DivS32},
+            {{VgprB64}, {VgprBRC, Vgpr32}, ExtrVecEltToSel}});
+
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD_NORET {}, {{}, {Imm, VgprSrc, ..., Sgpr_WF_RsrcIdx}}
@@ -863,11 +882,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64},
                  {Vgpr64, Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_ADD, G_AMDGPU_BUFFER_ATOMIC_FMAX,
-                    G_AMDGPU_BUFFER_ATOMIC_FMIN, G_AMDGPU_BUFFER_ATOMIC_SMAX,
+  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_ADD, G_AMDGPU_BUFFER_ATOMIC_AND,
+                    G_AMDGPU_BUFFER_ATOMIC_DEC, G_AMDGPU_BUFFER_ATOMIC_FMAX,
+                    G_AMDGPU_BUFFER_ATOMIC_FMIN, G_AMDGPU_BUFFER_ATOMIC_INC,
+                    G_AMDGPU_BUFFER_ATOMIC_OR, G_AMDGPU_BUFFER_ATOMIC_SMAX,
                     G_AMDGPU_BUFFER_ATOMIC_SMIN, G_AMDGPU_BUFFER_ATOMIC_SUB,
                     G_AMDGPU_BUFFER_ATOMIC_SWAP, G_AMDGPU_BUFFER_ATOMIC_UMAX,
-                    G_AMDGPU_BUFFER_ATOMIC_UMIN},
+                    G_AMDGPU_BUFFER_ATOMIC_UMIN, G_AMDGPU_BUFFER_ATOMIC_XOR},
                    Standard)
       .Div(S32, {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Div(S64, {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
@@ -1463,18 +1484,25 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{S32}, {{Sgpr32}, {}}})
       .Any({{S64}, {{Sgpr64}, {}}});
 
-  addRulesForIOpcs({amdgcn_groupstaticsize, amdgcn_pops_exiting_wave_id},
+  addRulesForIOpcs({amdgcn_s_memrealtime, amdgcn_s_memtime}, Standard)
+      .Uni(S64, {{Sgpr64}, {IntrId}});
+
+  addRulesForIOpcs({amdgcn_groupstaticsize, amdgcn_pops_exiting_wave_id,
+                    amdgcn_reloc_constant, amdgcn_s_get_waveid_in_workgroup},
                    Standard)
       .Uni(S32, {{Sgpr32}, {IntrId}});
 
   // Intrinsics with no register operands.
   addRulesForIOpcs({amdgcn_endpgm,
+                    amdgcn_init_exec,
                     amdgcn_s_barrier,
                     amdgcn_s_barrier_signal,
                     amdgcn_s_barrier_wait,
+                    amdgcn_s_monitor_sleep,
                     amdgcn_s_nop,
                     amdgcn_s_sethalt,
                     amdgcn_s_setprio,
+                    amdgcn_s_setprio_inc_wg,
                     amdgcn_s_sleep,
                     amdgcn_s_ttracedata_imm,
                     amdgcn_s_wait_asynccnt,
@@ -1491,6 +1519,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_waitcnt,
                     amdgcn_wave_barrier})
       .Any({{}, {{}, {}}});
+
+  addRulesForIOpcs({amdgcn_init_exec_from_input})
+      .Any({{}, {{}, {IntrId, Sgpr32, Imm}}});
 
   addRulesForIOpcs({amdgcn_s_ttracedata}).Any({{}, {{}, {IntrId, SgprB32_M0}}});
 
@@ -1530,6 +1561,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
              {IntrId, Imm, Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Imm,
               SgprB32_M0}}});
 
+  addRulesForIOpcs({amdgcn_lds_direct_load}, StandardB)
+      .Div(B32, {{VgprB32}, {IntrId, SgprB32_M0}});
+
   addRulesForIOpcs({amdgcn_lds_param_load}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Imm, Imm, SgprB32_M0}});
 
@@ -1555,15 +1589,26 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                  {IntrId, Vgpr32, Vgpr32, SgprB32_ReadFirstLane,
                   SgprB32_ReadFirstLane, Imm, Imm}});
 
+  addRulesForIOpcs({amdgcn_perm}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
   addRulesForIOpcs({amdgcn_wave_reduce_umax, amdgcn_wave_reduce_umin}, Standard)
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}})
       .Div(S32, {{Sgpr32ToVgprDst}, {IntrId, VgprB32}})
       .Uni(S64, {{Sgpr64}, {IntrId, Sgpr64}})
       .Div(S64, {{Sgpr64ToVgprDst}, {IntrId, VgprB64}});
 
-  addRulesForIOpcs({amdgcn_bitop3}, Standard)
+  addRulesForIOpcs({amdgcn_bitop3, amdgcn_fmad_ftz}, Standard)
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_udot4, amdgcn_sdot4, amdgcn_udot8, amdgcn_sdot8,
+                    amdgcn_dot4_f32_bf8_bf8, amdgcn_dot4_f32_bf8_fp8,
+                    amdgcn_dot4_f32_fp8_fp8, amdgcn_dot4_f32_fp8_bf8},
+                   Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
@@ -1573,12 +1618,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr32, Vgpr32}});
 
-  addRulesForIOpcs({amdgcn_mulhi_u24, amdgcn_mulhi_i24, amdgcn_fmul_legacy},
+  addRulesForIOpcs({amdgcn_ds_bpermute, amdgcn_ds_bpermute_fi_b32,
+                    amdgcn_ds_permute, amdgcn_fmul_legacy, amdgcn_mulhi_i24,
+                    amdgcn_mulhi_u24},
                    Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
 
-  addRulesForIOpcs({amdgcn_fma_legacy}, Standard)
+  addRulesForIOpcs({amdgcn_cubesc, amdgcn_cubetc, amdgcn_cubema, amdgcn_cubeid,
+                    amdgcn_fma_legacy},
+                   Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
@@ -1604,10 +1653,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{Sgpr64}, {IntrId, Sgpr64, Sgpr32, Sgpr32}, S_BFE})
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr32, Vgpr32}, V_BFE});
 
-  addRulesForIOpcs({amdgcn_cvt_pk_u16, amdgcn_cvt_pk_i16, amdgcn_cvt_pkrtz},
+  addRulesForIOpcs({amdgcn_cvt_pk_i16, amdgcn_cvt_pk_u16, amdgcn_cvt_pknorm_i16,
+                    amdgcn_cvt_pknorm_u16, amdgcn_cvt_pkrtz},
                    Standard)
-      .Div(V2S16, {{VgprV2S16}, {IntrId, Vgpr32, Vgpr32}})
-      .Uni(V2S16, {{UniInVgprV2S16}, {IntrId, Vgpr32, Vgpr32}});
+      .Uni(V2S16, {{UniInVgprV2S16}, {IntrId, Vgpr32, Vgpr32}})
+      .Div(V2S16, {{VgprV2S16}, {IntrId, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_global_load_tr_b64})
       .Any({{DivB64}, {{VgprB64}, {IntrId, SgprP1}}})
@@ -1641,6 +1691,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_struct_ptr_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprP8, SgprP3, Imm, Vgpr32, Vgpr32, Sgpr32}}});
 
+  addRulesForIOpcs({amdgcn_global_load_lds})
+      .Any({{}, {{}, {IntrId, VgprP1, SgprB32_M0}}});
+
   addRulesForIOpcs({amdgcn_wwm, amdgcn_strict_wwm, amdgcn_wqm, amdgcn_softwqm,
                     amdgcn_strict_wqm},
                    StandardB)
@@ -1657,11 +1710,22 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
       .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
 
-  addRulesForIOpcs({amdgcn_live_mask}).Any({{S1}, {{Vcc}, {}}});
+  addRulesForIOpcs({amdgcn_wqm_demote}).Any({{}, {{}, {IntrId, Vcc}}});
+
+  addRulesForIOpcs({amdgcn_inverse_ballot})
+      .Any({{DivS1, _, S32}, {{Vcc}, {IntrId, SgprB32_ReadFirstLane}}})
+      .Any({{DivS1, _, S64}, {{Vcc}, {IntrId, SgprB64_ReadFirstLane}}});
+
+  addRulesForIOpcs({amdgcn_live_mask, amdgcn_ps_live})
+      .Any({{DivS1}, {{Vcc}, {}}});
 
   addRulesForIOpcs({amdgcn_mov_dpp, amdgcn_mov_dpp8}, StandardB)
       .Div(B32, {{VgprB32}, {IntrId, VgprB32}})
       .Div(B64, {{VgprB64}, {IntrId, VgprB64}});
+
+  addRulesForIOpcs({amdgcn_update_dpp}, StandardB)
+      .Div(B32, {{VgprB32}, {IntrId, VgprB32, VgprB32}})
+      .Div(B64, {{VgprB64}, {IntrId, VgprB64, VgprB64}});
 
   addRulesForIOpcs({amdgcn_sin, amdgcn_cos}, Standard)
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
@@ -1669,10 +1733,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_trig_preop}, Standard)
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr32}});
+
   addRulesForIOpcs({amdgcn_ds_add_gs_reg_rtn, amdgcn_ds_sub_gs_reg_rtn},
                    Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_ds_append, amdgcn_ds_consume}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, SgprB32_M0}})
+      .Div(S32, {{Vgpr32}, {IntrId, SgprB32_M0}});
 
   addRulesForIOpcs(
       {amdgcn_ds_bvh_stack_rtn, amdgcn_ds_bvh_stack_push4_pop1_rtn}, Standard)
@@ -1684,12 +1756,29 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_ds_bvh_stack_push8_pop2_rtn}, Standard)
       .Div(S64, {{Vgpr64, Vgpr32}, {IntrId, Vgpr32, Vgpr32, VgprV8S32}});
 
+  addRulesForIOpcs({amdgcn_ds_gws_sema_p, amdgcn_ds_gws_sema_v,
+                    amdgcn_ds_gws_sema_release_all})
+      .Any({{}, {{}, {IntrId, SgprB32_M0}}});
+
+  addRulesForIOpcs(
+      {amdgcn_ds_gws_barrier, amdgcn_ds_gws_init, amdgcn_ds_gws_sema_br})
+      .Any({{}, {{}, {IntrId, Vgpr32, SgprB32_M0}}});
+
+  addRulesForIOpcs({amdgcn_ds_ordered_add, amdgcn_ds_ordered_swap}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, SgprB32_M0, Vgpr32}});
+
   addRulesForIOpcs({amdgcn_ds_swizzle}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_permlane16_var, amdgcn_permlanex16_var}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
   addRulesForIOpcs({amdgcn_permlane16_swap, amdgcn_permlane32_swap}, Standard)
       .Div(S32, {{Vgpr32, Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_permlane64}, StandardB)
+      .Div(B32, {{VgprB32}, {IntrId, VgprB32}});
 
   addRulesForIOpcs({amdgcn_ds_read_tr4_b64, amdgcn_ds_read_tr8_b64})
       .Any({{DivV2S32}, {{VgprV2S32}, {IntrId, VgprP3}}});
@@ -1699,5 +1788,108 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_ds_read_tr16_b64})
       .Any({{DivV4S16}, {{VgprV4S16}, {IntrId, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_interp_p1}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_p1_f16}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Imm, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_p2}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_p2_f16}, Standard)
+      .Div(S16,
+           {{Vgpr16}, {IntrId, Vgpr32, Vgpr32, Imm, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_mov}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Imm, Imm, Imm, SgprB32_M0}});
+
+  addRulesForIOpcs({amdgcn_interp_inreg_p10, amdgcn_interp_inreg_p2,
+                    amdgcn_interp_inreg_p10_f16, amdgcn_interp_p10_rtz_f16},
+                   Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_interp_inreg_p2_f16, amdgcn_interp_p2_rtz_f16},
+                   Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_div_fmas}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr64, Vgpr64, Vcc}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr64, Vgpr64, Vcc}});
+
+  addRulesForIOpcs({amdgcn_div_fixup}, Standard)
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr64, Vgpr64}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr64, Vgpr64}});
+
+  addRulesForIOpcs({amdgcn_div_scale}, Standard)
+      .Div(S32, {{Vgpr32, Vcc}, {IntrId, Vgpr32, Vgpr32}})
+      .Uni(S32, {{UniInVgprS32, UniInVcc}, {IntrId, Vgpr32, Vgpr32}})
+      .Div(S64, {{Vgpr64, Vcc}, {IntrId, Vgpr64, Vgpr64}})
+      .Uni(S64, {{UniInVgprS64, UniInVcc}, {IntrId, Vgpr64, Vgpr64}});
+
+  addRulesForIOpcs({amdgcn_fdot2, amdgcn_sdot2, amdgcn_udot2}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, VgprV2S16, VgprV2S16, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, VgprV2S16, VgprV2S16, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_fdot2_f16_f16}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, VgprV2S16, VgprV2S16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {IntrId, VgprV2S16, VgprV2S16, Vgpr16}});
+
+  addRulesForIOpcs({amdgcn_sudot4, amdgcn_sudot8}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Imm, Vgpr32, Imm, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Imm, Vgpr32, Imm, Vgpr32, Vgpr32}});
+
+  // WMMA/SWMMAC intrinsics: all register operands map to VGPR.
+  addRulesForIOpcs(
+      {// WMMA GFX11+
+       amdgcn_wmma_f32_16x16x16_f16, amdgcn_wmma_f32_16x16x16_bf16,
+       amdgcn_wmma_f16_16x16x16_f16, amdgcn_wmma_bf16_16x16x16_bf16,
+       amdgcn_wmma_f16_16x16x16_f16_tied, amdgcn_wmma_bf16_16x16x16_bf16_tied,
+       amdgcn_wmma_i32_16x16x16_iu8, amdgcn_wmma_i32_16x16x16_iu4,
+       // WMMA GFX12
+       amdgcn_wmma_f32_16x16x16_fp8_fp8, amdgcn_wmma_f32_16x16x16_fp8_bf8,
+       amdgcn_wmma_f32_16x16x16_bf8_fp8, amdgcn_wmma_f32_16x16x16_bf8_bf8,
+       amdgcn_wmma_i32_16x16x32_iu4,
+       // WMMA GFX1250
+       amdgcn_wmma_f32_16x16x4_f32, amdgcn_wmma_f32_16x16x32_bf16,
+       amdgcn_wmma_f32_16x16x32_f16, amdgcn_wmma_f16_16x16x32_f16,
+       amdgcn_wmma_bf16_16x16x32_bf16, amdgcn_wmma_bf16f32_16x16x32_bf16,
+       amdgcn_wmma_f32_16x16x64_fp8_fp8, amdgcn_wmma_f32_16x16x64_fp8_bf8,
+       amdgcn_wmma_f32_16x16x64_bf8_fp8, amdgcn_wmma_f32_16x16x64_bf8_bf8,
+       amdgcn_wmma_f16_16x16x64_fp8_fp8, amdgcn_wmma_f16_16x16x64_fp8_bf8,
+       amdgcn_wmma_f16_16x16x64_bf8_fp8, amdgcn_wmma_f16_16x16x64_bf8_bf8,
+       amdgcn_wmma_f16_16x16x128_fp8_fp8, amdgcn_wmma_f16_16x16x128_fp8_bf8,
+       amdgcn_wmma_f16_16x16x128_bf8_fp8, amdgcn_wmma_f16_16x16x128_bf8_bf8,
+       amdgcn_wmma_f32_16x16x128_fp8_fp8, amdgcn_wmma_f32_16x16x128_fp8_bf8,
+       amdgcn_wmma_f32_16x16x128_bf8_fp8, amdgcn_wmma_f32_16x16x128_bf8_bf8,
+       amdgcn_wmma_i32_16x16x64_iu8, amdgcn_wmma_f32_16x16x128_f8f6f4,
+       amdgcn_wmma_scale_f32_16x16x128_f8f6f4,
+       amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, amdgcn_wmma_f32_32x16x128_f4,
+       amdgcn_wmma_scale_f32_32x16x128_f4, amdgcn_wmma_scale16_f32_32x16x128_f4,
+       // SWMMAC GFX12
+       amdgcn_swmmac_f32_16x16x32_f16, amdgcn_swmmac_f32_16x16x32_bf16,
+       amdgcn_swmmac_f16_16x16x32_f16, amdgcn_swmmac_bf16_16x16x32_bf16,
+       amdgcn_swmmac_i32_16x16x32_iu8, amdgcn_swmmac_i32_16x16x32_iu4,
+       amdgcn_swmmac_i32_16x16x64_iu4, amdgcn_swmmac_f32_16x16x32_fp8_fp8,
+       amdgcn_swmmac_f32_16x16x32_fp8_bf8, amdgcn_swmmac_f32_16x16x32_bf8_fp8,
+       amdgcn_swmmac_f32_16x16x32_bf8_bf8,
+       // SWMMAC GFX1250
+       amdgcn_swmmac_f32_16x16x64_f16, amdgcn_swmmac_f32_16x16x64_bf16,
+       amdgcn_swmmac_f16_16x16x64_f16, amdgcn_swmmac_bf16_16x16x64_bf16,
+       amdgcn_swmmac_bf16f32_16x16x64_bf16, amdgcn_swmmac_f32_16x16x128_fp8_fp8,
+       amdgcn_swmmac_f32_16x16x128_fp8_bf8, amdgcn_swmmac_f32_16x16x128_bf8_fp8,
+       amdgcn_swmmac_f32_16x16x128_bf8_bf8, amdgcn_swmmac_f16_16x16x128_fp8_fp8,
+       amdgcn_swmmac_f16_16x16x128_fp8_bf8, amdgcn_swmmac_f16_16x16x128_bf8_fp8,
+       amdgcn_swmmac_f16_16x16x128_bf8_bf8, amdgcn_swmmac_i32_16x16x128_iu8})
+      .Any({{}, {{}, {}, ApplyAllVgpr}});
 
 } // end initialize rules

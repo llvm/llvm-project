@@ -56,30 +56,29 @@
 @A = common global [1024 x i32] zeroinitializer, align 16
 @B = common global [1024 x i32] zeroinitializer, align 16
 
-; Function Attrs: norecurse nounwind uwtable
 define void @foo(i32 %iCount, i32 %c, i32 %jCount) {
 entry:
   %cmp22 = icmp sgt i32 %iCount, 0
   br i1 %cmp22, label %for.body.lr.ph, label %for.end11
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %cmp220 = icmp sgt i32 %jCount, 0
   %wide.trip.count = zext i32 %jCount to i64
   %wide.trip.count27 = zext i32 %iCount to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.inc9, %for.body.lr.ph
+for.body:
   %indvars.iv25 = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next26, %for.inc9 ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @A, i64 0, i64 %indvars.iv25
   store i32 %c, ptr %arrayidx, align 4
   br i1 %cmp220, label %for.body3.lr.ph, label %for.inc9
 
-for.body3.lr.ph:                                  ; preds = %for.body
+for.body3.lr.ph:
   %arrayidx.promoted = load i32, ptr %arrayidx, align 4
   %0 = trunc i64 %indvars.iv25 to i32
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.body3.lr.ph
+for.body3:
   %indvars.iv = phi i64 [ 0, %for.body3.lr.ph ], [ %indvars.iv.next, %for.body3 ]
   %1 = phi i32 [ %arrayidx.promoted, %for.body3.lr.ph ], [ %add8, %for.body3 ]
   %arrayidx5 = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %indvars.iv
@@ -90,16 +89,16 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond1.for.inc9_crit_edge, label %for.body3
 
-for.cond1.for.inc9_crit_edge:                     ; preds = %for.body3
+for.cond1.for.inc9_crit_edge:
   store i32 %add8, ptr %arrayidx, align 4
   br label %for.inc9
 
-for.inc9:                                         ; preds = %for.cond1.for.inc9_crit_edge, %for.body
+for.inc9:
   %indvars.iv.next26 = add nuw nsw i64 %indvars.iv25, 1
   %exitcond28 = icmp eq i64 %indvars.iv.next26, %wide.trip.count27
   br i1 %exitcond28, label %for.end11, label %for.body, !llvm.loop !1
 
-for.end11:                                        ; preds = %for.inc9, %entry
+for.end11:
   ret void
 }
 

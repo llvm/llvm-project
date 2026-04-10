@@ -200,7 +200,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   }
 
   auto HasNoSignedWrap = [&](const SCEVAddRecExpr *AR) {
-    if (AR->getNoWrapFlags(SCEV::FlagNSW))
+    if (AR->hasNoSignedWrap())
       return true;
 
     IntegerType *Ty = cast<IntegerType>(AR->getType());
@@ -222,7 +222,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     }
 
     // We may have proved this when computing the sign extension above.
-    return AR->getNoWrapFlags(SCEV::FlagNSW) != SCEV::FlagAnyWrap;
+    return AR->hasNoSignedWrap();
   };
 
   // `ICI` is interpreted as taking the backedge if the *next* value of the
@@ -287,7 +287,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
         //     break;                       break;
         //   ...                          ...
         // }                            }
-        if (IndVarBase->getNoWrapFlags(SCEV::FlagNUW) &&
+        if (IndVarBase->hasNoUnsignedWrap() &&
             cannotBeMinInLoop(RightSCEV, &L, SE, /*Signed*/ false)) {
           Pred = ICmpInst::ICMP_UGT;
           RightSCEV =
@@ -351,7 +351,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
         //     break;                       break;
         //   ...                          ...
         // }                            }
-        if (IndVarBase->getNoWrapFlags(SCEV::FlagNUW) &&
+        if (IndVarBase->hasNoUnsignedWrap() &&
             cannotBeMaxInLoop(RightSCEV, &L, SE, /* Signed */ false)) {
           Pred = ICmpInst::ICMP_ULT;
           RightSCEV = SE.getAddExpr(RightSCEV, SE.getOne(RightSCEV->getType()));

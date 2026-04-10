@@ -255,7 +255,7 @@ define void @test_interleave_store_one_constant(ptr noalias %src, ptr noalias %d
 entry:
   br label %loop
 
-loop:                                ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.src = getelementptr double, ptr %src, i64 %iv
   %l = load double, ptr %gep.src, align 8

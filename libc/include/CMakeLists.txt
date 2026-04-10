@@ -180,6 +180,11 @@ add_header_macro(
     .llvm-libc-types.uint_ur_t
 )
 
+add_header(
+  syscall
+  HDR
+    syscall.h
+)
 
 add_header_macro(
   sysexits
@@ -237,6 +242,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  cpio
+  ../libc/include/cpio.yaml
+  cpio.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   setjmp
   ../libc/include/setjmp.yaml
   setjmp.h
@@ -253,6 +266,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.null_macro
+    .llvm-libc-types.errno_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
 )
 
@@ -273,9 +288,13 @@ add_header_macro(
     .llvm-libc-types.ACTION
     .llvm-libc-types.ENTRY
     .llvm-libc-types.VISIT
+    .llvm-libc-types.posix_tnode
     .llvm-libc-types.__search_compare_t
     .llvm-libc-types.size_t
     .llvm-libc-types.struct_hsearch_data
+    .llvm-libc-types.__action_closure_fn_t
+    .llvm-libc-types.__action_fn_t
+    .llvm-libc-types.__free_fn_t
     .llvm_libc_common_h
 )
 
@@ -288,11 +307,13 @@ add_header_macro(
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.time_macros
     .llvm-libc-types.clock_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.time_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
+    .llvm-libc-types.rsize_t
 )
 
 add_header_macro(
@@ -366,7 +387,9 @@ add_header_macro(
     .llvm-libc-macros.stdio_macros
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.off_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
     .llvm_libc_common_h
@@ -385,9 +408,11 @@ add_header_macro(
     .llvm-libc-types.__search_compare_t
     .llvm-libc-types.constraint_handler_t
     .llvm-libc-types.div_t
+    .llvm-libc-types.errno_t
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
     .llvm-libc-types.locale_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm_libc_common_h
 )
@@ -834,6 +859,7 @@ add_header_macro(
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.wchar_macros
     .llvm-libc-types.mbstate_t
+    .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
@@ -912,8 +938,9 @@ function(get_all_install_header_targets out_var)
 endfunction(get_all_install_header_targets)
 
 get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADERS})
+add_custom_target(generate-libc-headers DEPENDS ${all_install_header_targets})
 add_library(libc-headers INTERFACE)
-add_dependencies(libc-headers ${all_install_header_targets})
+add_dependencies(libc-headers generate-libc-headers)
 target_include_directories(libc-headers SYSTEM INTERFACE ${LIBC_INCLUDE_DIR})
 
 foreach(target IN LISTS all_install_header_targets)

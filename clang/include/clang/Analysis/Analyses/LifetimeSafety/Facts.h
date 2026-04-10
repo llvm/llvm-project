@@ -102,8 +102,13 @@ public:
             const OriginManager &OM) const override;
 };
 
+/// When an AccessPath expires (e.g., a variable goes out of scope), all loans
+/// that are associated with this path expire. For example, if `x` expires, then
+/// the loan to `x` expires.
 class ExpireFact : public Fact {
-  LoanID LID;
+  // The access path that expires.
+  AccessPath AP;
+
   // Expired origin (e.g., its variable goes out of scope).
   std::optional<OriginID> OID;
   SourceLocation ExpiryLoc;
@@ -111,11 +116,11 @@ class ExpireFact : public Fact {
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Expire; }
 
-  ExpireFact(LoanID LID, SourceLocation ExpiryLoc,
+  ExpireFact(AccessPath AP, SourceLocation ExpiryLoc,
              std::optional<OriginID> OID = std::nullopt)
-      : Fact(Kind::Expire), LID(LID), OID(OID), ExpiryLoc(ExpiryLoc) {}
+      : Fact(Kind::Expire), AP(AP), OID(OID), ExpiryLoc(ExpiryLoc) {}
 
-  LoanID getLoanID() const { return LID; }
+  const AccessPath &getAccessPath() const { return AP; }
   std::optional<OriginID> getOriginID() const { return OID; }
   SourceLocation getExpiryLoc() const { return ExpiryLoc; }
 
@@ -241,6 +246,7 @@ public:
       : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
 
   const OriginList *getUsedOrigins() const { return OList; }
+  void setUsedOrigins(const OriginList *NewList) { OList = NewList; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
@@ -312,8 +318,7 @@ public:
 
 class FactManager {
 public:
-  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg)
-      : OriginMgr(AC.getASTContext(), AC.getDecl()) {
+  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg) : OriginMgr(AC) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 

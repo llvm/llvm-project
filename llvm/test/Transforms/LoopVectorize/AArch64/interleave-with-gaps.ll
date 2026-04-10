@@ -261,9 +261,7 @@ exit:
   ret void
 }
 
-declare i32 @llvm.umin.i32(i32, i32)
 
-declare i32 @llvm.abs.i32(i32, i1 immarg)
 
 attributes #0 = { "target-cpu"="neoverse-512tvb" }
 attributes #1 = { "target-cpu"="grace" }

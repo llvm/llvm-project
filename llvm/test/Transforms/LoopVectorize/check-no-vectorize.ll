@@ -13,7 +13,7 @@ define void @foo(i32 %val1, i32 %val2) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %0 = phi i32 [ %val1, %entry ], [ %add1, %for.body ]
   %1 = phi i32 [ %val2, %entry ], [ %2, %for.body ]
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %for.body ]
@@ -27,6 +27,6 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i64 %iv.next, 31999
   br i1 %exitcond, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }

@@ -2390,7 +2390,35 @@ void StmtProfiler::VisitMaterializeTemporaryExpr(
 }
 
 void StmtProfiler::VisitCXXFoldExpr(const CXXFoldExpr *S) {
-  VisitExpr(S);
+  // For CXXFoldExpr, do not profile the callee as it may
+  // be affected by the context. e.g.,
+  //
+  // "a.h"
+  //
+  //   struct F {
+  //     template <typename... T> requires ((sizeof(T) > 0) && ...)
+  //     void operator()(T...) {}
+  //   } f;
+  //
+  // and
+  //
+  // "c.h"
+  //
+  //   void operator&&(struct X, struct X);
+  //   #include "a.h"
+  //
+  // Here we may give different profile results to F::operator() in
+  // "c.h" vs other use cases of "a.h". This is problematic in
+  // cases where we may have expression coming from different
+  // headers, e.g., modules.
+  if (S->getLHS())
+    Visit(S->getLHS());
+  else
+    ID.AddInteger(0);
+  if (S->getRHS())
+    Visit(S->getRHS());
+  else
+    ID.AddInteger(0);
   ID.AddInteger(S->getOperator());
 }
 
@@ -2430,20 +2458,24 @@ void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 
+void StmtProfiler::VisitObjCObjectLiteral(const ObjCObjectLiteral *E) {
+  VisitExpr(E);
+}
+
 void StmtProfiler::VisitObjCStringLiteral(const ObjCStringLiteral *S) {
-  VisitExpr(S);
+  VisitObjCObjectLiteral(S);
 }
 
 void StmtProfiler::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
 }
 
 void StmtProfiler::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
 }
 
 void StmtProfiler::VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
 }
 
 void StmtProfiler::VisitObjCEncodeExpr(const ObjCEncodeExpr *S) {
