@@ -2018,8 +2018,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
           AggValueSlot::DoesNotOverlap);
       AggExprEmitter(CGF, elementSlot, false)
           .VisitArrayInitLoopExpr(InnerLoop, outerBegin);
-    } else
+    } else {
       EmitInitializationToLValue(E->getSubExpr(), elementLV);
+    }
   }
 
   // Move on to the next element.
