@@ -22,6 +22,9 @@
 // Symbolizer needs to allocated memory when reporting.
 // UNSUPPORTED: internal_symbolizer
 
+// FIXME: The test fails flakily, see e.g. PRs #170911, #171469, #188441.
+// UNSUPPORTED: true
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
