@@ -10,10 +10,10 @@ class TestCase(TestBase):
         self.expect(
             "target hook enable -1",
             error=True,
-            startstr='error: invalid hook id: "-1".',
+            startstr='error: invalid hook id: "-1"',
         )
         self.expect(
             "target hook enable abcdfx",
             error=True,
-            startstr='error: invalid hook id: "abcdfx".',
+            startstr='error: invalid hook id: "abcdfx"',
         )
