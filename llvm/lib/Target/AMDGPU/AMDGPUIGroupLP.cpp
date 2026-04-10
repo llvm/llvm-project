@@ -27,6 +27,7 @@
 #include <type_traits>
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "igrouplp"
 
@@ -818,13 +819,6 @@ void PipelineSolver::solve() {
   LLVM_DEBUG(dbgs() << "After applying mutation\n");
   LLVM_DEBUG(DAG->dump());
 }
-
-enum IGLPStrategyID : int {
-  MFMASmallGemmOptID = 0,
-  MFMASmallGemmSingleWaveOptID = 1,
-  MFMAExpInterleaveID = 2,
-  MFMAExpSimpleInterleaveID = 3
-};
 
 // Implement a IGLP scheduling strategy.
 class IGLPStrategy {
