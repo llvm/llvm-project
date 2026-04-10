@@ -211,6 +211,10 @@ struct InlineParams {
   /// Threshold to use for callees with inline hint.
   std::optional<int> HintThreshold;
 
+  /// Threshold to use for callees with inline hint, when the caller is
+  /// optimized for size.
+  std::optional<int> OptSizeHintThreshold;
+
   /// Threshold to use for cold callees.
   std::optional<int> ColdThreshold;
 

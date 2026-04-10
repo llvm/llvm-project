@@ -820,7 +820,8 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
   // when not optimzing for size. This should probably be lowered after
   // performance testing.
   // FIXME: this comment is cargo culted from the old pass manager, revisit).
-  IP.HintThreshold = Level.isOptimizingForSize() ? PreInlineThreshold : 325;
+  IP.HintThreshold = 325;
+  IP.OptSizeHintThreshold = PreInlineThreshold;
   ModuleInlinerWrapperPass MIWP(
       IP, /* MandatoryFirst */ true,
       InlineContext{LTOPhase, InlinePass::EarlyInliner});
