@@ -81,7 +81,7 @@ public:
   }
 
   StringRef getPassName() const override {
-    return "RISC-V Branch Condition Combine";
+    return "RISC-V Conditional Branch Combine";
   }
 
 private:
@@ -100,7 +100,7 @@ private:
 char RISCVConditionalBranchCombine::ID = 0;
 
 INITIALIZE_PASS(RISCVConditionalBranchCombine, DEBUG_TYPE,
-                "RISC-V Branch Condition Combine", false, false)
+                "RISC-V Conditional Branch Combine", false, false)
 
 static bool isIgnorableInstr(const MachineInstr &MI) {
   return MI.isDebugInstr() || MI.getOpcode() == RISCV::PseudoBR ||
