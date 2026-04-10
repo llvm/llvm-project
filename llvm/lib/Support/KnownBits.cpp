@@ -603,21 +603,31 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
-KnownBits KnownBits::fshl(KnownBits LHS, KnownBits RHS, unsigned Amt) {
+KnownBits KnownBits::fshl(KnownBits LHS, KnownBits RHS, KnownBits Amt) {
   // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
-  if (Amt == 0)
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(BitWidth == RHS.getBitWidth() && "Operand mismatch");
+  if (!Amt.isConstant())
+    return KnownBits(BitWidth);
+  auto ShAmt = Amt.getConstant().urem(BitWidth);
+  if (ShAmt == 0)
     return LHS;
-  LHS <<= Amt;
-  RHS >>= LHS.getBitWidth() - Amt;
+  LHS <<= ShAmt;
+  RHS >>= BitWidth - ShAmt;
   return LHS.unionWith(RHS);
 }
 
-KnownBits KnownBits::fshr(KnownBits LHS, KnownBits RHS, unsigned Amt) {
+KnownBits KnownBits::fshr(KnownBits LHS, KnownBits RHS, KnownBits Amt) {
   // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
-  if (Amt == 0)
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(BitWidth == RHS.getBitWidth() && "Operand mismatch");
+  if (!Amt.isConstant())
+    return KnownBits(BitWidth);
+  auto ShAmt = Amt.getConstant().urem(BitWidth);
+  if (ShAmt == 0)
     return RHS;
-  LHS <<= LHS.getBitWidth() - Amt;
-  RHS >>= Amt;
+  LHS <<= BitWidth - ShAmt;
+  RHS >>= ShAmt;
   return LHS.unionWith(RHS);
 }
 

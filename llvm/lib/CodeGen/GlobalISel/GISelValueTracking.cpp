@@ -567,10 +567,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     if (!MaybeAmtOp)
       break;
 
-    unsigned Amt = MaybeAmtOp->urem(BitWidth);
+    KnownBits Amt;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(3).getReg(), Amt, DemandedElts,
                          Depth + 1);
     if (Opcode == TargetOpcode::G_FSHL) {
       Known = KnownBits::fshl(Known, Known2, Amt);

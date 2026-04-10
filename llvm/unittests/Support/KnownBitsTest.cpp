@@ -673,6 +673,25 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
 
+TEST(KnownBitsTest, FunnelShift) {
+  KnownBits LHS = KnownBits::makeConstant(APInt(8, 224)); // 11100000
+  KnownBits RHS = KnownBits::makeConstant(APInt(8, 240)); // 11110000
+  KnownBits Amt = KnownBits::makeConstant(APInt(8, 2));
+
+  EXPECT_EQ(KnownBits::fshl(LHS, RHS, Amt),
+            KnownBits::makeConstant(APInt(8, 0b10000011)));
+  EXPECT_EQ(KnownBits::fshr(LHS, RHS, Amt),
+            KnownBits::makeConstant(APInt(8, 0b00111100)));
+
+  KnownBits ZeroAmt = KnownBits::makeConstant(APInt(8, 0));
+  EXPECT_EQ(KnownBits::fshl(LHS, RHS, ZeroAmt), LHS);
+  EXPECT_EQ(KnownBits::fshr(LHS, RHS, ZeroAmt), RHS);
+
+  KnownBits UnknownAmt(8);
+  EXPECT_TRUE(KnownBits::fshl(LHS, RHS, UnknownAmt).isUnknown());
+  EXPECT_TRUE(KnownBits::fshr(LHS, RHS, UnknownAmt).isUnknown());
+}
+
 TEST(KnownBitsTest, WideShifts) {
   unsigned BitWidth = 128;
   KnownBits Unknown(BitWidth);
