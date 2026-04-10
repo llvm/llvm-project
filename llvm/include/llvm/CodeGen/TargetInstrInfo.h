@@ -1257,14 +1257,14 @@ public:
   /// If VRM is passed, the assigned physregs can be inspected by target to
   /// decide on using an opcode (note that those assignments can still change).
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
-                                  int FI,
+                                  int FI, MachineInstr *&CopyMI,
                                   LiveIntervals *LIS = nullptr,
                                   VirtRegMap *VRM = nullptr) const;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
-                                  MachineInstr &LoadMI,
+                                  MachineInstr &LoadMI, MachineInstr *&CopyMI,
                                   LiveIntervals *LIS = nullptr) const;
 
   /// This function defines the logic to lower COPY instruction to
@@ -1446,7 +1446,7 @@ protected:
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                         ArrayRef<unsigned> Ops,
                         MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
+                        MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr,
                         VirtRegMap *VRM = nullptr) const {
     return nullptr;
   }
@@ -1459,7 +1459,7 @@ protected:
   virtual MachineInstr *foldMemoryOperandImpl(
       MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
       MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const {
+      MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr) const {
     return nullptr;
   }
 
@@ -1845,7 +1845,8 @@ public:
   virtual MachineInstr *optimizeLoadInstr(MachineInstr &MI,
                                           const MachineRegisterInfo *MRI,
                                           Register &FoldAsLoadDefReg,
-                                          MachineInstr *&DefMI) const;
+                                          MachineInstr *&DefMI,
+                                          MachineInstr *&CopyMI) const;
 
   /// 'Reg' is known to be defined by a move immediate instruction,
   /// try to fold the immediate into the use instruction.
