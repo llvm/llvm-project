@@ -1027,7 +1027,6 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   const uArch *uArch = getUArch(getChipStr(load).value_or(""));
   if (!uArch)
     return;
-  auto subgroupSize = uArch->getSubgroupSize();
   VectorType resVecTy = load.getValueType();
   int chunkSize = load.getChunkSize().value_or(1);
 
@@ -1093,7 +1092,6 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   const uArch *uArch = getUArch(getChipStr(storeScatter).value_or(""));
   if (!uArch)
     return;
-  auto subgroupSize = uArch->getSubgroupSize();
   VectorType srcVecTy = storeScatter.getValueType();
   int chunkSize = storeScatter.getChunkSize().value_or(1);
 
