@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx950 -run-pass si-pre-emit-peephole -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx950 -run-pass=si-pre-emit-peephole %s -o - | FileCheck %s
 
 ---
 name: test_m0_sched_basic

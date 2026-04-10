@@ -747,21 +747,21 @@ static MachineInstr *getPrevNonDebugInst(MachineInstr *MI) {
 // no flow dependency from BufferLoad to MFMA
 // no anti-flow dependency from BufferLoad to MFMA
 // no output dependency between BufferLoad and MFMA
-static bool canbeReordered(MachineInstr *BufferLoad, MachineInstr *MFMA,
+static bool canBeReordered(MachineInstr *BufferLoad, MachineInstr *MFMA,
                            const SIRegisterInfo *TRI) {
   bool HasFlowDep =
-      llvm::any_of(BufferLoad->defs(), [MFMA, TRI](const auto &def) {
+      llvm::any_of(BufferLoad->defs(), [MFMA, TRI](const MachineOperand &def) {
         return def.isReg() && MFMA->readsRegister(def.getReg(), TRI);
       });
 
   bool HasAntiDep =
-      llvm::any_of(MFMA->defs(), [BufferLoad, TRI](const auto &def) {
-        return def.isReg() && BufferLoad->readsRegister(def.getReg(), TRI);
+      llvm::any_of(MFMA->defs(), [BufferLoad, TRI](const MachineOperand &def) {
+        return BufferLoad->readsRegister(def.getReg(), TRI);
       });
 
   bool HasOutputDep =
-      llvm::any_of(MFMA->defs(), [BufferLoad, TRI](const auto &def) {
-        return def.isReg() && BufferLoad->modifiesRegister(def.getReg(), TRI);
+      llvm::any_of(MFMA->defs(), [BufferLoad, TRI](const MachineOperand &def) {
+        return BufferLoad->modifiesRegister(def.getReg(), TRI);
       });
 
   return !HasFlowDep && !HasAntiDep && !HasOutputDep;
@@ -771,21 +771,18 @@ static bool canbeReordered(MachineInstr *BufferLoad, MachineInstr *MFMA,
 // pattern 2: s_mov_b32 m0 --> buffer_load --> mfma
 // swap buffer_load and mfma, the remove s_nop 0
 bool SIPreEmitPeephole::optimizeBufferLoadM0(MachineBasicBlock &MBB) {
-  if (MBB.empty()) {
+  if (MBB.empty())
     return false;
-  }
 
   bool Changed = false;
   using InstrIt = MachineBasicBlock::iterator;
   for (InstrIt I = MBB.begin(), E = MBB.end(); I != E; ++I) {
-    if (!TII->isMFMA(I->getOpcode()))
+    if (!TII->isMFMA(I->getOpcode()) || I == MBB.begin())
       continue;
     MachineInstr *MFMA = &*I;
 
-    if (I == MBB.begin())
-      continue;
     MachineInstr *Prev = getPrevNonDebugInst(&*I);
-    if (Prev == nullptr || !IsVecBufferLoad(TII, *Prev) ||
+    if (!Prev || !IsVecBufferLoad(TII, *Prev) ||
         !Prev->readsRegister(AMDGPU::M0, TRI))
       continue;
 
@@ -807,11 +804,11 @@ bool SIPreEmitPeephole::optimizeBufferLoadM0(MachineBasicBlock &MBB) {
       MaybeNop = nullptr;
     }
 
-    if (MaybeSMov == nullptr || MaybeSMov->getOpcode() != AMDGPU::S_MOV_B32 ||
+    if (!MaybeSMov || MaybeSMov->getOpcode() != AMDGPU::S_MOV_B32 ||
         !MaybeSMov->modifiesRegister(AMDGPU::M0, TRI))
       continue;
 
-    if (!canbeReordered(BufferLoad, MFMA, TRI))
+    if (!canBeReordered(BufferLoad, MFMA, TRI))
       continue;
 
     Changed = true;
@@ -965,9 +962,8 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   }
 
   if (ST.hasGFX950Insts()) {
-    for (MachineBasicBlock &MBB : MF) {
+    for (MachineBasicBlock &MBB : MF)
       Changed |= optimizeBufferLoadM0(MBB);
-    }
   }
 
   return Changed;
