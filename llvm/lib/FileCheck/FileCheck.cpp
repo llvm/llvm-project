@@ -2956,9 +2956,9 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
         i = j;
         break;
       }
-      // In Diff Mode with strict checking, any text found between the current
-      // position and the match is treated as a stray. Even if a match is found
-      // later, we report the gap as a mismatch.
+      // In Diff Mode, while doing strick checking even if we found a match
+      // later, we must stop processing the current block and print the gap as
+      // mismatch.
       if (IsDiffFormat && IsStrict && MatchPos > 0) {
         // Create a temporary view that starts with next new line.
         size_t CurrentLineEnd = CheckRegion.find_first_of("\n\r");
