@@ -733,5 +733,3 @@ exit:
   ret i64 %res
 }
 
-declare i64 @llvm.smax.i64(i64, i64)
-declare i16 @llvm.smax.i16(i16, i16)
