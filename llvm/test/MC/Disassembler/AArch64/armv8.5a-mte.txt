@@ -383,67 +383,7 @@
 # CHECK: stzgm	xzr, [x2]
 # NOMTE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x9f,0x40,0x03,0xd5]
-# CHECK: msr	TCO, #0
-# NOMTE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
-
-[0xe0,0x42,0x1b,0xd5]
-# CHECK: msr	TCO, x0
-# NOMTE: msr	S3_3_C4_C2_7, x0
-[0xc1,0x10,0x18,0xd5]
-# CHECK: msr	GCR_EL1, x1
-# NOMTE: msr	S3_0_C1_C0_6, x1
-[0xa2,0x10,0x18,0xd5]
-# CHECK: msr	RGSR_EL1, x2
-# NOMTE: msr	S3_0_C1_C0_5, x2
-[0x03,0x56,0x18,0xd5]
-# CHECK: msr	TFSR_EL1, x3
-# NOMTE: msr	S3_0_C5_C6_0, x3
-[0x04,0x56,0x1c,0xd5]
-# CHECK: msr	TFSR_EL2, x4
-# NOMTE: msr	S3_4_C5_C6_0, x4
-[0x05,0x56,0x1e,0xd5]
-# CHECK: msr	TFSR_EL3, x5
-# NOMTE: msr	S3_6_C5_C6_0, x5
-[0x06,0x56,0x1d,0xd5]
-# CHECK: msr	TFSR_EL12, x6
-# NOMTE: msr	S3_5_C5_C6_0, x6
-[0x27,0x56,0x18,0xd5]
-# CHECK: msr	TFSRE0_EL1, x7
-# NOMTE: msr	S3_0_C5_C6_1, x7
-# GMID_EL1 is read only
-[0x88,0x00,0x19,0xd5]
-# CHECK: msr	S3_1_C0_C0_4, x8
-# NOMTE: msr	S3_1_C0_C0_4, x8
-
-[0xe0,0x42,0x3b,0xd5]
-# CHECK: mrs	x0, TCO
-# NOMTE: mrs	x0, S3_3_C4_C2_7
-[0xc1,0x10,0x38,0xd5]
-# CHECK: mrs	x1, GCR_EL1
-# NOMTE: mrs	x1, S3_0_C1_C0_6
-[0xa2,0x10,0x38,0xd5]
-# CHECK: mrs	x2, RGSR_EL1
-# NOMTE: mrs	x2, S3_0_C1_C0_5
-[0x03,0x56,0x38,0xd5]
-# CHECK: mrs	x3, TFSR_EL1
-# NOMTE: mrs	x3, S3_0_C5_C6_0
-[0x04,0x56,0x3c,0xd5]
-# CHECK: mrs	x4, TFSR_EL2
-# NOMTE: mrs	x4, S3_4_C5_C6_0
-[0x05,0x56,0x3e,0xd5]
-# CHECK: mrs	x5, TFSR_EL3
-# NOMTE: mrs	x5, S3_6_C5_C6_0
-[0x06,0x56,0x3d,0xd5]
-# CHECK: mrs	x6, TFSR_EL12
-# NOMTE: mrs	x6, S3_5_C5_C6_0
-[0x27,0x56,0x38,0xd5]
-# CHECK: mrs	x7, TFSRE0_EL1
-# NOMTE: mrs	x7, S3_0_C5_C6_1
-[0x88,0x00,0x39,0xd5]
-# CHECK: mrs	x8, GMID_EL1
-# NOMTE: mrs	x8, S3_1_C0_C0_4
 
 [0x60,0x76,0x08,0xd5]
 # CHECK: dc	igvac, x0
@@ -499,3 +439,69 @@
 [0x91,0x74,0x0b,0xd5]
 # CHECK: dc	gzva, x17
 # NOMTE: sys	#3, c7, c4, #4, x17
+
+
+
+[0xe0,0x42,0x3b,0xd5]
+# CHECK: mrs	x0, TCO
+# NOMTE: mrs	x0, S3_3_C4_C2_7
+[0xc1,0x10,0x38,0xd5]
+# CHECK: mrs	x1, GCR_EL1
+# NOMTE: mrs	x1, S3_0_C1_C0_6
+[0xa2,0x10,0x38,0xd5]
+# CHECK: mrs	x2, RGSR_EL1
+# NOMTE: mrs	x2, S3_0_C1_C0_5
+[0x03,0x56,0x38,0xd5]
+# CHECK: mrs	x3, TFSR_EL1
+# NOMTE: mrs	x3, S3_0_C5_C6_0
+[0x04,0x56,0x3c,0xd5]
+# CHECK: mrs	x4, TFSR_EL2
+# NOMTE: mrs	x4, S3_4_C5_C6_0
+[0x05,0x56,0x3e,0xd5]
+# CHECK: mrs	x5, TFSR_EL3
+# NOMTE: mrs	x5, S3_6_C5_C6_0
+[0x06,0x56,0x3d,0xd5]
+# CHECK: mrs	x6, TFSR_EL12
+# NOMTE: mrs	x6, S3_5_C5_C6_0
+[0x27,0x56,0x38,0xd5]
+# CHECK: mrs	x7, TFSRE0_EL1
+# NOMTE: mrs	x7, S3_0_C5_C6_1
+[0x88,0x00,0x39,0xd5]
+# CHECK: mrs	x8, GMID_EL1
+# NOMTE: mrs	x8, S3_1_C0_C0_4
+
+
+
+[0x9f,0x40,0x03,0xd5]
+# CHECK: msr	TCO, #0
+# NOMTE: :[[@LINE-2]]:2: warning: invalid instruction encoding
+
+
+[0xe0,0x42,0x1b,0xd5]
+# CHECK: msr	TCO, x0
+# NOMTE: msr	S3_3_C4_C2_7, x0
+[0xc1,0x10,0x18,0xd5]
+# CHECK: msr	GCR_EL1, x1
+# NOMTE: msr	S3_0_C1_C0_6, x1
+[0xa2,0x10,0x18,0xd5]
+# CHECK: msr	RGSR_EL1, x2
+# NOMTE: msr	S3_0_C1_C0_5, x2
+[0x03,0x56,0x18,0xd5]
+# CHECK: msr	TFSR_EL1, x3
+# NOMTE: msr	S3_0_C5_C6_0, x3
+[0x04,0x56,0x1c,0xd5]
+# CHECK: msr	TFSR_EL2, x4
+# NOMTE: msr	S3_4_C5_C6_0, x4
+[0x05,0x56,0x1e,0xd5]
+# CHECK: msr	TFSR_EL3, x5
+# NOMTE: msr	S3_6_C5_C6_0, x5
+[0x06,0x56,0x1d,0xd5]
+# CHECK: msr	TFSR_EL12, x6
+# NOMTE: msr	S3_5_C5_C6_0, x6
+[0x27,0x56,0x18,0xd5]
+# CHECK: msr	TFSRE0_EL1, x7
+# NOMTE: msr	S3_0_C5_C6_1, x7
+# GMID_EL1 is read only
+[0x88,0x00,0x19,0xd5]
+# CHECK: msr	S3_1_C0_C0_4, x8
+# NOMTE: msr	S3_1_C0_C0_4, x8
