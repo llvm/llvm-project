@@ -1831,10 +1831,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
       const MachineOperand &Src = MI.getOperand(Idx);
       Register SrcReg = Src.getReg();
-      if (!SrcReg.isVirtual()) {
-        Known.resetAll();
-        break;
-      }
       if (First) {
         computeKnownFPClass(SrcReg, DemandedElts, InterestedClasses, Known,
                             Depth + 1);
