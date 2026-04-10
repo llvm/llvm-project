@@ -35,16 +35,14 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-rewrite-agpr-copy-mfma"
 
-static cl::opt<unsigned> RewriteAGPRCopyMFMALimit(
-    "amdgpu-rewrite-agpr-copy-mfma-limit", cl::Hidden,
-    cl::desc("Maximum number of MFMA instructions to rewrite to AGPR form."),
-    cl::init(~0U));
+DEBUG_COUNTER(RewriteAGPRCopyMFMACounter, DEBUG_TYPE,
+              "Controls which MFMA chains are rewritten to AGPR form");
 
 namespace {
 
@@ -273,8 +271,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
     LRM.unassign(LI);
   }
 
-  if (NumMFMAsRewrittenToAGPR + RewriteCandidates.size() >
-          RewriteAGPRCopyMFMALimit ||
+  if (!DebugCounter::shouldExecute(RewriteAGPRCopyMFMACounter) ||
       !attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
     // Roll back the register assignments to the original state.
     for (auto [LI, OldAssign] : TentativeReassignments) {
