@@ -9749,8 +9749,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   } else {
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, &CM, Checks,
                            BestPlan);
-    // TODO: Move to general VPlan pipeline once epilogue loops are also
-    // supported.
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
     LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
