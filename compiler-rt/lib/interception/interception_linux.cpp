@@ -54,11 +54,13 @@ void* LookupSymbolNext(const char* symbol) {
   return dlsym(RTLD_NEXT, symbol);
 }
 
+#if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD
 void* LookupSymbolNextVersioned(const char* symbol, const char* version) {
   if (!DynamicLoaderAvailable() || dlvsym == nullptr)
     return nullptr;
   return dlvsym(RTLD_NEXT, symbol, version);
 }
+#endif  // SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD
 
 }  // namespace __interception
 
