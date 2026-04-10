@@ -18,7 +18,6 @@ from lit.ShellEnvironment import (
 )
 
 
-
 def executeBuiltinCd(cmd, shenv):
     """executeBuiltinCd - Change the current directory."""
     if len(cmd.args) != 2:
