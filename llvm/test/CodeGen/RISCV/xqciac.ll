@@ -503,13 +503,13 @@ define i32 @add_shl_OneUse_1(i32 %x) {
 ; RV32IMXQCIAC-LABEL: add_shl_OneUse_1:
 ; RV32IMXQCIAC:       # %bb.0:
 ; RV32IMXQCIAC-NEXT:    ori a0, a0, 1
-; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 4
+; RV32IMXQCIAC-NEXT:    qc.c.muliadd a0, a0, 16
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: add_shl_OneUse_1:
 ; RV32IZBAMXQCIAC:       # %bb.0:
 ; RV32IZBAMXQCIAC-NEXT:    ori a0, a0, 1
-; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 4
+; RV32IZBAMXQCIAC-NEXT:    qc.c.muliadd a0, a0, 16
 ; RV32IZBAMXQCIAC-NEXT:    ret
   %or = or i32 %x, 1
   %mul = shl i32 %or, 4
@@ -600,6 +600,26 @@ define i32 @add_shl_moreOneUse_4(i32 %x) {
   ret i32 %add
 }
 
+define i32 @select20(i1 zeroext %x) {
+; RV32IM-LABEL: select20:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    andi a0, a0, 20
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select20:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    qc.c.muliadd a0, a0, 19
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select20:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    qc.c.muliadd a0, a0, 19
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 20, i32 0
+  ret i32 %select
+}
+
 define i32 @select65(i1 zeroext %x) {
 ; RV32IM-LABEL: select65:
 ; RV32IM:       # %bb.0:
@@ -609,13 +629,79 @@ define i32 @select65(i1 zeroext %x) {
 ;
 ; RV32IMXQCIAC-LABEL: select65:
 ; RV32IMXQCIAC:       # %bb.0:
-; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IMXQCIAC-NEXT:    qc.muliadd a0, a0, 64
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: select65:
 ; RV32IZBAMXQCIAC:       # %bb.0:
-; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a0, a0, 64
 ; RV32IZBAMXQCIAC-NEXT:    ret
   %select = select i1 %x, i32 65, i32 0
   ret i32 %select
+}
+
+
+define i32 @select1111(i1 zeroext %x) {
+; RV32IM-LABEL: select1111:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    andi a0, a0, 1111
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select1111:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    qc.muliadd a0, a0, 1110
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select1111:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a0, a0, 1110
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 1111, i32 0
+  ret i32 %select
+}
+
+define i32 @select8193(i1 zeroext %x) {
+; RV32IM-LABEL: select8193:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    lui a1, 2
+; RV32IM-NEXT:    addi a1, a1, 1
+; RV32IM-NEXT:    and a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select8193:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 13
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select8193:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 13
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 8193, i32 0
+  ret i32 %select
+}
+
+
+define i64 @select_int64_min(i1 zeroext %x) {
+; RV32IM-LABEL: select_int64_min:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    slli a1, a0, 31
+; RV32IM-NEXT:    li a0, 0
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select_int64_min:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    slli a1, a0, 31
+; RV32IMXQCIAC-NEXT:    li a0, 0
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select_int64_min:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    slli a1, a0, 31
+; RV32IZBAMXQCIAC-NEXT:    li a0, 0
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i64 -9223372036854775808, i64 0
+  ret i64 %select
 }

@@ -2051,7 +2051,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
-    OptionalAttr<UWTableKindAttr>:$uwtable_kind
+    OptionalAttr<UWTableKindAttr>:$uwtable_kind,
+    OptionalAttr<BoolAttr>:$use_sample_profile
   );
 
   let regions = (region AnyRegion:$body);
@@ -2066,7 +2067,12 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
       CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs,
-      CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>
+      CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>,
+    OpBuilder<(ins "const Properties &":$properties,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$discardableAttributes), [{
+      $_state.addRegion();
+      $_state.getOrAddProperties<Properties>() = properties;
+      $_state.addAttributes(discardableAttributes);}]>
   ];
 
   let extraClassDeclaration = [{

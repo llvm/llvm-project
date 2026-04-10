@@ -48,6 +48,8 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[TMP1:%.*]] = add i32 [[TC]], 1
 ; CHECK-VS1-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-VS1-NEXT:    [[TMP3:%.*]] = sub i64 20, [[TMP2]]
+; CHECK-VS1-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-VS1-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP14]], 4
 ; CHECK-VS1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; CHECK-VS1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK-VS1:       [[VECTOR_SCEVCHECK]]:
@@ -61,8 +63,6 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-VS1-NEXT:    br i1 [[TMP13]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-VS1:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-VS1-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS1-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP14]], 4
 ; CHECK-VS1-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP3]], [[TMP15]]
 ; CHECK-VS1-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VS1:       [[VECTOR_PH]]:
@@ -141,6 +141,8 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[TMP1:%.*]] = add i32 [[TC]], 1
 ; CHECK-VS2-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-VS2-NEXT:    [[TMP3:%.*]] = sub i64 20, [[TMP2]]
+; CHECK-VS2-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-VS2-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP14]], 3
 ; CHECK-VS2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; CHECK-VS2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK-VS2:       [[VECTOR_SCEVCHECK]]:
@@ -154,8 +156,6 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-VS2-NEXT:    br i1 [[TMP13]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-VS2:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-VS2-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS2-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP14]], 3
 ; CHECK-VS2-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP3]], [[TMP15]]
 ; CHECK-VS2-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VS2:       [[VECTOR_PH]]:
@@ -464,13 +464,9 @@ define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[TMP3]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> zeroinitializer, [[WIDE_LOAD]]
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -480,7 +476,7 @@ define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.0179 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx1 = getelementptr inbounds nuw i32, ptr %tmp, i64 %iv
@@ -490,7 +486,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, 4
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 }
@@ -517,7 +513,7 @@ define i32 @tc4_from_profile(ptr noundef readonly captures(none) %tmp, i64 %N) v
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.0179 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx1 = getelementptr inbounds nuw i32, ptr %tmp, i64 %iv
@@ -527,7 +523,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %exit, label %for.body, !prof !2
 
-exit:                                 ; preds = %for.body
+exit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 }
@@ -546,7 +542,6 @@ exit:                                 ; preds = %for.body
 ; CHECK-VS1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
 ; CHECK-VS1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK-VS1: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
-; CHECK-VS1: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; CHECK-VS1: [[PROF9]] = !{!"branch_weights", i32 10, i32 30}
 ;.
 ; CHECK-VS2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
@@ -557,6 +552,5 @@ exit:                                 ; preds = %for.body
 ; CHECK-VS2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
 ; CHECK-VS2: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK-VS2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
-; CHECK-VS2: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; CHECK-VS2: [[PROF9]] = !{!"branch_weights", i32 10, i32 30}
 ;.

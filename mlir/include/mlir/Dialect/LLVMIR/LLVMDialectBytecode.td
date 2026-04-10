@@ -129,16 +129,21 @@ def DISubroutineTypeAttr : DialectAttribute<(attr
 //===----------------------------------------------------------------------===//
 
 def DICompileUnitAttr : DialectAttribute<(attr
-  Attr<"DistinctAttr">:$id,
+  OptionalAttribute<"DistinctAttr">:$recId,
+  Bool:$isRecSelf,
+  OptionalAttribute<"DistinctAttr">:$id,
   VarInt:$sourceLanguage,
-  Attr<"DIFileAttr">:$file,
+  OptionalAttribute<"DIFileAttr">:$file,
   OptionalAttribute<"StringAttr">:$producer,
   Bool:$isOptimized,
   EnumClassFlag<"DIEmissionKind", "getEmissionKind()">:$_rawEmissionKind,
   LocalVar<"DIEmissionKind", "(DIEmissionKind)_rawEmissionKind">:$emissionKind,
+  Bool:$isDebugInfoForProfiling,
   EnumClassFlag<"DINameTableKind", "getNameTableKind()">:$_rawNameTableKind,
   LocalVar<"DINameTableKind",
-           "(DINameTableKind)_rawNameTableKind">:$nameTableKind
+           "(DINameTableKind)_rawNameTableKind">:$nameTableKind,
+  OptionalAttribute<"StringAttr">:$splitDebugFilename,
+  OptionalArrayRef<"DINodeAttr">:$importedEntities
 )>;
 
 //===----------------------------------------------------------------------===//

@@ -8,10 +8,10 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-LABEL: define i32 @sub_reduction(
 ; CHECK-EPI-SAME: i32 [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-EPI-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-EPI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-EPI-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[TMP0]], 4
 ; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-EPI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-EPI-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
 ; CHECK-EPI-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 39, [[TMP1]]
 ; CHECK-EPI-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-EPI:       [[VECTOR_PH]]:
@@ -87,10 +87,10 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-PARTIAL-RED-EPI-LABEL: define i32 @sub_reduction(
 ; CHECK-PARTIAL-RED-EPI-SAME: i32 [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-PARTIAL-RED-EPI-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[TMP0]], 4
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 39, [[TMP1]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_PH]]:

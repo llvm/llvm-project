@@ -1755,6 +1755,12 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_TRUE(match(VectorInfPoison, m_Inf()));
   EXPECT_FALSE(match(VectorNaNPoison, m_Inf()));
 
+  EXPECT_TRUE(match(ScalarPosInf, m_PosInf()));
+  EXPECT_FALSE(match(ScalarNegInf, m_PosInf()));
+
+  EXPECT_FALSE(match(ScalarPosInf, m_NegInf()));
+  EXPECT_TRUE(match(ScalarNegInf, m_NegInf()));
+
   EXPECT_FALSE(match(ScalarUndef, m_NonInf()));
   EXPECT_FALSE(match(VectorUndef, m_NonInf()));
   EXPECT_FALSE(match(VectorZeroUndef, m_NonInf()));

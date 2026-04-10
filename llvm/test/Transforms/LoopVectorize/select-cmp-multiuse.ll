@@ -488,8 +488,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
 ; CHECK-VF4-IC1-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK-VF4-IC1:       pred.store.if:
-; CHECK-VF4-IC1-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
+; CHECK-VF4-IC1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-VF4-IC1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
 ; CHECK-VF4-IC1-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP10]], 1
 ; CHECK-VF4-IC1-NEXT:    store i32 [[TMP11]], ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META6]]
@@ -607,8 +606,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP15]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK-VF4-IC2:       pred.store.if:
-; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
+; CHECK-VF4-IC2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP18:%.*]] = add nsw i32 [[TMP17]], 1
 ; CHECK-VF4-IC2-NEXT:    store i32 [[TMP18]], ptr [[TMP16]], align 4, !alias.scope [[META9]], !noalias [[META6]]
@@ -1299,7 +1297,7 @@ define i32 @multi_user_cmp_max(ptr readonly %a, i64 noundef %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %all.0.off010 = phi i1 [ true, %entry ], [ %all.0.off0., %for.body ]
   %any.0.off09 = phi i1 [ false, %entry ], [ %.any.0.off0, %for.body ]
@@ -1314,7 +1312,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   %.any.0.off0.lcssa = phi i1 [ %.any.0.off0, %for.body ]
   %all.0.off0..lcssa = phi i1 [ %all.0.off0., %for.body ]
   %0 = select i1 %.any.0.off0.lcssa, i32 2, i32 3
@@ -1322,7 +1320,6 @@ exit:                                             ; preds = %for.body
   ret i32 %1
 }
 
-declare i32 @llvm.smax.i32(i32, i32)
 
 ; Currently, this test-case is not supported.
 ; int multi_user_cmp_use_store_offset(float* a, int *b, long long n) {

@@ -30,30 +30,6 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
   return markDivergent(cast<Value>(&Instr));
 }
 
-template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
-  for (auto &I : instructions(F)) {
-    InstructionUniformity IU = TTI->getInstructionUniformity(&I);
-    switch (IU) {
-    case InstructionUniformity::AlwaysUniform:
-      addUniformOverride(I);
-      break;
-    case InstructionUniformity::NeverUniform:
-      markDivergent(I);
-      break;
-    case InstructionUniformity::Custom:
-      addCustomUniformityCandidate(&I);
-      break;
-    case InstructionUniformity::Default:
-      break;
-    }
-  }
-  for (auto &Arg : F.args()) {
-    if (TTI->getInstructionUniformity(&Arg) ==
-        InstructionUniformity::NeverUniform)
-      markDivergent(&Arg);
-  }
-}
-
 template <>
 void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Value *V) {
@@ -71,6 +47,64 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
   if (Instr.isTerminator())
     return;
   pushUsers(cast<Value>(&Instr));
+}
+
+template <>
+bool llvm::GenericUniformityAnalysisImpl<SSAContext>::printDivergentArgs(
+    raw_ostream &OS) const {
+  bool haveDivergentArgs = false;
+  for (const auto &Arg : F.args()) {
+    if (isDivergent(&Arg)) {
+      if (!haveDivergentArgs) {
+        OS << "DIVERGENT ARGUMENTS:\n";
+        haveDivergentArgs = true;
+      }
+      OS << "  DIVERGENT: " << Context.print(&Arg) << '\n';
+    }
+  }
+  return haveDivergentArgs;
+}
+
+template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
+  // Pre-populate UniformValues with uniform values, then seed divergence.
+  // NeverUniform values are not inserted -- they are divergent by definition
+  // and will be reported as such by isDivergent() (not in UniformValues).
+  SmallVector<const Value *, 4> DivergentArgs;
+  for (auto &Arg : F.args()) {
+    if (TTI->getValueUniformity(&Arg) == ValueUniformity::NeverUniform)
+      DivergentArgs.push_back(&Arg);
+    else
+      UniformValues.insert(&Arg);
+  }
+  for (auto &I : instructions(F)) {
+    ValueUniformity IU = TTI->getValueUniformity(&I);
+    switch (IU) {
+    case ValueUniformity::AlwaysUniform:
+      UniformValues.insert(&I);
+      addUniformOverride(I);
+      continue;
+    case ValueUniformity::NeverUniform:
+      // Skip inserting -- divergent by definition. Add to Worklist directly
+      // so compute() propagates divergence to users.
+      if (I.isTerminator())
+        DivergentTermBlocks.insert(I.getParent());
+      Worklist.push_back(&I);
+      continue;
+    case ValueUniformity::Custom:
+      UniformValues.insert(&I);
+      addCustomUniformityCandidate(&I);
+      continue;
+    case ValueUniformity::Default:
+      UniformValues.insert(&I);
+      break;
+    }
+  }
+  // Arguments are not instructions and cannot go on the Worklist, so we
+  // propagate their divergence to users explicitly here. This must happen
+  // after all instructions are in UniformValues so markDivergent (called
+  // inside pushUsers) can successfully erase user instructions from the set.
+  for (const Value *Arg : DivergentArgs)
+    pushUsers(Arg);
 }
 
 template <>
@@ -133,14 +167,13 @@ template struct llvm::GenericUniformityAnalysisImplDeleter<
 
 llvm::UniformityInfo UniformityInfoAnalysis::run(Function &F,
                                                  FunctionAnalysisManager &FAM) {
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  if (!TTI.hasBranchDivergence(&F))
+    return UniformityInfo{};
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &CI = FAM.getResult<CycleAnalysis>(F);
   UniformityInfo UI{DT, CI, &TTI};
-  // Skip computation if we can assume everything is uniform.
-  if (TTI.hasBranchDivergence(&F))
-    UI.compute();
-
+  UI.compute();
   return UI;
 }
 
@@ -181,18 +214,20 @@ void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
-  auto &cycleInfo = getAnalysis<CycleInfoWrapperPass>().getResult();
-  auto &domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &targetTransformInfo =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   m_function = &F;
+
+  if (!targetTransformInfo.hasBranchDivergence(m_function)) {
+    m_uniformityInfo = UniformityInfo{};
+    return false;
+  }
+
+  auto &cycleInfo = getAnalysis<CycleInfoWrapperPass>().getResult();
+  auto &domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   m_uniformityInfo = UniformityInfo{domTree, cycleInfo, &targetTransformInfo};
-
-  // Skip computation if we can assume everything is uniform.
-  if (targetTransformInfo.hasBranchDivergence(m_function))
-    m_uniformityInfo.compute();
-
+  m_uniformityInfo.compute();
   return false;
 }
 

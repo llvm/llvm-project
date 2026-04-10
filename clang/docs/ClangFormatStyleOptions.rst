@@ -6831,6 +6831,16 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      Foo::Foo() : a(a) {}                   Foo::Foo(): a(a) {}
 
+.. _SpaceBeforeEnumUnderlyingTypeColon:
+
+**SpaceBeforeEnumUnderlyingTypeColon** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpaceBeforeEnumUnderlyingTypeColon>`
+  If ``false``, spaces will be removed before enum underlying type colon.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     enum E : int {}                        enum E: int {}
+
 .. _SpaceBeforeInheritanceColon:
 
 **SpaceBeforeInheritanceColon** (``Boolean``) :versionbadge:`clang-format 7` :ref:`¶ <SpaceBeforeInheritanceColon>`

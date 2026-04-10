@@ -610,7 +610,8 @@ protected:
             uint32_t expr_path_options =
                 StackFrame::eExpressionPathOptionCheckPtrVsMember |
                 StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
-                StackFrame::eExpressionPathOptionsInspectAnonymousUnions;
+                StackFrame::eExpressionPathOptionsInspectAnonymousUnions |
+                StackFrame::eExpressionPathOptionsAllowVarUpdates;
             lldb::VariableSP var_sp;
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
@@ -637,8 +638,21 @@ protected:
               Stream &output_stream = result.GetOutputStream();
               options.SetRootValueObjectName(
                   valobj_sp->GetParent() ? entry.c_str() : nullptr);
-              if (llvm::Error error = valobj_sp->Dump(output_stream, options))
-                result.AppendError(toString(std::move(error)));
+              // Check only the `error` argument, because doing
+              // `valobj_sp->GetError()` will update the value and potentially
+              // return a new error that happens during the update, even if
+              // `GetValueForVariableExpressionPath` reported no errors.
+              if (error.Fail()) {
+                result.SetStatus(eReturnStatusFailed);
+                result.SetError(error.takeError());
+              } else {
+                // If there is an error while updating the value, it will be
+                // printed here as the contents of the value, e.g.
+                // `(int) *((int*)0) = <parent is NULL>`
+                if (llvm::Error error = valobj_sp->Dump(output_stream, options))
+                  result.AppendError(toString(std::move(error)));
+              }
+
             } else {
               if (auto error_cstr = error.AsCString(nullptr))
                 result.AppendError(error_cstr);
@@ -690,7 +704,7 @@ protected:
                 options.SetVariableFormatDisplayLanguage(
                     valobj_sp->GetPreferredDisplayLanguage());
                 options.SetRootValueObjectName(
-                    var_sp ? var_sp->GetName().AsCString() : nullptr);
+                    var_sp ? var_sp->GetName().AsCString(nullptr) : nullptr);
                 if (llvm::Error error =
                         valobj_sp->Dump(result.GetOutputStream(), options))
                   result.AppendError(toString(std::move(error)));
@@ -714,7 +728,8 @@ protected:
             options.SetFormat(m_option_format.GetFormat());
             options.SetVariableFormatDisplayLanguage(
                 rec_value_sp->GetPreferredDisplayLanguage());
-            options.SetRootValueObjectName(rec_value_sp->GetName().AsCString());
+            options.SetRootValueObjectName(
+                rec_value_sp->GetName().AsCString(nullptr));
             if (llvm::Error error =
                     rec_value_sp->Dump(result.GetOutputStream(), options))
               result.AppendError(toString(std::move(error)));
@@ -902,7 +917,7 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
 
   if (interpreter &&
       !interpreter->CheckObjectExists(m_options.m_class_name.c_str())) {
-    result.AppendWarning("The provided class does not exist - please define it "
+    result.AppendWarning("the provided class does not exist - please define it "
                          "before attempting to use this frame recognizer");
   }
 

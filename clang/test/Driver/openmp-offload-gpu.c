@@ -449,3 +449,11 @@
 // RUN:   | FileCheck --check-prefix=NO-UBSAN %s
 //
 // NO-UBSAN-NOT: --device-compiler=amdgcn-amd-amdhsa=-fsanitize=undefined
+
+// Check that --cuda-path and --rocm-path are forwarded unconditionally
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda --rocm-path=%S/Inputs/rocm \
+// RUN:     --offload-arch=sm_89 --offload-arch=gfx906 -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CUDA-PATH %s
+// CUDA-PATH: clang-linker-wrapper{{.*}} "--device-compiler=--cuda-path={{.*}}"{{.*}}"--device-compiler=--rocm-path={{.*}}"
