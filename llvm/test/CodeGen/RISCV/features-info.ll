@@ -65,9 +65,9 @@
 ; CHECK-NEXT:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
 ; CHECK-NEXT:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK-NEXT:   mips-p8700                       - MIPS p8700 processor.
-; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference..
+; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference.
 ; CHECK-NEXT:   no-sink-splat-operands           - Disable sink splat operands to enable .vx, .vf,.wx, and .wf instructions.
-; CHECK-NEXT:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store..
+; CHECK-NEXT:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store.
 ; CHECK-NEXT:   optimized-nf2-segment-load-store - vlseg2eN.v and vsseg2eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-nf3-segment-load-store - vlseg3eN.v and vsseg3eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-nf4-segment-load-store - vlseg4eN.v and vsseg4eN.v are implemented as a wide memory op and shuffle.
@@ -82,7 +82,7 @@
 ; CHECK-NEXT:   prefer-vsetvli-over-read-vlenb   - Prefer vsetvli over read vlenb CSR to calculate VLEN.
 ; CHECK-NEXT:   prefer-w-inst                    - Prefer instructions with W suffix.
 ; CHECK-NEXT:   q                                - 'Q' (Quad-Precision Floating-Point).
-; CHECK-NEXT:   relax                            - Enable Linker relaxation..
+; CHECK-NEXT:   relax                            - Enable Linker relaxation.
 ; CHECK-NEXT:   reserve-x1                       - Reserve X1.
 ; CHECK-NEXT:   reserve-x10                      - Reserve X10.
 ; CHECK-NEXT:   reserve-x11                      - Reserve X11.
@@ -124,7 +124,7 @@
 ; CHECK-NEXT:   rvb23u64                         - RISC-V rvb23u64 profile.
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.
 ; CHECK-NEXT:   rvi20u64                         - RISC-V rvi20u64 profile.
-; CHECK-NEXT:   save-restore                     - Enable save/restore..
+; CHECK-NEXT:   save-restore                     - Enable save/restore.
 ; CHECK-NEXT:   sdext                            - 'Sdext' (External debugger).
 ; CHECK-NEXT:   sdtrig                           - 'Sdtrig' (Debugger triggers).
 ; CHECK-NEXT:   sha                              - 'Sha' (Augmented Hypervisor).
