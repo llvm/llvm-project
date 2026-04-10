@@ -27769,8 +27769,14 @@ performExpandedI128CmpCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (CCCode == ISD::SETUGT || CCCode == ISD::SETUGE) {
     // x >  K  <=> (xhi > khi)  || (xhi==khi && xlo >  klo)
     // x >= K  <=> (xhi > khi)  || (xhi==khi && xlo >= klo)
-    SDValue ZeroHi = DAG.getConstant(0, SDLoc(N), LHSHi.getValueType());
+    // This specialized form relies on the immediate living entirely in the low
+    // 64 bits. When the high half is non-zero, reducing the compare to a
+    // high==0 test is invalid and can miscompile widened expressions such as
+    // (shl i128 X, 1) > C.
+    if (!isNullConstant(RHSHi))
+      return SDValue();
 
+    SDValue ZeroHi = DAG.getConstant(0, SDLoc(N), LHSHi.getValueType());
     ISD::CondCode LoCC = (CCCode == ISD::SETUGT) ? ISD::SETULE : ISD::SETULT;
 
     SDValue HiEq =
