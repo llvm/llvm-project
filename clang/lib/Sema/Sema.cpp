@@ -3040,16 +3040,22 @@ bool Sema::processProfilesEnforceAttr(
   return true;
 }
 
-ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
-  StringRef ProfileName;
-  if (!checkStringLiteralArgumentAttr(AL, 0, ProfileName))
-    return nullptr;
-
-  StringRef Justification, Rule;
+std::optional<Sema::ParsedProfileSuppressInfo>
+Sema::getProfileSuppressInfo(const ParsedAttr &AL) {
+  ParsedProfileSuppressInfo Info;
+  if (!checkStringLiteralArgumentAttr(AL, 0, Info.ProfileName))
+    return std::nullopt;
   if (AL.getNumArgs() >= 2)
-    checkStringLiteralArgumentAttr(AL, 1, Justification);
+    checkStringLiteralArgumentAttr(AL, 1, Info.Justification);
   if (AL.getNumArgs() >= 3)
-    checkStringLiteralArgumentAttr(AL, 2, Rule);
+    checkStringLiteralArgumentAttr(AL, 2, Info.Rule);
+  return Info;
+}
+
+ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
+  auto Info = getProfileSuppressInfo(AL);
+  if (!Info)
+    return nullptr;
 
   SmallVector<StringRef, 4> RawArgs;
   for (unsigned I = 3; I < AL.getNumArgs(); ++I) {
@@ -3059,8 +3065,8 @@ ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
   }
 
   return ::new (Context) ProfilesSuppressAttr(
-      Context, AL, ProfileName, Justification, Rule, RawArgs.data(),
-      RawArgs.size());
+      Context, AL, Info->ProfileName, Info->Justification, Info->Rule,
+      RawArgs.data(), RawArgs.size());
 }
 
 void Sema::pushProfileSuppression(StringRef ProfileName, StringRef RuleName) {
@@ -3132,16 +3138,8 @@ Sema::ProfileSuppressRAII::ProfileSuppressRAII(
   for (const auto &AL : Attrs) {
     if (AL.getKind() != ParsedAttr::AT_ProfilesSuppress)
       continue;
-    if (AL.getNumArgs() < 1)
-      continue;
-    if (const auto *SL =
-            dyn_cast<StringLiteral>(AL.getArgAsExpr(0))) {
-      StringRef Rule;
-      if (AL.getNumArgs() >= 3)
-        if (const auto *RuleSL =
-                dyn_cast<StringLiteral>(AL.getArgAsExpr(2)))
-          Rule = RuleSL->getString();
-      S.pushProfileSuppression(SL->getString(), Rule);
+    if (auto Info = S.getProfileSuppressInfo(AL)) {
+      S.pushProfileSuppression(Info->ProfileName, Info->Rule);
       ++Count;
     }
   }
