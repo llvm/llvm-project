@@ -5,6 +5,27 @@
 
 class Foo {};
 
-// CLASS: {"Contexts":[{"DocumentationFileName":"index","End":true,"Name":"Global Namespace","QualName":"GlobalNamespace","RelativePath":"{{.*}}","USR":"0000000000000000000000000000000000000000"}],"DocumentationFileName":"_ZTV3Foo","HasContexts":true,"InfoType":"record","IsTypedef":false,"Location":{"Filename":"{{.*}}compact.cpp","LineNumber":6},"MangledName":"_ZTV3Foo","Name":"Foo","Namespace":["GlobalNamespace"],"Path":"GlobalNamespace","TagType":"class","USR":"{{([0-9A-F]{40})}}"}
+// CLASS:      {
+// CLASS-SAME: "Contexts":
+// CLASS-SAME: [{"DocumentationFileName":"index",
+// CLASS-SAME: "End":true,
+// CLASS-SAME: "Name":"Global Namespace",
+// CLASS-SAME: "QualName":"GlobalNamespace",
+// CLASS-SAME: "RelativePath":"{{.*}}","USR":"0000000000000000000000000000000000000000"}],
+// CLASS-SAME: "DocumentationFileName":"_ZTV3Foo",
+// CLASS-SAME: "HasContexts":true,
+// CLASS-SAME: "InfoType":"record",
+// CLASS-SAME: "IsTypedef":false,
+// CLASS-SAME: "Location":{"Filename":"{{.*}}compact.cpp","LineNumber":6},
+// CLASS-SAME: "MangledName":"_ZTV3Foo",
+// CLASS-SAME: "Name":"Foo",
+// CLASS-SAME: "Namespace":["GlobalNamespace"],
+// CLASS-SAME: "Path":"GlobalNamespace",
+// CLASS-SAME: "TagType":"class",
+// CLASS-SAME: "USR":"{{([0-9A-F]{40})}}"}
 
-// INDEX: {"Index":[{"Name":"GlobalNamespace","QualName":"GlobalNamespace","Type":"namespace","USR":"0000000000000000000000000000000000000000"}]}
+// INDEX:      {"Index":
+// INDEX-SAME: [{"Name":"GlobalNamespace",
+// INDEX-SAME: "QualName":"GlobalNamespace",
+// INDEX-SAME: "Type":"namespace",
+// INDEX-SAME: "USR":"0000000000000000000000000000000000000000"}]}
