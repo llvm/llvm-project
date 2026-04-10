@@ -1054,9 +1054,8 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     --NumSpills;
   SlotIndex FoldIdx = LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
   if (CopyMI) {
-    LIS.InsertMachineInstrInMaps(*CopyMI);
+    SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
     if (!MRI.isSSA()) {
-      SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
       LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
       VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
       LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
@@ -1103,7 +1102,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   // Insert any new instructions other than FoldMI into the LIS maps.
   assert(!MIS.empty() && "Unexpected empty span of instructions!");
   for (MachineInstr &MI : MIS)
-    if (&MI != FoldMI)
+    if (&MI != FoldMI && &MI != CopyMI)
       LIS.InsertMachineInstrInMaps(MI);
 
   // TII.foldMemoryOperand may have left some implicit operands on the

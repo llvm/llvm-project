@@ -160,11 +160,9 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   SlotIndex FoldIdx = LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
   if (CopyMI) {
     SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
-    if (!MRI.isSSA()) {
-      LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
-      VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
-      LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
-    }
+    LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
+    VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+    LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
   }
   // Update the call info.
   if (UseMI->shouldUpdateAdditionalCallInfo())

@@ -1241,7 +1241,7 @@ entry:
   ret void
 }
 
-define i64 @pr191165(i32 %0, ptr %1) {
+define i64 @pr191165(i32 %a, ptr %b) {
 ; NDD-LABEL: pr191165:
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
@@ -1272,9 +1272,9 @@ define i64 @pr191165(i32 %0, ptr %1) {
 ; NF-NEXT:    movl %eax, 0 # encoding: [0x89,0x04,0x25,0x00,0x00,0x00,0x00]
 ; NF-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
 ; NF-NEXT:    retq # encoding: [0xc3]
-  %3 = load i32, ptr %1, align 4
-  %4 = or i32 %3, %0
-  store volatile i32 %4, ptr null, align 4
-  %5 = sext i32 %0 to i64
-  ret i64 %5
+  %x = load i32, ptr %b, align 4
+  %y = or i32 %x, %a
+  store volatile i32 %y, ptr null, align 4
+  %z = sext i32 %a to i64
+  ret i64 %z
 }
