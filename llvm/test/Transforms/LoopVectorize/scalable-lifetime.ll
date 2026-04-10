@@ -54,23 +54,23 @@ define void @test(ptr %d) {
 
 entry:
   %arr = alloca [1024 x i32], align 16
-  call void @llvm.lifetime.start.p0(ptr %arr) #1
+  call void @llvm.lifetime.start.p0(ptr %arr)
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  call void @llvm.lifetime.end.p0(ptr %arr) #1
+  call void @llvm.lifetime.end.p0(ptr %arr)
   %arrayidx = getelementptr inbounds i32, ptr %d, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 8
   store i32 100, ptr %arrayidx, align 8
-  call void @llvm.lifetime.start.p0(ptr %arr) #1
+  call void @llvm.lifetime.start.p0(ptr %arr)
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, 128
   br i1 %exitcond, label %for.body, label %for.end, !llvm.loop !0
 
 for.end:
-  call void @llvm.lifetime.end.p0(ptr %arr) #1
+  call void @llvm.lifetime.end.p0(ptr %arr)
   ret void
 }
 
@@ -126,11 +126,11 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr [1024 x i32], ptr %arr, i32 0, i64 %indvars.iv
-  call void @llvm.lifetime.end.p0(ptr %arr) #1
+  call void @llvm.lifetime.end.p0(ptr %arr)
   %arrayidx = getelementptr inbounds i32, ptr %d, i64 %indvars.iv
   %1 = load i32, ptr %arrayidx, align 8
   store i32 100, ptr %arrayidx, align 8
-  call void @llvm.lifetime.start.p0(ptr %arr) #1
+  call void @llvm.lifetime.start.p0(ptr %arr)
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, 128
@@ -140,9 +140,7 @@ for.end:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
-declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}

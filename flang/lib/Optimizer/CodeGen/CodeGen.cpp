@@ -65,6 +65,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOLLVMLOWERING
@@ -72,6 +73,14 @@ namespace fir {
 } // namespace fir
 
 #define DEBUG_TYPE "flang-codegen"
+
+static llvm::cl::opt<bool> useNativeLogicalOps(
+    "fir-logical-native-ops",
+    llvm::cl::desc(
+        "Use bitwise operations on the storage type for logical operations "
+        "instead of normalizing to i1. Requires that all logical values "
+        "are in their canonical representation."),
+    llvm::cl::init(false));
 
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
@@ -1753,8 +1762,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
       if (!typeDesc) {
         if (useInputType) {
-          mlir::Type innerType = fir::unwrapInnerType(inputType);
-          if (innerType && mlir::isa<fir::RecordType>(innerType)) {
+          mlir::Type innerType = fir::getFortranElementType(inputType);
+          if (mlir::isa<fir::RecordType>(innerType)) {
             auto recTy = mlir::dyn_cast<fir::RecordType>(innerType);
             typeDesc =
                 getTypeDescriptor(mod, rewriter, loc, recTy, this->options);
@@ -3391,6 +3400,18 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       g.setAlignment(*global.getAlignment());
 
     auto module = global->getParentOfType<mlir::ModuleOp>();
+
+    // Mimic shouldAssumeDSOLocal in clang, marking external definitions as
+    // dso_local if it is defined and is ELF, and either static or PIE.
+    bool isDefinition = global.isInitialized();
+    if (isDefinition && linkage == mlir::LLVM::Linkage::External &&
+        fir::getTargetTriple(module).isOSBinFormatELF()) {
+      llvm::Reloc::Model rm = fir::getRelocationModel(module);
+      bool isPIE = fir::getIsPIE(module);
+      if (rm == llvm::Reloc::Static || isPIE)
+        g.setDsoLocal(true);
+    }
+
     auto gpuMod = global->getParentOfType<mlir::gpu::GPUModuleOp>();
     // Add comdat if necessary
     if (fir::getTargetTriple(module).supportsCOMDAT() &&
@@ -3447,6 +3468,15 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         *global.getDataAttr() == cuf::DataAttribute::Constant)
       g.setAddrSpace(
           static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Constant));
+
+    if (gpuMod && global.getDataAttr() &&
+        *global.getDataAttr() == cuf::DataAttribute::Managed &&
+        !mlir::isa<fir::BaseBoxType>(global.getType())) {
+      g.setAddrSpace(
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Global));
+      g->setAttr(mlir::NVVM::NVVMDialect::getManagedAttrName(),
+                 mlir::UnitAttr::get(global.getContext()));
+    }
 
     rewriter.eraseOp(global);
     return mlir::success();
@@ -4283,6 +4313,115 @@ struct NegcOpConversion : public fir::FIROpConversion<fir::NegcOp> {
   }
 };
 
+/// Normalize a logical value to i1 by comparing with zero.
+static mlir::Value
+normalizeLogicalToI1(mlir::ConversionPatternRewriter &rewriter,
+                     mlir::Location loc, mlir::Value value) {
+  mlir::Type ty = value.getType();
+  auto i1Ty = mlir::IntegerType::get(rewriter.getContext(), 1);
+  if (ty == i1Ty)
+    return value;
+  mlir::Value zero = fir::genConstantIndex(loc, ty, rewriter, 0);
+  return mlir::LLVM::ICmpOp::create(rewriter, loc,
+                                    mlir::LLVM::ICmpPredicate::ne, value, zero);
+}
+
+/// Extend an i1 value to the given integer type. Returns the value unchanged
+/// if it is already the target type.
+static mlir::Value extendI1ToType(mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Location loc, mlir::Value i1Val,
+                                  mlir::Type toTy) {
+  auto i1Ty = mlir::IntegerType::get(rewriter.getContext(), 1);
+  if (toTy == i1Ty)
+    return i1Val;
+  return mlir::LLVM::ZExtOp::create(rewriter, loc, toTy, i1Val);
+}
+
+/// Logical AND codegen.
+struct LogicalAndOpConversion : public fir::FIROpConversion<fir::LogicalAndOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::LogicalAndOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type resTy = convertType(op.getType());
+    auto loc = op.getLoc();
+    if (useNativeLogicalOps) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(
+          op, resTy, adaptor.getLhs(), adaptor.getRhs());
+    } else {
+      auto lhs = normalizeLogicalToI1(rewriter, loc, adaptor.getLhs());
+      auto rhs = normalizeLogicalToI1(rewriter, loc, adaptor.getRhs());
+      auto res = mlir::LLVM::AndOp::create(rewriter, loc, lhs, rhs);
+      rewriter.replaceOp(op, extendI1ToType(rewriter, loc, res, resTy));
+    }
+    return mlir::success();
+  }
+};
+
+/// Logical OR codegen.
+struct LogicalOrOpConversion : public fir::FIROpConversion<fir::LogicalOrOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::LogicalOrOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type resTy = convertType(op.getType());
+    auto loc = op.getLoc();
+    if (useNativeLogicalOps) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(op, resTy, adaptor.getLhs(),
+                                                    adaptor.getRhs());
+    } else {
+      auto lhs = normalizeLogicalToI1(rewriter, loc, adaptor.getLhs());
+      auto rhs = normalizeLogicalToI1(rewriter, loc, adaptor.getRhs());
+      auto res = mlir::LLVM::OrOp::create(rewriter, loc, lhs, rhs);
+      rewriter.replaceOp(op, extendI1ToType(rewriter, loc, res, resTy));
+    }
+    return mlir::success();
+  }
+};
+
+/// Logical equivalence codegen.
+struct EqvOpConversion : public fir::FIROpConversion<fir::EqvOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::EqvOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type resTy = convertType(op.getType());
+    auto loc = op.getLoc();
+    auto lhs = normalizeLogicalToI1(rewriter, loc, adaptor.getLhs());
+    auto rhs = normalizeLogicalToI1(rewriter, loc, adaptor.getRhs());
+    auto res = mlir::LLVM::ICmpOp::create(
+        rewriter, loc, mlir::LLVM::ICmpPredicate::eq, lhs, rhs);
+    rewriter.replaceOp(op, extendI1ToType(rewriter, loc, res, resTy));
+    return mlir::success();
+  }
+};
+
+/// Logical non-equivalence codegen.
+struct NeqvOpConversion : public fir::FIROpConversion<fir::NeqvOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::NeqvOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type resTy = convertType(op.getType());
+    auto loc = op.getLoc();
+    if (useNativeLogicalOps) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
+          op, resTy, adaptor.getLhs(), adaptor.getRhs());
+    } else {
+      auto lhs = normalizeLogicalToI1(rewriter, loc, adaptor.getLhs());
+      auto rhs = normalizeLogicalToI1(rewriter, loc, adaptor.getRhs());
+      auto res = mlir::LLVM::ICmpOp::create(
+          rewriter, loc, mlir::LLVM::ICmpPredicate::ne, lhs, rhs);
+      rewriter.replaceOp(op, extendI1ToType(rewriter, loc, res, resTy));
+    }
+    return mlir::success();
+  }
+};
+
 struct BoxOffsetOpConversion : public fir::FIROpConversion<fir::BoxOffsetOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -4632,19 +4771,20 @@ void fir::populateFIRToLLVMConversionPatterns(
       DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
-      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
-      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
-      GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
-      LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
-      NegcOpConversion, NoReassocOpConversion, PrefetchOpConversion,
-      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
-      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-      UndefOpConversion, UnreachableOpConversion, UseStmtOpConversion,
-      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
-      ZeroOpConversion>(converter, options);
+      EmboxProcOpConversion, EqvOpConversion, ExtractValueOpConversion,
+      FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
+      GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
+      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+      LogicalAndOpConversion, LogicalOrOpConversion, MulcOpConversion,
+      NegcOpConversion, NeqvOpConversion, NoReassocOpConversion,
+      PrefetchOpConversion, SelectCaseOpConversion, SelectOpConversion,
+      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
+      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
+      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+      UseStmtOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
+      XReboxOpConversion, ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.

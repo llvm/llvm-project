@@ -52,7 +52,7 @@ llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
   encodeAddrOffsets(O, Hdr.AddrOffSize, Hdr.BaseAddress);
 
   O.alignTo(4);
-  const off_t AddrInfoOffsetsOffset = O.tell();
+  const uint64_t AddrInfoOffsetsOffset = O.tell();
   for (size_t i = 0, n = Funcs.size(); i < n; ++i)
     O.writeU32(0);
 
@@ -60,9 +60,9 @@ llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
   if (auto Err = encodeFileTable(O))
     return Err;
 
-  const off_t StrtabOffset = O.tell();
+  const uint64_t StrtabOffset = O.tell();
   StrTab.write(O.get_stream());
-  const off_t StrtabSize = O.tell() - StrtabOffset;
+  const uint64_t StrtabSize = O.tell() - StrtabOffset;
   std::vector<uint32_t> AddrInfoOffsets;
 
   if (StrtabSize > UINT32_MAX) {

@@ -972,3 +972,5 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp,
 
   hash = hasher.result();
 }
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::EmptyProperties)

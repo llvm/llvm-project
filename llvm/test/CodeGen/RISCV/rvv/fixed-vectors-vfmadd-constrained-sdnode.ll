@@ -389,11 +389,10 @@ define <32 x half> @vfmadd_vf_v32f16(<32 x half> %va, <32 x half> %vb, half %c) 
 ;
 ; ZVFBFA-LABEL: vfmadd_vf_v32f16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; ZVFBFA-NEXT:    li a0, 32
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZVFBFA-NEXT:    vmv4r.v v4, v12
 ; ZVFBFA-NEXT:    fmv.x.h a0, fa0
-; ZVFBFA-NEXT:    li a1, 32
-; ZVFBFA-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; ZVFBFA-NEXT:    vmv.v.x v12, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v4

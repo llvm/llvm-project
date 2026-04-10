@@ -330,6 +330,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                   {v2s64, v2s64}})
       .clampScalar(0, s32, s128)
       .widenScalarToNextPow2(0)
+      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
       .minScalarEltSameAsIf(always, 1, 0)
       .maxScalarEltSameAsIf(always, 1, 0)
       .clampNumElements(0, v8s8, v16s8)
@@ -350,6 +351,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v4s32, v4s32}})
       .widenScalarToNextPow2(1, /*Min=*/32)
       .clampScalar(1, s32, s64)
+      .widenScalarOrEltToNextPow2OrMinSize(1, /*Min=*/8)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -1262,6 +1264,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             return Query.Types[0].isFixedVector() &&
                    Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getScalarSizeInBits() >= 8 &&
+                   isPowerOf2_64(Query.Types[0].getScalarSizeInBits()) &&
                    Query.Types[0].getSizeInBits() <= 128 &&
                    Query.Types[1].getSizeInBits() <= 64;
           },
