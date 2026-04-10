@@ -20,6 +20,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
@@ -31,6 +32,7 @@ namespace llvm {
 
 class MachineFrameInfo;
 class MachineFunction;
+class MachineInstr;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class TargetRegisterClass;
@@ -84,6 +86,24 @@ public:
   void printCustom(raw_ostream &OS) const override {
     OS << "GWSResource";
   }
+};
+
+struct MFMASmallGemmSingleWaveCache {
+  unsigned DSWCount = 0;
+  unsigned DSWWithPermCount = 0;
+  unsigned DSWWithSharedVMEMCount = 0;
+};
+
+struct MFMAExpInterleaveCache {
+  unsigned TransPipeCount = 0;
+  unsigned MFMAPipeCount = 0;
+  unsigned AddPipeCount = 0;
+  unsigned MFMAEnablement = 0;
+  unsigned ExpRequirement = 0;
+  unsigned MFMAChains = 0;
+  bool HasCvt = false;
+  bool HasChainBetweenCvt = false;
+  bool AnalysisResult = false;
 };
 
 namespace yaml {
@@ -259,6 +279,45 @@ template <> struct MappingTraits<SIMode> {
   }
 };
 
+struct MFMASmallGemmSingleWaveCacheEntry {
+  unsigned MBBNum = 0;
+  unsigned StrategyId = 0;
+  MFMASmallGemmSingleWaveCache Cache;
+};
+
+template <> struct MappingTraits<MFMASmallGemmSingleWaveCacheEntry> {
+  static void mapping(IO &YamlIO, MFMASmallGemmSingleWaveCacheEntry &E) {
+    YamlIO.mapRequired("mbb", E.MBBNum);
+    YamlIO.mapRequired("strategyId", E.StrategyId);
+    YamlIO.mapRequired("dswCount", E.Cache.DSWCount);
+    YamlIO.mapRequired("dswWithPermCount", E.Cache.DSWWithPermCount);
+    YamlIO.mapRequired("dswWithSharedVMEMCount",
+                       E.Cache.DSWWithSharedVMEMCount);
+  }
+};
+
+struct MFMAExpInterleaveCacheEntry {
+  unsigned MBBNum = 0;
+  unsigned StrategyId = 0;
+  MFMAExpInterleaveCache Cache;
+};
+
+template <> struct MappingTraits<MFMAExpInterleaveCacheEntry> {
+  static void mapping(IO &YamlIO, MFMAExpInterleaveCacheEntry &E) {
+    YamlIO.mapRequired("mbb", E.MBBNum);
+    YamlIO.mapRequired("strategyId", E.StrategyId);
+    YamlIO.mapRequired("transPipeCount", E.Cache.TransPipeCount);
+    YamlIO.mapRequired("mfmaPipeCount", E.Cache.MFMAPipeCount);
+    YamlIO.mapRequired("addPipeCount", E.Cache.AddPipeCount);
+    YamlIO.mapRequired("mfmaEnablement", E.Cache.MFMAEnablement);
+    YamlIO.mapRequired("expRequirement", E.Cache.ExpRequirement);
+    YamlIO.mapRequired("mfmaChains", E.Cache.MFMAChains);
+    YamlIO.mapRequired("hasCvt", E.Cache.HasCvt);
+    YamlIO.mapRequired("hasChainBetweenCvt", E.Cache.HasChainBetweenCvt);
+    YamlIO.mapRequired("analysisResult", E.Cache.AnalysisResult);
+  }
+};
+
 struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   uint64_t ExplicitKernArgSize = 0;
   Align MaxKernArgAlign;
@@ -302,6 +361,9 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
   bool IsWholeWaveFunction = false;
+
+  SmallVector<MFMASmallGemmSingleWaveCacheEntry> MFMASmallGemmSingleWaveCaches;
+  SmallVector<MFMAExpInterleaveCacheEntry> MFMAExpInterleaveCaches;
 
   unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
@@ -360,6 +422,9 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("mfmaSmallGemmSingleWaveCaches",
+                       MFI.MFMASmallGemmSingleWaveCaches);
+    YamlIO.mapOptional("mfmaExpInterleaveCaches", MFI.MFMAExpInterleaveCaches);
     YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
@@ -614,7 +679,11 @@ private:
   // load/store is enabled.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
-private:
+  DenseMap<const MachineInstr *, MFMASmallGemmSingleWaveCache>
+      MFMASmallGemmSingleWaveCaches;
+  DenseMap<const MachineInstr *, MFMAExpInterleaveCache>
+      MFMAExpInterleaveCaches;
+
   Register VGPRForAGPRCopy;
 
   bool allocateVirtualVGPRForSGPRSpills(MachineFunction &MF, int FI,
@@ -632,6 +701,45 @@ public:
     VGPRForAGPRCopy = NewVGPRForAGPRCopy;
   }
 
+  const MFMASmallGemmSingleWaveCache *
+  getMFMASmallGemmSingleWaveCache(const MachineInstr *MI) const {
+    DenseMap<const MachineInstr *, MFMASmallGemmSingleWaveCache>::const_iterator
+        It = MFMASmallGemmSingleWaveCaches.find(MI);
+    return It == MFMASmallGemmSingleWaveCaches.end() ? nullptr : &It->second;
+  }
+
+  const MFMASmallGemmSingleWaveCache *
+  setMFMASmallGemmSingleWaveCache(const MachineInstr *MI,
+                                  MFMASmallGemmSingleWaveCache &&Cache) {
+    return &MFMASmallGemmSingleWaveCaches
+                .emplace_or_assign(MI, std::move(Cache))
+                .first->getSecond();
+  }
+
+  const MFMAExpInterleaveCache *
+  getMFMAExpInterleaveCache(const MachineInstr *MI) const {
+    DenseMap<const MachineInstr *, MFMAExpInterleaveCache>::const_iterator It =
+        MFMAExpInterleaveCaches.find(MI);
+    return It == MFMAExpInterleaveCaches.end() ? nullptr : &It->second;
+  }
+
+  const MFMAExpInterleaveCache *
+  setMFMAExpInterleaveCache(const MachineInstr *MI,
+                            MFMAExpInterleaveCache &&Cache) {
+    return &MFMAExpInterleaveCaches.emplace_or_assign(MI, std::move(Cache))
+                .first->getSecond();
+  }
+
+  const DenseMap<const MachineInstr *, MFMASmallGemmSingleWaveCache> &
+  getMFMASmallGemmSingleWaveCaches() const {
+    return MFMASmallGemmSingleWaveCaches;
+  }
+
+  const DenseMap<const MachineInstr *, MFMAExpInterleaveCache> &
+  getMFMAExpInterleaveCaches() const {
+    return MFMAExpInterleaveCaches;
+  }
+
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
 
   void setMaskForVGPRBlockOps(Register RegisterBlock, uint32_t Mask) {
@@ -647,7 +755,6 @@ public:
     return MaskForVGPRBlockOps.inBounds(RegisterBlock);
   }
 
-public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
   SIMachineFunctionInfo(const Function &F, const GCNSubtarget *STI);
 
@@ -1228,5 +1335,8 @@ public:
 };
 
 } // end namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MFMASmallGemmSingleWaveCacheEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MFMAExpInterleaveCacheEntry)
 
 #endif // LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H

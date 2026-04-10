@@ -772,6 +772,18 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
   auto SFI = MFI.getOptionalScavengeFI();
   if (SFI)
     ScavengeFI = yaml::FrameIndex(*SFI, MF.getFrameInfo());
+
+  for (const auto &[MI, C] : MFI.getMFMASmallGemmSingleWaveCaches()) {
+    MFMASmallGemmSingleWaveCaches.push_back(
+        {static_cast<unsigned>(MI->getParent()->getNumber()),
+         static_cast<unsigned>(MI->getOperand(0).getImm()), C});
+  }
+
+  for (const auto &[MI, C] : MFI.getMFMAExpInterleaveCaches()) {
+    MFMAExpInterleaveCaches.push_back(
+        {static_cast<unsigned>(MI->getParent()->getNumber()),
+         static_cast<unsigned>(MI->getOperand(0).getImm()), C});
+  }
 }
 
 void yaml::SIMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
@@ -821,6 +833,35 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   } else {
     ScavengeFI = std::nullopt;
   }
+
+  if (!YamlMFI.MFMASmallGemmSingleWaveCaches.empty() ||
+      !YamlMFI.MFMAExpInterleaveCaches.empty()) {
+    for (const MachineBasicBlock &MBB : MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (MI.getOpcode() != AMDGPU::IGLP_OPT)
+          continue;
+        unsigned MBBNum = MBB.getNumber();
+        unsigned StrategyId = static_cast<unsigned>(MI.getOperand(0).getImm());
+
+        for (const yaml::MFMASmallGemmSingleWaveCacheEntry &E :
+             YamlMFI.MFMASmallGemmSingleWaveCaches) {
+          if (E.MBBNum == MBBNum && E.StrategyId == StrategyId) {
+            MFMASmallGemmSingleWaveCaches[&MI] = E.Cache;
+            break;
+          }
+        }
+
+        for (const yaml::MFMAExpInterleaveCacheEntry &E :
+             YamlMFI.MFMAExpInterleaveCaches) {
+          if (E.MBBNum == MBBNum && E.StrategyId == StrategyId) {
+            MFMAExpInterleaveCaches[&MI] = E.Cache;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   return false;
 }
 
