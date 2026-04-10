@@ -20,3 +20,27 @@ struct Hello {
 
   void UnnamedExplicitObjectParam(this Hello &) {}
 };
+
+
+class OverloadedUnresolvedWithAutoLambda {
+public:
+  void CallsFunctionVar();
+  void CallsOverloadedMethodWithArg(int a);
+  void OverloadedMethodWithoutArg();
+  void OverloadedMethodWithArg(int a) { };
+};
+
+void OverloadedUnresolvedWithAutoLambda::CallsFunctionVar() {
+  // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: method 'CallsFunctionVar' can be made static [readability-convert-member-functions-to-static]
+  auto fun = [&](auto a) {
+    var(a);
+  };
+}
+
+void OverloadedUnresolvedWithAutoLambda::CallsOverloadedMethodWithArg(int a) {
+  auto fun = [&](auto b) {
+    OverloadedMethodWithArg(b);
+  };
+}
+
+void Var(int a) { }
