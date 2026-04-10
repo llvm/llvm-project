@@ -167,9 +167,9 @@ public:
     // Should preserve the same set that TwoAddressInstructions does.
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
-    AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
+    //AU.addPreserved<SlotIndexesWrapperPass>();
+    //AU.addPreserved<LiveIntervalsWrapperPass>();
+    //AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -861,11 +861,14 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
   LoweredIf.clear();
   KillBlocks.clear();
 
+#if 1
   if (Changed)
     for (MachineBasicBlock &MBB : MF)
       for (MachineInstr &MI : MBB)
         if (MI.isBundled())
           MI.unbundleFromSucc();
+#endif
+  //llvm::finalizeBundles(MF);
 
   return Changed;
 }
@@ -905,9 +908,9 @@ SILowerControlFlowPass::run(MachineFunction &MF,
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachinePostDominatorTreeAnalysis>();
-  PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<LiveIntervalsAnalysis>();
-  PA.preserve<LiveVariablesAnalysis>();
+  //PA.preserve<SlotIndexesAnalysis>();
+  //PA.preserve<LiveIntervalsAnalysis>();
+  //PA.preserve<LiveVariablesAnalysis>();
   PA.preserve<MachineBlockFrequencyAnalysis>();
   return PA;
 }

@@ -55,13 +55,15 @@ static inline void moveInsBeforePhis(MachineInstr &MI) {
       ClonedMI->bundleWithPred();
     }
     MI.eraseFromParent();
-  } else
+  } else {
     for (auto *PredMBB : MBB.predecessors()) {
       MachineInstr &BranchMI = getBranchWithDest(*PredMBB, MBB);
       MachineInstr *ClonedMI = MF.CloneMachineInstr(&MI);
       PredMBB->insertAfterBundle(BranchMI.getIterator(), ClonedMI);
       ClonedMI->bundleWithPred();
     }
+    MI.eraseFromParent();
+  }
 }
 
 struct EpilogIterator {
