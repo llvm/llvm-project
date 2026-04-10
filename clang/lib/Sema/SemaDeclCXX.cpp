@@ -9673,9 +9673,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
         DiagKind = NonTrivialDecl;
     } else if (CSM == CXXSpecialMemberKind::Destructor &&
                S.getLangOpts().CPlusPlus26) {
-      // In C++26, a union's destructor is not deleted merely because a
-      // variant member has a non-trivial destructor. Deletion is determined
-      // by the new union-specific rules (see C++26 [class.dtor]p7).
+      // C++26 [class.dtor]p7: union destructor deletion is determined
+      // by the union-specific rules, not variant member triviality.
       return false;
     } else {
       DiagKind = NonTrivialDecl;
@@ -9838,9 +9837,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
   if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD))
     return true;
 
-  // In C++26, a union's defaulted default constructor is trivially defined
-  // and never deleted due to variant member properties
-  // (see C++26 [class.default.ctor]p3).
+  // C++26 [class.default.ctor]p3: a union's defaulted default constructor
+  // is trivially defined regardless of variant members.
   if (inUnion() && S.getLangOpts().CPlusPlus26 &&
       CSM == CXXSpecialMemberKind::DefaultConstructor)
     return false;
@@ -10001,7 +9999,8 @@ static bool ShouldDeleteUnionDestructorInCpp26(Sema &S, CXXRecordDecl *RD,
     return true;
   }
 
-  // Bullet 2: variant member with DMI and non-trivial dtor.
+  // Bullet 2: variant member with default member initializer (DMI)
+  // and non-trivial destructor.
   if (!RD->hasDMIWithNonTrivialDtor())
     return false;
 
@@ -10590,7 +10589,7 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
   if (RD->isUnion() && getLangOpts().CPlusPlus26 &&
       (CSM == CXXSpecialMemberKind::DefaultConstructor ||
        CSM == CXXSpecialMemberKind::Destructor)) {
-    // Skip member triviality checks for unions in C++26.
+    // Union member triviality doesn't affect the union's own triviality.
   } else if (!checkTrivialClassMembers(*this, RD, CSM, ConstArg, TAH, Diagnose))
     return false;
 

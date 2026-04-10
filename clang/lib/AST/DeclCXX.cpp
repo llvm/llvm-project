@@ -81,10 +81,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasPrivateFields(false), HasProtectedFields(false),
       HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
       HasOnlyCMembers(true), HasInitMethod(false), HasInClassInitializer(false),
-      HasDMIWithNonTrivialDtor(false),
-      HasUninitializedReferenceMember(false), HasUninitializedFields(false),
-      HasInheritedConstructor(false), HasInheritedDefaultConstructor(false),
-      HasInheritedAssignment(false),
+      HasDMIWithNonTrivialDtor(false), HasUninitializedReferenceMember(false),
+      HasUninitializedFields(false), HasInheritedConstructor(false),
+      HasInheritedDefaultConstructor(false), HasInheritedAssignment(false),
       NeedOverloadResolutionForCopyConstructor(false),
       NeedOverloadResolutionForMoveConstructor(false),
       NeedOverloadResolutionForCopyAssignment(false),
@@ -1178,16 +1177,18 @@ void CXXRecordDecl::addedMember(Decl *D) {
          Field->getType()->getAsCXXRecordDecl()->hasInClassInitializer())) {
       data().HasInClassInitializer = true;
 
-      // C++26 [class.dtor]p7 bullet 2: track whether any field with a DMI
-      // has a type with a non-trivial destructor, for union dtor deletion.
+      // C++26 [class.dtor]p7 bullet 2: track whether any field with a
+      // default member initializer (DMI) has a type with a non-trivial
+      // destructor, for union destructor deletion.
       if (Field->hasInClassInitializer()) {
-        QualType FT =
-            getASTContext().getBaseElementType(Field->getType());
+        QualType FT = getASTContext().getBaseElementType(Field->getType());
         if (const auto *FR = FT->getAsCXXRecordDecl();
             FR && FR->hasNonTrivialDestructor())
           data().HasDMIWithNonTrivialDtor = true;
       } else if (Field->isAnonymousStructOrUnion()) {
-        if (Field->getType()->getAsCXXRecordDecl()->data()
+        if (Field->getType()
+                ->getAsCXXRecordDecl()
+                ->data()
                 .HasDMIWithNonTrivialDtor)
           data().HasDMIWithNonTrivialDtor = true;
       }
