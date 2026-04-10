@@ -73,7 +73,7 @@ The LFI target has several configuration options.
 Use ``+nolfi-loads`` to create a "stores-only" sandbox that may read, but not
 write, outside the sandbox region.
 
-Use ``+nolfi-loads+nolfi-stores`` to create a "jumps-only" sandbox that may
+Use ``+nolfi-loads,+nolfi-stores`` to create a "jumps-only" sandbox that may
 read/write outside the sandbox region but may not transfer control outside
 (e.g., may not execute system calls directly). This is primarily useful in
 combination with some other form of memory sandboxing, such as Intel MPK.
