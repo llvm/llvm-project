@@ -2663,9 +2663,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
              (C->getType()->getScalarSizeInBits() == 1);
     };
     if (m_SubXorCmp(Op0, Op1))
-      return SelectInst::Create(C, Builder.CreateNeg(X), X);
+      return createSelectInstWithUnknownProfile(C, Builder.CreateNeg(X), X);
     if (m_SubXorCmp(Op1, Op0))
-      return SelectInst::Create(C, X, Builder.CreateNeg(X));
+      return createSelectInstWithUnknownProfile(C, X, Builder.CreateNeg(X));
   }
 
   if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))

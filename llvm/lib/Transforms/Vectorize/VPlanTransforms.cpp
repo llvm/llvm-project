@@ -734,8 +734,9 @@ static bool isDeadRecipe(VPRecipeBase &R) {
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_post_order_deep(Plan.getEntry()))) {
+  PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
@@ -1485,12 +1486,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
         *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
 
-  // Don't convert udiv to lshr inside a replicate region, as VPInstructions are
-  // not allowed in them.
-  const VPRegionBlock *ParentRegion = Def->getParent()->getParent();
-  bool IsInReplicateRegion = ParentRegion && ParentRegion->isReplicator();
-  if (CanCreateNewRecipe && !IsInReplicateRegion &&
-      match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) && APC->isPowerOf2())
+  if (CanCreateNewRecipe && match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) &&
+      APC->isPowerOf2())
     return Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::LShr,
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
@@ -2711,8 +2708,9 @@ static void licm(VPlan &Plan) {
   // Sink recipes with no users inside the vector loop region if all users are
   // in the same exit block of the region.
   // TODO: Extend to sink recipes from inner loops.
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_post_order_shallow(LoopRegion->getEntry()))) {
+  PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> POT(
+      LoopRegion->getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (cannotHoistOrSinkRecipe(R))
         continue;

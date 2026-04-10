@@ -71,14 +71,6 @@ def _llvm_repos_extension_impl(module_ctx):
     )
 
     http_archive(
-        name = "pybind11",
-        url = "https://github.com/pybind/pybind11/archive/v2.10.3.zip",
-        sha256 = "201966a61dc826f1b1879a24a3317a1ec9214a918c8eb035be2f30c3e9cfbdcb",
-        strip_prefix = "pybind11-2.10.3",
-        build_file = "@llvm-raw//utils/bazel/third_party_build:pybind.BUILD",
-    )
-
-    http_archive(
         name = "pyyaml",
         url = "https://github.com/yaml/pyyaml/archive/refs/tags/5.1.zip",
         sha256 = "f0a35d7f282a6d6b1a4f3f3965ef5c124e30ed27a0088efb97c0977268fd671f",
