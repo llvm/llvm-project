@@ -9139,6 +9139,12 @@ public:
       TypeSourceInfo *TInfo, const InitializedEntity &Entity,
       const InitializationKind &Kind, MultiExprArg Init);
 
+  /// Build an alias for CTAD from type template parameters (C++26).
+  TypeAliasTemplateDecl *
+  BuildAliasForCTADFromTypeTemplateParameter(TemplateTemplateParmDecl *D,
+                                             TemplateName Replacement,
+                                             SourceLocation Loc);
+
   ///@}
 
   //

@@ -10140,32 +10140,60 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   if (TemplateName.isDependent())
     return SubstAutoTypeSourceInfoDependent(TSInfo)->getType();
 
-  // We can only perform deduction for class templates or alias templates.
-  auto *Template =
-      dyn_cast_or_null<ClassTemplateDecl>(TemplateName.getAsTemplateDecl());
-  TemplateDecl *LookupTemplateDecl = Template;
-  if (!Template) {
-    if (auto *AliasTemplate = dyn_cast_or_null<TypeAliasTemplateDecl>(
-            TemplateName.getAsTemplateDecl())) {
-      DiagCompat(Kind.getLocation(), diag_compat::ctad_for_alias_templates);
-      LookupTemplateDecl = AliasTemplate;
-      auto UnderlyingType = AliasTemplate->getTemplatedDecl()
-                                ->getUnderlyingType()
-                                .getCanonicalType();
-      // C++ [over.match.class.deduct#3]: ..., the defining-type-id of A must be
-      // of the form
-      //   [typename] [nested-name-specifier] [template] simple-template-id
-      if (const auto *TST =
-              UnderlyingType->getAs<TemplateSpecializationType>()) {
-        Template = dyn_cast_or_null<ClassTemplateDecl>(
-            TST->getTemplateName().getAsTemplateDecl());
-      } else if (const auto *RT = UnderlyingType->getAs<RecordType>()) {
-        // Cases where template arguments in the RHS of the alias are not
-        // dependent. e.g.
-        //   using AliasFoo = Foo<bool>;
-        if (const auto *CTSD =
-                llvm::dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
-          Template = CTSD->getSpecializedTemplate();
+  TemplateDecl *LookupTemplateDecl = nullptr;
+  ClassTemplateDecl *Template = nullptr;
+
+  // [C++26] [over.match.class.deduct]p3
+  // When resolving a placeholder for a deduced class type where the
+  // template-name designates a type template template parameter P.
+  //
+  // This is applied as a DR to C++20 (Aliases templates are technically a C++20
+  // feature)
+  if (const SubstTemplateTemplateParmStorage *SubstitutedTTP =
+          TemplateName.getAsSubstTemplateTemplateParm();
+      SubstitutedTTP && getLangOpts().CPlusPlus20) {
+
+    TypeAliasTemplateDecl *Alias = BuildAliasForCTADFromTypeTemplateParameter(
+        SubstitutedTTP->getParameter(), SubstitutedTTP->getReplacement(),
+        Kind.getLocation());
+    if (!Alias)
+      return QualType();
+
+    LookupTemplateDecl = Alias;
+    auto UnderlyingType =
+        Alias->getTemplatedDecl()->getUnderlyingType().getCanonicalType();
+    const auto *TST = UnderlyingType->getAs<TemplateSpecializationType>();
+    Template = dyn_cast_or_null<ClassTemplateDecl>(
+        TST->getTemplateName().getAsTemplateDecl());
+  } else {
+    // We can only perform deduction for class templates or alias templates.
+    Template =
+        dyn_cast_or_null<ClassTemplateDecl>(TemplateName.getAsTemplateDecl());
+    LookupTemplateDecl = Template;
+    if (!Template) {
+      if (auto *AliasTemplate = dyn_cast_or_null<TypeAliasTemplateDecl>(
+              TemplateName.getAsTemplateDecl())) {
+        DiagCompat(Kind.getLocation(), diag_compat::ctad_for_alias_templates);
+        LookupTemplateDecl = AliasTemplate;
+        auto UnderlyingType = AliasTemplate->getTemplatedDecl()
+                                  ->getUnderlyingType()
+                                  .getCanonicalType();
+        // C++ [over.match.class.deduct#3]: ..., the defining-type-id of A must
+        // be of the form
+        //   [typename] [nested-name-specifier] [template] simple-template-id
+        if (const auto *TST =
+                UnderlyingType->getAs<TemplateSpecializationType>()) {
+          Template = dyn_cast_or_null<ClassTemplateDecl>(
+              TST->getTemplateName().getAsTemplateDecl());
+        } else if (const auto *RT = UnderlyingType->getAs<RecordType>()) {
+          // Cases where template arguments in the RHS of the alias are not
+          // dependent. e.g.
+          //   using AliasFoo = Foo<bool>;
+          if (const auto *CTSD =
+                  llvm::dyn_cast<ClassTemplateSpecializationDecl>(
+                      RT->getDecl()))
+            Template = CTSD->getSpecializedTemplate();
+        }
       }
     }
   }

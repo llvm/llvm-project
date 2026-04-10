@@ -1582,3 +1582,59 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
 
   SavedContext.pop();
 }
+
+TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
+    TemplateTemplateParmDecl *D, TemplateName Replacement, SourceLocation Loc) {
+
+  // [C++26] [over.match.class.deduct]p3
+  // When resolving a placeholder for a deduced class type where the
+  // template-name designates a type template template parameter P, let A be an
+  // alias template whose template parameter list is that of P and whose
+  // defining-type-id designates the type template template argument with a
+  // simpletemplate-id in which the template-argument-list consists of a list of
+  // identifiers naming each template-parameter of P, with the argument being a
+  // pack expansion if the template-parameter is a pack. A is then used instead
+  // of the original template-name to resolve the placeholder
+
+  LocalInstantiationScope Scope(SemaRef);
+
+  auto &AST = SemaRef.getASTContext();
+  auto *Func = cast<NamedDecl>(CurContext);
+  auto *Ctx = CurContext->getParent();
+
+  MultiLevelTemplateArgumentList MTAL =
+      SemaRef.getTemplateInstantiationArgs(Func);
+  llvm::SmallVector<NamedDecl *> Parameters;
+  llvm::SmallVector<TemplateArgument> Args;
+  for (NamedDecl *P : D->getTemplateParameters()->asArray()) {
+    auto [Depth, Index] = getDepthAndIndex(P);
+    NamedDecl *NewParam =
+        transformTemplateParameter(*this, Ctx, P, MTAL, Index, Depth - 1);
+    if (!NewParam)
+      return nullptr;
+    Parameters.push_back(NewParam);
+    Args.push_back(SemaRef.Context.getInjectedTemplateArg(NewParam));
+  }
+
+  auto *ParamList =
+      TemplateParameterList::Create(AST, SourceLocation(), SourceLocation(),
+                                    Parameters, SourceLocation(), nullptr);
+
+  QualType Type = AST.getCanonicalType(AST.getTemplateSpecializationType(
+      ElaboratedTypeKeyword::Class, Replacement, Args, {}));
+
+  auto *Alias = TypeAliasDecl::Create(AST, Ctx, Loc, SourceLocation(), nullptr,
+                                      AST.getTrivialTypeSourceInfo(Type));
+  Alias->setImplicit(true);
+
+  auto *Template = TypeAliasTemplateDecl::Create(
+      AST, Ctx, Loc, Alias->getDeclName(), ParamList, Alias);
+
+  Alias->setDescribedAliasTemplate(Template);
+
+  Template->setImplicit(true);
+  Template->setLexicalDeclContext(Alias->getDeclContext());
+  Ctx->addDecl(Template);
+
+  return Template;
+}
