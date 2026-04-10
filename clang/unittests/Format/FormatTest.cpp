@@ -22354,6 +22354,7 @@ TEST_F(FormatTest, StructuredBindings) {
 
 TEST_F(FormatTest, FileAndCode) {
   EXPECT_EQ(FormatStyle::LK_C, guessLanguage("foo.c", ""));
+  EXPECT_EQ(FormatStyle::LK_C, guessLanguage("foo.c.in", ""));
   EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.cc", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.m", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.mm", ""));
@@ -22523,6 +22524,9 @@ TEST_F(FormatTest, GetLanguageByComment) {
   EXPECT_EQ(FormatStyle::LK_C,
             guessLanguage("foo.h", "// clang-format Language: C\n"
                                    "int i;"));
+  EXPECT_EQ(FormatStyle::LK_C,
+            guessLanguage("foo.h.in", "// clang-format Language: C\n"
+                                      "int i;"));
   EXPECT_EQ(FormatStyle::LK_Cpp,
             guessLanguage("foo.h", "// clang-format Language: Cpp\n"
                                    "int DoStuff(CGRect rect);"));
