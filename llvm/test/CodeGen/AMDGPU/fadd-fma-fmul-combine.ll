@@ -14,8 +14,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul() #0 {
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -36,8 +34,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul() #0 {
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -58,8 +54,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul() #0 {
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -94,8 +88,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul() #0 {
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -116,8 +108,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul() #0 {
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -138,8 +128,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul() #0 {
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -174,8 +162,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -199,8 +185,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -224,8 +208,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -263,8 +245,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul_commute() #0 {
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -288,8 +268,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul_commute() #0 {
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -313,8 +291,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul_commute() #0 {
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -352,8 +328,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd() #0 {
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -377,8 +351,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd() #0 {
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -402,8 +374,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd() #0 {
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -441,8 +411,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd_commute() #0 
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -466,8 +434,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd_commute() #0 
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -491,8 +457,6 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd_commute() #0 
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -530,8 +494,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -555,8 +517,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -580,8 +540,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -619,8 +577,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_lhs() #0 {
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -644,8 +600,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_lhs() #0 {
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -669,8 +623,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_lhs() #0 {
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -708,8 +660,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_rhs() #0 {
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -733,8 +683,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_rhs() #0 {
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -758,8 +706,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_rhs() #0 {
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -797,8 +743,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_lhs() #
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -826,8 +770,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_lhs() #
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -855,8 +797,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_lhs() #
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -899,8 +839,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_rhs() #
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FLUSH-NEXT:    s_mov_b32 s2, -1
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr0
-; GCN-FLUSH-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FLUSH-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -928,8 +866,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_rhs() #
 ; GCN-FASTFMA:       ; %bb.0:
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-FASTFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-FASTFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-FASTFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -957,8 +893,6 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_rhs() #
 ; GCN-SLOWFMA:       ; %bb.0:
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-SLOWFMA-NEXT:    s_mov_b32 s2, -1
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr0
-; GCN-SLOWFMA-NEXT:    ; implicit-def: $sgpr1
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc

@@ -172,8 +172,6 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; GCN-NEXT:  .LBB1_4: ; %bb18
 ; GCN-NEXT:    ; Parent Loop BB1_3 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
-; GCN-NEXT:    ; implicit-def: $sgpr0
-; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 8, v0

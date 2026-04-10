@@ -26,6 +26,9 @@ define arm_aapcs_vfpcc <8 x half> @fceil_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-MVE-NEXT:    vrintp.f16 s0, s0
 ; CHECK-MVE-NEXT:    vrintp.f16 s4, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vins.f16 s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vrintp.f16 s4, s4
@@ -98,6 +101,9 @@ define arm_aapcs_vfpcc <8 x half> @ftrunc_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-MVE-NEXT:    vrintz.f16 s0, s0
 ; CHECK-MVE-NEXT:    vrintz.f16 s4, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vins.f16 s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vrintz.f16 s4, s4
@@ -170,6 +176,9 @@ define arm_aapcs_vfpcc <8 x half> @frint_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-MVE-NEXT:    vrintx.f16 s0, s0
 ; CHECK-MVE-NEXT:    vrintx.f16 s4, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vins.f16 s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vrintx.f16 s4, s4
@@ -237,6 +246,9 @@ define arm_aapcs_vfpcc <8 x half> @fnearbyint_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmovx.f16 s4, s0
 ; CHECK-NEXT:    vrintr.f16 s0, s0
 ; CHECK-NEXT:    vrintr.f16 s4, s4
+; CHECK-NEXT:    @ implicit-def: $s6
+; CHECK-NEXT:    @ implicit-def: $s7
+; CHECK-NEXT:    @ implicit-def: $s5
 ; CHECK-NEXT:    vins.f16 s0, s4
 ; CHECK-NEXT:    vmovx.f16 s4, s1
 ; CHECK-NEXT:    vrintr.f16 s4, s4
@@ -304,6 +316,9 @@ define arm_aapcs_vfpcc <8 x half> @ffloor_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-MVE-NEXT:    vrintm.f16 s0, s0
 ; CHECK-MVE-NEXT:    vrintm.f16 s4, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vins.f16 s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vrintm.f16 s4, s4
@@ -376,6 +391,9 @@ define arm_aapcs_vfpcc <8 x half> @fround_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-MVE-NEXT:    vrinta.f16 s0, s0
 ; CHECK-MVE-NEXT:    vrinta.f16 s4, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vins.f16 s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vrinta.f16 s4, s4
@@ -448,6 +466,9 @@ define arm_aapcs_vfpcc <8 x half> @froundeven_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-MVE-NEXT:    vrintn.f16 s0, s0
 ; CHECK-MVE-NEXT:    vrintn.f16 s4, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vins.f16 s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vrintn.f16 s4, s4

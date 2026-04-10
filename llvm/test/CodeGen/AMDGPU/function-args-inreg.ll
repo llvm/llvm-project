@@ -1529,140 +1529,71 @@ define void @void_func_v32i32_i1_i8_i16_f32_inreg(<32 x i32> inreg %arg0, i1 inr
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: void_func_v32i32_i1_i8_i16_f32_inreg:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s8, v1
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s9, v0
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s12, v3
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s13, v2
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, s26 :: v_dual_mov_b32 v3, s27
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s10, v5
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s11, v4
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s40, v7
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s41, v6
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v4, s20 :: v_dual_mov_b32 v5, s21
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v6, s22 :: v_dual_mov_b32 v7, s23
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s42, v13
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s20, v12
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s21, v11
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s22, v10
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s14, v9
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s15, v8
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s7, v14
-; GFX11-TRUE16-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s19
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v6, s2 :: v_dual_mov_b32 v7, s3
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr15_hi16
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s6, v15
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v8, s22 :: v_dual_mov_b32 v9, s21
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v10, s20 :: v_dual_mov_b32 v11, s42
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr17_hi16
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr16_hi16
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s5, v16
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v12, s41 :: v_dual_mov_b32 v13, s40
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v14, s15 :: v_dual_mov_b32 v15, s14
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s4, v17
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v16, s13 :: v_dual_mov_b32 v17, s12
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v18, s11 :: v_dual_mov_b32 v19, s10
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, s7, 1
-; GFX11-TRUE16-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b128 v[0:1], v[16:19], off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s28 :: v_dual_mov_b32 v1, s29
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, s9 :: v_dual_mov_b32 v3, s8
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s6
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v6, s5 :: v_dual_mov_b32 v7, s4
-; GFX11-TRUE16-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b8 v[0:1], v4, off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b8 v[0:1], v5, off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v6, off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v7, off dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: void_func_v32i32_i1_i8_i16_f32_inreg:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s8, v1
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s9, v0
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s12, v3
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s13, v2
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, s26 :: v_dual_mov_b32 v3, s27
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s10, v5
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s11, v4
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s40, v7
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s41, v6
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, s20 :: v_dual_mov_b32 v5, s21
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v6, s22 :: v_dual_mov_b32 v7, s23
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s42, v13
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s20, v12
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s21, v11
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s22, v10
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s14, v9
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s15, v8
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s7, v14
-; GFX11-FAKE16-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s19
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v6, s2 :: v_dual_mov_b32 v7, s3
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s6, v15
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v8, s22 :: v_dual_mov_b32 v9, s21
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v10, s20 :: v_dual_mov_b32 v11, s42
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s5, v16
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v12, s41 :: v_dual_mov_b32 v13, s40
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v14, s15 :: v_dual_mov_b32 v15, s14
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s4, v17
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v16, s13 :: v_dual_mov_b32 v17, s12
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v18, s11 :: v_dual_mov_b32 v19, s10
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, s7, 1
-; GFX11-FAKE16-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b128 v[0:1], v[16:19], off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s28 :: v_dual_mov_b32 v1, s29
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, s9 :: v_dual_mov_b32 v3, s8
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s6
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v6, s5 :: v_dual_mov_b32 v7, s4
-; GFX11-FAKE16-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b8 v[0:1], v4, off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b8 v[0:1], v5, off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v6, off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v7, off dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: void_func_v32i32_i1_i8_i16_f32_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s8, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s9, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s12, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s13, v2
+; GFX11-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
+; GFX11-NEXT:    v_dual_mov_b32 v2, s26 :: v_dual_mov_b32 v3, s27
+; GFX11-NEXT:    v_readfirstlane_b32 s10, v5
+; GFX11-NEXT:    v_readfirstlane_b32 s11, v4
+; GFX11-NEXT:    v_readfirstlane_b32 s40, v7
+; GFX11-NEXT:    v_readfirstlane_b32 s41, v6
+; GFX11-NEXT:    v_dual_mov_b32 v4, s20 :: v_dual_mov_b32 v5, s21
+; GFX11-NEXT:    v_dual_mov_b32 v6, s22 :: v_dual_mov_b32 v7, s23
+; GFX11-NEXT:    v_readfirstlane_b32 s42, v13
+; GFX11-NEXT:    v_readfirstlane_b32 s20, v12
+; GFX11-NEXT:    v_readfirstlane_b32 s21, v11
+; GFX11-NEXT:    v_readfirstlane_b32 s22, v10
+; GFX11-NEXT:    v_readfirstlane_b32 s14, v9
+; GFX11-NEXT:    v_readfirstlane_b32 s15, v8
+; GFX11-NEXT:    v_readfirstlane_b32 s7, v14
+; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
+; GFX11-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s19
+; GFX11-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
+; GFX11-NEXT:    v_dual_mov_b32 v6, s2 :: v_dual_mov_b32 v7, s3
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v15
+; GFX11-NEXT:    v_dual_mov_b32 v8, s22 :: v_dual_mov_b32 v9, s21
+; GFX11-NEXT:    v_dual_mov_b32 v10, s20 :: v_dual_mov_b32 v11, s42
+; GFX11-NEXT:    v_readfirstlane_b32 s5, v16
+; GFX11-NEXT:    v_dual_mov_b32 v12, s41 :: v_dual_mov_b32 v13, s40
+; GFX11-NEXT:    v_dual_mov_b32 v14, s15 :: v_dual_mov_b32 v15, s14
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v17
+; GFX11-NEXT:    v_dual_mov_b32 v16, s13 :: v_dual_mov_b32 v17, s12
+; GFX11-NEXT:    v_dual_mov_b32 v18, s11 :: v_dual_mov_b32 v19, s10
+; GFX11-NEXT:    s_and_b32 s0, s7, 1
+; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b128 v[0:1], v[16:19], off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_dual_mov_b32 v0, s28 :: v_dual_mov_b32 v1, s29
+; GFX11-NEXT:    v_dual_mov_b32 v2, s9 :: v_dual_mov_b32 v3, s8
+; GFX11-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s6
+; GFX11-NEXT:    v_dual_mov_b32 v6, s5 :: v_dual_mov_b32 v7, s4
+; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b8 v[0:1], v4, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b8 v[0:1], v5, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b16 v[0:1], v6, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_store_b16 v[0:1], v7, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store volatile <32 x i32> %arg0, ptr addrspace(1) poison
   store volatile i1 %arg1, ptr addrspace(1) poison
   store volatile i8 %arg2, ptr addrspace(1) poison

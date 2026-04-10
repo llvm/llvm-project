@@ -27,7 +27,6 @@ define amdgpu_ps float @uniform_kill(float %a, i32 %b, float %c) {
 ; SI-NEXT:    s_cbranch_execz .LBB0_5
 ; SI-NEXT:  ; %bb.4: ; %if2
 ; SI-NEXT:    s_mov_b32 s3, 0
-; SI-NEXT:    ; implicit-def: $sgpr2
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v2
 ; SI-NEXT:    v_cvt_i32_f32_e32 v0, v0
@@ -70,7 +69,6 @@ define amdgpu_ps float @uniform_kill(float %a, i32 %b, float %c) {
 ; FLAT-NEXT:    s_cbranch_execz .LBB0_5
 ; FLAT-NEXT:  ; %bb.4: ; %if2
 ; FLAT-NEXT:    s_mov_b32 s3, 0
-; FLAT-NEXT:    ; implicit-def: $sgpr2
 ; FLAT-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; FLAT-NEXT:    v_add_f32_e32 v0, 1.0, v2
 ; FLAT-NEXT:    v_cvt_i32_f32_e32 v0, v0

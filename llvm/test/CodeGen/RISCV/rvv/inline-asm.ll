@@ -469,6 +469,12 @@ define void @test_vector_tuple_type2(target("riscv.vector.tuple", <vscale x 16 x
 ; CHECK-NEXT:    vl1r.v v28, (a0)
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    vl1r.v v29, (a0)
+; CHECK-NEXT:    # implicit-def: $v2
+; CHECK-NEXT:    # implicit-def: $v3
+; CHECK-NEXT:    # implicit-def: $v4
+; CHECK-NEXT:    # implicit-def: $v5
+; CHECK-NEXT:    # implicit-def: $v30
+; CHECK-NEXT:    # implicit-def: $v30
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vsseg3e8.v v8, (a1)
 ; CHECK-NEXT:    #NO_APP

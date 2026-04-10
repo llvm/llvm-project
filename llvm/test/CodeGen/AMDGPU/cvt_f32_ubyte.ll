@@ -140,8 +140,6 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    ; implicit-def: $sgpr5
 ; SI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -153,8 +151,6 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
-; VI-NEXT:    ; implicit-def: $sgpr4
-; VI-NEXT:    ; implicit-def: $sgpr5
 ; VI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -269,18 +265,11 @@ define float @v_uitofp_i8_to_f32(i8 %arg0) nounwind {
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: v_uitofp_i8_to_f32:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: v_uitofp_i8_to_f32:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: v_uitofp_i8_to_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cvt = uitofp i8 %arg0 to float
   ret float %cvt
 }
@@ -314,7 +303,6 @@ define <2 x float> @v_uitofp_v2i8_to_v2f32(i16 %arg0) nounwind {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_ubyte0_e32 v0, v1
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_ubyte1_e32 v1, v1

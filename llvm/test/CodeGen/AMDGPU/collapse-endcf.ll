@@ -1038,7 +1038,6 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    s_cbranch_execz .LBB5_1
 ; GCN-NEXT:  ; %bb.6: ; %bb8
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
-; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    v_mov_b32_e32 v5, v3
 ; GCN-NEXT:    v_mov_b32_e32 v4, v2
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1

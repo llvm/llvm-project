@@ -16,13 +16,12 @@ body:             |
     ; CHECK-LABEL: name: regsequence-undef-subreg-use
     ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
     ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0:sreg_64 = COPY [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub1:sreg_64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub1:sreg_64 = COPY undef %2:sgpr_32
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[COPY]].sub1, implicit $exec
     ;
     ; LIS-LABEL: name: regsequence-undef-subreg-use
     ; LIS: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
-    ; LIS-NEXT: undef [[COPY:%[0-9]+]].sub0:sreg_64 = COPY [[S_MOV_B32_]]
-    ; LIS-NEXT: dead [[COPY:%[0-9]+]].sub1:sreg_64 = IMPLICIT_DEF
+    ; LIS-NEXT: dead undef [[COPY:%[0-9]+]].sub0:sreg_64 = COPY [[S_MOV_B32_]]
     ; LIS-NEXT: dead [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 undef [[COPY]].sub1, implicit $exec
     %0:sgpr_32 = S_MOV_B32  0, implicit $exec
 
@@ -41,12 +40,10 @@ body:             |
     ; CHECK-LABEL: name: regsequence-undef-subreg-without-use
     ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
     ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0:sreg_64 = COPY [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub1:sreg_64 = IMPLICIT_DEF
     ;
     ; LIS-LABEL: name: regsequence-undef-subreg-without-use
     ; LIS: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
-    ; LIS-NEXT: undef [[COPY:%[0-9]+]].sub0:sreg_64 = COPY [[S_MOV_B32_]]
-    ; LIS-NEXT: dead [[COPY:%[0-9]+]].sub1:sreg_64 = IMPLICIT_DEF
+    ; LIS-NEXT: dead undef [[COPY:%[0-9]+]].sub0:sreg_64 = COPY [[S_MOV_B32_]]
     %0:sgpr_32 = S_MOV_B32  0, implicit $exec
 
     %1:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, undef %2:sgpr_32, %subreg.sub1
@@ -63,13 +60,11 @@ body:             |
     ; CHECK-LABEL: name: regsequence-undef-subreg-full-reg-use
     ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
     ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0:sreg_64 = COPY [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub1:sreg_64 = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]], implicit $exec
     ;
     ; LIS-LABEL: name: regsequence-undef-subreg-full-reg-use
     ; LIS: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
     ; LIS-NEXT: undef [[COPY:%[0-9]+]].sub0:sreg_64 = COPY [[S_MOV_B32_]]
-    ; LIS-NEXT: [[COPY:%[0-9]+]].sub1:sreg_64 = IMPLICIT_DEF
     ; LIS-NEXT: dead [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]], implicit $exec
     %0:sgpr_32 = S_MOV_B32  0, implicit $exec
 

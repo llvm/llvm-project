@@ -747,7 +747,6 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX6-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
-; GFX6-NEXT:    ; implicit-def: $vgpr4
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -767,7 +766,6 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX7-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
-; GFX7-NEXT:    ; implicit-def: $vgpr4
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
@@ -787,7 +785,6 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX8-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
-; GFX8-NEXT:    ; implicit-def: $vgpr4
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -806,7 +803,6 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
-; GFX9-NEXT:    ; implicit-def: $vgpr4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 main_body:
@@ -852,7 +848,6 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX6-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
-; GFX6-NEXT:    ; implicit-def: $vgpr4
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -872,7 +867,6 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX7-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
-; GFX7-NEXT:    ; implicit-def: $vgpr4
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
@@ -892,7 +886,6 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX8-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
-; GFX8-NEXT:    ; implicit-def: $vgpr4
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -911,7 +904,6 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
-; GFX9-NEXT:    ; implicit-def: $vgpr4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 main_body:
@@ -968,7 +960,6 @@ define amdgpu_vs float @vgpr_arg_src(ptr addrspace(6) %arg) {
 ; GFX6:       ; %bb.0: ; %main_body
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    s_mov_b32 s1, 0
-; GFX6-NEXT:    ; implicit-def: $vgpr1
 ; GFX6-NEXT:    s_nop 2
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
@@ -981,7 +972,6 @@ define amdgpu_vs float @vgpr_arg_src(ptr addrspace(6) %arg) {
 ; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX7-NEXT:    s_mov_b32 s1, 0
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; GFX7-NEXT:    ; implicit-def: $vgpr1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -992,7 +982,6 @@ define amdgpu_vs float @vgpr_arg_src(ptr addrspace(6) %arg) {
 ; GFX89-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX89-NEXT:    s_mov_b32 s1, 0
 ; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; GFX89-NEXT:    ; implicit-def: $vgpr1
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX89-NEXT:    s_nop 1
 ; GFX89-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen

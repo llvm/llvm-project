@@ -3914,7 +3914,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_undef_hi(ptr addrspace(
 ; GFX12-GISEL-TRUE16-LABEL: global_load_saddr_i16_d16lo_undef_hi:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
-; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -3956,7 +3955,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_undef_hi_immneg128(ptr 
 ; GFX12-GISEL-TRUE16-LABEL: global_load_saddr_i16_d16lo_undef_hi_immneg128:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3] offset:-128
-; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -4277,7 +4275,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_undef_hi(ptr addrspace(
 ; GFX12-GISEL-TRUE16-LABEL: global_load_saddr_i16_d16hi_undef_hi:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v0, s[2:3]
-; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -4319,7 +4316,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_undef_hi_immneg128(ptr 
 ; GFX12-GISEL-TRUE16-LABEL: global_load_saddr_i16_d16hi_undef_hi_immneg128:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
 ; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v0, s[2:3] offset:-128
-; GFX12-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_lo16
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -4352,7 +4348,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_zero_hi(ptr addrspace(1
 ; GFX11-TRUE16-LABEL: global_load_saddr_i16_d16hi_zero_hi:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
@@ -4369,7 +4364,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_zero_hi(ptr addrspace(1
 ; GFX12-SDAG-TRUE16-LABEL: global_load_saddr_i16_d16hi_zero_hi:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
 ; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
-; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
@@ -4416,7 +4410,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_zero_hi_immneg128(ptr a
 ; GFX11-TRUE16-LABEL: global_load_saddr_i16_d16hi_zero_hi_immneg128:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
@@ -4433,7 +4426,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_zero_hi_immneg128(ptr a
 ; GFX12-SDAG-TRUE16-LABEL: global_load_saddr_i16_d16hi_zero_hi_immneg128:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
 ; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
-; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
@@ -4477,42 +4469,19 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_reg_hi(ptr addrspace(1)
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: global_load_saddr_i16_d16hi_reg_hi:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: global_load_saddr_i16_d16hi_reg_hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX11-FAKE16-LABEL: global_load_saddr_i16_d16hi_reg_hi:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-TRUE16-LABEL: global_load_saddr_i16_d16hi_reg_hi:
-; GFX12-SDAG-TRUE16:       ; %bb.0:
-; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-FAKE16-LABEL: global_load_saddr_i16_d16hi_reg_hi:
-; GFX12-SDAG-FAKE16:       ; %bb.0:
-; GFX12-SDAG-FAKE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: global_load_saddr_i16_d16hi_reg_hi:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: global_load_saddr_i16_d16hi_reg_hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load i16, ptr addrspace(1) %gep0
@@ -4529,42 +4498,19 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_reg_hi_immneg128(ptr ad
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: global_load_saddr_i16_d16hi_reg_hi_immneg128:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: global_load_saddr_i16_d16hi_reg_hi_immneg128:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX11-FAKE16-LABEL: global_load_saddr_i16_d16hi_reg_hi_immneg128:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-TRUE16-LABEL: global_load_saddr_i16_d16hi_reg_hi_immneg128:
-; GFX12-SDAG-TRUE16:       ; %bb.0:
-; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-FAKE16-LABEL: global_load_saddr_i16_d16hi_reg_hi_immneg128:
-; GFX12-SDAG-FAKE16:       ; %bb.0:
-; GFX12-SDAG-FAKE16-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: global_load_saddr_i16_d16hi_reg_hi_immneg128:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: global_load_saddr_i16_d16hi_reg_hi_immneg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -4582,42 +4528,19 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_zexti8_reg_hi(ptr addrs
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3]
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX11-FAKE16-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3]
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-TRUE16-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi:
-; GFX12-SDAG-TRUE16:       ; %bb.0:
-; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3]
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-FAKE16-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi:
-; GFX12-SDAG-FAKE16:       ; %bb.0:
-; GFX12-SDAG-FAKE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3]
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3]
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load i8, ptr addrspace(1) %gep0
@@ -4635,42 +4558,19 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX11-FAKE16-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-TRUE16-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
-; GFX12-SDAG-TRUE16:       ; %bb.0:
-; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-FAKE16-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
-; GFX12-SDAG-FAKE16:       ; %bb.0:
-; GFX12-SDAG-FAKE16-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: global_load_saddr_i16_d16hi_zexti8_reg_hi_immneg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_hi_u8 v1, v0, s[2:3] offset:-128
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
@@ -4689,42 +4589,19 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_sexti8_reg_hi(ptr addrs
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3]
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX11-FAKE16-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3]
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-TRUE16-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi:
-; GFX12-SDAG-TRUE16:       ; %bb.0:
-; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3]
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-FAKE16-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi:
-; GFX12-SDAG-FAKE16:       ; %bb.0:
-; GFX12-SDAG-FAKE16-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3]
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3]
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load i8, ptr addrspace(1) %gep0
@@ -4742,42 +4619,19 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX11-FAKE16-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-TRUE16-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
-; GFX12-SDAG-TRUE16:       ; %bb.0:
-; GFX12-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX12-SDAG-TRUE16-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-SDAG-FAKE16-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
-; GFX12-SDAG-FAKE16:       ; %bb.0:
-; GFX12-SDAG-FAKE16-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_hi_i8 v1, v0, s[2:3] offset:-128
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128

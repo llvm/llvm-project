@@ -361,8 +361,6 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-NEXT:    s_cselect_b32 s0, 0, s2
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    ; implicit-def: $sgpr5
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -534,8 +532,6 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-NEXT:    s_cselect_b32 s0, 0, s8
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    ; implicit-def: $sgpr5
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm

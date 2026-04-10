@@ -303,12 +303,10 @@ define amdgpu_kernel void @v_fneg_fold_bf16(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v1, v0, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_xor_b32_e32 v2, 0x8000, v1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2

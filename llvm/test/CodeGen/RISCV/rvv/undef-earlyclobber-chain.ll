@@ -41,22 +41,27 @@ define internal void @SubRegLivenessUndefInPhi(i64 %cond) {
 ; CHECK-NEXT:  # %bb.1: # %Cond1
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    # implicit-def: $v9
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    vadd.vi v12, v8, 1
 ; CHECK-NEXT:    vadd.vi v10, v8, 3
 ; CHECK-NEXT:    j .LBB2_3
 ; CHECK-NEXT:  .LBB2_2: # %Cond2
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vid.v v10
 ; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    # implicit-def: $v9
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    vadd.vi v10, v9, 1
-; CHECK-NEXT:    vadd.vi v11, v9, 3
+; CHECK-NEXT:    vadd.vi v9, v10, 1
+; CHECK-NEXT:    vadd.vi v11, v10, 3
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v9, a0
-; CHECK-NEXT:    vslideup.vx v12, v10, a0
+; CHECK-NEXT:    vslideup.vx v8, v10, a0
+; CHECK-NEXT:    vslideup.vx v12, v9, a0
 ; CHECK-NEXT:    vslideup.vx v10, v11, a0
 ; CHECK-NEXT:  .LBB2_3: # %UseSR
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    vl1r.v v14, (zero)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v15, v14, v8
@@ -149,6 +154,7 @@ loopIR3.i.i:                                      ; preds = %loopIR3.i.i, %loopI
 define void @repeat_shuffle(<2 x double> %v, ptr noalias %q) {
 ; CHECK-LABEL: repeat_shuffle:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vslideup.vi v10, v8, 2

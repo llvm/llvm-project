@@ -113,8 +113,6 @@ define arm_aapcs_vfpcc <2 x float> @ptr_v2f32(ptr %offptr) {
 ; CHECK-LABEL: ptr_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrd r0, r1, [r0]
-; CHECK-NEXT:    @ implicit-def: $s2
-; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vldr s1, [r1]
 ; CHECK-NEXT:    vldr s0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -364,7 +362,10 @@ define arm_aapcs_vfpcc <8 x half> @ptr_f16(ptr %offptr) {
 ; CHECK-LABEL: ptr_f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    @ implicit-def: $s6
+; CHECK-NEXT:    @ implicit-def: $s7
 ; CHECK-NEXT:    vmov r1, r2, d0
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vldr.16 s4, [r2]
 ; CHECK-NEXT:    vldr.16 s0, [r1]
 ; CHECK-NEXT:    vmov r1, r2, d1
@@ -393,6 +394,7 @@ define arm_aapcs_vfpcc <4 x half> @ptr_v4f16(ptr %offptr) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d0
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vldr.16 s4, [r1]
 ; CHECK-NEXT:    vldr.16 s0, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d1

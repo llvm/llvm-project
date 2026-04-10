@@ -208,7 +208,6 @@ define amdgpu_ps half @v_interp_f16(float inreg %i, float inreg %j, i32 inreg %m
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_interp_p2_f16_f32 v0.h, v1.h, v2, v4 wait_exp:7
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: v_interp_f16:
@@ -245,7 +244,6 @@ define amdgpu_ps half @v_interp_f16(float inreg %i, float inreg %j, i32 inreg %m
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_interp_p2_f16_f32 v0.h, v1.h, v2, v4 wait_exp:7
 ; GFX12-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-FAKE16-LABEL: v_interp_f16:
@@ -292,7 +290,6 @@ define amdgpu_ps half @v_interp_rtz_f16(float inreg %i, float inreg %j, i32 inre
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_interp_p2_rtz_f16_f32 v0.h, v1.h, v2, v4 wait_exp:7
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: v_interp_rtz_f16:
@@ -329,7 +326,6 @@ define amdgpu_ps half @v_interp_rtz_f16(float inreg %i, float inreg %j, i32 inre
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_interp_p2_rtz_f16_f32 v0.h, v1.h, v2, v4 wait_exp:7
 ; GFX12-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
-; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-FAKE16-LABEL: v_interp_rtz_f16:
@@ -371,7 +367,6 @@ define amdgpu_ps half @v_interp_f16_imm_params(float inreg %i, float inreg %j) #
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v1
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.h, v0.l
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: v_interp_f16_imm_params:
@@ -391,7 +386,6 @@ define amdgpu_ps half @v_interp_f16_imm_params(float inreg %i, float inreg %j) #
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, 0
-; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_interp_p10_f16_f32 v1, v0.l, v1, v0.l wait_exp:7
 ; GFX12-TRUE16-NEXT:    v_interp_p2_f16_f32 v0.l, v0.l, v2, v3 wait_exp:7
@@ -521,7 +515,6 @@ define amdgpu_ps half @s_interp_rtz_f16(float inreg %p, float inreg %j, float in
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s2
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_interp_p2_rtz_f16_f32 v0.l, v0.l, v1, v2 wait_exp:7
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
@@ -538,7 +531,6 @@ define amdgpu_ps half @s_interp_rtz_f16(float inreg %p, float inreg %j, float in
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_interp_p2_rtz_f16_f32 v0.l, v0.l, v1, v2 wait_exp:7
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog

@@ -145,8 +145,6 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    ; implicit-def: $sgpr0
-; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x8001, v0
@@ -160,8 +158,6 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GFX8:       ; %bb.0: ; %bb
 ; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
-; GFX8-NEXT:    ; implicit-def: $sgpr0
-; GFX8-NEXT:    ; implicit-def: $sgpr1
 ; GFX8-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x8001
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -177,8 +173,6 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    ; implicit-def: $sgpr0
-; GFX9-NEXT:    ; implicit-def: $sgpr1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0x80018001, v0
 ; GFX9-NEXT:    v_bfi_b32 v0, v1, 0, v0

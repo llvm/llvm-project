@@ -23,7 +23,6 @@ define amdgpu_kernel void @use_local_to_constant32bit_addrspacecast(ptr addrspac
 ; CHECK-LABEL: use_local_to_constant32bit_addrspacecast:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    ; implicit-def: $sgpr0
 ; CHECK-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; CHECK-NEXT:    s_endpgm
   %stof = addrspacecast ptr addrspace(3) %ptr to ptr addrspace(6)

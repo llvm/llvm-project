@@ -63,9 +63,13 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_44)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v14, (a0)
+; CHECK-NEXT:    vmv4r.v v16, v12
+; CHECK-NEXT:    vmv4r.v v12, v8
+; CHECK-NEXT:    # implicit-def: $v10m2
 ; CHECK-NEXT:    lui a0, %hi(var_47)
 ; CHECK-NEXT:    addi a0, a0, %lo(var_47)
-; CHECK-NEXT:    vsseg4e16.v v8, (a0)
+; CHECK-NEXT:    vsseg4e16.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v12m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    add a0, a1, a0

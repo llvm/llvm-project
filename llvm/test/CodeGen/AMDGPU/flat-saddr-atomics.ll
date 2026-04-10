@@ -9383,8 +9383,6 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn(ptr inreg %sbase, i32 %
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr5
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr4
 ; GFX1250-SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB90_2
 ; GFX1250-SDAG-NEXT:  .LBB90_4: ; %atomicrmw.private
@@ -9434,7 +9432,6 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn(ptr inreg %sbase, i32 %
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr2
 ; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GFX1250-GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-GISEL-NEXT:    s_cbranch_execz .LBB90_2
 ; GFX1250-GISEL-NEXT:  .LBB90_4: ; %atomicrmw.private
@@ -9480,7 +9477,6 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn(ptr inreg %sbase, i32 %
 ; GFX950-SDAG-NEXT:    buffer_inv sc0 sc1
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX950-SDAG-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB90_2
 ; GFX950-SDAG-NEXT:  .LBB90_4: ; %atomicrmw.private
@@ -9529,7 +9525,6 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn(ptr inreg %sbase, i32 %
 ; GFX950-GISEL-NEXT:    buffer_inv sc0 sc1
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GFX950-GISEL-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_cbranch_execz .LBB90_2
 ; GFX950-GISEL-NEXT:  .LBB90_4: ; %atomicrmw.private
@@ -9589,8 +9584,6 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn_neg128(ptr inreg %sbase
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr5
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr4
 ; GFX1250-SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB91_2
 ; GFX1250-SDAG-NEXT:  .LBB91_4: ; %atomicrmw.private
@@ -9643,7 +9636,6 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn_neg128(ptr inreg %sbase
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr2
 ; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GFX1250-GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-GISEL-NEXT:    s_cbranch_execz .LBB91_2
 ; GFX1250-GISEL-NEXT:  .LBB91_4: ; %atomicrmw.private
@@ -9692,7 +9684,6 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn_neg128(ptr inreg %sbase
 ; GFX950-SDAG-NEXT:    buffer_inv sc0 sc1
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX950-SDAG-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB91_2
 ; GFX950-SDAG-NEXT:  .LBB91_4: ; %atomicrmw.private
@@ -9744,7 +9735,6 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn_neg128(ptr inreg %sbase
 ; GFX950-GISEL-NEXT:    buffer_inv sc0 sc1
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GFX950-GISEL-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_cbranch_execz .LBB91_2
 ; GFX950-GISEL-NEXT:  .LBB91_4: ; %atomicrmw.private
@@ -9800,8 +9790,6 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffs
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr5
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr4
 ; GFX1250-SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB92_2
 ; GFX1250-SDAG-NEXT:  .LBB92_4: ; %atomicrmw.private
@@ -9845,7 +9833,6 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffs
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr2
 ; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GFX1250-GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-GISEL-NEXT:    s_cbranch_execz .LBB92_2
 ; GFX1250-GISEL-NEXT:  .LBB92_4: ; %atomicrmw.private
@@ -9886,7 +9873,6 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffs
 ; GFX950-SDAG-NEXT:    buffer_inv sc0 sc1
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX950-SDAG-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB92_2
 ; GFX950-SDAG-NEXT:  .LBB92_4: ; %atomicrmw.private
@@ -9929,7 +9915,6 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffs
 ; GFX950-GISEL-NEXT:    buffer_inv sc0 sc1
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GFX950-GISEL-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_cbranch_execz .LBB92_2
 ; GFX950-GISEL-NEXT:  .LBB92_4: ; %atomicrmw.private
@@ -9981,8 +9966,6 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr5
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr4
 ; GFX1250-SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB93_2
 ; GFX1250-SDAG-NEXT:  .LBB93_4: ; %atomicrmw.private
@@ -10029,7 +10012,6 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr2
 ; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GFX1250-GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-GISEL-NEXT:    s_cbranch_execz .LBB93_2
 ; GFX1250-GISEL-NEXT:  .LBB93_4: ; %atomicrmw.private
@@ -10073,7 +10055,6 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32
 ; GFX950-SDAG-NEXT:    buffer_inv sc0 sc1
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX950-SDAG-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB93_2
 ; GFX950-SDAG-NEXT:  .LBB93_4: ; %atomicrmw.private
@@ -10120,7 +10101,6 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32
 ; GFX950-GISEL-NEXT:    buffer_inv sc0 sc1
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GFX950-GISEL-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_cbranch_execz .LBB93_2
 ; GFX950-GISEL-NEXT:  .LBB93_4: ; %atomicrmw.private

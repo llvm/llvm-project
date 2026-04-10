@@ -549,16 +549,21 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-MVEFP-NEXT:    vins.f16 s6, s2
 ; CHECK-MVEFP-NEXT:    vins.f16 s7, s3
 ; CHECK-MVEFP-NEXT:    vmov q0, q1
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s10
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s11
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s9
 ; CHECK-MVEFP-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b2:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vrev64.16 q2, q0
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
+; CHECKBE-NEXT:    @ implicit-def: $s6
+; CHECKBE-NEXT:    @ implicit-def: $s5
 ; CHECKBE-NEXT:    vmovx.f16 s4, s0
+; CHECKBE-NEXT:    vmovx.f16 s7, s3
 ; CHECKBE-NEXT:    vmovx.f16 s5, s1
 ; CHECKBE-NEXT:    vmovx.f16 s6, s2
-; CHECKBE-NEXT:    vmovx.f16 s7, s3
 ; CHECKBE-NEXT:    vins.f16 s4, s8
 ; CHECKBE-NEXT:    vins.f16 s5, s9
 ; CHECKBE-NEXT:    vins.f16 s6, s10
@@ -602,6 +607,9 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-MVEFP-NEXT:    vins.f16 s1, s5
 ; CHECK-MVEFP-NEXT:    vins.f16 s2, s6
 ; CHECK-MVEFP-NEXT:    vins.f16 s3, s7
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s10
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s11
+; CHECK-MVEFP-NEXT:    @ implicit-def: $s9
 ; CHECK-MVEFP-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b3:
@@ -612,7 +620,9 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECKBE-NEXT:    vmovx.f16 s5, s5
 ; CHECKBE-NEXT:    vmovx.f16 s6, s6
 ; CHECKBE-NEXT:    vmovx.f16 s7, s7
+; CHECKBE-NEXT:    @ implicit-def: $s2
 ; CHECKBE-NEXT:    vins.f16 s4, s8
+; CHECKBE-NEXT:    @ implicit-def: $s1
 ; CHECKBE-NEXT:    vins.f16 s5, s9
 ; CHECKBE-NEXT:    vins.f16 s6, s10
 ; CHECKBE-NEXT:    vins.f16 s7, s11

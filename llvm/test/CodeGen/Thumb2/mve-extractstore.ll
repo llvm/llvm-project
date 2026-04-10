@@ -25,7 +25,6 @@ define half @extret4_f16_sf(<8 x half> %a, <8 x half> %b, ptr nocapture %p) {
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    @ implicit-def: $d0
 ; CHECK-NEXT:    ldr r0, [sp, #16]
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-NEXT:    vstr.16 s2, [r0]
@@ -119,7 +118,6 @@ define float @extret2_f32_sf(<4 x float> %a, <4 x float> %b, ptr nocapture %p) {
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    @ implicit-def: $d0
 ; CHECK-NEXT:    ldr r1, [sp, #16]
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s2

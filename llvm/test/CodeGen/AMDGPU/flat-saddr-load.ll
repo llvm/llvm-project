@@ -2551,7 +2551,6 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zero_hi(ptr inreg %sbase,
 ; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
-; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3]
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
@@ -2612,7 +2611,6 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_zero_hi_immneg128(ptr inr
 ; GFX1250-NOECC-SDAG-TRUE16:       ; %bb.0:
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
-; GFX1250-NOECC-SDAG-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    flat_load_d16_hi_b16 v1, v0, s[2:3] offset:-128
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NOECC-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v1

@@ -1321,22 +1321,18 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, 0
-; GFX6-NEXT:    ; implicit-def: $sgpr0
-; GFX6-NEXT:    ; implicit-def: $sgpr1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:  .LBB9_2: ; %bb4
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, -1
-; GFX6-NEXT:    ; implicit-def: $sgpr0
-; GFX6-NEXT:    ; implicit-def: $sgpr1
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    s_load_dword s4, s[4:5], 0x12
+; GFX6-NEXT:    s_load_dword s0, s[4:5], 0x12
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0x42280000
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    v_mac_f32_e64 v1, s4, 0.5
+; GFX6-NEXT:    v_mac_f32_e64 v1, s0, 0.5
 ; GFX6-NEXT:    v_mul_f32_e32 v0, v1, v0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)

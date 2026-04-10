@@ -7,40 +7,39 @@ define amdgpu_vs void @test(<4 x float> inreg %reg0) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    CALL_FS
-; CHECK-NEXT:    ALU 9, @14, KC0[], KC1[]
-; CHECK-NEXT:    TEX 1 @8
-; CHECK-NEXT:    ALU 1, @24, KC0[], KC1[]
+; CHECK-NEXT:    ALU 2, @16, KC0[], KC1[]
+; CHECK-NEXT:    TEX 0 @10
+; CHECK-NEXT:    ALU 1, @19, KC0[], KC1[]
 ; CHECK-NEXT:    TEX 0 @12
-; CHECK-NEXT:    ALU 7, @26, KC0[], KC1[]
+; CHECK-NEXT:    ALU 1, @21, KC0[], KC1[]
+; CHECK-NEXT:    TEX 0 @14
+; CHECK-NEXT:    ALU 7, @23, KC0[], KC1[]
 ; CHECK-NEXT:    EXPORT T0.XYZW
 ; CHECK-NEXT:    CF_END
-; CHECK-NEXT:    Fetch clause starting at 8:
-; CHECK-NEXT:     TEX_SAMPLE T1.XYZW, T1.XY__ RID:0 SID:0 CT:UUUU
-; CHECK-NEXT:     TEX_SAMPLE T2.XYZW, T3.ZX__ RID:0 SID:0 CT:UUUU
+; CHECK-NEXT:    Fetch clause starting at 10:
+; CHECK-NEXT:     TEX_SAMPLE T2.XYZW, T1.XY__ RID:0 SID:0 CT:UUUU
 ; CHECK-NEXT:    Fetch clause starting at 12:
-; CHECK-NEXT:     TEX_SAMPLE T0.XYZW, T3.W___ RID:0 SID:0 CT:UUUU
-; CHECK-NEXT:    ALU clause starting at 14:
+; CHECK-NEXT:     TEX_SAMPLE T3.XYZW, T1.ZX__ RID:0 SID:0 CT:UUUU
+; CHECK-NEXT:    Fetch clause starting at 14:
+; CHECK-NEXT:     TEX_SAMPLE T0.XYZW, T1.W___ RID:0 SID:0 CT:UUUU
+; CHECK-NEXT:    ALU clause starting at 16:
 ; CHECK-NEXT:     MUL_IEEE T1.X, T0.X, literal.x,
-; CHECK-NEXT:     MUL_IEEE T1.Y, T0.Y, literal.x,
-; CHECK-NEXT:     MUL_IEEE * T2.W, T0.Z, literal.x,
+; CHECK-NEXT:     MUL_IEEE * T1.Y, T0.Y, literal.x,
 ; CHECK-NEXT:    1077936128(3.000000e+00), 0(0.000000e+00)
-; CHECK-NEXT:     MOV T3.X, PV.X,
-; CHECK-NEXT:     MOV T3.Y, PV.Y,
-; CHECK-NEXT:     MOV T3.Z, T1.Z,
-; CHECK-NEXT:     MOV T3.W, T1.W,
-; CHECK-NEXT:     MOV * T3.Z, PV.W,
-; CHECK-NEXT:     MOV * T3.X, T1.X,
-; CHECK-NEXT:    ALU clause starting at 24:
-; CHECK-NEXT:     MUL_IEEE * T3.W, T0.W, literal.x,
+; CHECK-NEXT:    ALU clause starting at 19:
+; CHECK-NEXT:     MUL_IEEE * T1.Z, T0.Z, literal.x,
 ; CHECK-NEXT:    1077936128(3.000000e+00), 0(0.000000e+00)
-; CHECK-NEXT:    ALU clause starting at 26:
-; CHECK-NEXT:     ADD T1.W, T1.W, T2.W,
-; CHECK-NEXT:     ADD * T2.W, T1.Z, T2.Z,
+; CHECK-NEXT:    ALU clause starting at 21:
+; CHECK-NEXT:     MUL_IEEE * T1.W, T0.W, literal.x,
+; CHECK-NEXT:    1077936128(3.000000e+00), 0(0.000000e+00)
+; CHECK-NEXT:    ALU clause starting at 23:
+; CHECK-NEXT:     ADD T1.W, T2.W, T3.W,
+; CHECK-NEXT:     ADD * T2.W, T2.Z, T3.Z,
 ; CHECK-NEXT:     ADD * T0.W, PV.W, T0.W,
 ; CHECK-NEXT:     ADD T0.Z, T2.W, T0.Z,
-; CHECK-NEXT:     ADD * T1.W, T1.Y, T2.Y,
+; CHECK-NEXT:     ADD * T1.W, T2.Y, T3.Y,
 ; CHECK-NEXT:     ADD T0.Y, PV.W, T0.Y,
-; CHECK-NEXT:     ADD * T1.W, T1.X, T2.X,
+; CHECK-NEXT:     ADD * T1.W, T2.X, T3.X,
 ; CHECK-NEXT:     ADD * T0.X, PV.W, T0.X,
   %1 = extractelement <4 x float> %reg0, i32 0
   %2 = extractelement <4 x float> %reg0, i32 1

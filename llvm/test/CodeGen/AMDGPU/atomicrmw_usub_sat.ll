@@ -2242,7 +2242,6 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v3
-; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v2.h, 8, v4.l
 ; GFX11-GISEL-NEXT:    v_sub_nc_u16 v2.h, v2.h, v2.l clamp
@@ -2280,7 +2279,6 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v4, v3
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b16 v2.h, 8, v4.l
 ; GFX12-GISEL-NEXT:    v_sub_nc_u16 v2.h, v2.h, v2.l clamp
@@ -2494,7 +2492,6 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v3
-; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v2.h, 8, v4.l
 ; GFX11-GISEL-NEXT:    v_sub_nc_u16 v2.h, v2.h, v2.l clamp
@@ -2532,7 +2529,6 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v4, v3
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b16 v2.h, 8, v4.l
 ; GFX12-GISEL-NEXT:    v_sub_nc_u16 v2.h, v2.h, v2.l clamp
@@ -2745,7 +2741,6 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v2.h, 8, v4.l
-; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_sub_nc_u16 v2.h, v2.h, v2.l clamp
 ; GFX11-GISEL-NEXT:    v_lshrrev_b16 v3.l, 8, v2.h
@@ -2781,7 +2776,6 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_lshlrev_b16 v2.h, 8, v4.l
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_sub_nc_u16 v2.h, v2.h, v2.l clamp
 ; GFX12-GISEL-NEXT:    v_lshrrev_b16 v3.l, 8, v2.h
@@ -2985,7 +2979,6 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v2.h, 8, v4.l
-; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_sub_nc_u16 v2.h, v2.h, v2.l clamp
 ; GFX11-GISEL-NEXT:    v_lshrrev_b16 v3.l, 8, v2.h
@@ -3021,7 +3014,6 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_lshlrev_b16 v2.h, 8, v4.l
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_sub_nc_u16 v2.h, v2.h, v2.l clamp
 ; GFX12-GISEL-NEXT:    v_lshrrev_b16 v3.l, 8, v2.h
@@ -3248,7 +3240,6 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1.l, 8, v2.l
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_sub_nc_u16 v1.l, v1.l, s3 clamp
@@ -3287,7 +3278,6 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 8, v2.l
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_sub_nc_u16 v1.l, v1.l, s2 clamp
@@ -3537,7 +3527,6 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v0.l, 8, v1.l
-; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-NEXT:    v_sub_nc_u16 v0.l, v0.l, s3 clamp
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshrrev_b16 v0.l, 8, v0.l
@@ -3571,7 +3560,6 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.l, 8, v1.l
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-NEXT:    v_sub_nc_u16 v0.l, v0.l, s2 clamp
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshrrev_b16 v0.l, 8, v0.l

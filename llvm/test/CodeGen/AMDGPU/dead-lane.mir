@@ -8,7 +8,6 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: dead_lane
     ; GCN: [[V_MAC_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAC_F32_e32 undef %1:vgpr_32, undef %1:vgpr_32, undef [[V_MAC_F32_e32_]], implicit $mode, implicit $exec
-    ; GCN-NEXT: dead [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: FLAT_STORE_DWORD undef %4:vreg_64, [[V_MAC_F32_e32_]], 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
     %1:vgpr_32 = nofpexcept V_MAC_F32_e32 undef %0:vgpr_32, undef %0:vgpr_32, undef %0:vgpr_32, implicit $mode, implicit $exec

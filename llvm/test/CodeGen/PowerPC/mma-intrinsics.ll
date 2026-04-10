@@ -19,6 +19,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlor vs3, v2, v2
 ; CHECK-NEXT:    xxlor vs2, v2, v2
+; CHECK-NEXT:    # implicit-def: $v2
 ; CHECK-NEXT:    xxlor vs0, vs2, vs2
 ; CHECK-NEXT:    xxlor vs1, vs3, vs3
 ; CHECK-NEXT:    stxv vs0, 48(r3)
@@ -31,6 +32,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxlor vs3, v2, v2
 ; CHECK-BE-NEXT:    xxlor vs2, v2, v2
+; CHECK-BE-NEXT:    # implicit-def: $v2
 ; CHECK-BE-NEXT:    xxlor vs0, vs2, vs2
 ; CHECK-BE-NEXT:    xxlor vs1, vs3, vs3
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
@@ -73,6 +75,7 @@ define void @int_xxmtacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlor vs3, v2, v2
 ; CHECK-NEXT:    xxlor vs2, v2, v2
+; CHECK-NEXT:    # implicit-def: $v2
 ; CHECK-NEXT:    xxlor vs0, vs2, vs2
 ; CHECK-NEXT:    xxlor vs1, vs3, vs3
 ; CHECK-NEXT:    xxmtacc acc0
@@ -86,6 +89,7 @@ define void @int_xxmtacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxlor vs3, v2, v2
 ; CHECK-BE-NEXT:    xxlor vs2, v2, v2
+; CHECK-BE-NEXT:    # implicit-def: $v2
 ; CHECK-BE-NEXT:    xxlor vs0, vs2, vs2
 ; CHECK-BE-NEXT:    xxlor vs1, vs3, vs3
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -132,6 +136,7 @@ define void @int_xxmfacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlor vs3, v2, v2
 ; CHECK-NEXT:    xxlor vs2, v2, v2
+; CHECK-NEXT:    # implicit-def: $v2
 ; CHECK-NEXT:    xxlor vs0, vs2, vs2
 ; CHECK-NEXT:    xxlor vs1, vs3, vs3
 ; CHECK-NEXT:    stxv vs0, 48(r3)
@@ -144,6 +149,7 @@ define void @int_xxmfacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxlor vs3, v2, v2
 ; CHECK-BE-NEXT:    xxlor vs2, v2, v2
+; CHECK-BE-NEXT:    # implicit-def: $v2
 ; CHECK-BE-NEXT:    xxlor vs0, vs2, vs2
 ; CHECK-BE-NEXT:    xxlor vs1, vs3, vs3
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
@@ -297,6 +303,7 @@ define void @testBranch(ptr %ptr, <16 x i8> %vc, i32 %val) {
 ; CHECK-NEXT:    b .LBB5_3
 ; CHECK-NEXT:  .LBB5_2: # %if.else
 ; CHECK-NEXT:    lxv vs3, 0(r3)
+; CHECK-NEXT:    # implicit-def: $vsl2
 ; CHECK-NEXT:    lxv vs2, 16(r3)
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
@@ -319,6 +326,7 @@ define void @testBranch(ptr %ptr, <16 x i8> %vc, i32 %val) {
 ; CHECK-BE-NEXT:    b .LBB5_3
 ; CHECK-BE-NEXT:  .LBB5_2: # %if.else
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl2
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
@@ -1040,6 +1048,7 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    plxvp vsp36, 8(r4), 0
@@ -1056,6 +1065,7 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    plxvp vsp36, 8(r4), 0
@@ -1114,6 +1124,7 @@ define void @test_ldst_2(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1130,6 +1141,7 @@ define void @test_ldst_2(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -1187,6 +1199,7 @@ define void @test_ldst_3(ptr nocapture readonly %vqp, i64 %offs, ptr %vpp, <16 x
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -1203,6 +1216,7 @@ define void @test_ldst_3(ptr nocapture readonly %vqp, i64 %offs, ptr %vpp, <16 x
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0

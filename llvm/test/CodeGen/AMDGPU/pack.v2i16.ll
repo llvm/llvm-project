@@ -247,10 +247,8 @@ define amdgpu_kernel void @v_pack_v2i16_user(ptr addrspace(1) %in0, ptr addrspac
 ; GFX9-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    ; implicit-def: $sgpr1
 ; GFX9-NEXT:    v_perm_b32 v0, v2, v1, s0
 ; GFX9-NEXT:    v_add_u32_e32 v0, 9, v0
-; GFX9-NEXT:    ; implicit-def: $sgpr0
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
@@ -276,10 +274,8 @@ define amdgpu_kernel void @v_pack_v2i16_user(ptr addrspace(1) %in0, ptr addrspac
 ; GFX803-NEXT:    s_mov_b32 s0, 0x1000504
 ; GFX803-NEXT:    s_mov_b32 s3, 0x1100f000
 ; GFX803-NEXT:    s_mov_b32 s2, -1
-; GFX803-NEXT:    ; implicit-def: $sgpr1
 ; GFX803-NEXT:    v_perm_b32 v0, v0, v1, s0
 ; GFX803-NEXT:    v_add_u32_e32 v0, vcc, 9, v0
-; GFX803-NEXT:    ; implicit-def: $sgpr0
 ; GFX803-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_endpgm

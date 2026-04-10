@@ -88,9 +88,12 @@ define arm_aapcs_vfpcc <8 x half> @scaled_v8f16_sext(ptr %base, ptr %offptr) {
 ; CHECK-LABEL: scaled_v8f16_sext:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1]
+; CHECK-NEXT:    @ implicit-def: $s6
+; CHECK-NEXT:    @ implicit-def: $s7
 ; CHECK-NEXT:    vshl.i32 q0, q0, #1
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vldr.16 s4, [r3]
 ; CHECK-NEXT:    vldr.16 s0, [r2]
 ; CHECK-NEXT:    vmov r2, r3, d1

@@ -80,13 +80,11 @@ define amdgpu_kernel void @br_cc_f16(
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %one
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s6
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, s7
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ; GFX11-TRUE16-NEXT:  .LBB0_2: ; %two
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s6
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, s7
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v1, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -197,7 +195,6 @@ define amdgpu_kernel void @br_cc_f16_imm_a(
 ; GFX11-TRUE16-NEXT:  .LBB1_2: ; %two
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s6
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, s7
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v1, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -298,7 +295,6 @@ define amdgpu_kernel void @br_cc_f16_imm_b(
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %one
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s6
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, s7
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v1, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ; GFX11-TRUE16-NEXT:  .LBB2_2: ; %two

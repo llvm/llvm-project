@@ -137,7 +137,6 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x32_f16(<4 x half> %A, <8 x half> %B, <4 x float> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_f32_16x16x32_f16:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr10_hi16
 ; GCN-NEXT:    v_swmmac_f32_16x16x32_f16 v[6:9], v[0:1], v[2:5], v10
 ; GCN-NEXT:    global_store_b128 v[11:12], v[6:9], off
 ; GCN-NEXT:    s_endpgm
@@ -150,7 +149,6 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x32_bf16(<4 x i16> %A, <8 x i16> %B, <4 x float> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_f32_16x16x32_bf16:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr10_hi16
 ; GCN-NEXT:    v_swmmac_f32_16x16x32_bf16 v[6:9], v[0:1], v[2:5], v10
 ; GCN-NEXT:    global_store_b128 v[11:12], v[6:9], off
 ; GCN-NEXT:    s_endpgm
@@ -163,7 +161,6 @@ bb:
 define amdgpu_ps void @test_swmmac_f16_16x16x32_f16(<4 x half> %A, <8 x half> %B, <4 x half> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_f16_16x16x32_f16:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr8_hi16
 ; GCN-NEXT:    v_swmmac_f16_16x16x32_f16 v[6:7], v[0:1], v[2:5], v8
 ; GCN-NEXT:    global_store_b64 v[9:10], v[6:7], off
 ; GCN-NEXT:    s_endpgm
@@ -176,7 +173,6 @@ bb:
 define amdgpu_ps void @test_swmmac_bf16_16x16x32_bf16(<4 x i16> %A, <8 x i16> %B, <4 x i16> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_bf16_16x16x32_bf16:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr8_hi16
 ; GCN-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[6:7], v[0:1], v[2:5], v8
 ; GCN-NEXT:    global_store_b64 v[9:10], v[6:7], off
 ; GCN-NEXT:    s_endpgm
@@ -189,7 +185,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8(i32 %A, <2 x i32> %B, <4 x i32> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x32_iu8:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x32_iu8 v[3:6], v0, v[1:2], v7
 ; GCN-NEXT:    global_store_b128 v[8:9], v[3:6], off
 ; GCN-NEXT:    s_endpgm
@@ -202,7 +197,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4(i32 %A, i32 %B, <4 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x32_iu4:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr6_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x32_iu4 v[2:5], v0, v1, v6
 ; GCN-NEXT:    global_store_b128 v[7:8], v[2:5], off
 ; GCN-NEXT:    s_endpgm
@@ -215,7 +209,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x64_iu4(i32 %A, <2 x i32> %B, <4 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x64_iu4:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x64_iu4 v[3:6], v0, v[1:2], v7
 ; GCN-NEXT:    global_store_b128 v[8:9], v[3:6], off
 ; GCN-NEXT:    s_endpgm
@@ -228,7 +221,6 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_fp8(i32 %A, <2 x i32> %B, <4 x float> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_f32_16x16x32_fp8_fp8:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GCN-NEXT:    v_swmmac_f32_16x16x32_fp8_fp8 v[3:6], v0, v[1:2], v7
 ; GCN-NEXT:    global_store_b128 v[8:9], v[3:6], off
 ; GCN-NEXT:    s_endpgm
@@ -241,7 +233,6 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_bf8(i32 %A, <2 x i32> %B, <4 x float> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_f32_16x16x32_fp8_bf8:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GCN-NEXT:    v_swmmac_f32_16x16x32_fp8_bf8 v[3:6], v0, v[1:2], v7
 ; GCN-NEXT:    global_store_b128 v[8:9], v[3:6], off
 ; GCN-NEXT:    s_endpgm
@@ -254,7 +245,6 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x32_bf8_fp8(i32 %A, <2 x i32> %B, <4 x float> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_f32_16x16x32_bf8_fp8:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GCN-NEXT:    v_swmmac_f32_16x16x32_bf8_fp8 v[3:6], v0, v[1:2], v7
 ; GCN-NEXT:    global_store_b128 v[8:9], v[3:6], off
 ; GCN-NEXT:    s_endpgm
@@ -267,7 +257,6 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x32_bf8_bf8(i32 %A, <2 x i32> %B, <4 x float> %C, i8 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_f32_16x16x32_bf8_bf8:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GCN-NEXT:    v_swmmac_f32_16x16x32_bf8_bf8 v[3:6], v0, v[1:2], v7
 ; GCN-NEXT:    global_store_b128 v[8:9], v[3:6], off
 ; GCN-NEXT:    s_endpgm

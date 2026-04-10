@@ -10,7 +10,6 @@ define void @gws_init_offset0() #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_mov_b32 m0, 0
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_init a0 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -28,7 +27,6 @@ define void @gws_init_offset63() #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_mov_b32 m0, 0
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_init a0 offset:63 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -46,7 +44,6 @@ define void @gws_init_sgpr_offset(i32 inreg %offset) #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_lshl_b32 m0, s16, 16
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_init a0 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -68,7 +65,6 @@ define amdgpu_kernel void @gws_init_agpr_offset() #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_lshl_b32 m0, s0, 16
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_init a0 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -92,7 +88,6 @@ define void @gws_init_agpr_offset_add1() #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_lshl_b32 m0, s4, 16
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_init a0 offset:1 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -116,7 +111,6 @@ define amdgpu_kernel void @gws_init_vgpr_offset_add(i32 %val) #0 {
 ; CHECK-NEXT:    s_lshl_b32 m0, s1, 16
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ds_gws_init v0 offset:3 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_endpgm
@@ -134,7 +128,6 @@ define void @gws_barrier_offset0() #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_mov_b32 m0, 0
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_barrier a0 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -152,7 +145,6 @@ define void @gws_barrier_offset63() #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_mov_b32 m0, 0
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_barrier a0 offset:63 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -170,7 +162,6 @@ define void @gws_barrier_sgpr_offset(i32 inreg %offset) #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_lshl_b32 m0, s16, 16
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_barrier a0 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -214,7 +205,6 @@ define void @gws_sema_br_offset0() #0 {
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_mov_b32 m0, 0
-; CHECK-NEXT:    ; implicit-def: $agpr1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    ds_gws_sema_br a0 gds
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

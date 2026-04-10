@@ -357,6 +357,7 @@ define <vscale x 32 x bfloat> @vfdiv_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <v
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
@@ -393,6 +394,7 @@ define <vscale x 32 x bfloat> @vfdiv_vv_nxv32bf16_unmasked(<vscale x 32 x bfloat
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
@@ -424,6 +426,7 @@ define <vscale x 32 x bfloat> @vfdiv_vf_nxv32bf16(<vscale x 32 x bfloat> %va, bf
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x bfloat> poison, bfloat %b, i32 0
   %vb = shufflevector <vscale x 32 x bfloat> %elt.head, <vscale x 32 x bfloat> poison, <vscale x 32 x i32> zeroinitializer
@@ -451,6 +454,7 @@ define <vscale x 32 x bfloat> @vfdiv_vf_nxv32bf16_unmasked(<vscale x 32 x bfloat
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x bfloat> poison, bfloat %b, i32 0
   %vb = shufflevector <vscale x 32 x bfloat> %elt.head, <vscale x 32 x bfloat> poison, <vscale x 32 x i32> zeroinitializer
@@ -929,6 +933,7 @@ define <vscale x 32 x half> @vfdiv_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
@@ -971,6 +976,7 @@ define <vscale x 32 x half> @vfdiv_vv_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
@@ -1008,6 +1014,7 @@ define <vscale x 32 x half> @vfdiv_vf_nxv32f16(<vscale x 32 x half> %va, half %b
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x half> poison, half %b, i32 0
   %vb = shufflevector <vscale x 32 x half> %elt.head, <vscale x 32 x half> poison, <vscale x 32 x i32> zeroinitializer
@@ -1041,6 +1048,7 @@ define <vscale x 32 x half> @vfdiv_vf_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x half> poison, half %b, i32 0
   %vb = shufflevector <vscale x 32 x half> %elt.head, <vscale x 32 x half> poison, <vscale x 32 x i32> zeroinitializer

@@ -135,8 +135,6 @@ define amdgpu_kernel void @v_fdiv_f16(
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)

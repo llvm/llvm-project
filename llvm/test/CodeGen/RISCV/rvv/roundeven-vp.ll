@@ -274,6 +274,7 @@ define <vscale x 32 x bfloat> @vp_roundeven_nxv32bf16(<vscale x 32 x bfloat> %va
 ; CHECK-NEXT:    vfsgnj.vv v24, v16, v24, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x bfloat> @llvm.vp.roundeven.nxv32bf16(<vscale x 32 x bfloat> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x bfloat> %v
@@ -311,6 +312,7 @@ define <vscale x 32 x bfloat> @vp_roundeven_nxv32bf16_unmasked(<vscale x 32 x bf
 ; CHECK-NEXT:    vfsgnj.vv v24, v16, v24, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x bfloat> @llvm.vp.roundeven.nxv32bf16(<vscale x 32 x bfloat> %va, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x bfloat> %v
@@ -754,6 +756,7 @@ define <vscale x 32 x half> @vp_roundeven_nxv32f16(<vscale x 32 x half> %va, <vs
 ; ZVFHMIN-NEXT:    vfsgnj.vv v24, v16, v24, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vp.roundeven.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x half> %v
@@ -807,6 +810,7 @@ define <vscale x 32 x half> @vp_roundeven_nxv32f16_unmasked(<vscale x 32 x half>
 ; ZVFHMIN-NEXT:    vfsgnj.vv v24, v16, v24, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vp.roundeven.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x half> %v

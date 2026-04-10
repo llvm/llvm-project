@@ -207,9 +207,11 @@ define arm_aapcs_vfpcc <8 x half> @vfma16(<8 x half> %src1, <8 x half> %src2, fl
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmov q3, q0
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s8
+; CHECK-MVE-NEXT:    @ implicit-def: $s2
 ; CHECK-MVE-NEXT:    vmovx.f16 s0, s4
-; CHECK-MVE-NEXT:    vmovx.f16 s2, s12
 ; CHECK-MVE-NEXT:    vmov.f32 s8, s3
+; CHECK-MVE-NEXT:    vmovx.f16 s2, s12
+; CHECK-MVE-NEXT:    @ implicit-def: $s1
 ; CHECK-MVE-NEXT:    vmla.f16 s8, s2, s0
 ; CHECK-MVE-NEXT:    vmov.f32 s0, s3
 ; CHECK-MVE-NEXT:    vmla.f16 s0, s12, s4
@@ -417,11 +419,14 @@ define arm_aapcs_vfpcc <8 x half> @vfma16_v1_pred(<8 x half> %src1, <8 x half> %
 ; CHECK-MVE-NEXT:    vseleq.f16 s12, s13, s15
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s8, #0
+; CHECK-MVE-NEXT:    @ implicit-def: $s15
+; CHECK-MVE-NEXT:    @ implicit-def: $s13
 ; CHECK-MVE-NEXT:    cset r0, mi
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s0, s0, s14
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vins.f16 s0, s12
+; CHECK-MVE-NEXT:    @ implicit-def: $s14
 ; CHECK-MVE-NEXT:    vmovx.f16 s12, s1
 ; CHECK-MVE-NEXT:    vmov.f32 s14, s12
 ; CHECK-MVE-NEXT:    vcmp.f16 s5, #0
@@ -514,11 +519,14 @@ define arm_aapcs_vfpcc <8 x half> @vfma16_v2_pred(<8 x half> %src1, <8 x half> %
 ; CHECK-MVE-NEXT:    vseleq.f16 s12, s13, s15
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s8, #0
+; CHECK-MVE-NEXT:    @ implicit-def: $s15
+; CHECK-MVE-NEXT:    @ implicit-def: $s13
 ; CHECK-MVE-NEXT:    cset r0, mi
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s0, s0, s14
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vins.f16 s0, s12
+; CHECK-MVE-NEXT:    @ implicit-def: $s14
 ; CHECK-MVE-NEXT:    vmovx.f16 s12, s1
 ; CHECK-MVE-NEXT:    vmov.f32 s14, s12
 ; CHECK-MVE-NEXT:    vcmp.f16 s5, #0
@@ -611,11 +619,14 @@ define arm_aapcs_vfpcc <8 x half> @vfms16_pred(<8 x half> %src1, <8 x half> %src
 ; CHECK-MVE-NEXT:    vseleq.f16 s12, s13, s15
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s8, #0
+; CHECK-MVE-NEXT:    @ implicit-def: $s15
+; CHECK-MVE-NEXT:    @ implicit-def: $s13
 ; CHECK-MVE-NEXT:    cset r0, mi
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s0, s0, s14
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vins.f16 s0, s12
+; CHECK-MVE-NEXT:    @ implicit-def: $s14
 ; CHECK-MVE-NEXT:    vmovx.f16 s12, s1
 ; CHECK-MVE-NEXT:    vmov.f32 s14, s12
 ; CHECK-MVE-NEXT:    vcmp.f16 s5, #0
@@ -704,11 +715,14 @@ define arm_aapcs_vfpcc <8 x half> @vfmar16_pred(<8 x half> %src1, <8 x half> %sr
 ; CHECK-MVE-NEXT:    vmov.f32 s14, s12
 ; CHECK-MVE-NEXT:    vmla.f16 s14, s10, s8
 ; CHECK-MVE-NEXT:    vcmp.f16 s4, #0
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    cset r0, mi
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s10, s12, s14
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vmov.f32 s12, s0
+; CHECK-MVE-NEXT:    @ implicit-def: $s14
 ; CHECK-MVE-NEXT:    vmla.f16 s12, s4, s8
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s5
 ; CHECK-MVE-NEXT:    vcmp.f16 s4, #0
@@ -805,11 +819,14 @@ define arm_aapcs_vfpcc <8 x half> @vfma16_pred(<8 x half> %src1, <8 x half> %src
 ; CHECK-MVE-NEXT:    vmov.f32 s14, s8
 ; CHECK-MVE-NEXT:    vmla.f16 s14, s12, s10
 ; CHECK-MVE-NEXT:    vcmp.f16 s4, #0
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    cset r0, mi
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s10, s12, s14
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vmov.f32 s12, s8
+; CHECK-MVE-NEXT:    @ implicit-def: $s14
 ; CHECK-MVE-NEXT:    vmla.f16 s12, s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s5
 ; CHECK-MVE-NEXT:    vcmp.f16 s4, #0

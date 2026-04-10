@@ -13,8 +13,6 @@ define amdgpu_kernel void @foo() {
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    ; implicit-def: $sgpr0
-; CHECK-NEXT:    ; implicit-def: $sgpr1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB0_3: ; %sw.bb10

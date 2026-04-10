@@ -139,7 +139,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_zext_src0(<2 x i32> %A, <4 x i32> %B, <8 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x32_iu8_zext_src0:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr14_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x32_iu8 v[6:13], v[0:1], v[2:5], v14 neg_lo:[1,0,0]
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16
@@ -154,7 +153,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_zext_src1(<2 x i32> %A, <4 x i32> %B, <8 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x32_iu8_zext_src1:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr14_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x32_iu8 v[6:13], v[0:1], v[2:5], v14 neg_lo:[0,1,0]
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16
@@ -169,7 +167,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_clamp(<2 x i32> %A, <4 x i32> %B, <8 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x32_iu8_clamp:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr14_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x32_iu8 v[6:13], v[0:1], v[2:5], v14 clamp
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16
@@ -186,7 +183,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_zext_src0(i32 %A, <2 x i32> %B, <8 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x32_iu4_zext_src0:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr11_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x32_iu4 v[3:10], v0, v[1:2], v11 neg_lo:[1,0,0]
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    global_store_b128 v[12:13], v[7:10], off offset:16
@@ -201,7 +197,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_zext_src1(i32 %A, <2 x i32> %B, <8 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x32_iu4_zext_src1:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr11_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x32_iu4 v[3:10], v0, v[1:2], v11 neg_lo:[0,1,0]
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    global_store_b128 v[12:13], v[7:10], off offset:16
@@ -216,7 +211,6 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_clamp(i32 %A, <2 x i32> %B, <8 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_swmmac_i32_16x16x32_iu4_clamp:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    ; implicit-def: $vgpr11_hi16
 ; GCN-NEXT:    v_swmmac_i32_16x16x32_iu4 v[3:10], v0, v[1:2], v11 clamp
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    global_store_b128 v[12:13], v[7:10], off offset:16

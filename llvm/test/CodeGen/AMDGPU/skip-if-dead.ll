@@ -578,8 +578,6 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; SI-NEXT:    s_andn2_b64 exec, exec, vcc
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v8, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    ;;#ASMSTART
@@ -588,8 +586,6 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; SI-NEXT:  .LBB8_3: ; %exit
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v9, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB8_4:
@@ -936,16 +932,14 @@ exit:
 define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; SI-LABEL: test_kill_divergent_loop:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_mov_b64 s[4:5], exec
+; SI-NEXT:    s_mov_b64 s[0:1], exec
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; SI-NEXT:    s_xor_b64 s[6:7], exec, s[0:1]
+; SI-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; SI-NEXT:    s_xor_b64 s[4:5], exec, s[2:3]
 ; SI-NEXT:    s_cbranch_execz .LBB10_4
 ; SI-NEXT:  ; %bb.1: ; %bb.preheader
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:  .LBB10_2: ; %bb
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    ;;#ASMSTART
@@ -962,7 +956,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; SI-NEXT:    v_nop_e64
 ; SI-NEXT:    ;;#ASMEND
 ; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
-; SI-NEXT:    s_andn2_b64 s[4:5], s[4:5], vcc
+; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], vcc
 ; SI-NEXT:    s_cbranch_scc0 .LBB10_5
 ; SI-NEXT:  ; %bb.3: ; %bb
 ; SI-NEXT:    ; in Loop: Header=BB10_2 Depth=1
@@ -972,12 +966,10 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; SI-NEXT:    s_cbranch_vccnz .LBB10_2
 ; SI-NEXT:  .LBB10_4: ; %Flow1
-; SI-NEXT:    s_or_b64 exec, exec, s[6:7]
+; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 8
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_endpgm
@@ -1159,8 +1151,6 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x, i32 inreg %y) #0 
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 8
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, 4.0
@@ -1171,8 +1161,6 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x, i32 inreg %y) #0 
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 9
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:  .LBB11_5: ; %end
@@ -1432,8 +1420,6 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 9
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:  .LBB13_5: ; %UnifiedReturnBlock
@@ -1989,8 +1975,6 @@ define amdgpu_ps void @scc_use_after_kill_inst(float inreg %x, i32 inreg %y) #0 
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 8
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, 4.0
@@ -2001,8 +1985,6 @@ define amdgpu_ps void @scc_use_after_kill_inst(float inreg %x, i32 inreg %y) #0 
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 9
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:  .LBB17_5: ; %end

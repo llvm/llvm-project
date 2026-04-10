@@ -254,7 +254,6 @@ define amdgpu_vs half @sitofp_i32_to_f16(i32 inreg %x) {
 ; GISEL-GFX11-NEXT:    v_cvt_f32_i32_e32 v0, s0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX11-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GISEL-GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: sitofp_i32_to_f16:
@@ -262,7 +261,6 @@ define amdgpu_vs half @sitofp_i32_to_f16(i32 inreg %x) {
 ; GISEL-GFX12-NEXT:    v_cvt_f32_i32_e32 v0, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX12-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GISEL-GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = sitofp i32 %x to half
   ret half %res
@@ -282,7 +280,6 @@ define amdgpu_vs half @uitofp_i32_to_f16(i32 inreg %x) {
 ; GISEL-GFX11-NEXT:    v_cvt_f32_u32_e32 v0, s0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX11-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GISEL-GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: uitofp_i32_to_f16:
@@ -290,7 +287,6 @@ define amdgpu_vs half @uitofp_i32_to_f16(i32 inreg %x) {
 ; GISEL-GFX12-NEXT:    v_cvt_f32_u32_e32 v0, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX12-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GISEL-GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = uitofp i32 %x to half
   ret half %res

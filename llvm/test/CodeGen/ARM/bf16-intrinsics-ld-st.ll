@@ -306,7 +306,6 @@ define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld3_lane_bf16(ptr %ptr, [3 x <2 x 
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    @ implicit-def: $d3
 ; CHECK-NEXT:    vld3.16 {d0[1], d1[1], d2[1]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -335,7 +334,6 @@ define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld3q_lane_bf16(ptr %ptr, [3 x <4 x
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-NEXT:    @ implicit-def: $q3
 ; CHECK-NEXT:    vld3.16 {d1[3], d3[3], d5[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -670,7 +668,6 @@ define arm_aapcs_vfpcc void @test_vst1_bf16_x3(ptr nocapture %ptr, [3 x <2 x i32
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    @ implicit-def: $d3
 ; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -690,7 +687,6 @@ define arm_aapcs_vfpcc void @test_vst1q_bf16_x3(ptr nocapture %ptr, [3 x <4 x i3
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-NEXT:    @ implicit-def: $q3
 ; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0]!
 ; CHECK-NEXT:    vst1.16 {d3, d4, d5}, [r0]
 ; CHECK-NEXT:    bx lr
@@ -820,7 +816,6 @@ define arm_aapcs_vfpcc void @test_vst3_bf16(ptr %ptr, [3 x <2 x i32>] %val.coerc
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    @ implicit-def: $d3
 ; CHECK-NEXT:    vst3.16 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -840,7 +835,6 @@ define arm_aapcs_vfpcc void @test_vst3q_bf16(ptr %ptr, [3 x <4 x i32>] %val.coer
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-NEXT:    @ implicit-def: $q3
 ; CHECK-NEXT:    vst3.16 {d0, d2, d4}, [r0]!
 ; CHECK-NEXT:    vst3.16 {d1, d3, d5}, [r0]
 ; CHECK-NEXT:    bx lr
@@ -861,7 +855,6 @@ define arm_aapcs_vfpcc void @test_vst3_lane_bf16(ptr %ptr, [3 x <2 x i32>] %val.
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    @ implicit-def: $d3
 ; CHECK-NEXT:    vst3.16 {d0[1], d1[1], d2[1]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -881,7 +874,6 @@ define arm_aapcs_vfpcc void @test_vst3q_lane_bf16(ptr %ptr, [3 x <4 x i32>] %val
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-NEXT:    @ implicit-def: $q3
 ; CHECK-NEXT:    vst3.16 {d1[3], d3[3], d5[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:

@@ -11,6 +11,7 @@ define <8 x i32> @concat_2xv4i32(<4 x i32> %a, <4 x i32> %b) {
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLA-NEXT:    vmv1r.v v10, v9
 ; VLA-NEXT:    vslideup.vi v8, v10, 4
+; VLA-NEXT:    # implicit-def: $v11
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_2xv4i32:
@@ -28,6 +29,7 @@ define <8 x i32> @concat_4xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x 
 ; VLA-NEXT:    vslideup.vi v8, v9, 2
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v10, 4
+; VLA-NEXT:    # implicit-def: $v11
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_4xv2i32:
@@ -58,6 +60,7 @@ define <8 x i32> @concat_8xv1i32(<1 x i32> %a, <1 x i32> %b, <1 x i32> %c, <1 x 
 ; VLA-NEXT:    vslideup.vi v8, v10, 2
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v12, 4
+; VLA-NEXT:    # implicit-def: $v11
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_8xv1i32:
@@ -92,6 +95,7 @@ define <16 x i32> @concat_2xv8i32(<8 x i32> %a, <8 x i32> %b) {
 ; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; VLA-NEXT:    vmv2r.v v12, v10
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
+; VLA-NEXT:    # implicit-def: $v14m2
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_2xv8i32:
@@ -112,6 +116,7 @@ define <16 x i32> @concat_4xv4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 ; VLA-NEXT:    vslideup.vi v8, v10, 4
 ; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
+; VLA-NEXT:    # implicit-def: $v14m2
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_4xv4i32:
@@ -136,6 +141,7 @@ define <16 x i32> @concat_8xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 ; VLA-NEXT:    vslideup.vi v8, v10, 4
 ; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
+; VLA-NEXT:    # implicit-def: $v14m2
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_8xv2i32:
@@ -168,6 +174,7 @@ define <32 x i32> @concat_2xv16i32(<16 x i32> %a, <16 x i32> %b) {
 ; VLA-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; VLA-NEXT:    vmv4r.v v16, v12
 ; VLA-NEXT:    vslideup.vi v8, v16, 16
+; VLA-NEXT:    # implicit-def: $v20m4
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_2xv16i32:
@@ -189,6 +196,7 @@ define <32 x i32> @concat_4xv8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
 ; VLA-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v16, 16
+; VLA-NEXT:    # implicit-def: $v20m4
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_4xv8i32:
@@ -221,6 +229,7 @@ define <32 x i32> @concat_8xv4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
 ; VLA-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v16, 16
+; VLA-NEXT:    # implicit-def: $v20m4
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: concat_8xv4i32:

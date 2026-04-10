@@ -107,6 +107,7 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v24, 16
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %v = call <32 x float> @llvm.vp.fptrunc.v32f64.v32f32(<32 x double> %a, <32 x i1> %m, i32 %vl)
   ret <32 x float> %v

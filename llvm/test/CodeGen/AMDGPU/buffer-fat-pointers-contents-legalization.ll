@@ -2518,11 +2518,10 @@ define <12 x i8> @load_v12i8(ptr addrspace(8) inreg %buf) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    buffer_load_dwordx3 v[0:2], off, s[16:19], 0
-; SDAG-NEXT:    ; implicit-def: $vgpr3
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    v_lshrrev_b64 v[13:14], 24, v[0:1]
-; SDAG-NEXT:    v_lshrrev_b32_e32 v15, 8, v0
-; SDAG-NEXT:    v_lshrrev_b32_e32 v14, 16, v0
+; SDAG-NEXT:    v_lshrrev_b64 v[3:4], 24, v[0:1]
+; SDAG-NEXT:    v_lshrrev_b32_e32 v14, 8, v0
+; SDAG-NEXT:    v_lshrrev_b32_e32 v13, 16, v0
 ; SDAG-NEXT:    v_lshrrev_b64 v[11:12], 24, v[2:3]
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
@@ -2531,9 +2530,8 @@ define <12 x i8> @load_v12i8(ptr addrspace(8) inreg %buf) {
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v1
 ; SDAG-NEXT:    v_mov_b32_e32 v8, v2
-; SDAG-NEXT:    v_mov_b32_e32 v1, v15
-; SDAG-NEXT:    v_mov_b32_e32 v2, v14
-; SDAG-NEXT:    v_mov_b32_e32 v3, v13
+; SDAG-NEXT:    v_mov_b32_e32 v1, v14
+; SDAG-NEXT:    v_mov_b32_e32 v2, v13
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: load_v12i8:

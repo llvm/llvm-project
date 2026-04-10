@@ -300,6 +300,7 @@ define <32 x i8> @vpgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %
 ; RV64-NEXT:    li a0, 32
 ; RV64-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV64-NEXT:    vslideup.vi v10, v8, 16
+; RV64-NEXT:    # implicit-def: $v9
 ; RV64-NEXT:    vmv.v.v v8, v10
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i8, ptr %base, <32 x i8> %idxs

@@ -36,7 +36,6 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-NEXT:    s_cbranch_vccz .LBB0_1
 ; GFX942-NEXT:  ; %bb.3:
 ; GFX942-NEXT:    ; implicit-def: $sgpr6
-; GFX942-NEXT:    ; implicit-def: $vgpr0
 ; GFX942-NEXT:  .LBB0_4: ; %common.ret
 ; GFX942-NEXT:    s_endpgm
 ;

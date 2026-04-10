@@ -263,6 +263,7 @@ define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vv(<vscale x 32 x bfloat> %a, <vs
 ; ZVFBFMIN-NEXT:    vfmin.vv v16, v16, v24
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vfncvtbf16.f.f.w v12, v16
+; ZVFBFMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFBFMIN-NEXT:    csrr a0, vlenb
 ; ZVFBFMIN-NEXT:    slli a0, a0, 3
 ; ZVFBFMIN-NEXT:    add sp, sp, a0
@@ -310,6 +311,7 @@ define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vf(<vscale x 32 x bfloat> %a, bfl
 ; ZVFBFMIN-NEXT:    vfmin.vv v16, v24, v16
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vfncvtbf16.f.f.w v12, v16
+; ZVFBFMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFBFMIN-NEXT:    csrr a0, vlenb
 ; ZVFBFMIN-NEXT:    slli a0, a0, 3
 ; ZVFBFMIN-NEXT:    add sp, sp, a0
@@ -580,6 +582,7 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    vfmin.vv v16, v16, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
@@ -627,6 +630,7 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vf(<vscale x 32 x half> %a, half %b)
 ; ZVFHMIN-NEXT:    vfmin.vv v16, v24, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0

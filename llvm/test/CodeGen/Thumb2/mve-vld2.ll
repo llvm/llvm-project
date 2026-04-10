@@ -395,13 +395,9 @@ define void @vld2_v2f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    @ implicit-def: $s6
-; CHECK-NEXT:    @ implicit-def: $s7
 ; CHECK-NEXT:    vmov.f32 s4, s1
 ; CHECK-NEXT:    vmov.f32 s5, s3
-; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vmov.f32 s1, s2
-; CHECK-NEXT:    @ implicit-def: $s2
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vstmia r1, {s0, s1}
 ; CHECK-NEXT:    bx lr
@@ -605,6 +601,8 @@ define void @vld2_v8f16_align1(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v8f16_align1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
+; CHECK-NEXT:    @ implicit-def: $s10
+; CHECK-NEXT:    @ implicit-def: $s5
 ; CHECK-NEXT:    vldrb.u8 q2, [r0, #16]
 ; CHECK-NEXT:    vmovx.f16 s4, s0
 ; CHECK-NEXT:    vmovx.f16 s6, s1

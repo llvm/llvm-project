@@ -268,8 +268,8 @@ define arm_aapcs_vfpcc <8 x half> @minnm_float16_t(<8 x half> %src1, <8 x half> 
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s0
 ; CHECK-MVE-NEXT:    vmovx.f16 s10, s4
-; CHECK-MVE-NEXT:    vminnm.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vminnm.f16 s8, s10, s8
+; CHECK-MVE-NEXT:    vminnm.f16 s0, s4, s0
 ; CHECK-MVE-NEXT:    vins.f16 s0, s8
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s5
@@ -285,6 +285,9 @@ define arm_aapcs_vfpcc <8 x half> @minnm_float16_t(<8 x half> %src1, <8 x half> 
 ; CHECK-MVE-NEXT:    vmovx.f16 s6, s7
 ; CHECK-MVE-NEXT:    vminnm.f16 s3, s7, s3
 ; CHECK-MVE-NEXT:    vminnm.f16 s4, s6, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s10
+; CHECK-MVE-NEXT:    @ implicit-def: $s11
+; CHECK-MVE-NEXT:    @ implicit-def: $s9
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4
 ; CHECK-MVE-NEXT:    bx lr
 ;

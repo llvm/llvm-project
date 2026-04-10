@@ -286,7 +286,6 @@ define amdgpu_kernel void @test_v_f64(ptr addrspace(1) %out, double %src0) #1 {
 define void @test_half(ptr addrspace(1) %out, half %src0) {
 ; GFX11-SDAG-LABEL: test_half:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_permlane64_b32 v2, v2
 ; GFX11-SDAG-NEXT:    global_store_b16 v[0:1], v2, off
@@ -306,7 +305,6 @@ define void @test_half(ptr addrspace(1) %out, half %src0) {
 define void @test_bfloat(ptr addrspace(1) %out, bfloat %src0) {
 ; GFX11-SDAG-LABEL: test_bfloat:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_permlane64_b32 v2, v2
 ; GFX11-SDAG-NEXT:    global_store_b16 v[0:1], v2, off
@@ -314,7 +312,6 @@ define void @test_bfloat(ptr addrspace(1) %out, bfloat %src0) {
 ;
 ; GFX11-GISEL-LABEL: test_bfloat:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_permlane64_b32 v2, v2
 ; GFX11-GISEL-NEXT:    global_store_b16 v[0:1], v2, off
@@ -327,7 +324,6 @@ define void @test_bfloat(ptr addrspace(1) %out, bfloat %src0) {
 define void @test_i16(ptr addrspace(1) %out, i16 %src0) {
 ; GFX11-SDAG-LABEL: test_i16:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_permlane64_b32 v2, v2
 ; GFX11-SDAG-NEXT:    global_store_b16 v[0:1], v2, off

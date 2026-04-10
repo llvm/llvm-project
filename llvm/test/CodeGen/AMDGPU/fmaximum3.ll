@@ -1558,7 +1558,6 @@ define amdgpu_ps i32 @s_fmaximum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX12-TRUE16-LABEL: s_fmaximum3_f16:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_maximum3_f16 v0.l, s0, s1, v0.l
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -1581,7 +1580,6 @@ define amdgpu_ps i32 @s_fmaximum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX1170-TRUE16-LABEL: s_fmaximum3_f16:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX1170-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-TRUE16-NEXT:    v_maximum3_f16 v0.l, s0, s1, v0.l
 ; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -4669,8 +4667,6 @@ define amdgpu_ps <2 x i32> @s_no_fmaximum3_f16__multi_use(half inreg %a, half in
 ; GFX1170-TRUE16-LABEL: s_no_fmaximum3_f16__multi_use:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    v_maximum_f16 v0.l, s0, s1
-; GFX1170-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
-; GFX1170-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1170-TRUE16-NEXT:    v_maximum_f16 v1.l, v0.l, s2
 ; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0

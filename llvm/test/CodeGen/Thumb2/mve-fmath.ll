@@ -23,6 +23,9 @@ define arm_aapcs_vfpcc <8 x half> @sqrt_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmovx.f16 s4, s0
 ; CHECK-NEXT:    vsqrt.f16 s0, s0
 ; CHECK-NEXT:    vsqrt.f16 s4, s4
+; CHECK-NEXT:    @ implicit-def: $s6
+; CHECK-NEXT:    @ implicit-def: $s7
+; CHECK-NEXT:    @ implicit-def: $s5
 ; CHECK-NEXT:    vins.f16 s0, s4
 ; CHECK-NEXT:    vmovx.f16 s4, s1
 ; CHECK-NEXT:    vsqrt.f16 s4, s4
@@ -117,6 +120,10 @@ define arm_aapcs_vfpcc <8 x half> @cos_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
@@ -228,6 +235,10 @@ define arm_aapcs_vfpcc <8 x half> @sin_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
@@ -339,6 +350,10 @@ define arm_aapcs_vfpcc <8 x half> @tan_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl tanf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
@@ -450,6 +465,10 @@ define arm_aapcs_vfpcc <8 x half> @exp_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
@@ -561,6 +580,10 @@ define arm_aapcs_vfpcc <8 x half> @exp2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
@@ -672,6 +695,10 @@ define arm_aapcs_vfpcc <8 x half> @log_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
@@ -783,6 +810,10 @@ define arm_aapcs_vfpcc <8 x half> @log2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
@@ -894,6 +925,10 @@ define arm_aapcs_vfpcc <8 x half> @log10_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
@@ -1017,6 +1052,10 @@ define arm_aapcs_vfpcc <8 x half> @pow_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s25, s0
@@ -1145,6 +1184,8 @@ define arm_aapcs_vfpcc <8 x half> @copysign_float16_t(<8 x half> %src1, <8 x hal
 ; FULLFP16-NEXT:    ldrb.w r0, [sp, #25]
 ; FULLFP16-NEXT:    vmovx.f16 s4, s0
 ; FULLFP16-NEXT:    vabs.f16 s4, s4
+; FULLFP16-NEXT:    @ implicit-def: $s5
+; FULLFP16-NEXT:    @ implicit-def: $s7
 ; FULLFP16-NEXT:    vneg.f16 s6, s4
 ; FULLFP16-NEXT:    lsls r0, r0, #24
 ; FULLFP16-NEXT:    it pl
@@ -1157,8 +1198,9 @@ define arm_aapcs_vfpcc <8 x half> @copysign_float16_t(<8 x half> %src1, <8 x hal
 ; FULLFP16-NEXT:    vmovpl.f32 s0, s4
 ; FULLFP16-NEXT:    ldrb.w r0, [sp, #17]
 ; FULLFP16-NEXT:    vmovx.f16 s4, s1
-; FULLFP16-NEXT:    vabs.f16 s4, s4
 ; FULLFP16-NEXT:    vins.f16 s0, s6
+; FULLFP16-NEXT:    @ implicit-def: $s6
+; FULLFP16-NEXT:    vabs.f16 s4, s4
 ; FULLFP16-NEXT:    vneg.f16 s6, s4
 ; FULLFP16-NEXT:    lsls r0, r0, #24
 ; FULLFP16-NEXT:    it pl

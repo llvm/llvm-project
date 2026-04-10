@@ -11,8 +11,6 @@ define i1 @i1_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -22,8 +20,6 @@ define i1 @i1_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -38,8 +34,6 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -49,8 +43,6 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -64,8 +56,6 @@ define signext i1 @i1_signext_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    v_bfe_i32 v0, v0, 0, 1
@@ -76,8 +66,6 @@ define signext i1 @i1_signext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 1
@@ -92,8 +80,6 @@ define i8 @i8_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -103,8 +89,6 @@ define i8 @i8_func_void() #0 {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-TRUE16-NEXT:    buffer_load_d16_u8 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -114,8 +98,6 @@ define i8 @i8_func_void() #0 {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-FAKE16-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -129,8 +111,6 @@ define zeroext i8 @i8_zeroext_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -140,8 +120,6 @@ define zeroext i8 @i8_zeroext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -155,8 +133,6 @@ define signext i8 @i8_signext_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_sbyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -166,8 +142,6 @@ define signext i8 @i8_signext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_i8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -181,8 +155,6 @@ define i16 @i16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -192,8 +164,6 @@ define i16 @i16_func_void() #0 {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -203,8 +173,6 @@ define i16 @i16_func_void() #0 {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-FAKE16-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -218,8 +186,6 @@ define zeroext i16 @i16_zeroext_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -229,8 +195,6 @@ define zeroext i16 @i16_zeroext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -244,8 +208,6 @@ define signext i16 @i16_signext_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_sshort v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -255,8 +217,6 @@ define signext i16 @i16_signext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_i16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -270,8 +230,6 @@ define i32 @i32_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -281,8 +239,6 @@ define i32 @i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -296,8 +252,6 @@ define i48 @i48_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; GFX789-NEXT:    buffer_load_ushort v1, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
@@ -308,8 +262,6 @@ define i48 @i48_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_load_u16 v1, off, s[0:3], 0
@@ -325,8 +277,6 @@ define zeroext i48 @i48_zeroext_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; GFX789-NEXT:    buffer_load_ushort v1, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
@@ -337,8 +287,6 @@ define zeroext i48 @i48_zeroext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_load_u16 v1, off, s[0:3], 0
@@ -354,8 +302,6 @@ define signext i48 @i48_signext_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; GFX789-NEXT:    buffer_load_sshort v1, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
@@ -366,8 +312,6 @@ define signext i48 @i48_signext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_load_i16 v1, off, s[0:3], 0
@@ -436,8 +380,6 @@ define i64 @i64_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -447,8 +389,6 @@ define i64 @i64_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -462,8 +402,6 @@ define i65 @i65_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX789-NEXT:    buffer_load_ubyte v2, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
@@ -474,8 +412,6 @@ define i65 @i65_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_load_u8 v2, off, s[0:3], 0
@@ -491,8 +427,6 @@ define float @f32_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -502,8 +436,6 @@ define float @f32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -517,8 +449,6 @@ define double @f64_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -528,8 +458,6 @@ define double @f64_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -543,8 +471,6 @@ define <2 x double> @v2f64_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -554,8 +480,6 @@ define <2 x double> @v2f64_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -569,8 +493,6 @@ define <2 x i32> @v2i32_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -580,8 +502,6 @@ define <2 x i32> @v2i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -595,8 +515,6 @@ define <3 x i32> @v3i32_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx3 v[0:2], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -606,8 +524,6 @@ define <3 x i32> @v3i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b96 v[0:2], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -621,8 +537,6 @@ define <4 x i32> @v4i32_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -632,8 +546,6 @@ define <4 x i32> @v4i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -647,8 +559,6 @@ define <5 x i32> @v5i32_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dword v4, off, s[4:7], 0 glc
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0 glc
@@ -660,8 +570,6 @@ define <5 x i32> @v5i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b32 v4, off, s[0:3], 0 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0 glc dlc
@@ -783,8 +691,6 @@ define <2 x i64> @v2i64_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -794,8 +700,6 @@ define <2 x i64> @v2i64_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -977,8 +881,6 @@ define <2 x i16> @v2i16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -988,8 +890,6 @@ define <2 x i16> @v2i16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1003,8 +903,6 @@ define <3 x i16> @v3i16_func_void() #0 {
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
-; CI-NEXT:    ; implicit-def: $sgpr4
-; CI-NEXT:    ; implicit-def: $sgpr5
 ; CI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
@@ -1015,8 +913,6 @@ define <3 x i16> @v3i16_func_void() #0 {
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX89-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX89-NEXT:    s_mov_b32 s6, -1
-; GFX89-NEXT:    ; implicit-def: $sgpr4
-; GFX89-NEXT:    ; implicit-def: $sgpr5
 ; GFX89-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
@@ -1026,8 +922,6 @@ define <3 x i16> @v3i16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1041,8 +935,6 @@ define <4 x i16> @v4i16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -1052,8 +944,6 @@ define <4 x i16> @v4i16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1067,8 +957,6 @@ define <4 x half> @v4f16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -1078,8 +966,6 @@ define <4 x half> @v4f16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1291,8 +1177,6 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    buffer_load_dword v1, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
@@ -1303,8 +1187,6 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_d16_u8 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[0:3], 0
@@ -1316,8 +1198,6 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[0:3], 0
@@ -1333,8 +1213,6 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ubyte v1, off, s[4:7], 0 glc
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    buffer_load_dword v2, off, s[4:7], 0 glc
@@ -1349,8 +1227,6 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-TRUE16-NEXT:    buffer_load_d16_u8 v1, off, s[0:3], 0 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v2, off, s[0:3], 0 glc dlc
@@ -1365,8 +1241,6 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-FAKE16-NEXT:    buffer_load_u8 v1, off, s[0:3], 0 glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v2, off, s[0:3], 0 glc dlc
@@ -2433,8 +2307,6 @@ define bfloat @bf16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -2444,8 +2316,6 @@ define bfloat @bf16_func_void() #0 {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -2455,8 +2325,6 @@ define bfloat @bf16_func_void() #0 {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr0
-; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-FAKE16-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -2470,8 +2338,6 @@ define <2 x bfloat> @v2bf16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -2481,8 +2347,6 @@ define <2 x bfloat> @v2bf16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2496,8 +2360,6 @@ define <3 x bfloat> @v3bf16_func_void() #0 {
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
-; CI-NEXT:    ; implicit-def: $sgpr4
-; CI-NEXT:    ; implicit-def: $sgpr5
 ; CI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
@@ -2508,8 +2370,6 @@ define <3 x bfloat> @v3bf16_func_void() #0 {
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX89-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX89-NEXT:    s_mov_b32 s6, -1
-; GFX89-NEXT:    ; implicit-def: $sgpr4
-; GFX89-NEXT:    ; implicit-def: $sgpr5
 ; GFX89-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
@@ -2519,8 +2379,6 @@ define <3 x bfloat> @v3bf16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2534,8 +2392,6 @@ define <4 x bfloat> @v4bf16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -2545,8 +2401,6 @@ define <4 x bfloat> @v4bf16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2560,8 +2414,6 @@ define <6 x bfloat> @v6bf16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx3 v[0:2], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -2571,8 +2423,6 @@ define <6 x bfloat> @v6bf16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b96 v[0:2], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2586,8 +2436,6 @@ define <8 x bfloat> @v8bf16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
@@ -2597,8 +2445,6 @@ define <8 x bfloat> @v8bf16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2612,8 +2458,6 @@ define <16 x bfloat> @v16bf16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    v_mov_b32_e32 v4, v0
@@ -2627,8 +2471,6 @@ define <16 x bfloat> @v16bf16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
@@ -2644,8 +2486,6 @@ define <32 x bfloat> @v32bf16_func_void() #0 {
 ; GFX789-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX789-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX789-NEXT:    s_mov_b32 s6, -1
-; GFX789-NEXT:    ; implicit-def: $sgpr4
-; GFX789-NEXT:    ; implicit-def: $sgpr5
 ; GFX789-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    v_mov_b32_e32 v4, v0
@@ -2667,8 +2507,6 @@ define <32 x bfloat> @v32bf16_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr0
-; GFX11-NEXT:    ; implicit-def: $sgpr1
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1

@@ -8,6 +8,9 @@ define arm_aapcs_vfpcc <8 x half> @fneg_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-MVE-NEXT:    vneg.f16 s0, s0
 ; CHECK-MVE-NEXT:    vneg.f16 s4, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vins.f16 s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vneg.f16 s4, s4
@@ -78,6 +81,9 @@ define arm_aapcs_vfpcc <8 x half> @fabs_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-MVE-NEXT:    vabs.f16 s0, s0
 ; CHECK-MVE-NEXT:    vabs.f16 s4, s4
+; CHECK-MVE-NEXT:    @ implicit-def: $s6
+; CHECK-MVE-NEXT:    @ implicit-def: $s7
+; CHECK-MVE-NEXT:    @ implicit-def: $s5
 ; CHECK-MVE-NEXT:    vins.f16 s0, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-MVE-NEXT:    vabs.f16 s4, s4

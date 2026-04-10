@@ -1324,15 +1324,13 @@ define i1 @test_fold_and_ord_multi_use(float %a) {
 ; SI-SDAG-LABEL: test_fold_and_ord_multi_use:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_cmp_class_f32_e64 s[8:9], v0, 35
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[8:9]
+; SI-SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 35
+; SI-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
-; SI-SDAG-NEXT:    ; implicit-def: $sgpr4
-; SI-SDAG-NEXT:    ; implicit-def: $sgpr5
 ; SI-SDAG-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; SI-SDAG-NEXT:    s_and_b64 s[8:9], vcc, s[8:9]
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[8:9]
+; SI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
+; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SI-SDAG-NEXT:    buffer_store_byte v1, off, s[4:7], 0
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -1340,14 +1338,13 @@ define i1 @test_fold_and_ord_multi_use(float %a) {
 ; SI-GISEL-LABEL: test_fold_and_ord_multi_use:
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[8:9], v0, 35
-; SI-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[8:9]
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 35
+; SI-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
 ; SI-GISEL-NEXT:    s_mov_b32 s6, -1
 ; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
-; SI-GISEL-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; SI-GISEL-NEXT:    s_and_b64 s[8:9], vcc, s[8:9]
-; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[8:9]
+; SI-GISEL-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
+; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SI-GISEL-NEXT:    buffer_store_byte v1, off, s[4:7], 0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]

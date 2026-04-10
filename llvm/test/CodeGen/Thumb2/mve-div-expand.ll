@@ -775,8 +775,8 @@ define arm_aapcs_vfpcc <8 x half> @fdiv_f16(<8 x half> %in1, <8 x half> %in2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovx.f16 s10, s0
 ; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vdiv.f16 s0, s0, s4
 ; CHECK-NEXT:    vdiv.f16 s8, s10, s8
+; CHECK-NEXT:    vdiv.f16 s0, s0, s4
 ; CHECK-NEXT:    vins.f16 s0, s8
 ; CHECK-NEXT:    vmovx.f16 s8, s1
 ; CHECK-NEXT:    vmovx.f16 s4, s5
@@ -792,6 +792,9 @@ define arm_aapcs_vfpcc <8 x half> @fdiv_f16(<8 x half> %in1, <8 x half> %in2) {
 ; CHECK-NEXT:    vmovx.f16 s4, s7
 ; CHECK-NEXT:    vdiv.f16 s3, s3, s7
 ; CHECK-NEXT:    vdiv.f16 s4, s6, s4
+; CHECK-NEXT:    @ implicit-def: $s10
+; CHECK-NEXT:    @ implicit-def: $s11
+; CHECK-NEXT:    @ implicit-def: $s9
 ; CHECK-NEXT:    vins.f16 s3, s4
 ; CHECK-NEXT:    bx lr
 entry:
@@ -827,6 +830,10 @@ define arm_aapcs_vfpcc <8 x half> @frem_f16(<8 x half> %in1, <8 x half> %in2) {
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s25, s0

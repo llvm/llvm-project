@@ -1159,13 +1159,15 @@ define <8 x i64> @v8xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i
 ; RV32-NEXT:    vslide1down.vx v9, v8, a7
 ; RV32-NEXT:    vslide1down.vx v8, v10, a3
 ; RV32-NEXT:    vmv.v.x v10, s0
+; RV32-NEXT:    vmv.v.x v11, t3
 ; RV32-NEXT:    vslide1down.vx v10, v10, t6
+; RV32-NEXT:    vslide1down.vx v11, v11, t2
 ; RV32-NEXT:    vslide1down.vx v10, v10, t5
 ; RV32-NEXT:    vslide1down.vx v10, v10, t4
-; RV32-NEXT:    vmv.v.x v11, t3
-; RV32-NEXT:    vslide1down.vx v11, v11, t2
 ; RV32-NEXT:    vslide1down.vx v11, v11, t1
 ; RV32-NEXT:    vslide1down.vx v11, v11, t0
+; RV32-NEXT:    # implicit-def: $v14
+; RV32-NEXT:    # implicit-def: $v15
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
@@ -1177,12 +1179,14 @@ define <8 x i64> @v8xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i
 ; RV64V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64V-NEXT:    vmv.v.x v8, a2
 ; RV64V-NEXT:    vmv.v.x v10, a0
+; RV64V-NEXT:    vmv.v.x v11, a4
 ; RV64V-NEXT:    vslide1down.vx v9, v8, a3
 ; RV64V-NEXT:    vslide1down.vx v8, v10, a1
-; RV64V-NEXT:    vmv.v.x v10, a4
-; RV64V-NEXT:    vslide1down.vx v10, v10, a5
+; RV64V-NEXT:    vslide1down.vx v10, v11, a5
 ; RV64V-NEXT:    vmv.v.x v11, a6
 ; RV64V-NEXT:    vslide1down.vx v11, v11, a7
+; RV64V-NEXT:    # implicit-def: $v14
+; RV64V-NEXT:    # implicit-def: $v15
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32-LABEL: v8xi64_exact:
@@ -1221,6 +1225,8 @@ define <8 x i64> @v8xi64_exact_equal_halves(i64 %a, i64 %b, i64 %c, i64 %d) vsca
 ; RV32-NEXT:    vslide1down.vx v8, v10, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vmv.v.v v10, v8
+; RV32-NEXT:    # implicit-def: $v14
+; RV32-NEXT:    # implicit-def: $v11
 ; RV32-NEXT:    vmv.v.v v11, v9
 ; RV32-NEXT:    ret
 ;
@@ -1232,6 +1238,8 @@ define <8 x i64> @v8xi64_exact_equal_halves(i64 %a, i64 %b, i64 %c, i64 %d) vsca
 ; RV64V-NEXT:    vmv.v.x v8, a0
 ; RV64V-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64V-NEXT:    vmv.v.v v10, v8
+; RV64V-NEXT:    # implicit-def: $v14
+; RV64V-NEXT:    # implicit-def: $v11
 ; RV64V-NEXT:    vmv.v.v v11, v9
 ; RV64V-NEXT:    ret
 ;

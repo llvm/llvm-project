@@ -72,6 +72,7 @@ define dso_local void @test52(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -87,6 +88,7 @@ define dso_local void @test52(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -113,6 +115,7 @@ define dso_local void @test53(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -128,6 +131,7 @@ define dso_local void @test53(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -154,6 +158,7 @@ define dso_local void @test54(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -169,6 +174,7 @@ define dso_local void @test54(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -195,6 +201,7 @@ define dso_local void @test55(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -210,6 +217,7 @@ define dso_local void @test55(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -236,6 +244,7 @@ define dso_local void @test56(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -251,6 +260,7 @@ define dso_local void @test56(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -277,6 +287,7 @@ define dso_local void @test57(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -292,6 +303,7 @@ define dso_local void @test57(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -318,6 +330,7 @@ define dso_local void @test58(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -333,6 +346,7 @@ define dso_local void @test58(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -359,6 +373,7 @@ define dso_local void @test59(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    # implicit-def: $vsl6
 ; CHECK-NEXT:    lxv vs1, 32(r3)
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
@@ -374,6 +389,7 @@ define dso_local void @test59(ptr nocapture readonly %vqp, ptr nocapture readnon
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    # implicit-def: $vsl6
 ; CHECK-BE-NEXT:    lxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0

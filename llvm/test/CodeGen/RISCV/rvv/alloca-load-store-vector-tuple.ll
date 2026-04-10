@@ -31,6 +31,10 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @load_store_m1x5(targe
 ; CHECK-NEXT:    vl1re8.v v10, (a3)
 ; CHECK-NEXT:    vl1re8.v v11, (a4)
 ; CHECK-NEXT:    vl1re8.v v12, (a1)
+; CHECK-NEXT:    # implicit-def: $v13
+; CHECK-NEXT:    # implicit-def: $v13
+; CHECK-NEXT:    # implicit-def: $v13
+; CHECK-NEXT:    # implicit-def: $v13
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
@@ -66,6 +70,7 @@ define target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @load_store_m2x2(targ
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vl2re8.v v8, (a0)
 ; CHECK-NEXT:    vl2re8.v v10, (a1)
+; CHECK-NEXT:    # implicit-def: $v12m2
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
@@ -101,6 +106,7 @@ define target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @load_store_m4x2(targ
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vl4re8.v v8, (a0)
 ; CHECK-NEXT:    vl4re8.v v12, (a1)
+; CHECK-NEXT:    # implicit-def: $v16m4
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0

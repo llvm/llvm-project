@@ -7,31 +7,29 @@ define <4 x i8> @f0(<4 x i8> %a0, <4 x i8> %a1) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r2 = r1
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    // implicit-def: $r1
-; CHECK-NEXT:    // implicit-def: $r3
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5:4 = combine(#0,#0)
+; CHECK-NEXT:     r7:6 = combine(#0,#0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5:4 = vmpybu(r0,r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p1 = vcmpb.gt(r1:0,#-1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7:6 = vmpybu(r0,r0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = vcmpb.gt(r3:2,#-1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r9:8 = vmpybu(r0,r2)
+; CHECK-NEXT:     r3:2 = vmux(p1,r7:6,r3:2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1:0 = vmux(p0,r5:4,r1:0)
+; CHECK-NEXT:     r1:0 = vmux(p0,r7:6,r1:0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3:2 = vmux(p1,r5:4,r3:2)
+; CHECK-NEXT:     r4 = vtrunohb(r5:4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = vtrunohb(r9:8)
+; CHECK-NEXT:     r7:6 = vmpybu(r0,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = vaddub(r3:2,r1:0)
@@ -211,13 +209,13 @@ define <4 x i16> @f6(<4 x i16> %a0, <4 x i16> %a1) #0 {
 ; CHECK-NEXT:     r5:4 = vmpyh(r0,r2):sat
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r{{[0-9]+}}:{{[0-9]+}} = vmpyh(r1,r3):sat
+; CHECK-NEXT:     r3:2 = vmpyh(r1,r3):sat
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = combine(r{{[0-9]+}}.h,r{{[0-9]+}}.h)
+; CHECK-NEXT:     r0 = combine(r5.h,r4.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = combine(r{{[0-9]+}}.h,r{{[0-9]+}}.h)
+; CHECK-NEXT:     r1 = combine(r3.h,r2.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31

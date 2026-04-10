@@ -5451,7 +5451,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_s_s(<7 x double> inreg 
 ; GPRIDX-NEXT:    s_mov_b32 s11, s13
 ; GPRIDX-NEXT:    s_mov_b32 s12, s14
 ; GPRIDX-NEXT:    s_mov_b32 s13, s15
-; GPRIDX-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GPRIDX-NEXT:    s_mov_b32 m0, s18
 ; GPRIDX-NEXT:    s_nop 0
 ; GPRIDX-NEXT:    s_movreld_b64 s[0:1], s[16:17]
@@ -5474,7 +5473,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_s_s(<7 x double> inreg 
 ; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
 ; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
 ; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GFX10PLUS-NEXT:    s_movreld_b64 s[0:1], s[16:17]
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
@@ -5499,7 +5497,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_s(<7 x double> inreg 
 ; GPRIDX-NEXT:    s_mov_b32 s11, s13
 ; GPRIDX-NEXT:    s_mov_b32 s12, s14
 ; GPRIDX-NEXT:    s_mov_b32 s13, s15
-; GPRIDX-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GPRIDX-NEXT:    v_mov_b32_e32 v17, s15
 ; GPRIDX-NEXT:    v_mov_b32_e32 v16, s14
 ; GPRIDX-NEXT:    v_mov_b32_e32 v15, s13
@@ -5553,7 +5550,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_s(<7 x double> inreg 
 ; GFX10-NEXT:    s_mov_b32 s11, s13
 ; GFX10-NEXT:    s_mov_b32 s12, s14
 ; GFX10-NEXT:    s_mov_b32 s13, s15
-; GFX10-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GFX10-NEXT:    v_mov_b32_e32 v17, s15
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX10-NEXT:    s_lshl_b32 m0, s16, 1
@@ -5605,7 +5601,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_s(<7 x double> inreg 
 ; GFX11-NEXT:    s_mov_b32 s11, s13
 ; GFX11-NEXT:    s_mov_b32 s12, s14
 ; GFX11-NEXT:    s_mov_b32 s13, s15
-; GFX11-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GFX11-NEXT:    v_dual_mov_b32 v17, s15 :: v_dual_mov_b32 v16, s14
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    s_lshl_b32 m0, s16, 1
@@ -5654,7 +5649,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_v(<7 x double> inreg 
 ; GPRIDX-NEXT:    s_mov_b32 s11, s13
 ; GPRIDX-NEXT:    s_mov_b32 s12, s14
 ; GPRIDX-NEXT:    s_mov_b32 s13, s15
-; GPRIDX-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GPRIDX-NEXT:    v_mov_b32_e32 v18, s15
 ; GPRIDX-NEXT:    v_mov_b32_e32 v17, s14
 ; GPRIDX-NEXT:    v_mov_b32_e32 v16, s13
@@ -5706,8 +5700,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_v(<7 x double> inreg 
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s11, v13
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s12, v0
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s13, v1
-; GPRIDX-NEXT:    ; implicit-def: $vgpr14
-; GPRIDX-NEXT:    ; implicit-def: $vgpr14
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_insertelement_v7f64_s_v_v:
@@ -5726,7 +5718,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_v(<7 x double> inreg 
 ; GFX10-NEXT:    s_mov_b32 s11, s13
 ; GFX10-NEXT:    s_mov_b32 s12, s14
 ; GFX10-NEXT:    s_mov_b32 s13, s15
-; GFX10-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GFX10-NEXT:    v_mov_b32_e32 v18, s15
 ; GFX10-NEXT:    v_mov_b32_e32 v17, s14
 ; GFX10-NEXT:    v_mov_b32_e32 v16, s13
@@ -5778,8 +5769,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_v(<7 x double> inreg 
 ; GFX10-NEXT:    v_readfirstlane_b32 s11, v13
 ; GFX10-NEXT:    v_readfirstlane_b32 s12, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s13, v1
-; GFX10-NEXT:    ; implicit-def: $vgpr14
-; GFX10-NEXT:    ; implicit-def: $vgpr14
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: dyn_insertelement_v7f64_s_v_v:
@@ -5798,7 +5787,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_v(<7 x double> inreg 
 ; GFX11-NEXT:    s_mov_b32 s11, s13
 ; GFX11-NEXT:    s_mov_b32 s12, s14
 ; GFX11-NEXT:    s_mov_b32 s13, s15
-; GFX11-NEXT:    ; implicit-def: $sgpr14_sgpr15
 ; GFX11-NEXT:    v_dual_mov_b32 v18, s15 :: v_dual_mov_b32 v17, s14
 ; GFX11-NEXT:    v_dual_mov_b32 v16, s13 :: v_dual_mov_b32 v15, s12
 ; GFX11-NEXT:    v_dual_mov_b32 v14, s11 :: v_dual_mov_b32 v13, s10
@@ -5839,8 +5827,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_v(<7 x double> inreg 
 ; GFX11-NEXT:    v_readfirstlane_b32 s11, v13
 ; GFX11-NEXT:    v_readfirstlane_b32 s12, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s13, v1
-; GFX11-NEXT:    ; implicit-def: $vgpr14
-; GFX11-NEXT:    ; implicit-def: $vgpr14
 ; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <7 x double> %vec, double %val, i32 %idx
@@ -5963,8 +5949,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_v_v_v(<7 x double> %vec, 
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s11, v11
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s12, v12
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s13, v13
-; GPRIDX-NEXT:    ; implicit-def: $vgpr14
-; GPRIDX-NEXT:    ; implicit-def: $vgpr14
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_insertelement_v7f64_v_v_v:
@@ -6004,8 +5988,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_v_v_v(<7 x double> %vec, 
 ; GFX10-NEXT:    v_readfirstlane_b32 s11, v11
 ; GFX10-NEXT:    v_readfirstlane_b32 s12, v12
 ; GFX10-NEXT:    v_readfirstlane_b32 s13, v13
-; GFX10-NEXT:    ; implicit-def: $vgpr14
-; GFX10-NEXT:    ; implicit-def: $vgpr14
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: dyn_insertelement_v7f64_v_v_v:
@@ -6042,8 +6024,6 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_v_v_v(<7 x double> %vec, 
 ; GFX11-NEXT:    v_readfirstlane_b32 s11, v11
 ; GFX11-NEXT:    v_readfirstlane_b32 s12, v12
 ; GFX11-NEXT:    v_readfirstlane_b32 s13, v13
-; GFX11-NEXT:    ; implicit-def: $vgpr14
-; GFX11-NEXT:    ; implicit-def: $vgpr14
 ; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <7 x double> %vec, double %val, i32 %idx
@@ -6581,7 +6561,6 @@ define void @insert_very_small_from_very_large(<32 x i16> %L3, ptr %ptr) {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b16 v0.l, 1, v0.l
-; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-NEXT:    v_and_b16 v0.l, v0.l, 1
 ; GFX11-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
 ; GFX11-NEXT:    v_and_b32_e32 v0, 3, v0

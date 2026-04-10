@@ -188,6 +188,7 @@ define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -214,6 +215,7 @@ define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVBB-NEXT:    vslideup.vi v8, v9, 2
 ; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 4
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -240,6 +242,7 @@ define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZIP-NEXT:    vslideup.vi v8, v9, 2
 ; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZIP-NEXT:    vslideup.vi v8, v10, 4
+; ZIP-NEXT:    # implicit-def: $v11
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
@@ -273,6 +276,7 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -302,6 +306,7 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVBB-NEXT:    vslideup.vi v8, v9, 2
 ; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 4
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -331,6 +336,7 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZIP-NEXT:    vslideup.vi v8, v9, 2
 ; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZIP-NEXT:    vslideup.vi v8, v10, 4
+; ZIP-NEXT:    # implicit-def: $v11
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
@@ -368,6 +374,7 @@ define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; CHECK-NEXT:    vslideup.vi v8, v12, 4
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 8
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -401,6 +408,7 @@ define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZVBB-NEXT:    vslideup.vi v8, v12, 4
 ; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 8
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -434,6 +442,7 @@ define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZIP-NEXT:    vslideup.vi v8, v12, 4
 ; ZIP-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZIP-NEXT:    vslideup.vi v8, v10, 8
+; ZIP-NEXT:    # implicit-def: $v11
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
@@ -474,6 +483,7 @@ define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; CHECK-NEXT:    vslideup.vi v8, v12, 4
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 8
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -510,6 +520,7 @@ define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZVBB-NEXT:    vslideup.vi v8, v12, 4
 ; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 8
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -546,6 +557,7 @@ define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZIP-NEXT:    vslideup.vi v8, v12, 4
 ; ZIP-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZIP-NEXT:    vslideup.vi v8, v10, 8
+; ZIP-NEXT:    # implicit-def: $v11
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
@@ -1013,6 +1025,7 @@ define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -1039,6 +1052,7 @@ define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZVBB-NEXT:    vslideup.vi v8, v9, 2
 ; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 4
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -1065,6 +1079,7 @@ define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZIP-NEXT:    vslideup.vi v8, v9, 2
 ; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZIP-NEXT:    vslideup.vi v8, v10, 4
+; ZIP-NEXT:    # implicit-def: $v11
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
@@ -1098,6 +1113,7 @@ define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -1127,6 +1143,7 @@ define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZVBB-NEXT:    vslideup.vi v8, v9, 2
 ; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 4
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -1156,6 +1173,7 @@ define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZIP-NEXT:    vslideup.vi v8, v9, 2
 ; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZIP-NEXT:    vslideup.vi v8, v10, 4
+; ZIP-NEXT:    # implicit-def: $v11
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
@@ -1193,6 +1211,7 @@ define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b
 ; CHECK-NEXT:    vslideup.vi v8, v12, 4
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 8
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -1226,6 +1245,7 @@ define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZVBB-NEXT:    vslideup.vi v8, v12, 4
 ; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 8
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -1259,6 +1279,7 @@ define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZIP-NEXT:    vslideup.vi v8, v12, 4
 ; ZIP-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZIP-NEXT:    vslideup.vi v8, v10, 8
+; ZIP-NEXT:    # implicit-def: $v11
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
@@ -1299,6 +1320,7 @@ define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b
 ; CHECK-NEXT:    vslideup.vi v8, v12, 4
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 8
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -1335,6 +1357,7 @@ define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZVBB-NEXT:    vslideup.vi v8, v12, 4
 ; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 8
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -1371,6 +1394,7 @@ define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZIP-NEXT:    vslideup.vi v8, v12, 4
 ; ZIP-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZIP-NEXT:    vslideup.vi v8, v10, 8
+; ZIP-NEXT:    # implicit-def: $v11
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0

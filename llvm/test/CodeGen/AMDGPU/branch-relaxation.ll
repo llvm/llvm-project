@@ -588,8 +588,6 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    v_mov_b32_e32 v0, 17
-; GCN-NEXT:    ; implicit-def: $sgpr0
-; GCN-NEXT:    ; implicit-def: $sgpr1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:  .LBB5_3: ; %bb4
@@ -1095,12 +1093,10 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_execz .LBB9_2
 ; GCN-NEXT:  ; %bb.1: ; %ret
-; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    v_mov_b32_e32 v0, 7
-; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:    ; implicit-def: $sgpr5
-; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:  .LBB9_2: ; %Flow1
 ; GCN-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]

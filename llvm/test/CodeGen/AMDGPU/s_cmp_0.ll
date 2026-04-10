@@ -487,7 +487,6 @@ define amdgpu_ps i32 @bfe_i32(i32 inreg %val0) {
 define amdgpu_ps i32 @bfe_i64(i64 inreg %val0) {
 ; CHECK-LABEL: bfe_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; implicit-def: $sgpr1
 ; CHECK-NEXT:    s_bfe_i64 s[2:3], s[0:1], 0x80000
 ; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
 ; CHECK-NEXT:    s_mov_b32 s1, 0

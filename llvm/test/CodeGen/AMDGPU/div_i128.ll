@@ -4402,9 +4402,6 @@ define i128 @v_sdiv_i128_v_pow2k(i128 %lhs) {
 ;
 ; GFX9-G-LABEL: v_sdiv_i128_v_pow2k:
 ; GFX9-G:       ; %bb.0:
-; GFX9-G-NEXT:    ; implicit-def: $vgpr4
-; GFX9-G-NEXT:    ; implicit-def: $vgpr4
-; GFX9-G-NEXT:    ; implicit-def: $vgpr4
 ; GFX9-G-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-G-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; GFX9-G-NEXT:    v_mov_b32_e32 v5, v4

@@ -228,6 +228,7 @@ define <vscale x 32 x bfloat> @vfmax_nxv32bf16_vv(<vscale x 32 x bfloat> %a, <vs
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vfncvtbf16.f.f.w v8, v24
 ; ZVFBFMIN-NEXT:    vfncvtbf16.f.f.w v12, v16
+; ZVFBFMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFBFMIN-NEXT:    csrr a0, vlenb
 ; ZVFBFMIN-NEXT:    slli a0, a0, 4
 ; ZVFBFMIN-NEXT:    add sp, sp, a0
@@ -471,6 +472,7 @@ define <vscale x 32 x half> @vfmax_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v24
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add sp, sp, a0

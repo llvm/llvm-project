@@ -586,6 +586,7 @@ define <vscale x 48 x i8> @vector_interleave_nxv48i8_nxv16i8(<vscale x 16 x i8> 
 ; CHECK-NEXT:    vl2r.v v10, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl2r.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -610,6 +611,7 @@ define <vscale x 48 x i8> @vector_interleave_nxv48i8_nxv16i8(<vscale x 16 x i8> 
 ; ZVBB-NEXT:    vl2r.v v10, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl2r.v v12, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -639,6 +641,7 @@ define <vscale x 24 x i16> @vector_interleave_nxv24i16_nxv8i16(<vscale x 8 x i16
 ; CHECK-NEXT:    vl2re16.v v10, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl2re16.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -663,6 +666,7 @@ define <vscale x 24 x i16> @vector_interleave_nxv24i16_nxv8i16(<vscale x 8 x i16
 ; ZVBB-NEXT:    vl2re16.v v10, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl2re16.v v12, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -692,6 +696,7 @@ define <vscale x 12 x i32> @vector_interleave_nxv12i32_nxv4i32(<vscale x 4 x i32
 ; CHECK-NEXT:    vl2re32.v v10, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl2re32.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -716,6 +721,7 @@ define <vscale x 12 x i32> @vector_interleave_nxv12i32_nxv4i32(<vscale x 4 x i32
 ; ZVBB-NEXT:    vl2re32.v v10, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl2re32.v v12, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -745,6 +751,7 @@ define <vscale x 6 x i64> @vector_interleave_nxv6i64_nxv2i64(<vscale x 2 x i64> 
 ; CHECK-NEXT:    vl2re64.v v10, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl2re64.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -769,6 +776,7 @@ define <vscale x 6 x i64> @vector_interleave_nxv6i64_nxv2i64(<vscale x 2 x i64> 
 ; ZVBB-NEXT:    vl2re64.v v10, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl2re64.v v12, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -819,6 +827,7 @@ define <vscale x 64 x i1> @vector_interleave_nxv64i1_nxv16i1(<vscale x 16 x i1> 
 ; CHECK-NEXT:    vslideup.vx v0, v9, a1
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v0, v8, a2
+; CHECK-NEXT:    # implicit-def: $v12m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
@@ -864,6 +873,7 @@ define <vscale x 64 x i1> @vector_interleave_nxv64i1_nxv16i1(<vscale x 16 x i1> 
 ; ZVBB-NEXT:    vslideup.vx v0, v9, a1
 ; ZVBB-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; ZVBB-NEXT:    vslideup.vx v0, v8, a2
+; ZVBB-NEXT:    # implicit-def: $v12m2
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 3
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -1592,6 +1602,7 @@ define <vscale x 40 x i8> @vector_interleave_nxv40i8_nxv8i8(<vscale x 8 x i8> %a
 ; CHECK-NEXT:    vl1r.v v9, (a2)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1r.v v12, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
@@ -1619,6 +1630,7 @@ define <vscale x 40 x i8> @vector_interleave_nxv40i8_nxv8i8(<vscale x 8 x i8> %a
 ; ZVBB-NEXT:    vl1r.v v9, (a2)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1r.v v12, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -2868,6 +2880,7 @@ define <vscale x 48 x i8> @vector_interleave_nxv48i8_nxv8i8(<vscale x 8 x i8> %a
 ; CHECK-NEXT:    vl1r.v v12, (a3)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1r.v v13, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -2897,6 +2910,7 @@ define <vscale x 48 x i8> @vector_interleave_nxv48i8_nxv8i8(<vscale x 8 x i8> %a
 ; ZVBB-NEXT:    vl1r.v v12, (a3)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1r.v v13, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -6755,6 +6769,7 @@ define <vscale x 6 x half> @vector_interleave_nxv6f16_nxv2f16(<vscale x 2 x half
 ; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a2)
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -6781,6 +6796,7 @@ define <vscale x 6 x half> @vector_interleave_nxv6f16_nxv2f16(<vscale x 2 x half
 ; ZVBB-NEXT:    add a2, a3, a2
 ; ZVBB-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVBB-NEXT:    vle16.v v9, (a2)
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -6807,6 +6823,7 @@ define <vscale x 12 x half> @vector_interleave_nxv12f16_nxv4f16(<vscale x 4 x ha
 ; CHECK-NEXT:    vl1re16.v v9, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl1re16.v v10, (a0)
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
@@ -6830,6 +6847,7 @@ define <vscale x 12 x half> @vector_interleave_nxv12f16_nxv4f16(<vscale x 4 x ha
 ; ZVBB-NEXT:    vl1re16.v v9, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl1re16.v v10, (a0)
+; ZVBB-NEXT:    # implicit-def: $v14m2
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -6858,6 +6876,7 @@ define <vscale x 24 x half> @vector_interleave_nxv24f16_nxv8f16(<vscale x 8 x ha
 ; CHECK-NEXT:    vl2re16.v v10, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl2re16.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -6882,6 +6901,7 @@ define <vscale x 24 x half> @vector_interleave_nxv24f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-NEXT:    vl2re16.v v10, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl2re16.v v12, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -6913,6 +6933,7 @@ define <vscale x 6 x bfloat> @vector_interleave_nxv6bf16_nxv2bf16(<vscale x 2 x 
 ; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a2)
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -6939,6 +6960,7 @@ define <vscale x 6 x bfloat> @vector_interleave_nxv6bf16_nxv2bf16(<vscale x 2 x 
 ; ZVBB-NEXT:    add a2, a3, a2
 ; ZVBB-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVBB-NEXT:    vle16.v v9, (a2)
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -6965,6 +6987,7 @@ define <vscale x 12 x bfloat> @vector_interleave_nxv12bf16_nxv4bf16(<vscale x 4 
 ; CHECK-NEXT:    vl1re16.v v9, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl1re16.v v10, (a0)
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
@@ -6988,6 +7011,7 @@ define <vscale x 12 x bfloat> @vector_interleave_nxv12bf16_nxv4bf16(<vscale x 4 
 ; ZVBB-NEXT:    vl1re16.v v9, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl1re16.v v10, (a0)
+; ZVBB-NEXT:    # implicit-def: $v14m2
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -7016,6 +7040,7 @@ define <vscale x 24 x bfloat> @vector_interleave_nxv24bf16_nxv8bf16(<vscale x 8 
 ; CHECK-NEXT:    vl2re16.v v10, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl2re16.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -7040,6 +7065,7 @@ define <vscale x 24 x bfloat> @vector_interleave_nxv24bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-NEXT:    vl2re16.v v10, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl2re16.v v12, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -7071,6 +7097,7 @@ define <vscale x 3 x float> @vector_interleave_nxv3f32_nxv1f32(<vscale x 1 x flo
 ; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a2)
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -7097,6 +7124,7 @@ define <vscale x 3 x float> @vector_interleave_nxv3f32_nxv1f32(<vscale x 1 x flo
 ; ZVBB-NEXT:    add a2, a3, a2
 ; ZVBB-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; ZVBB-NEXT:    vle32.v v9, (a2)
+; ZVBB-NEXT:    # implicit-def: $v11
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
@@ -7123,6 +7151,7 @@ define <vscale x 6 x float> @vector_interleave_nxv6f32_nxv2f32(<vscale x 2 x flo
 ; CHECK-NEXT:    vl1re32.v v9, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl1re32.v v10, (a0)
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
@@ -7146,6 +7175,7 @@ define <vscale x 6 x float> @vector_interleave_nxv6f32_nxv2f32(<vscale x 2 x flo
 ; ZVBB-NEXT:    vl1re32.v v9, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl1re32.v v10, (a0)
+; ZVBB-NEXT:    # implicit-def: $v14m2
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -7174,6 +7204,7 @@ define <vscale x 12 x float> @vector_interleave_nxv12f32_nxv4f32(<vscale x 4 x f
 ; CHECK-NEXT:    vl2re32.v v10, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl2re32.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -7198,6 +7229,7 @@ define <vscale x 12 x float> @vector_interleave_nxv12f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-NEXT:    vl2re32.v v10, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl2re32.v v12, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -7225,6 +7257,7 @@ define <vscale x 3 x double> @vector_interleave_nxv3f64_nxv1f64(<vscale x 1 x do
 ; CHECK-NEXT:    vl1re64.v v9, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl1re64.v v10, (a0)
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
@@ -7248,6 +7281,7 @@ define <vscale x 3 x double> @vector_interleave_nxv3f64_nxv1f64(<vscale x 1 x do
 ; ZVBB-NEXT:    vl1re64.v v9, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl1re64.v v10, (a0)
+; ZVBB-NEXT:    # implicit-def: $v14m2
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -7276,6 +7310,7 @@ define <vscale x 6 x double> @vector_interleave_nxv6f64_nxv2f64(<vscale x 2 x do
 ; CHECK-NEXT:    vl2re64.v v10, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl2re64.v v12, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -7300,6 +7335,7 @@ define <vscale x 6 x double> @vector_interleave_nxv6f64_nxv2f64(<vscale x 2 x do
 ; ZVBB-NEXT:    vl2re64.v v10, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl2re64.v v12, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -7939,6 +7975,7 @@ define <vscale x 10 x half> @vector_interleave_nxv10f16_nxv2f16(<vscale x 2 x ha
 ; CHECK-NEXT:    add a2, a5, a2
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v10, (a2)
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
@@ -7974,6 +8011,7 @@ define <vscale x 10 x half> @vector_interleave_nxv10f16_nxv2f16(<vscale x 2 x ha
 ; ZVBB-NEXT:    add a2, a5, a2
 ; ZVBB-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVBB-NEXT:    vle16.v v10, (a2)
+; ZVBB-NEXT:    # implicit-def: $v14m2
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -8005,6 +8043,7 @@ define <vscale x 20 x half> @vector_interleave_nxv20f16_nxv4f16(<vscale x 4 x ha
 ; CHECK-NEXT:    vl1re16.v v9, (a2)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re16.v v12, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
@@ -8032,6 +8071,7 @@ define <vscale x 20 x half> @vector_interleave_nxv20f16_nxv4f16(<vscale x 4 x ha
 ; ZVBB-NEXT:    vl1re16.v v9, (a2)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1re16.v v12, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -8405,6 +8445,7 @@ define <vscale x 10 x bfloat> @vector_interleave_nxv10bf16_nxv2bf16(<vscale x 2 
 ; CHECK-NEXT:    add a2, a5, a2
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v10, (a2)
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
@@ -8440,6 +8481,7 @@ define <vscale x 10 x bfloat> @vector_interleave_nxv10bf16_nxv2bf16(<vscale x 2 
 ; ZVBB-NEXT:    add a2, a5, a2
 ; ZVBB-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVBB-NEXT:    vle16.v v10, (a2)
+; ZVBB-NEXT:    # implicit-def: $v14m2
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -8471,6 +8513,7 @@ define <vscale x 20 x bfloat> @vector_interleave_nxv20bf16_nxv4bf16(<vscale x 4 
 ; CHECK-NEXT:    vl1re16.v v9, (a2)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re16.v v12, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
@@ -8498,6 +8541,7 @@ define <vscale x 20 x bfloat> @vector_interleave_nxv20bf16_nxv4bf16(<vscale x 4 
 ; ZVBB-NEXT:    vl1re16.v v9, (a2)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1re16.v v12, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -8871,6 +8915,7 @@ define <vscale x 5 x float> @vector_interleave_nxv5f32_nxv1f32(<vscale x 1 x flo
 ; CHECK-NEXT:    add a2, a5, a2
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v10, (a2)
+; CHECK-NEXT:    # implicit-def: $v14m2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
@@ -8906,6 +8951,7 @@ define <vscale x 5 x float> @vector_interleave_nxv5f32_nxv1f32(<vscale x 1 x flo
 ; ZVBB-NEXT:    add a2, a5, a2
 ; ZVBB-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; ZVBB-NEXT:    vle32.v v10, (a2)
+; ZVBB-NEXT:    # implicit-def: $v14m2
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -8937,6 +8983,7 @@ define <vscale x 10 x float> @vector_interleave_nxv10f32_nxv2f32(<vscale x 2 x f
 ; CHECK-NEXT:    vl1re32.v v9, (a2)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re32.v v12, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
@@ -8964,6 +9011,7 @@ define <vscale x 10 x float> @vector_interleave_nxv10f32_nxv2f32(<vscale x 2 x f
 ; ZVBB-NEXT:    vl1re32.v v9, (a2)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1re32.v v12, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -9329,6 +9377,7 @@ define <vscale x 5 x double> @vector_interleave_nxv5f64_nxv1f64(<vscale x 1 x do
 ; CHECK-NEXT:    vl1re64.v v9, (a2)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re64.v v12, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
@@ -9356,6 +9405,7 @@ define <vscale x 5 x double> @vector_interleave_nxv5f64_nxv1f64(<vscale x 1 x do
 ; ZVBB-NEXT:    vl1re64.v v9, (a2)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1re64.v v12, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
@@ -9805,6 +9855,7 @@ define <vscale x 24 x half> @vector_interleave_nxv24f16_nxv4f16(<vscale x 4 x ha
 ; CHECK-NEXT:    vl1re16.v v12, (a3)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re16.v v13, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -9834,6 +9885,7 @@ define <vscale x 24 x half> @vector_interleave_nxv24f16_nxv4f16(<vscale x 4 x ha
 ; ZVBB-NEXT:    vl1re16.v v12, (a3)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1re16.v v13, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -10318,6 +10370,7 @@ define <vscale x 24 x bfloat> @vector_interleave_nxv24bf16_nxv4bf16(<vscale x 4 
 ; CHECK-NEXT:    vl1re16.v v12, (a3)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re16.v v13, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -10347,6 +10400,7 @@ define <vscale x 24 x bfloat> @vector_interleave_nxv24bf16_nxv4bf16(<vscale x 4 
 ; ZVBB-NEXT:    vl1re16.v v12, (a3)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1re16.v v13, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -10831,6 +10885,7 @@ define <vscale x 12 x float> @vector_interleave_nxv12f32_nxv2f32(<vscale x 2 x f
 ; CHECK-NEXT:    vl1re32.v v12, (a3)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re32.v v13, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -10860,6 +10915,7 @@ define <vscale x 12 x float> @vector_interleave_nxv12f32_nxv2f32(<vscale x 2 x f
 ; ZVBB-NEXT:    vl1re32.v v12, (a3)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1re32.v v13, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -11262,6 +11318,7 @@ define <vscale x 6 x double> @vector_interleave_nxv6f64_nxv1f64(<vscale x 1 x do
 ; CHECK-NEXT:    vl1re64.v v12, (a3)
 ; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re64.v v13, (a1)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -11291,6 +11348,7 @@ define <vscale x 6 x double> @vector_interleave_nxv6f64_nxv1f64(<vscale x 1 x do
 ; ZVBB-NEXT:    vl1re64.v v12, (a3)
 ; ZVBB-NEXT:    add a1, a3, a1
 ; ZVBB-NEXT:    vl1re64.v v13, (a1)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
@@ -11777,6 +11835,7 @@ define <vscale x 28 x half> @vector_interleave_nxv28f16_nxv4f16(<vscale x 4 x ha
 ; CHECK-NEXT:    vl1re16.v v13, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl1re16.v v14, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
@@ -11808,6 +11867,7 @@ define <vscale x 28 x half> @vector_interleave_nxv28f16_nxv4f16(<vscale x 4 x ha
 ; ZVBB-NEXT:    vl1re16.v v13, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl1re16.v v14, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
@@ -12334,6 +12394,7 @@ define <vscale x 28 x bfloat> @vector_interleave_nxv28bf16_nxv4bf16(<vscale x 4 
 ; CHECK-NEXT:    vl1re16.v v13, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl1re16.v v14, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
@@ -12365,6 +12426,7 @@ define <vscale x 28 x bfloat> @vector_interleave_nxv28bf16_nxv4bf16(<vscale x 4 
 ; ZVBB-NEXT:    vl1re16.v v13, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl1re16.v v14, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
@@ -12891,6 +12953,7 @@ define <vscale x 14 x float> @vector_interleave_nxv14f32_nxv2f32(<vscale x 2 x f
 ; CHECK-NEXT:    vl1re32.v v13, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl1re32.v v14, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
@@ -12922,6 +12985,7 @@ define <vscale x 14 x float> @vector_interleave_nxv14f32_nxv2f32(<vscale x 2 x f
 ; ZVBB-NEXT:    vl1re32.v v13, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl1re32.v v14, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
@@ -13366,6 +13430,7 @@ define <vscale x 7 x double> @vector_interleave_nxv7f64_nxv1f64(<vscale x 1 x do
 ; CHECK-NEXT:    vl1re64.v v13, (a0)
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vl1re64.v v14, (a0)
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
@@ -13397,6 +13462,7 @@ define <vscale x 7 x double> @vector_interleave_nxv7f64_nxv1f64(<vscale x 1 x do
 ; ZVBB-NEXT:    vl1re64.v v13, (a0)
 ; ZVBB-NEXT:    add a0, a0, a1
 ; ZVBB-NEXT:    vl1re64.v v14, (a0)
+; ZVBB-NEXT:    # implicit-def: $v20m4
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0

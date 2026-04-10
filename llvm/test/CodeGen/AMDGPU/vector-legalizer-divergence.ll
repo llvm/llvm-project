@@ -15,8 +15,6 @@ define amdgpu_kernel void @spam(ptr addrspace(1) noalias %arg) {
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s2, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x7ff80000
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    buffer_store_dwordx4 v[1:4], v[0:1], s[0:3], 0 addr64 offset:16
 ; CHECK-NEXT:    s_waitcnt expcnt(0)

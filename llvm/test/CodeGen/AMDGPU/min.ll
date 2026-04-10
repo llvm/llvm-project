@@ -3231,8 +3231,6 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v1, v0, s[6:7]
@@ -3241,8 +3239,6 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffff, v1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v4, 0xffff, v2
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v4, v3
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo

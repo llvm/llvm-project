@@ -1504,6 +1504,7 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZIP-NEXT:    ri.vunzip2a.vv v12, v8, v10
 ; ZIP-NEXT:    vsetivli zero, 16, e64, m4, ta, ma
 ; ZIP-NEXT:    vslideup.vi v12, v16, 8
+; ZIP-NEXT:    # implicit-def: $v10m2
 ; ZIP-NEXT:    vmv.v.v v8, v12
 ; ZIP-NEXT:    ret
 entry:
@@ -1713,15 +1714,16 @@ define <16 x i64> @unzip2a_dual_v16i64_exact(<16 x i64> %a, <16 x i64> %b) vscal
 ; ZVE32F-NEXT:    vslide1down.vx v10, v13, a7
 ; ZVE32F-NEXT:    srli a1, a7, 32
 ; ZVE32F-NEXT:    vslide1down.vx v10, v10, a1
-; ZVE32F-NEXT:    vslidedown.vi v10, v14, 4, v0.t
 ; ZVE32F-NEXT:    vslide1down.vx v11, v15, t2
 ; ZVE32F-NEXT:    srli a1, t2, 32
+; ZVE32F-NEXT:    vslidedown.vi v10, v14, 4, v0.t
 ; ZVE32F-NEXT:    vslide1down.vx v11, v11, a1
 ; ZVE32F-NEXT:    vslide1down.vx v12, v16, a2
 ; ZVE32F-NEXT:    srli a2, a2, 32
 ; ZVE32F-NEXT:    vslide1down.vx v12, v12, a2
 ; ZVE32F-NEXT:    vslidedown.vi v11, v12, 4, v0.t
 ; ZVE32F-NEXT:    vs4r.v v8, (a0)
+; ZVE32F-NEXT:    # implicit-def: $v10
 ; ZVE32F-NEXT:    ret
 ;
 ; ZIP-LABEL: unzip2a_dual_v16i64_exact:

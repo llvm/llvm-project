@@ -1966,6 +1966,7 @@ define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, ptr addrspace(
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dword s4, s[8:9], 0x4
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; SI-NEXT:    ; implicit-def: $sgpr5
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB42_4
@@ -1993,6 +1994,7 @@ define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, ptr addrspace(
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dword s4, s[8:9], 0x10
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; VI-NEXT:    ; implicit-def: $sgpr5
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB42_4

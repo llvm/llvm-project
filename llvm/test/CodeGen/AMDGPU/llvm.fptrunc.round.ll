@@ -99,7 +99,6 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_poison_to_v2f16_towardzero(float %a
 ; GFX11-SDAG-LABEL: v_fptrunc_round_poison_to_v2f16_towardzero:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, v0, s0
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
   %lo = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.towardzero")
   %tmp = insertelement <2 x half> poison, half %lo, i32 0
@@ -250,7 +249,6 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_upward(float inreg %a, ptr addr
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
@@ -275,7 +273,6 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_downward(float inreg %a, ptr ad
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
@@ -462,8 +459,6 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_upward(<2 x float> in
 ; GFX11-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, s1
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v1
@@ -496,8 +491,6 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_downward(<2 x float> 
 ; GFX11-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, s1
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr1_hi16
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v1
@@ -601,7 +594,6 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_upward(<3 x float> %
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.h, v1
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v0
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v2
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
@@ -633,7 +625,6 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_downward(<3 x float>
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.h, v1
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v0
 ; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v2
-; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog

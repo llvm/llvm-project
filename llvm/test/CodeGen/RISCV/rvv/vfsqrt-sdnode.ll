@@ -96,6 +96,7 @@ define <vscale x 32 x bfloat> @vfsqrt_nxv32bf16(<vscale x 32 x bfloat> %v) {
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %r = call <vscale x 32 x bfloat> @llvm.sqrt.nxv32bf16(<vscale x 32 x bfloat> %v)
   ret <vscale x 32 x bfloat> %r
@@ -221,6 +222,7 @@ define <vscale x 32 x half> @vfsqrt_nxv32f16(<vscale x 32 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %r = call <vscale x 32 x half> @llvm.sqrt.nxv32f16(<vscale x 32 x half> %v)
   ret <vscale x 32 x half> %r

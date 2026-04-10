@@ -1387,6 +1387,8 @@ define <8 x i64> @shuffle_v8i64_span_splat_neg(<8 x i64> %a) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v9, v10, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v15, v8, v9
+; CHECK-NEXT:    # implicit-def: $v10
+; CHECK-NEXT:    # implicit-def: $v11
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i64> %a, <8 x i64> poison, <8 x i32> <i32 poison, i32 poison, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>

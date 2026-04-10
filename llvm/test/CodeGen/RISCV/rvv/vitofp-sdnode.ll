@@ -158,6 +158,7 @@ define <vscale x 32 x bfloat> @vsitofp_nxv32i1_nxv32bf16(<vscale x 32 x i1> %va)
 ; CHECK-NEXT:    vmerge.vim v12, v12, -1, v0
 ; CHECK-NEXT:    vfwcvt.f.x.v v16, v12
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 32 x i1> %va to <vscale x 32 x bfloat>
   ret <vscale x 32 x bfloat> %evec
@@ -179,6 +180,7 @@ define <vscale x 32 x bfloat> @vuitofp_nxv32i1_nxv32bf16(<vscale x 32 x i1> %va)
 ; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
 ; CHECK-NEXT:    vfwcvt.f.xu.v v16, v12
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 32 x i1> %va to <vscale x 32 x bfloat>
   ret <vscale x 32 x bfloat> %evec
@@ -344,6 +346,7 @@ define <vscale x 32 x bfloat> @vsitofp_nxv32i8_nxv32bf16(<vscale x 32 x i8> %va)
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfwcvt.f.x.v v16, v24
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 32 x i8> %va to <vscale x 32 x bfloat>
   ret <vscale x 32 x bfloat> %evec
@@ -359,6 +362,7 @@ define <vscale x 32 x bfloat> @vuitofp_nxv32i8_nxv32bf16(<vscale x 32 x i8> %va)
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfwcvt.f.xu.v v16, v24
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 32 x i8> %va to <vscale x 32 x bfloat>
   ret <vscale x 32 x bfloat> %evec
@@ -482,6 +486,7 @@ define <vscale x 32 x bfloat> @vsitofp_nxv32i16_nxv32bf16(<vscale x 32 x i16> %v
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfwcvt.f.x.v v16, v12
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 32 x i16> %va to <vscale x 32 x bfloat>
   ret <vscale x 32 x bfloat> %evec
@@ -495,6 +500,7 @@ define <vscale x 32 x bfloat> @vuitofp_nxv32i16_nxv32bf16(<vscale x 32 x i16> %v
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    vfwcvt.f.xu.v v16, v12
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
+; CHECK-NEXT:    # implicit-def: $v20m4
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 32 x i16> %va to <vscale x 32 x bfloat>
   ret <vscale x 32 x bfloat> %evec
@@ -1166,6 +1172,7 @@ define <vscale x 32 x half> @vsitofp_nxv32i1_nxv32f16(<vscale x 32 x i1> %va) {
 ; ZVFHMIN-NEXT:    vmerge.vim v12, v12, -1, v0
 ; ZVFHMIN-NEXT:    vfwcvt.f.x.v v16, v12
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %evec = sitofp <vscale x 32 x i1> %va to <vscale x 32 x half>
   ret <vscale x 32 x half> %evec
@@ -1195,6 +1202,7 @@ define <vscale x 32 x half> @vuitofp_nxv32i1_nxv32f16(<vscale x 32 x i1> %va) {
 ; ZVFHMIN-NEXT:    vmerge.vim v12, v12, 1, v0
 ; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v16, v12
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %evec = uitofp <vscale x 32 x i1> %va to <vscale x 32 x half>
   ret <vscale x 32 x half> %evec
@@ -1651,6 +1659,7 @@ define <vscale x 32 x half> @vsitofp_nxv32i8_nxv32f16(<vscale x 32 x i8> %va) {
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.x.v v16, v24
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %evec = sitofp <vscale x 32 x i8> %va to <vscale x 32 x half>
   ret <vscale x 32 x half> %evec
@@ -1673,6 +1682,7 @@ define <vscale x 32 x half> @vuitofp_nxv32i8_nxv32f16(<vscale x 32 x i8> %va) {
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v16, v24
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %evec = uitofp <vscale x 32 x i8> %va to <vscale x 32 x half>
   ret <vscale x 32 x half> %evec
@@ -2060,6 +2070,7 @@ define <vscale x 32 x half> @vsitofp_nxv32i16_nxv32f16(<vscale x 32 x i16> %va) 
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.x.v v16, v12
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %evec = sitofp <vscale x 32 x i16> %va to <vscale x 32 x half>
   ret <vscale x 32 x half> %evec
@@ -2079,6 +2090,7 @@ define <vscale x 32 x half> @vuitofp_nxv32i16_nxv32f16(<vscale x 32 x i16> %va) 
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v16, v12
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    # implicit-def: $v20m4
 ; ZVFHMIN-NEXT:    ret
   %evec = uitofp <vscale x 32 x i16> %va to <vscale x 32 x half>
   ret <vscale x 32 x half> %evec

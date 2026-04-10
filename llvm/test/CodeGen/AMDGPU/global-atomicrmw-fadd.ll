@@ -13664,7 +13664,6 @@ define bfloat @global_agent_atomic_fadd_ret_bf16__amdgpu_no_fine_grained_memory(
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
@@ -14257,7 +14256,6 @@ define bfloat @global_agent_atomic_fadd_ret_bf16__offset12b_pos__amdgpu_no_fine_
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u64_e32 v[4:5], 0x7fe, v[0:1]
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_bitop2_b32 v0, -4, v4 bitop3:0x40
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v4
@@ -14869,7 +14867,6 @@ define bfloat @global_agent_atomic_fadd_ret_bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u64_e32 v[4:5], s[0:1], v[0:1]
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_bitop2_b32 v0, -4, v4 bitop3:0x40
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v4
 ; GFX1250-TRUE16-NEXT:    global_load_b32 v5, v[0:1], off
@@ -15480,7 +15477,6 @@ define void @global_agent_atomic_fadd_noret_bf16__amdgpu_no_fine_grained_memory(
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
@@ -16058,7 +16054,6 @@ define void @global_agent_atomic_fadd_noret_bf16__offset12b_pos__amdgpu_no_fine_
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u64_e32 v[4:5], 0x7fe, v[0:1]
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr6_hi16
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_bitop2_b32 v0, -4, v4 bitop3:0x40
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4
@@ -16654,7 +16649,6 @@ define void @global_agent_atomic_fadd_noret_bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u64_e32 v[4:5], s[0:1], v[0:1]
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr6_hi16
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_bitop2_b32 v0, -4, v4 bitop3:0x40
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4
@@ -17250,7 +17244,6 @@ define bfloat @global_agent_atomic_fadd_ret_bf16__offset12b_pos__align4__amdgpu_
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off offset:2046
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX1250-TRUE16-NEXT:  .LBB60_1: ; %atomicrmw.start
 ; GFX1250-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -17735,7 +17728,6 @@ define void @global_agent_atomic_fadd_noret_bf16__offset12b__align4_pos__amdgpu_
 ; GFX1250-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off offset:2046
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v2.l
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr4_hi16
 ; GFX1250-TRUE16-NEXT:  .LBB61_1: ; %atomicrmw.start
 ; GFX1250-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -18203,7 +18195,6 @@ define bfloat @global_system_atomic_fadd_ret_bf16__offset12b_pos__amdgpu_no_fine
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u64_e32 v[4:5], 0x7fe, v[0:1]
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_bitop2_b32 v0, -4, v4 bitop3:0x40
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v4
@@ -18820,7 +18811,6 @@ define void @global_system_atomic_fadd_noret_bf16__offset12b_pos__amdgpu_no_fine
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u64_e32 v[4:5], 0x7fe, v[0:1]
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
 ; GFX1250-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX1250-TRUE16-NEXT:    ; implicit-def: $vgpr6_hi16
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_bitop2_b32 v0, -4, v4 bitop3:0x40
 ; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4

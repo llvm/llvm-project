@@ -235,15 +235,11 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    str r2, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q3, [r5], #16
 ; CHECK-NEXT:    mov.w r2, #-1
-; CHECK-NEXT:    vmov.f32 s18, s11
-; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    vmov.f32 s16, s10
-; CHECK-NEXT:    str r5, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    vmov.f32 s20, s14
-; CHECK-NEXT:    @ implicit-def: $s11
-; CHECK-NEXT:    @ implicit-def: $s11
-; CHECK-NEXT:    @ implicit-def: $s11
-; CHECK-NEXT:    @ implicit-def: $s11
+; CHECK-NEXT:    str r5, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    vmov.f32 s18, s11
 ; CHECK-NEXT:    vmov.f32 s22, s15
 ; CHECK-NEXT:    vmullb.s32 q6, q5, q4
 ; CHECK-NEXT:    vmov.f32 s14, s13
@@ -477,14 +473,12 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(ptr nocapture readonly %pSrcA, ptr n
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q4, [r0], #16
 ; CHECK-NEXT:    vldrwt.u32 q5, [r1], #16
-; CHECK-NEXT:    vmov.f32 s26, s19
-; CHECK-NEXT:    @ implicit-def: $s19
-; CHECK-NEXT:    @ implicit-def: $s19
 ; CHECK-NEXT:    vmov.f32 s24, s18
+; CHECK-NEXT:    vmov.f32 s26, s19
 ; CHECK-NEXT:    vmov.f32 s28, s22
 ; CHECK-NEXT:    vmov.f32 s30, s23
 ; CHECK-NEXT:    vmullb.s32 q0, q7, q6
-; CHECK-NEXT:    vmov.f32 s18, s17
+; CHECK-NEXT:    vmov.f32 s18, s21
 ; CHECK-NEXT:    vmov r10, r5, d0
 ; CHECK-NEXT:    asrl r10, r5, #31
 ; CHECK-NEXT:    rsbs.w r7, r10, #-2147483648
@@ -498,6 +492,7 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(ptr nocapture readonly %pSrcA, ptr n
 ; CHECK-NEXT:    sbcs.w r3, r12, r7
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r7
 ; CHECK-NEXT:    csetm r3, lt
+; CHECK-NEXT:    vmov r7, s18
 ; CHECK-NEXT:    bfi r4, r3, #8, #8
 ; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vpsel q0, q0, q2
@@ -516,10 +511,7 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(ptr nocapture readonly %pSrcA, ptr n
 ; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vmov r4, s20
 ; CHECK-NEXT:    vpsel q6, q0, q3
-; CHECK-NEXT:    vmov.f32 s2, s21
-; CHECK-NEXT:    @ implicit-def: $s3
-; CHECK-NEXT:    @ implicit-def: $s3
-; CHECK-NEXT:    vmov r7, s2
+; CHECK-NEXT:    vmov.f32 s2, s17
 ; CHECK-NEXT:    smull r10, r5, r4, r3
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    asrl r10, r5, #31
@@ -527,7 +519,7 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(ptr nocapture readonly %pSrcA, ptr n
 ; CHECK-NEXT:    sbcs.w r3, r12, r5
 ; CHECK-NEXT:    csetm r3, lt
 ; CHECK-NEXT:    bfi r4, r3, #0, #8
-; CHECK-NEXT:    vmov r3, s18
+; CHECK-NEXT:    vmov r3, s2
 ; CHECK-NEXT:    smull r6, r3, r7, r3
 ; CHECK-NEXT:    asrl r6, r3, #31
 ; CHECK-NEXT:    rsbs.w r7, r6, #-2147483648
@@ -806,12 +798,8 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
 ; CHECK-NEXT:    str r2, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    vmov.f32 s14, s7
-; CHECK-NEXT:    @ implicit-def: $s7
-; CHECK-NEXT:    @ implicit-def: $s7
-; CHECK-NEXT:    @ implicit-def: $s7
-; CHECK-NEXT:    @ implicit-def: $s7
 ; CHECK-NEXT:    vmov.f32 s12, s6
+; CHECK-NEXT:    vmov.f32 s14, s7
 ; CHECK-NEXT:    vmov.f32 s16, s10
 ; CHECK-NEXT:    vmov.f32 s18, s11
 ; CHECK-NEXT:    vmullb.u32 q5, q4, q3

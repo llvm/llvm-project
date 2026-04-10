@@ -267,6 +267,8 @@ define <16 x i32> @v16i32_v4i32(<4 x i32>) {
 ; CHECK-NEXT:    vslidedown.vx v14, v14, a1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v12, v14
+; CHECK-NEXT:    # implicit-def: $v14
+; CHECK-NEXT:    # implicit-def: $v15
 ; CHECK-NEXT:    ret
   %2 = shufflevector <4 x i32> %0, <4 x i32> poison, <16 x i32> <i32 2, i32 3, i32 0, i32 2, i32 3, i32 0, i32 1, i32 1, i32 2, i32 0, i32 3, i32 1, i32 1, i32 2, i32 0, i32 3>
   ret <16 x i32> %2
@@ -328,6 +330,12 @@ define <32 x i32> @v32i32_v4i32(<4 x i32>) {
 ; CHECK-NEXT:    vslidedown.vx v20, v20, a1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v15, v16, v20
+; CHECK-NEXT:    # implicit-def: $v18
+; CHECK-NEXT:    # implicit-def: $v19
+; CHECK-NEXT:    # implicit-def: $v20
+; CHECK-NEXT:    # implicit-def: $v21
+; CHECK-NEXT:    # implicit-def: $v22
+; CHECK-NEXT:    # implicit-def: $v23
 ; CHECK-NEXT:    ret
   %2 = shufflevector <4 x i32> %0, <4 x i32> poison, <32 x i32> <i32 2, i32 3, i32 0, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 2, i32 3, i32 0, i32 1, i32 1, i32 2, i32 0, i32 3, i32 1, i32 1, i32 2, i32 0, i32 3, i32 1, i32 2, i32 0, i32 3, i32 1, i32 1, i32 2, i32 0, i32 3>
   ret <32 x i32> %2

@@ -271,13 +271,10 @@ define void @v_constained_fma_v3f32_fpexcept_strict_uni(<3 x float> inreg %x, <3
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[18:19]
 ; GFX942-NEXT:    s_mov_b32 s6, s17
 ; GFX942-NEXT:    v_pk_fma_f32 v[2:3], s[0:1], v[2:3], v[4:5]
-; GFX942-NEXT:    ; implicit-def: $sgpr7
-; GFX942-NEXT:    ; implicit-def: $sgpr21
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[20:21]
 ; GFX942-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX942-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
-; GFX942-NEXT:    ; implicit-def: $sgpr3
 ; GFX942-NEXT:    v_pk_fma_f32 v[2:3], s[2:3], v[2:3], v[4:5]
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s2, v2
@@ -355,11 +352,8 @@ define void @v_constained_fma_v3f32_fpexcept_strict_div(<3 x float> %x, <3 x flo
 ; GFX942-NEXT:    v_mov_b32_e32 v12, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v13, v4
 ; GFX942-NEXT:    v_mov_b32_e32 v4, v5
-; GFX942-NEXT:    ; implicit-def: $vgpr3
 ; GFX942-NEXT:    v_mov_b32_e32 v14, v9
 ; GFX942-NEXT:    v_mov_b32_e32 v15, v10
-; GFX942-NEXT:    ; implicit-def: $vgpr5
-; GFX942-NEXT:    ; implicit-def: $vgpr9
 ; GFX942-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[12:13], v[6:7]
 ; GFX942-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[4:5], v[8:9]
 ; GFX942-NEXT:    global_store_dwordx3 v[14:15], v[0:2], off

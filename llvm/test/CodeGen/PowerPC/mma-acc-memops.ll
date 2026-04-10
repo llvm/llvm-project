@@ -36,6 +36,7 @@ define dso_local void @testLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED:       # %bb.0: # %entry
 ; LE-PAIRED-NEXT:    plxv vs3, f@PCREL+64(0), 1
 ; LE-PAIRED-NEXT:    plxv vs2, f@PCREL+80(0), 1
+; LE-PAIRED-NEXT:    # implicit-def: $vsl6
 ; LE-PAIRED-NEXT:    plxv vs1, f@PCREL+96(0), 1
 ; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+112(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs0, f@PCREL+176(0), 1
@@ -61,6 +62,7 @@ define dso_local void @testLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-LABEL: testLdSt:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, f@toc@ha
+; BE-PAIRED-NEXT:    # implicit-def: $vsl6
 ; BE-PAIRED-NEXT:    addi r3, r3, f@toc@l
 ; BE-PAIRED-NEXT:    lxv vs3, 112(r3)
 ; BE-PAIRED-NEXT:    lxv vs2, 96(r3)
@@ -176,6 +178,7 @@ define dso_local void @testXLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-NEXT:    lxvx vs3, r5, r3
 ; LE-PAIRED-NEXT:    sldi r3, r4, 6
 ; LE-PAIRED-NEXT:    add r4, r5, r3
+; LE-PAIRED-NEXT:    # implicit-def: $vsl6
 ; LE-PAIRED-NEXT:    lxv vs2, 16(r6)
 ; LE-PAIRED-NEXT:    lxv vs1, 32(r6)
 ; LE-PAIRED-NEXT:    lxv vs0, 48(r6)
@@ -207,6 +210,7 @@ define dso_local void @testXLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-LABEL: testXLdSt:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r5, r2, f@toc@ha
+; BE-PAIRED-NEXT:    # implicit-def: $vsl6
 ; BE-PAIRED-NEXT:    addi r5, r5, f@toc@l
 ; BE-PAIRED-NEXT:    sldi r3, r3, 6
 ; BE-PAIRED-NEXT:    add r6, r5, r3
@@ -332,6 +336,7 @@ define dso_local void @testUnalignedLdSt() {
 ; LE-PAIRED:       # %bb.0: # %entry
 ; LE-PAIRED-NEXT:    plxv vs3, f@PCREL+11(0), 1
 ; LE-PAIRED-NEXT:    plxv vs2, f@PCREL+27(0), 1
+; LE-PAIRED-NEXT:    # implicit-def: $vsl6
 ; LE-PAIRED-NEXT:    plxv vs1, f@PCREL+43(0), 1
 ; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+59(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs0, f@PCREL+67(0), 1
@@ -357,6 +362,7 @@ define dso_local void @testUnalignedLdSt() {
 ; BE-PAIRED-LABEL: testUnalignedLdSt:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, f@toc@ha
+; BE-PAIRED-NEXT:    # implicit-def: $vsl6
 ; BE-PAIRED-NEXT:    addi r3, r3, f@toc@l
 ; BE-PAIRED-NEXT:    plxv vs3, 59(r3), 0
 ; BE-PAIRED-NEXT:    plxv vs2, 43(r3), 0

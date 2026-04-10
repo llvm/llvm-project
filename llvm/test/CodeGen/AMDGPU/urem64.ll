@@ -169,7 +169,6 @@ define amdgpu_kernel void @s_test_urem_i64(ptr addrspace(1) %out, i64 %x, i64 %y
 ; GCN-IR-NEXT:    s_cselect_b32 s8, 0, s2
 ; GCN-IR-NEXT:    s_or_b64 s[14:15], s[14:15], s[18:19]
 ; GCN-IR-NEXT:    s_andn2_b64 vcc, exec, s[14:15]
-; GCN-IR-NEXT:    ; implicit-def: $sgpr14
 ; GCN-IR-NEXT:    s_cbranch_vccz .LBB0_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s14, s12, 1
@@ -363,8 +362,6 @@ define i64 @v_test_urem_i64(i64 %x, i64 %y) {
 ; GCN-IR-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-IR-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
 ; GCN-IR-NEXT:    v_cmp_ne_u64_e32 vcc, 63, v[4:5]
-; GCN-IR-NEXT:    ; implicit-def: $vgpr6
-; GCN-IR-NEXT:    ; implicit-def: $vgpr6
 ; GCN-IR-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GCN-IR-NEXT:    v_cndmask_b32_e64 v7, v1, 0, s[4:5]
 ; GCN-IR-NEXT:    v_cndmask_b32_e64 v6, v0, 0, s[4:5]
@@ -936,7 +933,6 @@ define amdgpu_kernel void @s_test_urem_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_or_b64 s[10:11], s[10:11], s[12:13]
 ; GCN-IR-NEXT:    s_andn2_b64 vcc, exec, s[10:11]
 ; GCN-IR-NEXT:    s_mov_b32 s7, 0
-; GCN-IR-NEXT:    ; implicit-def: $sgpr10
 ; GCN-IR-NEXT:    s_cbranch_vccz .LBB6_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s10, s8, 1
@@ -1040,7 +1036,6 @@ define amdgpu_kernel void @s_test_urem_k_den_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-LABEL: s_test_urem_k_den_i64:
 ; GCN-IR:       ; %bb.0: ; %_udiv-special-cases
 ; GCN-IR-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GCN-IR-NEXT:    ; implicit-def: $sgpr11
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-IR-NEXT:    s_flbit_i32_b64 s10, s[2:3]
 ; GCN-IR-NEXT:    s_sub_u32 s8, 59, s10
@@ -1220,10 +1215,9 @@ define i64 @v_test_urem_pow2_k_num_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 32, v2
 ; GCN-IR-NEXT:    v_ffbh_u32_e32 v3, v1
 ; GCN-IR-NEXT:    v_min_u32_e32 v8, v2, v3
-; GCN-IR-NEXT:    ; implicit-def: $vgpr2
-; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[0:1]
 ; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 0xffffffd0, v8
 ; GCN-IR-NEXT:    v_addc_u32_e64 v3, s[6:7], 0, -1, vcc
+; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[0:1]
 ; GCN-IR-NEXT:    v_cmp_lt_u64_e32 vcc, 63, v[2:3]
 ; GCN-IR-NEXT:    v_cmp_ne_u64_e64 s[6:7], 63, v[2:3]
 ; GCN-IR-NEXT:    v_mov_b32_e32 v4, 0x8000
@@ -1320,7 +1314,6 @@ define i64 @v_test_urem_pow2_k_den_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_subb_u32_e64 v3, s[4:5], 0, 0, s[4:5]
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; GCN-IR-NEXT:    v_cmp_lt_u64_e64 s[4:5], 63, v[2:3]
-; GCN-IR-NEXT:    ; implicit-def: $vgpr4
 ; GCN-IR-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-IR-NEXT:    v_cmp_ne_u64_e32 vcc, 63, v[2:3]
 ; GCN-IR-NEXT:    s_xor_b64 s[6:7], s[4:5], -1

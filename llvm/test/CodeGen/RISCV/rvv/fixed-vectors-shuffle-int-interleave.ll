@@ -83,6 +83,8 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-NEXT:    vmv2r.v v10, v8
 ; V128-NEXT:    vslideup.vi v10, v8, 1
 ; V128-NEXT:    vmerge.vvm v8, v10, v12, v0
+; V128-NEXT:    # implicit-def: $v11
+; V128-NEXT:    # implicit-def: $v11
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v2i64:

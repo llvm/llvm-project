@@ -266,14 +266,13 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_negA(<8 x half> %A, <16 x half> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1170-LABEL: test_swmmac_f32_16x16x32_f16_negA:
-; GFX1170:       ; %bb.0: ; %bb
-; GFX1170-NEXT:    ; implicit-def: $vgpr20_hi16
-; GFX1170-NEXT:    v_swmmac_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v20 neg_lo:[1,0,0] neg_hi:[1,0,0]
-; GFX1170-NEXT:    s_clause 0x1
-; GFX1170-NEXT:    global_store_b128 v[21:22], v[16:19], off offset:16
-; GFX1170-NEXT:    global_store_b128 v[21:22], v[12:15], off
-; GFX1170-NEXT:    s_endpgm
+; GCN-LABEL: test_swmmac_f32_16x16x32_f16_negA:
+; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    v_swmmac_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v20 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GCN-NEXT:    s_clause 0x1
+; GCN-NEXT:    global_store_b128 v[21:22], v[16:19], off offset:16
+; GCN-NEXT:    global_store_b128 v[21:22], v[12:15], off
+; GCN-NEXT:    s_endpgm
 bb:
   %fneg.A = fneg <8 x half> %A
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.i16(<8 x half> %fneg.A, <16 x half> %B, <8 x float> %C, i16 %Index)
@@ -282,14 +281,13 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_negB(<8 x half> %A, <16 x half> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1170-LABEL: test_swmmac_f32_16x16x32_f16_negB:
-; GFX1170:       ; %bb.0: ; %bb
-; GFX1170-NEXT:    ; implicit-def: $vgpr20_hi16
-; GFX1170-NEXT:    v_swmmac_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v20 neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GFX1170-NEXT:    s_clause 0x1
-; GFX1170-NEXT:    global_store_b128 v[21:22], v[16:19], off offset:16
-; GFX1170-NEXT:    global_store_b128 v[21:22], v[12:15], off
-; GFX1170-NEXT:    s_endpgm
+; GCN-LABEL: test_swmmac_f32_16x16x32_f16_negB:
+; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    v_swmmac_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v20 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GCN-NEXT:    s_clause 0x1
+; GCN-NEXT:    global_store_b128 v[21:22], v[16:19], off offset:16
+; GCN-NEXT:    global_store_b128 v[21:22], v[12:15], off
+; GCN-NEXT:    s_endpgm
 bb:
   %fneg.B = fneg <16 x half> %B
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.i16(<8 x half> %A, <16 x half> %fneg.B, <8 x float> %C, i16 %Index)
@@ -298,12 +296,11 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_negA(<8 x half> %A, <16 x half> %B, <8 x half> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1170-LABEL: test_swmmac_f16_16x16x32_f16_negA:
-; GFX1170:       ; %bb.0: ; %bb
-; GFX1170-NEXT:    ; implicit-def: $vgpr16_hi16
-; GFX1170-NEXT:    v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16 neg_lo:[1,0,0] neg_hi:[1,0,0]
-; GFX1170-NEXT:    global_store_b128 v[17:18], v[12:15], off
-; GFX1170-NEXT:    s_endpgm
+; GCN-LABEL: test_swmmac_f16_16x16x32_f16_negA:
+; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GCN-NEXT:    global_store_b128 v[17:18], v[12:15], off
+; GCN-NEXT:    s_endpgm
 bb:
   %fneg.A = fneg <8 x half> %A
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.i16(<8 x half> %fneg.A, <16 x half> %B, <8 x half> %C, i16 %Index)
@@ -312,12 +309,11 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_negB(<8 x half> %A, <16 x half> %B, <8 x half> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1170-LABEL: test_swmmac_f16_16x16x32_f16_negB:
-; GFX1170:       ; %bb.0: ; %bb
-; GFX1170-NEXT:    ; implicit-def: $vgpr16_hi16
-; GFX1170-NEXT:    v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16 neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GFX1170-NEXT:    global_store_b128 v[17:18], v[12:15], off
-; GFX1170-NEXT:    s_endpgm
+; GCN-LABEL: test_swmmac_f16_16x16x32_f16_negB:
+; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GCN-NEXT:    global_store_b128 v[17:18], v[12:15], off
+; GCN-NEXT:    s_endpgm
 bb:
   %fneg.B = fneg <16 x half> %B
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.i16(<8 x half> %A, <16 x half> %fneg.B, <8 x half> %C, i16 %Index)

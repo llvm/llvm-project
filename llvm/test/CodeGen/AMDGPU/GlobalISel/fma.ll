@@ -153,7 +153,6 @@ define half @v_fma_f16(half %x, half %y, half %z) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -171,7 +170,6 @@ define half @v_fma_f16(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
-; GFX12-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call half @llvm.fma.f16(half %x, half %y, half %z)
@@ -217,7 +215,6 @@ define half @v_fma_f16_fneg_lhs(half %x, half %y, half %z) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_fma_f16 v0.l, -v0.l, v1.l, v2.l
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_fma_f16_fneg_lhs:
@@ -234,7 +231,6 @@ define half @v_fma_f16_fneg_lhs(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_fma_f16 v0.l, -v0.l, v1.l, v2.l
-; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg half %x
   %fma = call half @llvm.fma.f16(half %neg.x, half %y, half %z)
@@ -280,7 +276,6 @@ define half @v_fma_f16_fneg_rhs(half %x, half %y, half %z) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, -v1.l, v2.l
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_fma_f16_fneg_rhs:
@@ -297,7 +292,6 @@ define half @v_fma_f16_fneg_rhs(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_fma_f16 v0.l, v0.l, -v1.l, v2.l
-; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.y = fneg half %y
   %fma = call half @llvm.fma.f16(half %x, half %neg.y, half %z)
@@ -343,7 +337,6 @@ define half @v_fma_f16_fneg_add(half %x, half %y, half %z) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, -v2.l
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_fma_f16_fneg_add:
@@ -360,7 +353,6 @@ define half @v_fma_f16_fneg_add(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, -v2.l
-; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.z = fneg half %z
   %fma = call half @llvm.fma.f16(half %x, half %y, half %neg.z)
@@ -1515,7 +1507,6 @@ define amdgpu_ps half @fma_s16_uniform(half inreg %a, half inreg %b, half inreg 
 ; GFX11-TRUE16-LABEL: fma_s16_uniform:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    v_fmac_f16_e64 v0.l, s0, s1
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;

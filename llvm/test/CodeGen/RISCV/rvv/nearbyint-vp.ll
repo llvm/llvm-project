@@ -253,6 +253,7 @@ define <vscale x 32 x bfloat> @vp_nearbyint_nxv32bf16(<vscale x 32 x bfloat> %va
 ; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v24, fa5
 ; CHECK-NEXT:    frflags a0
+; CHECK-NEXT:    # implicit-def: $v28m4
 ; CHECK-NEXT:    vfcvt.x.f.v v24, v16, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v24, v24, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
@@ -290,6 +291,7 @@ define <vscale x 32 x bfloat> @vp_nearbyint_nxv32bf16_unmasked(<vscale x 32 x bf
 ; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v24, fa5
 ; CHECK-NEXT:    frflags a0
+; CHECK-NEXT:    # implicit-def: $v28m4
 ; CHECK-NEXT:    vfcvt.x.f.v v24, v16, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v24, v24, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
@@ -733,6 +735,7 @@ define <vscale x 32 x half> @vp_nearbyint_nxv32f16(<vscale x 32 x half> %va, <vs
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v24, fa5
 ; ZVFHMIN-NEXT:    frflags a0
+; ZVFHMIN-NEXT:    # implicit-def: $v28m4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v24, v16, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v24, v24, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
@@ -786,6 +789,7 @@ define <vscale x 32 x half> @vp_nearbyint_nxv32f16_unmasked(<vscale x 32 x half>
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v24, fa5
 ; ZVFHMIN-NEXT:    frflags a0
+; ZVFHMIN-NEXT:    # implicit-def: $v28m4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v24, v16, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v24, v24, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, mu

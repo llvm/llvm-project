@@ -146,8 +146,6 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:  .LBB1_2: ; %bb1

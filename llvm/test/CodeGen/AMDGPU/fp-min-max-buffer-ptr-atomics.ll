@@ -130,8 +130,6 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_min_rtn_f32(ptr addrspace(8) inreg 
 ; SI-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen glc
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -141,8 +139,6 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_min_rtn_f32(ptr addrspace(8) inreg 
 ; GFX7-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen glc
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s2, -1
-; GFX7-NEXT:    ; implicit-def: $sgpr0
-; GFX7-NEXT:    ; implicit-def: $sgpr1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
@@ -173,7 +169,6 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_min_rtn_f32(ptr addrspace(8) inreg 
 ; G_SI-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen glc
 ; G_SI-NEXT:    s_mov_b32 s2, -1
 ; G_SI-NEXT:    s_mov_b32 s3, 0xf000
-; G_SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; G_SI-NEXT:    s_waitcnt vmcnt(0)
 ; G_SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; G_SI-NEXT:    s_endpgm
@@ -183,7 +178,6 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_min_rtn_f32(ptr addrspace(8) inreg 
 ; G_GFX7-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen glc
 ; G_GFX7-NEXT:    s_mov_b32 s2, -1
 ; G_GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; G_GFX7-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; G_GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; G_GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; G_GFX7-NEXT:    s_endpgm
@@ -480,8 +474,6 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_max_rtn_f32(ptr addrspace(8) inreg 
 ; SI-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen glc
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    ; implicit-def: $sgpr0
-; SI-NEXT:    ; implicit-def: $sgpr1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -491,8 +483,6 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_max_rtn_f32(ptr addrspace(8) inreg 
 ; GFX7-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen glc
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s2, -1
-; GFX7-NEXT:    ; implicit-def: $sgpr0
-; GFX7-NEXT:    ; implicit-def: $sgpr1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
@@ -523,7 +513,6 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_max_rtn_f32(ptr addrspace(8) inreg 
 ; G_SI-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen glc
 ; G_SI-NEXT:    s_mov_b32 s2, -1
 ; G_SI-NEXT:    s_mov_b32 s3, 0xf000
-; G_SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; G_SI-NEXT:    s_waitcnt vmcnt(0)
 ; G_SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; G_SI-NEXT:    s_endpgm
@@ -533,7 +522,6 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_max_rtn_f32(ptr addrspace(8) inreg 
 ; G_GFX7-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen glc
 ; G_GFX7-NEXT:    s_mov_b32 s2, -1
 ; G_GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; G_GFX7-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; G_GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; G_GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; G_GFX7-NEXT:    s_endpgm

@@ -31,8 +31,6 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    ; implicit-def: $sgpr5
 ; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
@@ -62,8 +60,6 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    ; implicit-def: $sgpr5
 ; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
