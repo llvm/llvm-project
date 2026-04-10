@@ -36,7 +36,7 @@ protected:
   raw_null_ostream NullStream;
 
   MCAsmBaseStreamer(MCContext &Context, std::unique_ptr<MCCodeEmitter> Emitter,
-                std::unique_ptr<MCAsmBackend> AsmBackend);
+                    std::unique_ptr<MCAsmBackend> AsmBackend);
 
 public:
   /// Return a raw_ostream that comments can be written to.
