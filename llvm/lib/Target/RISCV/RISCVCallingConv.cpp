@@ -18,6 +18,42 @@
 
 using namespace llvm;
 
+// This does not have the regular `CCAssignFn` signature, it has an extra
+// `bool IsRet` parameter.
+static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
+                          CCValAssign::LocInfo LocInfo,
+                          ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                          CCState &State, bool IsRet);
+
+/// Used for assigning arguments with CallingConvention::GHC
+static CCAssignFn CC_RISCV_GHC;
+
+/// Used for assigning arguments with CallingConvention::Fast
+static CCAssignFn CC_RISCV_FastCC;
+
+bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
+                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                    Type *OrigTy, CCState &State) {
+  if (State.getCallingConv() == CallingConv::GHC)
+    return CC_RISCV_GHC(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State);
+
+  if (State.getCallingConv() == CallingConv::Fast)
+    return CC_RISCV_FastCC(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy,
+                           State);
+
+  // For all other cases, use the standard calling convention
+  return CC_RISCV_Impl(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State,
+                       /*IsRet=*/false);
+}
+
+bool llvm::RetCC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
+                       CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                       Type *OrigTy, CCState &State) {
+  // Always use the standard calling convention.
+  return CC_RISCV_Impl(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State,
+                       /*IsRet=*/true);
+}
+
 // Calling Convention Implementation.
 // The expectations for frontend ABI lowering vary from target to target.
 // Ideally, an LLVM frontend would be able to avoid worrying about many ABI
@@ -322,9 +358,12 @@ static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
 }
 
 // Implements the RISC-V calling convention. Returns true upon failure.
-bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
-                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State, bool IsRet, Type *OrigTy) {
+//
+// This has a slightly different signature to CCAssignFn - it adds `bool IsRet`.
+static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
+                          CCValAssign::LocInfo LocInfo,
+                          ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                          CCState &State, bool IsRet) {
   const MachineFunction &MF = State.getMachineFunction();
   const DataLayout &DL = MF.getDataLayout();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -623,10 +662,10 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 // FastCC has less than 1% performance improvement for some particular
 // benchmark. But theoretically, it may have benefit for some cases.
-bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                           CCValAssign::LocInfo LocInfo,
-                           ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsRet,
-                           Type *OrigTy) {
+static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   const MachineFunction &MF = State.getMachineFunction();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
@@ -744,9 +783,9 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
   return true; // CC didn't match.
 }
 
-bool llvm::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                        CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                        Type *OrigTy, CCState &State) {
+static bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
+                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                         Type *OrigTy, CCState &State) {
   if (ArgFlags.isNest()) {
     report_fatal_error(
         "Attribute 'nest' is not supported in GHC calling convention");
