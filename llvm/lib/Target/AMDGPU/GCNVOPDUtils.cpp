@@ -35,7 +35,7 @@ using namespace llvm;
 #define DEBUG_TYPE "gcn-vopd-utils"
 
 bool llvm::dataDependencyForVOPD(const MachineInstr &FirstMI,
-                          const MachineInstr &SecondMI) {
+                                 const MachineInstr &SecondMI) {
   const GCNSubtarget &ST = FirstMI.getMF()->getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   for (const auto &Use : SecondMI.all_uses()) {
