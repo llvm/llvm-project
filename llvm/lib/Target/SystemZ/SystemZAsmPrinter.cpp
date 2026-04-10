@@ -1539,9 +1539,8 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
     FPRSaveAreaOffset &= 0x0FFFFFFF; // Lose top 4 bits.
     OutStreamer->AddComment(
         Twine("  Bit 0-3: Register R").concat(utostr(Info.FrameReg)).str());
-    OutStreamer->AddComment(Twine("  Bit 4-31: Offset ")
-                                .concat(utostr(FPRSaveAreaOffset))
-                                .str());
+    OutStreamer->AddComment(
+        Twine("  Bit 4-31: Offset ").concat(utostr(FPRSaveAreaOffset)).str());
     OutStreamer->emitInt32(FPRSaveAreaOffset |
                            (Info.FrameReg << 28)); // Offset to FPR save area
                                                    // with register to add
