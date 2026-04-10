@@ -1,0 +1,54 @@
+//===----------------------------------------------------------------------===//
+//
+// Custom __config_site for HIPRTC - freestanding environment
+//
+// This file is embedded in comgr and used when compiling HIPRTC programs
+// with the embedded libc++ headers.
+//
+// Defines mirror libcxx/include/__config_site.in — update if upstream changes.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___CONFIG_SITE
+#define _LIBCPP___CONFIG_SITE
+
+// ABI configuration
+#define _LIBCPP_ABI_VERSION 1
+#define _LIBCPP_ABI_NAMESPACE __1
+#define _LIBCPP_ABI_FORCE_ITANIUM 1
+#define _LIBCPP_ABI_FORCE_MICROSOFT 0
+
+// Disable features not available on GPU
+#define _LIBCPP_HAS_THREADS 0
+#define _LIBCPP_HAS_MONOTONIC_CLOCK 0
+#define _LIBCPP_HAS_TERMINAL 0
+#define _LIBCPP_HAS_MUSL_LIBC 0
+#define _LIBCPP_HAS_THREAD_API_PTHREAD 0
+#define _LIBCPP_HAS_THREAD_API_EXTERNAL 0
+#define _LIBCPP_HAS_THREAD_API_WIN32 0
+#define _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS 0
+#define _LIBCPP_HAS_FILESYSTEM 0
+#define _LIBCPP_HAS_RANDOM_DEVICE 0
+#define _LIBCPP_HAS_LOCALIZATION 0
+#define _LIBCPP_HAS_UNICODE 0
+#define _LIBCPP_HAS_WIDE_CHARACTERS 0
+#define _LIBCPP_HAS_TIME_ZONE_DATABASE 0
+#define _LIBCPP_INSTRUMENTED_WITH_ASAN 0
+
+// C libraries - freestanding
+#define _LIBCPP_LIBC_PICOLIBC 0
+#define _LIBCPP_LIBC_NEWLIB 0
+#define _LIBCPP_LIBC_LLVM_LIBC 0
+
+// Hardening - disabled for GPU (minimal overhead)
+// Values from libcxx/include/__configuration/hardening.h:
+//   _LIBCPP_HARDENING_MODE_NONE      = (1 << 1)
+//   _LIBCPP_ASSERTION_SEMANTIC_IGNORE = (1 << 2)
+#define _LIBCPP_HARDENING_MODE_DEFAULT (1 << 1)
+#define _LIBCPP_ASSERTION_SEMANTIC_DEFAULT (1 << 2)
+
+// Remove transitive includes to avoid pulling in exception/iostream headers
+// that are not available in GPU freestanding environment
+#define _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+
+#endif // _LIBCPP___CONFIG_SITE
