@@ -52,6 +52,7 @@ private:
 ConcurrentStringPool &getGlobalStringPool();
 
 extern thread_local llvm::BumpPtrAllocator TransientArena;
+extern thread_local llvm::BumpPtrAllocator PersistentArena;
 
 inline StringRef internString(const Twine &T) {
   if (T.isTriviallyEmpty())
@@ -775,6 +776,12 @@ struct Index : public Reference {
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
 llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values);
+
+// Merges a single new Info into an existing Reduced Info (allocating it if
+// needed).
+llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
+                            doc::OwnedPtr<doc::Info> &&NewInfo,
+                            llvm::BumpPtrAllocator &Arena);
 
 struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
