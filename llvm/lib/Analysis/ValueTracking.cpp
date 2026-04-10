@@ -5588,10 +5588,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
-      const FPMathOperator *FPop = cast<FPMathOperator>(Op);
-      bool HasNSZ = FPop->hasNoSignedZeros();
-
-      if (!HasNSZ && Self && Opc == Instruction::FAdd) {
+      if (Self && Opc == Instruction::FAdd) {
         Known = KnownFPClass::fadd_self(KnownLHS, Mode);
       } else {
         // RHS is canonically cheaper to compute. Skip inspecting the LHS if
@@ -6069,6 +6066,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   default:
     break;
+  }
+
+  // With no-signed-zeros semantics, +0 and -0 are interchangeable. 
+  // If the operation has nsz and only one sign of zero is possible in the result,
+  // the other must also be considered possible. 
+  if (const auto *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
+    if (FPOp->hasNoSignedZeros()) {
+      FPClassTest KnownZero = Known.KnownFPClasses & fcZero;
+      if (KnownZero && KnownZero != fcZero) {
+        Known.KnownFPClasses |= fcZero;
+        // The sign of zero is now indeterminate since nsz allows either sign.
+        Known.SignBit = std::nullopt;
+      }
+    }
   }
 }
 
