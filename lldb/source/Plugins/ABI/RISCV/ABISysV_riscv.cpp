@@ -91,7 +91,7 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
      DEFINE_GENERIC_REGISTER_STUB(ra, nullptr, LLDB_REGNUM_GENERIC_RA),
      DEFINE_GENERIC_REGISTER_STUB(sp, nullptr, LLDB_REGNUM_GENERIC_SP),
      DEFINE_REGISTER_STUB(gp, nullptr),
-     DEFINE_REGISTER_STUB(tp, nullptr),
+     DEFINE_GENERIC_REGISTER_STUB(tp, nullptr, LLDB_REGNUM_GENERIC_TP),
      DEFINE_REGISTER_STUB(t0, nullptr),
      DEFINE_REGISTER_STUB(t1, nullptr),
      DEFINE_REGISTER_STUB(t2, nullptr),
@@ -820,6 +820,7 @@ static uint32_t GetGenericNum(llvm::StringRef name) {
       .Cases({"ra", "x1"}, LLDB_REGNUM_GENERIC_RA)
       .Cases({"sp", "x2"}, LLDB_REGNUM_GENERIC_SP)
       .Cases({"fp", "s0"}, LLDB_REGNUM_GENERIC_FP)
+      .Cases({"tp", "x4"}, LLDB_REGNUM_GENERIC_TP)
       .Case("a0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("a1", LLDB_REGNUM_GENERIC_ARG2)
       .Case("a2", LLDB_REGNUM_GENERIC_ARG3)
