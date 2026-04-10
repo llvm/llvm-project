@@ -225,7 +225,7 @@ static const unsigned
 
 // ASYNCMARK is a meta instruction that emits no hardware code but still
 // needs to be processed by this pass for async vmcnt tracking.
-static bool shouldSkipForWaitcnt(const MachineInstr &MI) {
+static bool shouldSkipWaitcntInsertionBefore(const MachineInstr &MI) {
   return MI.isMetaInstruction() && MI.getOpcode() != AMDGPU::ASYNCMARK;
 }
 
@@ -2461,7 +2461,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   LLVM_DEBUG(dbgs() << "\n*** GenerateWaitcntInstBefore: "; MI.print(dbgs()););
   setForceEmitWaitcnt();
 
-  assert(!shouldSkipForWaitcnt(MI));
+  assert(!shouldSkipWaitcntInsertionBefore(MI));
 
   AMDGPU::Waitcnt Wait;
   const unsigned Opc = MI.getOpcode();
@@ -3314,7 +3314,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                          E = Block.instr_end();
        Iter != E; ++Iter) {
     MachineInstr &Inst = *Iter;
-    if (shouldSkipForWaitcnt(Inst))
+    if (shouldSkipWaitcntInsertionBefore(Inst))
       continue;
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
