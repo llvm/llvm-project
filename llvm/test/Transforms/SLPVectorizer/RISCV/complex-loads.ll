@@ -154,8 +154,7 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; THR15-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr i8, ptr [[ADD_PTR_1]], i64 4
 ; THR15-NEXT:    [[ARRAYIDX5_2:%.*]] = getelementptr i8, ptr [[ADD_PTR64_1]], i64 4
 ; THR15-NEXT:    [[ARRAYIDX5_3:%.*]] = getelementptr i8, ptr null, i64 4
-; THR15-NEXT:    [[TMP0:%.*]] = load i8, ptr null, align 1
-; THR15-NEXT:    [[TMP1:%.*]] = load i8, ptr null, align 1
+; THR15-NEXT:    [[TMP0:%.*]] = call <2 x i8> @llvm.masked.gather.v2i8.v2p0(<2 x ptr> align 1 zeroinitializer, <2 x i1> splat (i1 true), <2 x i8> poison)
 ; THR15-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[PIX1]], align 1
 ; THR15-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
 ; THR15-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[PIX2]], align 1
@@ -223,8 +222,7 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; THR15-NEXT:    [[TMP66:%.*]] = zext <4 x i8> [[TMP65]] to <4 x i32>
 ; THR15-NEXT:    [[TMP67:%.*]] = sub <4 x i32> [[TMP64]], [[TMP66]]
 ; THR15-NEXT:    [[TMP68:%.*]] = shufflevector <4 x i32> [[TMP67]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; THR15-NEXT:    [[TMP69:%.*]] = insertelement <4 x i8> poison, i8 [[TMP1]], i32 0
-; THR15-NEXT:    [[TMP70:%.*]] = insertelement <4 x i8> [[TMP69]], i8 [[TMP0]], i32 1
+; THR15-NEXT:    [[TMP70:%.*]] = shufflevector <2 x i8> [[TMP0]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; THR15-NEXT:    [[TMP116:%.*]] = shufflevector <2 x i8> [[TMP62]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; THR15-NEXT:    [[TMP71:%.*]] = shufflevector <4 x i8> [[TMP70]], <4 x i8> [[TMP116]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; THR15-NEXT:    [[TMP72:%.*]] = zext <4 x i8> [[TMP71]] to <4 x i32>

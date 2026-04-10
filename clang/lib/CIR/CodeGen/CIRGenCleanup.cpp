@@ -192,6 +192,54 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
   return false;
 }
 
+/// The given cleanup block is being deactivated. Configure a cleanup variable
+/// if necessary.
+static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
+                                          EHScopeStack::stable_iterator c,
+                                          mlir::Operation *dominatingIP) {
+  EHCleanupScope &scope = cast<EHCleanupScope>(*cgf.ehStack.find(c));
+
+  assert((scope.isNormalCleanup() || scope.isEHCleanup()) &&
+         "cleanup block is neither normal nor EH?");
+
+  if (scope.isNormalCleanup())
+    scope.setTestFlagInNormalCleanup();
+
+  if (scope.isEHCleanup())
+    scope.setTestFlagInEHCleanup();
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  // If the cleanup block doesn't exist yet, create it and set its initial
+  // value to `true`. If we are inside a conditional branch, the value must be
+  // initialized before the conditional branch begins.
+  Address var = scope.getActiveFlag();
+  if (!var.isValid()) {
+    mlir::Location loc = builder.getUnknownLoc();
+
+    var = cgf.createTempAllocaWithoutCast(builder.getBoolTy(), CharUnits::One(),
+                                          loc, "cleanup.isactive");
+    scope.setActiveFlag(var);
+
+    assert(dominatingIP && "no existing variable and no dominating IP!");
+
+    if (cgf.isInConditionalBranch()) {
+      mlir::Value val = builder.getBool(true, loc);
+      cgf.setBeforeOutermostConditional(val, var);
+    } else {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(dominatingIP);
+      builder.createFlagStore(loc, true, var.getPointer());
+    }
+  }
+
+  // The code above sets the `isActive` flag to `true` as its initial state
+  // at the point where the variable is created. The code below sets it to
+  // `false` at the point where the cleanup is deactivated.
+  mlir::Location loc = builder.getUnknownLoc();
+  builder.createFlagStore(loc, false, var.getPointer());
+}
+
 /// Deactive a cleanup that was created in an active state.
 void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
                                             mlir::Operation *dominatingIP) {
@@ -208,12 +256,15 @@ void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
   }
 
   // Otherwise, follow the general case.
-  cgm.errorNYI("deactivateCleanupBlock: setupCleanupBlockActivation");
+  setupCleanupBlockDeactivation(*this, c, dominatingIP);
+
+  scope.setActive(false);
 }
 
 static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
                         EHScopeStack::Cleanup *cleanup,
-                        EHScopeStack::Cleanup::Flags flags) {
+                        EHScopeStack::Cleanup::Flags flags,
+                        Address activeFlag) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Block &block = cleanupScope.getCleanupRegion().back();
 
@@ -222,9 +273,23 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
 
   // Ask the cleanup to emit itself.
   assert(cgf.haveInsertPoint() && "expected insertion point");
-  assert(!cir::MissingFeatures::ehCleanupActiveFlag());
-  cleanup->emit(cgf, flags);
-  assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
+
+  if (activeFlag.isValid()) {
+    mlir::Location loc = cleanupScope.getLoc();
+    mlir::Value isActive = builder.createFlagLoad(loc, activeFlag.getPointer());
+    cir::IfOp::create(builder, loc, isActive,
+                      /*withElseRegion=*/false,
+                      /*thenBuilder=*/
+                      [&](mlir::OpBuilder &, mlir::Location) {
+                        cleanup->emit(cgf, flags);
+                        assert(cgf.haveInsertPoint() &&
+                               "cleanup ended with no insertion point?");
+                        builder.createYield(loc);
+                      });
+  } else {
+    cleanup->emit(cgf, flags);
+    assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
+  }
 
   mlir::Block &cleanupRegionLastBlock = cleanupScope.getCleanupRegion().back();
   if (cleanupRegionLastBlock.empty() ||
@@ -233,18 +298,6 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
     builder.setInsertionPointToEnd(&cleanupRegionLastBlock);
     builder.createYield(cleanupScope.getLoc());
   }
-}
-
-static mlir::Block *createNormalEntry(CIRGenFunction &cgf,
-                                      EHCleanupScope &scope) {
-  assert(scope.isNormalCleanup());
-  mlir::Block *entry = scope.getNormalBlock();
-  if (!entry) {
-    mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
-    entry = cgf.curLexScope->getOrCreateCleanupBlock(cgf.getBuilder());
-    scope.setNormalBlock(entry);
-  }
-  return entry;
 }
 
 void CIRGenFunction::popCleanupBlock() {
@@ -256,17 +309,17 @@ void CIRGenFunction::popCleanupBlock() {
   assert(cleanupScope && "CleanupScopeOp is nullptr");
 
   // Remember activation information.
-  bool isActive = scope.isActive();
+  Address normalActiveFlag = scope.shouldTestFlagInNormalCleanup()
+                                 ? scope.getActiveFlag()
+                                 : Address::invalid();
+  Address ehActiveFlag = scope.shouldTestFlagInEHCleanup()
+                             ? scope.getActiveFlag()
+                             : Address::invalid();
 
-  // - whether there's a fallthrough
-  mlir::Block *fallthroughSource = builder.getInsertionBlock();
-  bool hasFallthrough = fallthroughSource != nullptr && isActive;
-
-  bool requiresNormalCleanup = scope.isNormalCleanup() && hasFallthrough;
-  bool requiresEHCleanup = scope.isEHCleanup() && hasFallthrough;
+  bool requiresNormalCleanup = scope.isNormalCleanup();
+  bool requiresEHCleanup = scope.isEHCleanup();
 
   // If we don't need the cleanup at all, we're done.
-  assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
   if (!requiresNormalCleanup && !requiresEHCleanup) {
     ehStack.popCleanup();
     return;
@@ -302,109 +355,17 @@ void CIRGenFunction::popCleanupBlock() {
   if (scope.isEHCleanup())
     cleanupFlags.setIsEHCleanupKind();
 
-  // If we have a fallthrough and no other need for the cleanup,
-  // emit it directly.
-  if (hasFallthrough) {
-    assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
-    ehStack.popCleanup();
-    scope.markEmitted();
-    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags);
-  } else {
-    // Otherwise, the best approach is to thread everything through
-    // the cleanup block and then try to clean up after ourselves.
+  // Determine the active flag for the cleanup handler.
+  Address cleanupActiveFlag = normalActiveFlag.isValid() ? normalActiveFlag
+                              : ehActiveFlag.isValid()   ? ehActiveFlag
+                                                         : Address::invalid();
 
-    // Force the entry block to exist.
-    mlir::Block *normalEntry = createNormalEntry(*this, scope);
-
-    // I.  Set up the fallthrough edge in.
-    mlir::OpBuilder::InsertPoint savedInactiveFallthroughIP;
-
-    // If we have a fallthrough source, but this cleanup is inactive,
-    // save and clear the IP.
-    if (!hasFallthrough && fallthroughSource) {
-      assert(!isActive && "source without fallthrough for active cleanup");
-      savedInactiveFallthroughIP = builder.saveInsertionPoint();
-    }
-
-    // II.  Emit the entry block.  This implicitly branches to it if
-    // we have fallthrough.  All the fixups and existing branches
-    // should already be branched to it.
-    builder.setInsertionPointToEnd(normalEntry);
-
-    // intercept normal cleanup to mark SEH scope end
-    assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
-
-    // III.  Figure out where we're going and build the cleanup
-    // epilogue.
-    bool hasEnclosingCleanups =
-        (scope.getEnclosingNormalCleanup() != ehStack.stable_end());
-
-    // Compute the branch-through dest if we need it:
-    //   - if there are branch-throughs threaded through the scope
-    //   - if fall-through is a branch-through
-    //   - if there are fixups that will be optimistically forwarded
-    //     to the enclosing cleanup
-    assert(!cir::MissingFeatures::cleanupBranchThrough());
-    if (hasEnclosingCleanups)
-      cgm.errorNYI("cleanup branch-through dest");
-
-    mlir::Block *fallthroughDest = nullptr;
-
-    // If there's exactly one branch-after and no other threads,
-    // we can route it without a switch.
-    // Skip for SEH, since ExitSwitch is used to generate code to indicate
-    // abnormal termination. (SEH: Except _leave and fall-through at
-    // the end, all other exits in a _try (return/goto/continue/break)
-    // are considered as abnormal terminations, using NormalCleanupDestSlot
-    // to indicate abnormal termination)
-    assert(!cir::MissingFeatures::cleanupBranchThrough());
-    assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
-
-    // IV.  Pop the cleanup and emit it.
-    scope.markEmitted();
-    ehStack.popCleanup();
-    assert(ehStack.hasNormalCleanups() == hasEnclosingCleanups);
-    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags);
-
-    // Append the prepared cleanup prologue from above.
-    assert(!cir::MissingFeatures::cleanupAppendInsts());
-
-    // V.  Set up the fallthrough edge out.
-
-    // Case 1: a fallthrough source exists but doesn't branch to the
-    // cleanup because the cleanup is inactive.
-    if (!hasFallthrough && fallthroughSource) {
-      // Prebranched fallthrough was forwarded earlier.
-      // Non-prebranched fallthrough doesn't need to be forwarded.
-      // Either way, all we need to do is restore the IP we cleared before.
-      assert(!isActive);
-      cgm.errorNYI("cleanup inactive fallthrough");
-
-      // Case 2: a fallthrough source exists and should branch to the
-      // cleanup, but we're not supposed to branch through to the next
-      // cleanup.
-    } else if (hasFallthrough && fallthroughDest) {
-      cgm.errorNYI("cleanup fallthrough destination");
-
-      // Case 3: a fallthrough source exists and should branch to the
-      // cleanup and then through to the next.
-    } else if (hasFallthrough) {
-      // Everything is already set up for this.
-
-      // Case 4: no fallthrough source exists.
-    } else {
-      // FIXME(cir): should we clear insertion point here?
-    }
-
-    // VI.  Assorted cleaning.
-
-    // Check whether we can merge NormalEntry into a single predecessor.
-    // This might invalidate (non-IR) pointers to NormalEntry.
-    //
-    // If it did invalidate those pointers, and normalEntry was the same
-    // as NormalExit, go back and patch up the fixups.
-    assert(!cir::MissingFeatures::simplifyCleanupEntry());
-  }
+  // In CIR, the cleanup code is emitted into the cleanup region of the
+  // cir.cleanup.scope op. There is no CFG threading needed — the FlattenCFG
+  // pass handles lowering the structured cleanup scope.
+  ehStack.popCleanup();
+  scope.markEmitted();
+  emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.
@@ -454,4 +415,19 @@ void CIRGenFunction::popCleanupBlocks(
       *valPtr = builder.createLoad(loc, addr);
     }
   }
+}
+
+/// Pops cleanup blocks until the given savepoint is reached, then add the
+/// cleanups from the given savepoint in the lifetime-extended cleanups stack.
+void CIRGenFunction::popCleanupBlocks(
+    EHScopeStack::stable_iterator oldCleanupStackDepth,
+    size_t oldLifetimeExtendedSize, ArrayRef<mlir::Value *> valuesToReload) {
+  popCleanupBlocks(oldCleanupStackDepth, valuesToReload);
+
+  // Promote deferred lifetime-extended cleanups onto the EH scope stack.
+  for (const LifetimeExtendedCleanupEntry &cleanup : llvm::make_range(
+           lifetimeExtendedCleanupStack.begin() + oldLifetimeExtendedSize,
+           lifetimeExtendedCleanupStack.end()))
+    pushLifetimeExtendedCleanupToEHStack(cleanup);
+  lifetimeExtendedCleanupStack.truncate(oldLifetimeExtendedSize);
 }

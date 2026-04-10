@@ -158,3 +158,99 @@ loop:
  exit:
    ret void
  }
+
+; FIXME: NUSW on the wider i32 AddRec does not imply NUSW on a narrower i8 AddRec.
+; Test for https://github.com/llvm/llvm-project/issues/191382.
+define void @wider_i32_nusw_does_not_imply_narrower_i4_nusw(ptr %dst, i64 %n) {
+; CHECK-LABEL: 'wider_i32_nusw_does_not_imply_narrower_i4_nusw'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {1,+,1}<%loop> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds nuw i8, ptr %dst, i64 %iv.mod.zext:
+; CHECK-NEXT:        ((zext i4 {0,+,1}<%loop> to i16) + %dst)<nuw>
+; CHECK-NEXT:        --> {%dst,+,1}<%loop>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.zext = phi i64 [ 0, %entry ], [ %iv.next.zext, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.mod = and i32 %iv, 15
+  %iv.mod.zext = zext nneg i32 %iv.mod to i64
+  %gep.dst = getelementptr inbounds nuw i8, ptr %dst, i64 %iv.mod.zext
+  %l.dst = load i8, ptr %gep.dst, align 1
+  %xor = xor i8 %l.dst, 10
+  store i8 %xor, ptr %gep.dst, align 1
+  %iv.next = add i32 %iv, 1
+  %iv.next.zext = zext i32 %iv.next to i64
+  %done = icmp ugt i64 %n, %iv.next.zext
+  br i1 %done, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Narrower i4 {0,+,2} [nusw] implies wider i8 {0,+,1} [nusw].
+define void @narrower_i4_nusw_implies_wider_i8_nusw(ptr %dst, ptr %src, i32 %N) {
+; CHECK-LABEL: 'narrower_i4_nusw_implies_wider_i8_nusw'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.wide
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.narrow
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %dst High: ((4 * (trunc i32 %N to i16)) + %dst))
+; CHECK-NEXT:            Member: {%dst,+,4}<%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %src High: (-4 + (8 * (trunc i32 %N to i16)) + %src))
+; CHECK-NEXT:            Member: {%src,+,8}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.wide:
+; CHECK-NEXT:        ((4 * (zext i8 {0,+,1}<%loop> to i16))<nuw><nsw> + %dst)<nuw>
+; CHECK-NEXT:        --> {%dst,+,4}<%loop>
+; CHECK-NEXT:      [PSE] %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.narrow:
+; CHECK-NEXT:        ((4 * (zext i4 {0,+,2}<%loop> to i16))<nuw><nsw> + %src)<nuw>
+; CHECK-NEXT:        --> {%src,+,8}<%loop>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.wide = phi i8 [ 0, %entry ], [ %iv.wide.next, %loop ]
+  %iv.narrow.base = phi i8 [ 0, %entry ], [ %iv.narrow.next, %loop ]
+  %iv.narrow = and i8 %iv.narrow.base, 15
+  %ext.wide = zext i8 %iv.wide to i64
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.wide
+  %ext.narrow = zext i8 %iv.narrow to i64
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.narrow
+  %l = load i32, ptr %gep.src, align 4
+  store i32 %l, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i32 %iv, 1
+  %iv.wide.next = add i8 %iv.wide, 1
+  %iv.narrow.next = add i8 %iv.narrow.base, 2
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

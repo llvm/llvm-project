@@ -15,8 +15,9 @@
 #include "src/__support/FPUtil/generic/sqrt.h"
 
 // Generic instruction specializations with __builtin_elementwise_sqrt.
-#if defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) ||                                  \
-    defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
+#if !defined(LIBC_HAS_CONSTANT_EVALUATION) &&                                  \
+    (defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) ||                                 \
+     defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE))
 
 #if __has_builtin(__builtin_elementwise_sqrt)
 

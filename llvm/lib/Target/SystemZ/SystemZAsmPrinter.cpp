@@ -24,6 +24,7 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCDirectives.h"
@@ -1228,6 +1229,20 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (TT.isOSzOS()) {
     emitADASection();
     emitIDRLSection(M);
+    // On z/OS, we need to associate an external data reference with an ED
+    // symbol, for which we use the the ED of the ADA. We also need to mark the
+    // reference as being to data, otherwise we cannot bind with code generated
+    // by XL.
+    for (auto &GO : M.global_objects()) {
+      if (auto *GV = dyn_cast<GlobalVariable>(&GO)) {
+        if (!GV->hasInitializer()) {
+          MCSymbol *Sym = getSymbol(GV);
+          getTargetStreamer()->emitADA(
+              Sym, OutContext.getObjectFileInfo()->getADASection());
+          OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+        }
+      }
+    }
   }
   emitAttributes(M);
 }

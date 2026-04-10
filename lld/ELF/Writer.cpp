@@ -401,11 +401,11 @@ static void markUsedLocalSymbolsImpl(ObjFile<ELFT> *file,
   for (const RelTy &rel : rels) {
     Symbol &sym = file->getRelocTargetSym(rel);
     if (sym.isLocal())
-      sym.used = true;
+      sym.setFlags(USED);
   }
 }
 
-// The function ensures that the "used" field of local symbols reflects the fact
+// The function ensures that the USED flag of local symbols reflects the fact
 // that the symbol is used in a relocation from a live section.
 template <class ELFT> static void markUsedLocalSymbols(Ctx &ctx) {
   // With --gc-sections, the field is already filled.
@@ -428,7 +428,7 @@ template <class ELFT> static void markUsedLocalSymbols(Ctx &ctx) {
         for (Elf_Crel_Impl<true> r : RelocsCrel<true>(isec->content_)) {
           Symbol &sym = file->getSymbol(r.r_symidx);
           if (sym.isLocal())
-            sym.used = true;
+            sym.setFlags(USED);
         }
       }
     }
@@ -441,7 +441,7 @@ static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
 
   // If --emit-reloc or -r is given, preserve symbols referenced by relocations
   // from live sections.
-  if (sym.used && ctx.arg.copyRelocs)
+  if (sym.hasFlag(USED) && ctx.arg.copyRelocs)
     return true;
 
   // Exclude local symbols pointing to .ARM.exidx sections.
@@ -482,7 +482,7 @@ bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
       return s->getSectionPiece(d->value).live;
     return true;
   }
-  return b.used || !ctx.arg.gcSections;
+  return b.hasFlag(USED) || !ctx.arg.gcSections;
 }
 
 // Scan local symbols to:
@@ -1109,11 +1109,12 @@ static void maybeShuffle(Ctx &ctx,
 static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   DenseMap<const InputSectionBase *, int> sectionOrder;
   if (ctx.arg.bpStartupFunctionSort || ctx.arg.bpFunctionOrderForCompression ||
-      ctx.arg.bpDataOrderForCompression) {
+      ctx.arg.bpDataOrderForCompression ||
+      !ctx.arg.bpCompressionSortSpecs.empty()) {
     TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
     sectionOrder = runBalancedPartitioning(
         ctx, ctx.arg.bpStartupFunctionSort ? ctx.arg.irpgoProfilePath : "",
-        ctx.arg.bpFunctionOrderForCompression,
+        ctx.arg.bpCompressionSortSpecs, ctx.arg.bpFunctionOrderForCompression,
         ctx.arg.bpDataOrderForCompression,
         ctx.arg.bpCompressionSortStartupFunctions,
         ctx.arg.bpVerboseSectionOrderer);

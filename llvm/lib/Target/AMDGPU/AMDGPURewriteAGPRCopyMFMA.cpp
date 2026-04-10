@@ -35,10 +35,14 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-rewrite-agpr-copy-mfma"
+
+DEBUG_COUNTER(RewriteAGPRCopyMFMACounter, DEBUG_TYPE,
+              "Controls which MFMA chains are rewritten to AGPR form");
 
 namespace {
 
@@ -205,7 +209,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
       if (!NewRC || NewRC == OldRC) {
         LLVM_DEBUG(dbgs() << "User of " << printReg(Reg, &TRI)
                           << " cannot be reassigned to "
-                          << TRI.getRegClassName(NewRC) << ": " << *MI);
+                          << (NewRC ? TRI.getRegClassName(NewRC) : "NULL")
+                          << ": " << *MI);
         return false;
       }
     }
@@ -267,7 +272,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
     LRM.unassign(LI);
   }
 
-  if (!attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
+  if (!DebugCounter::shouldExecute(RewriteAGPRCopyMFMACounter) ||
+      !attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
     // Roll back the register assignments to the original state.
     for (auto [LI, OldAssign] : TentativeReassignments) {
       if (VRM.hasPhys(LI->reg()))

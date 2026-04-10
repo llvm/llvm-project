@@ -54,6 +54,8 @@ void test_amdgcn_wmma_bf16f32_16x16x32_bf16(global v8bf16* out, v16bf16 a, v16bf
   *out = __builtin_amdgcn_wmma_bf16f32_16x16x32_bf16(0, a, 0, b, mod, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_bf16f32_16x16x32_bf16' must be a constant integer}}
   *out = __builtin_amdgcn_wmma_bf16f32_16x16x32_bf16(0, a, 0, b, 0, c, mod, false); // expected-error {{'__builtin_amdgcn_wmma_bf16f32_16x16x32_bf16' must be a constant integer}}
   *out = __builtin_amdgcn_wmma_bf16f32_16x16x32_bf16(0, a, 0, b, 0, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_bf16f32_16x16x32_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_bf16f32_16x16x32_bf16(1, a, 0, b, 0, c, false, false); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  *out = __builtin_amdgcn_wmma_bf16f32_16x16x32_bf16(0, a, 1, b, 0, c, false, false); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
 }
 
 void test_amdgcn_wmma_f32_16x16x64_fp8_fp8(global v8f* out, v8i a, v8i b, v8f c, int mod)
