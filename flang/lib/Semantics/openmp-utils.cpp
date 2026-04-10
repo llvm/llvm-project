@@ -1059,8 +1059,10 @@ WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
     if (auto *clause{
             parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_looprange)}) {
       auto &range{DEREF(parser::Unwrap<parser::OmpLooprangeClause>(clause->u))};
-      auto first{GetIntValueFromExpr(std::get<0>(range.t), semaCtx)};
-      auto count{GetIntValueFromExpr(std::get<1>(range.t), semaCtx)};
+      std::optional<int64_t> first{
+          GetIntValueFromExpr(std::get<0>(range.t), semaCtx)};
+      std::optional<int64_t> count{
+          GetIntValueFromExpr(std::get<1>(range.t), semaCtx)};
       if (!first || !count || *first <= 0 || *count <= 0) {
         return {};
       }
@@ -1363,7 +1365,8 @@ WithReason<int64_t> LoopSequence::calculateLength() const {
     }
 
     auto *loopRange{parser::Unwrap<parser::OmpLooprangeClause>(*clause)};
-    auto count{GetIntValueFromExpr(std::get<1>(loopRange->t), semaCtx_)};
+    std::optional<int64_t> count{
+        GetIntValueFromExpr(std::get<1>(loopRange->t), semaCtx_)};
     if (!count || *count <= 0) {
       return {};
     }
