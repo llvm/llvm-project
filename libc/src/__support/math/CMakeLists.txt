@@ -21,7 +21,7 @@ add_header_library(
   HDRS
     acosf.h
   DEPENDS
-    .inv_trigf_utils
+    .asin_utils
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
@@ -101,7 +101,7 @@ add_header_library(
   HDRS
     acospif.h
   DEPENDS
-    .inv_trigf_utils
+    .asin_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
@@ -211,7 +211,7 @@ add_header_library(
   HDRS
     asinpif.h
   DEPENDS
-    .inv_trigf_utils
+    .asin_utils
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
@@ -267,7 +267,7 @@ add_header_library(
     atan2f_float.h
     atan2f.h
   DEPENDS
-    .inv_trigf_utils
+    .atan_utils
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -283,7 +283,7 @@ add_header_library(
   HDRS
     atan2f16.h
   DEPENDS
-    .inv_trigf_utils
+    .atan_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.cast
@@ -329,7 +329,7 @@ add_header_library(
     atanf_float.h
     atanf.h
   DEPENDS
-    .inv_trigf_utils
+    .atan_utils
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
@@ -417,7 +417,7 @@ add_header_library(
   HDRS
     asinf.h
   DEPENDS
-    .inv_trigf_utils
+    .asin_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.except_value_utils
@@ -1750,15 +1750,6 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
-add_header_library(
-  inv_trigf_utils
-  HDRS
-    inv_trigf_utils.h
-  DEPENDS
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.common
-)
 
 add_header_library(
   frexpf16
