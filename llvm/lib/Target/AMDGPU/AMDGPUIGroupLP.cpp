@@ -819,13 +819,6 @@ void PipelineSolver::solve() {
   LLVM_DEBUG(DAG->dump());
 }
 
-enum IGLPStrategyID : int {
-  MFMASmallGemmOptID = 0,
-  MFMASmallGemmSingleWaveOptID = 1,
-  MFMAExpInterleaveID = 2,
-  MFMAExpSimpleInterleaveID = 3
-};
-
 // Implement a IGLP scheduling strategy.
 class IGLPStrategy {
 protected:
@@ -2316,16 +2309,16 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
 }
 
 static std::unique_ptr<IGLPStrategy>
-createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
+createIGLPStrategy(AMDGPU::IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
                    const SIInstrInfo *TII) {
   switch (ID) {
-  case MFMASmallGemmOptID:
+  case AMDGPU::MFMASmallGemmOptID:
     return std::make_unique<MFMASmallGemmOpt>(DAG, TII);
-  case MFMASmallGemmSingleWaveOptID:
+  case AMDGPU::MFMASmallGemmSingleWaveOptID:
     return std::make_unique<MFMASmallGemmSingleWaveOpt>(DAG, TII);
-  case MFMAExpInterleaveID:
+  case AMDGPU::MFMAExpInterleaveID:
     return std::make_unique<MFMAExpInterleaveOpt>(DAG, TII);
-  case MFMAExpSimpleInterleaveID:
+  case AMDGPU::MFMAExpSimpleInterleaveID:
     return std::make_unique<MFMAExpSimpleInterleaveOpt>(DAG, TII);
   }
 
@@ -2702,8 +2695,8 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
 }
 
 bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
-  IGLPStrategyID StrategyID =
-      (IGLPStrategyID)SU.getInstr()->getOperand(0).getImm();
+  AMDGPU::IGLPStrategyID StrategyID =
+      (AMDGPU::IGLPStrategyID)SU.getInstr()->getOperand(0).getImm();
   auto S = createIGLPStrategy(StrategyID, DAG, TII);
   if (!S->shouldApplyStrategy(DAG, Phase))
     return false;
