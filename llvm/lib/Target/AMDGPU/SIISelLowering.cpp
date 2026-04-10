@@ -8790,25 +8790,25 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   SmallSet<Register, 8> SGPRInputRegs;
 
-  for (unsigned I = InlineAsm::Op_FirstOperand; I < NumOps - 1;) {
+  unsigned NumVals = 0;
+  for (unsigned I = InlineAsm::Op_FirstOperand; I < NumOps - 1;
+       I += 1 + NumVals) {
     const InlineAsm::Flag Flags(Op.getConstantOperandVal(I));
-    unsigned NumVals = Flags.getNumOperandRegisters();
-    ++I;
+    NumVals = Flags.getNumOperandRegisters();
 
     unsigned RCID;
     bool IsSGPRInput = Flags.getKind() == InlineAsm::Kind::RegUse &&
                        NumVals > 0 && Flags.hasRegClassConstraint(RCID) &&
                        TRI->isSGPRClass(TRI->getRegClass(RCID));
 
-    for (unsigned J = 0; J < NumVals; ++J, ++I) {
-      SDValue Val = Op.getOperand(I);
+    for (unsigned J = 0; J < NumVals; ++J) {
+      SDValue Val = Op.getOperand(I + 1 + J);
       if (Val.getOpcode() != ISD::Register)
         continue;
 
       Register Reg = cast<RegisterSDNode>(Val.getNode())->getReg();
 
-      IsSGPRInput = Reg.isPhysical() ? TRI->isSGPRPhysReg(Reg) : IsSGPRInput;
-      if (IsSGPRInput)
+      if (IsSGPRInput || (Reg.isPhysical() && TRI->isSGPRPhysReg(Reg)))
         SGPRInputRegs.insert(Reg);
     }
   }
