@@ -206,7 +206,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   auto &CARef = *ChildArr.getAsArray();
   CARef.reserve(I.Children.size());
   for (const auto &C : I.Children)
-    CARef.emplace_back(serializeComment(*C, Description));
+    CARef.emplace_back(serializeComment(C, Description));
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
@@ -385,7 +385,7 @@ static void serializeDescription(llvm::ArrayRef<CommentInfo> Description,
   auto &Comments = Description.front().Children;
   Object DescriptionObj = Object();
   for (const auto &CommentInfo : Comments) {
-    json::Value Comment = serializeComment(*CommentInfo, DescriptionObj);
+    json::Value Comment = serializeComment(CommentInfo, DescriptionObj);
     // if a ParagraphComment is returned, then it is a top-level comment that
     // needs to be inserted manually.
     if (auto *ParagraphComment = Comment.getAsObject();

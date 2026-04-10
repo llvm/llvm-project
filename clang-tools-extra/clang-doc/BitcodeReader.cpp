@@ -385,6 +385,7 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
   if (llvm::Error Err = Stream.EnterSubBlock(ID))
     return Err;
 
+  llvm::SmallVector<CommentInfo> LocalChildren;
   llvm::SmallVector<StringRef> AttrKeys;
   llvm::SmallVector<StringRef> AttrValues;
   llvm::SmallVector<StringRef> Args;
@@ -400,6 +401,8 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "bad block found");
     case Cursor::BlockEnd: {
+      if (!LocalChildren.empty())
+        I->Children = allocateArray<CommentInfo>(LocalChildren, TransientArena);
       if (!AttrKeys.empty()) {
         StringRef *KeysMem =
             TransientArena.Allocate<StringRef>(AttrKeys.size());
@@ -421,10 +424,20 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
       return llvm::Error::success();
     }
     case Cursor::BlockBegin:
-      if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
-        if (llvm::Error Skipped = Stream.SkipBlock())
-          return joinErrors(std::move(Err), std::move(Skipped));
-        return Err;
+      if (BlockOrCode == BI_COMMENT_BLOCK_ID) {
+        CommentInfo Child;
+        if (llvm::Error Err = readBlock(BlockOrCode, &Child)) {
+          if (llvm::Error Skipped = Stream.SkipBlock())
+            return joinErrors(std::move(Err), std::move(Skipped));
+          return Err;
+        }
+        LocalChildren.push_back(std::move(Child));
+      } else {
+        if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
+          if (llvm::Error Skipped = Stream.SkipBlock())
+            return joinErrors(std::move(Err), std::move(Skipped));
+          return Err;
+        }
       }
       continue;
     case Cursor::Record:
@@ -572,11 +585,6 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(TypedefInfo *I) {
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumValueInfo *I) {
   return &I->Description.emplace_back();
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
-  I->Children.emplace_back(allocatePtr<CommentInfo>());
-  return getPtr(I->Children.back());
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(ConceptInfo *I) {
