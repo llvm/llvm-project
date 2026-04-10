@@ -355,6 +355,20 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     return;
   }
   instantiated_ = true;
+
+  if (IsEnumerationType()) {
+    // Enumeration types have no components, no parameters, and need
+    // no instantiation, but scope_ must be set so that callers of
+    // scope() (e.g., GetAlignment, MeasureSizeInBytes) can access
+    // the type's size and alignment.
+    scope_ = typeSymbol_.scope();
+    Scope &mutableTypeScope{const_cast<Scope &>(*scope_)};
+    if (!mutableTypeScope.derivedTypeSpec()) {
+      mutableTypeScope.set_derivedTypeSpec(*this);
+    }
+    return;
+  }
+
   auto &context{containingScope.context()};
   auto &foldingContext{context.foldingContext()};
   if (IsForwardReferenced()) {
