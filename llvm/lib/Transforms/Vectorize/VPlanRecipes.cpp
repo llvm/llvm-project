@@ -440,20 +440,25 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
          "number of operands does not match opcode");
 }
 
-/// For call VPInstructions, return the operand index of the called function and
-/// the called function itself. The function is either the last operand (for
-/// unmasked calls) or the second-to-last operand (for masked calls).
-static std::pair<unsigned, Function *>
-getCalledFunction(const VPInstruction &VPI) {
+/// For call VPInstructions, return the operand index of the called function.
+/// The function is either the last operand (for unmasked calls) or the
+/// second-to-last operand (for masked calls).
+static unsigned getCalledFnOperandIndex(const VPInstruction &VPI) {
   assert(VPI.getOpcode() == Instruction::Call && "must be a call");
   unsigned NumOps = VPI.getNumOperands();
   auto *LastOp = dyn_cast<VPIRValue>(VPI.getOperand(NumOps - 1));
-  if (LastOp)
-    if (auto *F = dyn_cast<Function>(LastOp->getValue()))
-      return {NumOps - 1, F};
-  return {
-      NumOps - 2,
-      cast<Function>(cast<VPIRValue>(VPI.getOperand(NumOps - 2))->getValue())};
+  if (LastOp && isa<Function>(LastOp->getValue()))
+    return NumOps - 1;
+  assert(
+      isa<Function>(cast<VPIRValue>(VPI.getOperand(NumOps - 2))->getValue()) &&
+      "expected function operand");
+  return NumOps - 2;
+}
+
+/// For call VPInstructions, return the called function.
+static Function *getCalledFunction(const VPInstruction &VPI) {
+  unsigned Idx = getCalledFnOperandIndex(VPI);
+  return cast<Function>(cast<VPIRValue>(VPI.getOperand(Idx))->getValue());
 }
 
 unsigned VPInstruction::getNumOperandsForOpcode() const {
@@ -502,10 +507,8 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ReductionStartVector:
     return 3;
-  case Instruction::Call: {
-    const auto &[Idx, _] = getCalledFunction(*this);
-    return Idx + 1;
-  }
+  case Instruction::Call:
+    return getCalledFnOperandIndex(*this) + 1;
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
@@ -1370,10 +1373,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::VScale:
   case VPInstruction::Unpack:
     return false;
-  case Instruction::Call: {
-    const auto &[_, CalledFn] = getCalledFunction(*this);
-    return !CalledFn->doesNotAccessMemory();
-  }
+  case Instruction::Call:
+    return !getCalledFunction(*this)->doesNotAccessMemory();
   default:
     return true;
   }
