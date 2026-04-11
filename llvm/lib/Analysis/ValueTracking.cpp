@@ -4982,6 +4982,31 @@ static bool isAbsoluteValueLessEqualOne(const Value *V) {
   return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
 }
 
+static bool shouldApplyNSZToResult(const Operator *Op) {
+  switch (Op->getOpcode()) {
+  case Instruction::FNeg:
+  case Instruction::Select:
+  case Instruction::PHI:
+    return false;
+  case Instruction::Call:
+    if (const auto *II = dyn_cast<IntrinsicInst>(Op)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fabs:
+      case Intrinsic::copysign:
+      case Intrinsic::ssa_copy:
+        return false;
+      default:
+        break;
+      }
+    }
+    break;
+  default:
+    break;
+  }
+
+  return true;
+}
+
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5081,11 +5106,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownNotFromFlags |= Arg->getNoFPClass();
 
   const Operator *Op = dyn_cast<Operator>(V);
+  bool HasNoSignedZeros = false;
+  DenormalMode Mode = DenormalMode::getDynamic();
   if (const FPMathOperator *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
     if (FPOp->hasNoNaNs())
       KnownNotFromFlags |= fcNan;
     if (FPOp->hasNoInfs())
       KnownNotFromFlags |= fcInf;
+    HasNoSignedZeros =
+        FPOp->hasNoSignedZeros() && shouldApplyNSZToResult(Op);
+    if (HasNoSignedZeros) {
+      if (const auto *I = dyn_cast<Instruction>(Op)) {
+        const Function *F = I->getFunction();
+        const fltSemantics &FltSem =
+            Op->getType()->getScalarType()->getFltSemantics();
+        Mode =
+            F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+      }
+    }
   }
 
   KnownFPClass AssumedClasses = computeKnownFPClassFromContext(V, Q);
@@ -5096,6 +5134,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   InterestedClasses &= ~KnownNotFromFlags;
 
   llvm::scope_exit ClearClassesFromFlags([=, &Known] {
+    // With no-signed-zeros semantics, +0 and -0 are interchangeable.
+    // If the operation has nsz and only one sign of zero is possible in the
+    // result, the other must also be considered possible.
+    if (HasNoSignedZeros) {
+      bool NeverPosZero = Known.isKnownNeverLogicalPosZero(Mode);
+      bool NeverNegZero = Known.isKnownNeverLogicalNegZero(Mode);
+      if (NeverPosZero != NeverNegZero) {
+        if (!NeverPosZero)
+          Known.KnownFPClasses |= fcPosZero | fcPosSubnormal;
+        if (!NeverNegZero)
+          Known.KnownFPClasses |= fcNegZero | fcNegSubnormal;
+        // The sign of zero is now indeterminate since nsz allows either sign.
+        Known.SignBit = std::nullopt;
+      }
+    }
+
     Known.knownNot(KnownNotFromFlags);
     if (!Known.SignBit && AssumedClasses.SignBit) {
       if (*AssumedClasses.SignBit)
@@ -6066,20 +6120,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   default:
     break;
-  }
-
-  // With no-signed-zeros semantics, +0 and -0 are interchangeable.
-  // If the operation has nsz and only one sign of zero is possible in the
-  // result, the other must also be considered possible.
-  if (const auto *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
-    if (FPOp->hasNoSignedZeros()) {
-      FPClassTest KnownZero = Known.KnownFPClasses & fcZero;
-      if (KnownZero && KnownZero != fcZero) {
-        Known.KnownFPClasses |= fcZero;
-        // The sign of zero is now indeterminate since nsz allows either sign.
-        Known.SignBit = std::nullopt;
-      }
-    }
   }
 }
 
