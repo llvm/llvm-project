@@ -4982,24 +4982,19 @@ static bool isAbsoluteValueLessEqualOne(const Value *V) {
   return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
 }
 
+/// \return true if result-side NSZ relaxation should be applied to this
+/// opcode.
+///
+/// With the stricter NSZ interpretation, NSZ only relaxes input zero sign.
+/// Do not relax opcodes whose output zero sign is fixed or sign-preserving
+/// (for example, fabs, copysign, and fneg).
 static bool shouldApplyNSZToResult(const Operator *Op) {
   switch (Op->getOpcode()) {
   case Instruction::FNeg:
   case Instruction::Select:
   case Instruction::PHI:
-    return false;
   case Instruction::Call:
-    if (const auto *II = dyn_cast<IntrinsicInst>(Op)) {
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::fabs:
-      case Intrinsic::copysign:
-      case Intrinsic::ssa_copy:
-        return false;
-      default:
-        break;
-      }
-    }
-    break;
+    return false;
   default:
     break;
   }
@@ -5106,24 +5101,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownNotFromFlags |= Arg->getNoFPClass();
 
   const Operator *Op = dyn_cast<Operator>(V);
-  bool HasNoSignedZeros = false;
-  DenormalMode Mode = DenormalMode::getDynamic();
   if (const FPMathOperator *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
     if (FPOp->hasNoNaNs())
       KnownNotFromFlags |= fcNan;
     if (FPOp->hasNoInfs())
       KnownNotFromFlags |= fcInf;
-    HasNoSignedZeros =
-        FPOp->hasNoSignedZeros() && shouldApplyNSZToResult(Op);
-    if (HasNoSignedZeros) {
-      if (const auto *I = dyn_cast<Instruction>(Op)) {
-        const Function *F = I->getFunction();
-        const fltSemantics &FltSem =
-            Op->getType()->getScalarType()->getFltSemantics();
-        Mode =
-            F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      }
-    }
   }
 
   KnownFPClass AssumedClasses = computeKnownFPClassFromContext(V, Q);
@@ -5134,22 +5116,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   InterestedClasses &= ~KnownNotFromFlags;
 
   llvm::scope_exit ClearClassesFromFlags([=, &Known] {
-    // With no-signed-zeros semantics, +0 and -0 are interchangeable.
-    // If the operation has nsz and only one sign of zero is possible in the
-    // result, the other must also be considered possible.
-    if (HasNoSignedZeros) {
-      bool NeverPosZero = Known.isKnownNeverLogicalPosZero(Mode);
-      bool NeverNegZero = Known.isKnownNeverLogicalNegZero(Mode);
-      if (NeverPosZero != NeverNegZero) {
-        if (!NeverPosZero)
-          Known.KnownFPClasses |= fcPosZero | fcPosSubnormal;
-        if (!NeverNegZero)
-          Known.KnownFPClasses |= fcNegZero | fcNegSubnormal;
-        // The sign of zero is now indeterminate since nsz allows either sign.
-        Known.SignBit = std::nullopt;
-      }
-    }
-
     Known.knownNot(KnownNotFromFlags);
     if (!Known.SignBit && AssumedClasses.SignBit) {
       if (*AssumedClasses.SignBit)
@@ -6120,6 +6086,30 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   default:
     break;
+  }
+
+  // With no-signed-zeros semantics, +0 and -0 are interchangeable.
+  // If only one sign of logical zero is possible in the result, the other
+  // sign must also be considered possible. Apply this selectively because
+  // some ops preserve or explicitly determine the zero sign.
+  if (const auto *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
+    if (FPOp->hasNoSignedZeros() && shouldApplyNSZToResult(Op)) {
+      const auto *I = dyn_cast<Instruction>(Op);
+      const Function *F = I ? I->getFunction() : nullptr;
+      const fltSemantics &FltSem =
+          Op->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+      bool NeverPosZero = Known.isKnownNeverLogicalPosZero(Mode);
+      bool NeverNegZero = Known.isKnownNeverLogicalNegZero(Mode);
+      if (NeverPosZero != NeverNegZero) {
+        if (NeverPosZero)
+          Known.KnownFPClasses |= fcPosZero | fcPosSubnormal;
+        if (NeverNegZero)
+          Known.KnownFPClasses |= fcNegZero | fcNegSubnormal;
+        Known.SignBit = std::nullopt;
+      }
+    }
   }
 }
 
