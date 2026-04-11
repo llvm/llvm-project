@@ -1039,8 +1039,6 @@ define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
 ; GFX1250-LABEL: ps_mesa_inreg_v5i32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_add_co_i32 s3, s3, 4
-; GFX1250-NEXT:    s_add_co_i32 s2, s2, 3
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 2
 ; GFX1250-NEXT:    s_add_co_i32 s4, s4, 5
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, 1
@@ -1098,7 +1096,6 @@ define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
 ; GFX1250-LABEL: ps_mesa_inreg_v5f32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_add_f32 s3, s3, -1.0
 ; GFX1250-NEXT:    s_add_f32 s4, s4, 0.5
 ; GFX1250-NEXT:    s_add_f32 s0, s0, 1.0
 ; GFX1250-NEXT:    s_add_f32 s1, s1, 2.0
@@ -1236,7 +1233,6 @@ define amdgpu_ps void @ps_mesa_v5i32(<5 x i32> %arg0) {
 ; GFX1250-LABEL: ps_mesa_v5i32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_add_nc_u32 v3, 4, v3 :: v_dual_add_nc_u32 v2, 3, v2
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v1, 2, v1 :: v_dual_add_nc_u32 v4, 5, v4
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v3, 4, v3
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v2, 3, v2
@@ -1287,7 +1283,6 @@ define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
 ; GFX1250-LABEL: ps_mesa_v5f32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_add_f32 v3, -1.0, v3 :: v_dual_add_f32 v2, 4.0, v2
 ; GFX1250-NEXT:    v_dual_add_f32 v1, 2.0, v1 :: v_dual_add_f32 v4, 0.5, v4
 ; GFX1250-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v3, -1.0, v3
 ; GFX1250-NEXT:    v_add_f32_e32 v2, 4.0, v2
