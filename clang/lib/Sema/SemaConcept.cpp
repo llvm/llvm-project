@@ -487,6 +487,11 @@ class ConstraintSatisfactionChecker {
   // right context.
   ConceptDecl *ParentConcept = nullptr;
 
+  // This is for TemplateInstantiator to not instantiate the same template
+  // parameter mapping many times, in order to improve substitution performance.
+  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+      CachedTemplateArgs;
+
 private:
   template <class Constraint>
   UnsignedOrNone getOuterPackIndex(const Constraint &C) const {
@@ -659,10 +664,10 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     return std::nullopt;
 
   TemplateArgumentListInfo SubstArgs;
-  Sema::ArgPackSubstIndexRAII SubstIndex(
-      S, Constraint.getPackSubstitutionIndex()
-             ? Constraint.getPackSubstitutionIndex()
-             : PackSubstitutionIndex);
+  Sema::ArgPackSubstIndexRAII SubstIndex(S, getOuterPackIndex(Constraint));
+
+  llvm::SaveAndRestore PushTemplateArgsCache(S.CurrentCachedTemplateArgs,
+                                             &CachedTemplateArgs);
 
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
@@ -804,11 +809,11 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   unsigned Size = Satisfaction.Details.size();
   llvm::FoldingSetNodeID ID;
+  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
+
   ID.AddPointer(Constraint.getConstraintExpr());
-  ID.AddInteger(
-      Constraint.getPackSubstitutionIndex().toInternalRepresentation());
-  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, getOuterPackIndex(Constraint))
+  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
@@ -900,8 +905,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                       UnsignedOrNone(I), Satisfaction,
                                       /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
-    if (BuildExpression && Expr.isUsable()) {
-      if (Out.isUnset())
+    if (BuildExpression) {
+      if (Out.isUnset() || !Expr.isUsable())
         Out = Expr;
       else
         Out = BinaryOperator::Create(S.Context, Out.get(), Expr.get(),
@@ -910,8 +915,6 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                      S.Context.BoolTy, VK_PRValue, OK_Ordinary,
                                      Constraint.getBeginLoc(),
                                      FPOptionsOverride{});
-    } else {
-      assert(!BuildExpression || !Satisfaction.IsSatisfied);
     }
     if (!Conjunction && Satisfaction.IsSatisfied) {
       Satisfaction.Details.erase(Satisfaction.Details.begin() +
@@ -974,10 +977,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprError();
   }
 
-  Sema::ArgPackSubstIndexRAII SubstIndex(
-      S, Constraint.getPackSubstitutionIndex()
-             ? Constraint.getPackSubstitutionIndex()
-             : PackSubstitutionIndex);
+  Sema::ArgPackSubstIndexRAII SubstIndex(S, getOuterPackIndex(Constraint));
 
   const ASTTemplateArgumentListInfo *Ori =
       ConceptId->getTemplateArgsAsWritten();
@@ -1070,12 +1070,11 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (Satisfaction.IsSatisfied)
     return E;
 
+  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Constraint.getConceptId());
-  ID.AddInteger(
-      Constraint.getPackSubstitutionIndex().toInternalRepresentation());
-  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, getOuterPackIndex(Constraint))
+  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
@@ -2171,6 +2170,8 @@ bool SubstituteParameterMappings::substitute(
   // FIXME: The BaseLoc will be used as the location of the pack expansion,
   // which is wrong.
   TemplateArgumentListInfo SubstArgs;
+  llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
+      DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
           N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs))
     return true;
@@ -2239,6 +2240,8 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
   // pack. The SourceLocation is necessary for the instantiation location.
   // FIXME: The BaseLoc will be used as the location of the pack expansion,
   // which is wrong.
+  llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
+      DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       CSE->getTemplateArgsAsWritten();
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
