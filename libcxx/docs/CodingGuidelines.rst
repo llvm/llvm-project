@@ -225,3 +225,10 @@ after the function they are measuring, with a few transformations to help filter
 When multiple benchmarks measure the same function under different circumstances, we add context as a parenthesis
 after the function signature. For example, ``std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)``
 would be the allocator-aware move constructor for ``std::vector<bool>`` in the case of equal allocators.
+
+Testing ``consteval``ness
+=========================
+
+When implementing a function or variable marked ``consteval`` e.g. ``std::text_encoding::literal()``, it is required to
+verify that the entity is always a constant expression. Only checking if it can run in a ``static_assert`` is not
+enough. There is/are examples of such tests with the suffix ``.consteval.verify.cpp``.

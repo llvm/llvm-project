@@ -237,7 +237,7 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
   // GetLocaleInfoEx doesn't accept anything other than BCP-47 locale names, e.g. "en_US",
   // so we'll try to do a best-attempt to derive the text encoding from the name.
   if (__sv == "C" || __sv == "") {
-    // "A locale argument value of C specifies the minimal ANSI conforming environment for C translation.""
+    // "A locale argument value of C specifies the minimal ANSI conforming environment for C translation."
     // TODO: Figure out what to do for an empty string:
     // "If locale points to an empty string, the locale is the implementation-defined native environment."
     return __get_win32_acp(::GetACP());

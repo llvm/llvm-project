@@ -72,10 +72,13 @@
 
 // clang-format off
 
+// LLVM 23
+// TODO: Fill this in
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23 0
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 22
+// TODO: Fill this in
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
 
