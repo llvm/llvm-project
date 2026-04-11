@@ -29606,6 +29606,11 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
   bool NonZeroSrc = DAG.isKnownNeverZero(N0);
 
+  // Default to expansion if CTPOP is legal.
+  if (VT.isVector() &&
+      DAG.getTargetLoweringInfo().isOperationLegal(ISD::CTPOP, VT))
+    return SDValue();
+
   // GFNI - isolate LSB and perform GF2P8AFFINEQB lookup.
   if (Subtarget.hasGFNI() && VT.isVector() &&
       VT.getVectorElementType() == MVT::i8) {
