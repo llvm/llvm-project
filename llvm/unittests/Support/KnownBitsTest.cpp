@@ -681,10 +681,8 @@ TEST(KnownBitsTest, FunnelShiftExhaustive) {
         if (Known1.hasConflict() || Known2.hasConflict() ||
             Known3.hasConflict())
           return;
-
-        KnownBits FSHLResult(Bits);
+        KnownBits FSHLResult(Bits), FSHRResult(Bits);
         FSHLResult.setAllConflict();
-        KnownBits FSHRResult(Bits);
         FSHRResult.setAllConflict();
 
         ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
