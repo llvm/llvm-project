@@ -1216,7 +1216,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     else
       dwarf->GetObjectFile()->GetModule()->ReportWarning(
           "{0:x8}: DW_AT_specification({1:x16}"
-          ") has no decl\n",
+          ") has no decl",
           die.GetID(), spec_die.GetOffset());
 
     return {true, nullptr};
@@ -1236,7 +1236,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     else
       dwarf->GetObjectFile()->GetModule()->ReportWarning(
           "{0:x8}: DW_AT_abstract_origin({1:x16}"
-          ") has no decl\n",
+          ") has no decl",
           die.GetID(), abs_die.GetOffset());
 
     return {true, nullptr};
@@ -3107,7 +3107,7 @@ void DWARFASTParserClang::ParseSingleMember(
           "{0:x16}: {1} ({2}) bitfield named \"{3}\" has invalid "
           "bit offset ({4:x8}) member will be ignored. Please file a bug "
           "against the "
-          "compiler and include the preprocessed output for {5}\n",
+          "compiler and include the preprocessed output for {5}",
           die.GetID(), DW_TAG_value_to_name(tag), tag, attrs.name,
           this_field_info.bit_offset, GetUnitName(parent_die).c_str());
       return;

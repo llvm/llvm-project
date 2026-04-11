@@ -42,7 +42,10 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/PatternMatchHelpers.h"
 #include <cstdint>
+
+using namespace llvm::PatternMatchHelpers;
 
 namespace llvm {
 namespace PatternMatch {
@@ -128,30 +131,20 @@ m_NoSignedZeros(const T &SubPattern) {
   return SubPattern;
 }
 
-template <typename Class> struct class_match {
-  template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
-};
-
 /// Match an arbitrary value and ignore it.
-inline class_match<Value> m_Value() { return class_match<Value>(); }
+inline auto m_Value() { return m_Isa<Value>(); }
 
 /// Match an arbitrary unary operation and ignore it.
-inline class_match<UnaryOperator> m_UnOp() {
-  return class_match<UnaryOperator>();
-}
+inline auto m_UnOp() { return m_Isa<UnaryOperator>(); }
 
 /// Match an arbitrary binary operation and ignore it.
-inline class_match<BinaryOperator> m_BinOp() {
-  return class_match<BinaryOperator>();
-}
+inline auto m_BinOp() { return m_Isa<BinaryOperator>(); }
 
 /// Matches any compare instruction and ignore it.
-inline class_match<CmpInst> m_Cmp() { return class_match<CmpInst>(); }
+inline auto m_Cmp() { return m_Isa<CmpInst>(); }
 
 /// Matches any intrinsic call and ignore it.
-inline class_match<IntrinsicInst> m_AnyIntrinsic() {
-  return class_match<IntrinsicInst>();
-}
+inline auto m_AnyIntrinsic() { return m_Isa<IntrinsicInst>(); }
 
 struct undef_match {
 private:
@@ -174,27 +167,19 @@ public:
 inline auto m_Undef() { return undef_match(); }
 
 /// Match an arbitrary UndefValue constant.
-inline class_match<UndefValue> m_UndefValue() {
-  return class_match<UndefValue>();
-}
+inline auto m_UndefValue() { return m_Isa<UndefValue>(); }
 
 /// Match an arbitrary poison constant.
-inline class_match<PoisonValue> m_Poison() {
-  return class_match<PoisonValue>();
-}
+inline auto m_Poison() { return m_Isa<PoisonValue>(); }
 
 /// Match an arbitrary Constant and ignore it.
-inline class_match<Constant> m_Constant() { return class_match<Constant>(); }
+inline auto m_Constant() { return m_Isa<Constant>(); }
 
 /// Match an arbitrary ConstantInt and ignore it.
-inline class_match<ConstantInt> m_ConstantInt() {
-  return class_match<ConstantInt>();
-}
+inline auto m_ConstantInt() { return m_Isa<ConstantInt>(); }
 
 /// Match an arbitrary ConstantFP and ignore it.
-inline class_match<ConstantFP> m_ConstantFP() {
-  return class_match<ConstantFP>();
-}
+inline auto m_ConstantFP() { return m_Isa<ConstantFP>(); }
 
 struct constantexpr_match {
   template <typename ITy> bool match(ITy *V) const {
@@ -228,9 +213,7 @@ inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
 }
 
 /// Match an arbitrary basic block value and ignore it.
-inline class_match<BasicBlock> m_BasicBlock() {
-  return class_match<BasicBlock>();
-}
+inline auto m_BasicBlock() { return m_Isa<BasicBlock>(); }
 
 /// Inverting matcher
 template <typename Ty> struct match_unless {
@@ -244,48 +227,6 @@ template <typename Ty> struct match_unless {
 /// Match if the inner matcher does *NOT* match.
 template <typename Ty> inline match_unless<Ty> m_Unless(const Ty &M) {
   return match_unless<Ty>(M);
-}
-
-/// Matching combinators
-template <typename LTy, typename RTy> struct match_combine_or {
-  LTy L;
-  RTy R;
-
-  match_combine_or(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (L.match(V))
-      return true;
-    if (R.match(V))
-      return true;
-    return false;
-  }
-};
-
-template <typename LTy, typename RTy> struct match_combine_and {
-  LTy L;
-  RTy R;
-
-  match_combine_and(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (L.match(V))
-      if (R.match(V))
-        return true;
-    return false;
-  }
-};
-
-/// Combine two pattern matchers matching L || R
-template <typename LTy, typename RTy>
-inline match_combine_or<LTy, RTy> m_CombineOr(const LTy &L, const RTy &R) {
-  return match_combine_or<LTy, RTy>(L, R);
-}
-
-/// Combine two pattern matchers matching L && R
-template <typename LTy, typename RTy>
-inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
-  return match_combine_and<LTy, RTy>(L, R);
 }
 
 template <typename APTy> struct ap_match {
@@ -2369,12 +2310,8 @@ m_ZExtOrSExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExtOrSExt(Op), Op);
 }
 
-template <typename OpTy>
-inline match_combine_or<match_combine_or<CastInst_match<OpTy, ZExtInst>,
-                                         CastInst_match<OpTy, TruncInst>>,
-                        OpTy>
-m_ZExtOrTruncOrSelf(const OpTy &Op) {
-  return m_CombineOr(m_CombineOr(m_ZExt(Op), m_Trunc(Op)), Op);
+template <typename OpTy> inline auto m_ZExtOrTruncOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_ZExt(Op), m_Trunc(Op), Op);
 }
 
 template <typename CondTy, typename LTy, typename RTy> struct SelectLike_match {
@@ -2654,14 +2591,8 @@ inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty> m_UMin(const LHS &L,
 }
 
 template <typename LHS, typename RHS>
-inline match_combine_or<
-    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>,
-                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>>,
-    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>,
-                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>>>
-m_MaxOrMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_CombineOr(m_SMax(L, R), m_SMin(L, R)),
-                     m_CombineOr(m_UMax(L, R), m_UMin(L, R)));
+inline auto m_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_SMax(L, R), m_SMin(L, R), m_UMax(L, R), m_UMin(L, R));
 }
 
 /// Match an 'ordered' floating point maximum function.
@@ -3196,14 +3127,9 @@ m_c_UMax(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline match_combine_or<
-    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>,
-                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>>,
-    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>,
-                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>>>
-m_c_MaxOrMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R)),
-                     m_CombineOr(m_c_UMax(L, R), m_c_UMin(L, R)));
+inline auto m_c_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R), m_c_UMax(L, R),
+                     m_c_UMin(L, R));
 }
 
 template <Intrinsic::ID IntrID, typename LHS, typename RHS>

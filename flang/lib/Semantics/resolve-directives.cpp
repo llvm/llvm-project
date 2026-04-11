@@ -610,10 +610,7 @@ public:
   void Post(const parser::OpenMPSimpleStandaloneConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPLoopConstruct &);
-  void Post(const parser::OpenMPLoopConstruct &) {
-    ordCollapseLevel++;
-    PopContext();
-  }
+  void Post(const parser::OpenMPLoopConstruct &) { PopContext(); }
   void Post(const parser::OmpBeginLoopDirective &) {
     GetContext().withinConstruct = true;
   }
@@ -1055,29 +1052,7 @@ public:
     }
   }
 
-  const parser::OmpClause *associatedClause{nullptr};
-  void SetAssociatedClause(const parser::OmpClause *c) { associatedClause = c; }
-  const parser::OmpClause *GetAssociatedClause() { return associatedClause; }
-
 private:
-  /// Given a vector of loop levels and a vector of corresponding clauses find
-  /// the largest loop level and set the associated loop level to the found
-  /// maximum. This is used for error handling to ensure that the number of
-  /// affected loops is not larger that the number of available loops.
-  std::int64_t SetAssociatedMaxClause(llvm::SmallVector<std::int64_t> &,
-      llvm::SmallVector<const parser::OmpClause *> &);
-  std::int64_t GetNumAffectedLoopsFromLoopConstruct(
-      const parser::OpenMPLoopConstruct &);
-  void CollectNumAffectedLoopsFromLoopConstruct(
-      const parser::OpenMPLoopConstruct &, llvm::SmallVector<std::int64_t> &,
-      llvm::SmallVector<const parser::OmpClause *> &);
-  void CollectNumAffectedLoopsFromInnerLoopContruct(
-      const parser::OpenMPLoopConstruct &, llvm::SmallVector<std::int64_t> &,
-      llvm::SmallVector<const parser::OmpClause *> &);
-  void CollectNumAffectedLoopsFromClauses(const parser::OmpClauseList &,
-      llvm::SmallVector<std::int64_t> &,
-      llvm::SmallVector<const parser::OmpClause *> &);
-
   Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::OmpShared,
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
@@ -1172,8 +1147,6 @@ private:
     sourceLabels_.clear();
     targetLabels_.clear();
   };
-
-  std::int64_t ordCollapseLevel{0};
 
   void AddOmpRequiresToScope(Scope &,
       const WithOmpDeclarative::RequiresClauses *,
@@ -2086,7 +2059,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     IssueNonConformanceWarning(beginName.v, beginName.source, version);
   }
   ClearDataSharingAttributeObjects();
-  SetContextAssociatedLoopLevel(GetNumAffectedLoopsFromLoopConstruct(x));
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
     if (const parser::DoConstruct *doConstruct{x.GetNestedLoop()}) {
@@ -2097,7 +2069,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   }
 
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
-  ordCollapseLevel = GetNumAffectedLoopsFromLoopConstruct(x) + 1;
   return true;
 }
 
@@ -2172,138 +2143,15 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
       if (iv && iv->symbol)
         ivs.push_back(iv);
     }
-    ordCollapseLevel--;
     for (auto iv : ivs) {
       if (!iv->symbol->test(Symbol::Flag::OmpPreDetermined)) {
         ResolveSeqLoopIndexInParallelOrTaskConstruct(*iv);
       } else {
         // TODO: conflict checks with explicitly determined DSA
       }
-      if (ordCollapseLevel) {
-        if (const auto *details{iv->symbol->detailsIf<HostAssocDetails>()}) {
-          const Symbol *tpSymbol = &details->symbol();
-          if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
-            context_.Say(iv->source,
-                "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
-                iv->ToString());
-          }
-        }
-      }
     }
   }
   return true;
-}
-
-static bool isSizesClause(const parser::OmpClause *clause) {
-  return std::holds_alternative<parser::OmpClause::Sizes>(clause->u);
-}
-
-static bool isCollapseClause(const parser::OmpClause *clause) {
-  return std::holds_alternative<parser::OmpClause::Collapse>(clause->u);
-}
-
-std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
-    llvm::SmallVector<std::int64_t> &levels,
-    llvm::SmallVector<const parser::OmpClause *> &clauses) {
-
-  // Find the tile level to ensure that the COLLAPSE clause value
-  // does not exeed the number of tiled loops.
-  std::int64_t tileLevel = 0;
-  for (auto [level, clause] : llvm::zip_equal(levels, clauses))
-    if (clause && isSizesClause(clause))
-      tileLevel = level;
-
-  std::int64_t maxLevel = 1;
-  const parser::OmpClause *maxClause = nullptr;
-  for (auto [level, clause] : llvm::zip_equal(levels, clauses)) {
-    if (clause && isCollapseClause(clause) && tileLevel > 0 &&
-        tileLevel < level) {
-      return 1;
-    }
-
-    if (level > maxLevel) {
-      maxLevel = level;
-      maxClause = clause;
-    }
-  }
-  if (maxClause)
-    SetAssociatedClause(maxClause);
-  return maxLevel;
-}
-
-std::int64_t OmpAttributeVisitor::GetNumAffectedLoopsFromLoopConstruct(
-    const parser::OpenMPLoopConstruct &x) {
-  llvm::SmallVector<std::int64_t> levels;
-  llvm::SmallVector<const parser::OmpClause *> clauses;
-
-  CollectNumAffectedLoopsFromLoopConstruct(x, levels, clauses);
-  return SetAssociatedMaxClause(levels, clauses);
-}
-
-void OmpAttributeVisitor::CollectNumAffectedLoopsFromLoopConstruct(
-    const parser::OpenMPLoopConstruct &x,
-    llvm::SmallVector<std::int64_t> &levels,
-    llvm::SmallVector<const parser::OmpClause *> &clauses) {
-  const auto &clauseList{x.BeginDir().Clauses()};
-
-  CollectNumAffectedLoopsFromClauses(clauseList, levels, clauses);
-  CollectNumAffectedLoopsFromInnerLoopContruct(x, levels, clauses);
-
-  // OMPD_interchange with no permutation clause needs a level 2 nest
-  if (x.BeginDir().DirId() == llvm::omp::Directive::OMPD_interchange &&
-      !parser::omp::FindClause(
-          x.BeginDir(), llvm::omp::Clause::OMPC_permutation)) {
-    levels.push_back(2);
-    clauses.push_back(nullptr);
-  }
-}
-
-void OmpAttributeVisitor::CollectNumAffectedLoopsFromInnerLoopContruct(
-    const parser::OpenMPLoopConstruct &x,
-    llvm::SmallVector<std::int64_t> &levels,
-    llvm::SmallVector<const parser::OmpClause *> &clauses) {
-  for (auto &construct : std::get<parser::Block>(x.t)) {
-    if (auto *innerConstruct{parser::omp::GetOmpLoop(construct)}) {
-      CollectNumAffectedLoopsFromLoopConstruct(
-          *innerConstruct, levels, clauses);
-    }
-  }
-}
-
-void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
-    const parser::OmpClauseList &x, llvm::SmallVector<std::int64_t> &levels,
-    llvm::SmallVector<const parser::OmpClause *> &clauses) {
-  for (const auto &clause : x.v) {
-    if (const auto oclause{
-            std::get_if<parser::OmpClause::Ordered>(&clause.u)}) {
-      std::int64_t level = 0;
-      if (const auto v{EvaluateInt64(context_, oclause->v)}) {
-        level = *v;
-      }
-      levels.push_back(level);
-      clauses.push_back(&clause);
-    }
-
-    if (const auto cclause{
-            std::get_if<parser::OmpClause::Collapse>(&clause.u)}) {
-      std::int64_t level = 0;
-      if (const auto v{EvaluateInt64(context_, cclause->v)}) {
-        level = *v;
-      }
-      levels.push_back(level);
-      clauses.push_back(&clause);
-    }
-
-    if (const auto tclause{std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
-      levels.push_back(tclause->v.size());
-      clauses.push_back(&clause);
-    }
-    if (const auto iclause{
-            std::get_if<parser::OmpClause::Permutation>(&clause.u)}) {
-      levels.push_back(iclause->v.size());
-      clauses.push_back(&clause);
-    }
-  }
 }
 
 // 2.15.1.1 Data-sharing Attribute Rules - Predetermined
@@ -2316,12 +2164,17 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
-  std::int64_t level{GetContext().associatedLoopLevel};
-  if (level <= 0) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  auto [depth, _]{
+      omp::GetAffectedNestDepthWithReason(x.BeginDir(), version, &context_)};
+  // If there was a problem obtaining the depth, it will be diagnosed in
+  // the semantic checks.
+  if (!depth || *depth.value <= 0) {
     return;
   }
+
+  int64_t level{*depth.value};
   Symbol::Flag ivDSA;
-  unsigned version{context_.langOptions().OpenMPVersion};
   if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
   } else if (level == 1 && version < 60) {
@@ -2341,6 +2194,15 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         if (const parser::Name *iv{GetLoopIndex(*loop)}) {
           if (!iv->symbol || !IsLocalInsideScope(*iv->symbol, currScope())) {
             if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
+              if (const auto *details{
+                      iv->symbol->detailsIf<HostAssocDetails>()}) {
+                const Symbol *tpSymbol = &details->symbol();
+                if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
+                  context_.Say(iv->source,
+                      "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
+                      iv->ToString());
+                }
+              }
               SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
               iv->symbol = symbol; // adjust the symbol within region
               AddToContextObjectWithDSA(*symbol, ivDSA);

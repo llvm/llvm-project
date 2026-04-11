@@ -7198,6 +7198,10 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       case llvm::Triple::csky:
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
         break;
+      case llvm::Triple::amdgcn:
+      case llvm::Triple::r600:
+        TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
+        break;
       default:
         if (toolchains::BareMetal::handlesTarget(Target))
           TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);

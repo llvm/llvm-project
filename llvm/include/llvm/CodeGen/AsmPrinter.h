@@ -236,9 +236,7 @@ protected:
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
   /// A handle to the EH info emitter (if present).
-  // Only for EHStreamer subtypes, but some C++ compilers will incorrectly warn
-  // us if we declare that directly.
-  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
+  SmallVector<std::unique_ptr<EHStreamer>, 1> EHHandlers;
 
   // A vector of all Debuginfo emitters we should use. Protected so that
   // targets can add their own. This vector maintains ownership of the
@@ -491,7 +489,7 @@ public:
   /// Helper to emit a symbol for the prefetch target associated with the given
   /// BBID and callsite index. The symbol is emitted as a label and its linkage
   /// is set based on the function's linkage.
-  void emitPrefetchTargetSymbol(unsigned BaseID, unsigned CallsiteIndex);
+  void emitPrefetchTargetSymbol(const UniqueBBID &BBID, unsigned CallsiteIndex);
 
   /// Emit prefetch targets that were not mapped to any basic block. These
   /// targets are emitted at the beginning of the function body.
