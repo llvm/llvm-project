@@ -523,6 +523,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMINIMUM:
   case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_FDOT: // 2-operand unordered: action from getOperand(0)
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
   case ISD::VECTOR_FIND_LAST_ACTIVE:
@@ -531,7 +532,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
-  case ISD::VECREDUCE_FDOT:
+  case ISD::VECREDUCE_SEQ_FDOT: // 3-operand sequential: action from getOperand(1)
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
@@ -1317,9 +1318,43 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_SEQ_FMUL:
     Results.push_back(TLI.expandVecReduceSeq(Node, DAG));
     return;
-  case ISD::VECREDUCE_FDOT:
-    Results.push_back(TLI.expandVecReduceDot(Node, DAG));
+  case ISD::VECREDUCE_SEQ_FDOT: {
+    // Inline sequential expansion (cannot use expandVecReduceSeq — no base opcode).
+    SDLoc dl(Node);
+    SDValue AccOp = Node->getOperand(0);
+    SDValue VecA = Node->getOperand(1), VecB = Node->getOperand(2);
+    SDNodeFlags Flags = Node->getFlags();
+    EVT VT = VecA.getValueType();
+    EVT EltVT = VT.getVectorElementType();
+    if (VT.isScalableVector())
+      report_fatal_error("Expanding reductions for scalable vectors is undefined.");
+    unsigned NumElts = VT.getVectorNumElements();
+    SmallVector<SDValue, 8> OpsA, OpsB;
+    DAG.ExtractVectorElements(VecA, OpsA, 0, NumElts);
+    DAG.ExtractVectorElements(VecB, OpsB, 0, NumElts);
+    SDValue Res = AccOp;
+    if (Flags.hasAllowContract())
+      for (unsigned i = 0; i < NumElts; i++)
+        Res = DAG.getNode(ISD::FMA, dl, EltVT, OpsA[i], OpsB[i], Res, Flags);
+    else
+      for (unsigned i = 0; i < NumElts; i++) {
+        SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, OpsA[i], OpsB[i], Flags);
+        Res = DAG.getNode(ISD::FADD, dl, EltVT, Res, Mul, Flags);
+      }
+    Results.push_back(Res);
     return;
+  }
+  case ISD::VECREDUCE_FDOT: {
+    // Decompose to FMUL(vecA, vecB) + VECREDUCE_FADD(products).
+    SDLoc dl(Node);
+    SDValue VecA = Node->getOperand(0), VecB = Node->getOperand(1);
+    SDNodeFlags Flags = Node->getFlags();
+    EVT VT = VecA.getValueType();
+    EVT EltVT = VT.getVectorElementType();
+    SDValue Products = DAG.getNode(ISD::FMUL, dl, VT, VecA, VecB, Flags);
+    Results.push_back(DAG.getNode(ISD::VECREDUCE_FADD, dl, EltVT, Products, Flags));
+    return;
+  }
   case ISD::SREM:
   case ISD::UREM:
     ExpandREM(Node, Results);

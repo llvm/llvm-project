@@ -69,6 +69,27 @@ define float @fdot_f32_contract(float %acc, <4 x float> %a, <4 x float> %b) {
   ret float %res
 }
 
+define float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
+; O0-LABEL: fdot_f32_reassoc:
+; O0:       // %bb.0:
+; O0-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; O0-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; O0-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; O0-NEXT:    faddp s1, v1.2s
+; O0-NEXT:    fadd s0, s0, s1
+; O0-NEXT:    ret
+;
+; O1-LABEL: fdot_f32_reassoc:
+; O1:       // %bb.0:
+; O1-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; O1-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; O1-NEXT:    faddp s1, v1.2s
+; O1-NEXT:    fadd s0, s0, s1
+; O1-NEXT:    ret
+  %res = call reassoc float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}
+
 define half @fdot_f16(half %acc, <4 x half> %a, <4 x half> %b) {
 ; O0-LABEL: fdot_f16:
 ; O0:       // %bb.0:

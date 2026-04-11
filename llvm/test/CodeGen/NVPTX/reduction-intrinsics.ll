@@ -2568,3 +2568,167 @@ define i32 @reduce_xor_i32_nonpow2(<7 x i32> %in) {
   %res = call i32 @llvm.vector.reduce.xor(<7 x i32> %in)
   ret i32 %res
 }
+
+declare float @llvm.vector.reduce.fdot.v4f32(float, <4 x float>, <4 x float>)
+declare half @llvm.vector.reduce.fdot.v4f16(half, <4 x half>, <4 x half>)
+
+; Default: sequential mul + add chain.
+define float @fdot_f32(float %acc, <4 x float> %a, <4 x float> %b) {
+; CHECK-SM80-LABEL: fdot_f32(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b32 %r<18>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r6, %r7, %r8, %r9}, [fdot_f32_param_2];
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r2, %r3, %r4, %r5}, [fdot_f32_param_1];
+; CHECK-SM80-NEXT:    ld.param.b32 %r1, [fdot_f32_param_0];
+; CHECK-SM80-NEXT:    mul.rn.f32 %r10, %r3, %r7;
+; CHECK-SM80-NEXT:    mul.rn.f32 %r11, %r2, %r6;
+; CHECK-SM80-NEXT:    add.rn.f32 %r12, %r1, %r11;
+; CHECK-SM80-NEXT:    add.rn.f32 %r13, %r12, %r10;
+; CHECK-SM80-NEXT:    mul.rn.f32 %r14, %r4, %r8;
+; CHECK-SM80-NEXT:    add.rn.f32 %r15, %r13, %r14;
+; CHECK-SM80-NEXT:    mul.rn.f32 %r16, %r5, %r9;
+; CHECK-SM80-NEXT:    add.rn.f32 %r17, %r15, %r16;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: fdot_f32(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<18>;
+; CHECK-SM100-NEXT:    .reg .b64 %rd<5>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [fdot_f32_param_2];
+; CHECK-SM100-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fdot_f32_param_1];
+; CHECK-SM100-NEXT:    ld.param.b32 %r1, [fdot_f32_param_0];
+; CHECK-SM100-NEXT:    mov.b64 {%r2, %r3}, %rd1;
+; CHECK-SM100-NEXT:    mov.b64 {%r4, %r5}, %rd3;
+; CHECK-SM100-NEXT:    mul.rn.f32 %r6, %r3, %r5;
+; CHECK-SM100-NEXT:    mul.rn.f32 %r7, %r2, %r4;
+; CHECK-SM100-NEXT:    add.rn.f32 %r8, %r1, %r7;
+; CHECK-SM100-NEXT:    add.rn.f32 %r9, %r8, %r6;
+; CHECK-SM100-NEXT:    mov.b64 {%r10, %r11}, %rd2;
+; CHECK-SM100-NEXT:    mov.b64 {%r12, %r13}, %rd4;
+; CHECK-SM100-NEXT:    mul.rn.f32 %r14, %r10, %r12;
+; CHECK-SM100-NEXT:    add.rn.f32 %r15, %r9, %r14;
+; CHECK-SM100-NEXT:    mul.rn.f32 %r16, %r11, %r13;
+; CHECK-SM100-NEXT:    add.rn.f32 %r17, %r15, %r16;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-SM100-NEXT:    ret;
+  %res = call float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}
+
+; With contract: sequential fma chain.
+define float @fdot_f32_contract(float %acc, <4 x float> %a, <4 x float> %b) {
+; CHECK-SM80-LABEL: fdot_f32_contract(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b32 %r<14>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r6, %r7, %r8, %r9}, [fdot_f32_contract_param_2];
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r2, %r3, %r4, %r5}, [fdot_f32_contract_param_1];
+; CHECK-SM80-NEXT:    ld.param.b32 %r1, [fdot_f32_contract_param_0];
+; CHECK-SM80-NEXT:    fma.rn.f32 %r10, %r2, %r6, %r1;
+; CHECK-SM80-NEXT:    fma.rn.f32 %r11, %r3, %r7, %r10;
+; CHECK-SM80-NEXT:    fma.rn.f32 %r12, %r4, %r8, %r11;
+; CHECK-SM80-NEXT:    fma.rn.f32 %r13, %r5, %r9, %r12;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r13;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: fdot_f32_contract(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<14>;
+; CHECK-SM100-NEXT:    .reg .b64 %rd<5>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [fdot_f32_contract_param_2];
+; CHECK-SM100-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fdot_f32_contract_param_1];
+; CHECK-SM100-NEXT:    ld.param.b32 %r1, [fdot_f32_contract_param_0];
+; CHECK-SM100-NEXT:    mov.b64 {%r2, %r3}, %rd1;
+; CHECK-SM100-NEXT:    mov.b64 {%r4, %r5}, %rd3;
+; CHECK-SM100-NEXT:    fma.rn.f32 %r6, %r2, %r4, %r1;
+; CHECK-SM100-NEXT:    fma.rn.f32 %r7, %r3, %r5, %r6;
+; CHECK-SM100-NEXT:    mov.b64 {%r8, %r9}, %rd2;
+; CHECK-SM100-NEXT:    mov.b64 {%r10, %r11}, %rd4;
+; CHECK-SM100-NEXT:    fma.rn.f32 %r12, %r8, %r10, %r7;
+; CHECK-SM100-NEXT:    fma.rn.f32 %r13, %r9, %r11, %r12;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r13;
+; CHECK-SM100-NEXT:    ret;
+  %res = call contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}
+
+; With reassoc: tree-reduction mul + add chain (unordered).
+define float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
+; CHECK-SM80-LABEL: fdot_f32_reassoc(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b32 %r<18>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r6, %r7, %r8, %r9}, [fdot_f32_reassoc_param_2];
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r2, %r3, %r4, %r5}, [fdot_f32_reassoc_param_1];
+; CHECK-SM80-NEXT:    ld.param.b32 %r1, [fdot_f32_reassoc_param_0];
+; CHECK-SM80-NEXT:    mul.rn.f32 %r10, %r5, %r9;
+; CHECK-SM80-NEXT:    mul.rn.f32 %r11, %r4, %r8;
+; CHECK-SM80-NEXT:    add.rn.f32 %r12, %r11, %r10;
+; CHECK-SM80-NEXT:    mul.rn.f32 %r13, %r3, %r7;
+; CHECK-SM80-NEXT:    mul.rn.f32 %r14, %r2, %r6;
+; CHECK-SM80-NEXT:    add.rn.f32 %r15, %r14, %r13;
+; CHECK-SM80-NEXT:    add.rn.f32 %r16, %r15, %r12;
+; CHECK-SM80-NEXT:    add.rn.f32 %r17, %r1, %r16;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: fdot_f32_reassoc(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<10>;
+; CHECK-SM100-NEXT:    .reg .b64 %rd<7>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [fdot_f32_reassoc_param_2];
+; CHECK-SM100-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fdot_f32_reassoc_param_1];
+; CHECK-SM100-NEXT:    ld.param.b32 %r1, [fdot_f32_reassoc_param_0];
+; CHECK-SM100-NEXT:    mul.rn.f32x2 %rd5, %rd2, %rd4;
+; CHECK-SM100-NEXT:    mov.b64 {%r2, %r3}, %rd5;
+; CHECK-SM100-NEXT:    add.rn.f32 %r4, %r2, %r3;
+; CHECK-SM100-NEXT:    mul.rn.f32x2 %rd6, %rd1, %rd3;
+; CHECK-SM100-NEXT:    mov.b64 {%r5, %r6}, %rd6;
+; CHECK-SM100-NEXT:    add.rn.f32 %r7, %r5, %r6;
+; CHECK-SM100-NEXT:    add.rn.f32 %r8, %r7, %r4;
+; CHECK-SM100-NEXT:    add.rn.f32 %r9, %r1, %r8;
+; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-SM100-NEXT:    ret;
+  %res = call reassoc float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}
+
+; f16 variant: sequential mul + add chain.
+define half @fdot_f16(half %acc, <4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: fdot_f16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<18>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b32 {%r3, %r4}, [fdot_f16_param_2];
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fdot_f16_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [fdot_f16_param_0];
+; CHECK-NEXT:    mov.b32 {%rs2, %rs3}, %r1;
+; CHECK-NEXT:    mov.b32 {%rs4, %rs5}, %r3;
+; CHECK-NEXT:    mul.rn.f16 %rs6, %rs3, %rs5;
+; CHECK-NEXT:    mul.rn.f16 %rs7, %rs2, %rs4;
+; CHECK-NEXT:    add.rn.f16 %rs8, %rs1, %rs7;
+; CHECK-NEXT:    add.rn.f16 %rs9, %rs8, %rs6;
+; CHECK-NEXT:    mov.b32 {%rs10, %rs11}, %r2;
+; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r4;
+; CHECK-NEXT:    mul.rn.f16 %rs14, %rs10, %rs12;
+; CHECK-NEXT:    add.rn.f16 %rs15, %rs9, %rs14;
+; CHECK-NEXT:    mul.rn.f16 %rs16, %rs11, %rs13;
+; CHECK-NEXT:    add.rn.f16 %rs17, %rs15, %rs16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs17;
+; CHECK-NEXT:    ret;
+  %res = call half @llvm.vector.reduce.fdot.v4f16(half %acc, <4 x half> %a, <4 x half> %b)
+  ret half %res
+}

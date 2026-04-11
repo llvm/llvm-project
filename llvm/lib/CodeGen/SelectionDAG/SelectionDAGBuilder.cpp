@@ -11210,9 +11210,14 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
     Res = DAG.getNode(ISD::VECREDUCE_FMINIMUM, dl, VT, Op1, SDFlags);
     break;
   case Intrinsic::vector_reduce_fdot:
-    // Always emit VECREDUCE_FDOT; all FMF flags (contract, reassoc, etc.)
-    // are carried in SDFlags and checked during expansion.
-    Res = DAG.getNode(ISD::VECREDUCE_FDOT, dl, VT, {Op1, Op2, Op3}, SDFlags);
+    if (SDFlags.hasAllowReassociation())
+      // Non-sequential: acc added externally, dot product is unordered.
+      Res = DAG.getNode(ISD::FADD, dl, VT, Op1,
+                        DAG.getNode(ISD::VECREDUCE_FDOT, dl, VT, Op2, Op3, SDFlags),
+                        SDFlags);
+    else
+      // Sequential: VECREDUCE_SEQ_FDOT(acc, vecA, vecB).
+      Res = DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, VT, {Op1, Op2, Op3}, SDFlags);
     break;
   default:
     llvm_unreachable("Unhandled vector reduce intrinsic");

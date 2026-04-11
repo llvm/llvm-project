@@ -933,6 +933,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_SEQ_FMUL:
     Res = ScalarizeVecOp_VECREDUCE_SEQ(N);
     break;
+  case ISD::VECREDUCE_SEQ_FDOT:
+    Res = ScalarizeVecOp_VECREDUCE_SEQ_FDOT(N);
+    break;
   case ISD::VECREDUCE_FDOT:
     Res = ScalarizeVecOp_VECREDUCE_FDOT(N);
     break;
@@ -1244,7 +1247,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N) {
                      AccOp, Op, N->getFlags());
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_FDOT(SDNode *N) {
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ_FDOT(SDNode *N) {
+  // 3-operand sequential: ScalarizeVecOp_VECREDUCE_SEQ_FDOT(acc, a, b) -> FMA or FMUL+FADD.
   SDLoc dl(N);
   SDValue AccOp = N->getOperand(0);
   SDValue VecAOp = N->getOperand(1);
@@ -1260,6 +1264,20 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_FDOT(SDNode *N) {
 
   SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, A, B, Flags);
   return DAG.getNode(ISD::FADD, dl, EltVT, AccOp, Mul, Flags);
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_FDOT(SDNode *N) {
+  // 2-operand unordered: ScalarizeVecOp_VECREDUCE_FDOT(a, b) -> FMUL(a[0], b[0]).
+  SDLoc dl(N);
+  SDValue VecAOp = N->getOperand(0);
+  SDValue VecBOp = N->getOperand(1);
+  SDNodeFlags Flags = N->getFlags();
+  EVT EltVT = N->getValueType(0);
+
+  SDValue A = GetScalarizedVector(VecAOp);
+  SDValue B = GetScalarizedVector(VecBOp);
+
+  return DAG.getNode(ISD::FMUL, dl, EltVT, A, B, Flags);
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecOp_CMP(SDNode *N) {
@@ -3838,6 +3856,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_SEQ_FMUL:
     Res = SplitVecOp_VECREDUCE_SEQ(N);
     break;
+  case ISD::VECREDUCE_SEQ_FDOT:
+    Res = SplitVecOp_VECREDUCE_SEQ_FDOT(N);
+    break;
   case ISD::VECREDUCE_FDOT:
     Res = SplitVecOp_VECREDUCE_FDOT(N);
     break;
@@ -4015,10 +4036,10 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE_SEQ(SDNode *N) {
   return DAG.getNode(N->getOpcode(), dl, ResVT, Partial, Hi, Flags);
 }
 
-SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE_FDOT(SDNode *N) {
+SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE_SEQ_FDOT(SDNode *N) {
+  // 3-operand sequential: chain acc through lower half, then upper half.
   EVT ResVT = N->getValueType(0);
   SDLoc dl(N);
-
   SDValue AccOp = N->getOperand(0);
   SDValue VecAOp = N->getOperand(1);
   SDValue VecBOp = N->getOperand(2);
@@ -4029,11 +4050,29 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE_FDOT(SDNode *N) {
   GetSplitVector(VecAOp, LoA, HiA);
   GetSplitVector(VecBOp, LoB, HiB);
 
-  // Reduce the lower half first, using the original accumulator.
+  // Reduce the lower half first using the original accumulator.
   SDValue Partial =
-      DAG.getNode(ISD::VECREDUCE_FDOT, dl, ResVT, AccOp, LoA, LoB, Flags);
-  // Reduce the upper half, using the lower-half result as the new accumulator.
-  return DAG.getNode(ISD::VECREDUCE_FDOT, dl, ResVT, Partial, HiA, HiB, Flags);
+      DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, ResVT, AccOp, LoA, LoB, Flags);
+  // Reduce the upper half with the lower-half result as the new accumulator.
+  return DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, ResVT, Partial, HiA, HiB, Flags);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE_FDOT(SDNode *N) {
+  // 2-operand unordered: reduce each half independently then sum.
+  EVT ResVT = N->getValueType(0);
+  SDLoc dl(N);
+  SDValue VecAOp = N->getOperand(0);
+  SDValue VecBOp = N->getOperand(1);
+  SDNodeFlags Flags = N->getFlags();
+
+  assert(VecAOp.getValueType().isVector() && "Expected vector operand");
+  SDValue LoA, HiA, LoB, HiB;
+  GetSplitVector(VecAOp, LoA, HiA);
+  GetSplitVector(VecBOp, LoB, HiB);
+
+  SDValue Lo = DAG.getNode(ISD::VECREDUCE_FDOT, dl, ResVT, LoA, LoB, Flags);
+  SDValue Hi = DAG.getNode(ISD::VECREDUCE_FDOT, dl, ResVT, HiA, HiB, Flags);
+  return DAG.getNode(ISD::FADD, dl, ResVT, Lo, Hi, Flags);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VP_REDUCE(SDNode *N, unsigned OpNo) {
@@ -7518,6 +7557,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_SEQ_FMUL:
     Res = WidenVecOp_VECREDUCE_SEQ(N);
     break;
+  case ISD::VECREDUCE_SEQ_FDOT:
+    Res = WidenVecOp_VECREDUCE_SEQ_FDOT(N);
+    break;
   case ISD::VECREDUCE_FDOT:
     Res = WidenVecOp_VECREDUCE_FDOT(N);
     break;
@@ -8458,7 +8500,8 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
   return DAG.getNode(Opc, dl, VT, AccOp, Op, Flags);
 }
 
-SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_FDOT(SDNode *N) {
+SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ_FDOT(SDNode *N) {
+  // 3-operand sequential: pad extra lanes with 0.0, re-emit SEQ_FDOT.
   SDLoc dl(N);
   SDValue AccOp = N->getOperand(0);
   SDValue VecAOp = N->getOperand(1);
@@ -8473,19 +8516,42 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_FDOT(SDNode *N) {
   EVT ElemVT = OrigVT.getVectorElementType();
   SDNodeFlags Flags = N->getFlags();
 
-  // Pad the extra lanes of both vectors with 0.0.
-  // FMA(0, 0, acc) = acc, so padding with zeros is correct.
+  // Padding with 0.0 is correct: FMA(0,0,acc)=acc, FMUL(0,0)+FADD(acc,0)=acc.
   SDValue Zero = DAG.getConstantFP(0.0, dl, ElemVT);
-
   unsigned OrigElts = OrigVT.getVectorMinNumElements();
   unsigned WideElts = WideVT.getVectorMinNumElements();
-
   for (unsigned Idx = OrigElts; Idx < WideElts; Idx++) {
     OpA = DAG.getInsertVectorElt(dl, OpA, Zero, Idx);
     OpB = DAG.getInsertVectorElt(dl, OpB, Zero, Idx);
   }
 
-  return DAG.getNode(ISD::VECREDUCE_FDOT, dl, VT, AccOp, OpA, OpB, Flags);
+  return DAG.getNode(ISD::VECREDUCE_SEQ_FDOT, dl, VT, AccOp, OpA, OpB, Flags);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_FDOT(SDNode *N) {
+  // 2-operand unordered: pad extra lanes with 0.0, re-emit FDOT.
+  SDLoc dl(N);
+  SDValue VecAOp = N->getOperand(0);
+  SDValue VecBOp = N->getOperand(1);
+
+  SDValue OpA = GetWidenedVector(VecAOp);
+  SDValue OpB = GetWidenedVector(VecBOp);
+
+  EVT VT = N->getValueType(0);
+  EVT OrigVT = VecAOp.getValueType();
+  EVT WideVT = OpA.getValueType();
+  EVT ElemVT = OrigVT.getVectorElementType();
+  SDNodeFlags Flags = N->getFlags();
+
+  SDValue Zero = DAG.getConstantFP(0.0, dl, ElemVT);
+  unsigned OrigElts = OrigVT.getVectorMinNumElements();
+  unsigned WideElts = WideVT.getVectorMinNumElements();
+  for (unsigned Idx = OrigElts; Idx < WideElts; Idx++) {
+    OpA = DAG.getInsertVectorElt(dl, OpA, Zero, Idx);
+    OpB = DAG.getInsertVectorElt(dl, OpB, Zero, Idx);
+  }
+
+  return DAG.getNode(ISD::VECREDUCE_FDOT, dl, VT, OpA, OpB, Flags);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VP_REDUCE(SDNode *N) {

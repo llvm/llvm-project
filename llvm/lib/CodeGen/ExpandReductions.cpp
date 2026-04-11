@@ -90,25 +90,36 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     }
     case Intrinsic::vector_reduce_fdot: {
       // Dot product: acc + sum(vecA[i] * vecB[i]).
-      // With 'contract': fma(a[i], b[i], rdx) chain.
-      // Without 'contract': sequential fmul(a[i], b[i]) + fadd(rdx, prod).
-      Value *Rdx = II->getArgOperand(0);
+      Value *Acc = II->getArgOperand(0);
       Value *VecA = II->getArgOperand(1);
       Value *VecB = II->getArgOperand(2);
       auto *VecTy = cast<FixedVectorType>(VecA->getType());
       unsigned NumElts = VecTy->getNumElements();
-      for (unsigned i = 0; i < NumElts; i++) {
-        Value *Ai = Builder.CreateExtractElement(VecA, i);
-        Value *Bi = Builder.CreateExtractElement(VecB, i);
-        if (FMF.allowContract()) {
-          Rdx = Builder.CreateIntrinsic(
-              Intrinsic::fma, {VecTy->getElementType()}, {Ai, Bi, Rdx});
-        } else {
-          Value *Prod = Builder.CreateFMul(Ai, Bi);
-          Rdx = Builder.CreateFAdd(Rdx, Prod);
+      Value *LocalRdx;
+      if (FMF.allowReassoc() && isPowerOf2_32(NumElts)) {
+        // Reassoc + power-of-2: fmul vector, shuffle-tree fadd, then add acc.
+        Value *Products = Builder.CreateFMul(VecA, VecB);
+        LocalRdx = getShuffleReduction(Builder, Products, Instruction::FAdd,
+                                       RS, RK);
+        LocalRdx = Builder.CreateBinOp(Instruction::FAdd, Acc, LocalRdx,
+                                       "bin.rdx");
+      } else {
+        // Sequential: with 'contract': fma(a[i], b[i], rdx) chain.
+        //             without: fmul(a[i], b[i]) + fadd(rdx, prod) chain.
+        LocalRdx = Acc;
+        for (unsigned i = 0; i < NumElts; i++) {
+          Value *Ai = Builder.CreateExtractElement(VecA, i);
+          Value *Bi = Builder.CreateExtractElement(VecB, i);
+          if (FMF.allowContract()) {
+            LocalRdx = Builder.CreateIntrinsic(
+                Intrinsic::fma, {VecTy->getElementType()}, {Ai, Bi, LocalRdx});
+          } else {
+            Value *Prod = Builder.CreateFMul(Ai, Bi);
+            LocalRdx = Builder.CreateFAdd(LocalRdx, Prod);
+          }
         }
       }
-      II->replaceAllUsesWith(Rdx);
+      II->replaceAllUsesWith(LocalRdx);
       II->eraseFromParent();
       Changed = true;
       continue;

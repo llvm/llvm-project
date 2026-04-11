@@ -1222,7 +1222,7 @@ void TargetLoweringBase::initActions() {
          ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN, ISD::VECREDUCE_FMAX,
          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM,
          ISD::VECREDUCE_SEQ_FADD, ISD::VECREDUCE_SEQ_FMUL,
-         ISD::VECREDUCE_FDOT},
+         ISD::VECREDUCE_SEQ_FDOT, ISD::VECREDUCE_FDOT},
         VT, Expand);
 
     // Named vector shuffles default to expand.

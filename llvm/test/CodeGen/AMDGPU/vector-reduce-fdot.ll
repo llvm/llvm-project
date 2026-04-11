@@ -34,3 +34,21 @@ define float @fdot_f32_contract(float %acc, <4 x float> %a, <4 x float> %b) {
   %res = call contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
   ret float %res
 }
+
+; With reassoc: tree-reduction v_mul_f32 + v_add_f32 (unordered).
+define float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
+; GFX9-LABEL: fdot_f32_reassoc:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v5
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-NEXT:    v_mul_f32_e32 v1, v2, v6
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-NEXT:    v_mul_f32_e32 v1, v3, v7
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-NEXT:    v_mul_f32_e32 v1, v4, v8
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %res = call reassoc float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}

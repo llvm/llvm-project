@@ -1487,13 +1487,12 @@ enum NodeType {
   /// RES = (((ACC + SRC_VEC[0]) + SRC_VEC[1]) + SRC_VEC[2]) + SRC_VEC[3]
   VECREDUCE_SEQ_FADD,
   VECREDUCE_SEQ_FMUL,
-
-  /// VECREDUCE_FDOT(Acc: scalar, VecA, VecB) - Floating-point dot product
-  /// reduction. Computes Acc + sum(VecA[i] * VecB[i]).
+  /// VECREDUCE_SEQ_FDOT(Acc: scalar, VecA, VecB) - Sequential floating-point
+  /// dot product reduction. Computes Acc + sum(VecA[i] * VecB[i]) in strict
+  /// left-to-right order.
   /// Without 'contract' flag: sequential fmul+fadd pairs (two roundings each).
   /// With 'contract' flag: sequential FMA chain (single rounding per element).
-  /// With 'reassoc' flag: order of operations is unspecified.
-  VECREDUCE_FDOT,
+  VECREDUCE_SEQ_FDOT,
 
   /// These reductions have relaxed evaluation order semantics, and have a
   /// single vector operand. The order of evaluation is unspecified. For
@@ -1516,6 +1515,11 @@ enum NodeType {
   /// llvm.minimum and llvm.maximum semantics.
   VECREDUCE_FMAXIMUM,
   VECREDUCE_FMINIMUM,
+  /// VECREDUCE_FDOT(VecA, VecB) - Unordered floating-point dot product
+  /// reduction. Computes sum(VecA[i] * VecB[i]) with unspecified evaluation
+  /// order. The caller adds the accumulator via a separate FADD. Decomposes
+  /// to FMUL(VecA, VecB) followed by VECREDUCE_FADD on the products.
+  VECREDUCE_FDOT,
   /// Integer reductions may have a result type larger than the vector element
   /// type. However, the reduction is performed using the vector element type
   /// and the value in the top bits is unspecified.

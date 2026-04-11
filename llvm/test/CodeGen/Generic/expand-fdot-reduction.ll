@@ -29,6 +29,22 @@ define float @fdot_ordered(float %acc, <4 x float> %a, <4 x float> %b) {
   ret float %res
 }
 
+; With reassoc flag: vector fmul then shuffle-tree fadd, then add accumulator.
+define float @fdot_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @fdot_reassoc(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc <4 x float> [[TMP1]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd reassoc <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd reassoc float [[ACC:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
+;
+  %res = call reassoc float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}
+
 ; With contract flag: sequential FMA chain.
 define float @fdot_contract(float %acc, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @fdot_contract(

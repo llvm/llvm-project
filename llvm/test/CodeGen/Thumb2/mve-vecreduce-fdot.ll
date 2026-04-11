@@ -29,3 +29,17 @@ define arm_aapcs_vfpcc float @fdot_f32_contract(float %acc, <4 x float> %a, <4 x
   %res = call contract float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
   ret float %res
 }
+
+; With reassoc: tree-reduction vmul.f32 + vadd.f32 (unordered).
+define arm_aapcs_vfpcc float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fdot_f32_reassoc:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmul.f32 q1, q1, q2
+; CHECK-NEXT:    vadd.f32 s2, s6, s7
+; CHECK-NEXT:    vadd.f32 s4, s4, s5
+; CHECK-NEXT:    vadd.f32 s2, s4, s2
+; CHECK-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-NEXT:    bx lr
+  %res = call reassoc float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
+  ret float %res
+}

@@ -12259,43 +12259,6 @@ SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) cons
   return Res;
 }
 
-SDValue TargetLowering::expandVecReduceDot(SDNode *Node,
-                                           SelectionDAG &DAG) const {
-  SDLoc dl(Node);
-  SDValue AccOp = Node->getOperand(0);
-  SDValue VecAOp = Node->getOperand(1);
-  SDValue VecBOp = Node->getOperand(2);
-  SDNodeFlags Flags = Node->getFlags();
-
-  EVT VT = VecAOp.getValueType();
-  EVT EltVT = VT.getVectorElementType();
-
-  if (VT.isScalableVector())
-    report_fatal_error(
-        "Expanding reductions for scalable vectors is undefined.");
-
-  unsigned NumElts = VT.getVectorNumElements();
-
-  SmallVector<SDValue, 8> OpsA, OpsB;
-  DAG.ExtractVectorElements(VecAOp, OpsA, 0, NumElts);
-  DAG.ExtractVectorElements(VecBOp, OpsB, 0, NumElts);
-
-  SDValue Res = AccOp;
-  if (Flags.hasAllowContract()) {
-    // With 'contract': use FMA chain for single-rounded dot product.
-    for (unsigned i = 0; i < NumElts; i++)
-      Res = DAG.getNode(ISD::FMA, dl, EltVT, OpsA[i], OpsB[i], Res, Flags);
-  } else {
-    // Default: sequential fmul + fadd (two roundings per element).
-    for (unsigned i = 0; i < NumElts; i++) {
-      SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, OpsA[i], OpsB[i], Flags);
-      Res = DAG.getNode(ISD::FADD, dl, EltVT, Res, Mul, Flags);
-    }
-  }
-
-  return Res;
-}
-
 bool TargetLowering::expandREM(SDNode *Node, SDValue &Result,
                                SelectionDAG &DAG) const {
   EVT VT = Node->getValueType(0);
