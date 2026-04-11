@@ -9,6 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_WCTYPE_T_H
 #define LLVM_LIBC_TYPES_WCTYPE_T_H
 
-typedef unsigned short wctype_t;
+typedef unsigned int wctype_t;
 
 #endif // LLVM_LIBC_TYPES_WCTYPE_T_H

@@ -130,6 +130,7 @@ add_libc_test(
     iswctype_test.cpp
   DEPENDS
     libc.src.wctype.iswctype
+    libc.src.wctype.wctype
 )
 
 add_libc_test(

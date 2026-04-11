@@ -7,104 +7,175 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/wctype/iswctype.h"
+#include "src/wctype/wctype.h"
 
 #include "test/UnitTest/Test.h"
 
-// Simple tests, already properly tested in
-// libc/test/src/__support/wctype_utils_test.cpp
+TEST(LlvmLibciswctype, Alnum) {
+  const auto desc = LIBC_NAMESPACE::wctype("alnum");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
 
-static constexpr wctype_t WCTYPE_INVALID = static_cast<wctype_t>(0);
-static constexpr wctype_t WCTYPE_ALNUM = static_cast<wctype_t>(1);
-static constexpr wctype_t WCTYPE_ALPHA = static_cast<wctype_t>(2);
-static constexpr wctype_t WCTYPE_BLANK = static_cast<wctype_t>(3);
-static constexpr wctype_t WCTYPE_CNTRL = static_cast<wctype_t>(4);
-static constexpr wctype_t WCTYPE_DIGIT = static_cast<wctype_t>(5);
-static constexpr wctype_t WCTYPE_GRAPH = static_cast<wctype_t>(6);
-static constexpr wctype_t WCTYPE_LOWER = static_cast<wctype_t>(7);
-static constexpr wctype_t WCTYPE_PRINT = static_cast<wctype_t>(8);
-static constexpr wctype_t WCTYPE_PUNCT = static_cast<wctype_t>(9);
-static constexpr wctype_t WCTYPE_SPACE = static_cast<wctype_t>(10);
-static constexpr wctype_t WCTYPE_UPPER = static_cast<wctype_t>(11);
-static constexpr wctype_t WCTYPE_XDIGIT = static_cast<wctype_t>(12);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('a', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('Z', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('5', desc), 0);
 
-TEST(LlvmLibciswctype, SimpleTest) {
-  using LIBC_NAMESPACE::iswctype;
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('!', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('\n', desc), 0);
+}
 
-  // alnum
-  EXPECT_NE(iswctype('a', WCTYPE_ALNUM), 0);
-  EXPECT_NE(iswctype('Z', WCTYPE_ALNUM), 0);
-  EXPECT_NE(iswctype('5', WCTYPE_ALNUM), 0);
-  EXPECT_EQ(iswctype('!', WCTYPE_ALNUM), 0);
+TEST(LlvmLibciswctype, Alpha) {
+  const auto desc = LIBC_NAMESPACE::wctype("alpha");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
 
-  // alpha
-  EXPECT_NE(iswctype('a', WCTYPE_ALPHA), 0);
-  EXPECT_NE(iswctype('Z', WCTYPE_ALPHA), 0);
-  EXPECT_EQ(iswctype('1', WCTYPE_ALPHA), 0);
-  EXPECT_EQ(iswctype(' ', WCTYPE_ALPHA), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('a', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('Z', desc), 0);
 
-  // blank
-  EXPECT_NE(iswctype(' ', WCTYPE_BLANK), 0);
-  EXPECT_NE(iswctype('\t', WCTYPE_BLANK), 0);
-  EXPECT_EQ(iswctype('\n', WCTYPE_BLANK), 0);
-  EXPECT_EQ(iswctype('A', WCTYPE_BLANK), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('1', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('_', desc), 0);
+}
 
-  // cntrl
-  EXPECT_NE(iswctype('\0', WCTYPE_CNTRL), 0);
-  EXPECT_NE(iswctype('\n', WCTYPE_CNTRL), 0);
-  EXPECT_NE(iswctype(0x7f, WCTYPE_CNTRL), 0);
-  EXPECT_EQ(iswctype('A', WCTYPE_CNTRL), 0);
+TEST(LlvmLibciswctype, Blank) {
+  const auto desc = LIBC_NAMESPACE::wctype("blank");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
 
-  // digit
-  EXPECT_NE(iswctype('0', WCTYPE_DIGIT), 0);
-  EXPECT_NE(iswctype('9', WCTYPE_DIGIT), 0);
-  EXPECT_EQ(iswctype('a', WCTYPE_DIGIT), 0);
-  EXPECT_EQ(iswctype(' ', WCTYPE_DIGIT), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\t', desc), 0);
 
-  // graph
-  EXPECT_NE(iswctype('A', WCTYPE_GRAPH), 0);
-  EXPECT_NE(iswctype('1', WCTYPE_GRAPH), 0);
-  EXPECT_NE(iswctype('!', WCTYPE_GRAPH), 0);
-  EXPECT_EQ(iswctype(' ', WCTYPE_GRAPH), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('\n', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('\r', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('A', desc), 0);
+}
 
-  // lower
-  EXPECT_NE(iswctype('a', WCTYPE_LOWER), 0);
-  EXPECT_NE(iswctype('z', WCTYPE_LOWER), 0);
-  EXPECT_EQ(iswctype('A', WCTYPE_LOWER), 0);
-  EXPECT_EQ(iswctype('1', WCTYPE_LOWER), 0);
+TEST(LlvmLibciswctype, Cntrl) {
+  const auto desc = LIBC_NAMESPACE::wctype("cntrl");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
 
-  // print
-  EXPECT_NE(iswctype(' ', WCTYPE_PRINT), 0);
-  EXPECT_NE(iswctype('A', WCTYPE_PRINT), 0);
-  EXPECT_NE(iswctype('~', WCTYPE_PRINT), 0);
-  EXPECT_EQ(iswctype('\n', WCTYPE_PRINT), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\0', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\t', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\n', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\r', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype(0x1f, desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype(0x7f, desc), 0);
 
-  // punct
-  EXPECT_NE(iswctype('!', WCTYPE_PUNCT), 0);
-  EXPECT_NE(iswctype('?', WCTYPE_PUNCT), 0);
-  EXPECT_EQ(iswctype('a', WCTYPE_PUNCT), 0);
-  EXPECT_EQ(iswctype('1', WCTYPE_PUNCT), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('A', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+}
 
-  // space
-  EXPECT_NE(iswctype(' ', WCTYPE_SPACE), 0);
-  EXPECT_NE(iswctype('\t', WCTYPE_SPACE), 0);
-  EXPECT_NE(iswctype('\n', WCTYPE_SPACE), 0);
-  EXPECT_EQ(iswctype('A', WCTYPE_SPACE), 0);
+TEST(LlvmLibciswctype, Digit) {
+  const auto desc = LIBC_NAMESPACE::wctype("digit");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
 
-  // upper
-  EXPECT_NE(iswctype('A', WCTYPE_UPPER), 0);
-  EXPECT_NE(iswctype('Z', WCTYPE_UPPER), 0);
-  EXPECT_EQ(iswctype('a', WCTYPE_UPPER), 0);
-  EXPECT_EQ(iswctype('1', WCTYPE_UPPER), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('0', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('9', desc), 0);
 
-  // xdigit
-  EXPECT_NE(iswctype('0', WCTYPE_XDIGIT), 0);
-  EXPECT_NE(iswctype('9', WCTYPE_XDIGIT), 0);
-  EXPECT_NE(iswctype('a', WCTYPE_XDIGIT), 0);
-  EXPECT_NE(iswctype('F', WCTYPE_XDIGIT), 0);
-  EXPECT_EQ(iswctype('g', WCTYPE_XDIGIT), 0);
-  EXPECT_EQ(iswctype('?', WCTYPE_XDIGIT), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('a', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('/', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype(':', desc), 0);
+}
 
-  // invalid descriptor
-  EXPECT_EQ(iswctype('a', WCTYPE_INVALID), 0);
-  EXPECT_EQ(iswctype('a', static_cast<wctype_t>(999)), 0);
+TEST(LlvmLibciswctype, Graph) {
+  const auto desc = LIBC_NAMESPACE::wctype("graph");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
+
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('A', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('1', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('!', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('~', desc), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('\n', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('\t', desc), 0);
+}
+
+TEST(LlvmLibciswctype, Lower) {
+  const auto desc = LIBC_NAMESPACE::wctype("lower");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
+
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('a', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('z', desc), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('A', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('1', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('_', desc), 0);
+}
+
+TEST(LlvmLibciswctype, Print) {
+  const auto desc = LIBC_NAMESPACE::wctype("print");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
+
+  EXPECT_NE(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('A', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('0', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('~', desc), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('\n', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('\t', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('\0', desc), 0);
+}
+
+TEST(LlvmLibciswctype, Punct) {
+  const auto desc = LIBC_NAMESPACE::wctype("punct");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
+
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('!', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('?', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('_', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('[', desc), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('a', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('1', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+}
+
+TEST(LlvmLibciswctype, Space) {
+  const auto desc = LIBC_NAMESPACE::wctype("space");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
+
+  EXPECT_NE(LIBC_NAMESPACE::iswctype(' ', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\t', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\n', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\v', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\f', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('\r', desc), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('A', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('1', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('!', desc), 0);
+}
+
+TEST(LlvmLibciswctype, Upper) {
+  const auto desc = LIBC_NAMESPACE::wctype("upper");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
+
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('A', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('Z', desc), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('a', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('1', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('_', desc), 0);
+}
+
+TEST(LlvmLibciswctype, XDigit) {
+  const auto desc = LIBC_NAMESPACE::wctype("xdigit");
+  ASSERT_NE(desc, static_cast<wctype_t>(0));
+
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('0', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('9', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('a', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('f', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('A', desc), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswctype('F', desc), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('g', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('G', desc), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('?', desc), 0);
+}
+
+TEST(LlvmLibciswctype, InvalidDescriptor) {
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('a', 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype('0', 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswctype(' ', 0), 0);
 }
