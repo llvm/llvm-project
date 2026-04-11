@@ -333,7 +333,7 @@ exit:
   ret void
 }
 
-; FIXME: NSSW on the wider i32 AddRec does not imply NSSW on a narrower i8 AddRec.
+; NSSW on the wider i32 AddRec does not imply NSSW on a narrower i8 AddRec.
 ; Test for https://github.com/llvm/llvm-project/issues/191382.
 define void @wider_i32_nssw_does_not_imply_narrower_i8_nssw(ptr %dst, ptr %src, i32 %N) {
 ; CHECK-LABEL: 'wider_i32_nssw_does_not_imply_narrower_i8_nssw'
@@ -358,6 +358,7 @@ define void @wider_i32_nssw_does_not_imply_narrower_i8_nssw(ptr %dst, ptr %src, 
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i32 %N to i1) to i32) == 0
 ; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1:
