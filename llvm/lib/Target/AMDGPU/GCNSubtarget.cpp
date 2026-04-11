@@ -740,7 +740,7 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
     return DefReg;
 
   if (!TRI->subRegsInterfere(DefReg, DefSubRegIdx, UseReg, UseSubRegIdx))
-    return 0; // no real dependency
+    return Register(); // No real dependency
 
   // UseReg might be smaller or larger than DefReg, depending on the subreg and
   // on whether DefReg is a subreg, too. -> Find the smaller one.  This does not
@@ -751,12 +751,7 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
       DefSubRegIdx ? TRI->getSubReg(DefReg, DefSubRegIdx) : DefReg.asMCReg();
   MCRegister UseMCReg =
       UseSubRegIdx ? TRI->getSubReg(UseReg, UseSubRegIdx) : UseReg.asMCReg();
-  const TargetRegisterClass *DefRC = TRI->getPhysRegBaseClass(DefMCReg);
-  const TargetRegisterClass *UseRC = TRI->getPhysRegBaseClass(UseMCReg);
-  // Some registers, such as SGPR[0-9]+_HI16, do not have a register class.
-  if (!DefRC || !UseRC)
-    return DefReg;
-  return DefRC->hasSubClass(UseRC) ? UseMCReg : DefMCReg;
+  return TRI->isSubRegisterEq(DefMCReg, UseMCReg) ? UseMCReg : DefMCReg;
 }
 
 void GCNSubtarget::adjustSchedDependency(
