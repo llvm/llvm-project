@@ -117,8 +117,8 @@ llvm::set_thread_priority(ThreadPriority Priority) {
         _In_reads_bytes_(ThreadInformationSize) PVOID ThreadInformation,
         ULONG ThreadInformationSize);
     static const auto pfnSetThreadInformation =
-        (SetThreadInformation_t)::GetProcAddress(kernelM,
-                                                 "SetThreadInformation");
+        (SetThreadInformation_t)(void *)::GetProcAddress(
+            kernelM, "SetThreadInformation");
     if (pfnSetThreadInformation) {
       auto setThreadInformation = [](ULONG ControlMaskAndStateMask) {
         THREAD_POWER_THROTTLING_STATE state{};
