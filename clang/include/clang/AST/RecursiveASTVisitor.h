@@ -2208,14 +2208,17 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        the source code anywhere.  (Note the instatiated *type* --              \
        set<int> -- is written, and will still get a callback of                \
        TemplateSpecializationType).  For explicit instantiations               \
-       ("template set<int>;"), we do need a callback, since this               \
-       is the only callback that's made for this instantiation.                \
-       We use getTemplateArgsAsWritten() to distinguish. */                    \
+       ("template set<int>;"), the ExplicitInstantiationDecl node              \
+       handles traversal of template args and qualifier.                       \
+       For explicit specializations ("template<> set<int> {...};"),            \
+       we traverse template args here since there is no EID. */                \
     if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
       assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      /* The args that remains unspecialized. */                               \
-      TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
-          ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
+      if (D->getTemplateSpecializationKind() ==                                \
+          TSK_ExplicitSpecialization) {                                        \
+        TRY_TO(TraverseTemplateArgumentLocsHelper(                             \
+            ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));    \
+      }                                                                        \
     }                                                                          \
                                                                                \
     if (getDerived().shouldVisitTemplateInstantiations() ||                    \
@@ -2223,8 +2226,6 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
       /* Traverse base definition for explicit specializations */              \
       TRY_TO(Traverse##DECLKIND##Helper(D));                                   \
     } else {                                                                   \
-      TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));            \
-                                                                               \
       /* Returning from here skips traversing the                              \
          declaration context of the *TemplateSpecializationDecl                \
          (embedded in the DEF_TRAVERSE_DECL() macro)                           \

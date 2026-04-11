@@ -3468,9 +3468,9 @@ class ExplicitInstantiationDecl : public Decl {
         TagKWLoc(TagKWLoc), QualifierLoc(QualifierLoc),
         TemplateArgsAsWritten(ArgsAsWritten), NameLoc(NameLoc),
         TypeAsWritten(TypeAsWritten), TSK(TSK) {
-    assert((TSK == TSK_ExplicitInstantiationDeclaration) ==
-               ExternLoc.isValid() &&
-           "ExternLoc should be valid iff TSK is a declaration");
+    // Note: ExternLoc and TSK can diverge in MSVC mode, where dllimport on
+    // an explicit instantiation definition (no 'extern' keyword) causes
+    // TSK to be changed to TSK_ExplicitInstantiationDeclaration.
   }
 
   ExplicitInstantiationDecl(EmptyShell Empty)
