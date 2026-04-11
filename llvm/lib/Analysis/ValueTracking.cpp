@@ -4989,21 +4989,28 @@ static bool isAbsoluteValueULEOne(const Value *V) {
 }
 
 /// \return true if result-side NSZ relaxation should be applied to this
-/// opcode.
+/// operation.
 ///
 /// With the stricter NSZ interpretation, NSZ only relaxes input zero sign.
-/// Do not relax opcodes whose output zero sign is fixed or sign-preserving
-/// (for example, fabs, copysign, and fneg).
+/// Do not relax ops whose output zero sign is fixed or sign-preserving:
+/// fabs always produces +0, copysign copies the sign of its second operand,
+/// and fneg(fabs) always produces -0.
 static bool shouldApplyNSZToResult(const Operator *Op) {
-  switch (Op->getOpcode()) {
-  case Instruction::FNeg:
-  case Instruction::Select:
-  case Instruction::PHI:
-  case Instruction::Call:
-    return false;
-  default:
-    break;
+  if (const auto *II = dyn_cast<IntrinsicInst>(Op)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::fabs:
+    case Intrinsic::copysign:
+      return false;
+    default:
+      break;
+    }
   }
+
+  // fneg(fabs(...)) always produces -0 for zero inputs.
+  if (Op->getOpcode() == Instruction::FNeg)
+    if (match(Op->getOperand(0),
+              m_Intrinsic<Intrinsic::fabs>(m_Value())))
+      return false;
 
   return true;
 }
