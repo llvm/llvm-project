@@ -5008,8 +5008,7 @@ static bool shouldApplyNSZToResult(const Operator *Op) {
 
   // fneg(fabs(...)) always produces -0 for zero inputs.
   if (Op->getOpcode() == Instruction::FNeg)
-    if (match(Op->getOperand(0),
-              m_Intrinsic<Intrinsic::fabs>(m_Value())))
+    if (match(Op->getOperand(0), m_Intrinsic<Intrinsic::fabs>(m_Value())))
       return false;
 
   return true;
