@@ -407,7 +407,7 @@ exit:
   ret void
 }
 
-; FIXME: NUSW on the wider i32 AddRec does no imply NUSW on a narrower i8 AddRec.
+; NUSW on the wider i32 AddRec does no imply NUSW on a narrower i8 AddRec.
 ; Test for https://github.com/llvm/llvm-project/issues/191382.
 define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @wider_nusw_does_not_imply_narrower(
@@ -424,7 +424,9 @@ define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP5]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP5]], [[N_MOD_VF]]
