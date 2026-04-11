@@ -273,13 +273,26 @@ object::SectionedAddress SymbolizableObjectFile::convertDwarfOffsetForWasm(
     object::SectionedAddress ModuleOffset) const {
   if (!Module->isWasm())
     return ModuleOffset;
+
+  // For Wasm object files, addresses are already section-relative.
+  if (Module->isRelocatableObject())
+    return ModuleOffset;
+
+  // We are dealing with a linked Wasm file, which uses file offsets.
   for (const SectionRef &Sec : Module->sections()) {
     if (Sec.getIndex() == ModuleOffset.SectionIndex) {
-      if (Sec.isText())
+      if (Sec.isText()) {
         ModuleOffset.Address -= Sec.getAddress();
+        return ModuleOffset;
+      }
       break;
     }
   }
+
+  // If the address is not in a text section, or we couldn't find a
+  // matching section, invalidate it. This prevents it from incorrectly
+  // being interpreted as as section-relative DWARF offset.
+  ModuleOffset.Address = UINT64_MAX;
   return ModuleOffset;
 }
 

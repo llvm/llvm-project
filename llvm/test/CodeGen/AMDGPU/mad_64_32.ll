@@ -251,17 +251,17 @@ define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], v0, v1, 0
-; CI-NEXT:    v_ashrrev_i32_e32 v12, 31, v0
+; CI-NEXT:    v_ashrrev_i32_e32 v13, 31, v0
 ; CI-NEXT:    v_mov_b32_e32 v8, 0
-; CI-NEXT:    v_mad_u64_u32 v[9:10], s[4:5], v12, v1, v[7:8]
-; CI-NEXT:    v_ashrrev_i32_e32 v13, 31, v1
+; CI-NEXT:    v_ashrrev_i32_e32 v14, 31, v1
+; CI-NEXT:    v_mad_u64_u32 v[9:10], s[4:5], v13, v1, v[7:8]
+; CI-NEXT:    v_mad_i64_i32 v[11:12], s[4:5], v1, v13, 0
 ; CI-NEXT:    v_mov_b32_e32 v7, v9
-; CI-NEXT:    v_mad_u64_u32 v[7:8], s[4:5], v0, v13, v[7:8]
+; CI-NEXT:    v_mad_u64_u32 v[7:8], s[4:5], v0, v14, v[7:8]
+; CI-NEXT:    v_mad_i64_i32 v[0:1], s[4:5], v14, v0, v[11:12]
 ; CI-NEXT:    v_add_i32_e32 v8, vcc, v10, v8
-; CI-NEXT:    v_mad_i64_i32 v[10:11], s[4:5], v1, v12, 0
 ; CI-NEXT:    v_addc_u32_e64 v9, s[4:5], 0, 0, vcc
-; CI-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v12, v13, v[8:9]
-; CI-NEXT:    v_mad_i64_i32 v[0:1], s[4:5], v13, v0, v[10:11]
+; CI-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v13, v14, v[8:9]
 ; CI-NEXT:    v_add_i32_e32 v8, vcc, v8, v0
 ; CI-NEXT:    v_addc_u32_e32 v9, vcc, v9, v1, vcc
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, v6, v2
@@ -2291,11 +2291,11 @@ define <2 x i64> @lshr_mad_i64_vec(<2 x i64> %arg0) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mad_u64_u32 v[4:5], null, 0xffff1c18, v1, v[0:1]
 ; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, 0xffff1118, v3, v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v1, v5, v1
-; GFX11-NEXT:    v_mov_b32_e32 v0, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v3, v7, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2308,11 +2308,11 @@ define <2 x i64> @lshr_mad_i64_vec(<2 x i64> %arg0) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[4:5], null, 0xffff1c18, v1, v[0:1]
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[6:7], null, 0xffff1118, v3, v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v1, v5, v1
-; GFX12-NEXT:    v_mov_b32_e32 v0, v4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v3, v7, v3
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX12-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
