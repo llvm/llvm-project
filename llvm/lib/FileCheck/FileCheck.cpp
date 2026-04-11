@@ -2766,7 +2766,7 @@ static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
 static void renderDiff(unsigned ExpectedLineNo, unsigned ActualLineNo,
                        StringRef ExpectedLine, StringRef ActualLine,
                        const DiffContext &Ctx) {
-  auto &OS = llvm::errs();
+  auto &OS = errs();
 
   // Header
   OS.changeColor(raw_ostream::CYAN);
@@ -2822,7 +2822,7 @@ static bool printDiff(const FileCheckString &CheckStr, StringRef ActualLine,
 
   renderDiff(ExpectedLineNo, ActualLineNo, ExpectedLine, ActualLine, Context);
 
-  llvm::errs() << "\n";
+  errs() << '\n';
   return true;
 }
 
@@ -2892,7 +2892,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
   unsigned TotalMismatches = 0;
   bool HeaderPrinted = false;
   bool IsDiffFormat = Req.DiffFormat != DiffFormatType::None;
-  auto &OS = llvm::errs();
+  auto &OS = errs();
 
   unsigned i = 0, j = 0, e = CheckStrings.size();
   while (true) {
