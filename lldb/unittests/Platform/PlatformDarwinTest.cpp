@@ -672,6 +672,55 @@ TEST_F(PlatformDarwinLocateTest,
   }
 }
 
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromDSYM_AutoLoadUsesModuleName) {
+  // Test that the auto-load-scripts-for-modules setting uses the module
+  // name (not the sanitized script name) for lookup. The module is named
+  // "TestModule.1" (with a dot), and the script is "TestModule_1.py"
+  // (sanitized). Setting "TestModule_1=true" should NOT affect loading
+  // because the lookup key should be "TestModule.1".
+
+  // Create dummy module file at <test-root>/TestModule.1.o
+  FileSpec module_fspec(CreateFile("TestModule.1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  FileSpec dsym_module_fspec(
+      CreateFile("TestModule.1.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fspec);
+
+  CreateFile("TestModule_1.py", m_tmp_dsym_python_dir);
+
+  m_target_sp->SetLoadScriptFromSymbolFile(eLoadScriptFromSymFileFalse);
+
+  // Setting the sanitized script name should NOT cause loading.
+  m_target_sp->SetAutoLoadScriptsForModule("TestModule_1",
+                                           eLoadScriptFromSymFileTrue);
+
+  {
+    StreamString ss;
+    auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                      ->LocateExecutableScriptingResourcesFromDSYM(
+                          ss, module_fspec, *m_target_sp, dsym_module_fspec);
+
+    ASSERT_EQ(fspecs.size(), 1u);
+    EXPECT_EQ(fspecs.begin()->second, eLoadScriptFromSymFileFalse);
+  }
+
+  // Now set the actual module name. This should override the default.
+  m_target_sp->SetAutoLoadScriptsForModule("TestModule.1",
+                                           eLoadScriptFromSymFileTrue);
+
+  {
+    StreamString ss;
+    auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                      ->LocateExecutableScriptingResourcesFromDSYM(
+                          ss, module_fspec, *m_target_sp, dsym_module_fspec);
+
+    ASSERT_EQ(fspecs.size(), 1u);
+    EXPECT_EQ(fspecs.begin()->second, eLoadScriptFromSymFileTrue);
+  }
+}
+
 struct SpecialCharTestCase {
   char special_char;
   char replacement;
