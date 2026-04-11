@@ -56,7 +56,7 @@ TEST(TidyProvider, NestedDirectories) {
 }
 
 TEST(TidyProvider, IsFastTidyCheck) {
-  EXPECT_THAT(isFastTidyCheck("misc-include-cleaner"), llvm::ValueIs(false));
+  EXPECT_THAT(isFastTidyCheck("misc-const-correctness"), llvm::ValueIs(false));
   EXPECT_THAT(isFastTidyCheck("bugprone-suspicious-include"),
               llvm::ValueIs(true));
   // Linked in (ParsedASTTests.cpp) but not measured.
