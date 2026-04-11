@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
 
@@ -91,6 +92,13 @@ bool DebugLoc::isImplicitCode() const {
 void DebugLoc::setImplicitCode(bool ImplicitCode) {
   if (DILocation *Loc = get())
     Loc->setImplicitCode(ImplicitCode);
+}
+
+void DebugLoc::Profile(FoldingSetNodeID &ID) const {
+  ID.AddInteger(getLine());
+  ID.AddInteger(getCol());
+  ID.AddPointer(getScope());
+  ID.AddPointer(getInlinedAt());
 }
 
 DebugLoc DebugLoc::replaceInlinedAtSubprogram(

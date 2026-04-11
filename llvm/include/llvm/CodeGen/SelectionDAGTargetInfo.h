@@ -24,6 +24,8 @@
 namespace llvm {
 
 class CallInst;
+class DebugLoc;
+class FoldingSetNodeID;
 class SelectionDAG;
 
 //===----------------------------------------------------------------------===//
@@ -204,6 +206,14 @@ public:
   virtual bool disableGenericCombines(CodeGenOptLevel OptLevel) const {
     return false;
   }
+
+  /// Mix additional bytes into the CSE key for the given node context.
+  /// Default is a no-op (preserves stock CSE behavior). Called from
+  /// SelectionDAG::FindNodeOrInsertPos and from the ContextualFoldingSet
+  /// trait used by the CSE container, so lookup and insertion agree.
+  virtual void augmentCSEKey(FoldingSetNodeID &ID, unsigned Opcode,
+                             const DebugLoc &DL,
+                             const SelectionDAG &DAG) const {}
 };
 
 /// Proxy class that targets should inherit from if they wish to use
