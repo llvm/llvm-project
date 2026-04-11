@@ -3440,7 +3440,8 @@ class ExplicitInstantiationDecl : public Decl {
   /// arguments were deduced.
   const ASTTemplateArgumentListInfo *TemplateArgsAsWritten = nullptr;
 
-  /// Location of the entity name (e.g., 'foo' in 'template void ns::foo<int>(int)').
+  /// Location of the entity name (e.g., 'foo' in 'template void
+  /// ns::foo<int>(int)').
   SourceLocation NameLoc;
 
   /// Type source info for the declaration type:
@@ -3455,10 +3456,8 @@ class ExplicitInstantiationDecl : public Decl {
   unsigned TSK : 3;
 
   ExplicitInstantiationDecl(DeclContext *DC, SourceRange Range,
-                            NamedDecl *Specialization,
-                            SourceLocation ExternLoc,
-                            SourceLocation TemplateLoc,
-                            SourceLocation TagKWLoc,
+                            NamedDecl *Specialization, SourceLocation ExternLoc,
+                            SourceLocation TemplateLoc, SourceLocation TagKWLoc,
                             NestedNameSpecifierLoc QualifierLoc,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten,
                             SourceLocation NameLoc,
@@ -3469,8 +3468,9 @@ class ExplicitInstantiationDecl : public Decl {
         TagKWLoc(TagKWLoc), QualifierLoc(QualifierLoc),
         TemplateArgsAsWritten(ArgsAsWritten), NameLoc(NameLoc),
         TypeAsWritten(TypeAsWritten), TSK(TSK) {
-    assert((TSK == TSK_ExplicitInstantiationDeclaration) == ExternLoc.isValid()
-           && "ExternLoc should be valid iff TSK is a declaration");
+    assert((TSK == TSK_ExplicitInstantiationDeclaration) ==
+               ExternLoc.isValid() &&
+           "ExternLoc should be valid iff TSK is a declaration");
   }
 
   ExplicitInstantiationDecl(EmptyShell Empty)

@@ -685,7 +685,8 @@ public:
 
   void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D) {
     // The specialization is already elsewhere in the AST; don't re-traverse it.
-    // Traverse source-location sub-nodes: template arguments and type-as-written.
+    // Traverse source-location sub-nodes: template arguments and
+    // type-as-written.
     if (const auto *ArgsAsWritten = D->getTemplateArgsAsWritten())
       for (unsigned I = 0, E = ArgsAsWritten->NumTemplateArgs; I != E; ++I)
         Visit((*ArgsAsWritten)[I].getArgument(),

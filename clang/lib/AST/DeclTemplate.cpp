@@ -1792,12 +1792,11 @@ ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
     NamedDecl *Specialization, SourceLocation ExternLoc,
     SourceLocation TemplateLoc, SourceLocation TagKWLoc,
     NestedNameSpecifierLoc QualifierLoc,
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
-    TemplateSpecializationKind TSK) {
+    const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+    TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
   return new (C, DC) ExplicitInstantiationDecl(
-      DC, Range, Specialization, ExternLoc, TemplateLoc, TagKWLoc,
-      QualifierLoc, ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
+      DC, Range, Specialization, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
+      ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
 }
 
 ExplicitInstantiationDecl *
