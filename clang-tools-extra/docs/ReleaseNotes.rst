@@ -311,9 +311,9 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check:
-
+  
   - Fixed false positive for constrained template parameters
-
+  
   - Fixed false positive with ``std::forward`` in brace-init and paren-init
     lambda captures such as ``[t{std::forward<T>(t)}]``.
 
@@ -482,7 +482,7 @@ Changes in existing checks
 
   - Fixed incorrect naming style application to C++17 structured bindings.
 
-  - Fixed a false positive where function templates could be diagnosed as generic
+  - Fixed a false positive where function templates could be diagnosed as generic 
     identifiers when `DefaultCase` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
