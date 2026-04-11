@@ -1807,7 +1807,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::CTPOP, MVT::i64,
                        Subtarget->usePopc() ? Legal : Expand);
-    setOperationAction(ISD::BSWAP, MVT::i64, Expand);
+    setOperationAction(ISD::BSWAP, MVT::i64, Custom);
     setOperationAction(ISD::ROTL , MVT::i64, Expand);
     setOperationAction(ISD::ROTR , MVT::i64, Expand);
     setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
@@ -1871,7 +1871,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                      Subtarget->isUA2007() ? Legal : Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
-  setOperationAction(ISD::BSWAP, MVT::i32, Expand);
+  setOperationAction(ISD::BSWAP, MVT::i32, Subtarget->isV9() ? Custom : Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::f128, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::f32, Expand);
@@ -1983,6 +1983,9 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Custom combine bitcast between f64 and v2i32
   if (!Subtarget->is64Bit())
     setTargetDAGCombine(ISD::BITCAST);
+
+  if (Subtarget->isV9())
+    setTargetDAGCombine({ISD::BSWAP, ISD::STORE});
 
   if (Subtarget->hasLeonCycleCounter())
     setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
@@ -3001,6 +3004,37 @@ static SDValue LowerF128Load(SDValue Op, SelectionDAG &DAG)
   return DAG.getMergeValues(Ops, dl);
 }
 
+SDValue SparcTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
+  // We don't have an in-register bswap, so expand bswap(x) into
+  // load(store-swapped(x)). The reason the swap is done during the store is
+  // that on some implementations (mainly older ones) ASI-tagged memory
+  // operations are not pipelined, and generally stores finish faster than
+  // loads.
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue Chain = DAG.getEntryNode();
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  SDLoc DL(Op);
+
+  SDValue BSwapOp = Op.getOperand(0);
+  EVT BSwapVT = BSwapOp.getValueType();
+
+  // Create a stack object to serve as temporary storage.
+  int BSwapFI = MFI.CreateStackObject(BSwapVT.getStoreSize(), Align(8), false);
+  SDValue BSwapPtr = DAG.getFrameIndex(BSwapFI, PtrVT);
+
+  // Store-swap the value, then load it back.
+  SDValue Ops[] = {Chain, BSwapOp, BSwapPtr, DAG.getValueType(BSwapVT)};
+  SDValue SwappedMem = DAG.getMemIntrinsicNode(
+      IsLittleEndian ? SPISD::STORE_BIG : SPISD::STORE_LITTLE, DL,
+      DAG.getVTList(MVT::Other), Ops, BSwapVT, MachinePointerInfo(), Align(8),
+      MachineMemOperand::MOStore);
+  return DAG.getLoad(BSwapVT, DL, SwappedMem, BSwapPtr, MachinePointerInfo(),
+                     Align(8));
+}
+
 static SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG)
 {
   LoadSDNode *LdNode = cast<LoadSDNode>(Op.getNode());
@@ -3173,6 +3207,9 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STACKADDRESS:
     return LowerSTACKADDRESS(Op, DAG, *Subtarget);
 
+  case ISD::BSWAP:
+    return LowerBSWAP(Op, DAG);
+
   case ISD::LOAD:               return LowerLOAD(Op, DAG);
   case ISD::STORE:              return LowerSTORE(Op, DAG);
   case ISD::FADD:
@@ -3218,6 +3255,98 @@ SDValue SparcTargetLowering::PerformBITCASTCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Op0 = N->getOperand(0);
+  EVT Op0VT = N->getValueType(0);
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+
+  // Turn BSWAP (LOAD) -> ld*a #ASI_P(_L) on V9.
+  if (Subtarget->isV9() && ISD::isNormalLoad(Op0.getNode()) &&
+      Op0.getNode()->hasOneUse() &&
+      (Op0VT == MVT::i16 || Op0VT == MVT::i32 ||
+       (Subtarget->is64Bit() && Op0VT == MVT::i64))) {
+    SDValue Load = Op0;
+    LoadSDNode *LD = cast<LoadSDNode>(Load);
+
+    // Create the byte-swapping load.
+    SDValue Ops[] = {
+        LD->getChain(),         // Chain
+        LD->getBasePtr(),       // Ptr
+        DAG.getValueType(Op0VT) // VT
+    };
+
+    SDValue BSLoad = DAG.getMemIntrinsicNode(
+        IsLittleEndian ? SPISD::LOAD_BIG : SPISD::LOAD_LITTLE, DL,
+        DAG.getVTList(Op0VT == MVT::i64 ? MVT::i64 : MVT::i32, MVT::Other), Ops,
+        LD->getMemoryVT(), LD->getMemOperand());
+
+    // If this is an i16 load, insert the truncate.
+    SDValue ResVal = BSLoad;
+    if (Op0VT == MVT::i16)
+      ResVal = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, BSLoad);
+
+    // First, combine the bswap away.  This makes the value produced by the
+    // load dead.
+    DCI.CombineTo(N, ResVal);
+
+    // Next, combine the load away, we give it a bogus result value but a real
+    // chain result.  The result value is dead because the bswap is dead.
+    DCI.CombineTo(Load.getNode(), ResVal, BSLoad.getValue(1));
+
+    // Return N so it doesn't get rechecked!
+    return SDValue(N, 0);
+  }
+
+  return SDValue();
+}
+
+SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+  EVT Op1VT = N->getOperand(1).getValueType();
+  unsigned Opcode = N->getOperand(1).getOpcode();
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+
+  // Turn STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
+  if (Subtarget->isV9() && Opcode == ISD::BSWAP &&
+      N->getOperand(1).getNode()->hasOneUse() &&
+      (Op1VT == MVT::i16 || Op1VT == MVT::i32 ||
+       (Subtarget->is64Bit() && Op1VT == MVT::i64))) {
+
+    // st*a can only handle simple types and it makes no sense to store less
+    // than two bytes in byte-reversed order.
+    EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
+    if (MemVT.isExtended() || MemVT.getSizeInBits() < 16)
+      return SDValue();
+
+    SDValue BSwapOp = N->getOperand(1).getOperand(0);
+    // Do an any-extend to 32-bits if this is a half-word input.
+    if (BSwapOp.getValueType() == MVT::i16)
+      BSwapOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, BSwapOp);
+
+    // If the type of BSWAP operand is wider than stored memory width
+    // it needs to be shifted to the right side before st*a.
+    if (Op1VT.bitsGT(MemVT)) {
+      int Shift = Op1VT.getSizeInBits() - MemVT.getSizeInBits();
+      BSwapOp = DAG.getNode(ISD::SRL, DL, Op1VT, BSwapOp,
+                            DAG.getConstant(Shift, DL, MVT::i32));
+    }
+
+    SDValue Ops[] = {N->getOperand(0), BSwapOp, N->getOperand(2),
+                     DAG.getValueType(MemVT)};
+    return DAG.getMemIntrinsicNode(
+        IsLittleEndian ? SPISD::STORE_BIG : SPISD::STORE_LITTLE, DL,
+        DAG.getVTList(MVT::Other), Ops, cast<StoreSDNode>(N)->getMemoryVT(),
+        cast<StoreSDNode>(N)->getMemOperand());
+  }
+
+  return SDValue();
+}
+
 SDValue SparcTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
@@ -3225,6 +3354,10 @@ SDValue SparcTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::BITCAST:
     return PerformBITCASTCombine(N, DCI);
+  case ISD::BSWAP:
+    return PerformBSWAPCombine(N, DCI);
+  case ISD::STORE:
+    return PerformSTORECombine(N, DCI);
   }
   return SDValue();
 }
