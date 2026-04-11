@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
@@ -35,18 +36,11 @@ private:
 
 SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
-    Triple TargetTriple, unsigned PageSize,
-    std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
+    Triple TargetTriple, unsigned PageSize)
     : ExecutorProcessControl(std::move(SSP), std::move(D)) {
-
-  OwnedMemMgr = std::move(MemMgr);
-  if (!OwnedMemMgr)
-    OwnedMemMgr = std::make_unique<jitlink::InProcessMemoryManager>(
-        sys::Process::getPageSizeEstimate());
 
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;
-  this->MemMgr = OwnedMemMgr.get();
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
 
@@ -62,9 +56,8 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
 }
 
 Expected<std::unique_ptr<SelfExecutorProcessControl>>
-SelfExecutorProcessControl::Create(
-    std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
-    std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr) {
+SelfExecutorProcessControl::Create(std::shared_ptr<SymbolStringPool> SSP,
+                                   std::unique_ptr<TaskDispatcher> D) {
 
   if (!SSP)
     SSP = std::make_shared<SymbolStringPool>();
@@ -79,8 +72,7 @@ SelfExecutorProcessControl::Create(
   Triple TT(sys::getProcessTriple());
 
   return std::make_unique<SelfExecutorProcessControl>(
-      std::move(SSP), std::move(D), std::move(TT), *PageSize,
-      std::move(MemMgr));
+      std::move(SSP), std::move(D), std::move(TT), *PageSize);
 }
 
 Expected<int32_t>
@@ -115,6 +107,12 @@ void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 Error SelfExecutorProcessControl::disconnect() {
   D->shutdown();
   return Error::success();
+}
+
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+SelfExecutorProcessControl::createDefaultMemoryManager() {
+  return std::make_unique<jitlink::InProcessMemoryManager>(
+      sys::Process::getPageSizeEstimate());
 }
 
 Expected<std::unique_ptr<DylibManager>>
