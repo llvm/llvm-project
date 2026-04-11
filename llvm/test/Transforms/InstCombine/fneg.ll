@@ -171,7 +171,8 @@ define float @fdiv_op1_constant_fneg_fmf(float %x) {
 
 define float @fdiv_op1_constant_fneg_ninf(float %x) {
 ; CHECK-LABEL: @fdiv_op1_constant_fneg_ninf(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], 0xFFF0000000000000
+; CHECK-NEXT:    ret float [[R]]
 ;
   %d = fdiv float %x, 0x7FF0000000000000
   %r = fneg ninf float %d
@@ -192,7 +193,7 @@ define float @fdiv_ninf_op1_constant_fneg_ninf(float %x) {
 
 define float @fdiv_op1_constant_fneg_nsz(float %x) {
 ; CHECK-LABEL: @fdiv_op1_constant_fneg_nsz(
-; CHECK-NEXT:    [[R:%.*]] = fdiv nsz float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], -0.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %d = fdiv float %x, 0.0
