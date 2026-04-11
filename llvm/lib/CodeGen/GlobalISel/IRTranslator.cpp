@@ -2572,8 +2572,15 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::vector_reduce_fdot: {
-    // Lower as G_FMUL(vecA, vecB) followed by G_VECREDUCE_SEQ_FADD or
-    // G_VECREDUCE_FADD + G_FADD depending on the reassoc flag.
+    // Lower fdot as a vector fmul followed by a reduction:
+    //   no reassoc: G_FMUL(vecA, vecB) -> G_VECREDUCE_SEQ_FADD(acc, products)
+    //   reassoc:    G_FMUL(vecA, vecB) -> G_FADD(acc, G_VECREDUCE_FADD(products))
+    //
+    // Note: when the 'contract' flag is set, the MIFlags are propagated to
+    // both G_FMUL and G_VECREDUCE_SEQ_FADD, permitting later combine passes
+    // to fuse adjacent fmul+fadd pairs into FMA instructions. This is not
+    // guaranteed — targets with dedicated dot-product instructions should
+    // select directly from this pattern without relying on FMA fusion.
     Register Dst = getOrCreateVReg(CI);
     Register AccSrc = getOrCreateVReg(*CI.getArgOperand(0));
     Register VecA = getOrCreateVReg(*CI.getArgOperand(1));
