@@ -7612,8 +7612,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return NewMI;
 
       const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-      Register NewSrc = MRI.isSSA() ? MRI.createVirtualRegister(&RC) :
-                                      MI.getOperand(0).getReg();
+      Register NewSrc = MRI.isSSA() ? MRI.createVirtualRegister(&RC)
+                                    : MI.getOperand(0).getReg();
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
