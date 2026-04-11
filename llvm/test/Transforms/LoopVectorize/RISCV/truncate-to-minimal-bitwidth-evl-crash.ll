@@ -28,7 +28,7 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr %src) {
 entry:
   br label %loop
 
-loop:                                             ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.src = getelementptr i8, ptr %src, i64 %iv
   %0 = load i8, ptr %gep.src, align 1
@@ -41,7 +41,7 @@ loop:                                             ; preds = %loop, %entry
   %ec = icmp eq i64 %iv, 8
   br i1 %ec, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret void
 }
 
@@ -102,7 +102,7 @@ define void @truncate_i16_to_i8_cse(ptr noalias %src, ptr noalias %dst) {
 entry:
   br label %loop
 
-loop:                                             ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %count = phi i32 [ 0, %entry ], [ %count.next, %loop ]
   %val = load i16, ptr %src, align 2
@@ -116,7 +116,7 @@ loop:                                             ; preds = %loop, %entry
   %iv.next = add i64 %iv, 1
   br i1 %exitcond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
+exit:
   ret void
 }
 

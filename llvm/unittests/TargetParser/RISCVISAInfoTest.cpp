@@ -1301,6 +1301,7 @@ R"(All available -march extensions for RISC-V
     xandesvpackfph       5.0
     xandesvsinth         5.0
     xandesvsintload      5.0
+    xcheriot             1.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0
@@ -1372,7 +1373,7 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    p                    0.19
+    p                    0.21
     y                    0.96
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
@@ -1386,7 +1387,6 @@ Experimental extensions
     zvzip                0.1
     smpmpmt              0.6
     svukte               0.3
-    xrivosvisni          0.1
     xrivosvizip          0.1
     xsfmclic             0.1
     xsfsclic             0.1

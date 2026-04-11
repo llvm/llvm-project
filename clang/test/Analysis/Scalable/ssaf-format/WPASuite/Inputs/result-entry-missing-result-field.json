@@ -1,0 +1,16 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "TagsAnalysisResult",
+      "result": {
+        "tags": [
+          "ok"
+        ]
+      }
+    },
+    {
+      "analysis_name": "PairsAnalysisResult"
+    }
+  ]
+}

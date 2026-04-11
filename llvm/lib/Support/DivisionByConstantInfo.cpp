@@ -139,7 +139,7 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
     APInt ShiftedD = D.lshr(PreShift);
     Retval =
         UnsignedDivisionByConstantInfo::get(ShiftedD, LeadingZeros + PreShift);
-    assert(Retval.IsAdd == 0 && Retval.PreShift == 0);
+    assert(!Retval.IsAdd && Retval.PreShift == 0);
     Retval.PreShift = PreShift;
     return Retval;
   }
@@ -162,7 +162,7 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
     unsigned W = D.getBitWidth();
     unsigned OriginalShift = Retval.PostShift + W + 1;
     // Since PostShift >= 1, shift amount is at most W-2, so W*2 bits suffice.
-    Retval.Magic = (APInt(W * 2, 1).shl(W) + Retval.Magic.zext(W * 2))
+    Retval.Magic = (APInt::getOneBitSet(W * 2, W) + Retval.Magic.zext(W * 2))
                        .shl(W * 2 - OriginalShift);
     Retval.IsAdd = false;
     Retval.PostShift = 0;

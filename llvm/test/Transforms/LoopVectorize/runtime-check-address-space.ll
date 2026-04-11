@@ -34,7 +34,7 @@ entry:
   %cmp1 = icmp slt i32 0, %n
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %b, i64 %idxprom
@@ -47,7 +47,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -61,7 +61,7 @@ entry:
   %cmp1 = icmp slt i32 0, %n
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %b, i64 %idxprom
@@ -74,7 +74,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -88,7 +88,7 @@ entry:
   %cmp1 = icmp slt i32 0, %n
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
@@ -101,7 +101,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -116,7 +116,7 @@ entry:
   %cmp1 = icmp slt i32 0, %n
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %b, i64 %idxprom
@@ -129,7 +129,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -144,7 +144,7 @@ entry:
   %cmp1 = icmp slt i32 0, %n
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
@@ -157,7 +157,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -173,7 +173,7 @@ entry:
   %cmp1 = icmp slt i32 0, %n
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds [1024 x i32], ptr addrspace(1) @g_as1, i64 0, i64 %idxprom
@@ -186,7 +186,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -201,7 +201,7 @@ entry:
   %cmp1 = icmp slt i32 0, %n
   br i1 %cmp1, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %idxprom = sext i32 %i.02 to i64
   %arrayidx = getelementptr inbounds [1024 x i32], ptr addrspace(2) @q_as2, i64 0, i64 %idxprom
@@ -214,8 +214,8 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }

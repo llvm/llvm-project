@@ -282,6 +282,10 @@ class HeaderSearch {
   /// The specific module cache path containing ContextHash (unless suppressed).
   std::string SpecificModuleCachePath;
 
+  /// The length of the normalized module cache path at the start of \c
+  /// SpecificModuleCachePath.
+  size_t NormalizedModuleCachePathLen = 0;
+
   /// All of the preprocessor-specific data about files that are
   /// included, indexed by the FileEntry's UID.
   mutable std::vector<HeaderFileInfo> FileInfo;
@@ -406,6 +410,12 @@ class HeaderSearch {
                            StringRef PathPrefix,
                            ModuleMapDirectoryState &MMState);
 
+  /// Check if a relative path would be covered by the module map index.
+  /// Returns the module names that would cover this path.
+  SmallVector<StringRef, 1>
+  findMatchingModulesInIndex(StringRef RelativePath,
+                             const ModuleMapDirectoryState &MMState) const;
+
 public:
   HeaderSearch(const HeaderSearchOptions &HSOpts, SourceManager &SourceMgr,
                DiagnosticsEngine &Diags, const LangOptions &LangOpts,
@@ -467,20 +477,23 @@ public:
     return {};
   }
 
-  /// Set the context hash to use for module cache paths.
-  void setContextHash(StringRef Hash) { ContextHash = std::string(Hash); }
+  /// Initialize the module cache path.
+  void initializeModuleCachePath(std::string ContextHash);
 
-  /// Set the module cache path with the context hash (unless suppressed).
-  void setSpecificModuleCachePath(StringRef Path) {
-    SpecificModuleCachePath = std::string(Path);
+  /// Retrieve the specific module cache path. This is the normalized module
+  /// cache path plus the context hash (unless suppressed).
+  StringRef getSpecificModuleCachePath() const {
+    return SpecificModuleCachePath;
   }
 
   /// Retrieve the context hash.
   StringRef getContextHash() const { return ContextHash; }
 
-  /// Retrieve the module cache path with the context hash (unless suppressed).
-  StringRef getSpecificModuleCachePath() const {
-    return SpecificModuleCachePath;
+  /// Retrieve the normalized module cache path. This is the path as provided on
+  /// the command line, but absolute, without './' components, and with
+  /// preferred path separators. Note that this does not have the context hash.
+  StringRef getNormalizedModuleCachePath() const {
+    return getSpecificModuleCachePath().substr(0, NormalizedModuleCachePathLen);
   }
 
   /// Forget everything we know about headers so far.
@@ -657,7 +670,7 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileName(Module *Module);
+  ModuleFileName getCachedModuleFileName(Module *Module);
 
   /// Retrieve the name of the prebuilt module file that should be used
   /// to load a module with the given name.
@@ -669,8 +682,8 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getPrebuiltModuleFileName(StringRef ModuleName,
-                                        bool FileMapOnly = false);
+  ModuleFileName getPrebuiltModuleFileName(StringRef ModuleName,
+                                           bool FileMapOnly = false);
 
   /// Retrieve the name of the prebuilt module file that should be used
   /// to load the given module.
@@ -679,7 +692,7 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getPrebuiltImplicitModuleFileName(Module *Module);
+  ModuleFileName getPrebuiltImplicitModuleFileName(Module *Module);
 
   /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
@@ -691,8 +704,8 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileName(StringRef ModuleName,
-                                      StringRef ModuleMapPath);
+  ModuleFileName getCachedModuleFileName(StringRef ModuleName,
+                                         StringRef ModuleMapPath);
 
   /// Lookup a module Search for a module with the given name.
   ///
@@ -808,13 +821,13 @@ private:
   /// \param ModuleMapPath A path that when combined with \c ModuleName
   /// uniquely identifies this module. See Module::ModuleMap.
   ///
-  /// \param CachePath A path to the module cache.
+  /// \param NormalizedCachePath The normalized path to the module cache.
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileNameImpl(StringRef ModuleName,
-                                          StringRef ModuleMapPath,
-                                          StringRef CachePath);
+  ModuleFileName getCachedModuleFileNameImpl(StringRef ModuleName,
+                                             StringRef ModuleMapPath,
+                                             StringRef NormalizedCachePath);
 
   /// Retrieve a module with the given name, which may be part of the
   /// given framework.
@@ -836,6 +849,11 @@ private:
   /// Load all of the module maps within the immediate subdirectories
   /// of the given search directory.
   void loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir);
+
+  /// Diagnose headers that are a symlink and not covered by a module map.
+  void diagnoseUncoveredSymlink(FileEntryRef File,
+                                ModuleMap::KnownHeader &Module,
+                                const DirectoryEntry *Root);
 
   /// Find and suggest a usable module for the given file.
   ///
@@ -1041,6 +1059,11 @@ void ApplyHeaderSearchOptions(HeaderSearch &HS,
 
 void normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
                               SmallVectorImpl<char> &NormalizedPath);
+
+std::string createSpecificModuleCachePath(FileManager &FileMgr,
+                                          StringRef ModuleCachePath,
+                                          bool DisableModuleHash,
+                                          std::string ContextHash);
 
 } // namespace clang
 

@@ -1268,7 +1268,7 @@ static ARMCC::CondCodes getComparePred(CmpInst::Predicate Pred) {
 }
 
 bool ARMFastISel::SelectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 

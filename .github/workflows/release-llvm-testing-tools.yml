@@ -1,0 +1,43 @@
+name: Release llvm-testing-tools
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release-llvm-testing-tools.yml'
+      - 'llvm/utils/llvm-testing-tools/**'
+
+jobs:
+  build-package:
+    name: Build Package
+    runs-on: ubuntu-24.04
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - name: Build Binaries
+        run: |
+          mkdir build
+          cd build
+          cmake -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            ../llvm
+          ninja split-file FileCheck
+      - name: Build Package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-build
+          cd ./llvm/utils/llvm-testing-tools
+          mkdir ./src/llvm_testing_tools/binaries
+          cp ../../../build/bin/FileCheck ./src/llvm_testing_tools/binaries/FileCheck
+          cp ../../../build/bin/split-file ./src/llvm_testing_tools/binaries/split-file
+          python3 -m build
+      - name: Upload Packages
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: packages
+          path: ./llvm/utils/llvm-testing-tools/dist/*

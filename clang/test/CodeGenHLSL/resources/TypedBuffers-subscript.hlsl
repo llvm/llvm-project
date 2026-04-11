@@ -8,19 +8,19 @@ RWBuffer<int> Out;
 void main(unsigned GI : SV_GroupIndex) {
   // CHECK: define void @main()
 
-  // DXIL: %[[INPTR:.*]] = call {{.*}} ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_0_0_1t(target("dx.TypedBuffer", i32, 0, 0, 1) %{{.*}}, i32 %{{.*}})
-  // SPIRV: %[[INPTR:.*]] = call {{.*}} ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_1_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 1, 0) %{{.*}}, i32 %{{.*}})
+  // DXIL: %[[INPTR:.*]] = call {{.*}} ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_0_0_1t.i32(target("dx.TypedBuffer", i32, 0, 0, 1) %{{.*}}, i32 %{{.*}})
+  // SPIRV: %[[INPTR:.*]] = call {{.*}} ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_1_0t.i32(target("spirv.SignedImage", i32, 5, 2, 0, 0, 1, 0) %{{.*}}, i32 %{{.*}})
   // CHECK: %[[LOAD:.*]] = load i32, ptr {{.*}}%[[INPTR]]
-  // DXIL: %[[OUTPTR:.*]] = call {{.*}} ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-  // SPIRV: %[[OUTPTR:.*]] = call {{.*}} ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
+  // DXIL: %[[OUTPTR:.*]] = call {{.*}} ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
+  // SPIRV: %[[OUTPTR:.*]] = call {{.*}} ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t.i32(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
   // CHECK: store i32 %[[LOAD]], ptr {{.*}}%[[OUTPTR]]
   Out[GI] = In[GI];
 
-  // DXIL: %[[INPTR:.*]] = call {{.*}} ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-  // SPIRV: %[[INPTR:.*]] = call {{.*}} ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
+  // DXIL: %[[INPTR:.*]] = call {{.*}} ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
+  // SPIRV: %[[INPTR:.*]] = call {{.*}} ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t.i32(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
   // CHECK: %[[LOAD:.*]] = load i32, ptr {{.*}}%[[INPTR]]
-  // DXIL: %[[OUTPTR:.*]] = call {{.*}} ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-  // SPIRV: %[[OUTPTR:.*]] = call {{.*}} ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
+  // DXIL: %[[OUTPTR:.*]] = call {{.*}} ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
+  // SPIRV: %[[OUTPTR:.*]] = call {{.*}} ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t.i32(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %{{.*}}, i32 %{{.*}})
   // CHECK: store i32 %[[LOAD]], ptr {{.*}}%[[OUTPTR]]
   Out[GI + 1] = Out[GI];
 }

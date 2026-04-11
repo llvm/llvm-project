@@ -1411,6 +1411,8 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAXIMUM,
   ATOMIC_LOAD_FMINIMUM,
+  ATOMIC_LOAD_FMAXIMUMNUM,
+  ATOMIC_LOAD_FMINIMUMNUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,
@@ -1577,6 +1579,13 @@ enum NodeType {
   /// Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  /// Returns the number of number of trailing (least significant) zero elements
+  /// in a vector. Has a single mask vector operand. The result is poison if the
+  /// return type isn't wide enough to hold the maximum number of elements in
+  /// the input vector.
+  CTTZ_ELTS,
+  CTTZ_ELTS_ZERO_POISON,
+
   /// Finds the index of the last active mask element
   /// Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
@@ -1609,6 +1618,14 @@ enum NodeType {
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 
+  /// Masked vector arithmetic that returns poison on disabled lanes. Disabled
+  /// lanes do not have undefined behaviour on division by zero or overflow. The
+  /// first two operands are input vectors, the third operand is the mask.
+  MASKED_UDIV,
+  MASKED_SDIV,
+  MASKED_UREM,
+  MASKED_SREM,
+
   /// llvm.clear_cache intrinsic
   /// Operands: Input Chain, Start Addres, End Address
   /// Outputs: Output Chain
@@ -1640,6 +1657,10 @@ LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
 LLVM_ABI NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+
+/// Given a \p MaskedOpc of ISD::MASKED_(U|S)(DIV|REM), returns the unmasked
+/// ISD::(U|S)(DIV|REM).
+LLVM_ABI NodeType getUnmaskedBinOpOpcode(unsigned MaskedOpc);
 
 /// Whether this is a vector-predicated Opcode.
 LLVM_ABI bool isVPOpcode(unsigned Opcode);

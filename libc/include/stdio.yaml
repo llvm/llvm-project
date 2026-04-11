@@ -1,5 +1,6 @@
 header: stdio.h
-header_template: stdio.h.def
+standards:
+  - stdc
 macros:
   - macro_name: "NULL"
     macro_header: null-macro.h
@@ -9,11 +10,29 @@ macros:
     macro_value: stdin
   - macro_name: stderr
     macro_value: stderr
+  - macro_name: SEEK_SET
+    macro_header: file-seek-macros.h
+  - macro_name: SEEK_CUR
+    macro_header: file-seek-macros.h
+  - macro_name: SEEK_END
+    macro_header: file-seek-macros.h
+  - macro_name: EOF
+    macro_header: stdio-macros.h
+  - macro_name: BUFSIZ
+    macro_header: stdio-macros.h
+  - macro_name: _IONBF
+    macro_header: stdio-macros.h
+  - macro_name: _IOLBF
+    macro_header: stdio-macros.h
+  - macro_name: _IOFBF
+    macro_header: stdio-macros.h
 types:
+  - type_name: rsize_t
   - type_name: size_t
   - type_name: off_t
   - type_name: cookie_io_functions_t
   - type_name: FILE
+  - type_name: errno_t
 enums: []
 objects:
   - object_name: stdin
@@ -31,6 +50,8 @@ functions:
       - type: char **__restrict
       - type: const char *__restrict
       - type: '...'
+    attributes:
+      - _LIBC_MODULAR_FORMAT_PRINTF(__asprintf_modular)
   - name: clearerr
     standards:
       - stdc
@@ -276,6 +297,8 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: '...'
+    attributes:
+      - _LIBC_MODULAR_FORMAT_PRINTF(__printf_modular)
   - name: putc
     standards:
       - stdc
@@ -347,6 +370,8 @@ functions:
       - type: size_t
       - type: const char *__restrict
       - type: '...'
+    attributes:
+      - _LIBC_MODULAR_FORMAT_PRINTF(__snprintf_modular)
   - name: sprintf
     standards:
       - stdc
@@ -355,6 +380,8 @@ functions:
       - type: char *__restrict
       - type: const char *__restrict
       - type: '...'
+    attributes:
+      - _LIBC_MODULAR_FORMAT_PRINTF(__sprintf_modular)
   - name: sscanf
     standards:
       - stdc
@@ -378,6 +405,8 @@ functions:
       - type: char **__restrict
       - type: const char *__restrict
       - type: va_list
+    attributes:
+      - _LIBC_MODULAR_FORMAT_PRINTF(__vasprintf_modular)
   - name: vfprintf
     standards:
       - stdc
@@ -393,6 +422,8 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: va_list
+    attributes:
+      - _LIBC_MODULAR_FORMAT_PRINTF(__vprintf_modular)
   - name: vsnprintf
     standards:
       - stdc
@@ -402,6 +433,8 @@ functions:
       - type: size_t
       - type: const char *__restrict
       - type: va_list
+    attributes:
+      - _LIBC_MODULAR_FORMAT_PRINTF(__vsnprintf_modular)
   - name: vsprintf
     standards:
       - stdc
@@ -410,6 +443,8 @@ functions:
       - type: char *__restrict
       - type: const char *__restrict
       - type: va_list
+    attributes:
+      - _LIBC_MODULAR_FORMAT_PRINTF(__vsprintf_modular)
   - name: vsscanf
     standards:
       - stdc

@@ -450,7 +450,7 @@ def OpRoundFToTF32INTEL : UnOp<"OpRoundFToTF32INTEL", 6426>;
 
 // 3.42.12 Composite Instructions
 
-def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
+def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, ID:$vec, ID:$idx),
                   "$res = OpVectorExtractDynamic $type $vec $idx">;
 def OpVectorInsertDynamic: Op<78, (outs ID:$res), (ins TYPE:$ty, ID:$vec, ID:$comp, ID:$idx),
                   "$res = OpVectorInsertDynamic $ty $vec $comp $idx">;
@@ -849,6 +849,7 @@ def OpGroupNonUniformBitwiseXor: OpGroupNUGroup<"BitwiseXor", 361>;
 def OpGroupNonUniformLogicalAnd: OpGroupNUGroup<"LogicalAnd", 362>;
 def OpGroupNonUniformLogicalOr: OpGroupNUGroup<"LogicalOr", 363>;
 def OpGroupNonUniformLogicalXor: OpGroupNUGroup<"LogicalXor", 364>;
+def OpGroupNonUniformQuadSwap: OpGroupNU4<"QuadSwap", 366>;
 
 // SPV_KHR_subgroup_rotate
 def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),
@@ -932,7 +933,7 @@ def OpCooperativeMatrixStoreKHR: Op<4458, (outs),
 def OpCooperativeMatrixMulAddKHR: Op<4459, (outs ID:$res),
                   (ins TYPE:$type, ID:$A, ID:$B, ID:$C, variable_ops),
                   "$res = OpCooperativeMatrixMulAddKHR $type $A $B $C">;
-def OpCooperativeMatrixLengthKHR: Op<4460, (outs ID:$res), (ins TYPE:$type, ID:$coop_matr_type),
+def OpCooperativeMatrixLengthKHR: Op<4460, (outs ID:$res), (ins TYPE:$type, TYPE:$coop_matr_type),
                   "$res = OpCooperativeMatrixLengthKHR $type $coop_matr_type">;
 
 // SPV_INTEL_joint_matrix
