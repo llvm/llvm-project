@@ -15,6 +15,7 @@
 // RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
 
 #include <cstdint>
+#include <cstddef>
 
 struct A {};
 struct B : A {};
@@ -182,6 +183,19 @@ void testBinaryOperatorRedundantCasting() {
   const auto diff_types_operands3 { static_cast<int>(1 + static_cast<uint8_t>(1)) };
   // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: redundant explicit casting to the same type 'int' as the sub-expression, remove this casting [readability-redundant-casting]
   // CHECK-FIXES: const auto diff_types_operands3 { (1 + static_cast<uint8_t>(1)) };
+
+  const auto diff_types_operands4 {
+    static_cast<size_t>(static_cast<size_t>(3) + 2)
+  };
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: redundant explicit casting to the same type 'size_t' (aka 'unsigned long') as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-FIXES: (static_cast<size_t>(3) + 2)
+
+  const auto diff_types_operands5 { unsigned(7 + unsigned(4)) };
+  // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: redundant explicit casting to the same type 'unsigned int' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-FIXES: const auto diff_types_operands5 { (7 + unsigned(4)) };
+
+  // casting isn't redundant here
+  const auto diff_types_operands6 { (int)(-7 + unsigned(4)) };
 }
 
 void testBinaryOperator(char c) {
