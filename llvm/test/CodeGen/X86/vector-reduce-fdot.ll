@@ -49,37 +49,21 @@ define float @fdot_f32(float %acc, <4 x float> %a, <4 x float> %b) {
 define float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
 ; AVX2-LABEL: fdot_f32_reassoc:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmulss %xmm2, %xmm1, %xmm3
-; AVX2-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm2[1,1,3,3]
-; AVX2-NEXT:    vmulss %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm2[1,0]
-; AVX2-NEXT:    vmulss %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; AVX2-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
-; AVX2-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX2-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX2-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; FMA-LABEL: fdot_f32_reassoc:
 ; FMA:       # %bb.0:
-; FMA-NEXT:    vmulss %xmm2, %xmm1, %xmm3
-; FMA-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; FMA-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; FMA-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm2[1,1,3,3]
-; FMA-NEXT:    vmulss %xmm4, %xmm3, %xmm3
-; FMA-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; FMA-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
-; FMA-NEXT:    vshufpd {{.*#+}} xmm4 = xmm2[1,0]
-; FMA-NEXT:    vmulss %xmm4, %xmm3, %xmm3
-; FMA-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; FMA-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; FMA-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
-; FMA-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; FMA-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; FMA-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; FMA-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; FMA-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; FMA-NEXT:    retq
   %res = call reassoc float @llvm.vector.reduce.fdot.v4f32(float %acc, <4 x float> %a, <4 x float> %b)
