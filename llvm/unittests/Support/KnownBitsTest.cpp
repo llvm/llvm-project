@@ -673,23 +673,42 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
 
-TEST(KnownBitsTest, FunnelShift) {
-  KnownBits LHS = KnownBits::makeConstant(APInt(8, 224)); // 11100000
-  KnownBits RHS = KnownBits::makeConstant(APInt(8, 240)); // 11110000
-  KnownBits Amt = KnownBits::makeConstant(APInt(8, 2));
+TEST(KnownBitsTest, FunnelShiftExhaustive) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      ForeachKnownBits(Bits, [&](const KnownBits &Known3) {
+        if (Known1.hasConflict() || Known2.hasConflict() ||
+            Known3.hasConflict())
+          return;
 
-  EXPECT_EQ(KnownBits::fshl(LHS, RHS, Amt),
-            KnownBits::makeConstant(APInt(8, 0b10000011)));
-  EXPECT_EQ(KnownBits::fshr(LHS, RHS, Amt),
-            KnownBits::makeConstant(APInt(8, 0b00111100)));
+        KnownBits FSHLResult(Bits);
+        FSHLResult.setAllConflict();
+        KnownBits FSHRResult(Bits);
+        FSHRResult.setAllConflict();
 
-  KnownBits ZeroAmt = KnownBits::makeConstant(APInt(8, 0));
-  EXPECT_EQ(KnownBits::fshl(LHS, RHS, ZeroAmt), LHS);
-  EXPECT_EQ(KnownBits::fshr(LHS, RHS, ZeroAmt), RHS);
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            ForeachNumInKnownBits(Known3, [&](const APInt &N3) {
+              APInt FSHL = APIntOps::fshl(N1, N2, N3);
+              FSHLResult.One &= FSHL;
+              FSHLResult.Zero &= ~FSHL;
+              APInt FSHR = APIntOps::fshr(N1, N2, N3);
+              FSHRResult.One &= FSHR;
+              FSHRResult.Zero &= ~FSHR;
+            });
+          });
+        });
 
-  KnownBits UnknownAmt(8);
-  EXPECT_TRUE(KnownBits::fshl(LHS, RHS, UnknownAmt).isUnknown());
-  EXPECT_TRUE(KnownBits::fshr(LHS, RHS, UnknownAmt).isUnknown());
+        KnownBits ComputeFSHL = KnownBits::fshl(Known1, Known2, Known3);
+        KnownBits ComputeFSHR = KnownBits::fshr(Known1, Known2, Known3);
+        EXPECT_TRUE(FSHLResult.Zero.isSubsetOf(ComputeFSHL.Zero) &&
+                    FSHLResult.One.isSubsetOf(ComputeFSHL.One));
+        EXPECT_TRUE(FSHRResult.Zero.isSubsetOf(ComputeFSHR.Zero) &&
+                    FSHRResult.One.isSubsetOf(ComputeFSHR.One));
+      });
+    });
+  });
 }
 
 TEST(KnownBitsTest, WideShifts) {

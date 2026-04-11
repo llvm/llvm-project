@@ -604,19 +604,61 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
 }
 
 KnownBits KnownBits::fshl(KnownBits LHS, KnownBits RHS, KnownBits Amt) {
-  if (!Amt.isConstant())
-    return KnownBits(LHS.getBitWidth());
-  APInt ShAmt = Amt.getConstant();
-  return KnownBits(APIntOps::fshl(LHS.Zero, RHS.Zero, ShAmt),
-                   APIntOps::fshl(LHS.One, RHS.One, ShAmt));
+  if (Amt.isConstant()) {
+    const APInt &ShAmt = Amt.getConstant();
+    return KnownBits(APIntOps::fshl(LHS.Zero, RHS.Zero, ShAmt),
+                     APIntOps::fshl(LHS.One, RHS.One, ShAmt));
+  }
+
+  unsigned BitWidth = LHS.getBitWidth();
+  unsigned MinAmt = Amt.getMinValue().getZExtValue();
+  unsigned MaxAmt = Amt.getMaxValue().getZExtValue();
+  KnownBits Known(BitWidth);
+  if (MinAmt > MaxAmt)
+    return Known;
+
+  unsigned ShiftAmtZeroMask = Amt.Zero.zextOrTrunc(32).getZExtValue();
+  unsigned ShiftAmtOneMask = Amt.One.zextOrTrunc(32).getZExtValue();
+  Known.setAllConflict();
+  for (unsigned ShiftAmt = MinAmt; ShiftAmt <= MaxAmt; ++ShiftAmt) {
+    if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
+        (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
+      continue;
+    APInt SA = APInt(BitWidth, ShiftAmt % BitWidth);
+    KnownBits Tmp(APIntOps::fshl(LHS.Zero, RHS.Zero, SA),
+                  APIntOps::fshl(LHS.One, RHS.One, SA));
+    Known = Known.intersectWith(Tmp);
+  }
+  return Known;
 }
 
 KnownBits KnownBits::fshr(KnownBits LHS, KnownBits RHS, KnownBits Amt) {
-  if (!Amt.isConstant())
-    return KnownBits(LHS.getBitWidth());
-  APInt ShAmt = Amt.getConstant();
-  return KnownBits(APIntOps::fshr(LHS.Zero, RHS.Zero, ShAmt),
-                   APIntOps::fshr(LHS.One, RHS.One, ShAmt));
+  if (Amt.isConstant()) {
+    const APInt &ShAmt = Amt.getConstant();
+    return KnownBits(APIntOps::fshr(LHS.Zero, RHS.Zero, ShAmt),
+                     APIntOps::fshr(LHS.One, RHS.One, ShAmt));
+  }
+
+  unsigned BitWidth = LHS.getBitWidth();
+  unsigned MinAmt = Amt.getMinValue().getZExtValue();
+  unsigned MaxAmt = Amt.getMaxValue().getZExtValue();
+  KnownBits Known(BitWidth);
+  if (MinAmt > MaxAmt)
+    return Known;
+
+  unsigned ShiftAmtZeroMask = Amt.Zero.zextOrTrunc(32).getZExtValue();
+  unsigned ShiftAmtOneMask = Amt.One.zextOrTrunc(32).getZExtValue();
+  Known.setAllConflict();
+  for (unsigned ShiftAmt = MinAmt; ShiftAmt <= MaxAmt; ++ShiftAmt) {
+    if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
+        (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
+      continue;
+    APInt SA = APInt(BitWidth, ShiftAmt % BitWidth);
+    KnownBits Tmp(APIntOps::fshr(LHS.Zero, RHS.Zero, SA),
+                  APIntOps::fshr(LHS.One, RHS.One, SA));
+    Known = Known.intersectWith(Tmp);
+  }
+  return Known;
 }
 
 KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
