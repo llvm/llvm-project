@@ -1001,8 +1001,6 @@ void lifetimebound_make_unique_string_view_local() {
   (void)ptr;
 }
 
-
-
 struct MultiLifetimeBoundCtor {
   MultiLifetimeBoundCtor(const MyObj& obj1 [[clang::lifetimebound]], const MyObj& obj2);
   MultiLifetimeBoundCtor(const MyObj& obj1, const MyObj& obj2 [[clang::lifetimebound]], int);
@@ -2532,8 +2530,6 @@ std::string_view return_dangling_view_through_owner() {
   return sv; // expected-note {{returned here}}
 }
 
-// FIXME: False negative. Move assignment of unique_ptr is not defaulted,
-// so origins from `local` don't propagate to `ups`.
 void owner_outlives_lifetimebound_source() {
   std::unique_ptr<S> ups;
   {
