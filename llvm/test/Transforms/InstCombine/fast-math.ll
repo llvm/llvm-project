@@ -742,7 +742,8 @@ define double @sqrt_intrinsic_not_so_fast(double %x, double %y) {
 define double @sqrt_intrinsic_arg_4th(double noundef %x) {
 ; CHECK-LABEL: @sqrt_intrinsic_arg_4th(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], [[X]]
-; CHECK-NEXT:    ret double [[MUL]]
+; CHECK-NEXT:    [[FABS:%.*]] = call fast double @llvm.fabs.f64(double [[MUL]])
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %mul = fmul fast double %x, %x
   %mul2 = fmul fast double %mul, %mul
