@@ -101,7 +101,9 @@ define i32 @load_clobber_load_gep2(ptr %p) {
   ret i32 %add
 }
 
-; MemoryDependence-backed GVN can use BasicAA's MustAlias result here.
+; MemoryDependence-backed GVN can use BasicAA's MustAlias result for %gep1 and
+; %gep2 to eliminate the redundant load. MSSA-backed GVN uses a coarser clobber
+; check and does not propagate the MustAlias result for this pattern.
 define i32 @load_clobber_load_gep3(ptr %p) {
 ; MDEP-LABEL: @load_clobber_load_gep3(
 ; MDEP-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 0

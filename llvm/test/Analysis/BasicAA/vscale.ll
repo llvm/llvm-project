@@ -668,3 +668,33 @@ define void @gep_2048_vscalerange(ptr %p) vscale_range(1,16) {
   load <vscale x 4 x i32>, ptr %noff256
   ret void
 }
+
+; Two GEPs with different scalable vector types but the same known-minimum
+; stride (both 16 bytes/vscale). ScalableOffset cancels after subtraction,
+; so they resolve to MustAlias.
+; <vscale x 4 x i32>: known-min stride = 4 * 4 = 16 bytes
+; <vscale x 2 x i64>: known-min stride = 2 * 8 = 16 bytes
+; CHECK-LABEL: gep_mismatched_scalable_strides_same_size
+; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %gep1, <vscale x 2 x i64>* %gep2
+define void @gep_mismatched_scalable_strides_same_size(ptr %p) {
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
+  %gep2 = getelementptr <vscale x 2 x i64>, ptr %p, i64 1
+  load <vscale x 4 x i32>, ptr %gep1
+  load <vscale x 2 x i64>, ptr %gep2
+  ret void
+}
+
+; Two GEPs with different scalable vector types and different known-minimum
+; strides. ScalableOffset does not cancel after subtraction, so the result
+; is conservatively MayAlias.
+; <vscale x 4 x i32>: known-min stride = 4 * 4 = 16 bytes
+; <vscale x 4 x i64>: known-min stride = 4 * 8 = 32 bytes
+; CHECK-LABEL: gep_mismatched_scalable_strides_diff_size
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %gep1, <vscale x 4 x i64>* %gep2
+define void @gep_mismatched_scalable_strides_diff_size(ptr %p) {
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
+  %gep2 = getelementptr <vscale x 4 x i64>, ptr %p, i64 1
+  load <vscale x 4 x i32>, ptr %gep1
+  load <vscale x 4 x i64>, ptr %gep2
+  ret void
+}
