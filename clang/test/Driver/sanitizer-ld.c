@@ -379,7 +379,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-TYSAN-HEXAGON
 //
-// CHECK-TYSAN-HEXAGON: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-TYSAN-HEXAGON: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.lld)?(.exe)?}}"
 // CHECK-TYSAN-HEXAGON: "--whole-archive" "{{.*}}libclang_rt.tysan{{[^.]*}}.a" "--no-whole-archive"
 
 // RUN: %clangxx -### %s 2>&1 \
