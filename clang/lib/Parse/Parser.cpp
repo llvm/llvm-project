@@ -194,15 +194,9 @@ bool Parser::ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed) {
   return ExpectAndConsume(tok::semi, DiagID , TokenUsed);
 }
 
-bool Parser::TryInjectSemicolon() {
-  if (Tok.isAtStartOfLine() &&
-      (isDeclarationSpecifier(ImplicitTypenameContext::No))) {
-    PP.EnterToken(Tok, /*IsReinject=*/true);
-    Tok.setKind(tok::semi);
-    ConsumeToken();
-    return true;
-  }
-  return false;
+bool Parser::isLikelyAtStartOfNewDeclaration() {
+  return Tok.isAtStartOfLine() &&
+         isDeclarationSpecifier(ImplicitTypenameContext::No);
 }
 
 void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {

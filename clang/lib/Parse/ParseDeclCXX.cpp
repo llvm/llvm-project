@@ -3245,7 +3245,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
   if (ExpectSemi &&
       ExpectAndConsume(tok::semi, diag::err_expected_semi_decl_list) &&
-      !TryInjectSemicolon()) {
+      !isLikelyAtStartOfNewDeclaration()) {
     // Skip to end of block or statement.
     SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
     // If we stopped at a ';', eat it.

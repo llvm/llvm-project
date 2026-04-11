@@ -132,7 +132,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
       SkipUntil(tok::semi);
     } else if (ExpectAndConsume(tok::semi, diag::err_expected_after,
                                 Delete ? "delete" : "default") &&
-               !TryInjectSemicolon()) {
+               !isLikelyAtStartOfNewDeclaration()) {
       SkipUntil(tok::semi);
     }
 
