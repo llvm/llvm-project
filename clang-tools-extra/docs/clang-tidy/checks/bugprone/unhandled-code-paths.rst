@@ -56,7 +56,8 @@ possible code paths.
   }
 
 
-Every ``switch`` statement should have at least two ``case`` labels other than a `default` label.
+Every ``switch`` statement should have at least two ``case`` labels
+other than a `default` label.
 Otherwise, the ``switch`` could be better expressed with an ``if`` statement.
 Degenerated ``switch`` statements without any labels are caught as well.
 
