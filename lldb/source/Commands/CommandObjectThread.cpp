@@ -20,6 +20,7 @@
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionGroupDirection.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -565,7 +566,8 @@ public:
   CommandObjectThreadStepWithTypeAndScope(CommandInterpreter &interpreter,
                                           const char *name, const char *help,
                                           const char *syntax,
-                                          StepType step_type)
+                                          StepType step_type,
+                                          bool allow_reverse)
       : CommandObjectParsed(interpreter, name, help, syntax,
                             eCommandRequiresProcess | eCommandRequiresThread |
                                 eCommandTryTargetAPILock |
@@ -574,11 +576,24 @@ public:
         m_step_type(step_type), m_class_options("scripted step") {
     AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
 
-    if (step_type == eStepTypeScripted) {
-      m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
-                           LLDB_OPT_SET_1);
+    if (allow_reverse) {
+      m_all_options.Append(&m_direction_options);
+
+      // Reverse is a separate option group, all other options should also exist
+      // in that group.
+      if (step_type == eStepTypeScripted) {
+        m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                             LLDB_OPT_SET_1 | LLDB_OPT_SET_2);
+      }
+      m_all_options.Append(&m_options, LLDB_OPT_SET_1,
+                           LLDB_OPT_SET_1 | LLDB_OPT_SET_2);
+    } else {
+      if (step_type == eStepTypeScripted) {
+        m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                             LLDB_OPT_SET_1);
+      }
+      m_all_options.Append(&m_options);
     }
-    m_all_options.Append(&m_options);
     m_all_options.Finalize();
   }
 
@@ -737,12 +752,8 @@ protected:
             new_plan_status);
     } else if (m_step_type == eStepTypeTrace) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          false, eRunForward, abort_other_plans, bool_stop_other_threads,
-          new_plan_status);
-    } else if (m_step_type == eStepTypeTraceBack) {
-      new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          false, eRunReverse, abort_other_plans, bool_stop_other_threads,
-          new_plan_status);
+          false, m_direction_options.GetDirection(), abort_other_plans,
+          bool_stop_other_threads, new_plan_status);
     } else if (m_step_type == eStepTypeTraceOver) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
           true, eRunForward, abort_other_plans, bool_stop_other_threads,
@@ -819,6 +830,7 @@ protected:
 
   StepType m_step_type;
   ThreadStepScopeOptionGroup m_options;
+  OptionGroupDirection m_direction_options;
   OptionGroupPythonClassWithDict m_class_options;
   OptionGroupOptions m_all_options;
 };
@@ -2759,42 +2771,35 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                      interpreter, "thread step-in",
                      "Source level single step, stepping into calls.  Defaults "
                      "to current thread unless specified.",
-                     nullptr, eStepTypeInto)));
+                     nullptr, eStepTypeInto, false)));
 
   LoadSubCommand("step-out",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-out",
                      "Finish executing the current stack frame and stop after "
                      "returning.  Defaults to current thread unless specified.",
-                     nullptr, eStepTypeOut)));
+                     nullptr, eStepTypeOut, false)));
 
   LoadSubCommand("step-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-over",
                      "Source level single step, stepping over calls.  Defaults "
                      "to current thread unless specified.",
-                     nullptr, eStepTypeOver)));
+                     nullptr, eStepTypeOver, false)));
 
   LoadSubCommand("step-inst",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst",
                      "Instruction level single step, stepping into calls.  "
                      "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTrace)));
-
-  LoadSubCommand("step-back-inst",
-                 CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
-                     interpreter, "thread step-back-inst",
-                     "Instruction level back step.  "
-                     "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTraceBack)));
+                     nullptr, eStepTypeTrace, true)));
 
   LoadSubCommand("step-inst-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst-over",
                      "Instruction level single step, stepping over calls.  "
                      "Defaults to current thread unless specified.",
-                     nullptr, eStepTypeTraceOver)));
+                     nullptr, eStepTypeTraceOver, false)));
 
   LoadSubCommand(
       "step-scripted",
@@ -2805,7 +2810,7 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
           "that will be used to populate an SBStructuredData Dictionary, which "
           "will be passed to the constructor of the class implementing the "
           "scripted step.  See the Python Reference for more details.",
-          nullptr, eStepTypeScripted)));
+          nullptr, eStepTypeScripted, false)));
 
   LoadSubCommand("plan", CommandObjectSP(new CommandObjectMultiwordThreadPlan(
                              interpreter)));
