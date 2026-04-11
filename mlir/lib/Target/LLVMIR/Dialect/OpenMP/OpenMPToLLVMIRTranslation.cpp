@@ -277,41 +277,17 @@ public:
     }
   }
 
-  // Rewrite all uses of the original variable, in the basic blocks whose names
-  // start with `prefix`, with the linear variable in-place.
-  void rewriteInPlace(llvm::IRBuilderBase &builder, llvm::BasicBlock *startBB,
-                      llvm::BasicBlock *endBB, llvm::StringRef prefix,
+  // Rewrite all uses of the original variable in `BBName`
+  //  with the linear variable in-place
+  void rewriteInPlace(llvm::IRBuilderBase &builder, const std::string &BBName,
                       size_t varIndex) {
-    llvm::SmallVector<llvm::BasicBlock *, 32> worklist;
-    llvm::SmallPtrSet<llvm::BasicBlock *, 32> visited;
-    llvm::SmallPtrSet<llvm::BasicBlock *, 32> matchingBBs;
-
-    assert(startBB && endBB && "Invalid startBB/endBB");
-
-    // Traverse basic blocks from startBB to endBB and save those
-    // whose names start with the specified prefix.
-    worklist.push_back(startBB);
-    visited.insert(startBB);
-
-    while (!worklist.empty()) {
-      llvm::BasicBlock *bb = worklist.pop_back_val();
-
-      if (bb->hasName() && bb->getName().starts_with(prefix))
-        matchingBBs.insert(bb);
-
-      if (bb == endBB)
-        continue;
-
-      for (llvm::BasicBlock *succ : llvm::successors(bb)) {
-        if (visited.insert(succ).second)
-          worklist.push_back(succ);
-      }
-    }
-
-    // Rewrite all uses in the matching BBs.
-    for (auto *user : linearOrigVal[varIndex]->users()) {
+    llvm::SmallVector<llvm::User *> users;
+    for (llvm::User *user : linearOrigVal[varIndex]->users())
+      users.push_back(user);
+    for (auto *user : users) {
       if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
-        if (matchingBBs.contains(userInst->getParent()))
+        if (userInst->getParent()->getName().str().find(BBName) !=
+            std::string::npos)
           user->replaceUsesOfWith(linearOrigVal[varIndex],
                                   linearLoopBodyTemps[varIndex]);
       }
@@ -384,7 +360,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("privatization");
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (isa<omp::TeamsOp>(op) || isa<omp::TaskloopOp>(op))
+    if (isa<omp::TeamsOp>(op) || isa<omp::TaskloopContextOp>(op))
       if (!op.getReductionVars().empty() || op.getReductionByref() ||
           op.getReductionSyms())
         result = todo("reduction");
@@ -445,7 +421,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkDepend(op, result);
         checkNowait(op, result);
       })
-      .Case([&](omp::TaskloopOp op) {
+      .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
         checkReduction(op, result);
@@ -2876,19 +2852,43 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// The correct entry point is convertOmpTaskloopContextOp. This gets called
+/// whilst lowering the body of the taskloop context (i.e. the task function).
+static LogicalResult
+convertOmpTaskloopWrapperOp(omp::TaskloopWrapperOp loopWrapperOp,
+                            llvm::IRBuilderBase &builder,
+                            LLVM::ModuleTranslation &moduleTranslation) {
+  mlir::Operation &opInst = *loopWrapperOp.getOperation();
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  // Recurse into the loop body.
+  auto continuationBlockOrError = convertOmpOpRegions(
+      loopWrapperOp.getRegion(), "omp.taskloop.wrapper.region", builder,
+      moduleTranslation);
+
+  if (failed(handleError(continuationBlockOrError, opInst)))
+    return failure();
+
+  builder.SetInsertPoint(continuationBlockOrError.get());
+  return success();
+}
+
 // Converts an OpenMP taskloop construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
-convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation) {
+convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
+                            llvm::IRBuilderBase &builder,
+                            LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  auto taskloopOp = cast<omp::TaskloopOp>(opInst);
+  mlir::Operation &opInst = *contextOp.getOperation();
+  omp::TaskloopWrapperOp loopWrapperOp = contextOp.getLoopOp();
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
   // It stores the pointer of allocated firstprivate copies,
   // which can be used later for freeing the allocated space.
   SmallVector<llvm::Value *> llvmFirstPrivateVars;
-  PrivateVarsInfo privateVarsInfo(taskloopOp);
+  PrivateVarsInfo privateVarsInfo(contextOp);
   TaskContextStructManager taskStructMgr{builder, moduleTranslation,
                                          privateVarsInfo.privatizers};
 
@@ -2897,7 +2897,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
 
   assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end());
   llvm::BasicBlock *taskloopStartBlock = llvm::BasicBlock::Create(
-      builder.getContext(), "omp.taskloop.start",
+      builder.getContext(), "omp.taskloop.wrapper.start",
       /*Parent=*/builder.GetInsertBlock()->getParent());
   llvm::Instruction *branchToTaskloopStartBlock =
       builder.CreateBr(taskloopStartBlock);
@@ -2934,7 +2934,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
         initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
                        blockArg, llvmPrivateVarAlloc, initBlock);
     if (!privateVarOrErr)
-      return handleError(privateVarOrErr, *taskloopOp.getOperation());
+      return handleError(privateVarOrErr, *contextOp.getOperation());
 
     llvmFirstPrivateVars[i] = privateVarOrErr.get();
 
@@ -2955,9 +2955,9 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   // firstprivate copy region
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
   if (failed(copyFirstPrivateVars(
-          taskloopOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
+          contextOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
           taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
-          taskloopOp.getPrivateNeedsBarrier())))
+          contextOp.getPrivateNeedsBarrier())))
     return llvm::failure();
 
   // Set up inserttion point for call to createTaskloop()
@@ -3028,9 +3028,11 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.mapValue(blockArg, llvmPrivateVar);
     }
 
-    auto continuationBlockOrError =
-        convertOmpOpRegions(taskloopOp.getRegion(), "omp.taskloop.region",
-                            builder, moduleTranslation);
+    // Lower the contents of the taskloop context region: this is the body of
+    // the generated task, not the loop.
+    auto continuationBlockOrError = convertOmpOpRegions(
+        contextOp.getRegion(), "omp.taskloop.context.region", builder,
+        moduleTranslation);
 
     if (failed(handleError(continuationBlockOrError, opInst)))
       return llvm::make_error<PreviouslyReportedError>();
@@ -3043,7 +3045,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     // into the outlined function. When the task is duplicated, that structure
     // is duplicated too.
     if (failed(cleanupPrivateVars(builder, moduleTranslation,
-                                  taskloopOp.getLoc(), privateVarsInfo.llvmVars,
+                                  contextOp.getLoc(), privateVarsInfo.llvmVars,
                                   privateVarsInfo.privatizers)))
       return llvm::make_error<PreviouslyReportedError>();
     // Similarly, the task context structure freed inside the task is the
@@ -3118,15 +3120,16 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
       // through a stack allocated structure.
     }
 
-    if (failed(copyFirstPrivateVars(
-            &opInst, builder, moduleTranslation, srcGEPs, destGEPs,
-            privateVarsInfo.privatizers, taskloopOp.getPrivateNeedsBarrier())))
+    if (failed(copyFirstPrivateVars(contextOp.getOperation(), builder,
+                                    moduleTranslation, srcGEPs, destGEPs,
+                                    privateVarsInfo.privatizers,
+                                    contextOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     return builder.saveIP();
   };
 
-  auto loopOp = cast<omp::LoopNestOp>(taskloopOp.getWrappedLoop());
+  auto loopOp = cast<omp::LoopNestOp>(loopWrapperOp.getWrappedLoop());
 
   auto loopInfo = [&]() -> llvm::Expected<llvm::CanonicalLoopInfo *> {
     llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
@@ -3214,9 +3217,9 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Value *ifCond = nullptr;
   llvm::Value *grainsize = nullptr;
   int sched = 0; // default
-  mlir::Value grainsizeVal = taskloopOp.getGrainsize();
-  mlir::Value numTasksVal = taskloopOp.getNumTasks();
-  if (Value ifVar = taskloopOp.getIfExpr())
+  mlir::Value grainsizeVal = contextOp.getGrainsize();
+  mlir::Value numTasksVal = contextOp.getNumTasks();
+  if (Value ifVar = contextOp.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifVar);
   if (grainsizeVal) {
     grainsize = moduleTranslation.lookupValue(grainsizeVal);
@@ -3237,17 +3240,17 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   // task's cleanup block which should be branched to. It doesn't depend upon
   // nogroup because even in that case the taskloop might still be inside an
   // explicit taskgroup.
-  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, taskloopOp,
+  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, contextOp,
                            llvm::omp::Directive::OMPD_taskgroup);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
           ompLoc, allocaIP, bodyCB, loopInfo, lbVal, ubVal, stepVal,
-          taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
-          sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
-          taskloopOp.getMergeable(),
-          moduleTranslation.lookupValue(taskloopOp.getPriority()),
+          contextOp.getUntied(), ifCond, grainsize, contextOp.getNogroup(),
+          sched, moduleTranslation.lookupValue(contextOp.getFinal()),
+          contextOp.getMergeable(),
+          moduleTranslation.lookupValue(contextOp.getPriority()),
           loopOp.getCollapseNumLoops(), taskDupOrNull,
           taskStructMgr.getStructPtr());
 
@@ -3421,7 +3424,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
 
-  llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
       wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
 
@@ -3489,10 +3491,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
     for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
-      linearClauseProcessor.rewriteInPlace(
-          builder, sourceBlock->getSingleSuccessor(), *regionBlock,
-          "omp.loop_nest.region", index);
-
+      linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
+                                           index);
     builder.restoreIP(oldIP);
   }
 
@@ -3863,18 +3863,15 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   });
 
   for (size_t index = 0; index < simdOp.getLinearVars().size(); index++) {
-    llvm::BasicBlock *startBB = sourceBlock->getSingleSuccessor();
-    llvm::BasicBlock *endBB = *regionBlock;
-    linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                         "omp.loop_nest.region", index);
-
+    linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
+                                         index);
     if (hasOrderedRegions) {
       // Also rewrite uses in ordered regions so they read the current value
-      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                           "omp.ordered.region", index);
+      linearClauseProcessor.rewriteInPlace(builder, "omp.ordered.region",
+                                           index);
       // Also rewrite uses in finalize blocks (code after ordered regions)
-      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                           "omp_region.finalize", index);
+      linearClauseProcessor.rewriteInPlace(builder, "omp_region.finalize",
+                                           index);
     }
   }
 
@@ -7535,6 +7532,18 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       isa_and_present<omp::LoopWrapperInterface>(op) &&
       !dyn_cast_if_present<omp::LoopWrapperInterface>(op->getParentOp());
 
+  // The TASKLOOP construct is implemented with an outer taskloop.context
+  // operation which is not a loop wrapper, containing an inner taskloop
+  // operation which is a loop wrapper. The stack frame should be pushed when
+  // translating the outer taskloop.context and popped when translating the
+  // inner taskloop which is a loop wrapper. We need access to the loop
+  // information in the outer taskloop context so we need to create it and pop
+  // it around the taskloop context not the inner loop wrapper.
+  if (isa<omp::TaskloopContextOp>(op))
+    isOutermostLoopWrapper = true;
+  else if (isa<omp::TaskloopWrapperOp>(op))
+    isOutermostLoopWrapper = false;
+
   if (isOutermostLoopWrapper)
     moduleTranslation.stackPush<OpenMPLoopInfoStackFrame>();
 
@@ -7631,8 +7640,11 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           .Case([&](omp::TaskOp op) {
             return convertOmpTaskOp(op, builder, moduleTranslation);
           })
-          .Case([&](omp::TaskloopOp op) {
-            return convertOmpTaskloopOp(*op, builder, moduleTranslation);
+          .Case([&](omp::TaskloopWrapperOp op) {
+            return convertOmpTaskloopWrapperOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TaskloopContextOp op) {
+            return convertOmpTaskloopContextOp(op, builder, moduleTranslation);
           })
           .Case([&](omp::TaskgroupOp op) {
             return convertOmpTaskgroupOp(op, builder, moduleTranslation);

@@ -25,6 +25,14 @@ enum class MemInitKind {
   Poisoned,
 };
 
+enum class MemAllocKind {
+  Global,
+  Stack,
+  Malloc,
+  New,
+  NewArray,
+};
+
 enum class MemoryObjectState {
   // This memory object is accessible.
   // Valid transitions:
@@ -60,6 +68,34 @@ enum class NaNPropagationBehavior {
                     // currently we implement it by filling payload with random
                     // values
 };
+  
+struct ProgramExitInfo {
+  enum class ProgramExitKind {
+    // Program exited via a normal return
+    Returned,
+    // Program exited with an interpreter error (UB/Unsupported
+    // instruction/etc.)
+    Failed,
+    // Program exited via a call to exit()
+    Exited,
+    // Program exited via a call to abort()
+    Aborted,
+    // Program exited via a call to terminate()
+    Terminated,
+  };
+
+  ProgramExitKind Kind;
+  uint64_t ExitCode;
+
+  explicit ProgramExitInfo(ProgramExitKind Kind, uint64_t ExitCode)
+      : Kind(Kind), ExitCode(ExitCode) {}
+
+  bool isExitedByLibcall() const {
+    return Kind == ProgramExitKind::Exited ||
+           Kind == ProgramExitKind::Aborted ||
+           Kind == ProgramExitKind::Terminated;
+  }
+};
 
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
@@ -69,11 +105,12 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   unsigned AS;
 
   MemoryObjectState State;
+  MemAllocKind AllocKind;
   bool IsConstant = false;
 
 public:
   MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
-               MemInitKind InitKind);
+               MemInitKind InitKind, MemAllocKind AllocKind);
   MemoryObject(const MemoryObject &) = delete;
   MemoryObject(MemoryObject &&) = delete;
   MemoryObject &operator=(const MemoryObject &) = delete;
@@ -86,6 +123,7 @@ public:
   unsigned getAddressSpace() const { return AS; }
   MemoryObjectState getState() const { return State; }
   void setState(MemoryObjectState S) { State = S; }
+  MemAllocKind getAllocKind() const { return AllocKind; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
@@ -101,6 +139,10 @@ public:
   MutableArrayRef<Byte> getBytes() { return Bytes; }
 
   void markAsFreed();
+
+  bool isGlobal() const;
+  bool isStackAllocated() const;
+  bool isHeapAllocated() const;
 };
 
 /// An interface for handling events and managing outputs during interpretation.
@@ -124,8 +166,10 @@ public:
   virtual bool onFunctionExit(Function &F, const AnyValue &RetVal) {
     return true;
   }
+  virtual void onProgramExit(const ProgramExitInfo &ExitInfo) {}
   virtual bool onPrint(StringRef Msg) {
     outs() << Msg;
+    outs().flush();
     return true;
   }
 };
@@ -253,8 +297,9 @@ public:
   const AnyValue &getConstantValue(Constant *C);
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
-                                            MemInitKind InitKind);
-  bool free(uint64_t Address);
+                                            MemInitKind InitKind,
+                                            MemAllocKind AllocKind);
+  bool free(const MemoryObject &Obj);
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
@@ -284,10 +329,14 @@ public:
   bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void.
-  /// Returns true if the function executed successfully. False indicates an
-  /// error occurred during execution.
-  bool runFunction(Function &F, ArrayRef<AnyValue> Args, AnyValue &RetVal,
-                   EventHandler &Handler);
+  /// Returns a `ProgramExitInfo` indicating how the program finished:
+  /// Kind = Returned: The program executed successfully and returned normally.
+  /// Kind = Failed: The interpreter encountered an error and could not execute
+  /// the program.
+  /// Kind = Exited/Aborted/Terminated: The program ended via an
+  /// explicit call to `exit()`, `abort()`, or `terminate()`.
+  ProgramExitInfo runFunction(Function &F, ArrayRef<AnyValue> Args,
+                              AnyValue &RetVal, EventHandler &Handler);
 
   RoundingMode getCurrentRoundingMode() const;
   fp::ExceptionBehavior getCurrentExceptionBehavior() const;

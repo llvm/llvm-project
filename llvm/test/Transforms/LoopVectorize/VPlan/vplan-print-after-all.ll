@@ -36,7 +36,6 @@
 ; CHECK: VPlan for loop in 'foo' after mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' after licm
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimize
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializeConstantVectorTripCount
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::unrollByUF
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializePacksAndUnpacks
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializeBroadcasts

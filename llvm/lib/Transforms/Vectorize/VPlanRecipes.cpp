@@ -126,6 +126,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
                 ->onlyWritesMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
+  case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPCurrentIterationPHISC:
@@ -657,14 +658,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
         {AVL, VFArg, Builder.getTrue()});
     return EVL;
   }
-  case VPInstruction::CanonicalIVIncrementForPart: {
-    auto *IV = State.get(getOperand(0), VPLane(0));
-    auto *VFxPart = State.get(getOperand(1), VPLane(0));
-    // The canonical IV is incremented by the vectorization factor (num of
-    // SIMD elements) times the unroll part.
-    return Builder.CreateAdd(IV, VFxPart, Name, hasNoUnsignedWrap(),
-                             hasNoSignedWrap());
-  }
   case VPInstruction::BranchOnCond: {
     Value *Cond = State.get(getOperand(0), VPLane(0));
     // Replace the temporary unreachable terminator with a new conditional
@@ -730,14 +723,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::ComputeAnyOfResult: {
     Value *Start = State.get(getOperand(0), VPLane(0));
     Value *NewVal = State.get(getOperand(1), VPLane(0));
-    Value *ReducedResult = State.get(getOperand(2));
-    for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
-      ReducedResult =
-          Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
-                              ReducedResult, "bin.rdx");
-    // If any predicate is true it means that we want to select the new value.
-    if (ReducedResult->getType()->isVectorTy())
-      ReducedResult = Builder.CreateOrReduce(ReducedResult);
+    Value *ReducedResult = State.get(getOperand(2), VPLane(0));
     // The compares in the loop may yield poison, which propagates through the
     // bitwise ORs. Freeze it here before the condition is used.
     ReducedResult = Builder.CreateFreeze(ReducedResult);
@@ -1328,7 +1314,8 @@ void VPInstruction::execute(VPTransformState &State) {
 }
 
 bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
-  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) ||
+      Instruction::isUnaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
   case Instruction::GetElementPtr:
@@ -2606,8 +2593,6 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
                                /*ImplicitTrunc=*/true)
             : ConstantFP::get(BaseIVTy, Lane);
     Value *StartIdx = Builder.CreateBinOp(AddOp, StartIdx0, LaneValue);
-    // The step returned by `createStepForVF` is a runtime-evaluated value
-    // when VF is scalable. Otherwise, it should be folded into a Constant.
     assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
            "Expected StartIdx to be folded to a constant when VF is not "
            "scalable");
@@ -4571,7 +4556,8 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   Value *VStart = VF.isScalar()
                       ? CanonicalIV
                       : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
-  Value *VStep = createStepForVF(Builder, STy, VF, getUnrollPart(*this));
+  Value *VStep = Builder.CreateElementCount(
+      STy, VF.multiplyCoefficientBy(getUnrollPart(*this)));
   if (VF.isVector()) {
     VStep = Builder.CreateVectorSplat(VF, VStep);
     VStep =

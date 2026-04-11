@@ -15,6 +15,8 @@ void unannotated_no_throw_body() {}
 
 void calls_unannotated() noexcept {
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_unannotated' which should not throw exceptions
+  // CHECK-MESSAGES-ALL: :[[@LINE-4]]:6: note: frame #0: an exception of unknown type may be thrown in function 'unannotated_no_throw_body' here
+  // CHECK-MESSAGES-ALL: :[[@LINE+3]]:3: note: frame #1: function 'calls_unannotated' calls function 'unannotated_no_throw_body' here
   // CHECK-MESSAGES-UNDEFINED-NOT: warning:
   // CHECK-MESSAGES-NONE-NOT: warning:
   unannotated_no_throw_body();
@@ -24,7 +26,11 @@ void extern_declared();
 
 void calls_unknown() noexcept {
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_unknown' which should not throw exceptions
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-2]]:6: warning: an exception may be thrown in function 'calls_unknown' which should not throw exceptions
+  // CHECK-MESSAGES-ALL: :[[@LINE-4]]:6: note: frame #0: an exception of unknown type may be thrown in function 'extern_declared' here
+  // CHECK-MESSAGES-ALL: :[[@LINE+5]]:3: note: frame #1: function 'calls_unknown' calls function 'extern_declared' here
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-4]]:6: warning: an exception may be thrown in function 'calls_unknown' which should not throw exceptions
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-7]]:6: note: frame #0: an exception of unknown type may be thrown in function 'extern_declared' here
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE+2]]:3: note: frame #1: function 'calls_unknown' calls function 'extern_declared' here
   // CHECK-MESSAGES-NONE-NOT: warning:
   extern_declared();
 }
@@ -52,6 +58,26 @@ void nothrow_nobody() throw();
 
 void call() noexcept {
   nothrow_nobody();
+}
+
+struct Member {
+  Member() noexcept {}
+  Member(const Member &) noexcept {}
+  Member &operator=(const Member &) noexcept { return *this; }
+  ~Member() noexcept {}
+};
+
+struct S {
+  Member m;
+};
+
+template <typename T>
+struct TmplNoexcept {
+  void method() noexcept(noexcept(T())) {}
+};
+
+void instantiate_tmpl_noexcept() {
+  TmplNoexcept<int> t;
 }
 
 void explicit_throw() { throw 1; }

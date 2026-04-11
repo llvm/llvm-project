@@ -47,6 +47,7 @@ if (SPHINX_FOUND)
       dirent
       endian
       errno
+      fcntl
       fenv
       float
       glob
@@ -64,6 +65,7 @@ if (SPHINX_FOUND)
       strings
       sys/mman
       sys/resource
+      sys/socket
       sys/stat
       sys/statvfs
       sys/time

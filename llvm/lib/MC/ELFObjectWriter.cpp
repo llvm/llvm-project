@@ -673,7 +673,7 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
 
   const StringRef SectionName = Sec.getName();
   const MCTargetOptions *TO = Ctx.getTargetOptions();
-  if (TO && TO->Crel) {
+  if (TO->Crel) {
     MCSectionELF *RelaSection =
         Ctx.createELFRelSection(".crel" + SectionName, ELF::SHT_CREL, Flags,
                                 /*EntrySize=*/1, Sec.getGroup(), &Sec);
@@ -724,8 +724,7 @@ void ELFWriter::writeSectionData(MCSection &Sec) {
   StringRef SectionName = Section.getName();
   auto &Ctx = Asm.getContext();
   const DebugCompressionType CompressionType =
-      Ctx.getTargetOptions() ? Ctx.getTargetOptions()->CompressDebugSections
-                             : DebugCompressionType::None;
+      Ctx.getTargetOptions()->CompressDebugSections;
   if (CompressionType == DebugCompressionType::None ||
       !SectionName.starts_with(".debug_")) {
     Asm.writeSectionData(W.OS, &Section);
@@ -912,10 +911,10 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
       sh_link = Sym->getSection().getOrdinal();
   }
 
-  writeSectionHeaderEntry(
-      StrTabBuilder.getOffset(Section.getName()), Section.getType(),
-      Section.getFlags(), 0, Offset, Size, sh_link, sh_info,
-      Section.getAlignmentForObjectFile(Size), Section.getEntrySize());
+  writeSectionHeaderEntry(StrTabBuilder.getOffset(Section.getName()),
+                          Section.getType(), Section.getFlags(), 0, Offset,
+                          Size, sh_link, sh_info, Section.getAlign(),
+                          Section.getEntrySize());
 }
 
 void ELFWriter::writeSectionHeaders() {
@@ -1386,7 +1385,7 @@ bool ELFObjectWriter::usesRela(const MCTargetOptions *TO,
                                const MCSectionELF &Sec) const {
   return (hasRelocationAddend() &&
           Sec.getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE) ||
-         (TO && TO->Crel);
+         TO->Crel;
 }
 
 bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(

@@ -113,16 +113,10 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
   if (in_type.IsArrayType())
     valobj = ArrayToPointerConversion(*valobj, *m_exe_ctx_scope, "result");
 
-  if (valobj->GetCompilerType().IsInteger() ||
-      valobj->GetCompilerType().IsUnscopedEnumerationType()) {
-    llvm::Expected<CompilerType> promoted_type =
-        type_system.get()->DoIntegralPromotion(valobj->GetCompilerType(),
-                                               m_exe_ctx_scope.get());
-    if (!promoted_type)
-      return promoted_type.takeError();
-    if (!promoted_type->CompareTypes(valobj->GetCompilerType()))
-      return valobj->CastToBasicType(*promoted_type);
-  }
+  CompilerType promoted_type =
+      valobj->GetCompilerType().GetPromotedIntegerType();
+  if (promoted_type)
+    return valobj->CastToBasicType(promoted_type);
 
   return valobj;
 }
@@ -1064,7 +1058,7 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
     std::string message = llvm::formatv(
         "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", first_index,
         last_index, base->GetTypeName().AsCString("<invalid type>"),
-        base->GetName().AsCString());
+        base->GetName().GetStringRef());
     return llvm::make_error<DILDiagnosticError>(m_expr, message,
                                                 node.GetLocation());
   }

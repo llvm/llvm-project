@@ -71,7 +71,7 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 L.entry:
   br label %L.LoopBody
 
-L.LoopBody:                                       ; preds = %L.LoopBody, %L.entry
+L.LoopBody:
   %indvar = phi i32 [ %indvar.next, %L.LoopBody ], [ %idx, %L.entry ]
   %indvar.next = add nsw i32 %indvar, 1
   %0 = getelementptr i64, ptr %a, i32 %indvar
@@ -81,7 +81,7 @@ L.LoopBody:                                       ; preds = %L.LoopBody, %L.entr
   %2 = icmp slt i32 %indvar.next, %n
   br i1 %2, label %L.LoopBody, label %L.exit
 
-L.exit:                                       ; preds = %L.LoopBody
+L.exit:
   store i64 1, ptr %0, align 8
   ret void
 }
