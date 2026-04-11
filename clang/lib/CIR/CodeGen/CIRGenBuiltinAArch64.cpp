@@ -740,6 +740,12 @@ static mlir::Value emitCommonNeonBuiltinExpr(
                      std::string("unimplemented AArch64 builtin call: ") +
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case NEON::BI__builtin_neon_vshl_v:
+  case NEON::BI__builtin_neon_vshlq_v:
+    return cir::ShiftOp::create(cgf.getBuilder(), loc, vTy,
+                              cgf.getBuilder().createBitcast(ops[0], vTy), 
+                              cgf.getBuilder().createBitcast(ops[1], vTy),
+                              true);
   case NEON::BI__builtin_neon_vmul_v:
   case NEON::BI__builtin_neon_vmulq_v:
     return cgf.getBuilder().emitIntrinsicCallOp(loc, "aarch64.neon.pmul", vTy,
