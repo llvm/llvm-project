@@ -440,7 +440,6 @@ FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
 FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
-FUNCTION_PASS("func-properties-stats", FunctionPropertiesStatisticsPass())
 FUNCTION_PASS("gc-lowering", GCLoweringPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
@@ -451,7 +450,6 @@ FUNCTION_PASS("infer-address-spaces", InferAddressSpacesPass())
 FUNCTION_PASS("infer-alignment", InferAlignmentPass())
 FUNCTION_PASS("inject-tli-mappings", InjectTLIMappings())
 FUNCTION_PASS("inline-asm-prepare", InlineAsmPreparePass())
-FUNCTION_PASS("instcount", InstCountPass())
 FUNCTION_PASS("instnamer", InstructionNamerPass())
 FUNCTION_PASS("instsimplify", InstSimplifyPass())
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass(*TM))
@@ -590,6 +588,13 @@ FUNCTION_PASS_WITH_PARAMS(
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },
     parseEntryExitInstrumenterPassOptions, "post-inline")
 FUNCTION_PASS_WITH_PARAMS(
+    "func-properties-stats", 
+    "FunctionPropertiesStatisticsPass",
+    [](bool IsPreOptimizations) { 
+      return FunctionPropertiesStatisticsPass(IsPreOptimizations); 
+    },
+    parseFunctionPropertiesStatisticsOptions, "pre-opt")
+FUNCTION_PASS_WITH_PARAMS(
     "function-simplification", "",
     [this](OptimizationLevel OL) {
       return buildFunctionSimplificationPipeline(OL, ThinOrFullLTOPhase::None);
@@ -612,6 +617,12 @@ FUNCTION_PASS_WITH_PARAMS(
     [](InstCombineOptions Opts) { return InstCombinePass(Opts); },
     parseInstCombineOptions,
     "no-verify-fixpoint;verify-fixpoint;max-iterations=N")
+FUNCTION_PASS_WITH_PARAMS(
+    "instcount", "InstCountPass",
+    [](bool IsPreOptimizations) { 
+      return InstCountPass(IsPreOptimizations); 
+    },
+    parseInstCountOptions, "pre-opt")
 FUNCTION_PASS_WITH_PARAMS(
     "lint", "LintPass",
     [](bool AbortOnError) { return LintPass(AbortOnError); }, parseLintOptions,
