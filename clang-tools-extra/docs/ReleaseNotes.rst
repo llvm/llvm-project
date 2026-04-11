@@ -523,16 +523,16 @@ Changes in existing checks
   `IgnoreMacros` option to suppress warnings when the initializer involves
   macros that may expand differently in other configurations.
 
-- Improved :doc:`readability-redundant-preprocessor
-  <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
-  false positive for nested ``#if`` directives using different builtin
-  expressions such as ``__has_builtin`` and ``__has_cpp_attribute``.
-
 - Improved :doc:`readability-redundant-casting
   <clang-tidy/checks/readability/redundant-casting>` check by fixing a false
   negative where casts were not flagged as redundant when at least one operand
   of a binary operation had the same type as the cast result type. For example,
   ``static_cast<float>(1.0f + 1)`` is now correctly identified as redundant.
+
+- Improved :doc:`readability-redundant-preprocessor
+  <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
+  false positive for nested ``#if`` directives using different builtin
+  expressions such as ``__has_builtin`` and ``__has_cpp_attribute``.
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
