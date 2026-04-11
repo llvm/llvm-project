@@ -20498,6 +20498,10 @@ static bool actOnOMPReductionKindClause(
         (DeclareReductionRef.isUnset() ||
          isa<UnresolvedLookupExpr>(DeclareReductionRef.get()))) {
       RD.push(RefExpr, DeclareReductionRef.get());
+      // Handle non-dependent inscan reduction variables in dependent contexts.
+      if (RD.RedModifier == OMPC_REDUCTION_inscan)
+        Stack->addDSA(D, RefExpr->IgnoreParens(), OMPC_reduction, nullptr,
+                      RD.RedModifier, ASE || OASE);
       continue;
     }
     if (BOK == BO_Comma && DeclareReductionRef.isUnset()) {
@@ -23299,6 +23303,21 @@ static void checkMappableExpressionList(
           << getOpenMPClauseNameForDiag(CKind);
       reportOriginalDsa(SemaRef, DSAS, VD, DVar);
       continue;
+    }
+
+    // OpenMP 6.0 [7.9.6, map Clause, Restrictions, p. 386]
+    // A device-local variable must not appear as a list item in a map clause.
+    if (VD && CKind == OMPC_map) {
+      if (std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+              OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
+        if (*Res == OMPDeclareTargetDeclAttr::MT_Local) {
+          if (NoDiagnose)
+            continue;
+          SemaRef.Diag(ELoc, diag::err_omp_device_local_in_clause)
+              << VD << getOpenMPClauseNameForDiag(CKind);
+          continue;
+        }
+      }
     }
 
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.9]

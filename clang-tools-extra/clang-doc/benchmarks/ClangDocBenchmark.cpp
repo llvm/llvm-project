@@ -50,7 +50,7 @@ private:
 
 static void BM_EmitInfoFunction(benchmark::State &State) {
   std::string Code = "void f() {}";
-  OwnedPtr<clang::ASTUnit> AST = clang::tooling::buildASTFromCode(Code);
+  std::unique_ptr<clang::ASTUnit> AST = clang::tooling::buildASTFromCode(Code);
   const FunctionDecl *Func = nullptr;
   BenchmarkVisitor Visitor(Func);
   Visitor.TraverseDecl(AST->getASTContext().getTranslationUnitDecl());
@@ -83,7 +83,7 @@ static void BM_Mapper_Scale(benchmark::State &State) {
     ClangDocContext CDCtx(&ECtx, "test-project", false, "", "", "", "", "", {},
                           Diags, OutputFormatTy::json, false);
     auto ActionFactory = doc::newMapperActionFactory(CDCtx);
-    OwnedPtr<FrontendAction> Action = ActionFactory->create();
+    std::unique_ptr<FrontendAction> Action = ActionFactory->create();
     tooling::runToolOnCode(std::move(Action), Code, "test.cpp");
   }
 }
@@ -184,9 +184,10 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
   auto NI = allocatePtr<NamespaceInfo>();
   NI->Name = "GlobalNamespace";
   for (int i = 0; i < NumRecords; ++i) {
-    NI->Children.Records.emplace_back(SymbolID{(uint8_t)(i & 0xFF)},
-                                      "Record" + std::to_string(i),
-                                      InfoType::IT_record);
+    Reference *R = new (TransientArena.Allocate<Reference>())
+        Reference(SymbolID{(uint8_t)(i & 0xFF)}, "Record" + std::to_string(i),
+                  InfoType::IT_record);
+    NI->Children.Records.push_back(*R);
   }
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());

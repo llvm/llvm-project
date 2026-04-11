@@ -7592,7 +7592,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
     }
 
-    if (NoNDDM) {
+    if (NoNDDM && !IsTwoAddr) {
       Register SrcReg = MI.getOperand(1).getReg();
       if (MI.killsRegister(SrcReg, /*TRI=*/nullptr))
         return NewMI;
@@ -10810,6 +10810,27 @@ void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
   M.BaseType = X86AddressMode::FrameIndexBase;
   M.Base.FrameIndex = FI;
   M.getFullAddress(Ops);
+}
+
+MachineInstr *
+X86InstrInfo::insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator InsertBefore,
+                                      const GlobalValue *GV) const {
+  MachineFunction &MF = *MBB.getParent();
+  MachineInstr *PrefetchInstr = MF.CreateMachineInstr(
+      get(X86::PREFETCHIT1),
+      InsertBefore == MBB.instr_end() ? MBB.findPrevDebugLoc(InsertBefore)
+                                      : InsertBefore->getDebugLoc(),
+      true);
+  MachineInstrBuilder MIB(MF, PrefetchInstr);
+  MIB.addMemOperand(MF.getMachineMemOperand(MachinePointerInfo(GV),
+                                            MachineMemOperand::MOLoad, /*s=*/8,
+                                            /*base_alignment=*/llvm::Align(1)));
+  MIB.addReg(X86::RIP).addImm(1).addReg(X86::NoRegister);
+  MIB.addGlobalAddress(GV);
+  MIB.addReg(X86::NoRegister);
+  MBB.insert(InsertBefore, PrefetchInstr);
+  return PrefetchInstr;
 }
 
 #define GET_INSTRINFO_HELPERS

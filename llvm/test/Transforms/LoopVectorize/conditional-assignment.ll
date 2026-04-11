@@ -4,36 +4,32 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind ssp uwtable
-define void @conditional_store(ptr noalias nocapture %indices) #0 !dbg !4 {
+define void @conditional_store(ptr noalias nocapture %indices) !dbg !4 {
 entry:
   br label %for.body, !dbg !10
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %indvars.iv, !dbg !12
-  %0 = load i32, ptr %arrayidx, align 4, !dbg !12, !tbaa !14
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !12
   %cmp1 = icmp eq i32 %0, 1024, !dbg !12
   br i1 %cmp1, label %if.then, label %for.inc, !dbg !12
 
-if.then:                                          ; preds = %for.body
-  store i32 0, ptr %arrayidx, align 4, !dbg !18, !tbaa !14
+if.then:
+  store i32 0, ptr %arrayidx, align 4, !dbg !18
   br label %for.inc, !dbg !18
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
   %exitcond = icmp eq i64 %indvars.iv.next, 4096, !dbg !10
   br i1 %exitcond, label %for.end, label %for.body, !dbg !10
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void, !dbg !19
 }
 
-attributes #0 = { nounwind }
-
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
-!llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0", isOptimized: true, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "source.c", directory: ".")
@@ -43,14 +39,9 @@ attributes #0 = { nounwind }
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 2}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
-!9 = !{!"clang version 3.6.0"}
 !10 = !DILocation(line: 2, column: 8, scope: !11)
 !11 = distinct !DILexicalBlock(line: 2, column: 3, file: !1, scope: !4)
 !12 = !DILocation(line: 3, column: 9, scope: !13)
 !13 = distinct !DILexicalBlock(line: 3, column: 9, file: !1, scope: !11)
-!14 = !{!15, !15, i64 0}
-!15 = !{!"int", !16, i64 0}
-!16 = !{!"omnipotent char", !17, i64 0}
-!17 = !{!"Simple C/C++ TBAA"}
 !18 = !DILocation(line: 3, column: 29, scope: !13)
 !19 = !DILocation(line: 4, column: 1, scope: !4)
