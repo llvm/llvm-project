@@ -150,7 +150,7 @@ TEST(IOApiTests, MultilineOutputTest) {
     IONAME(OutputInteger64)(cookie, j);
   }
 
-  // Ensure no errors occured in write operations above
+  // Ensure no errors occurred in write operations above
   const auto status{IONAME(EndIoStatement)(cookie)};
   ASSERT_EQ(status, 0) << "multiline: '" << format << "' failed, status "
                        << static_cast<int>(status);
@@ -184,7 +184,7 @@ TEST(IOApiTests, ListInputTest) {
         << "InputComplex32 failed with value " << z[j];
   }
 
-  // Ensure no IO errors occured during IO operations above
+  // Ensure no IO errors occurred during IO operations above
   auto status{IONAME(EndIoStatement)(cookie)};
   ASSERT_EQ(status, 0) << "Failed complex list-directed input, status "
                        << static_cast<int>(status);
@@ -200,7 +200,7 @@ TEST(IOApiTests, ListInputTest) {
         << z[j + 1];
   }
 
-  // Ensure no IO errors occured during IO operations above
+  // Ensure no IO errors occurred during IO operations above
   status = IONAME(EndIoStatement)(cookie);
   ASSERT_EQ(status, 0) << "Failed complex list-directed output, status "
                        << static_cast<int>(status);
@@ -406,23 +406,23 @@ TEST(IOApiTests, FormatDoubleValues) {
       {// +Inf
           0x7ff0000000000000,
           {
-              {"(E9.1,';')", "      Inf;"},
-              {"(F9.1,';')", "      Inf;"},
-              {"(G9.1,';')", "      Inf;"},
-              {"(EX9.1,';')", "      Inf;"},
-              {"(SP,E9.1,';')", "     +Inf;"},
-              {"(SP,F9.1,';')", "     +Inf;"},
-              {"(SP,G9.1,';')", "     +Inf;"},
-              {"(SP,EX9.1,';')", "     +Inf;"},
+              {"(E9.1,';')", " Infinity;"},
+              {"(F9.1,';')", " Infinity;"},
+              {"(G9.1,';')", " Infinity;"},
+              {"(EX9.1,';')", " Infinity;"},
+              {"(SP,E9.1,';')", "+Infinity;"},
+              {"(SP,F9.1,';')", "+Infinity;"},
+              {"(SP,G9.1,';')", "+Infinity;"},
+              {"(SP,EX9.1,';')", "+Infinity;"},
               {"(G0,';')", "Inf;"},
           }},
       {// -Inf
           0xfff0000000000000,
           {
-              {"(E9.1,';')", "     -Inf;"},
-              {"(F9.1,';')", "     -Inf;"},
-              {"(G9.1,';')", "     -Inf;"},
-              {"(EX9.1,';')", "     -Inf;"},
+              {"(E9.1,';')", "-Infinity;"},
+              {"(F9.1,';')", "-Infinity;"},
+              {"(G9.1,';')", "-Infinity;"},
+              {"(EX9.1,';')", "-Infinity;"},
               {"(G0,';')", "-Inf;"},
           }},
       {// NaN

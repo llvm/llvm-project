@@ -38,8 +38,10 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
@@ -55,7 +57,8 @@ enum InlineStrategy {
 enum LoadScriptFromSymFile {
   eLoadScriptFromSymFileTrue,
   eLoadScriptFromSymFileFalse,
-  eLoadScriptFromSymFileWarn
+  eLoadScriptFromSymFileWarn,
+  eLoadScriptFromSymFileTrusted,
 };
 
 enum LoadCWDlldbinitFile {
@@ -237,6 +240,11 @@ public:
 
   LoadScriptFromSymFile GetLoadScriptFromSymbolFile() const;
 
+  /// Set the target-wide target.load-script-from-symbol-file setting.
+  /// See \c SetAutoLoadScriptsForModule for overriding this setting
+  /// per-module.
+  void SetLoadScriptFromSymbolFile(LoadScriptFromSymFile load_style);
+
   LoadCWDlldbinitFile GetLoadCWDlldbinitFile() const;
 
   Disassembler::HexImmediateStyle GetHexImmediateStyle() const;
@@ -277,6 +285,16 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  std::optional<LoadScriptFromSymFile>
+  GetAutoLoadScriptsForModule(llvm::StringRef module_name) const;
+
+  /// Set the \c LoadScriptFromSymFile for a module called \c module_name
+  /// (excluding file extension). LLDB will prefer this over the target-wide
+  /// target.load-script-from-symbol-file setting
+  /// (see \c SetLoadScriptFromSymbolFile).
+  void SetAutoLoadScriptsForModule(llvm::StringRef module_name,
+                                   LoadScriptFromSymFile load_style);
+
 private:
   std::optional<bool>
   GetExperimentalPropertyValue(size_t prop_idx,
@@ -307,6 +325,8 @@ private:
 
 class EvaluateExpressionOptions {
 public:
+  EvaluateExpressionOptions();
+
 // MSVC has a bug here that reports C4268: 'const' static/global data
 // initialized with compiler generated default constructor fills the object
 // with zeros. Confirmed that MSVC is *not* zero-initializing, it's just a
@@ -322,8 +342,6 @@ public:
 
   static constexpr ExecutionPolicy default_execution_policy =
       eExecutionPolicyOnlyWhenNeeded;
-
-  EvaluateExpressionOptions() = default;
 
   ExecutionPolicy GetExecutionPolicy() const { return m_execution_policy; }
 
@@ -481,7 +499,26 @@ public:
 
   void SetIsForUtilityExpr(bool b) { m_running_utility_expression = b; }
 
+  /// Set language-plugin specific option called \c option_name to
+  /// the specified boolean \c value.
+  llvm::Error SetBooleanLanguageOption(llvm::StringRef option_name, bool value);
+
+  /// Get the language-plugin specific boolean option called \c option_name.
+  ///
+  /// If the option doesn't exist or is not a boolean option, returns false.
+  /// Otherwise returns the boolean value of the option.
+  llvm::Expected<bool>
+  GetBooleanLanguageOption(llvm::StringRef option_name) const;
+
+  void SetCppIgnoreContextQualifiers(bool value);
+
+  bool GetCppIgnoreContextQualifiers() const;
+
 private:
+  const StructuredData::Dictionary &GetLanguageOptions() const;
+
+  StructuredData::Dictionary &GetLanguageOptions();
+
   ExecutionPolicy m_execution_policy = default_execution_policy;
   SourceLanguage m_language;
   std::string m_prefix;
@@ -513,6 +550,10 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  /// Dictionary mapping names of language-plugin specific options
+  /// to values.
+  StructuredData::DictionarySP m_language_options_sp = nullptr;
 
   /// During expression evaluation, any SymbolContext in this list will be
   /// used for symbol/function lookup before any other context (except for
@@ -773,9 +814,15 @@ public:
   void ClearScriptedFrameProviderDescriptors();
 
   /// Get all scripted frame provider descriptors for this target.
-  const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+  const llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor> &
   GetScriptedFrameProviderDescriptors() const;
 
+protected:
+  /// Invalidate all potentially cached frame providers for all threads
+  /// and trigger a stack changed event for all threads.
+  void InvalidateThreadFrameProviders();
+
+public:
   // This part handles the breakpoints.
 
   BreakpointList &GetBreakpointList(bool internal = false);
@@ -1085,10 +1132,9 @@ public:
       LoadDependentFiles load_dependent_files = eLoadDependentsDefault);
 
   bool LoadScriptingResources(std::list<Status> &errors,
-                              Stream &feedback_stream,
                               bool continue_on_error = true) {
-    return m_images.LoadScriptingResourcesInTarget(
-        this, errors, feedback_stream, continue_on_error);
+    return m_images.LoadScriptingResourcesInTarget(this, errors,
+                                                   continue_on_error);
   }
 
   /// Get accessor for the images for this process.
@@ -1776,11 +1822,13 @@ protected:
   TypeSystemMap m_scratch_type_system_map;
 
   /// Map of scripted frame provider descriptors for this target.
-  /// Keys are the provider descriptors ids, values are the descriptors.
-  /// Used to initialize frame providers for new threads.
-  llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor>
+  /// Keys are the provider descriptor IDs, values are the descriptors.
+  /// Insertion order is preserved so that equal-priority providers chain
+  /// in registration order.
+  llvm::MapVector<uint32_t, ScriptedFrameProviderDescriptor>
       m_frame_provider_descriptors;
   mutable std::recursive_mutex m_frame_provider_descriptors_mutex;
+  uint32_t m_next_frame_provider_id = 1;
 
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;
@@ -1812,6 +1860,8 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

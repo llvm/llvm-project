@@ -17,9 +17,9 @@ foo:
 ; CHECK-DIS: file format mach-o 32-bit risc-v
 ; CHECK-DIS: Disassembly of section __TEXT,__text:
 ; CHECK-DIS: nop
-; CHECK-DIS: 002a <unknown>
-; CHECK-DIS: 002a <unknown>
-; CHECK-DIS: 0000 <unknown>
+; CHECK-DIS: 002a 
+; CHECK-DIS: 002a
+; CHECK-DIS: 0000
 
 ; CHECK-SYMS-NOT: Lfoo
 ; CHECK-SYMS: foo

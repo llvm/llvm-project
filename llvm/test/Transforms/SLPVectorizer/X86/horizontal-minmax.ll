@@ -901,15 +901,15 @@ define i32 @maxi8_mutiple_uses2(i32) {
 ; DEFAULT-NEXT:    ret i32 [[TMP17]]
 ;
 ; THRESH-LABEL: @maxi8_mutiple_uses2(
-; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @arr, align 16
-; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
-; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; THRESH-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @arr, align 16
+; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
+; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
 ; THRESH-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], [[TMP4]]
 ; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP3]], i32 [[TMP4]]
-; THRESH-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
+; THRESH-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
 ; THRESH-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], [[TMP7]]
 ; THRESH-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP6]], i32 [[TMP7]]
-; THRESH-NEXT:    [[TMP10:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 3), align 4
+; THRESH-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
 ; THRESH-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[TMP9]], [[TMP10]]
 ; THRESH-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 [[TMP9]], i32 [[TMP10]]
 ; THRESH-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 4), align 16

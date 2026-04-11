@@ -19,6 +19,11 @@
 ORC_RT_C_EXTERN_C_BEGIN
 
 /**
+ * Opaque reference to an error instance. Null serves as the 'success' value.
+ */
+typedef struct orc_rt_OpaqueError *orc_rt_ErrorRef;
+
+/**
  * A reference to an orc_rt::Session instance.
  */
 typedef struct orc_rt_OpaqueSession *orc_rt_SessionRef;

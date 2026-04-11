@@ -12,15 +12,25 @@
 
 /* Transform the elements of "multi" by applying "fn" to them
  * with extra argument "set".
- *
- * The parameters of "multi" and "set" are assumed to have been aligned.
+ * If "multi" has an explicit domain, then apply "fn_domain" or
+ * "fn_params" to this explicit domain instead.
+ * In particular, if the explicit domain is a parameter set,
+ * then apply "fn_params".  Otherwise, apply "fn_domain".
  */
-__isl_give MULTI(BASE) *FN(FN(MULTI(BASE),apply_aligned),APPLY_DOMBASE)(
+static __isl_give MULTI(BASE) *FN(FN(MULTI(BASE),apply),APPLY_DOMBASE)(
 	__isl_take MULTI(BASE) *multi, __isl_take APPLY_DOM *set,
-	__isl_give EL *(*fn)(EL *el, __isl_take APPLY_DOM *set))
+	__isl_give EL *(*fn)(EL *el, __isl_take APPLY_DOM *set),
+	__isl_give DOM *(*fn_domain)(DOM *domain, __isl_take APPLY_DOM *set),
+	__isl_give DOM *(*fn_params)(DOM *domain, __isl_take APPLY_DOM *set))
 {
 	isl_size n;
 	int i;
+
+	FN(FN(MULTI(BASE),align_params),APPLY_DOMBASE)(&multi, &set);
+
+	if (FN(MULTI(BASE),has_explicit_domain)(multi))
+		return FN(FN(MULTI(BASE),apply_domain),APPLY_DOMBASE)(multi,
+						set, fn_domain, fn_params);
 
 	n = FN(MULTI(BASE),size)(multi);
 	if (n < 0 || !set)
@@ -39,41 +49,5 @@ __isl_give MULTI(BASE) *FN(FN(MULTI(BASE),apply_aligned),APPLY_DOMBASE)(
 error:
 	FN(APPLY_DOM,free)(set);
 	FN(MULTI(BASE),free)(multi);
-	return NULL;
-}
-
-/* Transform the elements of "multi" by applying "fn" to them
- * with extra argument "set".
- *
- * Align the parameters if needed and call apply_set_aligned.
- */
-static __isl_give MULTI(BASE) *FN(FN(MULTI(BASE),apply),APPLY_DOMBASE)(
-	__isl_take MULTI(BASE) *multi, __isl_take APPLY_DOM *set,
-	__isl_give EL *(*fn)(EL *el, __isl_take APPLY_DOM *set))
-{
-	isl_bool aligned;
-	isl_ctx *ctx;
-
-	if (!multi || !set)
-		goto error;
-
-	aligned = FN(APPLY_DOM,space_has_equal_params)(set, multi->space);
-	if (aligned < 0)
-		goto error;
-	if (aligned)
-		return FN(FN(MULTI(BASE),apply_aligned),APPLY_DOMBASE)(multi,
-								    set, fn);
-	ctx = FN(MULTI(BASE),get_ctx)(multi);
-	if (!isl_space_has_named_params(multi->space) ||
-	    !isl_space_has_named_params(set->dim))
-		isl_die(ctx, isl_error_invalid,
-			"unaligned unnamed parameters", goto error);
-	multi = FN(MULTI(BASE),align_params)(multi,
-						FN(APPLY_DOM,get_space)(set));
-	set = FN(APPLY_DOM,align_params)(set, FN(MULTI(BASE),get_space)(multi));
-	return FN(FN(MULTI(BASE),apply_aligned),APPLY_DOMBASE)(multi, set, fn);
-error:
-	FN(MULTI(BASE),free)(multi);
-	FN(APPLY_DOM,free)(set);
 	return NULL;
 }

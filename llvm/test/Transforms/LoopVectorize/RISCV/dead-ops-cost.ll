@@ -101,9 +101,6 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP10]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP12]], 16
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 16 x i8> [[WIDE_MASKED_GATHER]], i64 [[TMP11]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -141,7 +138,6 @@ exit:
   ret i8 %r
 }
 
-declare i16 @llvm.umax.i16(i16, i16)
 
 ; Test case for https://github.com/llvm/llvm-project/issues/106780.
 define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) #0 {

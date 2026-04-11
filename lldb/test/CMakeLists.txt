@@ -132,6 +132,11 @@ if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()
 
+if(TARGET darwin-mte-launcher)
+  add_lldb_test_dependency(darwin-mte-launcher)
+  set(LLDB_LAUNCHER ${LLVM_RUNTIME_OUTPUT_INTDIR}/darwin-mte-launcher${CMAKE_EXECUTABLE_SUFFIX})
+endif()
+
 if (LLDB_CAN_USE_LLDB_RPC_SERVER)
   add_lldb_test_dependency(lldb-rpc-generate-sources)
 endif()
@@ -202,7 +207,7 @@ if(TARGET clang)
     else()
       # We require libcxx for the test suite, so if we aren't building it,
       # provide a helpful error about how to resolve the situation.
-      if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS AND NOT LLDB_HAS_LIBCXX)
+      if(NOT LLDB_HAS_LIBCXX)
         message(SEND_ERROR
           "LLDB test suite requires libc++, but it is currently disabled. "
           "Please add `libcxx` to `LLVM_ENABLE_RUNTIMES` or disable tests via "
@@ -245,11 +250,16 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(LLDB_IS_64_BITS 1)
 endif()
 
+if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
+  set(LLDB_USE_ARM64E_DEBUGSERVER ON)
+endif()
+
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
   LLDB_ENABLE_LZMA
@@ -261,7 +271,8 @@ llvm_canonicalize_cmake_booleans(
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS
-  LLDB_BUILD_LLDBRPC)
+  LLDB_BUILD_LLDBRPC
+  LLDB_USE_ARM64E_DEBUGSERVER)
 
 # Configure the individual test suites.
 add_subdirectory(API)

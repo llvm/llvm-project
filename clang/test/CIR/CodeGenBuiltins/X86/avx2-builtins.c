@@ -58,6 +58,48 @@ __m256i test1_mm256_inserti128_si256(__m256i a, __m128i b) {
   return _mm256_inserti128_si256(a, b, 1);
 }
 
+__m256i test_mm256_blend_epi16(__m256i a, __m256i b) {
+  // CIR-LABEL: _mm256_blend_epi16
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<16 x !s16i>) [#cir.int<0> : !s32i, #cir.int<17> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<25> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<16 x !s16i>
+
+  // LLVM-LABEL: test_mm256_blend_epi16
+  // LLVM-NOT: @llvm.x86.avx2.pblendw
+  // LLVM: shufflevector <16 x i16> %{{.*}}, <16 x i16> %{{.*}}, <16 x i32> <i32 0, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 25, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  // OGCG-LABEL: test_mm256_blend_epi16
+  // OGCG-NOT: @llvm.x86.avx2.pblendw
+  // OGCG: shufflevector <16 x i16> %{{.*}}, <16 x i16> %{{.*}}, <16 x i32> <i32 0, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 25, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  return _mm256_blend_epi16(a, b, 2);
+}
+
+__m128i test_mm_blend_epi32(__m128i a, __m128i b) {
+  // CIR-LABEL: _mm_blend_epi32
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>) [#cir.int<4> : !s32i, #cir.int<1> : !s32i, #cir.int<6> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: test_mm_blend_epi32
+  // LLVM-NOT: @llvm.x86.avx2.pblendd.128
+  // LLVM: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+
+  // OGCG-LABEL: test_mm_blend_epi32
+  // OGCG-NOT: @llvm.x86.avx2.pblendd.128
+  // OGCG: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+  return _mm_blend_epi32(a, b, 0x05);
+}
+
+__m256i test_mm256_blend_epi32(__m256i a, __m256i b) {
+  // CIR-LABEL: _mm256_blend_epi32
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !s32i>) [#cir.int<8> : !s32i, #cir.int<1> : !s32i, #cir.int<10> : !s32i, #cir.int<3> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !s32i>
+
+  // LLVM-LABEL: test_mm256_blend_epi32
+  // LLVM-NOT: @llvm.x86.avx2.pblendd.256
+  // LLVM: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 13, i32 6, i32 7>
+
+  // OGCG-LABEL: test_mm256_blend_epi32
+  // OGCG-NOT: @llvm.x86.avx2.pblendd.256
+  // OGCG: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 13, i32 6, i32 7>
+  return _mm256_blend_epi32(a, b, 0x35);
+}
+
 __m256i test_mm256_shufflelo_epi16(__m256i a) {
   // CIR-LABEL: _mm256_shufflelo_epi16
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<16 x !s16i>) [#cir.int<3> : !s32i, #cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<11> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<9> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<16 x !s16i>
@@ -88,9 +130,9 @@ __m256i test_mm256_mul_epu32(__m256i a, __m256i b) {
   // CIR: [[BC_B:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !s64i>
   // CIR: [[MASK_SCALAR:%.*]] = cir.const #cir.int<4294967295> : !s64i
   // CIR: [[MASK_VEC:%.*]] = cir.vec.splat [[MASK_SCALAR]] : !s64i, !cir.vector<4 x !s64i>
-  // CIR: [[AND_A:%.*]] = cir.binop(and, [[BC_A]], [[MASK_VEC]])
-  // CIR: [[AND_B:%.*]] = cir.binop(and, [[BC_B]], [[MASK_VEC]])
-  // CIR: [[MUL:%.*]]   = cir.binop(mul, [[AND_A]], [[AND_B]])
+  // CIR: [[AND_A:%.*]] = cir.and [[BC_A]], [[MASK_VEC]]
+  // CIR: [[AND_B:%.*]] = cir.and [[BC_B]], [[MASK_VEC]]
+  // CIR: [[MUL:%.*]]   = cir.mul [[AND_A]], [[AND_B]]
 
   // LLVM-LABEL: _mm256_mul_epu32
   // LLVM: and <4 x i64> %{{.*}}, splat (i64 4294967295)
@@ -115,7 +157,7 @@ __m256i test_mm256_mul_epi32(__m256i a, __m256i b) {
   // CIR: [[ASHR_A:%.*]] = cir.shift(right, [[SHL_A]] : !cir.vector<4 x !s64i>, [[SV]] : !cir.vector<4 x !s64i>)
   // CIR: [[SHL_B:%.*]]  = cir.shift(left, [[B64]] : !cir.vector<4 x !s64i>, [[SV]] : !cir.vector<4 x !s64i>)
   // CIR: [[ASHR_B:%.*]] = cir.shift(right, [[SHL_B]] : !cir.vector<4 x !s64i>, [[SV]] : !cir.vector<4 x !s64i>)
-  // CIR: [[MUL:%.*]]    = cir.binop(mul, [[ASHR_A]], [[ASHR_B]])
+  // CIR: [[MUL:%.*]]    = cir.mul [[ASHR_A]], [[ASHR_B]]
 
   // LLVM-LABEL: _mm256_mul_epi32
   // LLVM: shl <4 x i64> %{{.*}}, splat (i64 32)

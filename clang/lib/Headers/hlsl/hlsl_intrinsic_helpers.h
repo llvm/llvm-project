@@ -12,42 +12,20 @@
 namespace hlsl {
 namespace __detail {
 
-constexpr int4 d3d_color_to_ubyte4_impl(float4 V) {
-  // Use the same scaling factor used by FXC, and DXC for DXIL
-  // (i.e., 255.001953)
-  // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
-  // The DXC implementation refers to a comment on the following stackoverflow
-  // discussion to justify the scaling factor: "Built-in rounding, necessary
-  // because of truncation. 0.001953 * 256 = 0.5"
-  // https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
-  return V.zyxw * 255.001953f;
+template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+length_impl(T X) {
+  return abs(X);
 }
-
-template <typename T> constexpr T length_impl(T X) { return abs(X); }
 
 template <typename T, int N>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-length_vec_impl(vector<T, N> X) {
+length_impl(vector<T, N> X) {
 #if (__has_builtin(__builtin_spirv_length))
   return __builtin_spirv_length(X);
 #else
   return sqrt(dot(X, X));
 #endif
-}
-
-template <typename T>
-constexpr vector<T, 4> dst_impl(vector<T, 4> Src0, vector<T, 4> Src1) {
-  return {1, Src0[1] * Src1[1], Src0[2], Src1[3]};
-}
-
-template <typename T> constexpr T distance_impl(T X, T Y) {
-  return length_impl(X - Y);
-}
-
-template <typename T, int N>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
-  return length_vec_impl(X - Y);
 }
 
 constexpr float dot2add_impl(half2 a, half2 b, float c) {
@@ -58,12 +36,29 @@ constexpr float dot2add_impl(half2 a, half2 b, float c) {
 #endif
 }
 
-template <typename T> constexpr T reflect_impl(T I, T N) {
+template <typename T, int N>
+constexpr enable_if_t<!is_same<double, T>::value, T>
+mul_vec_impl(vector<T, N> x, vector<T, N> y) {
+  return dot(x, y);
+}
+
+// Double vectors do not have a dot intrinsic, so expand manually.
+template <typename T, int N>
+enable_if_t<is_same<double, T>::value, T> mul_vec_impl(vector<T, N> x,
+                                                       vector<T, N> y) {
+  T sum = x[0] * y[0];
+  [unroll] for (int i = 1; i < N; ++i) sum = mad(x[i], y[i], sum);
+  return sum;
+}
+
+template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+reflect_impl(T I, T N) {
   return I - 2 * N * I * N;
 }
 
 template <typename T, int L>
-constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
+constexpr vector<T, L> reflect_impl(vector<T, L> I, vector<T, L> N) {
 #if (__has_builtin(__builtin_spirv_reflect))
   return __builtin_spirv_reflect(I, N);
 #else
@@ -113,17 +108,6 @@ template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
 #endif
 }
 
-template <typename T, int N>
-constexpr vector<T, N> smoothstep_vec_impl(vector<T, N> Min, vector<T, N> Max,
-                                           vector<T, N> X) {
-#if (__has_builtin(__builtin_spirv_smoothstep))
-  return __builtin_spirv_smoothstep(Min, Max, X);
-#else
-  vector<T, N> S = saturate((X - Min) / (Max - Min));
-  return (3 - 2 * S) * S * S;
-#endif
-}
-
 template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
   bool DiffuseCond = NDotL < 0;
   T Diffuse = select<T>(DiffuseCond, 0, NDotL);
@@ -137,11 +121,7 @@ template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
 }
 
 template <typename T> constexpr T faceforward_impl(T N, T I, T Ng) {
-  return select(dot(I, Ng) < 0, N, -N);
-}
-
-template <typename T> constexpr T ldexp_impl(T X, T Exp) {
-  return exp2(Exp) * X;
+  return select<T>(dot(I, Ng) < 0, N, -N);
 }
 
 template <typename K, typename T, int BitWidth>

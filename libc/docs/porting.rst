@@ -4,10 +4,6 @@
 Bringup on a New OS or Architecture
 =======================================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Building the libc
 =================
 
@@ -53,29 +49,19 @@ architecture.
 The entrypoints.txt file
 ------------------------
 
-One of the important pieces of config information is listed in a file named
-``entrypoints.txt``. This file lists the targets for the entrypoints (see
-:ref:`entrypoints`) you want to include in the static archive of the libc (for
-the :ref:`overlay_mode` and/or the :ref:`full_host_build`.) If you are doing an
-architecture specific bring up, then an ``entrypoints.txt`` file should be
-created in the architecture subdirectory for each architecture. Else, having a
-single ``entrypoints.txt`` in the operating system directory is sufficient.
+The ``entrypoints.txt`` file lists the targets for the entrypoints to be
+included in the build for a specific platform. For more technical details on
+what entrypoints are and how they are registered as targets, see the
+:ref:`entrypoints` documentation.
 
-The Linux config has an ``entrypoint.txt`` for each individual target
-architecture separately: `aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/aarch64>`_,
-`arm32 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/arm>`_ and
-`x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/x86_64>`_. On the
-other hand, the Windows config has a single ``entrypoints.txt``
-`file <https://github.com/llvm/llvm-project/tree/main/libc/config/windows/entrypoints.txt>`_.
+If you are doing an architecture specific bring-up, then an ``entrypoints.txt``
+file should be created in the architecture subdirectory for each architecture.
+Else, having a single ``entrypoints.txt`` in the operating system directory is
+sufficient.
 
-A typical bring up procedure will normally bring up a small group of entrypoints
-at a time. The usual practice is to progressively add the targets for those
-entrypoints to the ``entrypoints.txt`` file as they are being brought up. The
-same is the case if one is implementing a new entrypoint - the target for the
-new entrypoint should be added to the relevant ``entrypoints.txt`` file. If
-the implementation of the new entrypoint supports multiple operating systems and
-target architectures, then multiple ``entrypoints.txt`` files will have to be
-updated.
+A typical bring-up procedure will normally involve progressively adding targets
+to this file as they are implemented and tested.
+
 
 The headers.txt file
 --------------------

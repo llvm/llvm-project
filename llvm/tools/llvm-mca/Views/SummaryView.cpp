@@ -79,7 +79,6 @@ void SummaryView::printView(raw_ostream &OS) const {
   TempStream << "\nBlock RThroughput: "
              << format("%.1f", floor((DV.BlockRThroughput * 10) + 0.5) / 10)
              << '\n';
-  TempStream.flush();
   OS << Buffer;
 }
 

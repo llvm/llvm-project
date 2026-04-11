@@ -80,6 +80,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 
@@ -92,8 +93,6 @@ class DominatorTree;
 class Function;
 class GetElementPtrInst;
 class Instruction;
-class ScalarEvolution;
-class SCEV;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
@@ -114,7 +113,7 @@ private:
   bool doOneIteration(Function &F);
 
   // Reassociates I for better CSE.
-  Instruction *tryReassociate(Instruction *I, const SCEV *&OrigSCEV);
+  Instruction *tryReassociate(Instruction *I, SCEVUse &OrigSCEV);
 
   // Reassociate GEP for better CSE.
   Instruction *tryReassociateGEP(GetElementPtrInst *GEP);
@@ -143,19 +142,18 @@ private:
   Instruction *tryReassociateBinaryOp(Value *LHS, Value *RHS,
                                       BinaryOperator *I);
   // Rewrites I to (LHS op RHS) if LHS is computed already.
-  Instruction *tryReassociatedBinaryOp(const SCEV *LHS, Value *RHS,
+  Instruction *tryReassociatedBinaryOp(SCEVUse LHS, Value *RHS,
                                        BinaryOperator *I);
 
   // Tries to match Op1 and Op2 by using V.
   bool matchTernaryOp(BinaryOperator *I, Value *V, Value *&Op1, Value *&Op2);
 
   // Gets SCEV for (LHS op RHS).
-  const SCEV *getBinarySCEV(BinaryOperator *I, const SCEV *LHS,
-                            const SCEV *RHS);
+  SCEVUse getBinarySCEV(BinaryOperator *I, SCEVUse LHS, SCEVUse RHS);
 
   // Returns the closest dominator of \c Dominatee that computes
   // \c CandidateExpr. Returns null if not found.
-  Instruction *findClosestMatchingDominator(const SCEV *CandidateExpr,
+  Instruction *findClosestMatchingDominator(SCEVUse CandidateExpr,
                                             Instruction *Dominatee);
 
   // Try to match \p I as signed/unsigned Min/Max and reassociate it. \p
@@ -163,8 +161,7 @@ private:
   // done or not. If reassociation was successful newly generated instruction is
   // returned, otherwise nullptr.
   template <typename PredT>
-  Instruction *matchAndReassociateMinOrMax(Instruction *I,
-                                           const SCEV *&OrigSCEV);
+  Instruction *matchAndReassociateMinOrMax(Instruction *I, SCEVUse &OrigSCEV);
 
   // Reassociate Min/Max.
   template <typename MaxMinT>

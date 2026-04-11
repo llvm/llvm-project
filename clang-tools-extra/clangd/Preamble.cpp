@@ -598,13 +598,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       CompilerInstance::createDiagnostics(*VFS, CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics,
                                           /*ShouldOwnClient=*/false);
-  const Config &Cfg = Config::current();
   PreambleDiagnostics.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
-    if (Cfg.Diagnostics.SuppressAll ||
-        isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
-                               CI.getLangOpts()))
-      return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
       // If the preamble doesn't span the whole file, drop the no newline at
@@ -689,7 +684,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
-    Result->StatCache = StatCache;
+    Result->StatCache = std::move(StatCache);
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
     // Move the options instead of copying them. The invocation doesn't need
     // them anymore.

@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -82,8 +83,8 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
   MachineOperand &HighRegOp = HighPartMI->getOperand(0);
   MachineOperand &LowRegOp = LowPartMI->getOperand(0);
   Register Reg128 = LowRegOp.getReg();
-  unsigned Reg128Killed = getKillRegState(LowRegOp.isKill());
-  unsigned Reg128Undef  = getUndefRegState(LowRegOp.isUndef());
+  RegState Reg128Killed = getKillRegState(LowRegOp.isKill());
+  RegState Reg128Undef = getUndefRegState(LowRegOp.isUndef());
   HighRegOp.setReg(RI.getSubReg(HighRegOp.getReg(), SystemZ::subreg_h64));
   LowRegOp.setReg(RI.getSubReg(LowRegOp.getReg(), SystemZ::subreg_l64));
 
@@ -107,7 +108,7 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
     // undefined. We could track liveness and skip storing an undefined
     // subreg, but this is hopefully rare (discovered with llvm-stress).
     // If Reg128 was killed, set kill flag on MI.
-    unsigned Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
+    RegState Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
     MachineInstrBuilder(MF, HighPartMI).addReg(Reg128, Reg128UndefImpl);
     MachineInstrBuilder(MF, LowPartMI).addReg(Reg128, (Reg128UndefImpl | Reg128Killed));
   } else {
@@ -999,6 +1000,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opcode = SystemZ::LDR;
   else if (SystemZ::FP128BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::LXR;
+  else if (SystemZ::VR16BitRegClass.contains(DestReg, SrcReg))
+    Opcode = SystemZ::VLR16;
   else if (SystemZ::VR32BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::VLR32;
   else if (SystemZ::VR64BitRegClass.contains(DestReg, SrcReg))
@@ -1590,17 +1593,15 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
 
   // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
   if (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
-    assert(LoadMI.getParent() == MI.getParent() && "Assuming a local fold.");
-    assert(LoadMI != InsertPt && "Assuming InsertPt not to be first in MBB.");
-    for (MachineBasicBlock::iterator MII = std::prev(InsertPt);;
-         --MII) {
-      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
-        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
+    for (MachineBasicBlock::iterator MII = InsertPt;;) {
+      if (MII == MBB->begin()) {
+        if (MBB->isLiveIn(SystemZ::CC))
           return nullptr;
         break;
       }
-      if (MII == MBB->begin()) {
-        if (MBB->isLiveIn(SystemZ::CC))
+      --MII;
+      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
+        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
           return nullptr;
         break;
       }
@@ -2158,6 +2159,28 @@ unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
   return 0;
 }
 
+bool SystemZInstrInfo::isLoadAndTestAsCmp(const MachineInstr &MI) const {
+  // If we during isel used a load-and-test as a compare with 0, the
+  // def operand is dead.
+  return (MI.getOpcode() == SystemZ::LTEBR ||
+          MI.getOpcode() == SystemZ::LTDBR ||
+          MI.getOpcode() == SystemZ::LTXBR) &&
+         MI.getOperand(0).isDead();
+}
+
+bool SystemZInstrInfo::isCompareZero(const MachineInstr &Compare) const {
+  if (isLoadAndTestAsCmp(Compare))
+    return true;
+  return Compare.isCompare() && Compare.getNumExplicitOperands() == 2 &&
+         Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
+}
+
+Register
+SystemZInstrInfo::getCompareSourceReg(const MachineInstr &Compare) const {
+  assert(isCompareZero(Compare) && "Expected a compare with 0.");
+  return Compare.getOperand(isLoadAndTestAsCmp(Compare) ? 1 : 0).getReg();
+}
+
 bool SystemZInstrInfo::
 prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
   assert(MBBI->isCompare() && MBBI->getOperand(0).isReg() &&
@@ -2375,4 +2398,8 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
       {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
   return ArrayRef(TargetFlags);
+}
+
+MCInst SystemZInstrInfo::getNop() const {
+  return MCInstBuilder(SystemZ::NOPR).addReg(0);
 }

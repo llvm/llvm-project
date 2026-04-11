@@ -420,91 +420,96 @@ llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
   if (!IsOutOfProcess)
     return llvm::Error::success();
 
-  static constexpr std::array<const char *, 3> OrcRTLibNames = {
-      "liborc_rt.a",
-      "liborc_rt_osx.a",
-      "liborc_rt-x86_64.a",
-  };
+  const clang::driver::Driver &D = C.getDriver();
+  const clang::driver::ToolChain &TC = C.getDefaultToolChain();
 
-  auto findInDir = [&](llvm::StringRef Base) -> std::optional<std::string> {
-    if (Base.empty() || !llvm::sys::fs::exists(Base))
-      return std::nullopt;
-    for (const char *LibName : OrcRTLibNames) {
-      llvm::SmallString<256> Candidate(Base);
-      llvm::sys::path::append(Candidate, LibName);
-      if (llvm::sys::fs::exists(Candidate))
-        return std::string(Candidate.str());
+  llvm::SmallVector<std::string, 2> OrcRTLibNames;
+
+  // Get canonical compiler-rt path
+  std::string CompilerRTPath = TC.getCompilerRT(C.getArgs(), "orc_rt");
+  llvm::StringRef CanonicalFilename = llvm::sys::path::filename(CompilerRTPath);
+
+  if (CanonicalFilename.empty()) {
+    return llvm::make_error<llvm::StringError>(
+        "Could not determine OrcRuntime filename from ToolChain",
+        llvm::inconvertibleErrorCode());
+  }
+
+  OrcRTLibNames.push_back(CanonicalFilename.str());
+
+  // Derive legacy spelling (libclang_rt.orc_rt -> orc_rt)
+  llvm::StringRef LegacySuffix = CanonicalFilename;
+  if (LegacySuffix.consume_front("libclang_rt.")) {
+    OrcRTLibNames.push_back(("lib" + LegacySuffix).str());
+  }
+
+  // Extract directory
+  llvm::SmallString<256> OrcRTDir(CompilerRTPath);
+  llvm::sys::path::remove_filename(OrcRTDir);
+
+  llvm::SmallVector<std::string, 8> triedPaths;
+
+  auto findInDir = [&](llvm::StringRef Dir) -> std::optional<std::string> {
+    for (const auto &LibName : OrcRTLibNames) {
+      llvm::SmallString<256> FullPath = Dir;
+      llvm::sys::path::append(FullPath, LibName);
+      if (llvm::sys::fs::exists(FullPath))
+        return std::string(FullPath.str());
+      triedPaths.push_back(std::string(FullPath.str()));
     }
     return std::nullopt;
   };
 
-  const clang::driver::Driver &D = C.getDriver();
-  const clang::driver::ToolChain &TC = C.getDefaultToolChain();
-  llvm::SmallVector<std::string, 8> triedPaths;
-
-  llvm::SmallString<256> Resource(D.ResourceDir);
-  if (llvm::sys::fs::exists(Resource)) {
-    // Ask the ToolChain for its runtime paths first (most authoritative).
-    for (auto RuntimePath :
-         {TC.getRuntimePath(), std::make_optional(TC.getCompilerRTPath())}) {
-      if (RuntimePath) {
-        if (auto Found = findInDir(*RuntimePath)) {
-          OrcRuntimePath = *Found;
-          return llvm::Error::success();
-        }
-        triedPaths.emplace_back(*RuntimePath);
-      }
-    }
-
-    // Check ResourceDir and ResourceDir/lib
-    for (auto P : {Resource.str().str(), (Resource + "/lib").str()}) {
-      if (auto F = findInDir(P)) {
-        OrcRuntimePath = *F;
-        return llvm::Error::success();
-      }
-      triedPaths.emplace_back(P);
-    }
-  } else {
-    // The binary was misplaced. Generic Backward Search (Climbing the tree)
-    // This allows unit tests in tools/clang/unittests to find the real lib/
-    llvm::SmallString<256> Cursor = Resource;
-    // ResourceDir-derived locations
-    llvm::StringRef Version = llvm::sys::path::filename(Resource);
-    llvm::StringRef OSName = TC.getOSLibName();
-    while (llvm::sys::path::has_parent_path(Cursor)) {
-      Cursor = llvm::sys::path::parent_path(Cursor).str();
-      // At each level, try standard relative layouts
-      for (auto Rel :
-           {(llvm::Twine("lib/clang/") + Version + "/lib/" + OSName).str(),
-            (llvm::Twine("lib/clang/") + Version + "/lib").str(),
-            (llvm::Twine("lib/") + OSName).str(), std::string("lib/clang")}) {
-        llvm::SmallString<256> Candidate = Cursor;
-        llvm::sys::path::append(Candidate, Rel);
-        if (auto F = findInDir(Candidate)) {
-          OrcRuntimePath = *F;
-          return llvm::Error::success();
-        }
-        triedPaths.emplace_back(std::string(Candidate.str()));
-      }
-      // Stop if we hit the root or go too far (safety check)
-      if (triedPaths.size() > 32)
-        break;
-    }
+  // Try the primary directory first
+  if (auto Found = findInDir(OrcRTDir)) {
+    OrcRuntimePath = *Found;
+    return llvm::Error::success();
   }
 
-  // Build a helpful error string if everything failed.
+  // We want to find the relative path from the Driver to the OrcRTDir
+  // to replicate that structure elsewhere if needed.
+  llvm::StringRef Rel = OrcRTDir.str();
+  if (!Rel.consume_front(llvm::sys::path::parent_path(D.Dir))) {
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("OrcRuntime library path ({0}) is not located within the "
+                      "Clang resource directory ({1}). Check your installation "
+                      "or provide an explicit path via -resource-dir.",
+                      OrcRTDir, D.Dir)
+            .str(),
+        llvm::inconvertibleErrorCode());
+  }
+
+  // Generic Backward Search (Climbing the tree)
+  // This is useful for unit tests or relocated toolchains
+  llvm::SmallString<256> Cursor(D.Dir); // Start from the driver directory
+  while (llvm::sys::path::has_parent_path(Cursor)) {
+    Cursor = llvm::sys::path::parent_path(Cursor).str();
+    llvm::SmallString<256> Candidate = Cursor;
+    llvm::sys::path::append(Candidate, Rel);
+
+    if (auto Found = findInDir(Candidate)) {
+      OrcRuntimePath = *Found;
+      return llvm::Error::success();
+    }
+
+    // Safety check
+    if (triedPaths.size() > 32)
+      break;
+  }
+
+  // Build a helpful error string
   std::string Joined;
   for (size_t i = 0; i < triedPaths.size(); ++i) {
-    if (i)
-      Joined += ", ";
+    if (i > 0)
+      Joined += "\n  ";
     Joined += triedPaths[i];
   }
-  if (Joined.empty())
-    Joined = "<no candidate paths available>";
 
   return llvm::make_error<llvm::StringError>(
-      llvm::formatv("OrcRuntime library not found in: {0}", Joined).str(),
-      llvm::inconvertibleErrorCode());
+      llvm::formatv("OrcRuntime library not found. Checked:  {0}",
+                    Joined.empty() ? "<none>" : Joined)
+          .str(),
+      std::make_error_code(std::errc::no_such_file_or_directory));
 }
 
 } // end namespace clang

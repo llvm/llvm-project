@@ -1,0 +1,540 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+
+// Test basic cleanup scope flattening with normal cleanup.
+// The body yields to cleanup, cleanup yields to continue.
+cir.func @test_normal_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_normal_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+// Test that a single return from the cleanup body branches through the cleanup.
+cir.func @test_return_from_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.return // Should branch through cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_return_from_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.return
+// CHECK:       ^[[UNREACHABLE_NORMAL_RETURN:bb[0-9]+]]
+// CHECK:         cir.return
+
+// Test that a single return from the cleanup body branches through the cleanup.
+cir.func @test_return_from_cleanup_with_operand() -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    %1 = cir.const #cir.int<-1> : !s32i
+    cir.return %1 : !s32i // Should branch through cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %2 = cir.const #cir.int<0> : !s32i
+  cir.return %2 : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_return_from_cleanup_with_operand()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK:         cir.return %[[MINUS_ONE]] : !s32i
+// CHECK:       ^[[UNREACHABLE_NORMAL_RETURN:bb[0-9]+]]
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]] : !s32i
+
+// Test that a continue statement in a cleanup scope branches through the
+// cleanup block before continuing the loop.
+cir.func @test_continue_in_cleanup_in_loop() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.while {
+    %cond = cir.call @shouldContinue() : () -> !cir.bool
+    cir.condition(%cond)
+  } do {
+    %cont = cir.call @shouldContinue() : () -> !cir.bool
+    cir.brcond %cont ^bb_continue, ^bb_normal
+  ^bb_continue:
+    cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      cir.continue  // Branches through cleanup
+    } cleanup normal {
+      cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.br ^bb_normal
+  ^bb_normal:
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_continue_in_cleanup_in_loop()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[COND1:.*]] = cir.call @shouldContinue() : () -> !cir.bool
+// CHECK:         cir.brcond %[[COND1]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         %[[COND2:.*]] = cir.call @shouldContinue() : () -> !cir.bool
+// CHECK:         cir.brcond %[[COND2]] ^[[CONTINUE_PATH:bb[0-9]+]], ^[[NORMAL_PATH:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE_PATH]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[NORMAL_PATH]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
+
+// Test that a break statement in a cleanup scope branches through the
+// cleanup block before breaking out of the loop.
+cir.func @test_break_in_cleanup_in_loop() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.while {
+    %cond = cir.call @shouldContinue() : () -> !cir.bool
+    cir.condition(%cond)
+  } do {
+    %cont = cir.call @shouldContinue() : () -> !cir.bool
+    cir.brcond %cont ^bb_continue, ^bb_normal
+  ^bb_continue:
+    cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      cir.break  // Branches through cleanup
+    } cleanup normal {
+      cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.br ^bb_normal
+  ^bb_normal:
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_break_in_cleanup_in_loop()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[COND1:.*]] = cir.call @shouldContinue() : () -> !cir.bool
+// CHECK:         cir.brcond %[[COND1]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         %[[COND2:.*]] = cir.call @shouldContinue() : () -> !cir.bool
+// CHECK:         cir.brcond %[[COND2]] ^[[CONTINUE_PATH:bb[0-9]+]], ^[[NORMAL_PATH:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE_PATH]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.br ^[[LOOP_EXIT]]
+// CHECK:       ^[[NORMAL_PATH]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.return
+
+// Test nested cleanup scopes.
+cir.func @test_nested_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_nested_cleanup()
+// CHECK:         %[[ALLOCA1:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[ALLOCA2:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA1]])
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA2]])
+// CHECK:         cir.br ^[[AFTER_INNER:bb[0-9]+]]
+// CHECK:       ^[[AFTER_INNER]]:
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA1]])
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+// Test a switch within a cleanup scope where the switch does not branch
+// through the cleanup.
+cir.func @test_normal_cleanup_with_switch() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    %1 = cir.call @get() : () -> !s32i
+    cir.switch (%1 : !s32i) {
+      cir.case (equal, [#cir.int<1> : !s32i]) {
+        cir.break  // Break from switch -- no cleanup exit
+      }
+      cir.case (equal, [#cir.int<2> : !s32i]) {
+        cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+        cir.break  // Break from switch -- no cleanup exit
+      }
+      cir.yield // Yield from switch -- no cleanup exit
+    }
+    cir.yield  // Normal exit through cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_normal_cleanup_with_switch()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[X:.*]] = cir.call @get() : () -> !s32i
+// CHECK:         cir.br ^[[SWITCH:bb[0-9]+]]
+// CHECK:       ^[[SWITCH]]:
+// CHECK:         cir.switch.flat %[[X]] : !s32i, ^bb6 [
+// CHECK:           1: ^[[BREAK:bb[0-9]+]],
+// CHECK:           2: ^[[CALL:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[FALLTHROUGH:bb[0-9]+]]:
+// CHECK:         cir.br ^[[BREAK]]
+// CHECK:       ^[[BREAK]]:
+// CHECK:         cir.br ^[[SWITCH_END:bb[0-9]+]]
+// CHECK:       ^[[CALL]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA]])
+// CHECK:         cir.br ^[[SWITCH_END]]
+// CHECK:       ^[[SWITCH_END]]:
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DONE:bb[0-9]+]]
+// CHECK:       ^[[DONE]]:
+// CHECK:         cir.return
+
+// Test a loop within a cleanup scope where the loop's break and continue are
+// handled by the loop itself, so only the yield after the loop exits through
+// the cleanup.
+cir.func @test_loop_in_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.while {
+      %cond = cir.call @shouldContinue() : () -> !cir.bool
+      cir.condition(%cond)
+    } do {
+      %brk = cir.call @shouldBreak() : () -> !cir.bool
+      cir.brcond %brk ^bb_break, ^bb_continue
+    ^bb_break:
+      cir.break     // Break from loop - handled by loop, no cleanup exit
+    ^bb_continue:
+      cir.continue  // Continue loop - handled by loop, no cleanup exit
+    }
+    cir.yield  // Normal exit through cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_loop_in_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[LOOP_BEGIN:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BEGIN]]:
+// CHECK:         cir.br ^[[COND:bb[0-9]+]]
+// CHECK:       ^[[COND]]:
+// CHECK:         %[[SHOULDCONT:.*]] = cir.call @shouldContinue
+// CHECK:         cir.brcond %[[SHOULDCONT]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         %[[SHOULDBRK:.*]] = cir.call @shouldBreak
+// CHECK:         cir.brcond %[[SHOULDBRK]] ^[[BREAK:bb[0-9]+]], ^[[CONT:bb[0-9]+]]
+// CHECK:       ^[[BREAK]]:
+// CHECK:         cir.br ^[[LOOP_EXIT]]
+// CHECK:       ^[[CONT]]:
+// CHECK:         cir.br ^[[COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DONE:bb[0-9]+]]
+// CHECK:       ^[[DONE]]:
+// CHECK:         cir.return
+
+// Test a switch within a loop within a cleanup scope. The switch's break is
+// handled by the switch, the loop's break/continue are handled by the loop,
+// so only the yield exits through cleanup.
+cir.func @test_switch_in_loop_in_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.while {
+      %cond = cir.call @shouldContinue() : () -> !cir.bool
+      cir.condition(%cond)
+    } do {
+      %x = cir.call @get() : () -> !s32i
+      cir.switch (%x : !s32i) {
+        cir.case (equal, [#cir.int<1> : !s32i]) {
+          cir.break     // Break from switch - handled by switch
+        }
+        cir.case (equal, [#cir.int<2> : !s32i]) {
+          cir.continue  // Continue outer loop - handled by loop
+        }
+        cir.yield
+      }
+      cir.yield  // Yield from loop body
+    }
+    cir.yield  // Normal exit through cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_switch_in_loop_in_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[LOOP_BEGIN:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BEGIN]]:
+// CHECK:         cir.br ^[[COND:bb[0-9]+]]
+// CHECK:       ^[[COND]]:
+// CHECK:         %[[SHOULDCONT:.*]] = cir.call @shouldContinue
+// CHECK:         cir.brcond %[[SHOULDCONT]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         %[[X:.*]] = cir.call @get() : () -> !s32i
+// CHECK:         cir.br ^[[SWITCH_BEGIN:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_BEGIN]]:
+// CHECK:         cir.switch.flat %[[X]] : !s32i, ^[[FALLTHROUGH:bb[0-9]+]] [
+// CHECK:           1: ^[[SWITCH_BREAK:bb[0-9]+]],
+// CHECK:           2: ^[[SWITCH_CONTINUE:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[SWITCH_BREAK]]:
+// CHECK:         cir.br ^[[FALLTHROUGH]]
+// CHECK:       ^[[SWITCH_CONTINUE]]:
+// CHECK:         cir.br ^[[COND]]
+// CHECK:       ^[[FALLTHROUGH]]:
+// CHECK:         cir.br ^[[COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DONE:bb[0-9]+]]
+// CHECK:       ^[[DONE]]:
+// CHECK:         cir.return
+
+// Test a loop within a switch within a cleanup scope. The loop's break/continue
+// are handled by the loop, the switch's break exits the switch, so only the
+// yield exits through cleanup.
+cir.func @test_loop_in_switch_in_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    %x = cir.call @get() : () -> !s32i
+    cir.switch (%x : !s32i) {
+      cir.case (equal, [#cir.int<1> : !s32i]) {
+        cir.while {
+          %cond = cir.call @shouldContinue() : () -> !cir.bool
+          cir.condition(%cond)
+        } do {
+          %brk = cir.call @shouldBreak() : () -> !cir.bool
+          cir.brcond %brk ^bb_break, ^bb_continue
+        ^bb_break:
+          cir.break     // Break from loop - handled by loop
+        ^bb_continue:
+          cir.continue  // Continue loop - handled by loop
+        }
+        cir.break  // Break from switch - handled by switch
+      }
+      cir.yield
+    }
+    cir.yield  // Normal exit through cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_loop_in_switch_in_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[X:.*]] = cir.call @get() : () -> !s32i
+// CHECK:         cir.br ^[[SWITCH_BEGIN:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_BEGIN]]:
+// CHECK:         cir.switch.flat %[[X]] : !s32i, ^[[SWITCH_END:bb[0-9]+]] [
+// CHECK:           1: ^[[CASE1:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[FALLTHROUGH:bb[0-9]+]]:
+// CHECK:         cir.br ^[[CASE1]]
+// CHECK:       ^[[CASE1]]:
+// CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
+// CHECK:       ^[[LOOP_COND]]:
+// CHECK:         %[[SHOULDCONT:.*]] = cir.call @shouldContinue() : () -> !cir.bool
+// CHECK:         cir.brcond %[[SHOULDCONT]] ^[[LOOP_BODY:bb[0-9]+]], ^[[LOOP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[LOOP_BODY]]:
+// CHECK:         %[[SHOULDBRK:.*]] = cir.call @shouldBreak() : () -> !cir.bool
+// CHECK:         cir.brcond %[[SHOULDBRK]] ^[[BREAK:bb[0-9]+]], ^[[CONT:bb[0-9]+]]
+// CHECK:       ^[[BREAK]]:
+// CHECK:         cir.br ^[[LOOP_EXIT]]
+// CHECK:       ^[[CONT]]:
+// CHECK:         cir.br ^[[LOOP_COND]]
+// CHECK:       ^[[LOOP_EXIT]]:
+// CHECK:         cir.br ^[[SWITCH_END]]
+// CHECK:       ^[[SWITCH_END]]:
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DONE:bb[0-9]+]]
+// CHECK:       ^[[DONE]]:
+// CHECK:         cir.return
+
+// Test a cleanup scope containing a switch which contains a nested cleanup
+// scope with a break. The break is handled by the switch, so the outer cleanup
+// has only one exit (yield) and should flatten successfully.
+cir.func @test_nested_cleanup_break_in_switch() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    %x = cir.call @get() : () -> !s32i
+    cir.switch (%x : !s32i) {
+      cir.case (equal, [#cir.int<1> : !s32i]) {
+        cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+        cir.cleanup.scope {
+          cir.call @doSomething(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+          cir.break  // Branch through inner cleanup, but not outer cleanup
+        } cleanup normal {
+          cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+          cir.yield
+        }
+        cir.break
+      }
+      cir.yield
+    }
+    cir.yield  // Only exit from outer cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_nested_cleanup_break_in_switch()
+// CHECK:         %[[ALLOCA1:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[ALLOCA2:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA1]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[X:.*]] = cir.call @get() : () -> !s32i
+// CHECK:         cir.br ^[[SWITCH_BEGIN:bb[0-9]+]]
+// CHECK:       ^[[SWITCH_BEGIN]]:
+// CHECK:         cir.switch.flat %[[X]] : !s32i, ^[[SWITCH_END:bb[0-9]+]] [
+// CHECK:           1: ^[[CASE1:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[CASE1]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA2]])
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA2]])
+// CHECK:         cir.br ^[[EXIT_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[EXIT_CLEANUP]]:
+// CHECK:         cir.br ^[[SWITCH_END]]
+// CHECK:       ^[[SWITCH_END]]:
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA1]])
+// CHECK:         cir.br ^[[OUTER_CLEANUP_DONE:bb[0-9]+]]
+// CHECK:       ^[[OUTER_CLEANUP_DONE]]:
+// CHECK:         cir.br ^[[DONE:bb[0-9]+]]
+// CHECK:       ^[[DONE]]:
+// CHECK:         cir.return
+
+cir.func private @get() -> !s32i
+cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)
+cir.func private @shouldBreak() -> !cir.bool
+cir.func private @shouldContinue() -> !cir.bool

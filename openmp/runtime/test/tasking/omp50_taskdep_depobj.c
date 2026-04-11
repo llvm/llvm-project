@@ -1,4 +1,4 @@
-// RUN: %clang %openmp_flags %flags-use-compiler-omp-h %s -o %t && %libomp-run
+// RUN: %clang %openmp_flags %flags %s -o %t && %libomp-run
 // UNSUPPORTED: gcc-5, gcc-6, gcc-7, gcc-8
 // UNSUPPORTED: clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
 // UNSUPPORTED: icc

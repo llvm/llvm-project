@@ -1,5 +1,5 @@
 // RUN: %clang %cflags -march=armv8.3-a %s -o %t.exe -Wl,--emit-relocs
-// RUN: llvm-bolt-binary-analysis --scanners=pauth %t.exe 2>&1 | FileCheck %s
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all %t.exe 2>&1 | FileCheck %s
 
         .text
 

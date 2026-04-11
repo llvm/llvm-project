@@ -13,6 +13,9 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
+#include <optional>
+#include <string>
+
 namespace clang {
 namespace driver {
 namespace tools {
@@ -99,8 +102,12 @@ public:
   std::string getHexagonTargetDir(
       const std::string &InstalledDir,
       const SmallVectorImpl<std::string> &PrefixDirs) const;
+  SmallString<128> getEffectiveSysRoot() const;
+  void getBaseIncludeDir(llvm::SmallString<128> &) const;
+  void getLibraryDir(const llvm::opt::ArgList &Args,
+                     llvm::SmallString<128> &) const;
   void getHexagonLibraryPaths(const llvm::opt::ArgList &Args,
-      ToolChain::path_list &LibPaths) const;
+                              ToolChain::path_list &LibPaths) const;
 
   std::string getCompilerRTPath() const override;
 
@@ -110,6 +117,8 @@ public:
 
   static std::optional<unsigned>
   getSmallDataThreshold(const llvm::opt::ArgList &Args);
+  static std::optional<std::string>
+  GetHVXVersion(const llvm::opt::ArgList &Args);
 };
 
 } // end namespace toolchains

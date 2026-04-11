@@ -22,6 +22,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -73,14 +74,15 @@ class MachineInstr
 public:
   using mmo_iterator = ArrayRef<MachineMemOperand *>::iterator;
 
+  using AsmPrinterFlagTy = uint8_t;
+
   /// Flags to specify different kinds of comments to output in
   /// assembly code.  These flags carry semantic information not
   /// otherwise easily derivable from the IR text.
-  ///
-  enum CommentFlag {
-    ReloadReuse = 0x1,    // higher bits are reserved for target dep comments.
+  enum CommentFlag : AsmPrinterFlagTy {
+    ReloadReuse = 0x1, // higher bits are reserved for target dep comments.
     NoSchedComment = 0x2,
-    TAsmComments = 0x4    // Target Asm comments should start from this value.
+    TAsmComments = 0x4 // Target Asm comments should start from this value.
   };
 
   enum MIFlag {
@@ -136,7 +138,7 @@ private:
   MachineOperand *Operands = nullptr;   // Pointer to the first operand.
 
 #define LLVM_MI_NUMOPERANDS_BITS 24
-#define LLVM_MI_FLAGS_BITS 24
+#define LLVM_MI_FLAGS_BITS 32
 #define LLVM_MI_ASMPRINTERFLAGS_BITS 8
 
   /// Number of operands on instruction.
@@ -148,12 +150,19 @@ private:
   OperandCapacity CapOperands;          // Capacity of the Operands array.
 
   /// Various bits of additional information about the machine instruction.
-  uint32_t Flags : LLVM_MI_FLAGS_BITS;
+  uint32_t Flags;
 
   /// Various bits of information used by the AsmPrinter to emit helpful
   /// comments.  This is *not* semantic information.  Do not use this for
   /// anything other than to convey comment information to AsmPrinter.
-  uint32_t AsmPrinterFlags : LLVM_MI_ASMPRINTERFLAGS_BITS;
+  AsmPrinterFlagTy AsmPrinterFlags;
+
+  /// Cached opcode from MCID.
+  uint32_t Opcode;
+
+  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
+  /// defined by this instruction.
+  unsigned DebugInstrNum;
 
   /// Internal implementation detail class that provides out-of-line storage for
   /// extra info used by the machine instruction when this info cannot be stored
@@ -318,13 +327,6 @@ private:
 
   DebugLoc DbgLoc; // Source line information.
 
-  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
-  /// defined by this instruction.
-  unsigned DebugInstrNum;
-
-  /// Cached opcode from MCID.
-  uint16_t Opcode;
-
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
   friend struct ilist_callback_traits<MachineBasicBlock>;
@@ -386,28 +388,28 @@ public:
   }
 
   /// Return the asm printer flags bitvector.
-  uint8_t getAsmPrinterFlags() const { return AsmPrinterFlags; }
+  AsmPrinterFlagTy getAsmPrinterFlags() const { return AsmPrinterFlags; }
 
   /// Clear the AsmPrinter bitvector.
   void clearAsmPrinterFlags() { AsmPrinterFlags = 0; }
 
   /// Return whether an AsmPrinter flag is set.
-  bool getAsmPrinterFlag(CommentFlag Flag) const {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  bool getAsmPrinterFlag(AsmPrinterFlagTy Flag) const {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     return AsmPrinterFlags & Flag;
   }
 
   /// Set a flag for the AsmPrinter.
-  void setAsmPrinterFlag(uint8_t Flag) {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  void setAsmPrinterFlag(AsmPrinterFlagTy Flag) {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags |= Flag;
   }
 
   /// Clear specific AsmPrinter flags.
-  void clearAsmPrinterFlag(CommentFlag Flag) {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  void clearAsmPrinterFlag(AsmPrinterFlagTy Flag) {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags &= ~Flag;
   }
@@ -672,7 +674,7 @@ public:
       return true;
     if (isRegSequence() && OpIdx > 1 && (OpIdx % 2) == 0)
       return true;
-    if (isSubregToReg() && OpIdx == 3)
+    if (isSubregToReg() && OpIdx == 2)
       return true;
     return false;
   }
@@ -1329,7 +1331,10 @@ public:
   /// If this instruction is the header of a bundle, the whole bundle is erased.
   /// This function can not be used for instructions inside a bundle, use
   /// eraseFromBundle() to erase individual bundled instructions.
-  LLVM_ABI void eraseFromParent();
+  /// \returns the iterator following the erased instruction. If this is the
+  /// header of a bundle it returns the iterator following the erased bundle
+  /// iterator.
+  LLVM_ABI MachineInstrBundleIterator<MachineInstr> eraseFromParent();
 
   /// Unlink 'this' from its basic block and delete it.
   ///

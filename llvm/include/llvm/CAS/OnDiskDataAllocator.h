@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CAS/FileOffset.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm::cas {
@@ -74,6 +75,7 @@ public:
   create(const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
          std::optional<uint64_t> NewFileInitialSize,
          uint32_t UserHeaderSize = 0,
+         std::shared_ptr<ondisk::OnDiskCASLogger> Logger = nullptr,
          function_ref<void(void *)> UserHeaderInit = nullptr);
 
   LLVM_ABI_FOR_TEST OnDiskDataAllocator(OnDiskDataAllocator &&RHS);

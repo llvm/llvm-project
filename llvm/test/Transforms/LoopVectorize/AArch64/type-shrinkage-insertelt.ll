@@ -13,18 +13,17 @@ define void @test0(ptr noalias %M3, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[WIDE_LOAD]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
@@ -55,7 +54,7 @@ define void @test0(ptr noalias %M3, ptr noalias %A, ptr noalias %B) {
 entry:
   br label %if.then1165.us
 
-if.then1165.us:                                   ; preds = %if.then1165.us, %entry
+if.then1165.us:
   %indvars.iv1783 = phi i64 [ 0, %entry ], [ %indvars.iv.next1784, %if.then1165.us ]
   %gep.A  = getelementptr inbounds i16, ptr %A, i64 %indvars.iv1783
   %l.A = load i16, ptr %gep.A
@@ -71,7 +70,7 @@ if.then1165.us:                                   ; preds = %if.then1165.us, %en
   %exitcond1785 = icmp eq i64 %indvars.iv.next1784, 16
   br i1 %exitcond1785, label %for.inc1286.loopexit, label %if.then1165.us
 
-for.inc1286.loopexit:                             ; preds = %if.then1165.us
+for.inc1286.loopexit:
   ret void
 }
 
@@ -84,14 +83,13 @@ define void @test1(ptr noalias %M3, ptr noalias %A, ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[WIDE_LOAD]], [[TMP6]]
@@ -99,7 +97,7 @@ define void @test1(ptr noalias %M3, ptr noalias %A, ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i16> [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP7]], i32 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i16> [[TMP7]], i32 3
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
@@ -130,7 +128,7 @@ define void @test1(ptr noalias %M3, ptr noalias %A, ptr noalias %B, ptr noalias 
 entry:
   br label %if.then1165.us
 
-if.then1165.us:                                   ; preds = %if.then1165.us, %entry
+if.then1165.us:
   %indvars.iv1783 = phi i64 [ 0, %entry ], [ %indvars.iv.next1784, %if.then1165.us ]
   %fptr = load i32, ptr %C, align 4
   %gep.A  = getelementptr inbounds i16, ptr %A, i64 %indvars.iv1783
@@ -147,6 +145,6 @@ if.then1165.us:                                   ; preds = %if.then1165.us, %en
   %exitcond1785 = icmp eq i64 %indvars.iv.next1784, 16
   br i1 %exitcond1785, label %for.inc1286.loopexit, label %if.then1165.us
 
-for.inc1286.loopexit:                             ; preds = %if.then1165.us
+for.inc1286.loopexit:
   ret void
 }

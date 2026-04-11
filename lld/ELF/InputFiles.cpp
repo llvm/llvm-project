@@ -1628,7 +1628,8 @@ template <class ELFT> void SharedFile::parse() {
   // --as-needed, --no-as-needed takes precedence over --as-needed because a
   // user can add an extra DSO with --no-as-needed to force it to be added to
   // the dependency list.
-  it->second->isNeeded |= isNeeded;
+  if (isNeeded)
+    it->second->isNeeded.store(true, std::memory_order_relaxed);
   if (!wasInserted)
     return;
 

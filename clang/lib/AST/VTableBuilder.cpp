@@ -537,8 +537,6 @@ public:
     VBaseOffsetOffsetsMapTy;
 
 private:
-  const ItaniumVTableContext &VTables;
-
   /// MostDerivedClass - The most derived class for which we're building vcall
   /// and vbase offsets.
   const CXXRecordDecl *MostDerivedClass;
@@ -587,15 +585,13 @@ private:
   CharUnits getCurrentOffsetOffset() const;
 
 public:
-  VCallAndVBaseOffsetBuilder(const ItaniumVTableContext &VTables,
-                             const CXXRecordDecl *MostDerivedClass,
+  VCallAndVBaseOffsetBuilder(const CXXRecordDecl *MostDerivedClass,
                              const CXXRecordDecl *LayoutClass,
                              const FinalOverriders *Overriders,
                              BaseSubobject Base, bool BaseIsVirtual,
                              CharUnits OffsetInLayoutClass)
-      : VTables(VTables), MostDerivedClass(MostDerivedClass),
-        LayoutClass(LayoutClass), Context(MostDerivedClass->getASTContext()),
-        Overriders(Overriders) {
+      : MostDerivedClass(MostDerivedClass), LayoutClass(LayoutClass),
+        Context(MostDerivedClass->getASTContext()), Overriders(Overriders) {
 
     // Add vcall and vbase offsets.
     AddVCallAndVBaseOffsets(Base, BaseIsVirtual, OffsetInLayoutClass);
@@ -675,7 +671,7 @@ CharUnits VCallAndVBaseOffsetBuilder::getCurrentOffsetOffset() const {
   // Under the relative ABI, the offset widths are 32-bit ints instead of
   // pointer widths.
   CharUnits OffsetWidth = Context.toCharUnitsFromBits(
-      VTables.isRelativeLayout()
+      Context.getLangOpts().RelativeCXXABIVTables
           ? 32
           : Context.getTargetInfo().getPointerWidth(LangAS::Default));
   CharUnits OffsetOffset = OffsetWidth * OffsetIndex;
@@ -1318,7 +1314,7 @@ ThisAdjustment ItaniumVTableBuilder::ComputeThisAdjustment(
       // We don't have vcall offsets for this virtual base, go ahead and
       // build them.
       VCallAndVBaseOffsetBuilder Builder(
-          VTables, MostDerivedClass, MostDerivedClass,
+          MostDerivedClass, MostDerivedClass,
           /*Overriders=*/nullptr,
           BaseSubobject(Offset.VirtualBase, CharUnits::Zero()),
           /*BaseIsVirtual=*/true,
@@ -1695,9 +1691,9 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
   VTableIndices.push_back(VTableIndex);
 
   // Add vcall and vbase offsets for this vtable.
-  VCallAndVBaseOffsetBuilder Builder(
-      VTables, MostDerivedClass, LayoutClass, &Overriders, Base,
-      BaseIsVirtualInLayoutClass, OffsetInLayoutClass);
+  VCallAndVBaseOffsetBuilder Builder(MostDerivedClass, LayoutClass, &Overriders,
+                                     Base, BaseIsVirtualInLayoutClass,
+                                     OffsetInLayoutClass);
   Components.append(Builder.components_begin(), Builder.components_end());
 
   // Check if we need to add these vcall offsets.
@@ -2333,9 +2329,8 @@ bool VTableContextBase::hasVtableSlot(const CXXMethodDecl *MD) {
   return MD->isVirtual() && !MD->isImmediateFunction();
 }
 
-ItaniumVTableContext::ItaniumVTableContext(
-    ASTContext &Context, VTableComponentLayout ComponentLayout)
-    : VTableContextBase(/*MS=*/false), ComponentLayout(ComponentLayout) {}
+ItaniumVTableContext::ItaniumVTableContext(ASTContext &Context)
+    : VTableContextBase(/*MS=*/false) {}
 
 ItaniumVTableContext::~ItaniumVTableContext() {}
 
@@ -2364,7 +2359,7 @@ ItaniumVTableContext::getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
   if (I != VirtualBaseClassOffsetOffsets.end())
     return I->second;
 
-  VCallAndVBaseOffsetBuilder Builder(*this, RD, RD, /*Overriders=*/nullptr,
+  VCallAndVBaseOffsetBuilder Builder(RD, RD, /*Overriders=*/nullptr,
                                      BaseSubobject(RD, CharUnits::Zero()),
                                      /*BaseIsVirtual=*/false,
                                      /*OffsetInLayoutClass=*/CharUnits::Zero());
@@ -3315,11 +3310,9 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
 
     default:
       DiagnosticsEngine &Diags = Context.getDiagnostics();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "Unexpected vftable component type %0 for component number %1");
-      Diags.Report(MostDerivedClass->getLocation(), DiagID)
-          << I << Component.getKind();
+      Diags.Report(MostDerivedClass->getLocation(),
+                   diag::err_unexpected_vftable_component)
+          << Component.getKind() << I;
     }
 
     Out << '\n';

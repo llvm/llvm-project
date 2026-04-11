@@ -118,7 +118,8 @@ define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
 ; CHECK: trunc i64 [[popc]] to i32
   %r6 = call i32 @llvm.nvvm.popc.ll(i64 %b)
 
-; CHECK: call float @llvm.convert.from.fp16.f32(i16 %c)
+; CHECK: [[BITCAST_C:%.+]] = bitcast i16 %c to half
+; CHECK-NEXT: = fpext half [[BITCAST_C]] to float
   %r7 = call float @llvm.nvvm.h2f(i16 %c)
   ret void
 }
@@ -283,10 +284,10 @@ define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
 
 ; CHECK-LABEL: @atomics
 define i32 @atomics(ptr %p0, i32 %a, float %b, double %c) {
-; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a seq_cst
-; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a seq_cst
-; CHECK: %3 = atomicrmw fadd ptr %p0, float %b seq_cst
-; CHECK: %4 = atomicrmw fadd ptr %p0, double %c seq_cst
+; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a monotonic
+; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a monotonic
+; CHECK: %3 = atomicrmw fadd ptr %p0, float %b monotonic
+; CHECK: %4 = atomicrmw fadd ptr %p0, double %c monotonic
 
   %r1 = call i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr %p0, i32 %a)
   %r2 = call i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr %p0, i32 %a)

@@ -409,8 +409,10 @@ foreach Ext = DExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_D, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_D, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_D, Ext>;
-  let Predicates = Ext.Predicates in
-  def : Pat<(f64 (fcanonicalize FPR64:$rs1)), (FMIN_D $rs1, $rs1)>;
+  let Predicates = Ext.Predicates in {
+    def : Pat<(f64 (fcanonicalize Ext.PrimaryTy:$rs1)),
+              (!cast<Instruction>("FMIN_D"#Ext.Suffix) $rs1, $rs1)>;
+  }
 }
 
 /// Setcc

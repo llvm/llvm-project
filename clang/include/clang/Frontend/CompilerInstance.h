@@ -17,6 +17,7 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -196,6 +197,14 @@ class CompilerInstance : public ModuleLoader {
 
   /// Force an output buffer.
   std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
+
+  using GenModuleActionWrapperFunc =
+      std::function<std::unique_ptr<FrontendAction>(
+          const FrontendOptions &, std::unique_ptr<FrontendAction>)>;
+
+  /// An optional callback function used to wrap all FrontendActions
+  /// produced to generate imported modules before they are executed.
+  GenModuleActionWrapperFunc GenModuleActionWrapper;
 
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
@@ -738,11 +747,6 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ModuleHash);
-  std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().getModuleHash());
-  }
-
   /// Create the AST context.
   void createASTContext();
 
@@ -864,7 +868,7 @@ public:
 
   void createASTReader();
 
-  bool loadModuleFile(StringRef FileName,
+  bool loadModuleFile(ModuleFileName FileName,
                       serialization::ModuleFile *&LoadedModuleFile);
 
   /// Configuration object for making the result of \c cloneForModuleCompile()
@@ -872,20 +876,24 @@ public:
   class ThreadSafeCloneConfig {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
     DiagnosticConsumer &DiagConsumer;
+    std::shared_ptr<ModuleCache> ModCache;
     std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
 
   public:
     ThreadSafeCloneConfig(
         IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-        DiagnosticConsumer &DiagConsumer,
+        DiagnosticConsumer &DiagConsumer, std::shared_ptr<ModuleCache> ModCache,
         std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector = nullptr)
         : VFS(std::move(VFS)), DiagConsumer(DiagConsumer),
+          ModCache(std::move(ModCache)),
           ModuleDepCollector(std::move(ModuleDepCollector)) {
       assert(this->VFS && "Clone config requires non-null VFS");
+      assert(this->ModCache && "Clone config requires non-null ModuleCache");
     }
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVFS() const { return VFS; }
     DiagnosticConsumer &getDiagConsumer() const { return DiagConsumer; }
+    std::shared_ptr<ModuleCache> getModuleCache() const { return ModCache; }
     std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const {
       return ModuleDepCollector;
     }
@@ -905,7 +913,7 @@ private:
   /// load it.
   ModuleLoadResult findOrCompileModuleAndReadAST(StringRef ModuleName,
                                                  SourceLocation ImportLoc,
-                                                 SourceLocation ModuleNameLoc,
+                                                 SourceRange ModuleNameRange,
                                                  bool IsInclusionDirective);
 
   /// Creates a \c CompilerInstance for compiling a module.
@@ -929,12 +937,14 @@ public:
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
-  /// provided by the importing compiler instance. Returns true if the module
-  /// was built without errors.
+  /// provided by the importing compiler instance. Returns the PCM file in
+  /// a buffer.
   // FIXME: This should be private, but it's called from static non-member
   // functions in the implementation file.
-  bool compileModule(SourceLocation ImportLoc, StringRef ModuleName,
-                     StringRef ModuleFileName, CompilerInstance &Instance);
+  std::unique_ptr<llvm::MemoryBuffer> compileModule(SourceLocation ImportLoc,
+                                                    StringRef ModuleName,
+                                                    StringRef ModuleFileName,
+                                                    CompilerInstance &Instance);
 
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,
@@ -953,6 +963,14 @@ public:
   GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override;
 
   bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override;
+
+  void setGenModuleActionWrapper(GenModuleActionWrapperFunc Wrapper) {
+    GenModuleActionWrapper = Wrapper;
+  }
+
+  GenModuleActionWrapperFunc getGenModuleActionWrapper() const {
+    return GenModuleActionWrapper;
+  }
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));

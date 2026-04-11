@@ -13,6 +13,7 @@
   define amdgpu_ps void @multiple_basic_blocks1() { ret void }
   define amdgpu_ps void @multiple_basic_blocks2() { ret void }
   define amdgpu_ps void @multiple_basic_blocks3() { ret void }
+  define amdgpu_ps void @multiple_basic_blocks4() { ret void }
   define amdgpu_ps void @recursive_loop() { ret void }
   define amdgpu_ps void @recursive_loop_vmem() { ret void }
   define amdgpu_ps void @image_store() { ret void }
@@ -360,6 +361,46 @@ body:             |
     S_BRANCH %bb.4
 
   bb.4:
+    S_ENDPGM 0, implicit $vgpr97
+...
+
+# The scratch store in the loop may still be pending at S_ENDPGM so we should
+# not insert S_SENDMSG.
+---
+name: multiple_basic_blocks4
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  ; CHECK-LABEL: name: multiple_basic_blocks4
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr2, killed renamable $vgpr0, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   SCRATCH_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit $vgpr97
+  bb.0:
+    GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr2, killed renamable $vgpr0, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec
+
+  bb.1:
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+
+  bb.2:
+    SCRATCH_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    S_BRANCH %bb.1
+
+  bb.3:
     S_ENDPGM 0, implicit $vgpr97
 ...
 

@@ -64,6 +64,18 @@ clang_tablegen("riscv_vector") {
   output_name = "riscv_vector.h"
 }
 
+# Generate HLSL intrinsic overloads
+clang_tablegen("hlsl_alias_intrinsics_gen") {
+  args = [ "-gen-hlsl-alias-intrinsics" ]
+  td_file = "//clang/include/clang/Basic/HLSLIntrinsics.td"
+  output_name = "hlsl/hlsl_alias_intrinsics_gen.inc"
+}
+clang_tablegen("hlsl_inline_intrinsics_gen") {
+  args = [ "-gen-hlsl-inline-intrinsics" ]
+  td_file = "//clang/include/clang/Basic/HLSLIntrinsics.td"
+  output_name = "hlsl/hlsl_inline_intrinsics_gen.inc"
+}
+
 copy("tablegen_headers") {
   visibility = [ ":Headers" ]
   deps = [
@@ -84,8 +96,26 @@ copy("tablegen_headers") {
   outputs = [ "$clang_resource_dir/include/{{source_file_part}}" ]
 }
 
+# These need a separate copy target since {{source_file_part}} would strip
+# the hlsl/ directory prefix.
+copy("hlsl_tablegen_headers") {
+  visibility = [ ":Headers" ]
+  deps = [
+    ":hlsl_alias_intrinsics_gen",
+    ":hlsl_inline_intrinsics_gen",
+  ]
+  sources = []
+  foreach(dep, deps) {
+    sources += get_target_outputs(dep)
+  }
+  outputs = [ "$clang_resource_dir/include/hlsl/{{source_file_part}}" ]
+}
+
 copy("Headers") {
-  deps = [ ":tablegen_headers" ]
+  deps = [
+    ":hlsl_tablegen_headers",
+    ":tablegen_headers",
+  ]
 
   sources = [
     "__clang_cuda_builtin_vars.h",
@@ -104,6 +134,7 @@ copy("Headers") {
     "__clang_hip_runtime_wrapper.h",
     "__clang_hip_stdlib.h",
     "__clang_spirv_builtins.h",
+    "__clang_spirv_libdevice_declares.h",
     "__float_float.h",
     "__float_header_macro.h",
     "__float_infinity_nan.h",
@@ -130,6 +161,7 @@ copy("Headers") {
     "adxintrin.h",
     "altivec.h",
     "amdgpuintrin.h",
+    "amdhsa_abi.h",
     "ammintrin.h",
     "amo.h",
     "amxavx512intrin.h",
@@ -210,6 +242,7 @@ copy("Headers") {
     "cuda_wrappers/complex",
     "cuda_wrappers/new",
     "emmintrin.h",
+    "endian.h",
     "enqcmdintrin.h",
     "f16cintrin.h",
     "float.h",

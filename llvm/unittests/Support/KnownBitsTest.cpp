@@ -113,6 +113,72 @@ static void testBinaryOpExhaustive(StringRef Name, BinaryBitsFn BitsFn,
 
 namespace {
 
+TEST(KnownBitsTest, SelfAddExhaustive) {
+  Twine Name = "selfadd";
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    KnownBits Exact(Bits), ExactNSW(Bits), ExactNUW(Bits), ExactNSWAndNUW(Bits);
+    Exact.Zero.setAllBits();
+    Exact.One.setAllBits();
+    ExactNSW.Zero.setAllBits();
+    ExactNSW.One.setAllBits();
+    ExactNUW.Zero.setAllBits();
+    ExactNUW.One.setAllBits();
+    ExactNSWAndNUW.Zero.setAllBits();
+    ExactNSWAndNUW.One.setAllBits();
+
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      bool SignedOverflow;
+      bool UnsignedOverflow;
+      APInt Res;
+      Res = N.uadd_ov(N, UnsignedOverflow);
+      Res = N.sadd_ov(N, SignedOverflow);
+
+      Exact.One &= Res;
+      Exact.Zero &= ~Res;
+
+      if (!SignedOverflow) {
+        ExactNSW.One &= Res;
+        ExactNSW.Zero &= ~Res;
+      }
+
+      if (!UnsignedOverflow) {
+        ExactNUW.One &= Res;
+        ExactNUW.Zero &= ~Res;
+      }
+
+      if (!UnsignedOverflow && !SignedOverflow) {
+        ExactNSWAndNUW.One &= Res;
+        ExactNSWAndNUW.Zero &= ~Res;
+      }
+    });
+
+    KnownBits Computed = KnownBits::add(Known, Known, /*NSW=*/false,
+                                        /*NUW=*/false, /*SelfAdd=*/true);
+    EXPECT_TRUE(checkResult(Name, Exact, Computed, {Known},
+                            /*CheckOptimality=*/true));
+
+    KnownBits ComputedNSW =
+        KnownBits::add(Known, Known,
+                       /*NSW=*/true, /*NUW=*/false, /*SelfAdd=*/true);
+    EXPECT_TRUE(checkResult(Name + " nsw", ExactNSW, ComputedNSW, {Known},
+                            /*CheckOptimality=*/true));
+
+    KnownBits ComputedNUW =
+        KnownBits::add(Known, Known,
+                       /*NSW=*/false, /*NUW=*/true, /*SelfAdd=*/true);
+    EXPECT_TRUE(checkResult(Name + " nuw", ExactNUW, ComputedNUW, {Known},
+                            /*CheckOptimality=*/true));
+
+    KnownBits ComputedNSWAndNUW =
+        KnownBits::add(Known, Known,
+                       /*NSW=*/true, /*NUW=*/true, /*SelfAdd=*/true);
+    EXPECT_TRUE(checkResult(Name + " nsw nuw", ExactNSWAndNUW,
+                            ComputedNSWAndNUW, {Known},
+                            /*CheckOptimality=*/true));
+  });
+}
+
 TEST(KnownBitsTest, AddCarryExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
@@ -567,6 +633,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive("avgCeilU", KnownBits::avgCeilU, APIntOps::avgCeilU);
 
   testBinaryOpExhaustive("avgCeilS", KnownBits::avgCeilS, APIntOps::avgCeilS);
+
+  testBinaryOpExhaustive("clmul", KnownBits::clmul, APIntOps::clmul);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
@@ -588,6 +656,14 @@ TEST(KnownBitsTest, UnaryExhaustive) {
   testUnaryOpExhaustive(
       "blsmsk", [](const KnownBits &Known) { return Known.blsmsk(); },
       [](const APInt &N) { return N ^ (N - 1); });
+
+  testUnaryOpExhaustive(
+      "add self",
+      [](const KnownBits &Known) {
+        return KnownBits::add(Known, Known, /*NSW=*/false, /*NUW=*/false,
+                              /*SelfAdd=*/true);
+      },
+      [](const APInt &N) { return N + N; }, /*CheckOptimality=*/true);
 
   testUnaryOpExhaustive(
       "mul self",
@@ -913,10 +989,75 @@ TEST(KnownBitsTest, ReduceAddExhaustive) {
       EnumerateCombinations(0, APInt(Bits, 0));
 
       if (!Exact.hasConflict()) {
-        EXPECT_TRUE(checkResult("reduceAdd", Exact, Computed, {EltKnown},
-                                /*CheckOptimality=*/false));
+        EXPECT_TRUE(
+            checkResult("reduceAdd", Exact, Computed, {EltKnown}, false));
       }
     });
+  }
+}
+
+TEST(KnownBitsTest, TruncateSatExhaustive) {
+  for (unsigned FromBits : {4, 8}) {
+    for (unsigned ToBits = 1; ToBits < FromBits; ++ToBits) {
+      ForeachKnownBits(FromBits, [&](const KnownBits &Known) {
+        // Test truncSSat
+        {
+          KnownBits Computed = Known.truncSSat(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
+
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncSSat(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncSSat", Exact, Computed, {Known}, true));
+          }
+        }
+
+        // Test truncSSatU
+        {
+          KnownBits Computed = Known.truncSSatU(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
+
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncSSatU(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncSSatU", Exact, Computed, {Known}, true));
+          }
+        }
+
+        // Test truncUSat
+        {
+          KnownBits Computed = Known.truncUSat(ToBits);
+          KnownBits Exact(ToBits);
+          Exact.Zero.setAllBits();
+          Exact.One.setAllBits();
+
+          ForeachNumInKnownBits(Known, [&](const APInt &N) {
+            APInt Res = N.truncUSat(ToBits);
+            Exact.One &= Res;
+            Exact.Zero &= ~Res;
+          });
+
+          if (!Exact.hasConflict()) {
+            EXPECT_TRUE(
+                checkResult("truncUSat", Exact, Computed, {Known}, true));
+          }
+        }
+      });
+    }
   }
 }
 

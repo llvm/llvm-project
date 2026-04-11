@@ -350,7 +350,7 @@ static void getNonTreePredicates(pdl::PatternOp pattern,
         .Case([&](pdl::AttributeOp attrOp) {
           getAttributePredicates(attrOp, predList, builder, inputs);
         })
-        .Case<pdl::ApplyNativeConstraintOp>([&](auto constraintOp) {
+        .Case([&](pdl::ApplyNativeConstraintOp constraintOp) {
           getConstraintPredicates(constraintOp, predList, builder, inputs);
         })
         .Case<pdl::ResultOp, pdl::ResultsOp>([&](auto resultOp) {
@@ -471,7 +471,7 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
       // We intentionally do not traverse attributes and types, because those
       // are expensive to join on.
       TypeSwitch<Operation *>(entry.value.getDefiningOp())
-          .Case<pdl::OperationOp>([&](auto operationOp) {
+          .Case([&](pdl::OperationOp operationOp) {
             OperandRange operands = operationOp.getOperandValues();
             // Special case when we pass all the operands in one range.
             // For those, the index is empty.
@@ -544,7 +544,7 @@ static void visitUpward(std::vector<PositionalPredicate> &predList,
                         Position *&pos, unsigned rootID) {
   Value value = opIndex.parent;
   TypeSwitch<Operation *>(value.getDefiningOp())
-      .Case<pdl::OperationOp>([&](auto operationOp) {
+      .Case([&](pdl::OperationOp operationOp) {
         LDBG() << "  * Value: " << value;
 
         // Get users and iterate over them.
@@ -583,7 +583,7 @@ static void visitUpward(std::vector<PositionalPredicate> &predList,
         // Update the position
         pos = opPos;
       })
-      .Case<pdl::ResultOp>([&](auto resultOp) {
+      .Case([&](pdl::ResultOp resultOp) {
         // Traverse up an individual result.
         auto *opPos = dyn_cast<OperationPosition>(pos);
         assert(opPos && "operations and results must be interleaved");
@@ -592,7 +592,7 @@ static void visitUpward(std::vector<PositionalPredicate> &predList,
         // Insert the result position in case we have not visited it yet.
         valueToPosition.try_emplace(value, pos);
       })
-      .Case<pdl::ResultsOp>([&](auto resultOp) {
+      .Case([&](pdl::ResultsOp resultOp) {
         // Traverse up a group of results.
         auto *opPos = dyn_cast<OperationPosition>(pos);
         assert(opPos && "operations and results must be interleaved");

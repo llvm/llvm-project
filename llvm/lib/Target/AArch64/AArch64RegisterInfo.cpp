@@ -419,7 +419,6 @@ BitVector
 AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   const AArch64FrameLowering *TFI = getFrameLowering(MF);
 
-  // FIXME: avoid re-calculating this every time.
   BitVector Reserved(getNumRegs());
   markSuperRegs(Reserved, AArch64::WSP);
   markSuperRegs(Reserved, AArch64::WZR);
@@ -577,9 +576,11 @@ bool AArch64RegisterInfo::isStrictlyReservedReg(const MachineFunction &MF,
 }
 
 bool AArch64RegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
-  return llvm::any_of(*AArch64::GPR64argRegClass.MC, [this, &MF](MCPhysReg r) {
-    return isStrictlyReservedReg(MF, r);
-  });
+  for (size_t i = 0; i < AArch64::GPR64argRegClass.getNumRegs(); ++i) {
+    if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
+      return true;
+  }
+  return false;
 }
 
 void AArch64RegisterInfo::emitReservedArgRegCallError(
@@ -1192,6 +1193,9 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         case AArch64::DestructiveUnaryPassthru:
           AddHintIfSuitable(R, Def.getOperand(3));
           break;
+        case AArch64::DestructiveBinaryShImmUnpred:
+          AddHintIfSuitable(R, Def.getOperand(1));
+          break;
         }
       }
     }
@@ -1385,9 +1389,8 @@ bool AArch64RegisterInfo::shouldCoalesce(
   MachineFunction &MF = *MI->getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // Coalescing of SUBREG_TO_REG is broken when using subreg liveness tracking,
-  // we must disable it for now.
-  if (MI->isSubregToReg() && MRI.subRegLivenessEnabled())
+  if (MI->isSubregToReg() && MRI.subRegLivenessEnabled() &&
+      !MF.getSubtarget<AArch64Subtarget>().enableSRLTSubregToRegMitigation())
     return false;
 
   if (MI->isCopy() &&
