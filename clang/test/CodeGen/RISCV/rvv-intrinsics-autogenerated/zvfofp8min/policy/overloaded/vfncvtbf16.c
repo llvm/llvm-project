@@ -16,7 +16,7 @@
 vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_tu(vfloat8e4m3mf8_t vd,
                                                    vbfloat16mf4_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_tu(
@@ -28,7 +28,7 @@ vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_tu(vfloat8e4m3mf8_t vd,
 vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_tu(vfloat8e4m3mf8_t vd,
                                                        vbfloat16mf4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_tu(
@@ -40,7 +40,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_tu(vfloat8e4m3mf8_t vd,
 vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_tu(vfloat8e4m3mf4_t vd,
                                                    vbfloat16mf2_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_tu(
@@ -52,7 +52,7 @@ vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_tu(vfloat8e4m3mf4_t vd,
 vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_tu(vfloat8e4m3mf4_t vd,
                                                        vbfloat16mf2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_tu(
@@ -64,7 +64,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_tu(vfloat8e4m3mf4_t vd,
 vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_tu(vfloat8e4m3mf2_t vd,
                                                   vbfloat16m1_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tu(
@@ -76,7 +76,7 @@ vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_tu(vfloat8e4m3mf2_t vd,
 vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tu(vfloat8e4m3mf2_t vd,
                                                       vbfloat16m1_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e4m3m1_tu(
@@ -87,7 +87,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tu(vfloat8e4m3mf2_t vd,
 //
 vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_tu(vfloat8e4m3m1_t vd,
                                                 vbfloat16m2_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tu(
@@ -99,7 +99,7 @@ vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_tu(vfloat8e4m3m1_t vd,
 vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tu(vfloat8e4m3m1_t vd,
                                                     vbfloat16m2_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e4m3m2_tu(
@@ -110,7 +110,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tu(vfloat8e4m3m1_t vd,
 //
 vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_tu(vfloat8e4m3m2_t vd,
                                                 vbfloat16m4_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tu(
@@ -122,7 +122,7 @@ vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_tu(vfloat8e4m3m2_t vd,
 vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tu(vfloat8e4m3m2_t vd,
                                                     vbfloat16m4_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e4m3m4_tu(
@@ -133,7 +133,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tu(vfloat8e4m3m2_t vd,
 //
 vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_tu(vfloat8e4m3m4_t vd,
                                                 vbfloat16m8_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_tu(
@@ -145,7 +145,7 @@ vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_tu(vfloat8e4m3m4_t vd,
 vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_tu(vfloat8e4m3m4_t vd,
                                                     vbfloat16m8_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_tum(
@@ -158,7 +158,7 @@ vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_tum(vbool64_t vm,
                                                     vfloat8e4m3mf8_t vd,
                                                     vbfloat16mf4_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_tum(
@@ -171,7 +171,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_tum(vbool64_t vm,
                                                         vfloat8e4m3mf8_t vd,
                                                         vbfloat16mf4_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_tum(
@@ -184,7 +184,7 @@ vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_tum(vbool32_t vm,
                                                     vfloat8e4m3mf4_t vd,
                                                     vbfloat16mf2_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_tum(
@@ -197,7 +197,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_tum(vbool32_t vm,
                                                         vfloat8e4m3mf4_t vd,
                                                         vbfloat16mf2_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_tum(
@@ -209,7 +209,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_tum(vbool32_t vm,
 vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_tum(vbool16_t vm, vfloat8e4m3mf2_t vd,
                                                    vbfloat16m1_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tum(
@@ -222,7 +222,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tum(vbool16_t vm,
                                                        vfloat8e4m3mf2_t vd,
                                                        vbfloat16m1_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e4m3m1_tum(
@@ -233,7 +233,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tum(vbool16_t vm,
 //
 vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_tum(vbool8_t vm, vfloat8e4m3m1_t vd,
                                                  vbfloat16m2_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tum(
@@ -245,7 +245,7 @@ vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_tum(vbool8_t vm, vfloat8e4m3m1
 vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tum(vbool8_t vm, vfloat8e4m3m1_t vd,
                                                      vbfloat16m2_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e4m3m2_tum(
@@ -256,7 +256,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tum(vbool8_t vm, vfloat8e4
 //
 vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_tum(vbool4_t vm, vfloat8e4m3m2_t vd,
                                                  vbfloat16m4_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tum(
@@ -268,7 +268,7 @@ vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_tum(vbool4_t vm, vfloat8e4m3m2
 vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tum(vbool4_t vm, vfloat8e4m3m2_t vd,
                                                      vbfloat16m4_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e4m3m4_tum(
@@ -279,7 +279,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tum(vbool4_t vm, vfloat8e4
 //
 vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_tum(vbool2_t vm, vfloat8e4m3m4_t vd,
                                                  vbfloat16m8_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_tum(
@@ -291,7 +291,7 @@ vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_tum(vbool2_t vm, vfloat8e4m3m4
 vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_tum(vbool2_t vm, vfloat8e4m3m4_t vd,
                                                      vbfloat16m8_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_tumu(
@@ -304,7 +304,7 @@ vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_tumu(vbool64_t vm,
                                                      vfloat8e4m3mf8_t vd,
                                                      vbfloat16mf4_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_tumu(
@@ -317,7 +317,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_tumu(vbool64_t vm,
                                                          vfloat8e4m3mf8_t vd,
                                                          vbfloat16mf4_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_tumu(
@@ -330,7 +330,7 @@ vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_tumu(vbool32_t vm,
                                                      vfloat8e4m3mf4_t vd,
                                                      vbfloat16mf2_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_tumu(
@@ -343,7 +343,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_tumu(vbool32_t vm,
                                                          vfloat8e4m3mf4_t vd,
                                                          vbfloat16mf2_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_tumu(
@@ -356,7 +356,7 @@ vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_tumu(vbool16_t vm,
                                                     vfloat8e4m3mf2_t vd,
                                                     vbfloat16m1_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tumu(
@@ -369,7 +369,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tumu(vbool16_t vm,
                                                         vfloat8e4m3mf2_t vd,
                                                         vbfloat16m1_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e4m3m1_tumu(
@@ -381,7 +381,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_tumu(vbool16_t vm,
 vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_tumu(vbool8_t vm, vfloat8e4m3m1_t vd,
                                                   vbfloat16m2_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tumu(
@@ -394,7 +394,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tumu(vbool8_t vm,
                                                       vfloat8e4m3m1_t vd,
                                                       vbfloat16m2_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e4m3m2_tumu(
@@ -406,7 +406,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_tumu(vbool8_t vm,
 vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_tumu(vbool4_t vm, vfloat8e4m3m2_t vd,
                                                   vbfloat16m4_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tumu(
@@ -419,7 +419,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tumu(vbool4_t vm,
                                                       vfloat8e4m3m2_t vd,
                                                       vbfloat16m4_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e4m3m4_tumu(
@@ -431,7 +431,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_tumu(vbool4_t vm,
 vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_tumu(vbool2_t vm, vfloat8e4m3m4_t vd,
                                                   vbfloat16m8_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_tumu(
@@ -444,7 +444,7 @@ vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_tumu(vbool2_t vm,
                                                       vfloat8e4m3m4_t vd,
                                                       vbfloat16m8_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_mu(
@@ -456,7 +456,7 @@ vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_tumu(vbool2_t vm,
 vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_mu(vbool64_t vm, vfloat8e4m3mf8_t vd,
                                                    vbfloat16mf4_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_mu(
@@ -469,7 +469,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_mu(vbool64_t vm,
                                                        vfloat8e4m3mf8_t vd,
                                                        vbfloat16mf4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_mu(
@@ -481,7 +481,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_mu(vbool64_t vm,
 vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_mu(vbool32_t vm, vfloat8e4m3mf4_t vd,
                                                    vbfloat16mf2_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_mu(
@@ -494,7 +494,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_mu(vbool32_t vm,
                                                        vfloat8e4m3mf4_t vd,
                                                        vbfloat16mf2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_mu(
@@ -506,7 +506,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_mu(vbool32_t vm,
 vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_mu(vbool16_t vm, vfloat8e4m3mf2_t vd,
                                                   vbfloat16m1_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_mu(
@@ -519,7 +519,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_mu(vbool16_t vm,
                                                       vfloat8e4m3mf2_t vd,
                                                       vbfloat16m1_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e4m3m1_mu(
@@ -530,7 +530,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_mu(vbool16_t vm,
 //
 vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_mu(vbool8_t vm, vfloat8e4m3m1_t vd,
                                                 vbfloat16m2_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_mu(
@@ -542,7 +542,7 @@ vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_mu(vbool8_t vm, vfloat8e4m3m1_
 vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_mu(vbool8_t vm, vfloat8e4m3m1_t vd,
                                                     vbfloat16m2_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e4m3m2_mu(
@@ -553,7 +553,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_mu(vbool8_t vm, vfloat8e4m
 //
 vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_mu(vbool4_t vm, vfloat8e4m3m2_t vd,
                                                 vbfloat16m4_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_mu(
@@ -565,7 +565,7 @@ vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_mu(vbool4_t vm, vfloat8e4m3m2_
 vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_mu(vbool4_t vm, vfloat8e4m3m2_t vd,
                                                     vbfloat16m4_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e4m3m4_mu(
@@ -576,7 +576,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_mu(vbool4_t vm, vfloat8e4m
 //
 vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_mu(vbool2_t vm, vfloat8e4m3m4_t vd,
                                                 vbfloat16m8_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_mu(
@@ -588,7 +588,7 @@ vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_mu(vbool2_t vm, vfloat8e4m3m4_
 vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_mu(vbool2_t vm, vfloat8e4m3m4_t vd,
                                                     vbfloat16m8_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_rm_tu(
@@ -600,7 +600,7 @@ vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_mu(vbool2_t vm, vfloat8e4m
 vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_rm_tu(vfloat8e4m3mf8_t vd,
                                                       vbfloat16mf4_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_tu(
@@ -612,7 +612,7 @@ vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_rm_tu(vfloat8e4m3mf8_t vd,
 vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_tu(vfloat8e4m3mf8_t vd,
                                                           vbfloat16mf4_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_rm_tu(
@@ -624,7 +624,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_tu(vfloat8e4m3mf8_t 
 vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_rm_tu(vfloat8e4m3mf4_t vd,
                                                       vbfloat16mf2_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_tu(
@@ -636,7 +636,7 @@ vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_rm_tu(vfloat8e4m3mf4_t vd,
 vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_tu(vfloat8e4m3mf4_t vd,
                                                           vbfloat16mf2_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_rm_tu(
@@ -648,7 +648,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_tu(vfloat8e4m3mf4_t 
 vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_rm_tu(vfloat8e4m3mf2_t vd,
                                                      vbfloat16m1_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tu(
@@ -660,7 +660,7 @@ vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_rm_tu(vfloat8e4m3mf2_t vd,
 vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tu(vfloat8e4m3mf2_t vd,
                                                          vbfloat16m1_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e4m3m1_rm_tu(
@@ -672,7 +672,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tu(vfloat8e4m3mf2_t v
 vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_rm_tu(vfloat8e4m3m1_t vd,
                                                    vbfloat16m2_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tu(
@@ -684,7 +684,7 @@ vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_rm_tu(vfloat8e4m3m1_t vd,
 vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tu(vfloat8e4m3m1_t vd,
                                                        vbfloat16m2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e4m3m2_rm_tu(
@@ -696,7 +696,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tu(vfloat8e4m3m1_t vd,
 vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_rm_tu(vfloat8e4m3m2_t vd,
                                                    vbfloat16m4_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tu(
@@ -708,7 +708,7 @@ vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_rm_tu(vfloat8e4m3m2_t vd,
 vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tu(vfloat8e4m3m2_t vd,
                                                        vbfloat16m4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e4m3m4_rm_tu(
@@ -720,7 +720,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tu(vfloat8e4m3m2_t vd,
 vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_rm_tu(vfloat8e4m3m4_t vd,
                                                    vbfloat16m8_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_tu(
@@ -732,7 +732,7 @@ vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_rm_tu(vfloat8e4m3m4_t vd,
 vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_tu(vfloat8e4m3m4_t vd,
                                                        vbfloat16m8_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_rm_tum(
@@ -745,7 +745,7 @@ vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_rm_tum(vbool64_t vm,
                                                        vfloat8e4m3mf8_t vd,
                                                        vbfloat16mf4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_tum(
@@ -758,7 +758,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_tum(vbool64_t vm,
                                                            vfloat8e4m3mf8_t vd,
                                                            vbfloat16mf4_t vs2,
                                                            size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_rm_tum(
@@ -771,7 +771,7 @@ vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_rm_tum(vbool32_t vm,
                                                        vfloat8e4m3mf4_t vd,
                                                        vbfloat16mf2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_tum(
@@ -784,7 +784,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_tum(vbool32_t vm,
                                                            vfloat8e4m3mf4_t vd,
                                                            vbfloat16mf2_t vs2,
                                                            size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_rm_tum(
@@ -797,7 +797,7 @@ vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_rm_tum(vbool16_t vm,
                                                       vfloat8e4m3mf2_t vd,
                                                       vbfloat16m1_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tum(
@@ -810,7 +810,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tum(vbool16_t vm,
                                                           vfloat8e4m3mf2_t vd,
                                                           vbfloat16m1_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e4m3m1_rm_tum(
@@ -822,7 +822,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tum(vbool16_t vm,
 vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_rm_tum(vbool8_t vm, vfloat8e4m3m1_t vd,
                                                     vbfloat16m2_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tum(
@@ -835,7 +835,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tum(vbool8_t vm,
                                                         vfloat8e4m3m1_t vd,
                                                         vbfloat16m2_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e4m3m2_rm_tum(
@@ -847,7 +847,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tum(vbool8_t vm,
 vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_rm_tum(vbool4_t vm, vfloat8e4m3m2_t vd,
                                                     vbfloat16m4_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tum(
@@ -860,7 +860,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tum(vbool4_t vm,
                                                         vfloat8e4m3m2_t vd,
                                                         vbfloat16m4_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e4m3m4_rm_tum(
@@ -872,7 +872,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tum(vbool4_t vm,
 vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_rm_tum(vbool2_t vm, vfloat8e4m3m4_t vd,
                                                     vbfloat16m8_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_tum(
@@ -885,7 +885,7 @@ vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_tum(vbool2_t vm,
                                                         vfloat8e4m3m4_t vd,
                                                         vbfloat16m8_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_rm_tumu(
@@ -898,7 +898,7 @@ vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_rm_tumu(vbool64_t vm,
                                                         vfloat8e4m3mf8_t vd,
                                                         vbfloat16mf4_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_tumu(
@@ -911,7 +911,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_tumu(vbool64_t vm,
                                                             vfloat8e4m3mf8_t vd,
                                                             vbfloat16mf4_t vs2,
                                                             size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -925,7 +925,7 @@ vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_rm_tumu(vbool32_t vm,
                                                         vfloat8e4m3mf4_t vd,
                                                         vbfloat16mf2_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_tumu(
@@ -938,7 +938,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_tumu(vbool32_t vm,
                                                             vfloat8e4m3mf4_t vd,
                                                             vbfloat16mf2_t vs2,
                                                             size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -952,7 +952,7 @@ vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_rm_tumu(vbool16_t vm,
                                                        vfloat8e4m3mf2_t vd,
                                                        vbfloat16m1_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tumu(
@@ -965,7 +965,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tumu(vbool16_t vm,
                                                            vfloat8e4m3mf2_t vd,
                                                            vbfloat16m1_t vs2,
                                                            size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -978,7 +978,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_tumu(vbool16_t vm,
 vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_rm_tumu(vbool8_t vm, vfloat8e4m3m1_t vd,
                                                      vbfloat16m2_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tumu(
@@ -991,7 +991,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tumu(vbool8_t vm,
                                                          vfloat8e4m3m1_t vd,
                                                          vbfloat16m2_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -1004,7 +1004,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_tumu(vbool8_t vm,
 vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_rm_tumu(vbool4_t vm, vfloat8e4m3m2_t vd,
                                                      vbfloat16m4_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tumu(
@@ -1017,7 +1017,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tumu(vbool4_t vm,
                                                          vfloat8e4m3m2_t vd,
                                                          vbfloat16m4_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -1030,7 +1030,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_tumu(vbool4_t vm,
 vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_rm_tumu(vbool2_t vm, vfloat8e4m3m4_t vd,
                                                      vbfloat16m8_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_tumu(
@@ -1043,7 +1043,7 @@ vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_tumu(vbool2_t vm,
                                                          vfloat8e4m3m4_t vd,
                                                          vbfloat16m8_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e4m3_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -1057,7 +1057,7 @@ vfloat8e4m3mf8_t test_vfncvt_f_f_w_bf16mf4_f8e4m3mf8_rm_mu(vbool64_t vm,
                                                       vfloat8e4m3mf8_t vd,
                                                       vbfloat16mf4_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_mu(
@@ -1070,7 +1070,7 @@ vfloat8e4m3mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e4m3mf8_rm_mu(vbool64_t vm,
                                                           vfloat8e4m3mf8_t vd,
                                                           vbfloat16mf4_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_rm_mu(
@@ -1083,7 +1083,7 @@ vfloat8e4m3mf4_t test_vfncvt_f_f_w_bf16mf2_f8e4m3mf4_rm_mu(vbool32_t vm,
                                                       vfloat8e4m3mf4_t vd,
                                                       vbfloat16mf2_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_mu(
@@ -1096,7 +1096,7 @@ vfloat8e4m3mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e4m3mf4_rm_mu(vbool32_t vm,
                                                           vfloat8e4m3mf4_t vd,
                                                           vbfloat16mf2_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_rm_mu(
@@ -1109,7 +1109,7 @@ vfloat8e4m3mf2_t test_vfncvt_f_f_w_bf16m1_f8e4m3mf2_rm_mu(vbool16_t vm,
                                                      vfloat8e4m3mf2_t vd,
                                                      vbfloat16m1_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_mu(
@@ -1122,7 +1122,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_mu(vbool16_t vm,
                                                          vfloat8e4m3mf2_t vd,
                                                          vbfloat16m1_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e4m3m1_rm_mu(
@@ -1134,7 +1134,7 @@ vfloat8e4m3mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e4m3mf2_rm_mu(vbool16_t vm,
 vfloat8e4m3m1_t test_vfncvt_f_f_w_bf16m2_f8e4m3m1_rm_mu(vbool8_t vm, vfloat8e4m3m1_t vd,
                                                    vbfloat16m2_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_mu(
@@ -1147,7 +1147,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_mu(vbool8_t vm,
                                                        vfloat8e4m3m1_t vd,
                                                        vbfloat16m2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e4m3m2_rm_mu(
@@ -1159,7 +1159,7 @@ vfloat8e4m3m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e4m3m1_rm_mu(vbool8_t vm,
 vfloat8e4m3m2_t test_vfncvt_f_f_w_bf16m4_f8e4m3m2_rm_mu(vbool4_t vm, vfloat8e4m3m2_t vd,
                                                    vbfloat16m4_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_mu(
@@ -1172,7 +1172,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_mu(vbool4_t vm,
                                                        vfloat8e4m3m2_t vd,
                                                        vbfloat16m4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e4m3m4_rm_mu(
@@ -1184,7 +1184,7 @@ vfloat8e4m3m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e4m3m2_rm_mu(vbool4_t vm,
 vfloat8e4m3m4_t test_vfncvt_f_f_w_bf16m8_f8e4m3m4_rm_mu(vbool2_t vm, vfloat8e4m3m4_t vd,
                                                    vbfloat16m8_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_mu(
@@ -1197,7 +1197,7 @@ vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_mu(vbool2_t vm,
                                                        vfloat8e4m3m4_t vd,
                                                        vbfloat16m8_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e4m3_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_tu(
@@ -1209,7 +1209,7 @@ vfloat8e4m3m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e4m3m4_rm_mu(vbool2_t vm,
 vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_tu(vfloat8e5m2mf8_t vd,
                                                    vbfloat16mf4_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_tu(
@@ -1221,7 +1221,7 @@ vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_tu(vfloat8e5m2mf8_t vd,
 vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_tu(vfloat8e5m2mf8_t vd,
                                                        vbfloat16mf4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_tu(
@@ -1233,7 +1233,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_tu(vfloat8e5m2mf8_t vd,
 vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_tu(vfloat8e5m2mf4_t vd,
                                                    vbfloat16mf2_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_tu(
@@ -1245,7 +1245,7 @@ vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_tu(vfloat8e5m2mf4_t vd,
 vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_tu(vfloat8e5m2mf4_t vd,
                                                        vbfloat16mf2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_tu(
@@ -1257,7 +1257,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_tu(vfloat8e5m2mf4_t vd,
 vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_tu(vfloat8e5m2mf2_t vd,
                                                   vbfloat16m1_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tu(
@@ -1269,7 +1269,7 @@ vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_tu(vfloat8e5m2mf2_t vd,
 vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tu(vfloat8e5m2mf2_t vd,
                                                       vbfloat16m1_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e5m2m1_tu(
@@ -1280,7 +1280,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tu(vfloat8e5m2mf2_t vd,
 //
 vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_tu(vfloat8e5m2m1_t vd,
                                                 vbfloat16m2_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tu(
@@ -1292,7 +1292,7 @@ vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_tu(vfloat8e5m2m1_t vd,
 vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tu(vfloat8e5m2m1_t vd,
                                                     vbfloat16m2_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e5m2m2_tu(
@@ -1303,7 +1303,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tu(vfloat8e5m2m1_t vd,
 //
 vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_tu(vfloat8e5m2m2_t vd,
                                                 vbfloat16m4_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tu(
@@ -1315,7 +1315,7 @@ vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_tu(vfloat8e5m2m2_t vd,
 vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tu(vfloat8e5m2m2_t vd,
                                                     vbfloat16m4_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e5m2m4_tu(
@@ -1326,7 +1326,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tu(vfloat8e5m2m2_t vd,
 //
 vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_tu(vfloat8e5m2m4_t vd,
                                                 vbfloat16m8_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_tu(
@@ -1338,7 +1338,7 @@ vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_tu(vfloat8e5m2m4_t vd,
 vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_tu(vfloat8e5m2m4_t vd,
                                                     vbfloat16m8_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_tum(
@@ -1351,7 +1351,7 @@ vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_tum(vbool64_t vm,
                                                     vfloat8e5m2mf8_t vd,
                                                     vbfloat16mf4_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_tum(
@@ -1364,7 +1364,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_tum(vbool64_t vm,
                                                         vfloat8e5m2mf8_t vd,
                                                         vbfloat16mf4_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_tum(
@@ -1377,7 +1377,7 @@ vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_tum(vbool32_t vm,
                                                     vfloat8e5m2mf4_t vd,
                                                     vbfloat16mf2_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_tum(
@@ -1390,7 +1390,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_tum(vbool32_t vm,
                                                         vfloat8e5m2mf4_t vd,
                                                         vbfloat16mf2_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_tum(
@@ -1402,7 +1402,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_tum(vbool32_t vm,
 vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_tum(vbool16_t vm, vfloat8e5m2mf2_t vd,
                                                    vbfloat16m1_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tum(
@@ -1415,7 +1415,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tum(vbool16_t vm,
                                                        vfloat8e5m2mf2_t vd,
                                                        vbfloat16m1_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e5m2m1_tum(
@@ -1426,7 +1426,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tum(vbool16_t vm,
 //
 vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_tum(vbool8_t vm, vfloat8e5m2m1_t vd,
                                                  vbfloat16m2_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tum(
@@ -1438,7 +1438,7 @@ vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_tum(vbool8_t vm, vfloat8e5m2m1
 vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tum(vbool8_t vm, vfloat8e5m2m1_t vd,
                                                      vbfloat16m2_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e5m2m2_tum(
@@ -1449,7 +1449,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tum(vbool8_t vm, vfloat8e5
 //
 vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_tum(vbool4_t vm, vfloat8e5m2m2_t vd,
                                                  vbfloat16m4_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tum(
@@ -1461,7 +1461,7 @@ vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_tum(vbool4_t vm, vfloat8e5m2m2
 vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tum(vbool4_t vm, vfloat8e5m2m2_t vd,
                                                      vbfloat16m4_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e5m2m4_tum(
@@ -1472,7 +1472,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tum(vbool4_t vm, vfloat8e5
 //
 vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_tum(vbool2_t vm, vfloat8e5m2m4_t vd,
                                                  vbfloat16m8_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_tum(
@@ -1484,7 +1484,7 @@ vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_tum(vbool2_t vm, vfloat8e5m2m4
 vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_tum(vbool2_t vm, vfloat8e5m2m4_t vd,
                                                      vbfloat16m8_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_tumu(
@@ -1497,7 +1497,7 @@ vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_tumu(vbool64_t vm,
                                                      vfloat8e5m2mf8_t vd,
                                                      vbfloat16mf4_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_tumu(
@@ -1510,7 +1510,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_tumu(vbool64_t vm,
                                                          vfloat8e5m2mf8_t vd,
                                                          vbfloat16mf4_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_tumu(
@@ -1523,7 +1523,7 @@ vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_tumu(vbool32_t vm,
                                                      vfloat8e5m2mf4_t vd,
                                                      vbfloat16mf2_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_tumu(
@@ -1536,7 +1536,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_tumu(vbool32_t vm,
                                                          vfloat8e5m2mf4_t vd,
                                                          vbfloat16mf2_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_tumu(
@@ -1549,7 +1549,7 @@ vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_tumu(vbool16_t vm,
                                                     vfloat8e5m2mf2_t vd,
                                                     vbfloat16m1_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tumu(
@@ -1562,7 +1562,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tumu(vbool16_t vm,
                                                         vfloat8e5m2mf2_t vd,
                                                         vbfloat16m1_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e5m2m1_tumu(
@@ -1574,7 +1574,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_tumu(vbool16_t vm,
 vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_tumu(vbool8_t vm, vfloat8e5m2m1_t vd,
                                                   vbfloat16m2_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tumu(
@@ -1587,7 +1587,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tumu(vbool8_t vm,
                                                       vfloat8e5m2m1_t vd,
                                                       vbfloat16m2_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e5m2m2_tumu(
@@ -1599,7 +1599,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_tumu(vbool8_t vm,
 vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_tumu(vbool4_t vm, vfloat8e5m2m2_t vd,
                                                   vbfloat16m4_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tumu(
@@ -1612,7 +1612,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tumu(vbool4_t vm,
                                                       vfloat8e5m2m2_t vd,
                                                       vbfloat16m4_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e5m2m4_tumu(
@@ -1624,7 +1624,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_tumu(vbool4_t vm,
 vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_tumu(vbool2_t vm, vfloat8e5m2m4_t vd,
                                                   vbfloat16m8_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_tumu(
@@ -1637,7 +1637,7 @@ vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_tumu(vbool2_t vm,
                                                       vfloat8e5m2m4_t vd,
                                                       vbfloat16m8_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_mu(
@@ -1649,7 +1649,7 @@ vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_tumu(vbool2_t vm,
 vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_mu(vbool64_t vm, vfloat8e5m2mf8_t vd,
                                                    vbfloat16mf4_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_mu(
@@ -1662,7 +1662,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_mu(vbool64_t vm,
                                                        vfloat8e5m2mf8_t vd,
                                                        vbfloat16mf4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_mu(
@@ -1674,7 +1674,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_mu(vbool64_t vm,
 vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_mu(vbool32_t vm, vfloat8e5m2mf4_t vd,
                                                    vbfloat16mf2_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_mu(
@@ -1687,7 +1687,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_mu(vbool32_t vm,
                                                        vfloat8e5m2mf4_t vd,
                                                        vbfloat16mf2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_mu(
@@ -1699,7 +1699,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_mu(vbool32_t vm,
 vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_mu(vbool16_t vm, vfloat8e5m2mf2_t vd,
                                                   vbfloat16m1_t vs2,
                                                   size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_mu(
@@ -1712,7 +1712,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_mu(vbool16_t vm,
                                                       vfloat8e5m2mf2_t vd,
                                                       vbfloat16m1_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e5m2m1_mu(
@@ -1723,7 +1723,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_mu(vbool16_t vm,
 //
 vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_mu(vbool8_t vm, vfloat8e5m2m1_t vd,
                                                 vbfloat16m2_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_mu(
@@ -1735,7 +1735,7 @@ vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_mu(vbool8_t vm, vfloat8e5m2m1_
 vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_mu(vbool8_t vm, vfloat8e5m2m1_t vd,
                                                     vbfloat16m2_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e5m2m2_mu(
@@ -1746,7 +1746,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_mu(vbool8_t vm, vfloat8e5m
 //
 vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_mu(vbool4_t vm, vfloat8e5m2m2_t vd,
                                                 vbfloat16m4_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_mu(
@@ -1758,7 +1758,7 @@ vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_mu(vbool4_t vm, vfloat8e5m2m2_
 vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_mu(vbool4_t vm, vfloat8e5m2m2_t vd,
                                                     vbfloat16m4_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e5m2m4_mu(
@@ -1769,7 +1769,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_mu(vbool4_t vm, vfloat8e5m
 //
 vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_mu(vbool2_t vm, vfloat8e5m2m4_t vd,
                                                 vbfloat16m8_t vs2, size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_mu(
@@ -1781,7 +1781,7 @@ vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_mu(vbool2_t vm, vfloat8e5m2m4_
 vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_mu(vbool2_t vm, vfloat8e5m2m4_t vd,
                                                     vbfloat16m8_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_rm_tu(
@@ -1793,7 +1793,7 @@ vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_mu(vbool2_t vm, vfloat8e5m
 vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_rm_tu(vfloat8e5m2mf8_t vd,
                                                       vbfloat16mf4_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_tu(
@@ -1805,7 +1805,7 @@ vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_rm_tu(vfloat8e5m2mf8_t vd,
 vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_tu(vfloat8e5m2mf8_t vd,
                                                           vbfloat16mf4_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_rm_tu(
@@ -1817,7 +1817,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_tu(vfloat8e5m2mf8_t 
 vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_rm_tu(vfloat8e5m2mf4_t vd,
                                                       vbfloat16mf2_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_tu(
@@ -1829,7 +1829,7 @@ vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_rm_tu(vfloat8e5m2mf4_t vd,
 vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_tu(vfloat8e5m2mf4_t vd,
                                                           vbfloat16mf2_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_rm_tu(
@@ -1841,7 +1841,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_tu(vfloat8e5m2mf4_t 
 vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_rm_tu(vfloat8e5m2mf2_t vd,
                                                      vbfloat16m1_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tu(
@@ -1853,7 +1853,7 @@ vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_rm_tu(vfloat8e5m2mf2_t vd,
 vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tu(vfloat8e5m2mf2_t vd,
                                                          vbfloat16m1_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e5m2m1_rm_tu(
@@ -1865,7 +1865,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tu(vfloat8e5m2mf2_t v
 vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_rm_tu(vfloat8e5m2m1_t vd,
                                                    vbfloat16m2_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tu(
@@ -1877,7 +1877,7 @@ vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_rm_tu(vfloat8e5m2m1_t vd,
 vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tu(vfloat8e5m2m1_t vd,
                                                        vbfloat16m2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e5m2m2_rm_tu(
@@ -1889,7 +1889,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tu(vfloat8e5m2m1_t vd,
 vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_rm_tu(vfloat8e5m2m2_t vd,
                                                    vbfloat16m4_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tu(
@@ -1901,7 +1901,7 @@ vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_rm_tu(vfloat8e5m2m2_t vd,
 vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tu(vfloat8e5m2m2_t vd,
                                                        vbfloat16m4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e5m2m4_rm_tu(
@@ -1913,7 +1913,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tu(vfloat8e5m2m2_t vd,
 vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_rm_tu(vfloat8e5m2m4_t vd,
                                                    vbfloat16m8_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_rm_tu(
@@ -1925,7 +1925,7 @@ vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_rm_tu(vfloat8e5m2m4_t vd,
 vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_rm_tu(vfloat8e5m2m4_t vd,
                                                        vbfloat16m8_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tu(vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_rm_tum(
@@ -1938,7 +1938,7 @@ vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_rm_tum(vbool64_t vm,
                                                        vfloat8e5m2mf8_t vd,
                                                        vbfloat16mf4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_tum(
@@ -1951,7 +1951,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_tum(vbool64_t vm,
                                                            vfloat8e5m2mf8_t vd,
                                                            vbfloat16mf4_t vs2,
                                                            size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_rm_tum(
@@ -1964,7 +1964,7 @@ vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_rm_tum(vbool32_t vm,
                                                        vfloat8e5m2mf4_t vd,
                                                        vbfloat16mf2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_tum(
@@ -1977,7 +1977,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_tum(vbool32_t vm,
                                                            vfloat8e5m2mf4_t vd,
                                                            vbfloat16mf2_t vs2,
                                                            size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_rm_tum(
@@ -1990,7 +1990,7 @@ vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_rm_tum(vbool16_t vm,
                                                       vfloat8e5m2mf2_t vd,
                                                       vbfloat16m1_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tum(
@@ -2003,7 +2003,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tum(vbool16_t vm,
                                                           vfloat8e5m2mf2_t vd,
                                                           vbfloat16m1_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e5m2m1_rm_tum(
@@ -2015,7 +2015,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tum(vbool16_t vm,
 vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_rm_tum(vbool8_t vm, vfloat8e5m2m1_t vd,
                                                     vbfloat16m2_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tum(
@@ -2028,7 +2028,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tum(vbool8_t vm,
                                                         vfloat8e5m2m1_t vd,
                                                         vbfloat16m2_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e5m2m2_rm_tum(
@@ -2040,7 +2040,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tum(vbool8_t vm,
 vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_rm_tum(vbool4_t vm, vfloat8e5m2m2_t vd,
                                                     vbfloat16m4_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tum(
@@ -2053,7 +2053,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tum(vbool4_t vm,
                                                         vfloat8e5m2m2_t vd,
                                                         vbfloat16m4_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e5m2m4_rm_tum(
@@ -2065,7 +2065,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tum(vbool4_t vm,
 vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_rm_tum(vbool2_t vm, vfloat8e5m2m4_t vd,
                                                     vbfloat16m8_t vs2,
                                                     size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_rm_tum(
@@ -2078,7 +2078,7 @@ vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_rm_tum(vbool2_t vm,
                                                         vfloat8e5m2m4_t vd,
                                                         vbfloat16m8_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_tum(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_rm_tumu(
@@ -2091,7 +2091,7 @@ vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_rm_tumu(vbool64_t vm,
                                                         vfloat8e5m2mf8_t vd,
                                                         vbfloat16mf4_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_tumu(
@@ -2104,7 +2104,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_tumu(vbool64_t vm,
                                                             vfloat8e5m2mf8_t vd,
                                                             vbfloat16mf4_t vs2,
                                                             size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -2118,7 +2118,7 @@ vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_rm_tumu(vbool32_t vm,
                                                         vfloat8e5m2mf4_t vd,
                                                         vbfloat16mf2_t vs2,
                                                         size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_tumu(
@@ -2131,7 +2131,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_tumu(vbool32_t vm,
                                                             vfloat8e5m2mf4_t vd,
                                                             vbfloat16mf2_t vs2,
                                                             size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -2145,7 +2145,7 @@ vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_rm_tumu(vbool16_t vm,
                                                        vfloat8e5m2mf2_t vd,
                                                        vbfloat16m1_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tumu(
@@ -2158,7 +2158,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tumu(vbool16_t vm,
                                                            vfloat8e5m2mf2_t vd,
                                                            vbfloat16m1_t vs2,
                                                            size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -2171,7 +2171,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_tumu(vbool16_t vm,
 vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_rm_tumu(vbool8_t vm, vfloat8e5m2m1_t vd,
                                                      vbfloat16m2_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tumu(
@@ -2184,7 +2184,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tumu(vbool8_t vm,
                                                          vfloat8e5m2m1_t vd,
                                                          vbfloat16m2_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -2197,7 +2197,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_tumu(vbool8_t vm,
 vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_rm_tumu(vbool4_t vm, vfloat8e5m2m2_t vd,
                                                      vbfloat16m4_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tumu(
@@ -2210,7 +2210,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tumu(vbool4_t vm,
                                                          vfloat8e5m2m2_t vd,
                                                          vbfloat16m4_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -2223,7 +2223,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_tumu(vbool4_t vm,
 vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_rm_tumu(vbool2_t vm, vfloat8e5m2m4_t vd,
                                                      vbfloat16m8_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_rm_tumu(
@@ -2236,7 +2236,7 @@ vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_rm_tumu(vbool2_t vm,
                                                          vfloat8e5m2m4_t vd,
                                                          vbfloat16m8_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
+  return __riscv_vfncvt_sat_f_f8e5m2_tumu(vm, vd, vs2, __RISCV_FRM_RNE,
                                                vl);
 }
 
@@ -2250,7 +2250,7 @@ vfloat8e5m2mf8_t test_vfncvt_f_f_w_bf16mf4_f8e5m2mf8_rm_mu(vbool64_t vm,
                                                       vfloat8e5m2mf8_t vd,
                                                       vbfloat16mf4_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_mu(
@@ -2263,7 +2263,7 @@ vfloat8e5m2mf8_t test_vfncvt_sat_f_f_w_bf16mf4_f8e5m2mf8_rm_mu(vbool64_t vm,
                                                           vfloat8e5m2mf8_t vd,
                                                           vbfloat16mf4_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_rm_mu(
@@ -2276,7 +2276,7 @@ vfloat8e5m2mf4_t test_vfncvt_f_f_w_bf16mf2_f8e5m2mf4_rm_mu(vbool32_t vm,
                                                       vfloat8e5m2mf4_t vd,
                                                       vbfloat16mf2_t vs2,
                                                       size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_mu(
@@ -2289,7 +2289,7 @@ vfloat8e5m2mf4_t test_vfncvt_sat_f_f_w_bf16mf2_f8e5m2mf4_rm_mu(vbool32_t vm,
                                                           vfloat8e5m2mf4_t vd,
                                                           vbfloat16mf2_t vs2,
                                                           size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_rm_mu(
@@ -2302,7 +2302,7 @@ vfloat8e5m2mf2_t test_vfncvt_f_f_w_bf16m1_f8e5m2mf2_rm_mu(vbool16_t vm,
                                                      vfloat8e5m2mf2_t vd,
                                                      vbfloat16m1_t vs2,
                                                      size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_mu(
@@ -2315,7 +2315,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_mu(vbool16_t vm,
                                                          vfloat8e5m2mf2_t vd,
                                                          vbfloat16m1_t vs2,
                                                          size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_f_f_w_bf16m2_f8e5m2m1_rm_mu(
@@ -2327,7 +2327,7 @@ vfloat8e5m2mf2_t test_vfncvt_sat_f_f_w_bf16m1_f8e5m2mf2_rm_mu(vbool16_t vm,
 vfloat8e5m2m1_t test_vfncvt_f_f_w_bf16m2_f8e5m2m1_rm_mu(vbool8_t vm, vfloat8e5m2m1_t vd,
                                                    vbfloat16m2_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_mu(
@@ -2340,7 +2340,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_mu(vbool8_t vm,
                                                        vfloat8e5m2m1_t vd,
                                                        vbfloat16m2_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_f_f_w_bf16m4_f8e5m2m2_rm_mu(
@@ -2352,7 +2352,7 @@ vfloat8e5m2m1_t test_vfncvt_sat_f_f_w_bf16m2_f8e5m2m1_rm_mu(vbool8_t vm,
 vfloat8e5m2m2_t test_vfncvt_f_f_w_bf16m4_f8e5m2m2_rm_mu(vbool4_t vm, vfloat8e5m2m2_t vd,
                                                    vbfloat16m4_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_mu(
@@ -2365,7 +2365,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_mu(vbool4_t vm,
                                                        vfloat8e5m2m2_t vd,
                                                        vbfloat16m4_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_f_f_w_bf16m8_f8e5m2m4_rm_mu(
@@ -2377,7 +2377,7 @@ vfloat8e5m2m2_t test_vfncvt_sat_f_f_w_bf16m4_f8e5m2m2_rm_mu(vbool4_t vm,
 vfloat8e5m2m4_t test_vfncvt_f_f_w_bf16m8_f8e5m2m4_rm_mu(vbool2_t vm, vfloat8e5m2m4_t vd,
                                                    vbfloat16m8_t vs2,
                                                    size_t vl) {
-  return __riscv_vfncvt_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_rm_mu(
@@ -2390,5 +2390,5 @@ vfloat8e5m2m4_t test_vfncvt_sat_f_f_w_bf16m8_f8e5m2m4_rm_mu(vbool2_t vm,
                                                        vfloat8e5m2m4_t vd,
                                                        vbfloat16m8_t vs2,
                                                        size_t vl) {
-  return __riscv_vfncvt_sat_f_bf16_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
+  return __riscv_vfncvt_sat_f_f8e5m2_mu(vm, vd, vs2, __RISCV_FRM_RNE, vl);
 }

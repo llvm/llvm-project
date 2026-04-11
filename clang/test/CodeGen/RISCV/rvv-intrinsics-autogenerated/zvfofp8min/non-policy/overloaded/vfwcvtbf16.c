@@ -14,7 +14,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4(vfloat8e4m3mf8_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2(
@@ -24,7 +24,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4(vfloat8e4m3mf8_t vs2, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2(vfloat8e4m3mf4_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1(
@@ -34,7 +34,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2(vfloat8e4m3mf4_t vs2, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1(vfloat8e4m3mf2_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x bfloat> @test_vfwcvt_f_f_v_f8e4m3m1_bf16m2(
@@ -44,7 +44,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1(vfloat8e4m3mf2_t vs2, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2(vfloat8e4m3m1_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x bfloat> @test_vfwcvt_f_f_v_f8e4m3m2_bf16m4(
@@ -54,7 +54,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2(vfloat8e4m3m1_t vs2, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4(vfloat8e4m3m2_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x bfloat> @test_vfwcvt_f_f_v_f8e4m3m4_bf16m8(
@@ -64,7 +64,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4(vfloat8e4m3m2_t vs2, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8(vfloat8e4m3m4_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_m(
@@ -76,7 +76,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8(vfloat8e4m3m4_t vs2, size_t vl) 
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_m(vbool64_t vm,
                                                      vfloat8e4m3mf8_t vs2,
                                                      size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_m(
@@ -88,7 +88,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_m(vbool64_t vm,
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_m(vbool32_t vm,
                                                      vfloat8e4m3mf4_t vs2,
                                                      size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_m(
@@ -99,7 +99,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_m(vbool32_t vm,
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_m(vbool16_t vm,
                                                    vfloat8e4m3mf2_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x bfloat> @test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_m(
@@ -110,7 +110,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_m(vbool16_t vm,
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_m(vbool8_t vm, vfloat8e4m3m1_t vs2,
                                                   size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x bfloat> @test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_m(
@@ -121,7 +121,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_m(vbool8_t vm, vfloat8e4m3m1_t v
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_m(vbool4_t vm, vfloat8e4m3m2_t vs2,
                                                   size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x bfloat> @test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_m(
@@ -132,7 +132,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_m(vbool4_t vm, vfloat8e4m3m2_t v
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_m(vbool2_t vm, vfloat8e4m3m4_t vs2,
                                                   size_t vl) {
-  return __riscv_vfwcvt_f_f8e4m3_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4(
@@ -142,7 +142,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_m(vbool2_t vm, vfloat8e4m3m4_t v
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4(vfloat8e5m2mf8_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2(
@@ -152,7 +152,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4(vfloat8e5m2mf8_t vs2, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2(vfloat8e5m2mf4_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1(
@@ -162,7 +162,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2(vfloat8e5m2mf4_t vs2, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1(vfloat8e5m2mf2_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x bfloat> @test_vfwcvt_f_f_v_f8e5m2m1_bf16m2(
@@ -172,7 +172,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1(vfloat8e5m2mf2_t vs2, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2(vfloat8e5m2m1_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x bfloat> @test_vfwcvt_f_f_v_f8e5m2m2_bf16m4(
@@ -182,7 +182,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2(vfloat8e5m2m1_t vs2, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4(vfloat8e5m2m2_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x bfloat> @test_vfwcvt_f_f_v_f8e5m2m4_bf16m8(
@@ -192,7 +192,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4(vfloat8e5m2m2_t vs2, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8(vfloat8e5m2m4_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_m(
@@ -204,7 +204,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8(vfloat8e5m2m4_t vs2, size_t vl) 
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_m(vbool64_t vm,
                                                      vfloat8e5m2mf8_t vs2,
                                                      size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_m(
@@ -216,7 +216,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_m(vbool64_t vm,
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_m(vbool32_t vm,
                                                      vfloat8e5m2mf4_t vs2,
                                                      size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_m(
@@ -227,7 +227,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_m(vbool32_t vm,
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_m(vbool16_t vm,
                                                    vfloat8e5m2mf2_t vs2, size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x bfloat> @test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_m(
@@ -238,7 +238,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_m(vbool16_t vm,
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_m(vbool8_t vm, vfloat8e5m2m1_t vs2,
                                                   size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x bfloat> @test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_m(
@@ -249,7 +249,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_m(vbool8_t vm, vfloat8e5m2m1_t v
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_m(vbool4_t vm, vfloat8e5m2m2_t vs2,
                                                   size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 32 x bfloat> @test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_m(
@@ -260,5 +260,5 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_m(vbool4_t vm, vfloat8e5m2m2_t v
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_m(vbool2_t vm, vfloat8e5m2m4_t vs2,
                                                   size_t vl) {
-  return __riscv_vfwcvt_f_f8e5m2_bf16(vm, vs2, vl);
+  return __riscv_vfwcvt_f_bf16(vm, vs2, vl);
 }
