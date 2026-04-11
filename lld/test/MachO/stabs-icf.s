@@ -7,6 +7,13 @@
 # RUN: %lld -lSystem --icf=all %t.o -o %t_icf_stabs --keep-icf-stabs
 # RUN: dsymutil -s %t_icf_stabs | FileCheck %s -DDIR=%t_icf_stabs -DSRC_PATH=%t.o --check-prefixes=ICF_STABS
 
+## Verify that --keep-icf-stabs with local (non-global) symbols emits STAB
+## entries for all ICF'd functions but only one regular nlist entry per address.
+## This prevents atos from returning "<deduplicated_symbol>".
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %S/Inputs/stabs-icf-local.s -o %t_local.o
+# RUN: %lld -lSystem --icf=all %t_local.o -o %t_local --keep-icf-stabs
+# RUN: dsymutil -s %t_local | FileCheck %s -DDIR=%t_local -DSRC_PATH=%t_local.o --check-prefixes=ICF_LOCAL
+
 ## This should include no N_FUN entry for _baz (which is ICF'd into _bar),
 ## but it does include a SECT EXT entry.
 ## NOTE: We do not omit the N_FUN entry for _bar even though it is of size zero.
@@ -52,6 +59,28 @@
 # ICF_STABS-DAG:  (       {{.*}}) {{[0-9]+}}                 0010   {{[0-9a-f]+}}      '__mh_execute_header'
 # ICF_STABS-DAG:  (       {{.*}}) {{[0-9]+}}                 0100   0000000000000000   'dyld_stub_binder'
 # ICF_STABS-EMPTY:
+
+## --keep-icf-stabs with local symbols: STAB entries for all functions should
+## be present, but only the canonical local symbol gets a regular nlist entry.
+## _local_baz and _local_baz2 are ICF'd into _local_bar; they should have
+## N_FUN STABs but no SECT nlist entries.
+# ICF_LOCAL:      (N_SO         ) 00      0000   0000000000000000  '/tmp{{[/\\]}}test.cpp'
+# ICF_LOCAL-NEXT: (N_OSO        ) 03      0001   {{.*}} '[[SRC_PATH]]'
+# ICF_LOCAL-NEXT: (N_FUN        ) 01      0000   [[#%.16x,LMAIN:]]  '_main'
+# ICF_LOCAL-NEXT: (N_FUN        ) 00      0000   {{.*}}
+# ICF_LOCAL-NEXT: (N_FUN        ) 01      0000   [[#%.16x,LBAR:]]   '_local_bar'
+# ICF_LOCAL-NEXT: (N_FUN        ) 00      0000   {{.*}}
+# ICF_LOCAL-NEXT: (N_FUN        ) 01      0000   [[#LBAR]]          '_local_baz'
+# ICF_LOCAL-NEXT: (N_FUN        ) 00      0000   {{.*}}
+# ICF_LOCAL-NEXT: (N_FUN        ) 01      0000   [[#LBAR]]          '_local_baz2'
+# ICF_LOCAL-NEXT: (N_FUN        ) 00      0000   {{.*}}
+# ICF_LOCAL-NEXT: (N_SO         ) 01      0000   0000000000000000{{$}}
+## Only the canonical local symbol should appear in the regular nlist.
+# ICF_LOCAL-DAG:  (     SECT EXT) 01      0000   [[#LMAIN]]         '_main'
+# ICF_LOCAL-DAG:  (     SECT    ) 01      0000   [[#LBAR]]          '_local_bar'
+## ICF'd local symbols must NOT have regular nlist entries.
+# ICF_LOCAL-NOT:  (     SECT    ) {{.*}} '_local_baz'
+# ICF_LOCAL-NOT:  (     SECT    ) {{.*}} '_local_baz2'
 
 
 .text

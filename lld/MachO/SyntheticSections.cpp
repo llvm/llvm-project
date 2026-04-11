@@ -1376,6 +1376,19 @@ void SymtabSection::finalizeContents() {
   }
 
   emitStabs();
+
+  // When --keep-icf-stabs is enabled, STAB entries for ICF-folded symbols
+  // have been emitted above. Now remove non-canonical ICF'd local symbols
+  // from the regular nlist. Keeping them would produce duplicate entries at
+  // the same address, causing Apple's atos (and Crashlytics) to return
+  // "<deduplicated_symbol>" instead of a real function name.
+  if (config->keepICFStabs) {
+    llvm::erase_if(localSymbols, [](const SymtabEntry &e) {
+      auto *defined = dyn_cast<Defined>(e.sym);
+      return defined && !defined->isExternal() &&
+             defined->identicalCodeFoldingKind != Symbol::ICFFoldKind::None;
+    });
+  }
   uint32_t symtabIndex = stabs.size();
   for (const SymtabEntry &entry :
        concat<SymtabEntry>(localSymbols, externalSymbols, undefinedSymbols)) {
