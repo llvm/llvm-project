@@ -15,7 +15,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_SELFEXECUTORPROCESSCONTROL_H
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 
 #include <memory>
 
@@ -52,6 +51,8 @@ public:
 
   Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
 
+  Expected<std::unique_ptr<MemoryAccess>> createDefaultMemoryAccess() override;
+
   Error disconnect() override;
 
 private:
@@ -75,7 +76,6 @@ private:
 #ifdef __APPLE__
   std::unique_ptr<UnwindInfoManager> UnwindInfoMgr;
 #endif // __APPLE__
-  InProcessMemoryAccess IPMA;
 };
 
 } // namespace llvm::orc
