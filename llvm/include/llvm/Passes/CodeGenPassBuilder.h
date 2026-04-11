@@ -603,7 +603,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     std::unique_ptr<AsmPrinter> Printer(
         TM.getTarget().createAsmPrinter(TM, std::move(*MCStreamerOrErr)));
     if (!Printer)
-      return createStringError("Failed to create AsmPrinter");
+      return createStringError("failed to create AsmPrinter");
     MAM.registerPass([&] { return AsmPrinterAnalysis(std::move(Printer)); });
     derived().addAsmPrinterBegin(PMW);
   }

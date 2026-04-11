@@ -258,8 +258,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
 }
 
 void X86CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
-  addModulePass(X86AsmPrinterBeginPass(), PMW,
-                /*Force=*/true);
+  addModulePass(X86AsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
