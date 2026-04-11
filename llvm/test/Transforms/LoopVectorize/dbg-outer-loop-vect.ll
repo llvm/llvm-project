@@ -33,7 +33,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20, !dbg [[DBG21]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG21]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]], !dbg [[DBG21]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]], !dbg [[DBG21]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]], !dbg [[DBG21]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
@@ -57,7 +57,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    [[INC13]] = add nuw nsw i64 [[I_023]], 1, !dbg [[DBG22]]
 ; CHECK-NEXT:      #dbg_value(i64 [[INC13]], [[META11]], !DIExpression(), [[META20]])
 ; CHECK-NEXT:    [[EXITCOND24_NOT:%.*]] = icmp eq i64 [[INC13]], 23, !dbg [[DBG33:![0-9]+]]
-; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label %[[EXIT]], label %[[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP34:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label %[[EXIT:.*]], label %[[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void, !dbg [[DBG35:![0-9]+]]
 ;
