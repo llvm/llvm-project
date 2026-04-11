@@ -8690,16 +8690,14 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
     mlir::Type sourceType = fir::unwrapRefType(sourceBase.getType());
     if (fir::isa_ref_type(sourceBase.getType()) &&
         !mlir::isa<fir::SequenceType>(sourceType)) {
-      auto &dl = builder.getDataLayout();
-      auto &kindMap = builder.getKindMap();
-      auto sourceSizeAndAlign =
-          fir::getTypeSizeAndAlignment(loc, sourceType, dl, kindMap);
-      auto resultSizeAndAlign =
-          fir::getTypeSizeAndAlignment(loc, resultType, dl, kindMap);
+      auto sourceSizeAndAlign = fir::getTypeSizeAndAlignment(
+          loc, sourceType, builder.getDataLayout(), builder.getKindMap());
+      auto resultSizeAndAlign = fir::getTypeSizeAndAlignment(
+          loc, resultType, builder.getDataLayout(), builder.getKindMap());
       if (sourceSizeAndAlign && resultSizeAndAlign &&
           sourceSizeAndAlign->first == resultSizeAndAlign->first) {
-        auto refTy = builder.getRefType(resultType);
-        auto cast = builder.createConvert(loc, refTy, sourceBase);
+        mlir::Type refTy = builder.getRefType(resultType);
+        mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
         return fir::LoadOp::create(builder, loc, cast);
       }
     }
