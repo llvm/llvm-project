@@ -1845,8 +1845,8 @@ public:
 
   template <typename... Ts> bool isNextPPTokenHeaderNameOrOneOf(Ts... Ks) {
     // First, tries to form a valid header-name token.
-    llvm::SaveAndRestore<bool> SavedFilename(CurPPLexer->ParsingFilename,
-                                              true);
+    llvm::SaveAndRestore<bool> SavedParsingFilename(CurPPLexer->ParsingFilename,
+                                                    true);
     if (auto Tok = peekNextPPToken()) {
       if (Tok->is(tok::header_name))
         return true;
