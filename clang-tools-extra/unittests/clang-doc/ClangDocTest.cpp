@@ -54,10 +54,10 @@ TypedefInfo *InfoAsTypedef(Info *I) {
   return static_cast<TypedefInfo *>(I);
 }
 
-void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
-                      const std::vector<CommentInfo> &Actual);
-void CheckCommentInfo(const std::vector<OwnedPtr<CommentInfo>> &Expected,
-                      const std::vector<OwnedPtr<CommentInfo>> &Actual);
+void CheckCommentInfo(ArrayRef<CommentInfo> Expected,
+                      ArrayRef<CommentInfo> Actual);
+void CheckCommentInfo(const OwningVec<CommentInfo> &Expected,
+                      const OwningVec<CommentInfo> &Actual);
 
 void CheckCommentInfo(const CommentInfo &Expected, const CommentInfo &Actual) {
   EXPECT_EQ(Expected.Kind, Actual.Kind);
@@ -84,52 +84,71 @@ void CheckCommentInfo(const CommentInfo &Expected, const CommentInfo &Actual) {
   CheckCommentInfo(Expected.Children, Actual.Children);
 }
 
-void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
-                      const std::vector<CommentInfo> &Actual) {
-  ASSERT_EQ(Expected.size(), Actual.size());
-  for (size_t Idx = 0; Idx < Actual.size(); ++Idx)
-    CheckCommentInfo(Expected[Idx], Actual[Idx]);
+void CheckCommentInfo(ArrayRef<CommentInfo> Expected,
+                      ArrayRef<CommentInfo> Actual) {
+  auto ItE = Expected.begin();
+  auto ItA = Actual.begin();
+  while (ItE != Expected.end() && ItA != Actual.end()) {
+    CheckCommentInfo(*ItE, *ItA);
+    ++ItE;
+    ++ItA;
+  }
+  EXPECT_TRUE(ItE == Expected.end() && ItA == Actual.end());
 }
 
-void CheckCommentInfo(const std::vector<OwnedPtr<CommentInfo>> &Expected,
-                      const std::vector<OwnedPtr<CommentInfo>> &Actual) {
-  ASSERT_EQ(Expected.size(), Actual.size());
-  for (size_t Idx = 0; Idx < Actual.size(); ++Idx)
-    CheckCommentInfo(*Expected[Idx], *Actual[Idx]);
+void CheckCommentInfo(const OwningVec<CommentInfo> &Expected,
+                      const OwningVec<CommentInfo> &Actual) {
+  auto ItE = Expected.begin();
+  auto ItA = Actual.begin();
+  while (ItE != Expected.end() && ItA != Actual.end()) {
+    CheckCommentInfo(*ItE, *ItA);
+    ++ItE;
+    ++ItA;
+  }
+  EXPECT_TRUE(ItE == Expected.end() && ItA == Actual.end());
 }
 
-void CheckReference(Reference &Expected, Reference &Actual) {
+void CheckReference(const Reference &Expected, const Reference &Actual) {
   EXPECT_EQ(Expected.Name, Actual.Name);
   EXPECT_EQ(Expected.RefType, Actual.RefType);
   EXPECT_EQ(Expected.Path, Actual.Path);
 }
 
-void CheckTypeInfo(TypeInfo *Expected, TypeInfo *Actual) {
+void CheckTypeInfo(const TypeInfo *Expected, const TypeInfo *Actual) {
   CheckReference(Expected->Type, Actual->Type);
 }
 
-void CheckFieldTypeInfo(FieldTypeInfo *Expected, FieldTypeInfo *Actual) {
+void CheckFieldTypeInfo(const FieldTypeInfo *Expected,
+                        const FieldTypeInfo *Actual) {
   CheckTypeInfo(Expected, Actual);
   EXPECT_EQ(Expected->Name, Actual->Name);
 }
 
-void CheckMemberTypeInfo(MemberTypeInfo *Expected, MemberTypeInfo *Actual) {
+void CheckMemberTypeInfo(const MemberTypeInfo *Expected,
+                         const MemberTypeInfo *Actual) {
   CheckFieldTypeInfo(Expected, Actual);
   EXPECT_EQ(Expected->Access, Actual->Access);
   CheckCommentInfo(Expected->Description, Actual->Description);
 }
 
-void CheckBaseInfo(Info *Expected, Info *Actual) {
+void CheckBaseInfo(const Info *Expected, const Info *Actual) {
   EXPECT_EQ(size_t(20), Actual->USR.size());
   EXPECT_EQ(Expected->Name, Actual->Name);
   EXPECT_EQ(Expected->Path, Actual->Path);
-  ASSERT_EQ(Expected->Namespace.size(), Actual->Namespace.size());
-  for (size_t Idx = 0; Idx < Actual->Namespace.size(); ++Idx)
-    CheckReference(Expected->Namespace[Idx], Actual->Namespace[Idx]);
+  auto ItN_E = Expected->Namespace.begin();
+  auto ItN_A = Actual->Namespace.begin();
+  while (ItN_E != Expected->Namespace.end() &&
+         ItN_A != Actual->Namespace.end()) {
+    CheckReference(*ItN_E, *ItN_A);
+    ++ItN_E;
+    ++ItN_A;
+  }
+  EXPECT_TRUE(ItN_E == Expected->Namespace.end() &&
+              ItN_A == Actual->Namespace.end());
   CheckCommentInfo(Expected->Description, Actual->Description);
 }
 
-void CheckSymbolInfo(SymbolInfo *Expected, SymbolInfo *Actual) {
+void CheckSymbolInfo(const SymbolInfo *Expected, const SymbolInfo *Actual) {
   CheckBaseInfo(Expected, Actual);
   EXPECT_EQ(Expected->DefLoc.has_value(), Actual->DefLoc.has_value());
   if (Expected->DefLoc && Actual->DefLoc.has_value()) {
@@ -138,109 +157,186 @@ void CheckSymbolInfo(SymbolInfo *Expected, SymbolInfo *Actual) {
     EXPECT_EQ(Expected->DefLoc->EndLineNumber, Actual->DefLoc->EndLineNumber);
     EXPECT_EQ(Expected->DefLoc->Filename, Actual->DefLoc->Filename);
   }
-  ASSERT_EQ(Expected->Loc.size(), Actual->Loc.size());
-  for (size_t Idx = 0; Idx < Actual->Loc.size(); ++Idx)
-    EXPECT_EQ(Expected->Loc[Idx], Actual->Loc[Idx]);
+  auto ItE = Expected->Loc.begin();
+  auto ItA = Actual->Loc.begin();
+  while (ItE != Expected->Loc.end() && ItA != Actual->Loc.end()) {
+    EXPECT_EQ(*ItE, *ItA);
+    ++ItE;
+    ++ItA;
+  }
+  EXPECT_TRUE(ItE == Expected->Loc.end() && ItA == Actual->Loc.end());
 }
 
-void CheckFunctionInfo(FunctionInfo *Expected, FunctionInfo *Actual) {
+void CheckFunctionInfo(const FunctionInfo *Expected,
+                       const FunctionInfo *Actual) {
   CheckSymbolInfo(Expected, Actual);
 
   EXPECT_EQ(Expected->IsMethod, Actual->IsMethod);
   CheckReference(Expected->Parent, Actual->Parent);
   CheckTypeInfo(&Expected->ReturnType, &Actual->ReturnType);
 
-  ASSERT_EQ(Expected->Params.size(), Actual->Params.size());
-  for (size_t Idx = 0; Idx < Actual->Params.size(); ++Idx)
+  for (size_t Idx = 0; Idx < Expected->Params.size(); ++Idx) {
     EXPECT_EQ(Expected->Params[Idx], Actual->Params[Idx]);
+  }
 
   EXPECT_EQ(Expected->Access, Actual->Access);
 }
 
-void CheckEnumInfo(EnumInfo *Expected, EnumInfo *Actual) {
+void CheckEnumInfo(const EnumInfo *Expected, const EnumInfo *Actual) {
   CheckSymbolInfo(Expected, Actual);
 
   EXPECT_EQ(Expected->Scoped, Actual->Scoped);
-  ASSERT_EQ(Expected->Members.size(), Actual->Members.size());
-  for (size_t Idx = 0; Idx < Actual->Members.size(); ++Idx)
-    EXPECT_EQ(Expected->Members[Idx], Actual->Members[Idx]);
+  auto ItM_E = Expected->Members.begin();
+  auto ItM_A = Actual->Members.begin();
+  while (ItM_E != Expected->Members.end() && ItM_A != Actual->Members.end()) {
+    EXPECT_EQ(*ItM_E, *ItM_A);
+    ++ItM_E;
+    ++ItM_A;
+  }
+  EXPECT_TRUE(ItM_E == Expected->Members.end() &&
+              ItM_A == Actual->Members.end());
 }
 
-void CheckTypedefInfo(TypedefInfo *Expected, TypedefInfo *Actual) {
+void CheckTypedefInfo(const TypedefInfo *Expected, const TypedefInfo *Actual) {
   CheckSymbolInfo(Expected, Actual);
   EXPECT_EQ(Expected->IsUsing, Actual->IsUsing);
   CheckTypeInfo(&Expected->Underlying, &Actual->Underlying);
 }
 
-void CheckNamespaceInfo(NamespaceInfo *Expected, NamespaceInfo *Actual) {
+void CheckNamespaceInfo(const NamespaceInfo *Expected,
+                        const NamespaceInfo *Actual) {
   CheckBaseInfo(Expected, Actual);
 
   ASSERT_EQ(Expected->Children.Namespaces.size(),
             Actual->Children.Namespaces.size());
-  auto ItExpected = Expected->Children.Namespaces.begin();
-  auto ItActual = Actual->Children.Namespaces.begin();
-  while (ItExpected != Expected->Children.Namespaces.end()) {
-    CheckReference(*ItExpected, *ItActual);
-    ++ItExpected;
-    ++ItActual;
+  auto ItN_E = Expected->Children.Namespaces.begin();
+  auto ItN_A = Actual->Children.Namespaces.begin();
+  while (ItN_E != Expected->Children.Namespaces.end() &&
+         ItN_A != Actual->Children.Namespaces.end()) {
+    CheckReference(*ItN_E, *ItN_A);
+    ++ItN_E;
+    ++ItN_A;
   }
+  EXPECT_TRUE(ItN_E == Expected->Children.Namespaces.end() &&
+              ItN_A == Actual->Children.Namespaces.end());
 
-  ASSERT_EQ(Expected->Children.Records.size(), Actual->Children.Records.size());
-  for (size_t Idx = 0; Idx < Actual->Children.Records.size(); ++Idx)
-    CheckReference(Expected->Children.Records[Idx],
-                   Actual->Children.Records[Idx]);
+  auto ItR_E = Expected->Children.Records.begin();
+  auto ItR_A = Actual->Children.Records.begin();
+  while (ItR_E != Expected->Children.Records.end() &&
+         ItR_A != Actual->Children.Records.end()) {
+    CheckReference(*ItR_E, *ItR_A);
+    ++ItR_E;
+    ++ItR_A;
+  }
+  EXPECT_TRUE(ItR_E == Expected->Children.Records.end() &&
+              ItR_A == Actual->Children.Records.end());
 
-  ASSERT_EQ(Expected->Children.Functions.size(),
-            Actual->Children.Functions.size());
-  for (size_t Idx = 0; Idx < Actual->Children.Functions.size(); ++Idx)
-    CheckFunctionInfo(&Expected->Children.Functions[Idx],
-                      &Actual->Children.Functions[Idx]);
+  auto ItF_E = Expected->Children.Functions.begin();
+  auto ItF_A = Actual->Children.Functions.begin();
+  while (ItF_E != Expected->Children.Functions.end() &&
+         ItF_A != Actual->Children.Functions.end()) {
+    CheckFunctionInfo(&(*ItF_E), &(*ItF_A));
+    ++ItF_E;
+    ++ItF_A;
+  }
+  EXPECT_TRUE(ItF_E == Expected->Children.Functions.end() &&
+              ItF_A == Actual->Children.Functions.end());
 
-  ASSERT_EQ(Expected->Children.Enums.size(), Actual->Children.Enums.size());
-  for (size_t Idx = 0; Idx < Actual->Children.Enums.size(); ++Idx)
-    CheckEnumInfo(&Expected->Children.Enums[Idx], &Actual->Children.Enums[Idx]);
+  auto ItEnum_E = Expected->Children.Enums.begin();
+  auto ItEnum_A = Actual->Children.Enums.begin();
+  while (ItEnum_E != Expected->Children.Enums.end() &&
+         ItEnum_A != Actual->Children.Enums.end()) {
+    CheckEnumInfo(&(*ItEnum_E), &(*ItEnum_A));
+    ++ItEnum_E;
+    ++ItEnum_A;
+  }
+  EXPECT_TRUE(ItEnum_E == Expected->Children.Enums.end() &&
+              ItEnum_A == Actual->Children.Enums.end());
 }
 
-void CheckRecordInfo(RecordInfo *Expected, RecordInfo *Actual) {
+void CheckRecordInfo(const RecordInfo *Expected, const RecordInfo *Actual) {
   CheckSymbolInfo(Expected, Actual);
 
   EXPECT_EQ(Expected->TagType, Actual->TagType);
 
   EXPECT_EQ(Expected->IsTypeDef, Actual->IsTypeDef);
 
-  ASSERT_EQ(Expected->Members.size(), Actual->Members.size());
-  for (size_t Idx = 0; Idx < Actual->Members.size(); ++Idx)
-    EXPECT_EQ(Expected->Members[Idx], Actual->Members[Idx]);
+  auto ItM_E = Expected->Members.begin();
+  auto ItM_A = Actual->Members.begin();
+  while (ItM_E != Expected->Members.end() && ItM_A != Actual->Members.end()) {
+    EXPECT_EQ(*ItM_E, *ItM_A);
+    ++ItM_E;
+    ++ItM_A;
+  }
+  EXPECT_TRUE(ItM_E == Expected->Members.end() &&
+              ItM_A == Actual->Members.end());
 
-  ASSERT_EQ(Expected->Parents.size(), Actual->Parents.size());
-  for (size_t Idx = 0; Idx < Actual->Parents.size(); ++Idx)
-    CheckReference(Expected->Parents[Idx], Actual->Parents[Idx]);
+  auto ItP_E = Expected->Parents.begin();
+  auto ItP_A = Actual->Parents.begin();
+  while (ItP_E != Expected->Parents.end() && ItP_A != Actual->Parents.end()) {
+    CheckReference(*ItP_E, *ItP_A);
+    ++ItP_E;
+    ++ItP_A;
+  }
+  EXPECT_TRUE(ItP_E == Expected->Parents.end() &&
+              ItP_A == Actual->Parents.end());
 
-  ASSERT_EQ(Expected->VirtualParents.size(), Actual->VirtualParents.size());
-  for (size_t Idx = 0; Idx < Actual->VirtualParents.size(); ++Idx)
-    CheckReference(Expected->VirtualParents[Idx], Actual->VirtualParents[Idx]);
+  auto ItVP_E = Expected->VirtualParents.begin();
+  auto ItVP_A = Actual->VirtualParents.begin();
+  while (ItVP_E != Expected->VirtualParents.end() &&
+         ItVP_A != Actual->VirtualParents.end()) {
+    CheckReference(*ItVP_E, *ItVP_A);
+    ++ItVP_E;
+    ++ItVP_A;
+  }
+  EXPECT_TRUE(ItVP_E == Expected->VirtualParents.end() &&
+              ItVP_A == Actual->VirtualParents.end());
 
-  ASSERT_EQ(Expected->Bases.size(), Actual->Bases.size());
-  for (size_t Idx = 0; Idx < Actual->Bases.size(); ++Idx)
-    CheckBaseRecordInfo(&Expected->Bases[Idx], &Actual->Bases[Idx]);
+  auto ItB_E = Expected->Bases.begin();
+  auto ItB_A = Actual->Bases.begin();
+  while (ItB_E != Expected->Bases.end() && ItB_A != Actual->Bases.end()) {
+    CheckBaseRecordInfo(&(*ItB_E), &(*ItB_A));
+    ++ItB_E;
+    ++ItB_A;
+  }
+  EXPECT_TRUE(ItB_E == Expected->Bases.end() && ItB_A == Actual->Bases.end());
 
-  ASSERT_EQ(Expected->Children.Records.size(), Actual->Children.Records.size());
-  for (size_t Idx = 0; Idx < Actual->Children.Records.size(); ++Idx)
-    CheckReference(Expected->Children.Records[Idx],
-                   Actual->Children.Records[Idx]);
+  auto ItR_E = Expected->Children.Records.begin();
+  auto ItR_A = Actual->Children.Records.begin();
+  while (ItR_E != Expected->Children.Records.end() &&
+         ItR_A != Actual->Children.Records.end()) {
+    CheckReference(*ItR_E, *ItR_A);
+    ++ItR_E;
+    ++ItR_A;
+  }
+  EXPECT_TRUE(ItR_E == Expected->Children.Records.end() &&
+              ItR_A == Actual->Children.Records.end());
 
-  ASSERT_EQ(Expected->Children.Functions.size(),
-            Actual->Children.Functions.size());
-  for (size_t Idx = 0; Idx < Actual->Children.Functions.size(); ++Idx)
-    CheckFunctionInfo(&Expected->Children.Functions[Idx],
-                      &Actual->Children.Functions[Idx]);
+  auto ItF_E = Expected->Children.Functions.begin();
+  auto ItF_A = Actual->Children.Functions.begin();
+  while (ItF_E != Expected->Children.Functions.end() &&
+         ItF_A != Actual->Children.Functions.end()) {
+    CheckFunctionInfo(&(*ItF_E), &(*ItF_A));
+    ++ItF_E;
+    ++ItF_A;
+  }
+  EXPECT_TRUE(ItF_E == Expected->Children.Functions.end() &&
+              ItF_A == Actual->Children.Functions.end());
 
-  ASSERT_EQ(Expected->Children.Enums.size(), Actual->Children.Enums.size());
-  for (size_t Idx = 0; Idx < Actual->Children.Enums.size(); ++Idx)
-    CheckEnumInfo(&Expected->Children.Enums[Idx], &Actual->Children.Enums[Idx]);
+  auto ItEnum_E = Expected->Children.Enums.begin();
+  auto ItEnum_A = Actual->Children.Enums.begin();
+  while (ItEnum_E != Expected->Children.Enums.end() &&
+         ItEnum_A != Actual->Children.Enums.end()) {
+    CheckEnumInfo(&(*ItEnum_E), &(*ItEnum_A));
+    ++ItEnum_E;
+    ++ItEnum_A;
+  }
+  EXPECT_TRUE(ItEnum_E == Expected->Children.Enums.end() &&
+              ItEnum_A == Actual->Children.Enums.end());
 }
 
-void CheckBaseRecordInfo(BaseRecordInfo *Expected, BaseRecordInfo *Actual) {
+void CheckBaseRecordInfo(const BaseRecordInfo *Expected,
+                         const BaseRecordInfo *Actual) {
   CheckRecordInfo(Expected, Actual);
 
   EXPECT_EQ(Expected->IsVirtual, Actual->IsVirtual);
@@ -248,7 +344,7 @@ void CheckBaseRecordInfo(BaseRecordInfo *Expected, BaseRecordInfo *Actual) {
   EXPECT_EQ(Expected->IsParent, Actual->IsParent);
 }
 
-void CheckIndex(Index &Expected, Index &Actual) {
+void CheckIndex(const Index &Expected, const Index &Actual) {
   CheckReference(Expected, Actual);
   ASSERT_EQ(Expected.Children.size(), Actual.Children.size());
   for (auto &[_, C] : Expected.Children)
