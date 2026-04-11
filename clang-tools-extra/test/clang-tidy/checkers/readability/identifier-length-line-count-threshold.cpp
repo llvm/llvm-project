@@ -10,6 +10,8 @@ struct myexcept {
 template<typename... Ts>
 void doIt(Ts...);
 
+#define MY_MACRO(arg) doIt(arg, arg)
+
 void shouldWarn(int z)
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: parameter name 'z' is too short, expected at least 3 characters [readability-identifier-length]
 {
@@ -31,6 +33,11 @@ void shouldWarn(int z)
   {
     doIt(x);
   }
+
+  int a = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable name 'a' is too short, expected at least 3 characters [readability-identifier-length]
+  ++a;
+  MY_MACRO(a);
 }
 
 void shouldNotWarn(int m)
@@ -51,4 +58,7 @@ void shouldNotWarn(int m)
   } catch (const myexcept &x) {
     doIt(x);
   }
+
+  int a = 0;
+  MY_MACRO(a);
 }
