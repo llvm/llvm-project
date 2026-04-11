@@ -184,7 +184,7 @@
 "`P3932R0 <https://wg21.link/P3932R0>`__","Fix LWG4470: Fix integer-from in [simd]","2026-03 (Croydon)","","","`#189591 <https://github.com/llvm/llvm-project/issues/189591>`__",""
 "`P4012R1 <https://wg21.link/P4012R1>`__","Value-preserving consteval broadcast to ``simd::vec``","2026-03 (Croydon)","","","`#189592 <https://github.com/llvm/llvm-project/issues/189592>`__",""
 "`P3886R0 <https://wg21.link/P3886R0>`__","Wording for AT1-057","2026-03 (Croydon)","","","`#189593 <https://github.com/llvm/llvm-project/issues/189593>`__",""
-"`P3936R1 <https://wg21.link/P3936R1>`__","Safer ``atomic_ref::address`` (FR-030-310)","2026-03 (Croydon)","","","`#189594 <https://github.com/llvm/llvm-project/issues/189594>`__",""
+"`P3936R1 <https://wg21.link/P3936R1>`__","Safer ``atomic_ref::address`` (FR-030-310)","2026-03 (Croydon)","|Complete|","23","`#189594 <https://github.com/llvm/llvm-project/issues/189594>`__",""
 "`P4140R0 <https://wg21.link/P4140R0>`__","Proposed resolution for US70-126: allow incomplete types in type_order","2026-03 (Croydon)","","","`#189595 <https://github.com/llvm/llvm-project/issues/189595>`__",""
 "`P3373R4 <https://wg21.link/P3373R4>`__","Of Operation States and Their Lifetimes","2026-03 (Croydon)","","","`#189597 <https://github.com/llvm/llvm-project/issues/189597>`__",""
 "`P3986R1 <https://wg21.link/P3986R1>`__","A Wording Strategy for Inlinable Receivers","2026-03 (Croydon)","","","`#189598 <https://github.com/llvm/llvm-project/issues/189598>`__",""
