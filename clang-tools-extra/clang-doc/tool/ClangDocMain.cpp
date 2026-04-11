@@ -29,6 +29,7 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -358,15 +359,22 @@ Example usage for a project using a compile commands database:
         llvm::hardware_concurrency(ExecutorConcurrency));
     {
       llvm::TimeTraceScope TS("Reduce");
-      for (auto &Group : USRToBitcode) {
-        Pool.async([&, &Diags = Diags]() { // time trace decoding bitcode
-          if (FTimeTrace)
+      for (const auto &Group : USRToBitcode) {
+        StringRef Key = Group.getKey();
+        std::vector<StringRef> Bitcodes = Group.getValue();
+        Pool.async([Key, Bitcodes, &CDCtx, &Diags, &USRToInfo, &USRToInfoMutex,
+                    &IndexMutex, &DiagMutex, &Error, DiagIDBitcodeReading,
+                    DiagIDBitcodeMerging]() {
+          if (CDCtx.FTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-          doc::OwningPtrVec<doc::Info> Infos;
+          doc::OwnedPtr<doc::Info> Reduced = nullptr;
           {
-            llvm::TimeTraceScope Red("decoding bitcode");
-            for (auto &Bitcode : Group.getValue()) {
+            llvm::TimeTraceScope Red("decoding and merging bitcode");
+            for (const auto &Bitcode : Bitcodes) {
+
+              llvm::scope_exit ArenaGuard(
+                  [] { clang::doc::TransientArena.Reset(); });
               llvm::BitstreamCursor Stream(Bitcode);
               doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
@@ -378,25 +386,17 @@ Example usage for a project using a compile commands database:
                 Error = true;
                 return;
               }
-              std::move(ReadInfos->begin(), ReadInfos->end(),
-                        std::back_inserter(Infos));
+              for (auto &I : *ReadInfos) {
+                if (auto Err = doc::mergeSingleInfo(
+                        Reduced, std::move(I), clang::doc::PersistentArena)) {
+                  std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
+                  Diags.Report(DiagIDBitcodeMerging)
+                      << toString(std::move(Err));
+                  return;
+                }
+              }
             }
-          } // time trace decoding bitcode
-
-          doc::OwnedPtr<doc::Info> Reduced;
-
-          {
-            llvm::TimeTraceScope Merge("merging bitcode");
-            auto ExpReduced = doc::mergeInfos(Infos);
-
-            if (!ExpReduced) {
-              std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
-              Diags.Report(DiagIDBitcodeMerging)
-                  << toString(ExpReduced.takeError());
-              return;
-            }
-            Reduced = std::move(*ExpReduced);
-          } // time trace merging bitcode
+          } // time trace decoding and merging bitcode
 
           // Add a reference to this Info in the Index
           {
@@ -408,7 +408,7 @@ Example usage for a project using a compile commands database:
           {
             llvm::TimeTraceScope Merge("USRToInfo");
             std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
-            USRToInfo[Group.getKey()] = std::move(Reduced);
+            USRToInfo[Key] = std::move(Reduced);
           }
 
           if (CDCtx.FTimeTrace)

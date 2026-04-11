@@ -388,12 +388,12 @@ protected:
             new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
     } else if (!new_exec_module_sp) {
-      result.AppendWarning("No executable binary.");
+      result.AppendWarning("no executable binary");
     } else if (old_exec_module_sp->GetFileSpec() !=
                new_exec_module_sp->GetFileSpec()) {
 
       result.AppendWarningWithFormatv(
-          "Executable binary changed from \"{0}\" to \"{1}\".",
+          "executable binary changed from \"{0}\" to \"{1}\"",
           old_exec_module_sp->GetFileSpec().GetPath(),
           new_exec_module_sp->GetFileSpec().GetPath());
     }
@@ -404,7 +404,7 @@ protected:
           target->GetArchitecture().GetTriple().getTriple().c_str());
     } else if (!old_arch_spec.IsExactMatch(target->GetArchitecture())) {
       result.AppendWarningWithFormatv(
-          "Architecture changed from {0} to {1}.",
+          "architecture changed from {0} to {1}",
           old_arch_spec.GetTriple().getTriple(),
           target->GetArchitecture().GetTriple().getTriple());
     }
