@@ -693,9 +693,6 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
                                  [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
-def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
-                      AssemblerPredicate<(all_of FeatureStdExtZvfbfa),
-                          "'Zvfbfa' (Additional BF16 vector compute support)">;
 
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
@@ -907,7 +904,7 @@ def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
           "(Vector Extensions for Embedded Processors)">;
 
 def HasVInstructionsF16Minimal : Predicate<"Subtarget->hasVInstructionsF16Minimal()">,
-      AssemblerPredicate<(any_of FeatureStdExtZvfhmin, FeatureStdExtZvfh),
+      AssemblerPredicate<(any_of FeatureStdExtZvfh),
                          "'Zvfhmin' (Vector Half-Precision Floating-Point Minimal) or "
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
