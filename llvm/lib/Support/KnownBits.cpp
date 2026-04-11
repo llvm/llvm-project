@@ -603,7 +603,8 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
-KnownBits KnownBits::fshl(KnownBits LHS, KnownBits RHS, KnownBits Amt) {
+KnownBits KnownBits::fshl(const KnownBits &LHS, const KnownBits &RHS,
+                          const KnownBits &Amt) {
   if (Amt.isConstant()) {
     const APInt &ShAmt = Amt.getConstant();
     return KnownBits(APIntOps::fshl(LHS.Zero, RHS.Zero, ShAmt),
@@ -632,7 +633,8 @@ KnownBits KnownBits::fshl(KnownBits LHS, KnownBits RHS, KnownBits Amt) {
   return Known;
 }
 
-KnownBits KnownBits::fshr(KnownBits LHS, KnownBits RHS, KnownBits Amt) {
+KnownBits KnownBits::fshr(const KnownBits &LHS, const KnownBits &RHS,
+                          const KnownBits &Amt) {
   if (Amt.isConstant()) {
     const APInt &ShAmt = Amt.getConstant();
     return KnownBits(APIntOps::fshr(LHS.Zero, RHS.Zero, ShAmt),
