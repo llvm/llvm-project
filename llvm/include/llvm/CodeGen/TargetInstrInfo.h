@@ -1842,7 +1842,8 @@ public:
   /// whether it can be folded into MI. FoldAsLoadDefReg is the virtual register
   /// defined by the load we are trying to fold. DefMI returns the machine
   /// instruction that defines FoldAsLoadDefReg, and the function returns
-  /// the machine instruction generated due to folding.
+  /// the machine instruction generated due to folding. CopyMI returns the
+  /// copy instruction possibly generated due to folding.
   virtual MachineInstr *optimizeLoadInstr(MachineInstr &MI,
                                           const MachineRegisterInfo *MRI,
                                           Register &FoldAsLoadDefReg,
