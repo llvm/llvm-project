@@ -8,6 +8,7 @@
 
 #include "IdentifierLengthCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "../utils/DeclRefExprUtils.h"
 
 using namespace clang::ast_matchers;
 
@@ -92,34 +93,21 @@ void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
 static unsigned countLinesToLastUse(const VarDecl *Var,
                                     const SourceManager *SrcMgr,
                                     ASTContext *Ctx) {
+  const auto *ParentScope = llvm::dyn_cast<FunctionDecl>(Var->getDeclContext());
+  if (ParentScope == nullptr) {
+    return 1;
+  }
+
+  auto AllRefs =
+      utils::decl_ref_expr::allDeclRefExprs(*Var, *ParentScope, *Ctx);
+
   const unsigned DeclLine = SrcMgr->getSpellingLineNumber(Var->getLocation());
-
-  class VarUseCallback : public MatchFinder::MatchCallback {
-  private:
-    unsigned *LastUseLineNumber;
-
-  public:
-    explicit VarUseCallback(unsigned *Output) : LastUseLineNumber{Output} {}
-
-    void run(const MatchFinder::MatchResult &Result) override {
-      const auto *Use = Result.Nodes.getNodeAs<DeclRefExpr>("varUse");
-      if (Use && LastUseLineNumber) {
-        auto Loc = Use->getLocation();
-        const unsigned UseLine =
-            Result.SourceManager->getSpellingLineNumber(Loc);
-        *LastUseLineNumber = std::max(*LastUseLineNumber, UseLine);
-      }
-    }
-  };
-
-  unsigned LastUseLine = DeclLine;
-  VarUseCallback Callback{&LastUseLine};
-
-  auto Matcher = declRefExpr(to(varDecl(equalsNode(Var)))).bind("varUse");
-
-  MatchFinder Finder;
-  Finder.addMatcher(Matcher, &Callback);
-  Finder.matchAST(*Ctx);
+  const unsigned LastUseLine = std::transform_reduce(
+      AllRefs.begin(), AllRefs.end(), DeclLine,
+      [](unsigned Lhs, unsigned Rhs) -> unsigned { return std::max(Lhs, Rhs); },
+      [&](DeclRefExpr const *RefToVar) -> unsigned {
+        return SrcMgr->getSpellingLineNumber(RefToVar->getLocation());
+      });
 
   return LastUseLine - DeclLine + 1;
 }
