@@ -122,17 +122,22 @@ void VPRecipeBase::dump() const {
 #endif
 
 #if !defined(NDEBUG)
-bool VPRecipeValue::isDefinedBy(const VPDef *D) const { return Def == D; }
+bool VPRecipeValue::isDefinedBy(const VPDef *D) const {
+  return getDefiningRecipe() == D;
+}
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  return DefValue ? DefValue->Def : nullptr;
+  if (!DefValue)
+    return nullptr;
+  if (auto *SV = dyn_cast<VPStandaloneRecipeValue>(DefValue))
+    return SV->getDef();
+  return static_cast<VPSingleDefRecipe *>(DefValue);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
-  auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  return DefValue ? DefValue->Def : nullptr;
+  return const_cast<VPValue *>(this)->getDefiningRecipe();
 }
 
 Value *VPValue::getLiveInIRValue() const {
@@ -141,15 +146,21 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
-VPRecipeValue::VPRecipeValue(VPRecipeBase *Def, Value *UV)
-    : VPValue(VPVRecipeValueSC, UV), Def(Def) {
-  assert(Def && "VPRecipeValue requires a defining recipe");
+VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV)
+    : VPRecipeValue(VPVSingleDefValueSC, UV) {
+  assert(Def && "VPSingleDefValue requires a defining recipe");
   Def->addDefinedValue(this);
 }
 
-VPRecipeValue::~VPRecipeValue() {
-  assert(Users.empty() &&
-         "trying to delete a VPRecipeValue with remaining users");
+VPRecipeValue::~VPRecipeValue() = default;
+
+VPStandaloneRecipeValue::VPStandaloneRecipeValue(VPRecipeBase *Def, Value *UV)
+    : VPRecipeValue(VPVStandaloneRecipeValueSC, UV), Def(Def) {
+  assert(Def && "VPStandaloneRecipeValue requires a defining recipe");
+  Def->addDefinedValue(this);
+}
+
+VPStandaloneRecipeValue::~VPStandaloneRecipeValue() {
   Def->removeDefinedValue(this);
 }
 

@@ -605,16 +605,17 @@ protected:
 
 /// VPSingleDef is a base class for recipes for modeling a sequence of one or
 /// more output IR that define a single result VPValue.
-/// Note that VPRecipeBase must be inherited from before VPValue.
-class VPSingleDefRecipe : public VPRecipeBase, public VPRecipeValue {
+class VPSingleDefRecipe : public VPRecipeBase, public VPSingleDefValue {
 public:
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPRecipeValue(this) {}
+      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this) {}
 
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     Value *UV, DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPRecipeValue(this, UV) {}
+      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV) {}
+
+  ~VPSingleDefRecipe() override { removeDefinedValue(this); }
 
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPRecipeID()) {
@@ -2873,7 +2874,7 @@ protected:
     if (StoredValues.empty()) {
       for (Instruction *Inst : IG->members()) {
         assert(!Inst->getType()->isVoidTy() && "must have result");
-        new VPRecipeValue(this, Inst);
+        new VPStandaloneRecipeValue(this, Inst);
       }
     } else {
       for (auto *SV : StoredValues)
@@ -3568,13 +3569,14 @@ public:
 
 /// A recipe for widening load operations, using the address to load from and an
 /// optional mask.
-struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
-                                                   public VPRecipeValue {
+struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final
+    : public VPWidenMemoryRecipe,
+      public VPStandaloneRecipeValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
                     bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadSC, Load, {Addr},
                             Consecutive, Metadata, DL),
-        VPRecipeValue(this, &Load) {
+        VPStandaloneRecipeValue(this, &Load) {
     setMask(Mask);
   }
 
@@ -3609,13 +3611,13 @@ protected:
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe,
-                                    public VPRecipeValue {
+                                    public VPStandaloneRecipeValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadEVLSC, L.getIngredient(),
                             {Addr, &EVL}, L.isConsecutive(), L,
                             L.getDebugLoc()),
-        VPRecipeValue(this, &getIngredient()) {
+        VPStandaloneRecipeValue(this, &getIngredient()) {
     setMask(Mask);
   }
 

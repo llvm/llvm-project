@@ -39,6 +39,7 @@ class VPDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
+class VPSingleDefRecipe;
 class VPPhiAccessors;
 class VPRegionValue;
 class VPRegionBlock;
@@ -79,11 +80,12 @@ public:
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {
-    VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
-    VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
-    VPVRecipeValueSC, /// A VPValue defined by a recipe.
-    VPRegionValueSC,  /// A VPValue sub-class that is defined by a region, like
-                      /// the canonical IV of a loop region.
+    VPVIRValueSC,             /// A live-in VPValue wrapping an IR Value.
+    VPVSymbolicSC,            /// A symbolic live-in VPValue without IR backing.
+    VPVStandaloneRecipeValueSC, /// A standalone VPValue defined by a recipe.
+    VPVSingleDefValueSC,        /// A VPValue embedded in a VPSingleDefRecipe.
+    VPRegionValueSC,            /// A VPValue sub-class that is defined by a
+                                /// region, like a loop region canonical IV.
   };
 
   VPValue(const VPValue &) = delete;
@@ -305,13 +307,10 @@ private:
   bool Materialized = false;
 };
 
-/// A VPValue defined by a recipe that produces one or more values.
+/// Abstract base class for VPValues defined by a VPRecipeBase.
 class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
-
-  /// Pointer to the VPRecipeBase that defines this VPValue.
-  VPRecipeBase *Def;
 
 #if !defined(NDEBUG)
   /// Returns true if this VPRecipeValue is defined by \p D.
@@ -320,13 +319,51 @@ class VPRecipeValue : public VPValue {
   bool isDefinedBy(const VPDef *D) const;
 #endif
 
-public:
-  LLVM_ABI_FOR_TEST VPRecipeValue(VPRecipeBase *Def, Value *UV = nullptr);
+protected:
+  VPRecipeValue(unsigned char SC, Value *UV = nullptr) : VPValue(SC, UV) {}
 
-  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue();
+public:
+  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue() = 0;
 
   static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVRecipeValueSC;
+    return V->getVPValueID() == VPVStandaloneRecipeValueSC ||
+           V->getVPValueID() == VPVSingleDefValueSC;
+  }
+};
+
+/// A VPRecipeValue embedded as a subobject of VPSingleDefRecipe.
+class VPSingleDefValue : public VPRecipeValue {
+  friend class VPDef;
+  friend class VPSingleDefRecipe;
+
+protected:
+  /// Construct a VPSingleDefValue. Must only be used by VPSingleDefRecipe.
+  LLVM_ABI_FOR_TEST VPSingleDefValue(VPSingleDefRecipe *Def,
+                                     Value *UV = nullptr);
+
+public:
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVSingleDefValueSC;
+  }
+};
+
+/// A VPRecipeValue that stores a pointer to its defining recipe.
+class VPStandaloneRecipeValue : public VPRecipeValue {
+  friend class VPDef;
+
+  /// Pointer to the VPRecipeBase that defines this VPValue.
+  VPRecipeBase *Def;
+
+public:
+  LLVM_ABI_FOR_TEST VPStandaloneRecipeValue(VPRecipeBase *Def,
+                                            Value *UV = nullptr);
+
+  ~VPStandaloneRecipeValue() override;
+
+  VPRecipeBase *getDef() const { return Def; }
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVStandaloneRecipeValueSC;
   }
 };
 
@@ -436,15 +473,15 @@ public:
 /// Single-value VPDefs that also inherit from VPValue must make sure to inherit
 /// from VPDef before VPValue.
 class VPDef {
-  friend class VPRecipeValue;
+  friend class VPSingleDefValue;
+  friend class VPSingleDefRecipe;
+  friend class VPStandaloneRecipeValue;
 
   /// The VPValues defined by this VPDef.
   TinyPtrVector<VPRecipeValue *> DefinedValues;
 
   /// Add \p V as a defined value by this VPDef.
   void addDefinedValue(VPRecipeValue *V) {
-    assert(V->isDefinedBy(this) &&
-           "can only add VPValue already linked with this VPDef");
     DefinedValues.push_back(V);
   }
 
@@ -456,7 +493,8 @@ class VPDef {
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
     llvm::erase(DefinedValues, V);
-    V->Def = nullptr;
+    if (auto *SV = dyn_cast<VPStandaloneRecipeValue>(V))
+      SV->Def = nullptr;
   }
 
 public:
