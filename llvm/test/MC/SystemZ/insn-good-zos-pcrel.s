@@ -3,128 +3,128 @@
 
 *CHECK: * encoding: [0xc0,0x04,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: brcl	0, FOO
+*CHECK: brcl	0,FOO
 *CHECK: * encoding: [0xc0,0x04,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnop	FOO
+*CHECK: jlnop	FOO
 	brcl	0,FOO
 	jlnop	FOO
 
 *CHECK: * encoding: [0xc0,0x84,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jge	FOO
+*CHECK: jle	FOO
 *CHECK: * encoding: [0xc0,0x84,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jge	FOO
+*CHECK: jle	FOO
 	jle	FOO
 	brel	FOO
 
 *CHECK: * encoding: [0xc0,0x74,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgne	FOO
+*CHECK: jlne	FOO
 *CHECK: * encoding: [0xc0,0x74,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgne	FOO
+*CHECK: jlne	FOO
 	jlne	FOO
 	brnel	FOO
 
 *CHECK: * encoding: [0xc0,0x24,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgh	FOO
+*CHECK: jlh	FOO
 *CHECK: * encoding: [0xc0,0x24,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgh	FOO
+*CHECK: jlh	FOO
 	jlh	FOO
 	brhl	FOO
 
 *CHECK: * encoding: [0xc0,0xd4,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnh	FOO
+*CHECK: jlnh	FOO
 *CHECK: * encoding: [0xc0,0xd4,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnh	FOO
+*CHECK: jlnh	FOO
 	jlnh	FOO
 	brnhl	FOO
 
 *CHECK: * encoding: [0xc0,0x44,A,A,A,A]
 *CHECK: fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgl	FOO
+*CHECK: jll	FOO
 *CHECK: * encoding: [0xc0,0x44,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgl	FOO
+*CHECK: jll	FOO
 	jll	FOO
 	brll	FOO
 
 *CHECK: * encoding: [0xc0,0xb4,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnl	FOO
+*CHECK: jlnl	FOO
 *CHECK: * encoding: [0xc0,0xb4,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnl	FOO
+*CHECK: jlnl	FOO
 	jlnl	FOO
 	brnll	FOO
 
 *CHECK: * encoding: [0xc0,0x84,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgz	FOO
+*CHECK: jlz	FOO
 *CHECK: * encoding: [0xc0,0x84,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgz	FOO
+*CHECK: jlz	FOO
 	jlz	FOO
 	brzl	FOO
 
 *CHECK: * encoding: [0xc0,0x74,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnz	FOO
+*CHECK: jlnz	FOO
 *CHECK: * encoding: [0xc0,0x74,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnz	FOO
+*CHECK: jlnz	FOO
 	jlnz	FOO
 	brnzl	FOO
 
 *CHECK: * encoding: [0xc0,0x24,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgp	FOO
+*CHECK: jlp	FOO
 *CHECK: * encoding: [0xc0,0x24,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgp	FOO
+*CHECK: jlp	FOO
 	jlp	FOO
 	brpl	FOO
 
 *CHECK: * encoding: [0xc0,0xd4,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnp	FOO
+*CHECK: jlnp	FOO
 *CHECK: * encoding: [0xc0,0xd4,A,A,A,A]
 *CHECK:  fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnp	FOO
+*CHECK: jlnp	FOO
 	jlnp	FOO
 	brnpl	FOO
 
 *CHECK: * encoding: [0xc0,0x44,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgm	FOO
+*CHECK: jlm	FOO
 *CHECK: * encoding: [0xc0,0x44,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgm	FOO
+*CHECK: jlm	FOO
 	jlm	FOO
 	brml	FOO
 
 
 *CHECK: * encoding: [0xc0,0xb4,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnm	FOO
+*CHECK: jlnm	FOO
 *CHECK: * encoding: [0xc0,0xb4,A,A,A,A]
 *CHECK:  fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jgnm	FOO
+*CHECK: jlnm	FOO
 	jlnm	FOO
 	brnml	FOO
 
 *CHECK: * encoding: [0xc0,0xf4,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jg	FOO
+*CHECK: jlu	FOO
 *CHECK: * encoding: [0xc0,0xf4,A,A,A,A]
 *CHECK: * fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: jg	FOO
+*CHECK: jlu	FOO
 	jlu	FOO
 	brul	FOO
 
