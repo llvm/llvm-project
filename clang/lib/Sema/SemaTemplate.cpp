@@ -9314,10 +9314,41 @@ static void StripImplicitInstantiation(NamedDecl *D, bool MinGW) {
     FD->setInlineSpecified(false);
 }
 
+/// Create an ExplicitInstantiationDecl to record source-location info for an
+/// explicit template instantiation statement, and add it to \p CurContext.
+static void addExplicitInstantiationDecl(
+    ASTContext &Context, DeclContext *CurContext, const CXXScopeSpec &SS,
+    SourceLocation EndLoc, NamedDecl *Spec, SourceLocation ExternLoc,
+    SourceLocation TemplateLoc, SourceLocation TagKWLoc,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten,
+    SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
+    TemplateSpecializationKind TSK) {
+  NestedNameSpecifierLoc QualifierLoc;
+  if (SS.isNotEmpty())
+    QualifierLoc = SS.getWithLocInContext(Context);
+  SourceLocation BeginLoc = ExternLoc.isValid() ? ExternLoc : TemplateLoc;
+  auto *EID = ExplicitInstantiationDecl::Create(
+      Context, CurContext, SourceRange(BeginLoc, EndLoc), Spec, ExternLoc,
+      TemplateLoc, TagKWLoc, QualifierLoc, ArgsAsWritten, NameLoc,
+      TypeAsWritten, TSK);
+  CurContext->addDecl(EID);
+}
+
 /// Compute the diagnostic location for an explicit instantiation
 //  declaration or definition.
 static SourceLocation DiagLocForExplicitInstantiation(
     NamedDecl* D, SourceLocation PointOfInstantiation) {
+  // Search for an ExplicitInstantiationDecl that references D. Per
+  // [temp.explicit], explicit instantiations must appear in an enclosing
+  // namespace of the template, so the EID is in D's DeclContext or an ancestor.
+  for (DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
+    for (auto *Decl : DC->decls()) {
+      if (auto *EID = dyn_cast<ExplicitInstantiationDecl>(Decl))
+        if (EID->getSpecialization() == D)
+          return EID->getTemplateLoc();
+    }
+  }
+
   // Explicit instantiations following a specialization have no effect and
   // hence no PointOfInstantiation. In that case, walk decl backwards
   // until a valid name loc is found.
@@ -10406,6 +10437,11 @@ DeclResult Sema::ActOnExplicitInstantiation(
   if (HasNoEffect) {
     // Set the template specialization kind.
     Specialization->setTemplateSpecializationKind(TSK);
+
+    addExplicitInstantiationDecl(
+        Context, CurContext, SS, RAngleLoc, Specialization, ExternLoc,
+        TemplateLoc, KWLoc, Specialization->getTemplateArgsAsWritten(),
+        TemplateNameLoc, nullptr, TSK);
     return Specialization;
   }
 
@@ -10495,6 +10531,10 @@ DeclResult Sema::ActOnExplicitInstantiation(
     Specialization->setTemplateSpecializationKind(TSK);
   }
 
+  addExplicitInstantiationDecl(
+      Context, CurContext, SS, RAngleLoc, Specialization, ExternLoc,
+      TemplateLoc, KWLoc, Specialization->getTemplateArgsAsWritten(),
+      TemplateNameLoc, nullptr, TSK);
   return Specialization;
 }
 
@@ -10569,8 +10609,12 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                                              MSInfo->getPointOfInstantiation(),
                                                HasNoEffect))
       return true;
-    if (HasNoEffect)
+    if (HasNoEffect) {
+      addExplicitInstantiationDecl(Context, CurContext, SS, NameLoc, Record,
+                                   ExternLoc, TemplateLoc, KWLoc, nullptr,
+                                   NameLoc, nullptr, TSK);
       return TagD;
+    }
   }
 
   CXXRecordDecl *RecordDef
@@ -10606,10 +10650,9 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   if (TSK == TSK_ExplicitInstantiationDefinition)
     MarkVTableUsed(NameLoc, RecordDef, true);
 
-  // FIXME: We don't have any representation for explicit instantiations of
-  // member classes. Such a representation is not needed for compilation, but it
-  // should be available for clients that want to see all of the declarations in
-  // the source code.
+  addExplicitInstantiationDecl(Context, CurContext, SS, NameLoc, Record,
+                               ExternLoc, TemplateLoc, KWLoc, nullptr,
+                               NameLoc, nullptr, TSK);
   return TagD;
 }
 
@@ -10803,7 +10846,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     if (!HasNoEffect) {
       // Instantiate static data member or variable template.
       Prev->setTemplateSpecializationKind(TSK, D.getIdentifierLoc());
-      if (auto *VTSD = dyn_cast<VarTemplatePartialSpecializationDecl>(Prev)) {
+      if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Prev)) {
         VTSD->setExternKeywordLoc(ExternLoc);
         VTSD->setTemplateKeywordLoc(TemplateLoc);
       }
@@ -10827,8 +10870,18 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       return true;
     }
 
-    // FIXME: Create an ExplicitInstantiation node?
-    return (Decl*) nullptr;
+    {
+      const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
+      if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Prev))
+        ArgsAsWritten = VTSD->getTemplateArgsAsWritten();
+      addExplicitInstantiationDecl(
+          Context, CurContext, D.getCXXScopeSpec(),
+          D.getSourceRange().getEnd(), Prev, ExternLoc, TemplateLoc,
+          SourceLocation(), ArgsAsWritten, D.getIdentifierLoc(), T, TSK);
+      // Don't return the EID to the Parser — doing so would trigger
+      // unrelated semantic actions (e.g. access checks via FinalizeDeclaration).
+      return (Decl *)nullptr;
+    }
   }
 
   // If the declarator is a template-id, translate the parser's template
@@ -11005,10 +11058,19 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
                                                HasNoEffect))
       return true;
 
-    // FIXME: We may still want to build some representation of this
-    // explicit specialization.
-    if (HasNoEffect)
-      return (Decl*) nullptr;
+    if (HasNoEffect) {
+      const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
+      if (HasExplicitTemplateArgs)
+        ArgsAsWritten =
+            ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
+      addExplicitInstantiationDecl(
+          Context, CurContext, D.getCXXScopeSpec(),
+          D.getSourceRange().getEnd(), Specialization, ExternLoc, TemplateLoc,
+          SourceLocation(), ArgsAsWritten, D.getIdentifierLoc(), T, TSK);
+      // Don't return the EID to the Parser — doing so would trigger
+      // unrelated semantic actions (e.g. access checks via FinalizeDeclaration).
+      return (Decl *)nullptr;
+    }
   }
 
   // HACK: libc++ has a bug where it attempts to explicitly instantiate the
@@ -11036,7 +11098,6 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     TSK = TSK_ExplicitInstantiationDeclaration;
 
   Specialization->setTemplateSpecializationKind(TSK, D.getIdentifierLoc());
-
   if (Specialization->isDefined()) {
     // Let the ASTConsumer know that this function has been explicitly
     // instantiated now, and its linkage might have changed.
@@ -11065,8 +11126,19 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
               : Specialization->getInstantiatedFromMemberFunction(),
       D.getIdentifierLoc(), D.getCXXScopeSpec().isSet(), TSK);
 
-  // FIXME: Create some kind of ExplicitInstantiationDecl here.
-  return (Decl*) nullptr;
+  {
+    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
+    if (HasExplicitTemplateArgs)
+      ArgsAsWritten =
+          ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
+    addExplicitInstantiationDecl(
+        Context, CurContext, D.getCXXScopeSpec(),
+        D.getSourceRange().getEnd(), Specialization, ExternLoc, TemplateLoc,
+        SourceLocation(), ArgsAsWritten, D.getIdentifierLoc(), T, TSK);
+    // Don't return the EID to the Parser — doing so would trigger
+    // unrelated semantic actions (e.g. access checks via FinalizeDeclaration).
+    return (Decl *)nullptr;
+  }
 }
 
 TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,

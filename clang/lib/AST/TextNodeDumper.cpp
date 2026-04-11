@@ -2936,6 +2936,20 @@ void TextNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *D) {
   dumpAccessSpecifier(D->getAccess());
 }
 
+void TextNodeDumper::VisitExplicitInstantiationDecl(
+    const ExplicitInstantiationDecl *D) {
+  dumpTemplateSpecializationKind(D->getTemplateSpecializationKind());
+  if (D->isExternTemplate())
+    OS << " extern";
+  OS << " template";
+  if (D->getQualifierLoc())
+    dumpNestedNameSpecifier(D->getQualifierLoc().getNestedNameSpecifier());
+  if (const NamedDecl *Spec = D->getSpecialization()) {
+    OS << " '" << Spec->getDeclName() << "'";
+    dumpDeclRef(Spec);
+  }
+}
+
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
   if (TypeSourceInfo *T = D->getFriendType())
     dumpType(T->getType());

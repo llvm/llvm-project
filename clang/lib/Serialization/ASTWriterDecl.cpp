@@ -144,6 +144,7 @@ namespace clang {
     void VisitFriendDecl(FriendDecl *D);
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
+    void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
     void VisitBlockDecl(BlockDecl *D);
     void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
@@ -2174,6 +2175,23 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Record.AddStmt(D->getMessage());
   Record.AddSourceLocation(D->getRParenLoc());
   Code = serialization::DECL_STATIC_ASSERT;
+}
+
+void ASTDeclWriter::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  VisitDecl(D);
+  Record.AddDeclRef(D->getSpecialization());
+  Record.AddSourceRange(D->getSourceRange());
+  Record.AddSourceLocation(D->getExternLoc());
+  Record.AddSourceLocation(D->getTagKWLoc());
+  Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
+  Record.push_back(D->getTemplateArgsAsWritten() != nullptr);
+  if (D->getTemplateArgsAsWritten())
+    Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
+  Record.AddSourceLocation(D->getNameLoc());
+  Record.AddTypeSourceInfo(D->getTypeAsWritten());
+  Record.push_back(D->getTemplateSpecializationKind());
+  Code = serialization::DECL_EXPLICIT_INSTANTIATION;
 }
 
 /// Emit the DeclContext part of a declaration context decl.

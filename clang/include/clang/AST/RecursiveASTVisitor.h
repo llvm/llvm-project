@@ -1748,6 +1748,16 @@ DEF_TRAVERSE_DECL(StaticAssertDecl, {
   TRY_TO(TraverseStmt(D->getMessage()));
 })
 
+DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
+  if (D->getQualifierLoc())
+    TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
+  if (const auto *ArgsAsWritten = D->getTemplateArgsAsWritten())
+    for (unsigned I = 0, E = ArgsAsWritten->NumTemplateArgs; I != E; ++I)
+      TRY_TO(TraverseTemplateArgumentLoc((*ArgsAsWritten)[I]));
+  if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+    TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
+})
+
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {
   // Code in an unnamed namespace shows up automatically in
   // decls_begin()/decls_end().  Thus we don't need to recurse on
@@ -2027,8 +2037,10 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
-      // FIXME: For now traverse explicit instantiations here. Change that
-      // once they are represented as dedicated nodes in the AST.
+      // Unlike class/variable template specializations, function template
+      // specializations are not independent children of the DeclContext —
+      // they are only reachable via FunctionTemplateDecl::specializations().
+      // We must traverse them here so visitors can see the instantiated body.
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
         TRY_TO(TraverseDecl(RD));

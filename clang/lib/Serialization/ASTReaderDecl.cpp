@@ -405,6 +405,7 @@ public:
   void VisitFriendDecl(FriendDecl *D);
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
+  void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
   void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
@@ -2785,6 +2786,22 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
   D->RParenLoc = readSourceLocation();
 }
 
+void ASTDeclReader::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  VisitDecl(D);
+  D->Specialization = readDeclAs<NamedDecl>();
+  D->Range = readSourceRange();
+  D->ExternLoc = readSourceLocation();
+  D->TagKWLoc = readSourceLocation();
+  D->QualifierLoc = Record.readNestedNameSpecifierLoc();
+  bool HasArgsAsWritten = Record.readInt();
+  if (HasArgsAsWritten)
+    D->TemplateArgsAsWritten = Record.readASTTemplateArgumentListInfo();
+  D->NameLoc = readSourceLocation();
+  D->TypeAsWritten = readTypeSourceInfo();
+  D->TSK = Record.readInt();
+}
+
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
   VisitDecl(D);
 }
@@ -4106,6 +4123,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     break;
   case DECL_STATIC_ASSERT:
     D = StaticAssertDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_EXPLICIT_INSTANTIATION:
+    D = ExplicitInstantiationDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_OBJC_METHOD:
     D = ObjCMethodDecl::CreateDeserialized(Context, ID);

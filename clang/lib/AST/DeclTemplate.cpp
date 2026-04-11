@@ -1784,3 +1784,23 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
   // FIXME: Adjust alias templates?
   return D;
 }
+
+void ExplicitInstantiationDecl::anchor() {}
+
+ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceRange Range,
+    NamedDecl *Specialization, SourceLocation ExternLoc,
+    SourceLocation TemplateLoc, SourceLocation TagKWLoc,
+    NestedNameSpecifierLoc QualifierLoc,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten,
+    SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
+    TemplateSpecializationKind TSK) {
+  return new (C, DC) ExplicitInstantiationDecl(
+      DC, Range, Specialization, ExternLoc, TemplateLoc, TagKWLoc,
+      QualifierLoc, ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
+}
+
+ExplicitInstantiationDecl *
+ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  return new (C, ID) ExplicitInstantiationDecl(EmptyShell());
+}

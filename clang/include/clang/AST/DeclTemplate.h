@@ -3405,6 +3405,122 @@ getReplacedTemplateParameter(Decl *D, unsigned Index);
 /// If we have an implicit instantiation, adjust 'D' to refer to template.
 const Decl &adjustDeclToTemplate(const Decl &D);
 
+/// Represents an explicit instantiation of a template entity in source code.
+///
+/// This node records source location information for an explicit instantiation
+/// statement. It does not participate in name lookup (inherits from Decl, not
+/// NamedDecl), and does not affect code generation. The underlying
+/// specialization decl (FunctionDecl, VarDecl, CXXRecordDecl, etc.) continues
+/// to handle all semantic and codegen responsibilities.
+///
+/// \code
+///   template void ns::foo<int>(int);        // function template
+///   extern template struct ns::S<int>;      // class template (extern)
+///   template int ns::bar<int>;              // variable template
+///   template void ns::S<int>::method(int);  // member function
+/// \endcode
+class ExplicitInstantiationDecl : public Decl {
+  /// The underlying specialization being explicitly instantiated.
+  NamedDecl *Specialization = nullptr;
+
+  /// The source range of the entire explicit instantiation statement.
+  SourceRange Range;
+
+  /// Location of the 'extern' keyword (invalid if not extern template).
+  SourceLocation ExternLoc;
+
+  /// Location of the struct/class/union keyword (for class template and
+  /// nested class instantiations; invalid otherwise).
+  SourceLocation TagKWLoc;
+
+  /// Nested name specifier with source locations (e.g., ns::S<int>::).
+  NestedNameSpecifierLoc QualifierLoc;
+
+  /// Template arguments as written (e.g., <int>). Null if the template
+  /// arguments were deduced.
+  const ASTTemplateArgumentListInfo *TemplateArgsAsWritten = nullptr;
+
+  /// Location of the entity name (e.g., 'foo' in 'template void ns::foo<int>(int)').
+  SourceLocation NameLoc;
+
+  /// Type source info for the declaration type:
+  ///   - Function templates / member functions: FunctionProtoTypeLoc with
+  ///     return type location and parameter type locations.
+  ///   - Variable templates / static data members: the declared type.
+  ///   - Class templates / nested classes: null.
+  TypeSourceInfo *TypeAsWritten = nullptr;
+
+  /// Whether this is a declaration (extern template) or definition (template).
+  LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
+  unsigned TSK : 3;
+
+  ExplicitInstantiationDecl(DeclContext *DC, SourceRange Range,
+                            NamedDecl *Specialization,
+                            SourceLocation ExternLoc,
+                            SourceLocation TemplateLoc,
+                            SourceLocation TagKWLoc,
+                            NestedNameSpecifierLoc QualifierLoc,
+                            const ASTTemplateArgumentListInfo *ArgsAsWritten,
+                            SourceLocation NameLoc,
+                            TypeSourceInfo *TypeAsWritten,
+                            TemplateSpecializationKind TSK)
+      : Decl(ExplicitInstantiation, DC, TemplateLoc),
+        Specialization(Specialization), Range(Range), ExternLoc(ExternLoc),
+        TagKWLoc(TagKWLoc), QualifierLoc(QualifierLoc),
+        TemplateArgsAsWritten(ArgsAsWritten), NameLoc(NameLoc),
+        TypeAsWritten(TypeAsWritten), TSK(TSK) {
+    assert((TSK == TSK_ExplicitInstantiationDeclaration) == ExternLoc.isValid()
+           && "ExternLoc should be valid iff TSK is a declaration");
+  }
+
+  ExplicitInstantiationDecl(EmptyShell Empty)
+      : Decl(ExplicitInstantiation, Empty), TSK(TSK_Undeclared) {}
+
+  virtual void anchor();
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  static ExplicitInstantiationDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceRange Range,
+         NamedDecl *Specialization, SourceLocation ExternLoc,
+         SourceLocation TemplateLoc, SourceLocation TagKWLoc,
+         NestedNameSpecifierLoc QualifierLoc,
+         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+         SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
+         TemplateSpecializationKind TSK);
+
+  static ExplicitInstantiationDecl *CreateDeserialized(ASTContext &C,
+                                                       GlobalDeclID ID);
+
+  NamedDecl *getSpecialization() const { return Specialization; }
+
+  SourceRange getSourceRange() const override LLVM_READONLY { return Range; }
+
+  SourceLocation getExternLoc() const { return ExternLoc; }
+  SourceLocation getTemplateLoc() const { return getLocation(); }
+  SourceLocation getTagKWLoc() const { return TagKWLoc; }
+  SourceLocation getNameLoc() const { return NameLoc; }
+
+  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
+
+  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
+    return TemplateArgsAsWritten;
+  }
+
+  TypeSourceInfo *getTypeAsWritten() const { return TypeAsWritten; }
+
+  TemplateSpecializationKind getTemplateSpecializationKind() const {
+    return static_cast<TemplateSpecializationKind>(TSK);
+  }
+
+  bool isExternTemplate() const { return ExternLoc.isValid(); }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == ExplicitInstantiation; }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECLTEMPLATE_H
