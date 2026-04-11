@@ -905,8 +905,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                       UnsignedOrNone(I), Satisfaction,
                                       /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
-    if (BuildExpression && Expr.isUsable()) {
-      if (Out.isUnset())
+    if (BuildExpression) {
+      if (Out.isUnset() || !Expr.isUsable())
         Out = Expr;
       else
         Out = BinaryOperator::Create(S.Context, Out.get(), Expr.get(),
@@ -915,8 +915,6 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                      S.Context.BoolTy, VK_PRValue, OK_Ordinary,
                                      Constraint.getBeginLoc(),
                                      FPOptionsOverride{});
-    } else {
-      assert(!BuildExpression || !Satisfaction.IsSatisfied);
     }
     if (!Conjunction && Satisfaction.IsSatisfied) {
       Satisfaction.Details.erase(Satisfaction.Details.begin() +
@@ -1039,7 +1037,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const MultiLevelTemplateArgumentList &MLTAL) {
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
-
   Sema::InstantiatingTemplate InstTemplate(
       S, ConceptId->getBeginLoc(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},

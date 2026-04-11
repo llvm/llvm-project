@@ -2810,8 +2810,8 @@ TemplateInstantiator::TransformNestedRequirement(
       return nullptr;
 
     Success = !SemaRef.CheckConstraintSatisfaction(
-        Req, AssociatedConstraint(Constraint, SemaRef.ArgPackSubstIndex),
-        TemplateArgs, Constraint->getSourceRange(), Satisfaction,
+        Req, AssociatedConstraint(Constraint), TemplateArgs,
+        Constraint->getSourceRange(), Satisfaction,
         /*TopLevelConceptId=*/nullptr, &NewConstraint);
   }
 

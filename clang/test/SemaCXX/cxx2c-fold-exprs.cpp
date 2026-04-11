@@ -556,3 +556,45 @@ check_all<F, A, B, C> x;
 }
 
 }
+
+namespace GH188505 {
+
+template <class _Tp, class _Up>
+concept same_as = __is_same(_Tp, _Up) && __is_same(_Up, _Tp);
+
+template <typename T, typename... Ts>
+concept AnyOf = (same_as<T, Ts> || ...);
+
+struct Constant
+{
+    template <typename T>
+    using alias = const T;
+};
+
+struct Mutable
+{
+    template <typename T>
+    using alias = __remove_cv(T);
+};
+
+template <template <typename> typename M, typename T>
+concept MutabilityAliasFor = requires {
+    requires AnyOf<M<T>, const T, __remove_cv(T)>;
+    requires same_as<M<M<T>>, M<T>>;
+};
+
+template <template <typename> typename M, typename... Ts>
+concept MutabilityAliasForAllOf = (MutabilityAliasFor<M, Ts> && ...);
+
+template <template <typename T> typename M>
+concept MutabilityAlias = MutabilityAliasForAllOf<M, int, char, double>;
+
+static_assert(AnyOf<char, const char, char>);
+
+static_assert(MutabilityAliasFor<Constant::alias, int>);
+static_assert(MutabilityAliasForAllOf<Constant::alias, char, int>);
+
+static_assert(MutabilityAlias<Constant::alias>);
+static_assert(MutabilityAlias<Mutable::alias>);
+
+}
