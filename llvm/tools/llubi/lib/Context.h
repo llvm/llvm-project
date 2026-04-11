@@ -68,7 +68,7 @@ enum class NaNPropagationBehavior {
                     // currently we implement it by filling payload with random
                     // values
 };
-  
+
 struct ProgramExitInfo {
   enum class ProgramExitKind {
     // Program exited via a normal return
