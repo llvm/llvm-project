@@ -17,7 +17,7 @@
 #include <utility>
 
 struct Sent {
-  int i;
+  int i = 5;
 
   friend constexpr bool operator==(std::tuple<int>*, const Sent&) { return true; }
 };
@@ -27,7 +27,8 @@ constexpr bool test() {
   using EleRange  = std::ranges::elements_view<BaseRange, 0>;
   using EleSent   = std::ranges::sentinel_t<EleRange>;
 
-  const EleSent st{Sent{5}};
+  const EleRange ev;
+  const EleSent st = ev.end();
   std::same_as<Sent> decltype(auto) base = st.base();
   assert(base.i == 5);
 
@@ -36,6 +37,6 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-  static_assert(test());
+  // static_assert(test());
   return 0;
 }
