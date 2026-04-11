@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
+#include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -307,6 +308,41 @@ Error YAMLOutputStyle::dumpDbiStream() {
       Hdr.Characteristics = Section.Characteristics;
       Obj.DbiStream->SectionHeaders.emplace_back(Hdr);
     }
+  }
+
+  if (opts::pdb2yaml::DumpSectionContribs) {
+    struct Visitor : public ISectionContribVisitor {
+      Visitor(std::vector<yaml::PdbDbiSectionContrib> &Out) : Out(Out) {}
+
+      static yaml::PdbDbiSectionContrib createFromSC(const SectionContrib &C) {
+        yaml::PdbDbiSectionContrib SC;
+        SC.ISect = C.ISect;
+        SC.Off = C.Off;
+        SC.Size = C.Size;
+        SC.Characteristics = C.Characteristics;
+        SC.Imod = C.Imod;
+        SC.DataCrc = C.DataCrc;
+        SC.RelocCrc = C.RelocCrc;
+        return SC;
+      }
+
+      void visit(const SectionContrib &C) override {
+        Out.emplace_back(createFromSC(C));
+      }
+      void visit(const SectionContrib2 &C) override {
+        yaml::PdbDbiSectionContrib SC = createFromSC(C.Base);
+        SC.ISectCoff = C.ISectCoff;
+        Out.emplace_back(SC);
+      }
+
+      std::vector<yaml::PdbDbiSectionContrib> &Out;
+    };
+    Obj.DbiStream->SectionContribs.emplace(yaml::PdbDbiSectionContribs{
+        /*Version=*/DS.getSectionContributionsVersion(),
+        /*Items=*/{},
+    });
+    Visitor Vis(Obj.DbiStream->SectionContribs->Items);
+    DS.visitSectionContributions(Vis);
   }
 
   return Error::success();

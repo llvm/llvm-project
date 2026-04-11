@@ -726,6 +726,10 @@ cl::opt<bool> DumpSectionHeaders("section-headers",
                                  cl::desc("Dump section headers."),
                                  cl::cat(FileOptions),
                                  cl::sub(PdbToYamlSubcommand));
+cl::opt<bool> DumpSectionContribs("section-contribs",
+                                  cl::desc("dump section contributions"),
+                                  cl::cat(FileOptions),
+                                  cl::sub(PdbToYamlSubcommand));
 
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
@@ -896,6 +900,31 @@ static void yamlToPdb(StringRef Path) {
         Allocator, MI.Subsections, Strings));
     for (auto &SS : CodeViewSubsections) {
       ModiBuilder.addDebugSubsection(SS);
+    }
+  }
+
+  if (Dbi.SectionContribs) {
+    if (Dbi.SectionContribs->Version !=
+        PdbRaw_DbiSecContribVer::DbiSecContribVer60) {
+      errs() << "Only DBI section contrib Version Ver60 is supported\n";
+      errs().flush();
+      exit(1);
+    }
+
+    for (const auto &Contrib : Dbi.SectionContribs->Items) {
+      SectionContrib SC;
+      SC.ISect = Contrib.ISect;
+      SC.Padding[0] = 0;
+      SC.Padding[1] = 0;
+      SC.Off = Contrib.Off;
+      SC.Size = Contrib.Size;
+      SC.Characteristics = Contrib.Characteristics;
+      SC.Imod = Contrib.Imod;
+      SC.Padding2[0] = 0;
+      SC.Padding2[1] = 0;
+      SC.DataCrc = Contrib.DataCrc;
+      SC.RelocCrc = Contrib.RelocCrc;
+      DbiBuilder.addSectionContrib(SC);
     }
   }
 
@@ -1595,6 +1624,7 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DumpModuleFiles = true;
       opts::pdb2yaml::DumpModuleSyms = true;
       opts::pdb2yaml::DumpSectionHeaders = true;
+      opts::pdb2yaml::DumpSectionContribs = true;
       opts::pdb2yaml::DumpModuleSubsections.push_back(
           opts::ModuleSubsection::All);
     }
@@ -1607,6 +1637,9 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DbiStream = true;
 
     if (opts::pdb2yaml::DumpSectionHeaders)
+      opts::pdb2yaml::DbiStream = true;
+
+    if (opts::pdb2yaml::DumpSectionContribs)
       opts::pdb2yaml::DbiStream = true;
   }
 

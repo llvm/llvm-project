@@ -1,0 +1,193 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --section-contribs %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --section-contribs %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK-PDB2YAML %s
+
+# CHECK-YAML2PDB:      SC[.text]   | mod = 1, 0001:0000, size = 15, data crc = 0, reloc crc = 0
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
+# CHECK-YAML2PDB-NEXT: SC[.text]   | mod = 0, 0001:0032, size = 44, data crc = 994759651, reloc crc = 0
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_MEM_READ
+# CHECK-YAML2PDB-NEXT: SC[.text]   | mod = 0, 0001:0096, size = 22, data crc = 3114067823, reloc crc = 0
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_CNT_CODE | IMAGE_SCN_LNK_COMDAT | IMAGE_SCN_ALIGN_16BYTES |
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
+# CHECK-YAML2PDB-NEXT: SC[.rdata]  | mod = 1, 0002:0000, size = 56, data crc = 0, reloc crc = 0
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+# CHECK-YAML2PDB-NEXT: SC[.rdata]  | mod = 1, 0002:0324, size = 58, data crc = 0, reloc crc = 0
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+# CHECK-YAML2PDB-NEXT: SC[.rdata]  | mod = 1, 0002:0384, size = 20, data crc = 0, reloc crc = 0
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+# CHECK-YAML2PDB-NEXT: SC[.rdata]  | mod = 0, 0002:0676, size = 8, data crc = 931692337, reloc crc = 0
+# CHECK-YAML2PDB-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+
+# CHECK-PDB2YAML:      SectionContribs:
+# CHECK-PDB2YAML-NEXT:   Version:         Ver60
+# CHECK-PDB2YAML-NEXT:   Items:
+# CHECK-PDB2YAML-NEXT:     - ISect:           1
+# CHECK-PDB2YAML-NEXT:       Offset:          0
+# CHECK-PDB2YAML-NEXT:       Size:            15
+# CHECK-PDB2YAML-NEXT:       Characteristics: 1610612768
+# CHECK-PDB2YAML-NEXT:       Imod:            1
+# CHECK-PDB2YAML-NEXT:       DataCrc:         0
+# CHECK-PDB2YAML-NEXT:       RelocCrc:        0
+# CHECK-PDB2YAML-NEXT:       ISectCoff:       0
+# CHECK-PDB2YAML-NEXT:     - ISect:           1
+# CHECK-PDB2YAML-NEXT:       Offset:          32
+# CHECK-PDB2YAML-NEXT:       Size:            44
+# CHECK-PDB2YAML-NEXT:       Characteristics: 1615855648
+# CHECK-PDB2YAML-NEXT:       Imod:            0
+# CHECK-PDB2YAML-NEXT:       DataCrc:         994759651
+# CHECK-PDB2YAML-NEXT:       RelocCrc:        0
+# CHECK-PDB2YAML-NEXT:       ISectCoff:       0
+# CHECK-PDB2YAML-NEXT:     - ISect:           1
+# CHECK-PDB2YAML-NEXT:       Offset:          96
+# CHECK-PDB2YAML-NEXT:       Size:            22
+# CHECK-PDB2YAML-NEXT:       Characteristics: 1615859744
+# CHECK-PDB2YAML-NEXT:       Imod:            0
+# CHECK-PDB2YAML-NEXT:       DataCrc:         3114067823
+# CHECK-PDB2YAML-NEXT:       RelocCrc:        0
+# CHECK-PDB2YAML-NEXT:       ISectCoff:       0
+# CHECK-PDB2YAML-NEXT:     - ISect:           2
+# CHECK-PDB2YAML-NEXT:       Offset:          0
+# CHECK-PDB2YAML-NEXT:       Size:            56
+# CHECK-PDB2YAML-NEXT:       Characteristics: 1076887616
+# CHECK-PDB2YAML-NEXT:       Imod:            1
+# CHECK-PDB2YAML-NEXT:       DataCrc:         0
+# CHECK-PDB2YAML-NEXT:       RelocCrc:        0
+# CHECK-PDB2YAML-NEXT:       ISectCoff:       0
+# CHECK-PDB2YAML-NEXT:     - ISect:           2
+# CHECK-PDB2YAML-NEXT:       Offset:          324
+# CHECK-PDB2YAML-NEXT:       Size:            58
+# CHECK-PDB2YAML-NEXT:       Characteristics: 1076887616
+# CHECK-PDB2YAML-NEXT:       Imod:            1
+# CHECK-PDB2YAML-NEXT:       DataCrc:         0
+# CHECK-PDB2YAML-NEXT:       RelocCrc:        0
+# CHECK-PDB2YAML-NEXT:       ISectCoff:       0
+# CHECK-PDB2YAML-NEXT:     - ISect:           2
+# CHECK-PDB2YAML-NEXT:       Offset:          384
+# CHECK-PDB2YAML-NEXT:       Size:            20
+# CHECK-PDB2YAML-NEXT:       Characteristics: 1076887616
+# CHECK-PDB2YAML-NEXT:       Imod:            1
+# CHECK-PDB2YAML-NEXT:       DataCrc:         0
+# CHECK-PDB2YAML-NEXT:       RelocCrc:        0
+# CHECK-PDB2YAML-NEXT:       ISectCoff:       0
+# CHECK-PDB2YAML-NEXT:     - ISect:           2
+# CHECK-PDB2YAML-NEXT:       Offset:          676
+# CHECK-PDB2YAML-NEXT:       Size:            8
+# CHECK-PDB2YAML-NEXT:       Characteristics: 1076887616
+# CHECK-PDB2YAML-NEXT:       Imod:            0
+# CHECK-PDB2YAML-NEXT:       DataCrc:         931692337
+# CHECK-PDB2YAML-NEXT:       RelocCrc:        0
+# CHECK-PDB2YAML-NEXT:       ISectCoff:       0
+
+---
+DbiStream:
+  VerHeader:       V70
+  Age:             3
+  BuildNumber:     36402
+  PdbDllVersion:   35728
+  PdbDllRbld:      0
+  Flags:           1
+  MachineType:     Amd64
+  SectionHeaders:
+    - Name:            .text
+      VirtualSize:     4229
+      VirtualAddress:  4096
+      SizeOfRawData:   4608
+      PointerToRawData: 1024
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1610612768
+    - Name:            .rdata
+      VirtualSize:     1196
+      VirtualAddress:  12288
+      SizeOfRawData:   1536
+      PointerToRawData: 5632
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1073741888
+    - Name:            .pdata
+      VirtualSize:     312
+      VirtualAddress:  16384
+      SizeOfRawData:   512
+      PointerToRawData: 7168
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1073741888
+    - Name:            .reloc
+      VirtualSize:     8
+      VirtualAddress:  20480
+      SizeOfRawData:   512
+      PointerToRawData: 7680
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1107296320
+  SectionContribs:
+    Version:         Ver60
+    Items:
+      - ISect:           1
+        Offset:          0
+        Size:            15
+        Characteristics: 1610612768
+        Imod:            1
+        DataCrc:         0
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           1
+        Offset:          32
+        Size:            44
+        Characteristics: 1615855648
+        Imod:            0
+        DataCrc:         994759651
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           1
+        Offset:          96
+        Size:            22
+        Characteristics: 1615859744
+        Imod:            0
+        DataCrc:         3114067823
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           2
+        Offset:          0
+        Size:            56
+        Characteristics: 1076887616
+        Imod:            1
+        DataCrc:         0
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           2
+        Offset:          324
+        Size:            58
+        Characteristics: 1076887616
+        Imod:            1
+        DataCrc:         0
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           2
+        Offset:          384
+        Size:            20
+        Characteristics: 1076887616
+        Imod:            1
+        DataCrc:         0
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           2
+        Offset:          676
+        Size:            8
+        Characteristics: 1076887616
+        Imod:            0
+        DataCrc:         931692337
+        RelocCrc:        0
+        ISectCoff:       0
+...
