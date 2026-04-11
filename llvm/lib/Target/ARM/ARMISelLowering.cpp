@@ -4486,7 +4486,7 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                      SDValue &ARMcc, SelectionDAG &DAG,
-                                     const SDLoc &dl) const {
+                                     const SDLoc &dl, bool CanUsePL) const {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     unsigned C = RHSC->getZExtValue();
     if (!isLegalICmpImmediate((int32_t)C)) {
@@ -4592,7 +4592,7 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   // If the RHS is a constant zero then the V (overflow) flag will never be
   // set. This can allow us to simplify GE to PL or LT to MI, which can be
   // simpler for other passes (like the peephole optimiser) to deal with.
-  if (isNullConstant(RHS)) {
+  if (isNullConstant(RHS) && CanUsePL) {
     switch (CondCode) {
       default: break;
       case ARMCC::GE:
@@ -4618,9 +4618,6 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
   // TODO: Remove CMPZ check once we generalize and remove the CMPZ enum from
   // the codebase.
-
-  // TODO: When we have a solution to the vselect predicate not allowing pl/mi
-  // all the time, allow those cases to be cmn too no matter what.
   if (CompareType != ARMISD::CMPZ && isCMN(RHS, CC, DAG)) {
     CompareType = ARMISD::CMN;
     RHS = RHS.getOperand(1);
@@ -5296,6 +5293,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     // inverting the compare condition, swapping 'less' and 'greater') and
     // sometimes need to swap the operands to the VSEL (which inverts the
     // condition in the sense of firing whenever the previous condition didn't)
+    bool CanUsePL = true;
     if (Subtarget->hasFPARMv8Base() && (TrueVal.getValueType() == MVT::f16 ||
                                         TrueVal.getValueType() == MVT::f32 ||
                                         TrueVal.getValueType() == MVT::f64)) {
@@ -5305,13 +5303,11 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
         CC = ISD::getSetCCInverse(CC, LHS.getValueType());
         std::swap(TrueVal, FalseVal);
       }
+      CanUsePL = false;
     }
 
     SDValue ARMcc;
-    SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
-    // Choose GE over PL, which vsel does now support
-    if (ARMcc->getAsZExtVal() == ARMCC::PL)
-      ARMcc = DAG.getConstant(ARMCC::GE, dl, MVT::i32);
+    SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl, CanUsePL);
     return getCMOV(dl, VT, FalseVal, TrueVal, ARMcc, Cmp, DAG);
   }
 
