@@ -100,8 +100,6 @@ with open(args.target, "w", buffering=1) as target:
 #ifndef SLOW
 #define SLOW(CHECK, DELTA)
 #endif
-
-// clang-format off
 """,
         file=target,
     )
@@ -114,8 +112,6 @@ with open(args.target, "w", buffering=1) as target:
 
     print(
         """
-// clang-format on
-
 #undef FAST
 #undef SLOW
 """,
