@@ -3129,8 +3129,8 @@ bool PreRARematStage::isReMaterializable(const MachineInstr &MI) {
 
 void PreRARematStage::removeFromLiveMaps(Register Reg, const BitVector &LiveIn,
                                          const BitVector &LiveOut) {
-  assert(LiveIn.size() == DAG.Regions.size() && "region num mismatch");
-  assert(LiveOut.size() == DAG.Regions.size() && "region num mismatch");
+  assert(LiveIn.size() == DAG.Regions.size() &&
+         LiveOut.size() == DAG.Regions.size() && "region num mismatch");
   for (unsigned I : LiveIn.set_bits())
     DAG.LiveIns[I].erase(Reg);
   for (unsigned I : LiveOut.set_bits())
@@ -3140,8 +3140,8 @@ void PreRARematStage::removeFromLiveMaps(Register Reg, const BitVector &LiveIn,
 void PreRARematStage::addToLiveMaps(Register Reg, LaneBitmask Mask,
                                     const BitVector &LiveIn,
                                     const BitVector &LiveOut) {
-  assert(LiveIn.size() == DAG.Regions.size() && "region num mismatch");
-  assert(LiveOut.size() == DAG.Regions.size() && "region num mismatch");
+  assert(LiveIn.size() == DAG.Regions.size() &&
+         LiveOut.size() == DAG.Regions.size() && "region num mismatch");
   std::pair<Register, LaneBitmask> LiveReg(Reg, Mask);
   for (unsigned I : LiveIn.set_bits())
     DAG.LiveIns[I].insert(LiveReg);
