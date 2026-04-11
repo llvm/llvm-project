@@ -311,6 +311,9 @@ def SDTVecReduce : SDTypeProfile<1, 1, [    // vector reduction
 def SDTFPVecReduce : SDTypeProfile<1, 1, [  // FP vector reduction
   SDTCisFP<0>, SDTCisEltOfVec<0, 1>
 ]>;
+def SDTFPDotVecReduce : SDTypeProfile<1, 2, [  // FP dot product vector reduction
+  SDTCisFP<0>, SDTCisEltOfVec<0, 1>, SDTCisSameAs<1, 2>
+]>;
 
 def SDTVecReverse : SDTypeProfile<1, 1, [  // vector reverse
   SDTCisVec<0>, SDTCisSameAs<0,1>
@@ -560,6 +563,7 @@ def vecreduce_fmin  : SDNode<"ISD::VECREDUCE_FMIN", SDTFPVecReduce>;
 def vecreduce_fmax  : SDNode<"ISD::VECREDUCE_FMAX", SDTFPVecReduce>;
 def vecreduce_fminimum : SDNode<"ISD::VECREDUCE_FMINIMUM", SDTFPVecReduce>;
 def vecreduce_fmaximum : SDNode<"ISD::VECREDUCE_FMAXIMUM", SDTFPVecReduce>;
+def vecreduce_fdot     : SDNode<"ISD::VECREDUCE_FDOT", SDTFPDotVecReduce>;
 
 def partial_reduce_umla : SDNode<"ISD::PARTIAL_REDUCE_UMLA",
                                  SDTPartialReduceMLA>;
