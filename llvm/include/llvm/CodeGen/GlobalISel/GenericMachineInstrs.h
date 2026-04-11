@@ -572,6 +572,7 @@ class GVecReduce : public GenericMachineInstr {
 public:
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
+    case TargetOpcode::G_VECREDUCE_FDOT:
     case TargetOpcode::G_VECREDUCE_FADD:
     case TargetOpcode::G_VECREDUCE_FMUL:
     case TargetOpcode::G_VECREDUCE_FMAX:

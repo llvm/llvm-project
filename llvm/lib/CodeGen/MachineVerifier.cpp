@@ -2152,6 +2152,37 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("Sequential FADD/FMUL vector reduction must have a vector 2nd operand", MI);
     break;
   }
+  case TargetOpcode::G_VECREDUCE_SEQ_FDOT: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT AccTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT VecATy = MRI->getType(MI->getOperand(2).getReg());
+    LLT VecBTy = MRI->getType(MI->getOperand(3).getReg());
+    if (!DstTy.isScalar())
+      report("Vector reduction requires a scalar destination type", MI);
+    if (!AccTy.isScalar())
+      report("G_VECREDUCE_SEQ_FDOT requires a scalar accumulator operand", MI);
+    if (!VecATy.isVector())
+      report("G_VECREDUCE_SEQ_FDOT requires a vector 2nd operand", MI);
+    if (!VecBTy.isVector())
+      report("G_VECREDUCE_SEQ_FDOT requires a vector 3rd operand", MI);
+    if (VecATy != VecBTy)
+      report("G_VECREDUCE_SEQ_FDOT vector operands must have the same type", MI);
+    break;
+  }
+  case TargetOpcode::G_VECREDUCE_FDOT: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT VecATy = MRI->getType(MI->getOperand(1).getReg());
+    LLT VecBTy = MRI->getType(MI->getOperand(2).getReg());
+    if (!DstTy.isScalar())
+      report("Vector reduction requires a scalar destination type", MI);
+    if (!VecATy.isVector())
+      report("G_VECREDUCE_FDOT requires a vector 1st operand", MI);
+    if (!VecBTy.isVector())
+      report("G_VECREDUCE_FDOT requires a vector 2nd operand", MI);
+    if (VecATy != VecBTy)
+      report("G_VECREDUCE_FDOT vector operands must have the same type", MI);
+    break;
+  }
   case TargetOpcode::G_VECREDUCE_FADD:
   case TargetOpcode::G_VECREDUCE_FMUL:
   case TargetOpcode::G_VECREDUCE_FMAX:

@@ -2311,6 +2311,27 @@ public:
                       {ScalarIn, {VecIn}});
   }
 
+  /// Build and insert \p Res = G_VECREDUCE_SEQ_FDOT \p Acc, \p VecA, \p VecB
+  ///
+  /// \p Acc is the scalar accumulator. Computes Acc + sum(VecA[i] * VecB[i])
+  /// in strict left-to-right order.
+  MachineInstrBuilder buildVecReduceSeqFDot(const DstOp &Dst,
+                                            const SrcOp &Acc,
+                                            const SrcOp &VecA,
+                                            const SrcOp &VecB) {
+    return buildInstr(TargetOpcode::G_VECREDUCE_SEQ_FDOT, {Dst},
+                      {Acc, VecA, VecB});
+  }
+
+  /// Build and insert \p Res = G_VECREDUCE_FDOT \p VecA, \p VecB
+  ///
+  /// Computes sum(VecA[i] * VecB[i]) in unspecified order (no accumulator).
+  MachineInstrBuilder buildVecReduceFDot(const DstOp &Dst,
+                                         const SrcOp &VecA,
+                                         const SrcOp &VecB) {
+    return buildInstr(TargetOpcode::G_VECREDUCE_FDOT, {Dst}, {VecA, VecB});
+  }
+
   /// Build and insert \p Res = G_VECREDUCE_FADD \p Src
   ///
   /// \p ScalarIn is the scalar accumulator input to the reduction operation of

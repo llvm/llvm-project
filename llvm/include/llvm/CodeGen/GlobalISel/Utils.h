@@ -56,6 +56,7 @@ class APFloat;
 #define GISEL_VECREDUCE_CASES_ALL                                              \
   case TargetOpcode::G_VECREDUCE_SEQ_FADD:                                     \
   case TargetOpcode::G_VECREDUCE_SEQ_FMUL:                                     \
+  case TargetOpcode::G_VECREDUCE_SEQ_FDOT:                                     \
   case TargetOpcode::G_VECREDUCE_FADD:                                         \
   case TargetOpcode::G_VECREDUCE_FMUL:                                         \
   case TargetOpcode::G_VECREDUCE_FMAX:                                         \
@@ -73,6 +74,7 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_UMIN:
 
 #define GISEL_VECREDUCE_CASES_NONSEQ                                           \
+  case TargetOpcode::G_VECREDUCE_FDOT:                                         \
   case TargetOpcode::G_VECREDUCE_FADD:                                         \
   case TargetOpcode::G_VECREDUCE_FMUL:                                         \
   case TargetOpcode::G_VECREDUCE_FMAX:                                         \

@@ -2572,29 +2572,19 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::vector_reduce_fdot: {
-    // Lower fdot as a vector fmul followed by a reduction:
-    //   no reassoc: G_FMUL(vecA, vecB) -> G_VECREDUCE_SEQ_FADD(acc, products)
-    //   reassoc:    G_FMUL(vecA, vecB) -> G_FADD(acc, G_VECREDUCE_FADD(products))
-    //
-    // Note: when the 'contract' flag is set, the MIFlags are propagated to
-    // both G_FMUL and G_VECREDUCE_SEQ_FADD, permitting later combine passes
-    // to fuse adjacent fmul+fadd pairs into FMA instructions. This is not
-    // guaranteed — targets with dedicated dot-product instructions should
-    // select directly from this pattern without relying on FMA fusion.
+    // Emit dedicated dot-product reduction opcodes:
+    //   no reassoc: G_VECREDUCE_SEQ_FDOT(acc, vecA, vecB) — sequential
+    //   reassoc:    G_FADD(acc, G_VECREDUCE_FDOT(vecA, vecB)) — unordered
     Register Dst = getOrCreateVReg(CI);
     Register AccSrc = getOrCreateVReg(*CI.getArgOperand(0));
     Register VecA = getOrCreateVReg(*CI.getArgOperand(1));
     Register VecB = getOrCreateVReg(*CI.getArgOperand(2));
-    LLT VecTy = MRI->getType(VecA);
+    LLT DstTy = MRI->getType(Dst);
     auto MIFlags = MachineInstr::copyFlagsFromInstruction(CI);
-    auto Prod = MIRBuilder.buildFMul(VecTy, VecA, VecB, MIFlags);
     if (!CI.hasAllowReassoc()) {
-      MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_SEQ_FADD, {Dst},
-                            {AccSrc, Prod}, MIFlags);
+      MIRBuilder.buildVecReduceSeqFDot(Dst, AccSrc, VecA, VecB);
     } else {
-      LLT DstTy = MRI->getType(Dst);
-      auto Rdx = MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_FADD, {DstTy},
-                                       {Prod}, MIFlags);
+      auto Rdx = MIRBuilder.buildVecReduceFDot(DstTy, VecA, VecB);
       MIRBuilder.buildFAdd(Dst, AccSrc, Rdx, MIFlags);
     }
     return true;

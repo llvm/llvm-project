@@ -4921,6 +4921,21 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
+  case TargetOpcode::G_VECREDUCE_SEQ_FDOT: {
+    // G_VECREDUCE_SEQ_FDOT(dst, acc, vecA, vecB) ->
+    //   G_FMUL(vecA, vecB), G_VECREDUCE_SEQ_FADD(acc, products)
+    Register DstReg = MI.getOperand(0).getReg();
+    Register AccReg = MI.getOperand(1).getReg();
+    Register VecA = MI.getOperand(2).getReg();
+    Register VecB = MI.getOperand(3).getReg();
+    LLT VecTy = MRI.getType(VecA);
+    unsigned Flags = MI.getFlags();
+    auto Products = MIRBuilder.buildFMul(VecTy, VecA, VecB, Flags);
+    MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_SEQ_FADD, {DstReg},
+                          {AccReg, Products.getReg(0)}, Flags);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case G_VAARG:
     return lowerVAArg(MI);
   case G_ATOMICRMW_SUB: {
@@ -10469,6 +10484,20 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
+  // G_VECREDUCE_FDOT(dst, vecA, vecB) -> G_FMUL(vecA, vecB), G_VECREDUCE_FADD(products)
+  if (MI.getOpcode() == TargetOpcode::G_VECREDUCE_FDOT) {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register VecA = MI.getOperand(1).getReg();
+    Register VecB = MI.getOperand(2).getReg();
+    LLT VecTy = MRI.getType(VecA);
+    unsigned Flags = MI.getFlags();
+    auto Products = MIRBuilder.buildFMul(VecTy, VecA, VecB, Flags);
+    MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_FADD, {DstReg},
+                          {Products.getReg(0)}, Flags);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   Register SrcReg = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(SrcReg);
   LLT DstTy = MRI.getType(SrcReg);

@@ -1735,6 +1735,15 @@ def G_VECREDUCE_SEQ_FMUL : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// G_VECREDUCE_SEQ_FDOT(acc, vecA, vecB): Sequential dot-product reduction.
+// Computes acc + sum(vecA[i] * vecB[i]) left-to-right.
+// 'contract' flag: FMA chain. Default: fmul+fadd chain.
+def G_VECREDUCE_SEQ_FDOT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$acc, type2:$va, type2:$vb);
+  let hasSideEffects = false;
+}
+
 def G_VECREDUCE_FADD : VectorReduction;
 def G_VECREDUCE_FMUL : VectorReduction;
 
@@ -1742,6 +1751,15 @@ def G_VECREDUCE_FMAX : VectorReduction;
 def G_VECREDUCE_FMIN : VectorReduction;
 def G_VECREDUCE_FMAXIMUM : VectorReduction;
 def G_VECREDUCE_FMINIMUM : VectorReduction;
+
+// G_VECREDUCE_FDOT(vecA, vecB): Unordered dot-product reduction.
+// Computes sum(vecA[i] * vecB[i]) in unspecified order.
+// Accumulator added by caller via G_FADD. Decomposes to G_FMUL + G_VECREDUCE_FADD.
+def G_VECREDUCE_FDOT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$va, type1:$vb);
+  let hasSideEffects = false;
+}
 
 def G_VECREDUCE_ADD : VectorReduction;
 def G_VECREDUCE_MUL : VectorReduction;

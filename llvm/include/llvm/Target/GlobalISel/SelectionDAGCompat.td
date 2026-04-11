@@ -205,6 +205,7 @@ def : GINodeEquiv<G_ROTL, rotl>;
 def : GINodeEquiv<G_LROUND, lround>;
 def : GINodeEquiv<G_LLROUND, llround>;
 def : GINodeEquiv<G_VECREDUCE_FADD, vecreduce_fadd>;
+def : GINodeEquiv<G_VECREDUCE_FDOT, vecreduce_fdot>;
 def : GINodeEquiv<G_VECREDUCE_FMAX, vecreduce_fmax>;
 def : GINodeEquiv<G_VECREDUCE_FMIN, vecreduce_fmin>;
 def : GINodeEquiv<G_VECREDUCE_FMAXIMUM, vecreduce_fmaximum>;
