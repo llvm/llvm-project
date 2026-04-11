@@ -126,7 +126,8 @@ The following options are described below:
 .. option:: LineCountThreshold
 
     Defines the minimum number of lines required between declaration and last
-    use for a diagnostic to be issued. The default value is 0.
+    use for a diagnostic to be issued. The default value for this option is 0,
+    which corresponds to all variables being flagged.
 
     .. code-block:: c++
 
