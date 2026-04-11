@@ -14877,7 +14877,8 @@ static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     std::swap(CSINC, Other);
   if (CSINC.getOpcode() == ARMISD::CSINC &&
       isNullConstant(CSINC.getOperand(0)) &&
-      isNullConstant(CSINC.getOperand(1)))
+      isNullConstant(CSINC.getOperand(1)) &&
+      DAG.MaskedValueIsZero(Other, APInt::getHighBitsSet(32, 31)))
     return DAG.getNode(ARMISD::CSINC, dl, VT, Other, CSINC.getOperand(1),
                        CSINC.getOperand(2), CSINC.getOperand(3));
 

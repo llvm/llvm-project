@@ -15,9 +15,10 @@ define nofpclass(nan inf) float @arm_canberra_distance_f32(ptr noundef readonly 
 ; CHECK-NEXT:    vcmp.f32 s2, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s4, #0
-; CHECK-NEXT:    cset r3, ne
+; CHECK-NEXT:    cset r12, ne
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    csinc r3, r3, zr, eq
+; CHECK-NEXT:    cset r3, ne
+; CHECK-NEXT:    orr.w r3, r3, r12
 ; CHECK-NEXT:    lsls r3, r3, #31
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:  @ %bb.2: @ %if.then
