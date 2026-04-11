@@ -9,29 +9,29 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-EP
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O2>' -S %s -passes-ep-full-link-time-optimization-early=no-op-module \
 ; RUN:     -passes-ep-full-link-time-optimization-last=no-op-module 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-EP
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ,CHECK-EP
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s -passes-ep-vectorizer-start='no-op-function' 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,CHECK-EP-VECTORIZER-START
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ,CHECK-EP-VECTORIZER-START
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s -passes-ep-vectorizer-end='no-op-function' 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,CHECK-EP-VECTORIZER-END
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ,CHECK-EP-VECTORIZER-END
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OS,CHECK-O23SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<Oz>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s -passes-ep-peephole='no-op-function' 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,CHECK-EP-PEEPHOLE
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23SZ,CHECK-EP-PEEPHOLE
 
 ; CHECK-EP: Running pass: NoOpModulePass
 ; CHECK-O: Running pass: CrossDSOCFIPass
@@ -117,6 +117,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass on foo
+; CHECK-O23SZ-NEXT: Running analysis: CycleAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: MergedLoadStoreMotionPass on foo
 ; CHECK-EP-VECTORIZER-START-NEXT: Running pass: NoOpFunctionPass on foo
@@ -139,9 +140,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: SCCPPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: InstCombinePass on foo
 ; CHECK-O23SZ-NEXT: Running pass: BDCEPass on foo
-; CHECK-O2-NEXT: Running pass: SLPVectorizerPass on foo
-; CHECK-O3-NEXT: Running pass: SLPVectorizerPass on foo
-; CHECK-OS-NEXT: Running pass: SLPVectorizerPass on foo
+; CHECK-O23SZ-NEXT: Running pass: SLPVectorizerPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: VectorCombinePass on foo
 ; CHECK-O23SZ-NEXT: Running pass: InferAlignmentPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: InstCombinePass on foo

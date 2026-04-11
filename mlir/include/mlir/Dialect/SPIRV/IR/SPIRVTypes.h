@@ -228,6 +228,16 @@ public:
   Type getImageType() const;
 };
 
+// SPIR-V sampler type
+class SamplerType : public Type::TypeBase<SamplerType, SPIRVType, TypeStorage> {
+public:
+  using Base::Base;
+
+  static constexpr StringLiteral name = "spirv.sampler";
+
+  static SamplerType get(MLIRContext *context);
+};
+
 /// SPIR-V struct type. Two kinds of struct types are supported:
 /// - Literal: a literal struct type is uniqued by its fields (types + offset
 /// info + decoration info).
@@ -425,8 +435,9 @@ public:
 };
 
 // SPIR-V matrix type
-class MatrixType : public Type::TypeBase<MatrixType, CompositeType,
-                                         detail::MatrixTypeStorage> {
+class MatrixType
+    : public Type::TypeBase<MatrixType, CompositeType,
+                            detail::MatrixTypeStorage, ShapedType::Trait> {
 public:
   using Base::Base;
 
@@ -457,6 +468,26 @@ public:
 
   /// Returns the elements' type (i.e, single element type).
   Type getElementType() const;
+
+  operator ShapedType() const { return cast<ShapedType>(*this); }
+
+  ArrayRef<int64_t> getShape() const;
+
+  bool hasRank() const { return true; }
+
+  MatrixType cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                       Type elementType) const {
+    if (!shape)
+      return get(elementType, getNumColumns());
+
+    assert(shape.value().size() == 2);
+
+    auto vectorType = cast<VectorType>(elementType);
+    Type newElementType =
+        vectorType.cloneWith({shape.value()[0]}, vectorType.getElementType());
+
+    return get(newElementType, shape.value()[1]);
+  }
 };
 
 /// SPIR-V TensorARM Type

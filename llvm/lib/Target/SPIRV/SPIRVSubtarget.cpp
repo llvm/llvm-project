@@ -11,12 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVSubtarget.h"
+
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVCommandLine.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
+
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -106,7 +109,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
-  GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
+  GR = std::make_unique<SPIRVGlobalRegistry>(TM.createDataLayout());
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
@@ -204,6 +207,34 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
     if (F.hasFnAttribute("hlsl.shader")) {
       HasShaderAttr = true;
       break;
+    }
+  }
+
+  if (!HasShaderAttr) {
+    if (auto *MemModel = M.getNamedMetadata("spirv.MemoryModel")) {
+      if (MemModel->getNumOperands() == 0)
+        report_fatal_error("Invalid spirv.MemoryModel metadata");
+      auto *MemMD = MemModel->getOperand(0);
+      if (MemMD->getNumOperands() < 2)
+        report_fatal_error("Invalid spirv.MemoryModel operand");
+      unsigned MemModelVal =
+          mdconst::extract<ConstantInt>(MemMD->getOperand(1))->getZExtValue();
+      switch (MemModelVal) {
+      case SPIRV::MemoryModel::Simple:
+      case SPIRV::MemoryModel::GLSL450:
+        HasShaderAttr = true;
+        break;
+      case SPIRV::MemoryModel::VulkanKHR:
+        HasShaderAttr = true;
+        AvailableExtensions.insert(
+            SPIRV::Extension::SPV_KHR_vulkan_memory_model);
+        break;
+      case SPIRV::MemoryModel::OpenCL:
+        break;
+      default:
+        report_fatal_error(
+            "Unknown memory model in spirv.MemoryModel metadata");
+      }
     }
   }
 

@@ -96,6 +96,9 @@ def NVVM_Dialect : Dialect {
     /// nvvm.cluster_dim attributes.
     static StringRef getBlocksAreClustersAttrName() { return "nvvm.blocksareclusters"; }
 
+    /// Get the name of the attribute used to annotate managed global variables.
+    static StringRef getManagedAttrName() { return "nvvm.managed"; }
+
     /// Verify an attribute from this dialect on the argument at 'argIndex' for
     /// the region at 'regionIndex' on the given operation. Returns failure if
     /// the verification failed, success otherwise. This hook may optionally be
@@ -720,7 +723,8 @@ def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx"> {
   let hasVerifier = 1;
 }
 
-def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive"> {
+def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
+    [InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
@@ -768,7 +772,8 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive"> {
   let hasVerifier = 1;
 }
 
-def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop"> {
+def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop",
+    [InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "MBarrier Arrive-Drop Operation";
   let description = [{
     The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
@@ -844,7 +849,8 @@ def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
 }
 
-def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx"> {
+def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx",
+    [InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "MBarrier Arrive with Expected Transaction Count";
   let description = [{
     The `nvvm.mbarrier.arrive.expect_tx` operation performs an expect-tx operation 
@@ -910,7 +916,8 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
   }];
 }
 
-def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.expect_tx"> {
+def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.expect_tx",
+    [InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "MBarrier arrive_drop with expected transaction count";
   let description = [{
     The `nvvm.mbarrier.arrive_drop.expect_tx` operation is similar to the
@@ -1123,7 +1130,8 @@ def BarrierReductionAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier", [AttrSizedOperandSegments]> {
+def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "CTA Barrier Synchronization Op";
   let description = [{
     The `nvvm.barrier` operation performs barrier synchronization and communication 
@@ -1504,7 +1512,7 @@ def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
 def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
 def NVVM_ShflOp :
-  NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>]>,
+  NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>, InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, F32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
                  AnyTypeOf<[I32, F32]>:$val,
@@ -1558,7 +1566,7 @@ def VoteSyncKind : I32EnumAttr<"VoteSyncKind", "NVVM vote sync kind",
 def VoteSyncKindAttr : EnumAttr<NVVM_Dialect, VoteSyncKind, "vote_sync_kind">;
 
 def NVVM_VoteSyncOp
-    : NVVM_Op<"vote.sync">,
+    : NVVM_Op<"vote.sync", [InferTypeOpAdaptor]>,
       Results<(outs AnyTypeOf<[I32, I1]>:$res)>,
       Arguments<(ins I32:$mask, I1:$pred, VoteSyncKindAttr:$kind)> {
   let summary = "Vote across thread group";
@@ -1589,7 +1597,7 @@ def NVVM_VoteSyncOp
 }
 
 def NVVM_SyncWarpOp :
-  NVVM_Op<"bar.warp.sync">,
+  NVVM_IntrOp<"bar.warp.sync">,
   Arguments<(ins I32:$mask)> {
   let summary = "Warp Barrier Synchronization Op";
   let description = [{
@@ -1618,9 +1626,6 @@ def NVVM_SyncWarpOp :
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar-warp-sync)
   }];
 
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_bar_warp_sync, {$mask});
-  }];
   let assemblyFormat = "$mask attr-dict `:` type($mask)";
 }
 
@@ -1972,6 +1977,44 @@ def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
   }];
 }
 
+class NVVM_ConvertFPx2ToF4x2Op<string srcType>
+    : NVVM_Op<"convert."#!tolower(srcType)#"x2.to.f4x2"> {
+  let summary = "Convert an " # !tolower(srcType) # "x2 input to f4x2";
+  let description = [{
+    This Op converts each of the given }]#srcType#[{ inputs in an }]#!tolower
+    (srcType)#[{x2 vector to the specified fp4 type.
+    The result `dst` is returned as an i8 type where the converted values are 
+    packed such that the value converted from the first element of `a` is 
+    stored in the lower 4 bits of `dst` and the value converted from the second 
+    element of `a` is stored in the upper 4 bits of `dst`.
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.
+    }];
+  let results = (outs I8:$dst);
+  let arguments = (ins
+      VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
+      DefaultValuedAttr<BoolAttr, "false">:$relu,
+      TypeAttrOf<F4E2M1FN>:$dstTy);
+
+  let assemblyFormat =
+      "$src attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`";
+
+  let extraClassDeclaration = [{
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::Convert}]#srcType#[{x2ToF4x2Op &op, 
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [intId, args] = NVVM::Convert}]#srcType#[{x2ToF4x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
+    $dst = builder.CreateTruncOrBitCast(packedI16, llvm::Type::getInt8Ty(builder.getContext()));
+  }];
+}
+
+def NVVM_ConvertF16x2ToF4x2Op : NVVM_ConvertFPx2ToF4x2Op<"F16">;
+def NVVM_ConvertBF16x2ToF4x2Op : NVVM_ConvertFPx2ToF4x2Op<"BF16">;
+
 def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   let summary = "Convert a pair of float inputs to f6x2";
   let description = [{
@@ -2014,6 +2057,48 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
                       llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
   }];
 }
+
+class NVVM_ConvertFPx2ToF6x2Op<string srcType>
+    : NVVM_Op<"convert."#!tolower(srcType)#"x2.to.f6x2"> {
+  let summary = "Convert an " # !tolower(srcType) # "x2 input to f6x2";
+  let description = [{
+    This Op converts each of the given }]#srcType#[{ inputs in an }]#!tolower
+    (srcType)#[{x2 vector to the specified fp6 type. The result `dst` is 
+    represented either as an i16 type or as a vector of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` with 2 MSB bits padded with zeros and the value 
+    converted from the second element of `a` is stored in the upper 8 bits of 
+    `dst` with 2 MSB bits padded with zeros.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector with 2 MSB bits padded with zeros.
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.
+  }];
+
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins
+      VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
+      DefaultValuedAttr<BoolAttr, "false">:$relu,
+      TypeAttrOf<AnyTypeOf<[F6E2M3FN, F6E3M2FN]>>:$dstTy);
+  let assemblyFormat = "$src attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`";
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy, bool hasRelu);
+  }];
+
+  string llvmBuilder = [{
+    auto intId = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                        llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
+def NVVM_ConvertF16x2ToF6x2Op : NVVM_ConvertFPx2ToF6x2Op<"F16">;
+def NVVM_ConvertBF16x2ToF6x2Op : NVVM_ConvertFPx2ToF6x2Op<"BF16">;
 
 def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   let summary = "Convert a pair of float inputs to f8x2";
@@ -2109,13 +2194,12 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let summary = "Convert a pair of bf16 inputs to f8x2";
   let description = [{
     This Op converts the given bf16 inputs in a bf16x2 vector to the specified 
-    f8 type.
-    The result `dst` is represented as an i16 type or as a vector
-    of two i8 types.
-    If `dst` is returned as an i16 type, the converted values from `a`
-    are packed such that the value converted from the first element of `a`
-    is stored in the upper 8 bits of `dst` and the value converted from the
-    second element of `a` is stored in the lower 8 bits of `dst`.
+    f8 type. The result `dst` is represented either as a packed i16 type or as 
+    a vector of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` and the value converted from the second element of 
+    `a` is stored in the upper 8 bits of `dst`.
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
     The `rnd` and `sat` attributes specify the rounding and saturation modes 
@@ -2127,20 +2211,22 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    VectorOfLengthAndType<[2], [BF16]>:$a,
+    VectorOfLengthAndType<[2], [BF16]>:$src,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
-    TypeAttr:$dstTy);
-  let assemblyFormat = "$a attr-dict `:` type($a) `->` type($dst) `(` $dstTy `)`";
+    DefaultValuedAttr<BoolAttr, "false">:$relu,
+    TypeAttrOf<AnyTypeOf<[F8E8M0FNU, F8E4M3FN, F8E5M2]>>:$dstTy);
+  let assemblyFormat = "$src attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`";
   
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                              NVVM::SaturationMode sat);
+    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
+                                  NVVM::FPRoundingMode rnd,
+                                  NVVM::SaturationMode sat, bool hasRelu);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($rnd, $sat);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2184,6 +2270,117 @@ def NVVM_ConvertF6x2ToF16x2Op :
   NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "F16">;
 def NVVM_ConvertF4x2ToF16x2Op :
   NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16">;
+
+def NVVM_ConvertF32x2ToS2F6x2Op : NVVM_Op<"convert.f32x2.to.s2f6x2"> {
+  let summary = "Convert a pair of f32 inputs to S2F6x2";
+  let description = [{
+    This Op converts each of the given f32 inputs to the
+    S2F6x2 type. The result `dst` can be either a packed i16 type or a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from `a` is stored in the upper 8 bits of `dst` 
+    and the value converted from `b` is stored in the lower 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `relu` attribute, when set, lowers to the '.relu' variant
+    of the cvt instruction.
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins F32:$a, F32:$b,
+      Optional<I16>:$scaleFactor,
+      DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat =
+      "$a `,` $b (`,` $scaleFactor^)? attr-dict `:` type($dst)";
+  let extraClassDeclaration = [{
+    static IDArgPair getIntrinsicIDAndArgs(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::ConvertF32x2ToS2F6x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, id, args);
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
+def NVVM_ConvertBF16x2ToS2F6x2Op : NVVM_Op<"convert.bf16x2.to.s2f6x2"> {
+  let summary = "Convert a pair of BF16 inputs to S2F6x2";
+  let description = [{
+    This Op converts each of the given BF16 inputs in a bf16x2 vector to the
+    S2F6x2 type. The result `dst` can be either a packed i16 type or a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` and the value converted from the second element of 
+    `a` is stored in the upper 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `relu` attribute, when set, lowers to the '.relu' variant
+    of the cvt instruction.
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins
+      VectorOfLengthAndType<[2], [BF16]>:$src,
+      Optional<I16>:$scaleFactor,
+      DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat =
+      "$src (`,` $scaleFactor^)? attr-dict `:` type($src) `->` type($dst)";
+  let extraClassDeclaration = [{
+    static IDArgPair getIntrinsicIDAndArgs(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::ConvertBF16x2ToS2F6x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, id, args);
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
+def NVVM_ConvertS2F6x2ToBF16x2Op : NVVM_SingleResultIntrinsicOp<"convert.s2f6x2.to.bf16x2", [], "$dst"> {
+  let summary = "Convert s2f6x2 to bf16x2";
+  let description = [{
+    This Op converts a pair of s2f6x2 inputs to bf16x2 type. The result `dst` 
+    is represented as a vector of two bf16 elements.
+
+    The `relu` attribute, when set, lowers to the '.relu' variant
+    of the cvt instruction.
+    
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs VectorOfLengthAndType<[2], [BF16]>:$dst);
+  let arguments = (ins VectorOfLengthAndType<[2], [I8]>:$src,
+      Optional<I16>:$scaleFactor,
+      DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+      DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat =
+      "$src (`,` $scaleFactor^)? attr-dict `:` type($src) `->` type($dst)";
+}
 
 //===----------------------------------------------------------------------===//
 // NVVM Stochastic Rounding Conversion Ops
@@ -3028,7 +3225,7 @@ def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
   let hasVerifier = 1;
 }
 
-def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
+def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix", [InferTypeOpAdaptor]>,
   Results<(outs AnyType:$res)>,
   Arguments<(ins LLVM_PointerShared:$ptr, I32Attr:$num,
                  MMALayoutAttr:$layout,
@@ -4217,7 +4414,7 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
   }];
 }
 
-def NVVM_CpAsyncBulkPrefetchOp : NVVM_Op<"cp.async.bulk.prefetch"> {
+def NVVM_CpAsyncBulkPrefetchOp : NVVM_VoidIntrinsicOp<"cp.async.bulk.prefetch"> {
   let summary = "Async bulk prefetch from global memory to L2 cache";
   let description = [{
     Initiates an asynchronous prefetch of data from the location
@@ -4246,22 +4443,10 @@ def NVVM_CpAsyncBulkPrefetchOp : NVVM_Op<"cp.async.bulk.prefetch"> {
     $srcMem `,` $size (`l2_cache_hint` `=` $l2CacheHint^ )?
     attr-dict  `:` type($srcMem)
   }];
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
 def NVVM_CpAsyncBulkTensorPrefetchOp :
-  NVVM_Op<"cp.async.bulk.tensor.prefetch", [AttrSizedOperandSegments]> {
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.prefetch", [AttrSizedOperandSegments]> {
   let arguments = (ins
     LLVM_PointerGeneric:$tmaDescriptor,
     Variadic<I32>:$coordinates,
@@ -4288,19 +4473,7 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
     attr-dict  `:` type($tmaDescriptor)
   }];
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
   let hasVerifier = 1;
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
 // List of Reduction Ops supported with TMA Store
@@ -4783,7 +4956,7 @@ def MatchSyncKind : I32EnumAttr<"MatchSyncKind", "NVVM match sync kind",
 
 def MatchSyncKindAttr : EnumAttr<NVVM_Dialect, MatchSyncKind, "match_sync_kind">;
 
-def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
+def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
                  AnyTypeOf<[I32, I64]>:$val,
@@ -5553,7 +5726,7 @@ def DotAccumulateTypeAttr : EnumAttr<NVVM_Dialect, DotAccumulateType, "dot_accum
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
+def NVVM_DotAccumulate4WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.4way"> {
   let summary = "Four-way byte dot product-accumulate instruction";
   let description = [{
     Performs a four-way byte dot-product which is accumulated in a 32-bit
@@ -5585,21 +5758,9 @@ def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
   let results = (outs I32:$res);
 
   let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
-  
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::DotAccumulate4WayOp::getIntrinsicIDAndArgs(
-                        *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
+def NVVM_DotAccumulate2WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.2way"> {
   let summary = "Two-way 16-bit to 8-bit dot product-accumulate instruction";
   let description = [{
     Performs a two-way 16-bit to 8-bit dot-product which is accumulated in a 
@@ -5639,18 +5800,6 @@ def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
   let results = (outs I32:$res);
 
   let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
-  
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
-  
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::DotAccumulate2WayOp::getIntrinsicIDAndArgs(
-                        *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -5723,7 +5872,8 @@ def ClusterLaunchControlQueryTypeAttr
 }
 
 def NVVM_ClusterLaunchControlQueryCancelOp
-    : NVVM_Op<"clusterlaunchcontrol.query.cancel", [NVVMRequiresSM<100>]> {
+    : NVVM_Op<"clusterlaunchcontrol.query.cancel",
+              [NVVMRequiresSM<100>, InferTypeOpAdaptor]> {
   let summary = "Query the response of a clusterlaunchcontrol.try.cancel operation";
   let description = [{
     `clusterlaunchcontrol.query.cancel` queries the response of a 

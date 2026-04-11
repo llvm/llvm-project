@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares helper classes and functions for NVPTX-specific debug
-// information processing, particularly for inlined function call sites and
+// This file declares the NVPTXDwarfDebug class, the NVPTX-specific subclass
+// of DwarfDebug. It customizes DWARF emission for PTX: address space
+// attributes, compile-unit range suppression, base address handling, and
 // enhanced line information with inlined_at directives.
 //
 //===----------------------------------------------------------------------===//
@@ -20,9 +21,12 @@
 
 namespace llvm {
 
-/// NVPTXDwarfDebug - NVPTX-specific DwarfDebug implementation.
-/// Inherits from DwarfDebug to provide enhanced line information with
-/// inlined_at support.
+/// NVPTX-specific DwarfDebug implementation.
+///
+/// Customizes DWARF emission for PTX targets: DWARF v2 defaults, address
+/// space attributes (DW_AT_address_class) for cuda-gdb, compile-unit range
+/// suppression, range-list base address handling, and enhanced line
+/// information with inlined_at directives.
 class NVPTXDwarfDebug : public DwarfDebug {
 private:
   /// Set of inlined_at locations that have already been emitted.
@@ -30,14 +34,30 @@ private:
   DenseSet<const DILocation *> EmittedInlinedAtLocs;
 
 public:
-  /// Constructor - Pass through to DwarfDebug constructor.
   NVPTXDwarfDebug(AsmPrinter *A);
 
+  /// Get or create an MCSymbol in .debug_str for a function's linkage name.
+  /// Used to reference the function name in .loc directives with inlined_at.
+  MCSymbol *getOrCreateFuncNameSymbol(StringRef LinkageName);
+
+  /// Returns true if the enhanced lineinfo mode (with inlined_at) is active
+  /// for the given MachineFunction.
+  bool isEnhancedLineinfo(const MachineFunction &MF) const;
+
+  bool shouldResetBaseAddress(const MCSection &Section) const override;
+  const DIExpression *adjustExpressionForTarget(
+      const DIExpression *Expr,
+      std::optional<unsigned> &TargetAddrSpace) const override;
+  void addTargetVariableAttributes(
+      DwarfCompileUnit &CU, DIE &Die, std::optional<unsigned> TargetAddrSpace,
+      VariableLocationKind VarLocKind,
+      const GlobalVariable *GV = nullptr) const override;
+
 protected:
-  /// Override to collect inlined_at locations.
   void initializeTargetDebugInfo(const MachineFunction &MF) override;
-  /// Override to record source line information with inlined_at support.
   void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) override;
+  bool shouldAttachCompileUnitRanges() const override;
+  bool shouldEmitDwarfPubSections() const override { return false; }
 };
 
 } // end namespace llvm

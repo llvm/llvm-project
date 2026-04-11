@@ -91,7 +91,6 @@
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
-#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
@@ -127,6 +126,7 @@
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -280,6 +280,7 @@
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
 #include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/ExpandMemCmp.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -805,6 +806,17 @@ Expected<bool> parseLintOptions(StringRef Params) {
                                             "LintPass");
 }
 
+/// Parser of parameters for FunctionPropertiesStatistics pass.
+Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
+                                            "FunctionPropertiesStatisticsPass");
+}
+
+/// Parser of parameters for InstCount pass.
+Expected<bool> parseInstCountOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -1273,17 +1285,25 @@ Expected<LICMOptions> parseLICMOptions(StringRef Params) {
   return Result;
 }
 
-Expected<std::pair<bool, bool>> parseLoopRotateOptions(StringRef Params) {
-  std::pair<bool, bool> Result = {true, false};
+struct LoopRotateOptions {
+  bool EnableHeaderDuplication = true;
+  bool PrepareForLTO = false;
+  bool CheckExitCount = false;
+};
+
+Expected<LoopRotateOptions> parseLoopRotateOptions(StringRef Params) {
+  LoopRotateOptions Result;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "header-duplication") {
-      Result.first = Enable;
+      Result.EnableHeaderDuplication = Enable;
     } else if (ParamName == "prepare-for-lto") {
-      Result.second = Enable;
+      Result.PrepareForLTO = Enable;
+    } else if (ParamName == "check-exit-count") {
+      Result.CheckExitCount = Enable;
     } else {
       return make_error<StringError>(
           formatv("invalid LoopRotate pass parameter '{}'", ParamName).str(),
@@ -1958,11 +1978,8 @@ PassBuilder::parsePipelineText(StringRef Text) {
 
 static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
                                          OptimizationLevel L) {
-  // This is consistent with old pass manager invoked via opt, but
-  // inconsistent with clang. Clang doesn't enable loop vectorization
-  // but does enable slp vectorization at Oz.
-  PTO.LoopVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-  PTO.SLPVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+  PTO.LoopVectorization = L.getSpeedupLevel() > 1;
+  PTO.SLPVectorization = L.getSpeedupLevel() > 1;
 }
 
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,

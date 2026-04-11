@@ -79,13 +79,13 @@ entry:
   %cmp66 = icmp sgt i32 %n, 0
   br i1 %cmp66, label %for.body4.lr.ph, label %for.cond.cleanup
 
-for.body4.lr.ph:                                  ; preds = %entry, %for.cond.cleanup3
+for.body4.lr.ph:
   %i.067 = phi i32 [ %inc29, %for.cond.cleanup3 ], [ 0, %entry ]
   %cmp962.not = icmp eq i32 %i.067, 0
   %mul15 = mul nsw i32 %i.067, %n
   br i1 %cmp962.not, label %for.body4, label %for.body4.us
 
-for.body4.us:                                     ; preds = %for.body4.lr.ph, %for.cond8.for.cond.cleanup10_crit_edge.us
+for.body4.us:
   %j.065.us = phi i32 [ %inc26.us, %for.cond8.for.cond.cleanup10_crit_edge.us ], [ %i.067, %for.body4.lr.ph ]
   %mul.us = mul nsw i32 %j.065.us, %n
   %add.us = add nsw i32 %mul.us, %i.067
@@ -95,7 +95,7 @@ for.body4.us:                                     ; preds = %for.body4.lr.ph, %f
   store float %0, ptr %arrayidx7.us, align 4
   br label %for.body11.us
 
-for.body11.us:                                    ; preds = %for.body4.us, %for.body11.us
+for.body11.us:
   %1 = phi float [ %0, %for.body4.us ], [ %sub.us, %for.body11.us ]
   %k.063.us = phi i32 [ 0, %for.body4.us ], [ %inc.us, %for.body11.us ]
   %add16.us = add nsw i32 %k.063.us, %mul15
@@ -111,20 +111,20 @@ for.body11.us:                                    ; preds = %for.body4.us, %for.
   %exitcond.not = icmp eq i32 %inc.us, %i.067
   br i1 %exitcond.not, label %for.cond8.for.cond.cleanup10_crit_edge.us, label %for.body11.us
 
-for.cond8.for.cond.cleanup10_crit_edge.us:        ; preds = %for.body11.us
+for.cond8.for.cond.cleanup10_crit_edge.us:
   %inc26.us = add nuw nsw i32 %j.065.us, 1
   %exitcond71.not = icmp eq i32 %inc26.us, %n
   br i1 %exitcond71.not, label %for.cond.cleanup3, label %for.body4.us
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, %entry
+for.cond.cleanup:
   ret i32 0
 
-for.cond.cleanup3:                                ; preds = %for.cond8.for.cond.cleanup10_crit_edge.us, %for.body4
+for.cond.cleanup3:
   %inc29 = add nuw nsw i32 %i.067, 1
   %exitcond73.not = icmp eq i32 %inc29, %n
   br i1 %exitcond73.not, label %for.cond.cleanup, label %for.body4.lr.ph
 
-for.body4:                                        ; preds = %for.body4.lr.ph, %for.body4
+for.body4:
   %j.065 = phi i32 [ %inc26, %for.body4 ], [ 0, %for.body4.lr.ph ]
   %mul = mul nsw i32 %j.065, %n
   %arrayidx = getelementptr inbounds float, ptr %pA, i32 %mul

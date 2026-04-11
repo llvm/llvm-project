@@ -229,7 +229,7 @@ bool AddressRange::GetDescription(Stream *s, Target *target) const {
   const auto section_sp = m_base_addr.GetSection();
   if (section_sp) {
     if (const auto object_file = section_sp->GetObjectFile())
-      file_name = object_file->GetFileSpec().GetFilename().AsCString();
+      file_name = object_file->GetFileSpec().GetFilename().AsCString(nullptr);
   }
   start_addr = m_base_addr.GetFileAddress();
   const addr_t end_addr = (start_addr == LLDB_INVALID_ADDRESS)

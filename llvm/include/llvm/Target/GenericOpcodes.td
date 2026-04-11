@@ -1442,6 +1442,8 @@ def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMAXIMUM : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMINIMUM : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMAXIMUMNUM : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMINIMUMNUM : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UINC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UDEC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_USUB_COND : G_ATOMICRMW_OP;
@@ -1763,6 +1765,8 @@ def G_STRICT_FREM : ConstrainedInstruction<G_FREM>;
 def G_STRICT_FMA : ConstrainedInstruction<G_FMA>;
 def G_STRICT_FSQRT : ConstrainedInstruction<G_FSQRT>;
 def G_STRICT_FLDEXP : ConstrainedInstruction<G_FLDEXP>;
+def G_STRICT_FCMP : ConstrainedInstruction<G_FCMP>;
+def G_STRICT_FCMPS : ConstrainedInstruction<G_FCMP>;
 
 //------------------------------------------------------------------------------
 // Memory intrinsics

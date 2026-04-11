@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Verify that -vplan-print-in-dot-format option works.
 
-define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK:      digraph VPlan {
 ; CHECK-NEXT:  graph [labelloc=t, fontsize=30; label="Vectorization Plan\nInitial VPlan for VF=\{4\},UF\>=1\nLive-in vp\<[[VF:%.+]]\> = VF\nLive-in vp\<[[VFxUF:%.+]]\> = VF * UF\nLive-in vp\<[[VEC_TC:%.+]]\> = vector-trip-count\nLive-in ir\<%n\> = original trip-count\n"]
 ; CHECK-NEXT:  node [shape=rect, fontname=Courier, fontsize=30]
@@ -55,7 +55,7 @@ entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
   %lv = load float, ptr %arrayidx, align 4
@@ -66,8 +66,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
-declare float @llvm.sqrt.f32(float) nounwind readnone

@@ -22,9 +22,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;      }
 ; }
 
-define void @_Z4testPfS_m(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, i64 %size) local_unnamed_addr {
+define void @_Z4testPfS_m(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, i64 %size) {
 ; CHECK-LABEL: define void @_Z4testPfS_m(
-; CHECK-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], i64 [[SIZE:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], i64 [[SIZE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i64 [[SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]

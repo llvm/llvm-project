@@ -56,7 +56,7 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
                              TripleName.c_str());
 
   MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                         nullptr, true, Swift5ReflectionSegmentName));
+                         true, Swift5ReflectionSegmentName));
   MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false, false));
   MC->setObjectFileInfo(MOFI.get());
 

@@ -464,9 +464,9 @@ define i32 @f31() {
 ; CHECK-LABEL: f31:
 ; CHECK-LABEL: # %bb.0:
 ; CHECK-NEXT: larl %r1, .LCPI31_0
+; CHECK-NEXT: larl %r2, .LCPI31_1
 ; CHECK-NEXT: vl %v0, 0(%r1), 3
-; CHECK-NEXT: larl %r1, .LCPI31_1
-; CHECK-NEXT: vl %v1, 0(%r1), 3
+; CHECK-NEXT: vl %v1, 0(%r2), 3
 ; CHECK-NEXT: vperm %v0, %v1, %v1, %v0
 ; CHECK-NEXT: vlgvb %r2, %v0, 0
 ; CHECK-NEXT: nilf %r2, 7

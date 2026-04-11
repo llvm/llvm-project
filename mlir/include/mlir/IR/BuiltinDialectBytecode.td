@@ -79,7 +79,7 @@ def IntegerAttr: DialectAttribute<(attr
   Type:$type,
   KnownWidthAPInt<"type">:$value
 )> {
-  let cBuilder = "get<$_resultType>(context, type, *value)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *value)";
 }
 
 defvar FloatType = Type;
@@ -87,7 +87,7 @@ def FloatAttr : DialectAttribute<(attr
   FloatType:$type,
   KnownSemanticsAPFloat<"type">:$value
 )> {
-  let cBuilder = "get<$_resultType>(context, type, *value)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *value)";
 }
 
 def CallSiteLoc : DialectAttribute<(attr
@@ -116,12 +116,15 @@ def FileLineColLoc : DialectAttribute<(attr
 }
 }
 
-let cType = "FusedLoc",
-    cBuilder = "cast<FusedLoc>(get<FusedLoc>(context, $_args))" in {
+let cType = "FusedLoc" in {
 def FusedLoc : DialectAttribute<(attr
   Array<Location>:$locations
 )> {
   let printerPredicate = "!$_val.getMetadata()";
+  // FusedLoc::get(context, locs) may return UnknownLoc when locs is empty.
+  // Pass Attribute() explicitly to bypass the folding logic and always
+  // construct a FusedLoc via Base::getChecked.
+  let cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args, Attribute()))";
 }
 
 def FusedLocWithMetadata : DialectAttribute<(attr
@@ -129,6 +132,7 @@ def FusedLocWithMetadata : DialectAttribute<(attr
   Attribute:$metadata
 )> {
   let printerPredicate = "$_val.getMetadata()";
+  let cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args))";
 }
 }
 
@@ -144,7 +148,7 @@ def DenseResourceElementsAttr : DialectAttribute<(attr
   ResourceHandle<"DenseResourceElementsHandle">:$rawHandle
 )> {
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, type, *rawHandle)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *rawHandle)";
 }
 
 let cType = "RankedTensorType" in {
@@ -162,7 +166,7 @@ def RankedTensorTypeWithEncoding : DialectType<(type
 )> {
   let printerPredicate = "$_val.getEncoding()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, encoding)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, shape, elementType, encoding)";
 }
 }
 
@@ -173,12 +177,12 @@ def DenseArrayAttr : DialectAttribute<(attr
 )>;
 
 def DenseElementsAttr : WithType<"DenseElementsAttr", Attribute>;
-def DenseIntOrFPElementsAttr : DialectAttribute<(attr
+def DenseTypedElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
   WithBuilder<"$_args",
     WithType<"SmallVector<char>",
-    WithParser<"succeeded(readDenseIntOrFPElementsAttr($_reader, type, $_var))",
-    WithPrinter<"writeDenseIntOrFPElementsAttr($_writer, $_name)">>>>:$rawData
+    WithParser<"succeeded(readDenseTypedElementsAttr($_reader, type, $_var))",
+    WithPrinter<"writeDenseTypedElementsAttr($_writer, $_name)">>>>:$rawData
 )>;
 
 def DenseStringElementsAttr : DialectAttribute<(attr
@@ -258,7 +262,7 @@ def MemRefTypeWithMemSpace : DialectType<(type
 )> {
   let printerPredicate = "!!$_val.getMemorySpace()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, layout, memorySpace)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, shape, elementType, layout, memorySpace)";
 }
 }
 
@@ -273,7 +277,7 @@ def UnrankedMemRefType : DialectType<(type
   Type:$elementType
 )> {
   let printerPredicate = "!$_val.getMemorySpace()";
-  let cBuilder = "get<$_resultType>(context, elementType, Attribute())";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, elementType, Attribute())";
 }
 
 def UnrankedMemRefTypeWithMemSpace : DialectType<(type
@@ -282,7 +286,7 @@ def UnrankedMemRefTypeWithMemSpace : DialectType<(type
 )> {
   let printerPredicate = "$_val.getMemorySpace()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, elementType, memorySpace)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, elementType, memorySpace)";
 }
 }
 
@@ -296,6 +300,9 @@ def VectorType : DialectType<(type
   Type:$elementType
 )> {
   let printerPredicate = "!$_val.isScalable()";
+  // Use getChecked to produce a null type (and emit a diagnostic) instead of
+  // asserting when the element type does not implement VectorElementTypeInterface.
+  let cBuilder = "VectorType::getChecked([&]() { return reader.emitError(\"invalid vector type\"); }, shape, elementType)";
 }
 
 def VectorTypeWithScalableDims : DialectType<(type
@@ -305,7 +312,7 @@ def VectorTypeWithScalableDims : DialectType<(type
 )> {
   let printerPredicate = "$_val.isScalable()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, scalableDims)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, shape, elementType, scalableDims)";
 }
 }
 
@@ -334,7 +341,7 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     UnknownLoc,
     DenseResourceElementsAttr,
     DenseArrayAttr,
-    DenseIntOrFPElementsAttr,
+    DenseTypedElementsAttr,
     DenseStringElementsAttr,
     SparseElementsAttr,
     DistinctAttr,
