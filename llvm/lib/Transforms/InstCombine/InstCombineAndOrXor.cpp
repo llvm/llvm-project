@@ -5634,10 +5634,13 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   // Otherwise, if all else failed, try to hoist the xor-by-constant:
   //   (X ^ C) ^ Y --> (X ^ Y) ^ C
+  //   (or disjoint X, C) ^ Y --> (X ^ Y) ^ C
   // Just like we do in other places, we completely avoid the fold
   // for constantexprs, at least to avoid endless combine loop.
   if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(X, m_Unless(m_ConstantExpr())),
                                        m_ImmConstant(C1))),
+                        m_Value(Y))) ||
+      match(&I, m_c_Xor(m_OneUse(m_DisjointOr(m_Value(X), m_ImmConstant(C1))),
                         m_Value(Y))))
     return BinaryOperator::CreateXor(Builder.CreateXor(X, Y), C1);
 
