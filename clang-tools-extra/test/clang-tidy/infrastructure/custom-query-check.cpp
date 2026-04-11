@@ -1,3 +1,5 @@
+// Broken due to https://github.com/llvm/llvm-project/issues/182526.
+// UNSUPPORTED: *
 // sed command does not work as-is on Windows.
 // UNSUPPORTED: system-windows
 // REQUIRES: custom-check
