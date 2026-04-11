@@ -1599,11 +1599,12 @@ TypeAliasTemplateDecl *Sema::BuildAliasForCTADFromTypeTemplateParameter(
   LocalInstantiationScope Scope(SemaRef);
 
   auto &AST = SemaRef.getASTContext();
-  auto *Func = cast<NamedDecl>(CurContext);
   auto *Ctx = CurContext->getParent();
 
-  MultiLevelTemplateArgumentList MTAL =
-      SemaRef.getTemplateInstantiationArgs(Func);
+  MultiLevelTemplateArgumentList MTAL;
+  if (NamedDecl *Func = dyn_cast<NamedDecl>(CurContext))
+    MTAL = SemaRef.getTemplateInstantiationArgs(Func);
+
   llvm::SmallVector<NamedDecl *> Parameters;
   llvm::SmallVector<TemplateArgument> Args;
   for (NamedDecl *P : D->getTemplateParameters()->asArray()) {

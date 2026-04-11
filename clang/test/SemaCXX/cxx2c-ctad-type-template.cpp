@@ -100,3 +100,33 @@ void f() {
 template void f<Y>(); // expected-note {{in instantiation}}
 
 }
+
+namespace Regression1 {
+
+template <typename>
+struct __iter_concept_impl;
+template <typename _Iter>
+    requires requires { typename _Iter; }
+struct __iter_concept_impl<_Iter>;
+template <typename _Iter>
+concept input_iterator = true;
+
+template <typename _Tp>
+concept input_range = true;
+
+template <template <typename> typename _Cont>
+using _DeduceExpr1 = decltype(_Cont());
+
+template <template <typename> typename _Cont, input_range _Rg>
+auto to(_Rg) {
+    auto _ = requires { typename _DeduceExpr1<_Cont>; };
+}
+
+template <typename>
+struct vector;
+
+void test() {
+    int range;
+    to<vector>(range);
+}
+}
