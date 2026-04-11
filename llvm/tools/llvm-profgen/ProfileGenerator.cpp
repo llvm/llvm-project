@@ -896,17 +896,10 @@ CSProfileGenerator::getOrCreateFunctionSamples(ContextTrieNode *ContextNode,
     FProfile->setFunction(ContextNode->getFuncName());
     ContextNode->setFunctionSamples(FProfile);
   }
-  // Update ContextWasInlined attribute for existing contexts.
-  // The current function can be called in two ways:
-  //  - when processing a probe of the current frame
-  //  - when processing the entry probe of an inlinee's frame, which
-  //    is then used to update the callsite count of the current frame.
-  // The two can happen in any order, hence here we are making sure
-  // `ContextWasInlined` is always set as expected.
-  // TODO: Note that the former does not always happen if no probes of the
-  // current frame has samples, and if the latter happens, we could lose the
-  // attribute. This should be fixed.
-  if (WasLeafInlined)
+  // Update ContextWasInlined attribute. Use either the caller-provided flag
+  // or the WasInlined flag stored on the trie node (set during probe
+  // processing from the probe inline tree).
+  if (WasLeafInlined || ContextNode->getWasInlined())
     FProfile->getContext().setAttribute(ContextWasInlined);
   return FProfile;
 }
@@ -1412,6 +1405,22 @@ ContextTrieNode *CSProfileGenerator::getContextNodeForLeafProbe(
   ContextTrieNode *ContextNode =
       getOrCreateContextNode(NewContextStack, WasLeafInlined);
   ContextNode->getFunctionSamples()->setFunctionHash(FuncDesc->FuncHash);
+
+  // Mark all intermediate inline frames as inlined on the trie node. Walk up
+  // the probe inline tree (which tells us which functions were inlined) and
+  // set the flag on corresponding trie nodes. This information is used later
+  // when creating FunctionSamples (e.g. for probeless nodes) to set
+  // ContextWasInlined.
+  ContextTrieNode *CurNode = ContextNode;
+  auto *InlineTreeNode = LeafProbe->getInlineTreeNode();
+  while (InlineTreeNode->hasInlineSite() && CurNode &&
+         CurNode != &ContextTracker.getRootContext()) {
+    CurNode->setWasInlined(true);
+    InlineTreeNode =
+        static_cast<MCDecodedPseudoProbeInlineTree *>(InlineTreeNode->Parent);
+    CurNode = CurNode->getParentContext();
+  }
+
   return ContextNode;
 }
 
