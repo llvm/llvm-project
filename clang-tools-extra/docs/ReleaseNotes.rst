@@ -509,6 +509,12 @@ Changes in existing checks
     implicit conversions of logical operator results (``&&``, ``||``, ``!``)
     to ``bool`` in C.
 
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check by fixing a false
+  negative where casts were not flagged as redundant when at least one operand
+  of a binary operation had the same type as the cast result type. For example,
+  ``static_cast<float>(1.0f + 1)`` is now correctly identified as redundant.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
