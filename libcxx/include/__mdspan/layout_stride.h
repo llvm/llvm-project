@@ -312,7 +312,7 @@ public:
   // Technically it is meaningless to query is_exhaustive() in that case, but unfortunately
   // the way the standard defines this function, we can't give a simple true or false then.
   _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const noexcept {
-    if constexpr (__rank_ == 0)
+    if constexpr (is_always_exhaustive())
       return true;
     index_type __span_size = required_span_size();
     if (__span_size == static_cast<index_type>(0))
