@@ -334,10 +334,10 @@ void RVVType::initTypeStr() {
     Str += getTypeString("uint");
     break;
   case ScalarTypeKind::FloatE4M3:
-    Str += Twine("vfloat8e4m3" + LMUL.str() + "_t").str();
+    Str += "vfloat8e4m3" + LMUL.str() + "_t";
     break;
   case ScalarTypeKind::FloatE5M2:
-    Str += Twine("vfloat8e5m2" + LMUL.str() + "_t").str();
+    Str += "vfloat8e5m2" + LMUL.str() + "_t";
     break;
   default:
     llvm_unreachable("ScalarType is invalid!");

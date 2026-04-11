@@ -1534,7 +1534,7 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
   unsigned EltSize = SemaRef.Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
 
-  auto IsOFP8Type = [&]() {
+  auto IsOFP8Type = [](const BuiltinType *BT) {
     switch (BT->getKind()) {
 #define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
   case BuiltinType::Id:
@@ -1581,7 +1581,7 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
   // if we don't have at least zve32x supported, then we need to emit error.
   else if (!FeatureMap.lookup("zve32x"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32x";
-  else if (IsOFP8Type() && !FeatureMap.lookup("experimental-zvfofp8min"))
+  else if (IsOFP8Type(BT) && !FeatureMap.lookup("experimental-zvfofp8min"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zvfofp8min";
 }
 
