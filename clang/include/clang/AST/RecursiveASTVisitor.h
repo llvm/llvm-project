@@ -2214,8 +2214,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        we traverse template args here since there is no EID. */                \
     if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
       assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      if (D->getTemplateSpecializationKind() ==                                \
-          TSK_ExplicitSpecialization) {                                        \
+      if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {  \
         TRY_TO(TraverseTemplateArgumentLocsHelper(                             \
             ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));    \
       }                                                                        \
