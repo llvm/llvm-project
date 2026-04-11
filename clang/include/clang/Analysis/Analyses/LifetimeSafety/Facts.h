@@ -130,7 +130,9 @@ public:
 
 class OriginFlowFact : public Fact {
   OriginID OIDDest;
-  OriginID OIDSrc;
+  // The source origin to flow from. Absent when only clearing the destination's
+  // loans.
+  std::optional<OriginID> OIDSrc;
   // True if the destination origin should be killed (i.e., its current loans
   // cleared) before the source origin's loans are flowed into it.
   bool KillDest;
@@ -140,12 +142,13 @@ public:
     return F->getKind() == Kind::OriginFlow;
   }
 
-  OriginFlowFact(OriginID OIDDest, OriginID OIDSrc, bool KillDest)
+  OriginFlowFact(OriginID OIDDest, std::optional<OriginID> OIDSrc,
+                 bool KillDest)
       : Fact(Kind::OriginFlow), OIDDest(OIDDest), OIDSrc(OIDSrc),
         KillDest(KillDest) {}
 
   OriginID getDestOriginID() const { return OIDDest; }
-  OriginID getSrcOriginID() const { return OIDSrc; }
+  std::optional<OriginID> getSrcOriginID() const { return OIDSrc; }
   bool getKillDest() const { return KillDest; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &,

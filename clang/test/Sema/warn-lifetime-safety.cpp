@@ -2666,13 +2666,12 @@ std::function<void()> reassign_lambda_to_function_pointer() {
 
 struct Functor { void operator()() const; };
 
-// FIXME: False positive.
 std::function<void()> reassign_lambda_to_functor() {
   int local;
   Functor c;
-  std::function<void()> f = [&local]() { (void)local; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f = [&local]() { (void)local; };
   f = c;
-  return f; // expected-note {{returned here}}
+  return f;
 }
 
 } // namespace callable_wrappers
