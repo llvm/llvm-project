@@ -1338,18 +1338,17 @@ public:
   /// response will include load address, filepath, uuid, and may also
   /// include the fully parsed mach header and load commands.
   ///
-  /// \param [in] include_mh_and_load_commands
-  ///     Whether the remote stub should include the full details of
-  ///     the mach header and load commands in its reply.  This may
-  ///     cause the packet size to be quite large, so to avoid memory
-  ///     pressure in the remote stub, caller may choose not to fetch
-  ///     these for all binaries.
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
   ///
   /// \return
   ///     A StructuredData object with the information that could be
   ///     retrieved.
   virtual lldb_private::StructuredData::ObjectSP
-  GetLoadedDynamicLibrariesInfos(bool include_mh_and_load_commands) {
+  GetLoadedDynamicLibrariesInfos(lldb::BinaryInformationLevel info_level) {
     return StructuredData::ObjectSP();
   }
 
@@ -1359,6 +1358,12 @@ public:
   /// response will include load address, filepath, uuid, fully parsed
   /// mach header and load commands.
   ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
   /// \param [in] load_addresses
   ///     The virtual address of the start of binaries to fetch
   ///     information.
@@ -1367,6 +1372,7 @@ public:
   ///     A StructuredData object with the information that could be
   ///     retrieved..
   virtual lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) {
     return StructuredData::ObjectSP();
   }

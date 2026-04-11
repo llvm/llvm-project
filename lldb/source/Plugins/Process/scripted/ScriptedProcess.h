@@ -84,8 +84,8 @@ public:
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
-  lldb_private::StructuredData::ObjectSP
-  GetLoadedDynamicLibrariesInfos(bool include_mh_and_load_commands) override;
+  lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level) override;
 
   lldb_private::StructuredData::DictionarySP GetMetadata() override;
 
@@ -98,7 +98,8 @@ public:
     // dictionary before emitting the private stop event to avoid having the
     // module loading happen while the process state is changing.
     if (StateIsStoppedState(state, true))
-      GetLoadedDynamicLibrariesInfos(/*include_mh_and_load_commands=*/true);
+      GetLoadedDynamicLibrariesInfos(
+          lldb::BinaryInformationLevel::eBinaryInformationLevelFull);
     SetPrivateState(state);
   }
 

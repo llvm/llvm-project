@@ -200,7 +200,7 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
 
   StructuredData::ObjectSP all_image_info_json_sp(
       m_process->GetLoadedDynamicLibrariesInfos(
-          /*include_mh_and_load_commands=*/false));
+          eBinaryInformationLevelAddrOnly));
   ImageInfo::collection image_infos;
   if (all_image_info_json_sp.get() &&
       all_image_info_json_sp->GetAsDictionary() &&
@@ -210,7 +210,7 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
           ->GetAsArray()) {
 
     // Older debugserver (pre-2024-ish) will not recognize the
-    // include_mh_and_load_commands==false option above, and
+    // eBinaryInformationLevelAddrOnly enum above, and
     // will return the full binary information including mach
     // header and segments/load commands.  The response includes
     // the full information on all binaries.
@@ -440,12 +440,16 @@ void DynamicLoaderMacOS::AddBinaries(
   Log *log = GetLog(LLDBLog::DynamicLoader);
   ImageInfo::collection image_infos;
 
-  static constexpr size_t g_image_fetch_max = 600;
+  // For now, hardcode a limit of fetching 600 binaries at once.
+  // Fetching the full binary information for a large number of
+  // binaries can cause debugserver to use too much memory on
+  // memory-limited environments, and get killed.
+  const size_t image_fetch_max = 600;
   size_t fetched = 0;
   size_t total_image_size = load_addresses.size();
   while (fetched < total_image_size) {
     size_t this_fetch_amt =
-        std::min(g_image_fetch_max, total_image_size - fetched);
+        std::min(image_fetch_max, total_image_size - fetched);
     std::vector<addr_t> fetch_binaries(load_addresses.begin() + fetched,
                                        load_addresses.begin() + fetched +
                                            this_fetch_amt);
@@ -454,7 +458,8 @@ void DynamicLoaderMacOS::AddBinaries(
               (uint64_t)fetch_binaries.size());
     image_infos.clear();
     StructuredData::ObjectSP binaries_info_sp =
-        m_process->GetLoadedDynamicLibrariesInfos(fetch_binaries);
+        m_process->GetLoadedDynamicLibrariesInfos(eBinaryInformationLevelFull,
+                                                  fetch_binaries);
     if (binaries_info_sp && binaries_info_sp->GetAsDictionary() &&
         binaries_info_sp->GetAsDictionary()->HasKey("images") &&
         binaries_info_sp->GetAsDictionary()
