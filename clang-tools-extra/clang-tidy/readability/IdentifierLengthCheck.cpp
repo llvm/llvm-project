@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "IdentifierLengthCheck.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "../utils/DeclRefExprUtils.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
@@ -94,9 +94,8 @@ static unsigned countLinesToLastUse(const VarDecl *Var,
                                     const SourceManager *SrcMgr,
                                     ASTContext *Ctx) {
   const auto *ParentScope = llvm::dyn_cast<FunctionDecl>(Var->getDeclContext());
-  if (ParentScope == nullptr) {
+  if (ParentScope == nullptr)
     return 1;
-  }
 
   auto AllRefs =
       utils::decl_ref_expr::allDeclRefExprs(*Var, *ParentScope, *Ctx);
@@ -105,7 +104,7 @@ static unsigned countLinesToLastUse(const VarDecl *Var,
   const unsigned LastUseLine = std::transform_reduce(
       AllRefs.begin(), AllRefs.end(), DeclLine,
       [](unsigned Lhs, unsigned Rhs) -> unsigned { return std::max(Lhs, Rhs); },
-      [&](DeclRefExpr const *RefToVar) -> unsigned {
+      [&](const DeclRefExpr *RefToVar) -> unsigned {
         return SrcMgr->getSpellingLineNumber(RefToVar->getLocation());
       });
 
