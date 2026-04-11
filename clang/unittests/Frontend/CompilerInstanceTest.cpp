@@ -173,7 +173,7 @@ TEST(CompilerInstance, SingleModuleParseModeCallback) {
     std::vector<std::string> &SkippedModules;
     ModuleLoadSkippedCallback(std::vector<std::string> &SkippedModules)
         : SkippedModules(SkippedModules) {}
-    void moduleLoadSkipped(Module *Skipped) override {
+    void moduleLoadSkipped(clang::Module *Skipped) override {
       SkippedModules.emplace_back(Skipped->getFullModuleName());
     }
   };

@@ -1227,6 +1227,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
+    libc.src.stdio.rewind
     libc.src.stdio.setbuf
     libc.src.stdio.setvbuf
     libc.src.stdio.stderr
@@ -1342,8 +1343,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # sys/socket.h entrypoints
+    libc.src.sys.socket.accept
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
+    libc.src.sys.socket.listen
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send

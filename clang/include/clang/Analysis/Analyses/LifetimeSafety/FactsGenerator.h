@@ -134,6 +134,7 @@ private:
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
   llvm::DenseMap<const Expr *, UseFact *> UseFacts;
+  const CFGBlock *CurrentBlock;
 };
 
 } // namespace clang::lifetimes::internal
