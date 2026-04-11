@@ -16,11 +16,11 @@
 //
 //     ...
 //     static constexpr bool is_always_unique() noexcept { return true; }
-//     static constexpr bool is_always_exhaustive() noexcept { return false; }
+//     static constexpr bool is_always_exhaustive() noexcept;
 //     static constexpr bool is_always_strided() noexcept { return true; }
 //
 //     static constexpr bool is_unique() noexcept { return true; }
-//     static constexpr bool is_exhaustive() noexcept;
+//     constexpr bool is_exhaustive() noexcept;
 //     static constexpr bool is_strided() noexcept { return true; }
 //     ...
 //   };
@@ -28,6 +28,12 @@
 //
 //
 // layout_stride::mapping<E> is a trivially copyable type that models regular for each E.
+//
+// static constexpr bool is_always_exhaustive() noexcept;
+//
+// Returns:
+//   - true if rank_ is 0 or if there is a rank index r of extents() such that
+//     extents_type::static_extent(r) is 0, otherwise false.
 //
 // constexpr bool is_exhaustive() const noexcept;
 //
@@ -48,8 +54,8 @@
 #include "test_macros.h"
 
 template <class E>
-constexpr void
-test_layout_mapping_stride(E ext, std::array<typename E::index_type, E::rank()> strides, bool exhaustive) {
+constexpr void test_layout_mapping_stride(
+    E ext, std::array<typename E::index_type, E::rank()> strides, bool exhaustive, bool always_exhaustive = false) {
   using M = std::layout_stride::mapping<E>;
   M m(ext, strides);
   const M c_m = m;
@@ -62,7 +68,7 @@ test_layout_mapping_stride(E ext, std::array<typename E::index_type, E::rank()> 
   assert(c_m.is_exhaustive() == exhaustive);
   assert(M::is_strided() == true);
   assert(M::is_always_unique() == true);
-  assert(M::is_always_exhaustive() == false);
+  assert(M::is_always_exhaustive() == always_exhaustive);
   assert(M::is_always_strided() == true);
 
   ASSERT_NOEXCEPT(m.strides());
@@ -103,7 +109,8 @@ test_layout_mapping_stride(E ext, std::array<typename E::index_type, E::rank()> 
 
 constexpr bool test() {
   constexpr size_t D = std::dynamic_extent;
-  test_layout_mapping_stride(std::extents<int>(), std::array<int, 0>{}, true);
+  test_layout_mapping_stride(std::extents<int>(), std::array<int, 0>{}, true, true);
+  test_layout_mapping_stride(std::extents<int, 2, 0>(), std::array<int, 2>{1, 2}, true, true);
   test_layout_mapping_stride(std::extents<signed char, 4, 5>(), std::array<signed char, 2>{1, 4}, true);
   test_layout_mapping_stride(std::extents<signed char, 4, 5>(), std::array<signed char, 2>{1, 5}, false);
   test_layout_mapping_stride(std::extents<unsigned, D, 4>(7), std::array<unsigned, 2>{20, 2}, false);

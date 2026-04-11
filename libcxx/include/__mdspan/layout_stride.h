@@ -296,7 +296,14 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept { return false; }
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept {
+    if constexpr (__rank_ == 0)
+      return true;
+    for (size_t __r = 0; __r < __rank_; ++__r)
+      if (extents_type::static_extent(__r) == 0)
+        return true;
+    return false;
+  }
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept { return true; }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_unique() noexcept { return true; }
@@ -307,27 +314,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const noexcept {
     if constexpr (__rank_ == 0)
       return true;
-    else {
-      index_type __span_size = required_span_size();
-      if (__span_size == static_cast<index_type>(0)) {
-        if constexpr (__rank_ == 1)
-          return __strides_[0] == 1;
-        else {
-          rank_type __r_largest = 0;
-          for (rank_type __r = 1; __r < __rank_; __r++)
-            if (__strides_[__r] > __strides_[__r_largest])
-              __r_largest = __r;
-          for (rank_type __r = 0; __r < __rank_; __r++)
-            if (__extents_.extent(__r) == 0 && __r != __r_largest)
-              return false;
-          return true;
-        }
-      } else {
-        return required_span_size() == [&]<size_t... _Pos>(index_sequence<_Pos...>) {
-          return (__extents_.extent(_Pos) * ... * static_cast<index_type>(1));
-        }(make_index_sequence<__rank_>());
-      }
-    }
+    index_type __span_size = required_span_size();
+    if (__span_size == static_cast<index_type>(0))
+      return true;
+    return __span_size == [&]<size_t... _Pos>(index_sequence<_Pos...>) {
+      return (__extents_.extent(_Pos) * ... * static_cast<index_type>(1));
+    }(make_index_sequence<__rank_>());
   }
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_strided() noexcept { return true; }
 

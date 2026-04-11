@@ -237,7 +237,7 @@ namespace std {
       constexpr index_type operator()(Indices...) const noexcept;
 
     static constexpr bool is_always_unique() noexcept { return true; }
-    static constexpr bool is_always_exhaustive() noexcept { return false; }
+    static constexpr bool is_always_exhaustive() noexcept;
     static constexpr bool is_always_strided() noexcept { return true; }
 
     static constexpr bool is_unique() noexcept { return true; }
