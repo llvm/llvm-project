@@ -24118,40 +24118,6 @@ void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       MachineOperand::CreateReg(RISCV::FRM, /*isDef*/ false, /*isImp*/ true));
 }
 
-void RISCVTargetLowering::analyzeInputArgs(
-    MachineFunction &MF, CCState &CCInfo,
-    const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
-    RISCVCCAssignFn Fn) const {
-  for (const auto &[Idx, In] : enumerate(Ins)) {
-    MVT ArgVT = In.VT;
-    ISD::ArgFlagsTy ArgFlags = In.Flags;
-
-    if (Fn(Idx, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo, IsRet,
-           In.OrigTy)) {
-      LLVM_DEBUG(dbgs() << "InputArg #" << Idx << " has unhandled type "
-                        << ArgVT << '\n');
-      llvm_unreachable(nullptr);
-    }
-  }
-}
-
-void RISCVTargetLowering::analyzeOutputArgs(
-    MachineFunction &MF, CCState &CCInfo,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, bool IsRet,
-    CallLoweringInfo *CLI, RISCVCCAssignFn Fn) const {
-  for (const auto &[Idx, Out] : enumerate(Outs)) {
-    MVT ArgVT = Out.VT;
-    ISD::ArgFlagsTy ArgFlags = Out.Flags;
-
-    if (Fn(Idx, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo, IsRet,
-           Out.OrigTy)) {
-      LLVM_DEBUG(dbgs() << "OutputArg #" << Idx << " has unhandled type "
-                        << ArgVT << "\n");
-      llvm_unreachable(nullptr);
-    }
-  }
-}
-
 // Convert Val to a ValVT. Should not be called for CCValAssign::Indirect
 // values.
 static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
@@ -24310,14 +24276,12 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
-  RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
   switch (CallConv) {
   default:
     reportFatalUsageError("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
-  case CallingConv::SPIR_KERNEL:
   case CallingConv::PreserveMost:
   case CallingConv::GRAAL:
   case CallingConv::RISCV_VectorCall:
@@ -24393,12 +24357,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (CallConv == CallingConv::GHC)
-    CCInfo.AnalyzeFormalArguments(Ins, CC_RISCV_GHC);
-  else
-    analyzeInputArgs(MF, CCInfo, Ins, /*IsRet=*/false,
-                     CallConv == CallingConv::Fast ? CC_RISCV_FastCC
-                                                   : CC_RISCV);
+  CCInfo.AnalyzeFormalArguments(Ins, CC_RISCV);
 
   for (unsigned i = 0, e = ArgLocs.size(), InsIdx = 0; i != e; ++i, ++InsIdx) {
     CCValAssign &VA = ArgLocs[i];
@@ -24439,9 +24398,6 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       continue;
     }
     InVals.push_back(ArgValue);
-
-    if (Ins[InsIdx].Flags.isByVal())
-      RVFI->addIncomingByValArgs(ArgValue);
   }
 
   if (any_of(ArgLocs,
@@ -24454,6 +24410,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     const TargetRegisterClass *RC = &RISCV::GPRRegClass;
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineRegisterInfo &RegInfo = MF.getRegInfo();
+    RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
     // Size of the vararg save area. For now, the varargs save area is either
     // zero or large enough to hold a0-a7.
@@ -24501,10 +24458,8 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     RVFI->setVarArgsSaveSize(VarArgsSaveSize);
   }
 
-  RVFI->setArgumentStackSize(CCInfo.getStackSize());
-
   // All stores are grouped in one node to allow the matching between
-  // the size of Ins and InVals.
+  // the size of Ins and InVals. This only happens for vararg functions.
   if (!OutChains.empty()) {
     assert(IsVarArg && "Only variadic functions should have OutChains");
     OutChains.push_back(Chain);
@@ -24525,7 +24480,6 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   auto &Outs = CLI.Outs;
   auto &Caller = MF.getFunction();
   auto CallerCC = Caller.getCallingConv();
-  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
   // Exception-handling functions need a special set of instructions to
   // indicate a return to the hardware. Tail-calling another function would
@@ -24535,28 +24489,28 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   if (Caller.hasFnAttribute("interrupt"))
     return false;
 
-  // If the stack arguments for this call do not fit into our own save area then
-  // the call cannot be made tail.
-  if (CCInfo.getStackSize() > RVFI->getArgumentStackSize())
+  // Do not tail call opt if the stack is used to pass parameters.
+  if (CCInfo.getStackSize() != 0)
     return false;
+
+  // Do not tail call opt if any parameters need to be passed indirectly.
+  // Since long doubles (fp128) and i128 are larger than 2*XLEN, they are
+  // passed indirectly. So the address of the value will be passed in a
+  // register, or if not available, then the address is put on the stack. In
+  // order to pass indirectly, space on the stack often needs to be allocated
+  // in order to store the value. In this case the CCInfo.getNextStackOffset()
+  // != 0 check is not enough and we need to check if any CCValAssign ArgsLocs
+  // are passed CCValAssign::Indirect.
+  for (auto &VA : ArgLocs)
+    if (VA.getLocInfo() == CCValAssign::Indirect)
+      return false;
 
   // Do not tail call opt if either caller or callee uses struct return
   // semantics.
   auto IsCallerStructRet = Caller.hasStructRetAttr();
   auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
-  if (IsCallerStructRet != IsCalleeStructRet)
+  if (IsCallerStructRet || IsCalleeStructRet)
     return false;
-
-  // Do not tail call opt if caller's and callee's byval arguments do not match.
-  for (unsigned i = 0, j = 0, e = Outs.size(); i != e; ++i) {
-    if (!Outs[i].Flags.isByVal())
-      continue;
-    if (j >= RVFI->getIncomingByValArgsSize())
-      return false;
-    if (RVFI->getIncomingByValArgs(j).getValueType() != Outs[i].ArgVT)
-      return false;
-    ++j;
-  }
 
   // The callee has to preserve all registers the caller needs to preserve.
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
@@ -24567,12 +24521,12 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
       return false;
   }
 
-  // If the callee takes no arguments then go on to check the results of the
-  // call.
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals))
-    return false;
+  // Byval parameters hand the function a pointer directly into the stack area
+  // we want to reuse during a tail call. Working around this *is* possible
+  // but less efficient and uglier in LowerCall.
+  for (auto &Arg : Outs)
+    if (Arg.Flags.isByVal())
+      return false;
 
   return true;
 }
@@ -24601,7 +24555,6 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   const CallBase *CB = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
-  RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   MachineFunction::CallSiteInfo CSInfo;
 
   // Set type id for call site info.
@@ -24611,14 +24564,14 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (CallConv == CallingConv::GHC) {
+  switch (CallConv) {
+  case CallingConv::GHC:
     if (Subtarget.hasStdExtE())
       reportFatalUsageError("GHC calling convention is not supported on RVE!");
-    ArgCCInfo.AnalyzeCallOperands(Outs, CC_RISCV_GHC);
-  } else
-    analyzeOutputArgs(MF, ArgCCInfo, Outs, /*IsRet=*/false, &CLI,
-                      CallConv == CallingConv::Fast ? CC_RISCV_FastCC
-                                                    : CC_RISCV);
+    break;
+  }
+
+  ArgCCInfo.AnalyzeCallOperands(Outs, CC_RISCV);
 
   // Check if it's really possible to do a tail call.
   if (IsTailCall)
@@ -24635,7 +24588,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Create local copies for byval args
   SmallVector<SDValue, 8> ByValArgs;
-  for (unsigned i = 0, j = 0, e = Outs.size(); i != e; ++i) {
+  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
     if (!Flags.isByVal())
       continue;
@@ -24644,38 +24597,20 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     unsigned Size = Flags.getByValSize();
     Align Alignment = Flags.getNonZeroByValAlign();
 
+    int FI =
+        MF.getFrameInfo().CreateStackObject(Size, Alignment, /*isSS=*/false);
+    SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, XLenVT);
-    SDValue Dst;
 
-    if (IsTailCall) {
-      SDValue CallerArg = RVFI->getIncomingByValArgs(j++);
-      if (isa<GlobalAddressSDNode>(Arg) || isa<ExternalSymbolSDNode>(Arg) ||
-          isa<FrameIndexSDNode>(Arg))
-        Dst = CallerArg;
-    } else {
-      int FI =
-          MF.getFrameInfo().CreateStackObject(Size, Alignment, /*isSS=*/false);
-      Dst = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
-    }
-    if (Dst) {
-      Chain =
-          DAG.getMemcpy(Chain, DL, Dst, Arg, SizeNode, Alignment,
-                        /*IsVolatile=*/false,
-                        /*AlwaysInline=*/false, /*CI=*/nullptr, std::nullopt,
-                        MachinePointerInfo(), MachinePointerInfo());
-      ByValArgs.push_back(Dst);
-    }
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+                          /*IsVolatile=*/false,
+                          /*AlwaysInline=*/false, /*CI*/ nullptr, IsTailCall,
+                          MachinePointerInfo(), MachinePointerInfo());
+    ByValArgs.push_back(FIPtr);
   }
 
   if (!IsTailCall)
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
-
-  // During a tail call, stores to the argument area must happen after all of
-  // the function's incoming arguments have been loaded because they may alias.
-  // This is done by folding in a TokenFactor from LowerFormalArguments, but
-  // there's no point in doing so repeatedly so this tracks whether that's
-  // happened yet.
-  bool AfterFormalArgLoads = false;
 
   // Copy argument values to their designated locations.
   SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
@@ -24778,12 +24713,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
 
     // Use local copy if it is a byval arg.
-    if (Flags.isByVal()) {
-      if (!IsTailCall || (isa<GlobalAddressSDNode>(ArgValue) ||
-                          isa<ExternalSymbolSDNode>(ArgValue) ||
-                          isa<FrameIndexSDNode>(ArgValue)))
-        ArgValue = ByValArgs[j++];
-    }
+    if (Flags.isByVal())
+      ArgValue = ByValArgs[j++];
 
     if (VA.isRegLoc()) {
       // Queue up the argument copies and emit them at the end.
@@ -24794,32 +24725,20 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
         CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      SDValue DstAddr;
-      MachinePointerInfo DstInfo;
-      int32_t Offset = VA.getLocMemOffset();
+      assert(!IsTailCall && "Tail call not allowed if stack is used "
+                            "for passing parameters");
 
       // Work out the address of the stack slot.
       if (!StackPtr.getNode())
         StackPtr = DAG.getCopyFromReg(Chain, DL, RISCV::X2, PtrVT);
-
-      if (IsTailCall) {
-        unsigned OpSize = divideCeil(VA.getValVT().getSizeInBits(), 8);
-        int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
-        DstAddr = DAG.getFrameIndex(FI, PtrVT);
-        DstInfo = MachinePointerInfo::getFixedStack(MF, FI);
-        if (!AfterFormalArgLoads) {
-          Chain = DAG.getStackArgumentTokenFactor(Chain);
-          AfterFormalArgLoads = true;
-        }
-      } else {
-        SDValue PtrOff = DAG.getIntPtrConstant(Offset, DL);
-        DstAddr = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
-        DstInfo = MachinePointerInfo::getStack(MF, Offset);
-      }
+      SDValue Address =
+          DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
+                      DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
 
       // Emit the store.
       MemOpChains.push_back(
-          DAG.getStore(Chain, DL, ArgValue, DstAddr, DstInfo));
+          DAG.getStore(Chain, DL, ArgValue, Address,
+                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset())));
     }
   }
 
@@ -24925,7 +24844,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
   CCState RetCCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
-  analyzeInputArgs(MF, RetCCInfo, Ins, /*IsRet=*/true, CC_RISCV);
+  RetCCInfo.AnalyzeFormalArguments(Ins, RetCC_RISCV);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
@@ -24966,15 +24885,7 @@ bool RISCVTargetLowering::CanLowerReturn(
     const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
-
-  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
-    MVT VT = Outs[i].VT;
-    ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (CC_RISCV(i, VT, VT, CCValAssign::Full, ArgFlags, CCInfo,
-                 /*IsRet=*/true, Outs[i].OrigTy))
-      return false;
-  }
-  return true;
+  return CCInfo.CheckReturn(Outs, RetCC_RISCV);
 }
 
 SDValue
@@ -24992,8 +24903,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
-  analyzeOutputArgs(DAG.getMachineFunction(), CCInfo, Outs, /*IsRet=*/true,
-                    nullptr, CC_RISCV);
+  CCInfo.AnalyzeCallOperands(Outs, RetCC_RISCV);
 
   if (CallConv == CallingConv::GHC && !RVLocs.empty())
     reportFatalUsageError("GHC functions return void only");
