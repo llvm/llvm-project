@@ -52341,21 +52341,41 @@ static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
 static SDValue combineAndOrForCcmpCtest(SDNode *N, SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const X86Subtarget &ST) {
-  // and/or(setcc(cc0, flag0), setcc(cc1, sub (X, Y)))
+  // Combine AND/OR of two SETCC nodes into CCMP/CTEST:
+  //
+  // and/or(setcc(cc0, flag0), setcc(cc1, sub(X, Y)))
   //  ->
   //    setcc(cc1, ccmp(X, Y, ~cflags/cflags, cc0/~cc0, flag0))
-
-  // and/or(setcc(cc0, flag0), setcc(cc1, cmp (X, 0)))
+  //
+  // and/or(setcc(cc0, flag0), setcc(cc1, cmp(X, 0)))
   //  ->
   //    setcc(cc1, ctest(X, X, ~cflags/cflags, cc0/~cc0, flag0))
   //
   // where cflags is determined by cc1.
+  //
+  // Fast-math canonicalization can introduce FREEZE nodes around SETCC
+  // operations to prevent poison propagation from unordered FP comparisons.
+  // We peek through single-use FREEZE nodes when matching:
+  //
+  // and/or(freeze(setcc(cc0, flag0)), freeze(setcc(cc1, sub(X, Y))))
+  //  ->
+  //    setcc(cc1, ccmp(X, Y, ~cflags/cflags, cc0/~cc0, flag0))
+  //
+  // and/or(freeze(setcc(cc0, flag0)), freeze(setcc(cc1, cmp(X, 0))))
+  //  ->
+  //    setcc(cc1, ctest(X, X, ~cflags/cflags, cc0/~cc0, flag0))
 
   if (!ST.hasCCMP())
     return SDValue();
 
-  SDValue SetCC0 = N->getOperand(0);
-  SDValue SetCC1 = N->getOperand(1);
+  auto PeekThroughFreeze = [](SDValue N) -> SDValue {
+    if (N.getOpcode() == ISD::FREEZE && N.hasOneUse())
+      return N.getOperand(0);
+    return N;
+  };
+
+  SDValue SetCC0 = PeekThroughFreeze(N->getOperand(0));
+  SDValue SetCC1 = PeekThroughFreeze(N->getOperand(1));
   if (SetCC0.getOpcode() != X86ISD::SETCC ||
       SetCC1.getOpcode() != X86ISD::SETCC)
     return SDValue();
