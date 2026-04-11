@@ -226,7 +226,7 @@ When multiple benchmarks measure the same function under different circumstances
 after the function signature. For example, ``std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)``
 would be the allocator-aware move constructor for ``std::vector<bool>`` in the case of equal allocators.
 
-Testing ``consteval``ness
+Testing ``consteval``
 =========================
 
 When implementing a function or variable marked ``consteval`` e.g. ``std::text_encoding::literal()``, it is required to
