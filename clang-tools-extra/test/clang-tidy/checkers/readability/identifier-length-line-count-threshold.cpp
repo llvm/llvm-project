@@ -11,7 +11,7 @@ template<typename... Ts>
 void doIt(Ts...);
 
 void shouldWarn(int z)
-// CHECK-MESSAGES: :[[@LINE-1]]:32: warning: parameter name 'z' is too short, expected at least 3 characters [readability-identifier-length]
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: parameter name 'z' is too short, expected at least 3 characters [readability-identifier-length]
 {
   int i = 5;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable name 'i' is too short, expected at least 3 characters [readability-identifier-length]
