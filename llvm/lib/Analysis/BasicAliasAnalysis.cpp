@@ -558,12 +558,14 @@ struct VariableGEPIndex {
 }
 
 // Represents the internal structure of a GEP, decomposed into a base pointer,
-// constant offsets, and variable scaled indices.
+// constant offsets, scalable offsets, and variable scaled indices.
 struct BasicAAResult::DecomposedGEP {
   // Base pointer of the GEP
   const Value *Base;
   // Total constant offset from base.
   APInt Offset;
+  // Total scalable offset from base, in units of vscale.
+  APInt ScalableOffset;
   // Scaled variable (non-constant) indices.
   SmallVector<VariableGEPIndex, 4> VarIndices;
   // Nowrap flags common to all GEP operations involved in expression.
@@ -577,7 +579,7 @@ struct BasicAAResult::DecomposedGEP {
     OS << ", inbounds=" << (NWFlags.isInBounds() ? "1" : "0")
        << ", nuw=" << (NWFlags.hasNoUnsignedWrap() ? "1" : "0")
        << "(DecomposedGEP Base=" << Base->getName() << ", Offset=" << Offset
-       << ", VarIndices=[";
+       << ", ScalableOffset=" << ScalableOffset << ", VarIndices=[";
     for (size_t i = 0; i < VarIndices.size(); i++) {
       if (i != 0)
         OS << ", ";
@@ -606,6 +608,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   unsigned IndexSize = DL.getIndexTypeSizeInBits(V->getType());
   DecomposedGEP Decomposed;
   Decomposed.Offset = APInt(IndexSize, 0);
+  Decomposed.ScalableOffset = APInt(IndexSize, 0);
   do {
     // See if this is a bitcast or GEP.
     const Operator *Op = dyn_cast<Operator>(V);
@@ -690,11 +693,13 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         if (CIdx->isZero())
           continue;
 
-        // Don't attempt to analyze GEPs if the scalable index is not zero.
+        // Track the implicit vscale factor separately for scalable strides.
         TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
         if (AllocTypeSize.isScalable()) {
-          Decomposed.Base = V;
-          return Decomposed;
+          Decomposed.ScalableOffset +=
+              APInt(IndexSize, AllocTypeSize.getKnownMinValue()) *
+              CIdx->getValue().sextOrTrunc(IndexSize);
+          continue;
         }
 
         Decomposed.Offset += AllocTypeSize.getFixedValue() *
@@ -1147,21 +1152,22 @@ AliasResult BasicAAResult::aliasGEP(
   // size
 
   if (DecompGEP1.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
-      V2Size.hasValue() && !V2Size.isScalable() &&
-      DecompGEP1.Offset.sge(V2Size.getValue()) &&
+      DecompGEP1.ScalableOffset == 0 && V2Size.hasValue() &&
+      !V2Size.isScalable() && DecompGEP1.Offset.sge(V2Size.getValue()) &&
       isBaseOfObject(DecompGEP2.Base))
     return AliasResult::NoAlias;
 
   // Symmetric case to above.
   if (DecompGEP2.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
-      V1Size.hasValue() && !V1Size.isScalable() &&
-      DecompGEP1.Offset.sle(-V1Size.getValue()) &&
+      DecompGEP1.ScalableOffset == 0 && V1Size.hasValue() &&
+      !V1Size.isScalable() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
       isBaseOfObject(DecompGEP1.Base))
     return AliasResult::NoAlias;
 
   // For GEPs with identical offsets, we can preserve the size and AAInfo
   // when performing the alias check on the underlying objects.
-  if (DecompGEP1.Offset == 0 && DecompGEP1.VarIndices.empty())
+  if (DecompGEP1.Offset == 0 && DecompGEP1.ScalableOffset == 0 &&
+      DecompGEP1.VarIndices.empty())
     return AAQI.AAR.alias(MemoryLocation(DecompGEP1.Base, V1Size),
                           MemoryLocation(DecompGEP2.Base, V2Size), AAQI);
 
@@ -1177,6 +1183,12 @@ AliasResult BasicAAResult::aliasGEP(
            BaseAlias == AliasResult::MayAlias);
     return BaseAlias;
   }
+
+  // The remaining checks reason about fixed constant offsets or explicit
+  // variable indices. Do not apply them if an implicit scalable GEP offset
+  // remains after subtracting the two decomposed GEPs.
+  if (DecompGEP1.ScalableOffset != 0)
+    return AliasResult::MayAlias;
 
   // If there is a constant difference between the pointers, but the difference
   // is less than the size of the associated memory object, then we know
@@ -1929,6 +1941,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
     DestGEP.NWFlags = DestGEP.NWFlags.withoutNoUnsignedWrap();
 
   DestGEP.Offset -= SrcGEP.Offset;
+  DestGEP.ScalableOffset -= SrcGEP.ScalableOffset;
   for (const VariableGEPIndex &Src : SrcGEP.VarIndices) {
     // Find V in Dest.  This is N^2, but pointer indices almost never have more
     // than a few variable indexes.
