@@ -79,32 +79,6 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     }
   }
 
-  if (STI.hasFeature(RISCV::FeatureStdExtP) && !isInt<12>(Val)) {
-    // Check if the immediate is packed i8 or i10
-    int32_t Bit63To32 = Val >> 32;
-    int32_t Bit31To0 = Val;
-    int16_t Bit31To16 = Bit31To0 >> 16;
-    int16_t Bit15To0 = Bit31To0;
-    int8_t Bit15To8 = Bit15To0 >> 8;
-    int8_t Bit7To0 = Bit15To0;
-    if (!IsRV64 || Bit63To32 == Bit31To0) {
-      if (IsRV64 && isInt<10>(Bit63To32)) {
-        Res.emplace_back(RISCV::PLI_W, Bit63To32);
-        return;
-      }
-      if (Bit31To16 == Bit15To0) {
-        if (isInt<10>(Bit31To16)) {
-          Res.emplace_back(RISCV::PLI_H, Bit31To16);
-          return;
-        }
-        if (Bit15To8 == Bit7To0) {
-          Res.emplace_back(RISCV::PLI_B, Bit15To8);
-          return;
-        }
-      }
-    }
-  }
-
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
     // instruction sequences are emitted:
@@ -303,6 +277,34 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
     if ((TmpSeq.size() + 1) < Res.size() || IsShiftedCompressible) {
       TmpSeq.emplace_back(RISCV::SLLI, TrailingZeros);
       Res = TmpSeq;
+    }
+  }
+
+  if (Res.size() != 1 && STI.hasFeature(RISCV::FeatureStdExtP)) {
+    // Check if the immediate is packed i8 or i10
+    int32_t Bit63To32 = Val >> 32;
+    int32_t Bit31To0 = Val;
+    int16_t Bit31To16 = Bit31To0 >> 16;
+    int16_t Bit15To0 = Bit31To0;
+    int8_t Bit15To8 = Bit15To0 >> 8;
+    int8_t Bit7To0 = Bit15To0;
+    RISCVMatInt::InstSeq TmpSeq;
+    bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
+    if (!IsRV64 || Bit63To32 == Bit31To0) {
+      if (IsRV64 && isInt<10>(Bit63To32)) {
+        TmpSeq.emplace_back(RISCV::PLI_W, Bit63To32);
+        return TmpSeq;
+      }
+      if (Bit31To16 == Bit15To0) {
+        if (isInt<10>(Bit31To16)) {
+          TmpSeq.emplace_back(RISCV::PLI_H, Bit31To16);
+          return TmpSeq;
+        }
+        if (Bit15To8 == Bit7To0) {
+          TmpSeq.emplace_back(RISCV::PLI_B, Bit15To8);
+          return TmpSeq;
+        }
+      }
     }
   }
 
