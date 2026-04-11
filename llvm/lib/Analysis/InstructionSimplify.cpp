@@ -984,6 +984,12 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
   if (!MaxRecurse--)
     return false;
 
+  // Vector constants with poison cannot be simplified away.
+  Constant *CX, *CY;
+  if ((match(X, m_Constant(CX)) && CX->containsUndefOrPoisonElement()) ||
+      (match(Y, m_Constant(CY)) && CY->containsUndefOrPoisonElement()))
+    return false;
+
   if (IsSigned) {
     // (X srem Y) sdiv Y --> 0
     if (match(X, m_SRem(m_Value(), m_Specific(Y))))
