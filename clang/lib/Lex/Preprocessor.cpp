@@ -1098,8 +1098,11 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
     // __has_include(__has_include))
     if (CurPPLexer->ParsingFilename)
       LexUnexpandedToken(FilenameTok);
-    else
+    else if ((getLangOpts().CPlusPlusModules && isImportingCXXNamedModules()) ||
+             isNextPPTokenHeaderNameOrOneOf(tok::less))
       CurPPLexer->LexIncludeFilename(FilenameTok);
+    else
+      Lex(FilenameTok);
   } else {
     Lex(FilenameTok);
   }
@@ -1380,33 +1383,24 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);
 
-  // The next token may be an angled string literal after import keyword.
-  llvm::SaveAndRestore<bool> SavedParsingFilemame(
-      CurPPLexer->ParsingFilename,
-      Result.getIdentifierInfo()->isImportKeyword());
-
-  std::optional<Token> NextTok =
-      CurLexer ? CurLexer->peekNextPPToken() : CurTokenLexer->peekNextPPToken();
-  if (!NextTok)
-    return false;
-
-  if (NextTok->is(tok::raw_identifier))
-    LookUpIdentifierInfo(*NextTok);
-
-  if (Result.getIdentifierInfo()->isImportKeyword()) {
-    if (NextTok->isOneOf(tok::identifier, tok::colon,
-                         tok::header_name)) {
-      Result.setKind(tok::kw_import);
-      ModuleImportLoc = Result.getLocation();
-      IsAtImport = false;
-      return true;
+  if (II->isModuleKeyword()) {
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      if (NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
+        Result.setKind(tok::kw_module);
+        ModuleDeclLoc = Result.getLocation();
+        return true;
+      }
     }
+    return false;
   }
 
-  if (Result.getIdentifierInfo()->isModuleKeyword() &&
-      NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
-    Result.setKind(tok::kw_module);
-    ModuleDeclLoc = Result.getLocation();
+  if (II->isImportKeyword() &&
+      isNextPPTokenHeaderNameOrOneOf(tok::identifier, tok::colon, tok::less)) {
+    Result.setKind(tok::kw_import);
+    ModuleImportLoc = Result.getLocation();
+    IsAtImport = false;
     return true;
   }
 

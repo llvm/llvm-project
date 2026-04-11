@@ -38,11 +38,12 @@
 // RUN: %clang_cc1 -std=c++20 %t/func_like_macro.cpp -D'm(x)=x' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/lparen.cpp -D'm(x)=x' -D'LPAREN=(' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/control_line.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/digraph.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/digraph2.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/digraph3.cpp -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 %t/digraph4.cpp -fsyntax-only -verify
-
+// RUN: %clang_cc1 -std=c++20 %t/header_name1.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name2.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name3.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name4.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name5.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name6.cpp -fsyntax-only -verify
 //--- hash.cpp
 // expected-no-diagnostics
 #                       // preprocessing directive
@@ -209,7 +210,7 @@ export module m; // expected-error {{module directive lines are not allowed on l
                  // expected-note@#1 {{add 'module;'}}
 #endif
 
-//--- digraph.cpp
+//--- header_name1.cpp
 // expected-no-diagnostics
 int
 import <:10
@@ -220,7 +221,7 @@ void foo() {
         import[i] = i;
 }
 
-//--- digraph2.cpp
+//--- header_name2.cpp
 // expected-no-diagnostics
 using import = int;
 
@@ -233,9 +234,23 @@ import <%
    bar(val);
 }
 
-//--- digraph3.cpp
+//--- header_name3.cpp
+export module M;
 import <%%>; // expected-error {{'%%' file not found}}
 
-//--- digraph4.cpp
+//--- header_name4.cpp
+export module M;
 import <::>; // expected-error {{'::' file not found}}
 
+//--- header_name5.cpp
+export module M;
+#define FOO foo>;
+import <:FOO
+// expected-error@-1 {{use of undeclared identifier 'foo'}}
+// expected-error@-2 {{a type specifier is required for all declarations}}
+// expected-error@-3 {{expected expression}}
+
+//--- header_name6.cpp
+export module M;
+#define HEADER vector>
+import <HEADER; // expected-error {{file not found}}

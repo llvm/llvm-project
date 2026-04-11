@@ -48,6 +48,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
@@ -1842,6 +1843,26 @@ public:
   void HandleCXXImportDirective(Token Import);
   void HandleCXXModuleDirective(Token Module);
 
+  template <typename... Ts> bool isNextPPTokenHeaderNameOrOneOf(Ts... Ks) {
+    // First, tries to form a valid header-name token.
+    llvm::SaveAndRestore<bool> SavedFilename(CurPPLexer->ParsingFilename,
+                                              true);
+    if (auto Tok = peekNextPPToken()) {
+      if (Tok->is(tok::header_name))
+        return true;
+    }
+
+    //  If that fails and it's not one of the other tokens, then it's not a
+    //  directive.
+    CurPPLexer->ParsingFilename = false;
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      return NextTok->isOneOf(Ks...);
+    }
+    return false;
+  }
+
   /// Callback invoked when the lexer sees one of export, import or module token
   /// at the start of a line.
   ///
@@ -2393,12 +2414,12 @@ public:
     return NextTokOpt.has_value() ? NextTokOpt->is(Ks...) : false;
   }
 
-private:
   /// peekNextPPToken - Return std::nullopt if there are no more tokens in the
   /// buffer controlled by this lexer, otherwise return the next unexpanded
   /// token.
   std::optional<Token> peekNextPPToken() const;
 
+private:
   /// Identifiers used for SEH handling in Borland. These are only
   /// allowed in particular circumstances
   // __except block
