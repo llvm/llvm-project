@@ -5,6 +5,7 @@
   "version": "0.0.14",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.75.0"
   },
