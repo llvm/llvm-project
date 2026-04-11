@@ -1270,8 +1270,13 @@ void ODRHash::AddStructuralValue(const APValue &Value) {
       break;
     }
 
-    assert(Base.is<const ValueDecl *>());
-    AddDecl(Base.get<const ValueDecl *>());
+    if (auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+      AddDecl(VD);
+    } else if (auto *E = Base.dyn_cast<const Expr *>()) {
+      AddStmt(E);
+    } else {
+      llvm_unreachable("unexpected LValue base kind in structural value");
+    }
     ID.AddInteger(Value.getLValueOffset().getQuantity());
 
     bool OnePastTheEnd = Value.isLValueOnePastTheEnd();

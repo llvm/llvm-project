@@ -5009,7 +5009,11 @@ recurse:
   }
 
   // FIXME: invent manglings for all these.
-  case Expr::BlockExprClass:
+  case Expr::BlockExprClass: {
+    NotPrimaryExpr();
+    mangleUnqualifiedBlock(cast<BlockExpr>(E)->getBlockDecl());
+    break;
+  }
   case Expr::ChooseExprClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
@@ -6775,7 +6779,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
 
   case APValue::LValue: {
     // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/47.
-    assert((T->isPointerOrReferenceType()) &&
+    assert((T->isPointerOrReferenceType() || T->isBlockPointerType()) &&
            "unexpected type for LValue template arg");
 
     if (V.isNullPointer()) {
@@ -6844,7 +6848,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
           Out << "cv";
           mangleType(T);
         }
-        if (T->isPointerType())
+        if (T->isPointerType() || T->isBlockPointerType())
           Out << "ad";
         Out << "so";
         mangleType(T->isVoidPointerType()
@@ -6859,7 +6863,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
           Out << "cv";
           mangleType(T);
         }
-        if (T->isPointerType()) {
+        if (T->isPointerType() || T->isBlockPointerType()) {
           NotPrimaryExpr();
           Out << "ad";
         }
