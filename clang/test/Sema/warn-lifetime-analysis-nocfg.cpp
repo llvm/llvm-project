@@ -376,9 +376,8 @@ int &doNotFollowReferencesForLocalOwner() {
 // Warning caught by CFG analysis.
   std::unique_ptr<int> localOwner;
   int &p = *localOwner // cfg-warning {{address of stack memory is returned later}} \
-                       // cfg-note {{function call result aliases the storage of 'localOwner'}} \
                        // cfg-note {{variable 'p' aliases the storage of 'localOwner'}}
-            .get();
+            .get();    // cfg-note {{function call result aliases the storage of 'localOwner'}}
   return p; // cfg-note {{returned here}}
 }
 
@@ -1127,6 +1126,7 @@ void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
                                                         // cfg-note {{function call result aliases the storage of the temporary}} \
                                                         // cfg-note {{variable 'y' aliases the storage of the temporary}}
   const std::string& z = (*temporary().begin()).second; // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}} \
+                                                        // cfg-note {{member access aliases the storage of the temporary}} \
                                                         // cfg-note {{expression aliases the storage of the temporary}} \
                                                         // cfg-note {{variable 'z' aliases the storage of the temporary}}
 
@@ -1178,12 +1178,14 @@ std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
 void test1() {
   std::string_view k1 = S().sv; // OK
   std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}} \
+                               // cfg-note {{member access aliases the storage of the temporary}} \
                                // cfg-note {{variable 'k2' aliases the storage of the temporary}} \
                                // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
   std::string_view k3 = Q().get()->sv; // OK
   std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
                                        // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}} \
+                                       // cfg-note {{member access aliases the storage of the temporary}} \
                                        // cfg-note {{function call result aliases the storage of the temporary}} \
                                        // cfg-note {{variable 'k4' aliases the storage of the temporary}}
 

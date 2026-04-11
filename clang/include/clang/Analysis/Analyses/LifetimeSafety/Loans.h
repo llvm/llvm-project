@@ -20,6 +20,12 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace clang::lifetimes {
+using LoanEntity = llvm::PointerUnion<const Expr *, const ParmVarDecl *,
+                                      const CXXMethodDecl *>;
+
+} // namespace clang::lifetimes
+
 namespace clang::lifetimes::internal {
 
 using LoanID = utils::ID<struct LoanTag>;

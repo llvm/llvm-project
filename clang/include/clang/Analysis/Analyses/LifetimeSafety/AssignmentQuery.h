@@ -24,12 +24,6 @@
 
 namespace clang::lifetimes {
 
-using OriginDestExpr =
-    llvm::PointerUnion<const DeclRefExpr *, const ValueDecl *,
-                       const MemberExpr *>;
-using LoanEntity = llvm::PointerUnion<const Expr *, const ParmVarDecl *,
-                                      const CXXMethodDecl *>;
-
 using AssignmentPair = std::pair<OriginDestExpr, const Expr *>;
 
 struct ExprPrintingResult {
@@ -37,18 +31,18 @@ struct ExprPrintingResult {
   const Expr *CurrExpr;
 };
 
-void FormatLoanEntityForSema(LoanEntity IssueEntity,
+void formatLoanEntityForSema(LoanEntity IssueEntity,
                              llvm::SmallVectorImpl<char> &IssueMsg);
-void FormatSrcExprForSema(
+void formatSrcExprForSema(
     const Expr *SrcExpr, llvm::SmallVectorImpl<ExprPrintingResult> &SrcMsgList);
 } // namespace clang::lifetimes
 
 namespace clang::lifetimes::internal {
 
 struct AliasAssignmentSearchResult {
-  bool SearchComplete;
-  const std::optional<OriginDestExpr> LastDestDecl;
-  std::optional<OriginID> LastOrigin;
+  const bool SearchComplete;
+  const OriginDestExpr LastDestDecl;
+  const std::optional<OriginID> LastOrigin;
 };
 
 struct AssignmentQueryContext {
@@ -59,10 +53,16 @@ struct AssignmentQueryContext {
   AnalysisDeclContext &ADC;
 };
 
-/// Retrieves a list of assignment chains for use-after-scope analysis.
+/// Get assignment history when an error is detected.
 ///
 /// To help users understand the data flow, we track where the problematic
 /// address originated.
+///
+/// `StartBlock` denotes the beginning block of the search, while `IssueExpr`
+/// represents the ending block.
+/// Note that `IssueExpr` can be null, as certain errors may not provide a
+/// specific expression. The search termination condition is independent of
+/// `IssueExpr`; it serves only as a hint to assist specific search strategies.
 void getAliasList(const AssignmentQueryContext &Context,
                   llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
                   const Fact *CausingFact, const LoanID End,

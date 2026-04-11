@@ -23,6 +23,12 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace clang::lifetimes {
+using OriginDestExpr =
+    llvm::PointerUnion<const DeclRefExpr *, const ValueDecl *,
+                       const MemberExpr *>;
+} // namespace clang::lifetimes
+
 namespace clang::lifetimes::internal {
 
 using OriginID = utils::ID<struct OriginTag>;

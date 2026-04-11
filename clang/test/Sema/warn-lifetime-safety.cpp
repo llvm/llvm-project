@@ -1425,10 +1425,9 @@ void foobar() {
   View view;
   {
     StatusOr<MyObj> string_or = getStringOr();
-    view = string_or. // expected-warning {{object whose reference is captured does not live long enough}} \\
-                      // expected-note {{function call result aliases the storage of 'string_or'}} \\
+    view = string_or. // expected-warning {{object whose reference is captured does not live long enough}} \
                       // expected-note {{variable 'view' aliases the storage of 'string_or'}}
-            value();
+            value();  // expected-note {{function call result aliases the storage of 'string_or'}}
   }                     // expected-note {{destroyed here}}
   (void)view;           // expected-note {{later used here}}
 }
@@ -1964,7 +1963,8 @@ void uaf() {
     S str;
     S* p = &str;  // expected-warning {{object whose reference is captured does not live long enough}} \
                   // expected-note {{variable 'p' aliases the storage of 'str'}}
-    view = p->s;  // expected-note {{variable 'view' aliases the storage of 'str'}}
+    view = p->s;  // expected-note {{member access aliases the storage of 'str'}} \
+                  // expected-note {{variable 'view' aliases the storage of 'str'}}
   } // expected-note {{destroyed here}}
   (void)view;  // expected-note {{later used here}}
 }
@@ -1991,7 +1991,8 @@ void uaf_union() {
     U u = U{"hello"};
     U* up = &u;  // expected-warning {{object whose reference is captured does not live long enough}} \
                  // expected-note {{variable 'up' aliases the storage of 'u'}}
-    view = up->s; // expected-note {{variable 'view' aliases the storage of 'u'}}
+    view = up->s; // expected-note {{member access aliases the storage of 'u'}} \
+                  // expected-note {{variable 'view' aliases the storage of 'u'}}
   } // expected-note {{destroyed here}}
   (void)view;  // expected-note {{later used here}}
 }
@@ -2009,7 +2010,8 @@ void uaf_anonymous_union() {
     AnonymousUnion au;
     AnonymousUnion* up = &au;  // expected-warning {{object whose reference is captured does not live long enough}} \
                                // expected-note {{variable 'up' aliases the storage of 'au'}}
-    ip = &up->x; // expected-note {{variable 'ip' aliases the storage of 'au'}}
+    ip = &up->x;               // expected-note {{member access aliases the storage of 'au'}} \
+                               // expected-note {{variable 'ip' aliases the storage of 'au'}}
   } // expected-note {{destroyed here}}
   (void)ip;  // expected-note {{later used here}}
 }
@@ -2380,6 +2382,7 @@ void element_use_after_scope() {
   {
     int a[10]{};
     p = &a[2]; // expected-warning {{object whose reference is captured does not live long enough}} \
+               // expected-note {{array subscript access aliases the storage of 'a'}} \
                // expected-note {{variable 'p' aliases the storage of 'a'}}
   }            // expected-note {{destroyed here}}
   (void)*p;    // expected-note {{later used here}}
@@ -2388,6 +2391,7 @@ void element_use_after_scope() {
 int* element_use_after_return() {
   int a[10]{};
   int* p = &a[0]; // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{array subscript access aliases the storage of 'a'}} \
                   // expected-note {{variable 'p' aliases the storage of 'a'}}
   return p;       // expected-note {{returned here}}
 }
@@ -2414,6 +2418,7 @@ void multidimensional_use_after_scope() {
   {
     int a[3][4]{};
     p = &a[1][2]; // expected-warning {{object whose reference is captured does not live long enough}} \
+                  // expected-note 2 {{array subscript access aliases the storage of 'a'}} \
                   // expected-note {{variable 'p' aliases the storage of 'a'}}
   }               // expected-note {{destroyed here}}
   (void)*p;       // expected-note {{later used here}}
@@ -2428,6 +2433,8 @@ void member_array_element_use_after_scope() {
   {
     S s;
     p = &s.arr[0]; // expected-warning {{object whose reference is captured does not live long enough}} \
+                   // expected-note {{array subscript access aliases the storage of 's'}} \
+                   // expected-note {{member access aliases the storage of 's'}} \
                    // expected-note {{variable 'p' aliases the storage of 's'}}
   }                // expected-note {{destroyed here}}
   (void)*p;        // expected-note {{later used here}}
@@ -2448,6 +2455,7 @@ void reversed_subscript_use_after_scope() {
   {
     int a[10]{};
     p = &(0[a]); // expected-warning {{object whose reference is captured does not live long enough}} \
+                 // expected-note {{array subscript access aliases the storage of 'a'}} \
                  // expected-note {{variable 'p' aliases the storage of 'a'}}
   }              // expected-note {{destroyed here}}
   (void)*p;      // expected-note {{later used here}}
