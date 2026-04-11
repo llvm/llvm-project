@@ -15,6 +15,7 @@ void shouldWarn(int z)
 {
   int i = 5;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable name 'i' is too short, expected at least 3 characters [readability-identifier-length]
+  ++i;
 
   for (int m = 0; m < 5; ++m)
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: loop variable name 'm' is too short, expected at least 2 characters [readability-identifier-length]
@@ -37,6 +38,7 @@ void shouldNotWarn(int m)
   doIt(m);
 
   int v = 5;
+  ++v;
   doIt(v);
 
   for (int a = 0; a < 42; ++a)
