@@ -94,6 +94,36 @@ def test_inline_ptx():
 
 
 @constructAndPrintInModule
+def test_mbarrier_arrive():
+    ptr_shared = llvm.PointerType.get(3)
+    ptr_cluster = llvm.PointerType.get(7)
+    i32 = T.i32()
+
+    @func.FuncOp.from_py_func(ptr_shared, ptr_cluster, i32)
+    def mbarrier_arrive_ops(barrier_shared, barrier_cluster, txcount):
+        token = nvvm.mbarrier_arrive(barrier_shared)
+        nvvm.mbarrier_arrive(barrier_cluster)
+        token2 = nvvm.mbarrier_arrive_drop(barrier_shared)
+        nvvm.mbarrier_arrive_drop(barrier_cluster)
+        token3 = nvvm.mbarrier_arrive_expect_tx(barrier_shared, txcount)
+        nvvm.mbarrier_arrive_expect_tx(barrier_cluster, txcount)
+        token4 = nvvm.mbarrier_arrive_drop_expect_tx(barrier_shared, txcount)
+        nvvm.mbarrier_arrive_drop_expect_tx(barrier_cluster, txcount)
+
+
+# CHECK-LABEL:   func.func @mbarrier_arrive_ops(
+# CHECK-SAME:      %[[SHARED:.*]]: !llvm.ptr<3>, %[[CLUSTER:.*]]: !llvm.ptr<7>, %[[TXCOUNT:.*]]: i32)
+# CHECK:           %{{.*}} = nvvm.mbarrier.arrive %[[SHARED]] : !llvm.ptr<3> -> i64
+# CHECK-NEXT:      nvvm.mbarrier.arrive %[[CLUSTER]] : !llvm.ptr<7>{{$}}
+# CHECK-NEXT:      %{{.*}} = nvvm.mbarrier.arrive_drop %[[SHARED]] : !llvm.ptr<3> -> i64
+# CHECK-NEXT:      nvvm.mbarrier.arrive_drop %[[CLUSTER]] : !llvm.ptr<7>{{$}}
+# CHECK-NEXT:      %{{.*}} = nvvm.mbarrier.arrive.expect_tx %[[SHARED]], %[[TXCOUNT]] : !llvm.ptr<3>, i32 -> i64
+# CHECK-NEXT:      nvvm.mbarrier.arrive.expect_tx %[[CLUSTER]], %[[TXCOUNT]] : !llvm.ptr<7>, i32{{$}}
+# CHECK-NEXT:      %{{.*}} = nvvm.mbarrier.arrive_drop.expect_tx %[[SHARED]], %[[TXCOUNT]] : !llvm.ptr<3>, i32 -> i64
+# CHECK-NEXT:      nvvm.mbarrier.arrive_drop.expect_tx %[[CLUSTER]], %[[TXCOUNT]] : !llvm.ptr<7>, i32{{$}}
+
+
+@constructAndPrintInModule
 def test_barriers():
     i32 = T.i32()
     f32 = T.f32()
@@ -102,21 +132,20 @@ def test_barriers():
     def barriers(mask, vi32, vf32):
         c0 = arith.constant(T.i32(), 0)
         cffff = arith.constant(T.i32(), 0xFFFF)
-        res = nvvm.barrier(
-            res=i32,
+        nvvm.barrier(
             barrier_id=c0,
             number_of_threads=cffff,
         )
 
+        pred = arith.constant(T.i32(), 1)
         for reduction in (
             nvvm.BarrierReduction.AND,
             nvvm.BarrierReduction.OR,
             nvvm.BarrierReduction.POPC,
         ):
-            res = nvvm.barrier(
-                res=i32,
+            pred = nvvm.barrier(
                 reduction_op=reduction,
-                reduction_predicate=res,
+                reduction_predicate=pred,
             )
 
         nvvm.barrier0()
@@ -129,15 +158,16 @@ def test_barriers():
         nvvm.cluster_wait(aligned=True)
         nvvm.fence_mbarrier_init()
         nvvm.bar_warp_sync(mask)
-        return res
+        return pred
 
 
 # CHECK-LABEL:   func.func @barriers(
 # CHECK:           %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: f32) -> i32 {
 # CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 # CHECK:           %[[CONSTANT_1:.*]] = arith.constant 65535 : i32
-# CHECK:           %[[BARRIER_0:.*]] = nvvm.barrier id = %[[CONSTANT_0]] number_of_threads = %[[CONSTANT_1]] -> i32
-# CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier #nvvm.reduction<and> %[[BARRIER_0]] -> i32
+# CHECK:           nvvm.barrier id = %[[CONSTANT_0]] number_of_threads = %[[CONSTANT_1]]
+# CHECK:           %[[PRED:.*]] = arith.constant 1 : i32
+# CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier #nvvm.reduction<and> %[[PRED]] -> i32
 # CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier #nvvm.reduction<or> %[[BARRIER_1]] -> i32
 # CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
 # CHECK:           nvvm.barrier0
@@ -151,7 +181,6 @@ def test_barriers():
 # CHECK:           nvvm.fence.mbarrier.init
 # CHECK:           nvvm.bar.warp.sync %[[ARG0]] : i32
 # CHECK:           return %[[BARRIER_3]] : i32
-# CHECK:         }
 
 
 @constructAndPrintInModule
