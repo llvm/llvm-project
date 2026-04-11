@@ -92,7 +92,7 @@ private:
                                TripleName.c_str());
 
     MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                           nullptr, true, "__DWARF"));
+                           true, "__DWARF"));
 
     return Error::success();
   }
