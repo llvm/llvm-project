@@ -963,6 +963,68 @@ void lifetimebound_ctor_static_cast() {
   (void)v;                                   // expected-note {{later used here}}
 }
 
+void lifetimebound_make_unique() {
+  std::unique_ptr<LifetimeBoundCtor> ptr;
+  {
+    MyObj obj;
+    ptr = std::make_unique<LifetimeBoundCtor>(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ptr; // expected-note {{later used here}}
+}
+
+void lifetimebound_make_unique_temp() {
+  std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // expected-warning {{object whose reference is captured does not live long enough}} \
+                                                                                         // expected-note {{destroyed here}}
+  (void)ptr; // expected-note {{later used here}}
+}
+
+struct MultiLifetimeBoundCtor {
+  MultiLifetimeBoundCtor(const MyObj& obj1 [[clang::lifetimebound]], const MyObj& obj2);
+  MultiLifetimeBoundCtor(const MyObj& obj1, const MyObj& obj2 [[clang::lifetimebound]], int);
+  MultiLifetimeBoundCtor(const MyObj& obj1 [[clang::lifetimebound]], const MyObj& obj2 [[clang::lifetimebound]], double);
+  MultiLifetimeBoundCtor(std::string_view sv [[clang::lifetimebound]]);
+};
+
+void lifetimebound_make_unique_multi_params() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ptr; // expected-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params2() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ptr; // expected-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params3_1() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ptr; // expected-note {{later used here}}
+}
+
+void lifetimebound_make_unique_multi_params3_2() {
+  std::unique_ptr<MultiLifetimeBoundCtor> ptr;
+  MyObj obj_long;
+  {
+    MyObj obj_short;
+    ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ptr; // expected-note {{later used here}}
+}
+
 View lifetimebound_return_of_local() {
   MyObj stack;
   return Identity(stack); // expected-warning {{address of stack memory is returned later}}
@@ -2452,9 +2514,9 @@ void owner_outlives_lifetimebound_source() {
   std::unique_ptr<S> ups;
   {
     std::string local;
-    ups = getUniqueS(local);
-  }
-  (void)ups; // Should warn.
+    ups = getUniqueS(local); // expected-warning {{object whose reference is captured does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)ups; // expected-note {{later used here}}
 }
 
 } // namespace track_origins_for_lifetimebound_record_type

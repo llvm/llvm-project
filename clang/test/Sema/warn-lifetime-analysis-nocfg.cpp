@@ -174,6 +174,17 @@ void initLocalGslPtrWithTempOwner() {
   use(global2, p2);                       // cfg-note 2 {{later used here}}
 }
 
+struct LifetimeBoundCtor {
+  LifetimeBoundCtor(const MyIntOwner& obj1 [[clang::lifetimebound]]);
+  LifetimeBoundCtor(std::string_view sv [[clang::lifetimebound]]);
+};
+
+auto lifetimebound_make_unique_single_param() {
+  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // expected-warning {{returning address of local temporary object}} \
+                                                            // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+}
+
+
 
 struct Unannotated {
   typedef std::vector<int>::iterator iterator;

@@ -250,6 +250,61 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
     }
     return;
   }
+
+  // Handle std::make_unique to propagate lifetimebound attributes from the
+  // constructed type's constructor to make_unique's parameters.
+  if (FD->isInStdNamespace() && FD->getDeclName().isIdentifier() &&
+      FD->getName() == "make_unique") {
+    if (!FD->isFunctionTemplateSpecialization())
+      return;
+
+    const TemplateArgumentList *TAL = FD->getTemplateSpecializationArgs();
+    if (!TAL || TAL->size() < 1)
+      return;
+
+    // make_unique's first template argument is the type being constructed.
+    TemplateArgument TA = TAL->get(0);
+    if (TA.getKind() != TemplateArgument::Type)
+      return;
+
+    QualType T = TA.getAsType();
+    const auto *RD = T->getAsCXXRecordDecl();
+    if (!RD)
+      return;
+
+    // Find the constructor that matches make_unique's arguments.
+    for (const auto *Ctor : RD->ctors()) {
+      if (Ctor->getNumParams() != FD->getNumParams())
+        continue;
+
+      bool Compatible = true;
+      for (unsigned i = 0; i < Ctor->getNumParams(); ++i) {
+        QualType CtorParamType = Ctor->getParamDecl(i)->getType();
+        QualType FDParamType = FD->getParamDecl(i)->getType();
+        // Compare types ignoring references.
+        if (!Context.hasSameUnqualifiedType(
+                CtorParamType.getNonReferenceType(),
+                FDParamType.getNonReferenceType())) {
+          Compatible = false;
+          break;
+        }
+      }
+
+      if (!Compatible)
+        continue;
+      // Propagate lifetimebound attributes only if the constructor parameter is
+      // a reference. This avoids incorrect loan tracking when a by-value view
+      // (like string_view) is passed by reference to make_unique.
+      for (unsigned i = 0; i < Ctor->getNumParams(); ++i)
+        if (Ctor->getParamDecl(i)->hasAttr<LifetimeBoundAttr>() &&
+            Ctor->getParamDecl(i)->getType()->isReferenceType())
+          FD->getParamDecl(i)->addAttr(
+              LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+      break; // Found matching constructor, done.
+    }
+    return;
+  }
+
   if (auto *CMD = dyn_cast<CXXMethodDecl>(FD)) {
     const auto *CRD = CMD->getParent();
     if (!CRD->isInStdNamespace() || !CRD->getIdentifier())

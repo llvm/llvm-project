@@ -205,6 +205,9 @@ struct unique_ptr {
   T *get() const;
 };
 
+template<typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args);
+
 template<typename T>
 struct optional {
   optional();
