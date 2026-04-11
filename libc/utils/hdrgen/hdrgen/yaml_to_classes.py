@@ -57,8 +57,7 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
         # If a type has a guard, the macro it references must exist in
         # the same yaml file with a macro_header attribute.
         if type_guard is not None and not any(
-            macro_data["macro_name"] == type_guard
-            and "macro_header" in macro_data
+            macro_data["macro_name"] == type_guard and "macro_header" in macro_data
             for macro_data in yaml_data.get("macros", [])
         ):
             raise ValueError(

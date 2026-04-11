@@ -110,6 +110,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
 
+
 def main():
     parser = argparse.ArgumentParser(description="TestHeaderGenIntegration arguments")
     parser.add_argument(

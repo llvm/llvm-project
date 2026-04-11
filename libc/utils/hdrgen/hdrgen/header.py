@@ -315,9 +315,7 @@ class HeaderFile:
             # elide the blank line between the declarations.
             if last_name == function.name_without_underscores():
                 content.pop()
-            current_guard = self.__emit_guard(
-                content, current_guard, function.guard
-            )
+            current_guard = self.__emit_guard(content, current_guard, function.guard)
             content.append(str(function) + " __NOEXCEPT;")
             content.append("")
             last_name = function.name_without_underscores()
