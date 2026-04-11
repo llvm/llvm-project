@@ -906,6 +906,9 @@
 # DEBUG-NEXT: G_VECREDUCE_SEQ_FMUL (opcode {{[0-9]+}}): 3 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_VECREDUCE_SEQ_FDOT (opcode {{[0-9]+}}): 3 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_VECREDUCE_FADD (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
@@ -922,6 +925,9 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_VECREDUCE_FMINIMUM (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_VECREDUCE_FDOT (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_VECREDUCE_ADD (opcode {{[0-9]+}}): 2 type indices, 0 imm indices

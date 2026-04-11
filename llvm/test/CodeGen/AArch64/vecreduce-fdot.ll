@@ -8,17 +8,20 @@ declare half @llvm.vector.reduce.fdot.v4f16(half, <4 x half>, <4 x half>)
 define float @fdot_f32(float %acc, <4 x float> %a, <4 x float> %b) {
 ; O0-LABEL: fdot_f32:
 ; O0:       // %bb.0:
-; O0-NEXT:    fmul v1.4s, v1.4s, v2.4s
-; O0-NEXT:    fmov s4, s1
-; O0-NEXT:    mov s3, v1.s[1]
-; O0-NEXT:    mov s2, v1.s[2]
-; O0-NEXT:    mov s1, v1.s[3]
+; O0-NEXT:    mov v5.16b, v1.16b
+; O0-NEXT:    mov s1, v5.s[3]
+; O0-NEXT:    mov s3, v5.s[2]
+; O0-NEXT:    mov s4, v5.s[1]
+; O0-NEXT:    fmul s4, s4, v2.s[1]
+; O0-NEXT:    fmov w0, s5
+; O0-NEXT:    fmov s5, w0
+; O0-NEXT:    fmul s5, s5, v2.s[0]
+; O0-NEXT:    fadd s0, s0, s5
 ; O0-NEXT:    fadd s0, s0, s4
+; O0-NEXT:    fmul s3, s3, v2.s[2]
 ; O0-NEXT:    fadd s0, s0, s3
-; O0-NEXT:    fadd s0, s0, s2
+; O0-NEXT:    fmul s1, s1, v2.s[3]
 ; O0-NEXT:    fadd s0, s0, s1
-; O0-NEXT:    fmov w0, s0
-; O0-NEXT:    fmov s0, w0
 ; O0-NEXT:    ret
 ;
 ; O1-LABEL: fdot_f32:
@@ -42,17 +45,24 @@ define float @fdot_f32(float %acc, <4 x float> %a, <4 x float> %b) {
 define float @fdot_f32_contract(float %acc, <4 x float> %a, <4 x float> %b) {
 ; O0-LABEL: fdot_f32_contract:
 ; O0:       // %bb.0:
-; O0-NEXT:    fmul v1.4s, v1.4s, v2.4s
-; O0-NEXT:    fmov s4, s1
-; O0-NEXT:    mov s3, v1.s[1]
-; O0-NEXT:    mov s2, v1.s[2]
-; O0-NEXT:    mov s1, v1.s[3]
-; O0-NEXT:    fadd s0, s0, s4
-; O0-NEXT:    fadd s0, s0, s3
-; O0-NEXT:    fadd s0, s0, s2
-; O0-NEXT:    fadd s0, s0, s1
+; O0-NEXT:    sub sp, sp, #16
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    str q2, [sp] // 16-byte Spill
+; O0-NEXT:    mov v2.16b, v1.16b
+; O0-NEXT:    fmov s6, s0
+; O0-NEXT:    ldr q0, [sp] // 16-byte Reload
+; O0-NEXT:    mov s1, v0.s[3]
+; O0-NEXT:    mov s3, v0.s[2]
+; O0-NEXT:    mov s4, v0.s[1]
 ; O0-NEXT:    fmov w0, s0
-; O0-NEXT:    fmov s0, w0
+; O0-NEXT:    fmov w1, s2
+; O0-NEXT:    fmov s0, w1
+; O0-NEXT:    fmov s5, w0
+; O0-NEXT:    fmadd s0, s0, s5, s6
+; O0-NEXT:    fmla s0, s4, v2.s[1]
+; O0-NEXT:    fmla s0, s3, v2.s[2]
+; O0-NEXT:    fmla s0, s1, v2.s[3]
+; O0-NEXT:    add sp, sp, #16
 ; O0-NEXT:    ret
 ;
 ; O1-LABEL: fdot_f32_contract:
@@ -74,7 +84,8 @@ define float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
 ; O0:       // %bb.0:
 ; O0-NEXT:    fmul v1.4s, v1.4s, v2.4s
 ; O0-NEXT:    faddp v1.4s, v1.4s, v1.4s
-; O0-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; O0-NEXT:    fmov x0, d1
+; O0-NEXT:    fmov d1, x0
 ; O0-NEXT:    faddp s1, v1.2s
 ; O0-NEXT:    fadd s0, s0, s1
 ; O0-NEXT:    ret
@@ -93,40 +104,50 @@ define float @fdot_f32_reassoc(float %acc, <4 x float> %a, <4 x float> %b) {
 define half @fdot_f16(half %acc, <4 x half> %a, <4 x half> %b) {
 ; O0-LABEL: fdot_f16:
 ; O0:       // %bb.0:
-; O0-NEXT:    fcvtl v1.4s, v1.4h
-; O0-NEXT:    fcvtl v2.4s, v2.4h
-; O0-NEXT:    fmul v1.4s, v1.4s, v2.4s
-; O0-NEXT:    fcvtn v5.4h, v1.4s
-; O0-NEXT:    fmov s4, s5
-; O0-NEXT:    // implicit-def: $q1
-; O0-NEXT:    fmov d1, d5
-; O0-NEXT:    mov h3, v1.h[1]
-; O0-NEXT:    // implicit-def: $q1
-; O0-NEXT:    fmov d1, d5
-; O0-NEXT:    mov h2, v1.h[2]
-; O0-NEXT:    // implicit-def: $q1
-; O0-NEXT:    fmov d1, d5
-; O0-NEXT:    mov h1, v1.h[3]
+; O0-NEXT:    // implicit-def: $q5
+; O0-NEXT:    fmov d5, d1
+; O0-NEXT:    mov h1, v5.h[3]
+; O0-NEXT:    // implicit-def: $q16
+; O0-NEXT:    fmov d16, d2
+; O0-NEXT:    mov h2, v16.h[3]
+; O0-NEXT:    mov h3, v5.h[2]
+; O0-NEXT:    mov h4, v16.h[2]
+; O0-NEXT:    fmov s6, s5
+; O0-NEXT:    fmov s7, s16
+; O0-NEXT:    mov h5, v5.h[1]
+; O0-NEXT:    mov h16, v16.h[1]
+; O0-NEXT:    fcvt s16, h16
+; O0-NEXT:    fcvt s5, h5
+; O0-NEXT:    fmul s5, s5, s16
+; O0-NEXT:    fcvt h5, s5
+; O0-NEXT:    fcvt s5, h5
+; O0-NEXT:    fcvt s7, h7
+; O0-NEXT:    fcvt s6, h6
+; O0-NEXT:    fmul s6, s6, s7
+; O0-NEXT:    fcvt h6, s6
+; O0-NEXT:    fcvt s6, h6
 ; O0-NEXT:    fcvt s0, h0
-; O0-NEXT:    fcvt s4, h4
-; O0-NEXT:    fadd s0, s0, s4
+; O0-NEXT:    fadd s0, s0, s6
 ; O0-NEXT:    fcvt h0, s0
 ; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fadd s0, s0, s5
+; O0-NEXT:    fcvt h0, s0
+; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fcvt s4, h4
+; O0-NEXT:    fcvt s3, h3
+; O0-NEXT:    fmul s3, s3, s4
+; O0-NEXT:    fcvt h3, s3
 ; O0-NEXT:    fcvt s3, h3
 ; O0-NEXT:    fadd s0, s0, s3
 ; O0-NEXT:    fcvt h0, s0
 ; O0-NEXT:    fcvt s0, h0
 ; O0-NEXT:    fcvt s2, h2
-; O0-NEXT:    fadd s0, s0, s2
-; O0-NEXT:    fcvt h0, s0
-; O0-NEXT:    fcvt s0, h0
+; O0-NEXT:    fcvt s1, h1
+; O0-NEXT:    fmul s1, s1, s2
+; O0-NEXT:    fcvt h1, s1
 ; O0-NEXT:    fcvt s1, h1
 ; O0-NEXT:    fadd s0, s0, s1
 ; O0-NEXT:    fcvt h0, s0
-; O0-NEXT:    // kill: def $s0 killed $h0
-; O0-NEXT:    fmov w0, s0
-; O0-NEXT:    fmov s0, w0
-; O0-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; O0-NEXT:    ret
 ;
 ; O1-LABEL: fdot_f16:
