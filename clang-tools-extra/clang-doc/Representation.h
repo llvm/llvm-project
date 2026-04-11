@@ -219,11 +219,11 @@ struct CommentInfo : public llvm::ilist_node<CommentInfo> {
 
   llvm::ArrayRef<CommentInfo>
       Children;              // List of child comments for this CommentInfo.
-  StringRef Direction;       // Parameter direction (for (T)ParamCommand).
-  StringRef Name;            // Name of the comment (for Verbatim and HTML).
-  StringRef ParamName;       // Parameter name (for (T)ParamCommand).
-  StringRef CloseName;       // Closing tag name (for VerbatimBlock).
-  StringRef Text;            // Text of the comment.
+  StringRef Direction = {};  // Parameter direction (for (T)ParamCommand).
+  StringRef Name = {};       // Name of the comment (for Verbatim and HTML).
+  StringRef ParamName = {};  // Parameter name (for (T)ParamCommand).
+  StringRef CloseName = {};  // Closing tag name (for VerbatimBlock).
+  StringRef Text = {};       // Text of the comment.
   llvm::ArrayRef<StringRef> AttrKeys; // List of attribute keys (for HTML).
   llvm::ArrayRef<StringRef>
       AttrValues; // List of attribute values for each key (for HTML).
@@ -285,17 +285,17 @@ struct Reference : public llvm::ilist_node<Reference> {
   // Name of type (possibly unresolved). Not including namespaces or template
   // parameters (so for a std::vector<int> this would be "vector"). See also
   // QualName.
-  StringRef Name;
+  StringRef Name = {};
 
   // Full qualified name of this type, including namespaces and template
   // parameter (for example this could be "std::vector<int>"). Contrast to
   // Name.
-  StringRef QualName;
+  StringRef QualName = {};
 
   // Path of directory where the clang-doc generated file will be saved
   // (possibly unresolved)
-  StringRef Path;
-  StringRef DocumentationFileName;
+  StringRef Path = {};
+  StringRef DocumentationFileName = {};
 };
 
 // A Context is a reference that holds a relative path from a certain Info's
@@ -359,7 +359,7 @@ struct TemplateParamInfo {
   // The literal contents of the code for that specifies this template parameter
   // for this declaration. Typical values will be "class T" and
   // "typename T = int".
-  StringRef Contents;
+  StringRef Contents = {};
 };
 
 struct TemplateSpecializationInfo {
@@ -380,7 +380,7 @@ struct ConstraintInfo {
       : ConceptRef(USR, Name, InfoType::IT_concept) {}
   Reference ConceptRef;
 
-  StringRef ConstraintExpr;
+  StringRef ConstraintExpr = {};
 };
 
 // Records the template information for a struct or function that is a template
@@ -410,11 +410,11 @@ struct FieldTypeInfo : public TypeInfo {
            std::tie(Other.Type, Other.Name, Other.DefaultValue);
   }
 
-  StringRef Name; // Name associated with this info.
+  StringRef Name = {}; // Name associated with this info.
 
   // When used for function parameters, contains the string representing the
   // expression of the default value, if any.
-  StringRef DefaultValue;
+  StringRef DefaultValue = {};
 };
 
 // Info for member types.
@@ -503,7 +503,7 @@ struct Info {
   // The name used for the file that this info is documented in.
   // In the JSON generator, infos are documented in files with mangled names.
   // Thus, we keep track of the physical filename for linking purposes.
-  StringRef DocumentationFileName;
+  StringRef DocumentationFileName = {};
 
   // List of parent namespaces for this decl.
   llvm::ArrayRef<Reference> Namespace;
@@ -561,7 +561,7 @@ struct SymbolInfo : public Info {
 
   std::optional<Location> DefLoc;     // Location where this decl is defined.
   OwningVec<Location> Loc;            // Locations where this decl is declared.
-  StringRef MangledName;
+  StringRef MangledName = {};
   bool IsStatic = false;
 };
 
@@ -602,7 +602,7 @@ struct FunctionInfo : public SymbolInfo, public llvm::ilist_node<FunctionInfo> {
   Reference Parent;
   TypeInfo ReturnType;
   llvm::ArrayRef<FieldTypeInfo> Params;
-  StringRef Prototype;
+  StringRef Prototype = {};
 
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
@@ -749,7 +749,7 @@ struct ConceptInfo : public SymbolInfo, public llvm::ilist_node<ConceptInfo> {
 
   bool IsType = false;
   TemplateInfo Template;
-  StringRef ConstraintExpression;
+  StringRef ConstraintExpression = {};
 };
 
 struct Index : public Reference {
