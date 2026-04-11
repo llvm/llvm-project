@@ -904,7 +904,7 @@ def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
           "(Vector Extensions for Embedded Processors)">;
 
 def HasVInstructionsF16Minimal : Predicate<"Subtarget->hasVInstructionsF16Minimal()">,
-      AssemblerPredicate<(any_of FeatureStdExtZvfh),
+      AssemblerPredicate<(any_of FeatureStdExtZvfhmin, FeatureStdExtZvfh),
                          "'Zvfhmin' (Vector Half-Precision Floating-Point Minimal) or "
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
