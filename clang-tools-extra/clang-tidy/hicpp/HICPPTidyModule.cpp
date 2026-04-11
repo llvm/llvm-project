@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../bugprone/StdExceptionBaseclassCheck.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
+#include "../bugprone/UnhandledCodePathsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/AvoidGotoCheck.h"
@@ -37,7 +38,6 @@
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "MultiwayPathsCoveredCheck.h"
 #include "SignedBitwiseCheck.h"
 
 namespace clang::tidy {
@@ -59,7 +59,7 @@ public:
         "hicpp-exception-baseclass");
     CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "hicpp-ignored-remove-result");
-    CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
+    CheckFactories.registerCheck<bugprone::UnhandledCodePathsCheck>(
         "hicpp-multiway-paths-covered");
     CheckFactories.registerCheck<SignedBitwiseCheck>("hicpp-signed-bitwise");
     CheckFactories.registerCheck<google::ExplicitConstructorCheck>(

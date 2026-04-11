@@ -103,6 +103,7 @@
 #include "UncheckedStringToNumberConversionCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
+#include "UnhandledCodePathsCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UnintendedCharOstreamOutputCheck.h"
@@ -305,6 +306,8 @@ public:
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(
         "bugprone-undelegated-constructor");
+    CheckFactories.registerCheck<UnhandledCodePathsCheck>(
+        "bugprone-unhandled-code-paths");
     CheckFactories.registerCheck<UnhandledSelfAssignmentCheck>(
         "bugprone-unhandled-self-assignment");
     CheckFactories.registerCheck<UnhandledExceptionAtNewCheck>(

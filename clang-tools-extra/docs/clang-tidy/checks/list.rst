@@ -173,6 +173,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
+   :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
@@ -611,6 +612,7 @@ Check aliases
    :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`, :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`hicpp-invalid-access-moved <hicpp/invalid-access-moved>`, :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`hicpp-member-init <hicpp/member-init>`, :doc:`cppcoreguidelines-pro-type-member-init <cppcoreguidelines/pro-type-member-init>`, "Yes"
+   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`, :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
    :doc:`hicpp-move-const-arg <hicpp/move-const-arg>`, :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
    :doc:`hicpp-named-parameter <hicpp/named-parameter>`, :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
    :doc:`hicpp-new-delete-operators <hicpp/new-delete-operators>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
