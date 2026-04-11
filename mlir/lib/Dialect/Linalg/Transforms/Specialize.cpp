@@ -307,6 +307,38 @@ static std::optional<TypeFn> getCastTypeForMatmulLikeOp(GenericOp genericOp) {
   return TypeFn::cast_signed;
 }
 
+static FailureOr<LinalgOp> specializeLinalgMmt4D(RewriterBase &rewriter,
+                                                 GenericOp genericOp,
+                                                 std::optional<TypeFn> castTy,
+                                                 ContractionDimensions &dims) {
+  // Should all be rank 4 and dim 6
+  auto indexingMaps = genericOp.getIndexingMapsArray();
+  if (llvm::any_of(indexingMaps, [](AffineMap m) {
+        return m.getResults().size() != 4 || m.getNumDims() != 6;
+      }))
+    return failure();
+
+  auto aOuter = matchOperandMap(indexingMaps[0], 0, dims.m[0], dims.k[0]);
+  auto aInner = matchOperandMap(indexingMaps[0], 2, dims.m[1], dims.k[1]);
+
+  auto bOuter = matchOperandMap(indexingMaps[1], 0, dims.k[0], dims.n[0]);
+  auto bInner = matchOperandMap(indexingMaps[1], 2, dims.k[1], dims.n[1]);
+
+  auto cOuter = matchOperandMap(indexingMaps[2], 0, dims.m[0], dims.n[0]);
+  auto cInner = matchOperandMap(indexingMaps[2], 2, dims.m[1], dims.n[1]);
+
+  if (llvm::is_contained({aOuter, bOuter, cOuter}, IndexMatchResult::Mismatch))
+    return failure();
+  if (llvm::is_contained({aInner, bInner, cInner}, IndexMatchResult::Mismatch))
+    return failure();
+
+  SmallVector<AffineMap> namedOpMaps = {indexingMaps[0], indexingMaps[1],
+                                        indexingMaps[2]};
+
+  return replaceWithMatmulVariant<Mmt4DOp>(rewriter, genericOp, castTy,
+                                           namedOpMaps);
+}
+
 // Converts linalg.generic to named linalg.*matmul* where possible.
 static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
                                                         GenericOp genericOp,
@@ -368,6 +400,8 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   if (!succeeded(res))
     return failure();
   auto dims = *res;
+  if (dims.m.size() == 2 && dims.n.size() == 2 && dims.k.size() == 2)
+    return specializeLinalgMmt4D(rewriter, genericOp, castTy, dims);
   if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
     return failure();
 
