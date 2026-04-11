@@ -36,9 +36,11 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
+#include "llvm/CodeGen/InsertCodePrefetch.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
@@ -705,11 +707,11 @@ bool AsmPrinter::doInitialization(Module &M) {
     break;
   }
   if (ES)
-    Handlers.push_back(std::unique_ptr<EHStreamer>(ES));
+    EHHandlers.push_back(std::unique_ptr<EHStreamer>(ES));
 
   // All CFG modes required the tables emitted.
   if (M.getControlFlowGuardMode() != ControlFlowGuardMode::Disabled)
-    EHHandlers.push_back(std::make_unique<WinCFGuard>(this));
+    Handlers.push_back(std::make_unique<WinCFGuard>(this));
 
   for (auto &Handler : Handlers)
     Handler->beginModule(&M);
@@ -1046,19 +1048,20 @@ void AsmPrinter::emitFunctionHeader() {
 
   emitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment()) {
-    // Make sure that the preferred alignment directive (.prefalign) is
-    // supported before using it. The preferred alignment directive will not
-    // have the intended effect unless function sections are enabled, so check
-    // for that as well.
+    Align PrefAlign = MF->getPreferredAlignment();
+    // Use .prefalign when the integrated assembler supports it and the target
+    // has a preferred alignment distinct from the minimum. The end symbol must
+    // be created here, before the function body, so that .prefalign can
+    // reference it; emitFunctionBody will emit the label at the function end.
     if (MAI->useIntegratedAssembler() && MAI->hasPreferredAlignment() &&
-        TM.getFunctionSections()) {
-      Align Alignment = MF->getAlignment();
-      Align PrefAlignment = MF->getPreferredAlignment();
-      emitAlignment(Alignment, &F);
-      if (Alignment != PrefAlignment)
-        OutStreamer->emitPrefAlign(PrefAlignment);
+        MF->getAlignment() != PrefAlign) {
+      emitAlignment(MF->getAlignment(), &F);
+      CurrentFnEnd = createTempSymbol("func_end");
+      OutStreamer->emitPrefAlign(PrefAlign, *CurrentFnEnd,
+                                 /*EmitNops=*/true, /*Fill=*/0,
+                                 getSubtargetInfo());
     } else {
-      emitAlignment(MF->getPreferredAlignment(), &F);
+      emitAlignment(PrefAlign, &F);
     }
   }
 
@@ -2019,13 +2022,12 @@ void AsmPrinter::handleCallsiteForCallgraph(
 
 /// Helper to emit a symbol for the prefetch target associated with the given
 /// BBID and callsite index.
-void AsmPrinter::emitPrefetchTargetSymbol(unsigned BaseID,
+void AsmPrinter::emitPrefetchTargetSymbol(const UniqueBBID &BBID,
                                           unsigned CallsiteIndex) {
   SmallString<128> FunctionName;
   getNameWithPrefix(FunctionName, &MF->getFunction());
   MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
-      "__llvm_prefetch_target_" + FunctionName + "_" + Twine(BaseID) + "_" +
-      Twine(CallsiteIndex));
+      getPrefetchTargetSymbolName(FunctionName, BBID, CallsiteIndex));
   // If the function is weak-linkage it may be replaced by a strong
   // version, in which case the prefetch targets should also be replaced.
   OutStreamer->emitSymbolAttribute(
@@ -2049,7 +2051,7 @@ void AsmPrinter::emitDanglingPrefetchTargets() {
     if (MFBBIDs.contains(BBID))
       continue;
     for (unsigned CallsiteIndex : CallsiteIndexes)
-      emitPrefetchTargetSymbol(BBID.BaseID, CallsiteIndex);
+      emitPrefetchTargetSymbol(BBID, CallsiteIndex);
   }
 }
 
@@ -2124,7 +2126,7 @@ void AsmPrinter::emitFunctionBody() {
     for (auto &MI : MBB) {
       if (PrefetchTargetIt != PrefetchTargetEnd &&
           *PrefetchTargetIt == LastCallsiteIndex) {
-        emitPrefetchTargetSymbol(MBB.getBBID()->BaseID, *PrefetchTargetIt);
+        emitPrefetchTargetSymbol(*MBB.getBBID(), *PrefetchTargetIt);
         ++PrefetchTargetIt;
       }
 
@@ -2335,8 +2337,15 @@ void AsmPrinter::emitFunctionBody() {
         handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
-      if (MCSymbol *S = MI.getPostInstrSymbol())
+      if (MCSymbol *S = MI.getPostInstrSymbol()) {
+        // Emit the weak symbol attribute used for the prefetch target fallback.
+        if (TM.getTargetTriple().isOSBinFormatELF()) {
+          MCSymbolELF *ESym = static_cast<MCSymbolELF *>(S);
+          if (ESym->getBinding() == ELF::STB_WEAK)
+            OutStreamer->emitSymbolAttribute(S, MCSA_Weak);
+        }
         OutStreamer->emitLabel(S);
+      }
 
       for (auto &Handler : Handlers)
         Handler->endInstruction();
@@ -2344,7 +2353,7 @@ void AsmPrinter::emitFunctionBody() {
     // Emit the remaining prefetch targets for this block. This includes
     // nonexisting callsite indexes.
     while (PrefetchTargetIt != PrefetchTargetEnd) {
-      emitPrefetchTargetSymbol(MBB.getBBID()->BaseID, *PrefetchTargetIt);
+      emitPrefetchTargetSymbol(*MBB.getBBID(), *PrefetchTargetIt);
       ++PrefetchTargetIt;
     }
 
@@ -2459,9 +2468,11 @@ void AsmPrinter::emitFunctionBody() {
   // SPIR-V supports label instructions only inside a block, not after the
   // function body.
   if (TT.getObjectFormat() != Triple::SPIRV &&
-      (EmitFunctionSize || needFuncLabels(*MF, *this))) {
-    // Create a symbol for the end of function.
-    CurrentFnEnd = createTempSymbol("func_end");
+      (EmitFunctionSize || needFuncLabels(*MF, *this) || CurrentFnEnd)) {
+    // Create a symbol for the end of function, if not already pre-created
+    // (e.g. for .prefalign directive).
+    if (!CurrentFnEnd)
+      CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
   }
 
@@ -3215,6 +3226,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnSymForSize = CurrentFnSym;
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
+  CurrentFnEnd = nullptr;
   CurrentSectionBeginSym = nullptr;
   CurrentFnCallsiteEndSymbols.clear();
   MBBSectionRanges.clear();
@@ -5342,5 +5354,7 @@ void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
   AsmPrinter.EmitStackMaps = [](Module &M) {};
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
+
+AnalysisKey AsmPrinterAnalysis::Key;
 
 } // namespace llvm

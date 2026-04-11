@@ -24,20 +24,20 @@ define void @test_consecutive_store(ptr, ptr, ptr nocapture) {
   %5 = icmp eq ptr %0, %1
   br i1 %5, label %12, label %6
 
-; <label>:6                                       ; preds = %3
+; <label>:
   br label %7
 
-; <label>:7                                       ; preds = %7, %6
+; <label>:
   %8 = phi ptr [ %0, %6 ], [ %9, %7 ]
   store ptr %4, ptr %8, align 8
   %9 = getelementptr inbounds ptr, ptr %8, i64 1
   %10 = icmp eq ptr %9, %1
   br i1 %10, label %11, label %7
 
-; <label>:11                                      ; preds = %7
+; <label>:
   br label %12
 
-; <label>:12                                      ; preds = %11, %3
+; <label>:
   ret void
 }
 
@@ -57,11 +57,11 @@ define void @test_consecutive_store(ptr, ptr, ptr nocapture) {
 define void @test_nonconsecutive_store() {
   br label %1
 
-; <label>:1                                       ; preds = %14, %0
+; <label>:
   %2 = phi i64 [ 0, %0 ], [ %15, %14 ]
   br label %3
 
-; <label>:3                                       ; preds = %3, %1
+; <label>:
   %4 = phi i64 [ 0, %1 ], [ %11, %3 ]
   %5 = getelementptr inbounds [2048 x i16], ptr @q, i64 0, i64 %4
   %6 = load i16, ptr %5, align 2
@@ -75,13 +75,13 @@ define void @test_nonconsecutive_store() {
   %13 = icmp ne i32 %12, 1024
   br i1 %13, label %3, label %14
 
-; <label>:14                                      ; preds = %3
+; <label>:
   %15 = add i64 %2, 1
   %16 = trunc i64 %15 to i32
   %17 = icmp ne i32 %16, 8
   br i1 %17, label %1, label %18
 
-; <label>:18                                      ; preds = %14
+; <label>:
   ret void
 }
 
@@ -100,7 +100,7 @@ define void @test_nonconsecutive_store() {
 define i8 @test_consecutive_ptr_load() readonly {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %2 = phi i64 [ 0, %0 ], [ %10, %1 ]
   %3 = phi i8 [ 0, %0 ], [ %9, %1 ]
   %4 = getelementptr inbounds [1024 x ptr], ptr @ia, i32 0, i64 %2
@@ -113,7 +113,7 @@ define i8 @test_consecutive_ptr_load() readonly {
   %11 = icmp ne i64 %10, 1024
   br i1 %11, label %1, label %12
 
-; <label>:12                                      ; preds = %1
+; <label>:
   %13 = phi i8 [ %9, %1 ]
   ret i8 %13
 }
@@ -125,11 +125,11 @@ define i8 @test_consecutive_ptr_load() readonly {
 define void @test_nonconsecutive_ptr_load() {
   br label %1
 
-; <label>:1                                       ; preds = %13, %0
+; <label>:
   %2 = phi i64 [ 0, %0 ], [ %14, %13 ]
   br label %3
 
-; <label>:3                                       ; preds = %3, %1
+; <label>:
   %4 = phi i64 [ 0, %1 ], [ %10, %3 ]
   %5 = getelementptr inbounds [2048 x [8 x ptr]], ptr @p2, i64 0, i64 %4, i64 %2
   %6 = getelementptr inbounds [2048 x i16], ptr @q2, i64 0, i64 %4
@@ -142,13 +142,13 @@ define void @test_nonconsecutive_ptr_load() {
   %12 = icmp ne i32 %11, 1024
   br i1 %12, label %3, label %13
 
-; <label>:13                                      ; preds = %3
+; <label>:
   %14 = add i64 %2, 1
   %15 = trunc i64 %14 to i32
   %16 = icmp ne i32 %15, 8
   br i1 %16, label %1, label %17
 
-; <label>:17                                      ; preds = %13
+; <label>:
   ret void
 }
 
