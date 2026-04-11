@@ -1001,6 +1001,8 @@ void lifetimebound_make_unique_string_view_local() {
   (void)ptr;
 }
 
+
+
 struct MultiLifetimeBoundCtor {
   MultiLifetimeBoundCtor(const MyObj& obj1 [[clang::lifetimebound]], const MyObj& obj2);
   MultiLifetimeBoundCtor(const MyObj& obj1, const MyObj& obj2 [[clang::lifetimebound]], int);

@@ -209,3 +209,19 @@ struct HasCallback {
 };
 
 } // namespace callable_wrappers
+
+namespace MakeUnique {
+struct MyObj {};
+
+struct LifetimeBoundCtor {
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]);
+};
+
+struct HasUniquePtrField {
+  std::unique_ptr<LifetimeBoundCtor> field; // expected-note {{this field dangles}}
+
+  void setWithParam(MyObj obj) {
+    field = std::make_unique<LifetimeBoundCtor>(obj); // expected-warning {{address of stack memory escapes to a field}}
+  }
+};
+} // namespace MakeUnique
