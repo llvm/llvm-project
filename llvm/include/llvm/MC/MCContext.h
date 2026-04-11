@@ -380,7 +380,6 @@ public:
                               const MCRegisterInfo *MRI,
                               const MCSubtargetInfo *MSTI,
                               const SourceMgr *Mgr = nullptr,
-                              MCTargetOptions const *TargetOpts = nullptr,
                               bool DoAutoReset = true,
                               StringRef Swift5ReflSegmentName = {});
   MCContext(const MCContext &) = delete;

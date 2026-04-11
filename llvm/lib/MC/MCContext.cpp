@@ -64,8 +64,8 @@ static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
 
 MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
                      const MCRegisterInfo *mri, const MCSubtargetInfo *msti,
-                     const SourceMgr *mgr, MCTargetOptions const *TargetOpts,
-                     bool DoAutoReset, StringRef Swift5ReflSegmentName)
+                     const SourceMgr *mgr, bool DoAutoReset,
+                     StringRef Swift5ReflSegmentName)
     : Swift5ReflectionSegmentName(Swift5ReflSegmentName), TT(TheTriple),
       SrcMgr(mgr), InlineSrcMgr(nullptr), DiagHandler(defaultDiagHandler),
       MAI(mai), MRI(mri), MSTI(msti), Symbols(Allocator),
@@ -74,8 +74,6 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       AutoReset(DoAutoReset) {
   assert(MAI && MAI->getTargetOptions() &&
          "MCAsmInfo and MCTargetOptions must be available");
-  assert((!TargetOpts || TargetOpts == MAI->getTargetOptions()) &&
-         "MCTargetOptions, if specified, must match MCAsmInfo");
   SaveTempLabels = getTargetOptions()->MCSaveTempLabels;
   if (SaveTempLabels)
     setUseNamesOnTempLabels(true);
