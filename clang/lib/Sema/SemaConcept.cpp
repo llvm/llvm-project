@@ -493,6 +493,12 @@ class ConstraintSatisfactionChecker {
       CachedTemplateArgs;
 
 private:
+  template <class Constraint>
+  UnsignedOrNone getOuterPackIndex(const Constraint &C) const {
+    return C.getPackSubstitutionIndex() ? C.getPackSubstitutionIndex()
+                                        : PackSubstitutionIndex;
+  }
+
   ExprResult
   EvaluateAtomicConstraint(const Expr *AtomicExpr,
                            const MultiLevelTemplateArgumentList &MLTAL);
@@ -658,10 +664,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     return std::nullopt;
 
   TemplateArgumentListInfo SubstArgs;
-  Sema::ArgPackSubstIndexRAII SubstIndex(
-      S, Constraint.getPackSubstitutionIndex()
-             ? Constraint.getPackSubstitutionIndex()
-             : PackSubstitutionIndex);
+  Sema::ArgPackSubstIndexRAII SubstIndex(S, getOuterPackIndex(Constraint));
 
   llvm::SaveAndRestore PushTemplateArgsCache(S.CurrentCachedTemplateArgs,
                                              &CachedTemplateArgs);
@@ -806,10 +809,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   unsigned Size = Satisfaction.Details.size();
   llvm::FoldingSetNodeID ID;
-  UnsignedOrNone OuterPackSubstIndex =
-      Constraint.getPackSubstitutionIndex()
-          ? Constraint.getPackSubstitutionIndex()
-          : PackSubstitutionIndex;
+  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
 
   ID.AddPointer(Constraint.getConstraintExpr());
   ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
@@ -979,10 +979,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprError();
   }
 
-  Sema::ArgPackSubstIndexRAII SubstIndex(
-      S, Constraint.getPackSubstitutionIndex()
-             ? Constraint.getPackSubstitutionIndex()
-             : PackSubstitutionIndex);
+  Sema::ArgPackSubstIndexRAII SubstIndex(S, getOuterPackIndex(Constraint));
 
   const ASTTemplateArgumentListInfo *Ori =
       ConceptId->getTemplateArgsAsWritten();
@@ -1043,11 +1040,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
 
-  UnsignedOrNone OuterPackSubstIndex =
-      Constraint.getPackSubstitutionIndex()
-          ? Constraint.getPackSubstitutionIndex()
-          : PackSubstitutionIndex;
-
   Sema::InstantiatingTemplate InstTemplate(
       S, ConceptId->getBeginLoc(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
@@ -1081,6 +1073,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (Satisfaction.IsSatisfied)
     return E;
 
+  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Constraint.getConceptId());
   ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
