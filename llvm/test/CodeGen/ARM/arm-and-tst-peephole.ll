@@ -38,7 +38,7 @@ define ptr @foo(ptr %this, i32 %acc) nounwind readonly align 2 {
 ; ARM-NEXT:    cmp r3, #2
 ; ARM-NEXT:    bne .LBB0_1
 ; ARM-NEXT:  @ %bb.6: @ %sw.bb8
-; ARM-NEXT:    add r1, r1, r12
+; ARM-NEXT:    add r1, r12, r1
 ; ARM-NEXT:    add r0, r0, r1, lsl #2
 ; ARM-NEXT:    mov pc, lr
 ;
@@ -78,7 +78,7 @@ define ptr @foo(ptr %this, i32 %acc) nounwind readonly align 2 {
 ; THUMB-NEXT:    adds r0, r3, #4
 ; THUMB-NEXT:    b .LBB0_8
 ; THUMB-NEXT:  .LBB0_7: @ %sw.bb8
-; THUMB-NEXT:    adds r1, r1, r2
+; THUMB-NEXT:    adds r1, r2, r1
 ; THUMB-NEXT:    lsls r1, r1, #2
 ; THUMB-NEXT:    adds r0, r0, r1
 ; THUMB-NEXT:  .LBB0_8: @ %sw.bb6

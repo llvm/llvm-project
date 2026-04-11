@@ -17,20 +17,18 @@ define void @Z4(ptr addrspace(1) %ptr.i8, ptr addrspace(1) %ptr.float) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 true, label [[BB10:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T:%.*]] = add i16 [[T4:%.*]], 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[T4]] = phi i16 [ [[T]], [[BB2]] ], [ 0, [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[T7:%.*]] = icmp eq i16 [[T4]], 0
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR_I8]], i16 [[T4]]
+; CHECK-NEXT:    [[T7:%.*]] = icmp eq i16 0, 0
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR_I8]], i16 0
 ; CHECK-NEXT:    br label [[BB14:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    store i8 undef, ptr addrspace(1) [[SCEVGEP]], align 1
 ; CHECK-NEXT:    [[T6:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[PTR_FLOAT]], align 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[T6]], i16 16
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[SCEVGEP1]], i16 [[T4]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[SCEVGEP1]], i16 0
 ; CHECK-NEXT:    store i8 undef, ptr addrspace(1) [[SCEVGEP2]], align 1
 ; CHECK-NEXT:    br label [[BB14]]
 ;

@@ -22,34 +22,35 @@ define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) noun
 ; CHECK-NEXT:    [[CMP34:%.*]] = icmp eq i64 [[COUNT]], 0
 ; CHECK-NEXT:    br i1 [[CMP34]], label %[[FOR_END29:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[SRCROW]], i64 4
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP4]], %[[FOR_BODY_PREHEADER]] ], [ [[SCEVGEP5:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[DUMMYIV:%.*]] = phi i64 [ [[DUMMYCNT:%.*]], %[[FOR_BODY]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[INDVARS_IV39:%.*]] = phi i64 [ [[INDVARS_IV_NEXT40:%.*]], %[[FOR_BODY]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[DP_036:%.*]] = phi ptr [ [[SCEVGEP16:%.*]], %[[FOR_BODY]] ], [ [[DESTROW]], %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[LSR_IV]], align 4
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[INCDEC_PTR4:%.*]], %[[FOR_BODY]] ], [ [[SRCROW]], %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[SCEVGEP9]], align 4
 ; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[SCEVGEP8]], align 4
 ; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 12
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[SCEVGEP7]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR4]] = getelementptr inbounds float, ptr [[LSR_IV]], i64 4
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 16
+; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[SCEVGEP4]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DP_036]], align 4
-; CHECK-NEXT:    [[CONV5:%.*]] = fptoui float [[TMP0]] to i32
+; CHECK-NEXT:    [[CONV5:%.*]] = fptoui float [[TMP1]] to i32
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP4]], [[CONV5]]
 ; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr i8, ptr [[DP_036]], i64 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SCEVGEP10]], align 4
-; CHECK-NEXT:    [[CONV7:%.*]] = fptoui float [[TMP1]] to i32
+; CHECK-NEXT:    [[CONV7:%.*]] = fptoui float [[TMP2]] to i32
 ; CHECK-NEXT:    [[OR8:%.*]] = or i32 [[TMP5]], [[CONV7]]
 ; CHECK-NEXT:    [[SCEVGEP11:%.*]] = getelementptr i8, ptr [[DP_036]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[SCEVGEP11]], align 4
-; CHECK-NEXT:    [[CONV10:%.*]] = fptoui float [[TMP2]] to i32
+; CHECK-NEXT:    [[CONV10:%.*]] = fptoui float [[TMP3]] to i32
 ; CHECK-NEXT:    [[OR11:%.*]] = or i32 [[TMP6]], [[CONV10]]
 ; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr i8, ptr [[DP_036]], i64 12
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[SCEVGEP12]], align 4
-; CHECK-NEXT:    [[CONV13:%.*]] = fptoui float [[TMP3]] to i32
+; CHECK-NEXT:    [[CONV13:%.*]] = fptoui float [[TMP13]] to i32
 ; CHECK-NEXT:    [[OR14:%.*]] = or i32 [[TMP7]], [[CONV13]]
 ; CHECK-NEXT:    store i32 [[OR]], ptr [[DP_036]], align 4
 ; CHECK-NEXT:    [[SCEVGEP13:%.*]] = getelementptr i8, ptr [[DP_036]], i64 4
@@ -61,12 +62,13 @@ define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) noun
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[DP_036]], i64 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT40]] = add i64 [[INDVARS_IV39]], 4
 ; CHECK-NEXT:    [[DUMMYCNT]] = add i64 [[DUMMYIV]], 1
-; CHECK-NEXT:    [[SCEVGEP5]] = getelementptr i8, ptr [[LSR_IV]], i64 16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT40]], [[COUNT]]
 ; CHECK-NEXT:    [[SCEVGEP16]] = getelementptr i8, ptr [[DP_036]], i64 16
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND19_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND19_PREHEADER]]:
 ; CHECK-NEXT:    [[DUMMYCNT_LCSSA:%.*]] = phi i64 [ [[DUMMYCNT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = phi ptr [ [[INCDEC_PTR4]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADD_PTR_LCSSA:%.*]] = phi ptr [ [[ADD_PTR]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[REM:%.*]] = and i64 [[COUNT]], 3
 ; CHECK-NEXT:    [[CMP2130:%.*]] = icmp eq i64 [[REM]], 0
 ; CHECK-NEXT:    br i1 [[CMP2130]], label %[[FOR_COND19_PREHEADER_FOR_END29_CRIT_EDGE:.*]], label %[[FOR_BODY23_LR_PH:.*]]
@@ -78,11 +80,12 @@ define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) noun
 ; CHECK:       [[FOR_BODY23]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY23_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY23]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[ADD_PTR]], i64 [[TMP9]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[ADD_PTR_LCSSA]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ADD_PTR]], i64 [[TMP10]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ADD_PTR_LCSSA]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[SCEVGEP6]], align 4
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP6]], i64 4
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[SCEVGEP3]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[SCEVGEP1]], align 4
 ; CHECK-NEXT:    [[CONV25:%.*]] = fptoui float [[TMP11]] to i32
 ; CHECK-NEXT:    [[OR26:%.*]] = or i32 [[TMP12]], [[CONV25]]

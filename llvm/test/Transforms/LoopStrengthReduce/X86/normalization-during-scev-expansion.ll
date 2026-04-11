@@ -7,8 +7,8 @@ target triple = "x86_64-apple-macos"
 declare i1 @cond()
 
 define ptr @test(ptr %dst, i64 %v4, i64 %v5, i64 %v6, i64 %v7)  {
-; CHECK-LABEL: define ptr @test
-; CHECK-SAME: (ptr [[DST:%.*]], i64 [[V4:%.*]], i64 [[V5:%.*]], i64 [[V6:%.*]], i64 [[V7:%.*]]) {
+; CHECK-LABEL: define ptr @test(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[V4:%.*]], i64 [[V5:%.*]], i64 [[V6:%.*]], i64 [[V7:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[V5]], [[V4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
@@ -64,8 +64,8 @@ exit:
 }
 
 define i32 @test_pr63678(i1 %c) {
-; CHECK-LABEL: define i32 @test_pr63678
-; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-LABEL: define i32 @test_pr63678(
+; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_1_PREHEADER:%.*]]
 ; CHECK:       bb:
@@ -81,201 +81,234 @@ define i32 @test_pr63678(i1 %c) {
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_1_LOOP_2_CRIT_EDGE:%.*]], label [[LOOP_1]]
 ; CHECK:       loop.1.loop.2_crit_edge:
+; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i32 [ [[LSR_IV]], [[LOOP_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.2:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[LOOP_2]] ], [ [[LSR_IV]], [[LOOP_1_LOOP_2_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[LOOP_2]] ], [ [[LSR_IV_LCSSA]], [[LOOP_1_LOOP_2_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add i32 [[LSR_IV1]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_3_PREHEADER:%.*]], label [[LOOP_2]]
 ; CHECK:       loop.3.preheader:
+; CHECK-NEXT:    [[LSR_IV1_LCSSA:%.*]] = phi i32 [ [[LSR_IV1]], [[LOOP_2]] ]
 ; CHECK-NEXT:    br label [[LOOP_3:%.*]]
 ; CHECK:       loop.3:
-; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV1]], [[LOOP_3_PREHEADER]] ], [ [[LSR_IV_NEXT4:%.*]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV1_LCSSA]], [[LOOP_3_PREHEADER]] ], [ [[LSR_IV_NEXT4:%.*]], [[LOOP_3]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_4_PREHEADER:%.*]], label [[LOOP_3]]
 ; CHECK:       loop.4.preheader:
+; CHECK-NEXT:    [[LSR_IV3_LCSSA:%.*]] = phi i32 [ [[LSR_IV3]], [[LOOP_3]] ]
 ; CHECK-NEXT:    br label [[LOOP_4:%.*]]
 ; CHECK:       loop.4:
-; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi i32 [ [[LSR_IV3]], [[LOOP_4_PREHEADER]] ], [ [[LSR_IV_NEXT6:%.*]], [[LOOP_4]] ]
+; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi i32 [ [[LSR_IV3_LCSSA]], [[LOOP_4_PREHEADER]] ], [ [[LSR_IV_NEXT6:%.*]], [[LOOP_4]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT6]] = add i32 [[LSR_IV5]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_5_PREHEADER:%.*]], label [[LOOP_4]]
 ; CHECK:       loop.5.preheader:
+; CHECK-NEXT:    [[LSR_IV5_LCSSA:%.*]] = phi i32 [ [[LSR_IV5]], [[LOOP_4]] ]
 ; CHECK-NEXT:    br label [[LOOP_5:%.*]]
 ; CHECK:       loop.5:
-; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi i32 [ [[LSR_IV5]], [[LOOP_5_PREHEADER]] ], [ [[LSR_IV_NEXT8:%.*]], [[LOOP_5]] ]
+; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi i32 [ [[LSR_IV5_LCSSA]], [[LOOP_5_PREHEADER]] ], [ [[LSR_IV_NEXT8:%.*]], [[LOOP_5]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT8]] = add i32 [[LSR_IV7]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_6_PREHEADER:%.*]], label [[LOOP_5]]
 ; CHECK:       loop.6.preheader:
+; CHECK-NEXT:    [[LSR_IV7_LCSSA:%.*]] = phi i32 [ [[LSR_IV7]], [[LOOP_5]] ]
 ; CHECK-NEXT:    br label [[LOOP_6:%.*]]
 ; CHECK:       loop.6:
-; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi i32 [ [[LSR_IV7]], [[LOOP_6_PREHEADER]] ], [ [[LSR_IV_NEXT10:%.*]], [[LOOP_6]] ]
+; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi i32 [ [[LSR_IV7_LCSSA]], [[LOOP_6_PREHEADER]] ], [ [[LSR_IV_NEXT10:%.*]], [[LOOP_6]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT10]] = add i32 [[LSR_IV9]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_135_PREHEADER:%.*]], label [[LOOP_6]]
 ; CHECK:       loop.135.preheader:
+; CHECK-NEXT:    [[LSR_IV9_LCSSA:%.*]] = phi i32 [ [[LSR_IV9]], [[LOOP_6]] ]
 ; CHECK-NEXT:    br label [[LOOP_135:%.*]]
 ; CHECK:       loop.135:
-; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi i32 [ [[LSR_IV9]], [[LOOP_135_PREHEADER]] ], [ [[LSR_IV_NEXT12:%.*]], [[LOOP_135]] ]
+; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi i32 [ [[LSR_IV9_LCSSA]], [[LOOP_135_PREHEADER]] ], [ [[LSR_IV_NEXT12:%.*]], [[LOOP_135]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT12]] = add i32 [[LSR_IV11]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_1_1_PREHEADER:%.*]], label [[LOOP_135]]
 ; CHECK:       loop.1.1.preheader:
+; CHECK-NEXT:    [[LSR_IV11_LCSSA:%.*]] = phi i32 [ [[LSR_IV11]], [[LOOP_135]] ]
 ; CHECK-NEXT:    br label [[LOOP_1_1:%.*]]
 ; CHECK:       loop.1.1:
-; CHECK-NEXT:    [[LSR_IV13:%.*]] = phi i32 [ [[LSR_IV11]], [[LOOP_1_1_PREHEADER]] ], [ [[LSR_IV_NEXT14:%.*]], [[LOOP_1_1]] ]
+; CHECK-NEXT:    [[LSR_IV13:%.*]] = phi i32 [ [[LSR_IV11_LCSSA]], [[LOOP_1_1_PREHEADER]] ], [ [[LSR_IV_NEXT14:%.*]], [[LOOP_1_1]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT14]] = add i32 [[LSR_IV13]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_2_1_PREHEADER:%.*]], label [[LOOP_1_1]]
 ; CHECK:       loop.2.1.preheader:
+; CHECK-NEXT:    [[LSR_IV13_LCSSA:%.*]] = phi i32 [ [[LSR_IV13]], [[LOOP_1_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_1:%.*]]
 ; CHECK:       loop.2.1:
-; CHECK-NEXT:    [[LSR_IV15:%.*]] = phi i32 [ [[LSR_IV13]], [[LOOP_2_1_PREHEADER]] ], [ [[LSR_IV_NEXT16:%.*]], [[LOOP_2_1]] ]
+; CHECK-NEXT:    [[LSR_IV15:%.*]] = phi i32 [ [[LSR_IV13_LCSSA]], [[LOOP_2_1_PREHEADER]] ], [ [[LSR_IV_NEXT16:%.*]], [[LOOP_2_1]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT16]] = add i32 [[LSR_IV15]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_3_1_PREHEADER:%.*]], label [[LOOP_2_1]]
 ; CHECK:       loop.3.1.preheader:
+; CHECK-NEXT:    [[LSR_IV15_LCSSA:%.*]] = phi i32 [ [[LSR_IV15]], [[LOOP_2_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_3_1:%.*]]
 ; CHECK:       loop.3.1:
-; CHECK-NEXT:    [[LSR_IV17:%.*]] = phi i32 [ [[LSR_IV15]], [[LOOP_3_1_PREHEADER]] ], [ [[LSR_IV_NEXT18:%.*]], [[LOOP_3_1]] ]
+; CHECK-NEXT:    [[LSR_IV17:%.*]] = phi i32 [ [[LSR_IV15_LCSSA]], [[LOOP_3_1_PREHEADER]] ], [ [[LSR_IV_NEXT18:%.*]], [[LOOP_3_1]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT18]] = add i32 [[LSR_IV17]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_4_1_PREHEADER:%.*]], label [[LOOP_3_1]]
 ; CHECK:       loop.4.1.preheader:
+; CHECK-NEXT:    [[LSR_IV17_LCSSA:%.*]] = phi i32 [ [[LSR_IV17]], [[LOOP_3_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_4_1:%.*]]
 ; CHECK:       loop.4.1:
-; CHECK-NEXT:    [[LSR_IV19:%.*]] = phi i32 [ [[LSR_IV17]], [[LOOP_4_1_PREHEADER]] ], [ [[LSR_IV_NEXT20:%.*]], [[LOOP_4_1]] ]
+; CHECK-NEXT:    [[LSR_IV19:%.*]] = phi i32 [ [[LSR_IV17_LCSSA]], [[LOOP_4_1_PREHEADER]] ], [ [[LSR_IV_NEXT20:%.*]], [[LOOP_4_1]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT20]] = add i32 [[LSR_IV19]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_5_1_PREHEADER:%.*]], label [[LOOP_4_1]]
 ; CHECK:       loop.5.1.preheader:
+; CHECK-NEXT:    [[LSR_IV19_LCSSA:%.*]] = phi i32 [ [[LSR_IV19]], [[LOOP_4_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_5_1:%.*]]
 ; CHECK:       loop.5.1:
-; CHECK-NEXT:    [[LSR_IV21:%.*]] = phi i32 [ [[LSR_IV19]], [[LOOP_5_1_PREHEADER]] ], [ [[LSR_IV_NEXT22:%.*]], [[LOOP_5_1]] ]
+; CHECK-NEXT:    [[LSR_IV21:%.*]] = phi i32 [ [[LSR_IV19_LCSSA]], [[LOOP_5_1_PREHEADER]] ], [ [[LSR_IV_NEXT22:%.*]], [[LOOP_5_1]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT22]] = add i32 [[LSR_IV21]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_6_1_PREHEADER:%.*]], label [[LOOP_5_1]]
 ; CHECK:       loop.6.1.preheader:
+; CHECK-NEXT:    [[LSR_IV21_LCSSA:%.*]] = phi i32 [ [[LSR_IV21]], [[LOOP_5_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_6_1:%.*]]
 ; CHECK:       loop.6.1:
-; CHECK-NEXT:    [[LSR_IV23:%.*]] = phi i32 [ [[LSR_IV21]], [[LOOP_6_1_PREHEADER]] ], [ [[LSR_IV_NEXT24:%.*]], [[LOOP_6_1]] ]
+; CHECK-NEXT:    [[LSR_IV23:%.*]] = phi i32 [ [[LSR_IV21_LCSSA]], [[LOOP_6_1_PREHEADER]] ], [ [[LSR_IV_NEXT24:%.*]], [[LOOP_6_1]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT24]] = add i32 [[LSR_IV23]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_241_PREHEADER:%.*]], label [[LOOP_6_1]]
 ; CHECK:       loop.241.preheader:
+; CHECK-NEXT:    [[LSR_IV23_LCSSA:%.*]] = phi i32 [ [[LSR_IV23]], [[LOOP_6_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_241:%.*]]
 ; CHECK:       loop.241:
-; CHECK-NEXT:    [[LSR_IV25:%.*]] = phi i32 [ [[LSR_IV23]], [[LOOP_241_PREHEADER]] ], [ [[LSR_IV_NEXT26:%.*]], [[LOOP_241]] ]
+; CHECK-NEXT:    [[LSR_IV25:%.*]] = phi i32 [ [[LSR_IV23_LCSSA]], [[LOOP_241_PREHEADER]] ], [ [[LSR_IV_NEXT26:%.*]], [[LOOP_241]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT26]] = add i32 [[LSR_IV25]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_1_2_PREHEADER:%.*]], label [[LOOP_241]]
 ; CHECK:       loop.1.2.preheader:
+; CHECK-NEXT:    [[LSR_IV25_LCSSA:%.*]] = phi i32 [ [[LSR_IV25]], [[LOOP_241]] ]
 ; CHECK-NEXT:    br label [[LOOP_1_2:%.*]]
 ; CHECK:       loop.1.2:
-; CHECK-NEXT:    [[LSR_IV27:%.*]] = phi i32 [ [[LSR_IV25]], [[LOOP_1_2_PREHEADER]] ], [ [[LSR_IV_NEXT28:%.*]], [[LOOP_1_2]] ]
+; CHECK-NEXT:    [[LSR_IV27:%.*]] = phi i32 [ [[LSR_IV25_LCSSA]], [[LOOP_1_2_PREHEADER]] ], [ [[LSR_IV_NEXT28:%.*]], [[LOOP_1_2]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT28]] = add i32 [[LSR_IV27]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_2_2_PREHEADER:%.*]], label [[LOOP_1_2]]
 ; CHECK:       loop.2.2.preheader:
+; CHECK-NEXT:    [[LSR_IV27_LCSSA:%.*]] = phi i32 [ [[LSR_IV27]], [[LOOP_1_2]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_2:%.*]]
 ; CHECK:       loop.2.2:
-; CHECK-NEXT:    [[LSR_IV29:%.*]] = phi i32 [ [[LSR_IV27]], [[LOOP_2_2_PREHEADER]] ], [ [[LSR_IV_NEXT30:%.*]], [[LOOP_2_2]] ]
+; CHECK-NEXT:    [[LSR_IV29:%.*]] = phi i32 [ [[LSR_IV27_LCSSA]], [[LOOP_2_2_PREHEADER]] ], [ [[LSR_IV_NEXT30:%.*]], [[LOOP_2_2]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT30]] = add i32 [[LSR_IV29]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_3_2_PREHEADER:%.*]], label [[LOOP_2_2]]
 ; CHECK:       loop.3.2.preheader:
+; CHECK-NEXT:    [[LSR_IV29_LCSSA:%.*]] = phi i32 [ [[LSR_IV29]], [[LOOP_2_2]] ]
 ; CHECK-NEXT:    br label [[LOOP_3_2:%.*]]
 ; CHECK:       loop.3.2:
-; CHECK-NEXT:    [[LSR_IV31:%.*]] = phi i32 [ [[LSR_IV29]], [[LOOP_3_2_PREHEADER]] ], [ [[LSR_IV_NEXT32:%.*]], [[LOOP_3_2]] ]
+; CHECK-NEXT:    [[LSR_IV31:%.*]] = phi i32 [ [[LSR_IV29_LCSSA]], [[LOOP_3_2_PREHEADER]] ], [ [[LSR_IV_NEXT32:%.*]], [[LOOP_3_2]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT32]] = add i32 [[LSR_IV31]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_4_2_PREHEADER:%.*]], label [[LOOP_3_2]]
 ; CHECK:       loop.4.2.preheader:
+; CHECK-NEXT:    [[LSR_IV31_LCSSA:%.*]] = phi i32 [ [[LSR_IV31]], [[LOOP_3_2]] ]
 ; CHECK-NEXT:    br label [[LOOP_4_2:%.*]]
 ; CHECK:       loop.4.2:
-; CHECK-NEXT:    [[LSR_IV33:%.*]] = phi i32 [ [[LSR_IV31]], [[LOOP_4_2_PREHEADER]] ], [ [[LSR_IV_NEXT34:%.*]], [[LOOP_4_2]] ]
+; CHECK-NEXT:    [[LSR_IV33:%.*]] = phi i32 [ [[LSR_IV31_LCSSA]], [[LOOP_4_2_PREHEADER]] ], [ [[LSR_IV_NEXT34:%.*]], [[LOOP_4_2]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT34]] = add i32 [[LSR_IV33]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_5_2_PREHEADER:%.*]], label [[LOOP_4_2]]
 ; CHECK:       loop.5.2.preheader:
+; CHECK-NEXT:    [[LSR_IV33_LCSSA:%.*]] = phi i32 [ [[LSR_IV33]], [[LOOP_4_2]] ]
 ; CHECK-NEXT:    br label [[LOOP_5_2:%.*]]
 ; CHECK:       loop.5.2:
-; CHECK-NEXT:    [[LSR_IV35:%.*]] = phi i32 [ [[LSR_IV33]], [[LOOP_5_2_PREHEADER]] ], [ [[LSR_IV_NEXT36:%.*]], [[LOOP_5_2]] ]
+; CHECK-NEXT:    [[LSR_IV35:%.*]] = phi i32 [ [[LSR_IV33_LCSSA]], [[LOOP_5_2_PREHEADER]] ], [ [[LSR_IV_NEXT36:%.*]], [[LOOP_5_2]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT36]] = add i32 [[LSR_IV35]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_6_2_PREHEADER:%.*]], label [[LOOP_5_2]]
 ; CHECK:       loop.6.2.preheader:
+; CHECK-NEXT:    [[LSR_IV35_LCSSA:%.*]] = phi i32 [ [[LSR_IV35]], [[LOOP_5_2]] ]
 ; CHECK-NEXT:    br label [[LOOP_6_2:%.*]]
 ; CHECK:       loop.6.2:
-; CHECK-NEXT:    [[LSR_IV37:%.*]] = phi i32 [ [[LSR_IV35]], [[LOOP_6_2_PREHEADER]] ], [ [[LSR_IV_NEXT38:%.*]], [[LOOP_6_2]] ]
+; CHECK-NEXT:    [[LSR_IV37:%.*]] = phi i32 [ [[LSR_IV35_LCSSA]], [[LOOP_6_2_PREHEADER]] ], [ [[LSR_IV_NEXT38:%.*]], [[LOOP_6_2]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT38]] = add i32 [[LSR_IV37]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_347_PREHEADER:%.*]], label [[LOOP_6_2]]
 ; CHECK:       loop.347.preheader:
+; CHECK-NEXT:    [[LSR_IV37_LCSSA:%.*]] = phi i32 [ [[LSR_IV37]], [[LOOP_6_2]] ]
 ; CHECK-NEXT:    br label [[LOOP_347:%.*]]
 ; CHECK:       loop.347:
-; CHECK-NEXT:    [[LSR_IV39:%.*]] = phi i32 [ [[LSR_IV37]], [[LOOP_347_PREHEADER]] ], [ [[LSR_IV_NEXT40:%.*]], [[LOOP_347]] ]
+; CHECK-NEXT:    [[LSR_IV39:%.*]] = phi i32 [ [[LSR_IV37_LCSSA]], [[LOOP_347_PREHEADER]] ], [ [[LSR_IV_NEXT40:%.*]], [[LOOP_347]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT40]] = add i32 [[LSR_IV39]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_1_3_PREHEADER:%.*]], label [[LOOP_347]]
 ; CHECK:       loop.1.3.preheader:
+; CHECK-NEXT:    [[LSR_IV39_LCSSA:%.*]] = phi i32 [ [[LSR_IV39]], [[LOOP_347]] ]
 ; CHECK-NEXT:    br label [[LOOP_1_3:%.*]]
 ; CHECK:       loop.1.3:
-; CHECK-NEXT:    [[LSR_IV41:%.*]] = phi i32 [ [[LSR_IV39]], [[LOOP_1_3_PREHEADER]] ], [ [[LSR_IV_NEXT42:%.*]], [[LOOP_1_3]] ]
+; CHECK-NEXT:    [[LSR_IV41:%.*]] = phi i32 [ [[LSR_IV39_LCSSA]], [[LOOP_1_3_PREHEADER]] ], [ [[LSR_IV_NEXT42:%.*]], [[LOOP_1_3]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT42]] = add i32 [[LSR_IV41]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_2_3_PREHEADER:%.*]], label [[LOOP_1_3]]
 ; CHECK:       loop.2.3.preheader:
+; CHECK-NEXT:    [[LSR_IV41_LCSSA:%.*]] = phi i32 [ [[LSR_IV41]], [[LOOP_1_3]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_3:%.*]]
 ; CHECK:       loop.2.3:
-; CHECK-NEXT:    [[LSR_IV43:%.*]] = phi i32 [ [[LSR_IV41]], [[LOOP_2_3_PREHEADER]] ], [ [[LSR_IV_NEXT44:%.*]], [[LOOP_2_3]] ]
+; CHECK-NEXT:    [[LSR_IV43:%.*]] = phi i32 [ [[LSR_IV41_LCSSA]], [[LOOP_2_3_PREHEADER]] ], [ [[LSR_IV_NEXT44:%.*]], [[LOOP_2_3]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT44]] = add i32 [[LSR_IV43]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_3_3_PREHEADER:%.*]], label [[LOOP_2_3]]
 ; CHECK:       loop.3.3.preheader:
+; CHECK-NEXT:    [[LSR_IV43_LCSSA:%.*]] = phi i32 [ [[LSR_IV43]], [[LOOP_2_3]] ]
 ; CHECK-NEXT:    br label [[LOOP_3_3:%.*]]
 ; CHECK:       loop.3.3:
-; CHECK-NEXT:    [[LSR_IV45:%.*]] = phi i32 [ [[LSR_IV43]], [[LOOP_3_3_PREHEADER]] ], [ [[LSR_IV_NEXT46:%.*]], [[LOOP_3_3]] ]
+; CHECK-NEXT:    [[LSR_IV45:%.*]] = phi i32 [ [[LSR_IV43_LCSSA]], [[LOOP_3_3_PREHEADER]] ], [ [[LSR_IV_NEXT46:%.*]], [[LOOP_3_3]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT46]] = add i32 [[LSR_IV45]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_4_3_PREHEADER:%.*]], label [[LOOP_3_3]]
 ; CHECK:       loop.4.3.preheader:
+; CHECK-NEXT:    [[LSR_IV45_LCSSA:%.*]] = phi i32 [ [[LSR_IV45]], [[LOOP_3_3]] ]
 ; CHECK-NEXT:    br label [[LOOP_4_3:%.*]]
 ; CHECK:       loop.4.3:
-; CHECK-NEXT:    [[LSR_IV47:%.*]] = phi i32 [ [[LSR_IV45]], [[LOOP_4_3_PREHEADER]] ], [ [[LSR_IV_NEXT48:%.*]], [[LOOP_4_3]] ]
+; CHECK-NEXT:    [[LSR_IV47:%.*]] = phi i32 [ [[LSR_IV45_LCSSA]], [[LOOP_4_3_PREHEADER]] ], [ [[LSR_IV_NEXT48:%.*]], [[LOOP_4_3]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT48]] = add i32 [[LSR_IV47]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_5_3_PREHEADER:%.*]], label [[LOOP_4_3]]
 ; CHECK:       loop.5.3.preheader:
+; CHECK-NEXT:    [[LSR_IV47_LCSSA:%.*]] = phi i32 [ [[LSR_IV47]], [[LOOP_4_3]] ]
 ; CHECK-NEXT:    br label [[LOOP_5_3:%.*]]
 ; CHECK:       loop.5.3:
-; CHECK-NEXT:    [[LSR_IV49:%.*]] = phi i32 [ [[LSR_IV47]], [[LOOP_5_3_PREHEADER]] ], [ [[LSR_IV_NEXT50:%.*]], [[LOOP_5_3]] ]
+; CHECK-NEXT:    [[LSR_IV49:%.*]] = phi i32 [ [[LSR_IV47_LCSSA]], [[LOOP_5_3_PREHEADER]] ], [ [[LSR_IV_NEXT50:%.*]], [[LOOP_5_3]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT50]] = add i32 [[LSR_IV49]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_6_3_PREHEADER:%.*]], label [[LOOP_5_3]]
 ; CHECK:       loop.6.3.preheader:
+; CHECK-NEXT:    [[LSR_IV49_LCSSA:%.*]] = phi i32 [ [[LSR_IV49]], [[LOOP_5_3]] ]
 ; CHECK-NEXT:    br label [[LOOP_6_3:%.*]]
 ; CHECK:       loop.6.3:
-; CHECK-NEXT:    [[LSR_IV51:%.*]] = phi i32 [ [[LSR_IV49]], [[LOOP_6_3_PREHEADER]] ], [ [[LSR_IV_NEXT52:%.*]], [[LOOP_6_3]] ]
+; CHECK-NEXT:    [[LSR_IV51:%.*]] = phi i32 [ [[LSR_IV49_LCSSA]], [[LOOP_6_3_PREHEADER]] ], [ [[LSR_IV_NEXT52:%.*]], [[LOOP_6_3]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT52]] = add i32 [[LSR_IV51]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_453_PREHEADER:%.*]], label [[LOOP_6_3]]
 ; CHECK:       loop.453.preheader:
+; CHECK-NEXT:    [[LSR_IV51_LCSSA:%.*]] = phi i32 [ [[LSR_IV51]], [[LOOP_6_3]] ]
 ; CHECK-NEXT:    br label [[LOOP_453:%.*]]
 ; CHECK:       loop.453:
-; CHECK-NEXT:    [[LSR_IV53:%.*]] = phi i32 [ [[LSR_IV51]], [[LOOP_453_PREHEADER]] ], [ [[LSR_IV_NEXT54:%.*]], [[LOOP_453]] ]
+; CHECK-NEXT:    [[LSR_IV53:%.*]] = phi i32 [ [[LSR_IV51_LCSSA]], [[LOOP_453_PREHEADER]] ], [ [[LSR_IV_NEXT54:%.*]], [[LOOP_453]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT54]] = add i32 [[LSR_IV53]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_1_4_PREHEADER:%.*]], label [[LOOP_453]]
 ; CHECK:       loop.1.4.preheader:
+; CHECK-NEXT:    [[LSR_IV53_LCSSA:%.*]] = phi i32 [ [[LSR_IV53]], [[LOOP_453]] ]
 ; CHECK-NEXT:    br label [[LOOP_1_4:%.*]]
 ; CHECK:       loop.1.4:
-; CHECK-NEXT:    [[LSR_IV55:%.*]] = phi i32 [ [[LSR_IV53]], [[LOOP_1_4_PREHEADER]] ], [ [[LSR_IV_NEXT56:%.*]], [[LOOP_1_4]] ]
+; CHECK-NEXT:    [[LSR_IV55:%.*]] = phi i32 [ [[LSR_IV53_LCSSA]], [[LOOP_1_4_PREHEADER]] ], [ [[LSR_IV_NEXT56:%.*]], [[LOOP_1_4]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT56]] = add i32 [[LSR_IV55]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_2_4_PREHEADER:%.*]], label [[LOOP_1_4]]
 ; CHECK:       loop.2.4.preheader:
+; CHECK-NEXT:    [[LSR_IV55_LCSSA:%.*]] = phi i32 [ [[LSR_IV55]], [[LOOP_1_4]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_4:%.*]]
 ; CHECK:       loop.2.4:
-; CHECK-NEXT:    [[LSR_IV57:%.*]] = phi i32 [ [[LSR_IV55]], [[LOOP_2_4_PREHEADER]] ], [ [[LSR_IV_NEXT58:%.*]], [[LOOP_2_4]] ]
+; CHECK-NEXT:    [[LSR_IV57:%.*]] = phi i32 [ [[LSR_IV55_LCSSA]], [[LOOP_2_4_PREHEADER]] ], [ [[LSR_IV_NEXT58:%.*]], [[LOOP_2_4]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT58]] = add i32 [[LSR_IV57]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_3_4_PREHEADER:%.*]], label [[LOOP_2_4]]
 ; CHECK:       loop.3.4.preheader:
+; CHECK-NEXT:    [[LSR_IV57_LCSSA:%.*]] = phi i32 [ [[LSR_IV57]], [[LOOP_2_4]] ]
 ; CHECK-NEXT:    br label [[LOOP_3_4:%.*]]
 ; CHECK:       loop.3.4:
-; CHECK-NEXT:    [[LSR_IV59:%.*]] = phi i32 [ [[LSR_IV57]], [[LOOP_3_4_PREHEADER]] ], [ [[LSR_IV_NEXT60:%.*]], [[LOOP_3_4]] ]
+; CHECK-NEXT:    [[LSR_IV59:%.*]] = phi i32 [ [[LSR_IV57_LCSSA]], [[LOOP_3_4_PREHEADER]] ], [ [[LSR_IV_NEXT60:%.*]], [[LOOP_3_4]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT60]] = add i32 [[LSR_IV59]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_4_4_PREHEADER:%.*]], label [[LOOP_3_4]]
 ; CHECK:       loop.4.4.preheader:
+; CHECK-NEXT:    [[LSR_IV59_LCSSA:%.*]] = phi i32 [ [[LSR_IV59]], [[LOOP_3_4]] ]
 ; CHECK-NEXT:    br label [[LOOP_4_4:%.*]]
 ; CHECK:       loop.4.4:
-; CHECK-NEXT:    [[LSR_IV61:%.*]] = phi i32 [ [[LSR_IV59]], [[LOOP_4_4_PREHEADER]] ], [ [[LSR_IV_NEXT62:%.*]], [[LOOP_4_4]] ]
+; CHECK-NEXT:    [[LSR_IV61:%.*]] = phi i32 [ [[LSR_IV59_LCSSA]], [[LOOP_4_4_PREHEADER]] ], [ [[LSR_IV_NEXT62:%.*]], [[LOOP_4_4]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT62]] = add i32 [[LSR_IV61]], -1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_5_4_PREHEADER:%.*]], label [[LOOP_4_4]]
 ; CHECK:       loop.5.4.preheader:
+; CHECK-NEXT:    [[LSR_IV61_LCSSA:%.*]] = phi i32 [ [[LSR_IV61]], [[LOOP_4_4]] ]
 ; CHECK-NEXT:    br label [[LOOP_5_4:%.*]]
 ; CHECK:       loop.5.4:
-; CHECK-NEXT:    [[LSR_IV63:%.*]] = phi i32 [ [[LSR_IV61]], [[LOOP_5_4_PREHEADER]] ], [ [[LSR_IV_NEXT64:%.*]], [[LOOP_5_4]] ]
+; CHECK-NEXT:    [[LSR_IV63:%.*]] = phi i32 [ [[LSR_IV61_LCSSA]], [[LOOP_5_4_PREHEADER]] ], [ [[LSR_IV_NEXT64:%.*]], [[LOOP_5_4]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT64]] = add i32 [[LSR_IV63]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP_6_4_PREHEADER:%.*]], label [[LOOP_5_4]]
 ; CHECK:       loop.6.4.preheader:
+; CHECK-NEXT:    [[LSR_IV63_LCSSA:%.*]] = phi i32 [ [[LSR_IV63]], [[LOOP_5_4]] ]
 ; CHECK-NEXT:    br label [[LOOP_6_4:%.*]]
 ; CHECK:       loop.6.4:
-; CHECK-NEXT:    [[LSR_IV65:%.*]] = phi i32 [ [[LSR_IV63]], [[LOOP_6_4_PREHEADER]] ], [ [[LSR_IV_NEXT66]], [[LOOP_6_4]] ]
+; CHECK-NEXT:    [[LSR_IV65:%.*]] = phi i32 [ [[LSR_IV63_LCSSA]], [[LOOP_6_4_PREHEADER]] ], [ [[LSR_IV_NEXT66]], [[LOOP_6_4]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT66]] = add i32 [[LSR_IV65]], 1
 ; CHECK-NEXT:    br label [[LOOP_6_4]]
 ;

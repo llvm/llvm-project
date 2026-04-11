@@ -17,7 +17,7 @@ define void @overflow1(i64 %a) {
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB1]], label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[LSR_IV_NEXT]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = and i64 -9223372036854775808, 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 0
 ; CHECK-NEXT:    unreachable
 ;
