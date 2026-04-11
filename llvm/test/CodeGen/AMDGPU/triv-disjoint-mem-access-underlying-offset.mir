@@ -1,0 +1,43 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -enable-misched -run-pass=machine-scheduler -o - -debug-only=machine-scheduler %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Make sure DS accesses with different MachineOperand bases but the same
+# underlying LDS object are treated as trivially disjoint after accounting for
+# the constant offsets recovered from the MachineMemOperands.
+
+# CHECK:      SU(4):   %3:vreg_128 = DS_READ_B128_gfx9 %1:vgpr_32, 0, 0, implicit $exec :: (load (s128) from %ir.load.ptr, addrspace 3)
+# CHECK:      Predecessors:
+# CHECK-NEXT: SU(1): Out  Latency=1
+# CHECK-NEXT: SU(1): Data Latency=1 Reg=%1
+# CHECK-NOT:  SU(3): Ord
+
+--- |
+  @lds = internal addrspace(3) global [8192 x i32] undef, align 16
+  declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+
+  define amdgpu_kernel void @test() {
+  entry:
+    %tid = call i32 @llvm.amdgcn.workitem.id.x()
+    %tid.copy = add i32 %tid, 0
+    %store.base = getelementptr [8192 x i32], ptr addrspace(3) @lds, i32 0, i32 %tid
+    %load.base = getelementptr [8192 x i32], ptr addrspace(3) @lds, i32 0, i32 %tid.copy
+    %store.ptr = getelementptr i32, ptr addrspace(3) %store.base, i32 4096
+    %load.ptr = getelementptr i32, ptr addrspace(3) %load.base, i32 4352
+    ret void
+  }
+
+...
+---
+name: test
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $vgpr0
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %2:vreg_128 = IMPLICIT_DEF
+    DS_WRITE_B128_gfx9 %0, %2, 0, 0, implicit $exec :: (store (s128) into %ir.store.ptr, addrspace 3)
+    %3:vreg_128 = DS_READ_B128_gfx9 %1, 0, 0, implicit $exec :: (load (s128) from %ir.load.ptr, addrspace 3)
+    S_ENDPGM 0
+...

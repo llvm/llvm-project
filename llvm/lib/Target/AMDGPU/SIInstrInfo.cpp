@@ -533,6 +533,51 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   return false;
 }
 
+static bool getBasePtrAndOffset(const MachineInstr &MI,
+                                const MachineMemOperand &MMO,
+                                const Value *&Base,
+                                int64_t &Offset) {
+  Offset = MMO.getOffset();
+  Base = nullptr;
+
+  const Value *V = MMO.getValue();
+  if (!V)
+    return false;
+
+  Base = GetPointerBaseWithConstantOffset(V, Offset, MI.getMF()->getDataLayout(),
+                                          /*AllowNonInbounds=*/true);
+  if (!Base)
+    return false;
+
+  Base = getUnderlyingObject(Base);
+  return !isa<UndefValue>(Base);
+}
+
+static bool memOperandsHaveSameBasePtr(const MachineInstr &MI1,
+                                       const MachineMemOperand &MMO1,
+                                       const MachineInstr &MI2,
+                                       const MachineMemOperand &MMO2,
+                                       int64_t *Offset1,
+                                       int64_t *Offset2) {
+  if (MMO1.getAddrSpace() != MMO2.getAddrSpace())
+    return false;
+
+  const Value *Base1 = nullptr;
+  const Value *Base2 = nullptr;
+  int64_t BaseOffset1 = 0;
+  int64_t BaseOffset2 = 0;
+  if (!getBasePtrAndOffset(MI1, MMO1, Base1, BaseOffset1) ||
+      !getBasePtrAndOffset(MI2, MMO2, Base2, BaseOffset2))
+    return false;
+
+  if (Base1 != Base2)
+    return false;
+
+  *Offset1 = BaseOffset1;
+  *Offset2 = BaseOffset2;
+  return true;
+}
+
 static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
                                   ArrayRef<const MachineOperand *> BaseOps1,
                                   const MachineInstr &MI2,
@@ -4033,13 +4078,43 @@ memOpsHaveSameBaseOperands(ArrayRef<const MachineOperand *> BaseOps1,
   return true;
 }
 
-static bool offsetsDoNotOverlap(LocationSize WidthA, int OffsetA,
-                                LocationSize WidthB, int OffsetB) {
-  int LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
-  int HighOffset = OffsetA < OffsetB ? OffsetB : OffsetA;
+static bool offsetsDoNotOverlap(LocationSize WidthA, int64_t OffsetA,
+                                LocationSize WidthB, int64_t OffsetB) {
+  int64_t LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
+  int64_t HighOffset = OffsetA < OffsetB ? OffsetB : OffsetA;
   LocationSize LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
   return LowWidth.hasValue() &&
-         LowOffset + (int)LowWidth.getValue() <= HighOffset;
+         LowOffset + static_cast<int64_t>(LowWidth.getValue()) <= HighOffset;
+}
+
+static const MachineMemOperand *getLDSMemOperand(const MachineInstr &MI) {
+  // Return the single LDS MachineMemOperand. Zero or multiple LDS operands are
+  // ambiguous for this disambiguation, so handle them conservatively.
+  const MachineMemOperand *LDSMMO = nullptr;
+  for (const MachineMemOperand *MMO : MI.memoperands()) {
+    if (MMO->getAddrSpace() != AMDGPUAS::LOCAL_ADDRESS)
+      continue;
+    if (LDSMMO)
+      return nullptr;
+    LDSMMO = MMO;
+  }
+  return LDSMMO;
+}
+
+static bool checkLDSMemOpsDoNotOverlap(const MachineInstr &MIa,
+                                       const MachineInstr &MIb) {
+  const MachineMemOperand *MMO0 = getLDSMemOperand(MIa);
+  const MachineMemOperand *MMO1 = getLDSMemOperand(MIb);
+  if (!MMO0 || !MMO1)
+    return false;
+
+  int64_t Offset0 = 0;
+  int64_t Offset1 = 0;
+  if (!memOperandsHaveSameBasePtr(MIa, *MMO0, MIb, *MMO1, &Offset0, &Offset1))
+    return false;
+
+  return offsetsDoNotOverlap(MMO0->getSize(), Offset0, MMO1->getSize(),
+                             Offset1);
 }
 
 bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
@@ -4055,15 +4130,26 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
                                      Dummy1, &RI))
     return false;
 
-  if (!memOpsHaveSameBaseOperands(BaseOps0, BaseOps1))
-    return false;
-
   if (!MIa.hasOneMemOperand() || !MIb.hasOneMemOperand()) {
     // FIXME: Handle ds_read2 / ds_write2.
     return false;
   }
-  LocationSize Width0 = MIa.memoperands().front()->getSize();
-  LocationSize Width1 = MIb.memoperands().front()->getSize();
+
+  auto *MMO0 = MIa.memoperands().front();
+  auto *MMO1 = MIb.memoperands().front();
+  LocationSize Width0 = MMO0->getSize();
+  LocationSize Width1 = MMO1->getSize();
+
+  if (!memOpsHaveSameBaseOperands(BaseOps0, BaseOps1)) {
+    int64_t BaseOffset0 = 0;
+    int64_t BaseOffset1 = 0;
+    if (!memOperandsHaveSameBasePtr(MIa, *MMO0, MIb, *MMO1, &BaseOffset0,
+                                    &BaseOffset1))
+      return false;
+    Offset0 += BaseOffset0;
+    Offset1 += BaseOffset1;
+  }
+
   return offsetsDoNotOverlap(Width0, Offset0, Width1, Offset1);
 }
 
@@ -4081,8 +4167,11 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
-  if (isLDSDMA(MIa) || isLDSDMA(MIb))
+  if (isLDSDMA(MIa) || isLDSDMA(MIb)) {
+    if ((isDS(MIa) && isLDSDMA(MIb)) || (isLDSDMA(MIa) && isDS(MIb)))
+      return checkLDSMemOpsDoNotOverlap(MIa, MIb);
     return false;
+  }
 
   if (MIa.isBundle() || MIb.isBundle())
     return false;
