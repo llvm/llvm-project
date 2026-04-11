@@ -59402,6 +59402,31 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   if (SDValue IFMA52 = matchVPMADD52(N, DAG, DL, VT, Subtarget))
     return IFMA52;
 
+  // If upper 33 bits of operands are 0, truncates opcode from i64 to i32.
+  if (VT == MVT::i64) {
+    APInt mask = APInt::getHighBitsSet(64, 33);
+    if (DAG.MaskedValueIsZero(Op0, mask) && DAG.MaskedValueIsZero(Op1, mask)) {
+      // Truncate operands  MVT::i64 -> MVT::i32
+      SDValue X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op0);
+      SDValue Y = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
+
+      // now check for NUW and NSW
+      SDNodeFlags flags;
+      // No unsigned wrap, both operands has their upper 33bits 0, making their
+      // sum lower then max unsigned int32.
+      flags.setNoUnsignedWrap(true);
+      // Now check id node had NSW set true or false.
+      bool isNSW = N->getFlags().hasNoSignedWrap();
+
+      // Verify if new nodes has NSW.
+      isNSW = isNSW & DAG.willNotOverflowAdd(true, X, Y);
+      flags.setNoSignedWrap(isNSW);
+      auto addl = DAG.getNode(ISD::ADD, DL, MVT::i32, X, Y, flags);
+
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, addl);
+    }
+  }
+
   return combineAddOrSubToADCOrSBB(N, DL, DAG);
 }
 
