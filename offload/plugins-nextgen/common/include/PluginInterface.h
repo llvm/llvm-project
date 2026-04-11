@@ -462,7 +462,8 @@ private:
               ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
               llvm::SmallVectorImpl<void *> &Args,
               llvm::SmallVectorImpl<void *> &Ptrs,
-              KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
+              KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
+              uint32_t Version) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
@@ -993,6 +994,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error syncEvent(void *EventPtr);
   virtual Error syncEventImpl(void *EventPtr) = 0;
 
+  /// Get the elapsed time in milliseconds between two events.
+  Expected<float> getEventElapsedTime(void *StartEventPtr, void *EndEventPtr);
+  virtual Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                                  void *EndEventPtr) = 0;
+
   /// Obtain information about the device.
   Expected<InfoTreeNode> obtainInfo();
   virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
@@ -1358,6 +1364,15 @@ struct GenericPluginTy {
     return *RPCServer;
   }
 
+  /// Initialize the RPC doorbell if used by the target.
+  virtual Error initRPCDoorbell(uint64_t *&Value, uint64_t *&Mailbox,
+                                uint32_t &EventID) {
+    return Plugin::success();
+  }
+
+  /// Tear down any target-specific doorbell resources.
+  virtual Error deinitRPCDoorbell() { return Plugin::success(); }
+
   /// Get a reference to the record and replay interface for the plugin.
   RecordReplayTy &getRecordReplay() {
     assert(RecordReplay && "RR interface not initialized");
@@ -1541,6 +1556,10 @@ public:
 
   /// Synchronize execution until an event is done.
   int32_t sync_event(int32_t DeviceId, void *EventPtr);
+
+  /// Get the elapsed time in milliseconds between two events.
+  int32_t get_event_elapsed_time(int32_t DeviceId, void *StartEventPtr,
+                                 void *EndEventPtr, float *ElapsedTime);
 
   /// Remove the event from the plugin.
   int32_t destroy_event(int32_t DeviceId, void *EventPtr);

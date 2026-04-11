@@ -388,14 +388,14 @@ protected:
             new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
     } else if (!new_exec_module_sp) {
-      result.AppendWarningWithFormat("No executable binary.");
+      result.AppendWarning("no executable binary");
     } else if (old_exec_module_sp->GetFileSpec() !=
                new_exec_module_sp->GetFileSpec()) {
 
-      result.AppendWarningWithFormat(
-          "Executable binary changed from \"%s\" to \"%s\".\n",
-          old_exec_module_sp->GetFileSpec().GetPath().c_str(),
-          new_exec_module_sp->GetFileSpec().GetPath().c_str());
+      result.AppendWarningWithFormatv(
+          "executable binary changed from \"{0}\" to \"{1}\"",
+          old_exec_module_sp->GetFileSpec().GetPath(),
+          new_exec_module_sp->GetFileSpec().GetPath());
     }
 
     if (!old_arch_spec.IsValid()) {
@@ -403,10 +403,10 @@ protected:
           "Architecture set to: {0}.",
           target->GetArchitecture().GetTriple().getTriple().c_str());
     } else if (!old_arch_spec.IsExactMatch(target->GetArchitecture())) {
-      result.AppendWarningWithFormat(
-          "Architecture changed from %s to %s.\n",
-          old_arch_spec.GetTriple().getTriple().c_str(),
-          target->GetArchitecture().GetTriple().getTriple().c_str());
+      result.AppendWarningWithFormatv(
+          "architecture changed from {0} to {1}",
+          old_arch_spec.GetTriple().getTriple(),
+          target->GetArchitecture().GetTriple().getTriple());
     }
 
     // This supports the use-case scenario of immediately continuing the
@@ -1057,8 +1057,8 @@ protected:
       }
 
       if (image_token != LLDB_INVALID_IMAGE_TOKEN) {
-        result.AppendMessageWithFormat(
-            "Loading \"%s\"...ok\nImage %u loaded.\n", image_path.str().c_str(),
+        result.AppendMessageWithFormatv(
+            "Loading \"{0}\"...ok\nImage {1} loaded.", image_path.str().c_str(),
             image_token);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
@@ -1362,7 +1362,7 @@ protected:
                   SaveCoreStyle::eSaveCoreDirtyOnly ||
               core_dump_options.GetStyle() ==
                   SaveCoreStyle::eSaveCoreStackOnly) {
-            result.AppendMessageWithFormat(
+            result.AppendMessage(
                 "\nModified-memory or stack-memory only corefile "
                 "created.  This corefile may \n"
                 "not show library/framework/app binaries "
@@ -1370,7 +1370,7 @@ protected:
                 "those binaries have "
                 "been updated/modified. Copies are not included\n"
                 "in this corefile.  Use --style full to include all "
-                "process memory.\n");
+                "process memory.");
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {

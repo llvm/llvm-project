@@ -160,6 +160,8 @@ llvm::Error MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
   return llvm::Error::success();
 }
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int SSAFMockSerializationFormatAnchorSource = 0;
 static SerializationFormatRegistry::Add<MockSerializationFormat>
     RegisterFormat("MockSerializationFormat",
                    "A serialization format for testing");
@@ -196,4 +198,14 @@ llvm::Error MockSerializationFormat::writeLUSummaryEncoding(
     const LUSummaryEncoding &SummaryEncoding, llvm::StringRef Path) {
   llvm_unreachable(
       "MockSerializationFormat does not support LUSummaryEncoding");
+}
+
+llvm::Expected<WPASuite>
+MockSerializationFormat::readWPASuite(llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support WPASuite");
+}
+
+llvm::Error MockSerializationFormat::writeWPASuite(const WPASuite &Suite,
+                                                   llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support WPASuite");
 }

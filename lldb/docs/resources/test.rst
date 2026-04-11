@@ -605,9 +605,9 @@ Running the Test Suite Remotely
    parameters of ``dotest.py``. These parameters are passed on to the ``platform select``
    and ``platform connect`` LLDB commands when the tests are run.
 
-   You will usually need to specify the compiler and architecture for the
+   You will usually need to specify the compiler and target triple for the
    remote system. This is done with CMake options ``LLDB_TEST_COMPILER`` and
-   ``LLDB_TEST_ARCH``, or the ``dotest.py`` options ``--compiler`` and ``--arch``.
+   ``LLDB_TEST_TRIPLE``, or the ``dotest.py`` options ``--compiler`` and ``--triple``.
 
    .. note::
       Even in cases where the two systems are the same architecture and run the
@@ -619,11 +619,11 @@ Running the Test Suite Remotely
 
    ::
 
-      ./bin/lldb-dotest --platform-name remote-linux --arch aarch64 --compiler aarch64-none-linux-gnu-gcc --platform-url connect://<remote-ip>:<port A> --platform-working-dir /tmp/test_lldb -p <test-name>.py
+      ./bin/lldb-dotest --platform-name remote-linux --triple aarch64-unknown-linux-gnu --compiler aarch64-none-linux-gnu-gcc --platform-url connect://<remote-ip>:<port A> --platform-working-dir /tmp/test_lldb -p <test-name>.py
 
    This is the equivalent of:
 
-      * ``LLDB_TEST_ARCH`` = ``aarch64``
+      * ``LLDB_TEST_TRIPLE`` = ``aarch64-unknown-linux-gnu``
       * ``LLDB_TEST_COMPILER`` = ``aarch64-none-linux-gnu-gcc``
       * ``LLDB_TEST_PLATFORM_URL`` = ``connect://<remote-ip>:<port A>``
       * ``LLDB_TEST_PLATFORM_WORKING_DIR`` = ``/tmp/test_lldb``

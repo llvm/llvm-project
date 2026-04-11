@@ -108,8 +108,10 @@ llvm.func @mbarrier_arrive_ignore_retval(%count : i32, %barrier: !llvm.ptr<3>) {
   // CHECK-NEXT: %4 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %1, i32 %0)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
+  // Result silently discarded (backward compatible form)
   nvvm.mbarrier.arrive %barrier, %count : !llvm.ptr<3>
-  nvvm.mbarrier.arrive %barrier, %count : !llvm.ptr<3>
+  // Result explicitly captured
+  %0 = nvvm.mbarrier.arrive %barrier, %count : !llvm.ptr<3> -> i64
 
   llvm.return
 }

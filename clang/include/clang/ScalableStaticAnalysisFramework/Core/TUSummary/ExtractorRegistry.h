@@ -9,8 +9,17 @@
 // Registry for TUSummaryExtractors, and some helper functions.
 // To register some custom extractor, insert this code:
 //
+//   // NOLINTNEXTLINE(misc-use-internal-linkage)
+//   volatile int SSAFMyExtractorAnchorSource = 0;
 //   static TUSummaryExtractorRegistry::Add<MyExtractor>
 //     X("MyExtractor", "My awesome extractor");
+//
+// Finally, insert a use of the new anchor symbol into the force-linker header:
+// clang/include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h:
+//
+//   extern volatile int SSAFMyExtractorAnchorSource;
+//   [[maybe_unused]] static int SSAFMyExtractorAnchorDestination =
+//       SSAFMyExtractorAnchorSource;
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,6 +30,7 @@
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::ssaf {
 
@@ -34,15 +44,15 @@ bool isTUSummaryExtractorRegistered(llvm::StringRef SummaryName);
 std::unique_ptr<ASTConsumer> makeTUSummaryExtractor(llvm::StringRef SummaryName,
                                                     TUSummaryBuilder &Builder);
 
+/// Print the list of available TUSummaryExtractors.
+void printAvailableTUSummaryExtractors(llvm::raw_ostream &OS);
+
 // Registry for adding new TUSummaryExtractor implementations.
 using TUSummaryExtractorRegistry =
     llvm::Registry<TUSummaryExtractor, TUSummaryBuilder &>;
 
 } // namespace clang::ssaf
 
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::TUSummaryExtractor, clang::ssaf::TUSummaryBuilder &>;
-} // namespace llvm
+LLVM_DECLARE_REGISTRY(clang::ssaf::TUSummaryExtractorRegistry)
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_TUSUMMARY_EXTRACTORREGISTRY_H

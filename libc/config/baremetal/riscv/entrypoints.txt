@@ -144,6 +144,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
     libc.src.stdio.sscanf
+    libc.src.stdio.stderr
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
     libc.src.stdio.vasprintf
     libc.src.stdio.vfprintf
     libc.src.stdio.vfscanf
@@ -305,6 +308,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
     libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
+    libc.src.wctype.iswprint
 
     # internal entrypoints
     libc.startup.baremetal.init
@@ -350,6 +355,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acospif
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
@@ -599,6 +605,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.acoshf16
     libc.src.math.asinf16
     libc.src.math.asinhf16
+    libc.src.math.atan2f16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
@@ -659,6 +666,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.log10f16
     libc.src.math.log10p1f16
     libc.src.math.log2f16
+    libc.src.math.log2p1f16
     libc.src.math.logbf16
     libc.src.math.logf16
     libc.src.math.lrintf16
@@ -789,6 +797,8 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl

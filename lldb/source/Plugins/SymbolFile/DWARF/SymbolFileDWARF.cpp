@@ -666,7 +666,7 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
           if (section && section->GetFileSize() == 1) {
             m_objfile_sp->GetModule()->ReportWarning(
                 "empty dSYM file detected, dSYM was created with an "
-                "executable with no debug info.");
+                "executable with no debug info");
           }
         }
       }
@@ -1619,7 +1619,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
         log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
         def_die.GetID(), DW_TAG_value_to_name(def_die.Tag()), def_die.Tag(),
-        type->GetName().AsCString());
+        type->GetName().GetStringRef());
   assert(compiler_type);
   return dwarf_ast->CompleteTypeFromDWARF(def_die, type, compiler_type);
 }
@@ -1924,7 +1924,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
           "unable to locate separate debug file (dwo, dwp). Debugging will be "
-          "degraded.");
+          "degraded");
     }
     return nullptr;
   }
@@ -2021,9 +2021,9 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
       GetObjectFile()->GetModule()->ReportWarning(
           "{0}", error.AsCString("unknown error"));
       GetObjectFile()->GetModule()->ReportWarning(
-          "Unable to locate module needed for external types.\n"
+          "unable to locate module needed for external types.\n"
           "Debugging will be degraded due to missing types. Rebuilding the "
-          "project will regenerate the needed module files.");
+          "project will regenerate the needed module files");
       continue;
     }
 
@@ -2043,10 +2043,10 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
     if (dwo_id != dwo_dwo_id) {
       GetObjectFile()->GetModule()->ReportWarning(
-          "Module {0} is out-of-date (hash mismatch).\n"
+          "module {0} is out-of-date (hash mismatch).\n"
           "Type information from this module may be incomplete or inconsistent "
           "with the rest of the program. Rebuilding the project will "
-          "regenerate the needed module files.",
+          "regenerate the needed module files",
           dwo_module_spec.GetFileSpec().GetPath());
     }
   }
@@ -2227,7 +2227,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
         } else {
           GetObjectFile()->GetModule()->ReportWarning(
               "{0:x16}: compile unit {1} failed to create a valid "
-              "lldb_private::CompileUnit class.",
+              "lldb_private::CompileUnit class",
               cu_offset, cu_idx);
         }
       }

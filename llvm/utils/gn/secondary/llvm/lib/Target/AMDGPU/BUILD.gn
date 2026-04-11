@@ -140,6 +140,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUAttributor.cpp",
     "AMDGPUBarrierLatency.cpp",
     "AMDGPUCallLowering.cpp",
+    "AMDGPUCoExecSchedStrategy.cpp",
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUCombinerHelper.cpp",
     "AMDGPUCtorDtorLowering.cpp",
@@ -172,7 +173,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMCInstLower.cpp",
     "AMDGPUMCResourceInfo.cpp",
     "AMDGPUMIRFormatter.cpp",
-    "AMDGPUMachineFunction.cpp",
+    "AMDGPUMachineFunctionInfo.cpp",
     "AMDGPUMachineModuleInfo.cpp",
     "AMDGPUMacroFusion.cpp",
     "AMDGPUMarkLastScratchLoad.cpp",
@@ -209,6 +210,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUUniformIntrinsicCombine.cpp",
     "AMDGPUUnifyDivergentExitNodes.cpp",
     "AMDGPUWaitSGPRHazards.cpp",
+    "AMDGPUWaitcntUtils.cpp",
     "GCNCreateVOPD.cpp",
     "GCNDPPCombine.cpp",
     "GCNHazardRecognizer.cpp",
@@ -274,6 +276,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIProgramInfo.cpp",
     "SIRegisterInfo.cpp",
     "SIShrinkInstructions.cpp",
+    "SISpillUtils.cpp",
     "SIWholeQuadMode.cpp",
   ]
 }

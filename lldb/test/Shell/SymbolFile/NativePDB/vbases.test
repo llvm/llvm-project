@@ -4,11 +4,11 @@
 
 # RUN: split-file %s %t
 
-# RUN: %clang_cl --target=x86_64-windows-msvc -Z7 -c /Fo%t.cv.obj -- %t/main.cpp
-# RUN: %clang_cl --target=x86_64-windows-msvc -Z7 -gdwarf -c /Fo%t.dwarf.obj -- %t/main.cpp
+# RUN: %clang_cl_host -Z7 -c /GS- /Fo%t.cv.obj -- %t/main.cpp
+# RUN: %clang_cl_host -Z7 -gdwarf -c /GS- /Fo%t.dwarf.obj -- %t/main.cpp
 
-# RUN: lld-link -debug %t.cv.obj -out:%t.cv.exe
-# RUN: lld-link -debug %t.dwarf.obj -out:%t.dwarf.exe
+# RUN: lld-link -debug -nodefaultlib -entry:main %t.cv.obj -out:%t.cv.exe
+# RUN: lld-link -debug -nodefaultlib -entry:main %t.dwarf.obj -out:%t.dwarf.exe
 
 # RUN: %lldb -f %t.cv.exe -s %t/commands.input 2>&1 | FileCheck %s
 # RUN: %lldb -f %t.dwarf.exe -s %t/commands.input 2>&1 | FileCheck %s

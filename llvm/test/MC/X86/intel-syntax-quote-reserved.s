@@ -1,8 +1,17 @@
 # RUN: llvm-mc -triple x86_64 -output-asm-variant=1 %s | FileCheck %s
+# RUN: llvm-mc -triple x86_64 %s | FileCheck %s --check-prefix=ATT
 # RUN: llvm-mc -triple x86_64 -output-asm-variant=1 -filetype=obj %s | llvm-objdump -dr - | FileCheck %s --check-prefix=DIS
 
 ## Round-trip: all calls should be direct (0xe8), not indirect (0xff).
 # DIS-NOT: callq *
+
+## AT&T output never needs quoting: registers use `%` prefix and none of
+## these names are keywords in AT&T syntax. Sentinel positive checks plus a
+## global NOT check that no `"` appears anywhere in the output.
+# ATT: callq rsi
+# ATT: callq byte
+# ATT: callq and
+# ATT-NOT: {{"}}
 
 ## Symbols whose names match registers or Intel syntax keywords must be quoted
 ## in Intel syntax output. Without quoting, the assembler would misparse these
@@ -10,13 +19,15 @@
 
 ## Register names
 # CHECK: call "rsi"
-# CHECK: call "rax"
+# CHECK: call "Rax"
 # CHECK: call "EAX"
-# CHECK: call "Ah"
+# CHECK: call "ah"
+# CHECK: call "dil"
 callq rsi
-callq rax
+callq Rax
 callq EAX
-callq Ah
+callq ah
+callq dil
 
 ## Size/type keywords (gas treats these as size constants: byte=1, word=2, etc.)
 # CHECK: call "byte"
@@ -43,13 +54,11 @@ callq ymmword
 callq zmmword
 
 ## Other keywords
-# CHECK: call "ptr"
 # CHECK: call "offset"
 # CHECK: call "flat"
 # CHECK: call "near"
 # CHECK: call "far"
 # CHECK: call "short"
-callq ptr
 callq offset
 callq flat
 callq near
@@ -84,6 +93,8 @@ callq shl
 callq shr
 callq xor
 
-## Normal symbols remain unquoted.
+## Symbols that don't need quoting (gas handles these correctly).
+# CHECK: call ptr
 # CHECK: call bar
+callq ptr
 callq bar
