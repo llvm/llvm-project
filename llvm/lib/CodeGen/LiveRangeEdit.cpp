@@ -158,12 +158,6 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
     return false;
   LLVM_DEBUG(dbgs() << "                folded: " << *FoldMI);
   SlotIndex FoldIdx = LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
-  if (CopyMI) {
-    SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
-    LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
-    VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
-    LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
-  }
   // Update the call info.
   if (UseMI->shouldUpdateAdditionalCallInfo())
     UseMI->getMF()->moveAdditionalCallInfo(UseMI, FoldMI);
@@ -171,6 +165,14 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   DefMI->addRegisterDead(LI->reg(), nullptr);
   Dead.push_back(DefMI);
   ++NumDCEFoldedLoads;
+  if (CopyMI) {
+    SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
+    LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
+    VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+    LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+    LiveInterval &SrcLI = LIS.getInterval(CopyMI->getOperand(1).getReg());
+    LIS.shrinkToUses(&SrcLI);
+  }
   return true;
 }
 

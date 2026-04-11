@@ -1254,6 +1254,7 @@ public:
   /// operand folded, otherwise NULL is returned.
   /// The new instruction is inserted before MI, and the client is responsible
   /// for removing the old instruction.
+  /// If a copy instruction being created during fold, return it by CopyMI.
   /// If VRM is passed, the assigned physregs can be inspected by target to
   /// decide on using an opcode (note that those assignments can still change).
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,

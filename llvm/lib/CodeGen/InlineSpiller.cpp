@@ -1105,6 +1105,11 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     if (&MI != FoldMI && &MI != CopyMI)
       LIS.InsertMachineInstrInMaps(MI);
 
+  if (CopyMI) {
+    LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(1).getReg());
+    LIS.shrinkToUses(&LI);
+  }
+
   // TII.foldMemoryOperand may have left some implicit operands on the
   // instruction.  Strip them.
   if (ImpReg)
