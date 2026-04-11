@@ -307,10 +307,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept { return true; }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_unique() noexcept { return true; }
-  // The answer of this function is fairly complex in the case where one or more
-  // extents are zero.
-  // Technically it is meaningless to query is_exhaustive() in that case, but unfortunately
-  // the way the standard defines this function, we can't give a simple true or false then.
   _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const noexcept {
     if constexpr (is_always_exhaustive())
       return true;
