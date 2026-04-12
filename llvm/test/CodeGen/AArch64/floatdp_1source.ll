@@ -3,6 +3,8 @@
 
 declare float @llvm.fabs.f32(float) readonly
 declare double @llvm.fabs.f64(double) readonly
+declare float @llvm.fneg.f32(float)
+declare double @llvm.fneg.f64(double)
 
 declare float @llvm.sqrt.f32(float %Val)
 declare double @llvm.sqrt.f64(double %Val)
@@ -203,4 +205,25 @@ define float @conv_d_f(double %v) {
 ; CHECK-NEXT:    ret
   %r = fptrunc double %v to float
   ret float %r
+}
+
+; llvm.fneg intrinsic lowers to the same fneg instruction as plain 'fneg' IR.
+; The fp.control operand bundle (when used) only affects backends that support
+; per-instruction FTZ (e.g. NVPTX), not AArch64.
+define float @fneg_f_intrinsic(float %v) {
+; CHECK-LABEL: fneg_f_intrinsic:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    fneg s0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.fneg.f32(float %v)
+  ret float %r
+}
+
+define double @fneg_d_intrinsic(double %v) {
+; CHECK-LABEL: fneg_d_intrinsic:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    fneg d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.fneg.f64(double %v)
+  ret double %r
 }

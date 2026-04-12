@@ -109,28 +109,42 @@ struct SimpleValue {
     if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
       if (Function *F = CI->getCalledFunction()) {
         switch (F->getIntrinsicID()) {
-        case Intrinsic::experimental_constrained_fadd:
-        case Intrinsic::experimental_constrained_fsub:
-        case Intrinsic::experimental_constrained_fmul:
-        case Intrinsic::experimental_constrained_fdiv:
-        case Intrinsic::experimental_constrained_frem:
-        case Intrinsic::experimental_constrained_fptosi:
-        case Intrinsic::experimental_constrained_sitofp:
-        case Intrinsic::experimental_constrained_fptoui:
-        case Intrinsic::experimental_constrained_uitofp:
-        case Intrinsic::experimental_constrained_fcmp:
-        case Intrinsic::experimental_constrained_fcmps: {
-          auto *CFP = cast<ConstrainedFPIntrinsic>(CI);
-          if (CFP->getExceptionBehavior() &&
-              CFP->getExceptionBehavior() == fp::ebStrict)
+        // New-form FP intrinsics (llvm.fadd, llvm.fsub, etc.) with fp.control
+        // and/or fp.except operand bundles follow the same CSE rules as their
+        // constrained predecessors:
+        //   - ebStrict or absent exception behavior → no CSE
+        //   - Dynamic or absent rounding mode → no CSE (unknown mode)
+        //   - Fixed non-strict EB + known RM → CSE allowed
+        case Intrinsic::fadd:
+        case Intrinsic::fsub:
+        case Intrinsic::fmul:
+        case Intrinsic::fdiv:
+        case Intrinsic::frem:
+        case Intrinsic::fptosi:
+        case Intrinsic::fptoui:
+        case Intrinsic::sitofp:
+        case Intrinsic::uitofp:
+        case Intrinsic::fcmp: {
+          // If there are no fp bundles at all, the call is memory(none) and
+          // the generic doesNotAccessMemory() path below handles it.
+          bool HasControl =
+              CI->getOperandBundle(LLVMContext::OB_fp_control).has_value();
+          bool HasExcept =
+              CI->getOperandBundle(LLVMContext::OB_fp_except).has_value();
+          if (!HasControl && !HasExcept)
+            break; // fall through to doesNotAccessMemory() check
+          // ebStrict means exceptions matter; don't CSE.
+          if (CI->getExceptionBehavior() == fp::ebStrict)
             return false;
-          // Since we CSE across function calls we must not allow
-          // the rounding mode to change.
-          if (CFP->getRoundingMode() &&
-              CFP->getRoundingMode() == RoundingMode::Dynamic)
+          // Dynamic rounding mode means result depends on runtime mode; don't CSE.
+          if (CI->getRoundingMode() == RoundingMode::Dynamic)
             return false;
           return true;
         }
+        case Intrinsic::fcmps:
+          // Signaling compare; CSE is safe when exceptions are not strict.
+          // Without an fp.except bundle in non-strictfp code, ebIgnore applies.
+          return CI->getExceptionBehavior() != fp::ebStrict;
         }
       }
       return CI->doesNotAccessMemory() &&
@@ -1517,10 +1531,12 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(&Inst)) {
-      if ([[maybe_unused]] auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
+      if ([[maybe_unused]] auto *CI = dyn_cast<IntrinsicInst>(&Inst);
+          CI && Intrinsic::isConstrainedFPIntrinsic(CI->getIntrinsicID())) {
         assert(CI->getExceptionBehavior() != fp::ebStrict &&
                "Unexpected ebStrict from SimpleValue::canHandle()");
-        assert((!CI->getRoundingMode() ||
+        // fcmps has no rounding mode; only check RM for operations that do.
+        assert((CI->getIntrinsicID() == Intrinsic::fcmps ||
                 CI->getRoundingMode() != RoundingMode::Dynamic) &&
                "Unexpected dynamic rounding from SimpleValue::canHandle()");
       }

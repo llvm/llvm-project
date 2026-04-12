@@ -7,50 +7,12 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for mul_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for div_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for frem_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fma_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptosi_i32_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptoui_i32_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptosi_i64_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptoui_i64_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f32_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f32_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f32_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f32_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f32_i128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f32_i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrt_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for powi_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sin_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cos_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tan_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for asin_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for acos_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan2_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sinh_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cosh_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tanh_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pow_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log10_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log2_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp2_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for rint_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for nearbyint_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lrint_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for llrint_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for maxnum_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for minnum_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for maximum_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for minimum_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ceil_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for floor_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lround_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for llround_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for round_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for roundeven_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for trunc_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_olt_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ole_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ogt_f32
@@ -80,50 +42,12 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for mul_f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for div_f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for frem_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fma_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptosi_i32_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptoui_i32_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptosi_i64_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptoui_i64_f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f64_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f64_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f64_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f64_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f64_i128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f64_i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrt_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for powi_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sin_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cos_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tan_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for asin_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for acos_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan2_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sinh_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cosh_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tanh_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pow_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log10_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log2_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp2_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for rint_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for nearbyint_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lrint_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for llrint_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for maxnum_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for minnum_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for maximum_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for minimum_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ceil_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for floor_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lround_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for llround_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for round_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for roundeven_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for trunc_f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_olt_f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ole_f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ogt_f64
@@ -153,47 +77,12 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for mul_f128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for div_f128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for frem_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fma_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptosi_i32_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptoui_i32_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptosi_i64_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptoui_i64_f128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f128_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f128_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f128_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f128_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_f128_i128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uitofp_f128_i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrt_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for powi_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sin_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cos_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tan_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for asin_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for acos_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan2_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sinh_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cosh_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tanh_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pow_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log10_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log2_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp2_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for rint_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for nearbyint_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lrint_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for llrint_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for maxnum_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for minnum_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ceil_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for floor_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lround_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for llround_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for round_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for trunc_f128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_olt_f128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ole_f128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ogt_f128
@@ -221,25 +110,6 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptrunc_f32_f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptrunc_f32_f128
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptrunc_f64_f128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fpext_f64_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fpext_f128_f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fpext_f128_f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sin_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cos_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tan_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for asin_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for acos_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for atan2_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sinh_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for cosh_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for tanh_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pow_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log2_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for log10_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp_v1f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for exp2_v1f64
 
 ; Check that constrained fp intrinsics are correctly lowered.
 
@@ -413,12 +283,7 @@ define float @sqrt_f32(float %x) #0 {
 define float @powi_f32(float %x, i32 %y) #0 {
 ; CHECK-LABEL: powi_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __powisf2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __powisf2
   %val = call float @llvm.experimental.constrained.powi.f32(float %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -426,12 +291,7 @@ define float @powi_f32(float %x, i32 %y) #0 {
 define float @sin_f32(float %x) #0 {
 ; CHECK-LABEL: sin_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b sinf
   %val = call float @llvm.experimental.constrained.sin.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -439,12 +299,7 @@ define float @sin_f32(float %x) #0 {
 define float @cos_f32(float %x) #0 {
 ; CHECK-LABEL: cos_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl cosf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b cosf
   %val = call float @llvm.experimental.constrained.cos.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -452,12 +307,7 @@ define float @cos_f32(float %x) #0 {
 define float @tan_f32(float %x) #0 {
 ; CHECK-LABEL: tan_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl tanf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b tanf
   %val = call float @llvm.experimental.constrained.tan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -465,12 +315,7 @@ define float @tan_f32(float %x) #0 {
 define float @asin_f32(float %x) #0 {
 ; CHECK-LABEL: asin_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl asinf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b asinf
   %val = call float @llvm.experimental.constrained.asin.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -478,12 +323,7 @@ define float @asin_f32(float %x) #0 {
 define float @acos_f32(float %x) #0 {
 ; CHECK-LABEL: acos_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl acosf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b acosf
   %val = call float @llvm.experimental.constrained.acos.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -491,12 +331,7 @@ define float @acos_f32(float %x) #0 {
 define float @atan_f32(float %x) #0 {
 ; CHECK-LABEL: atan_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl atanf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b atanf
   %val = call float @llvm.experimental.constrained.atan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -504,12 +339,7 @@ define float @atan_f32(float %x) #0 {
 define float @atan2_f32(float %x, float %y) #0 {
 ; CHECK-LABEL: atan2_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl atan2f
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b atan2f
   %val = call float @llvm.experimental.constrained.atan2.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -517,12 +347,7 @@ define float @atan2_f32(float %x, float %y) #0 {
 define float @sinh_f32(float %x) #0 {
 ; CHECK-LABEL: sinh_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl sinhf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b sinhf
   %val = call float @llvm.experimental.constrained.sinh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -530,12 +355,7 @@ define float @sinh_f32(float %x) #0 {
 define float @cosh_f32(float %x) #0 {
 ; CHECK-LABEL: cosh_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl coshf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b coshf
   %val = call float @llvm.experimental.constrained.cosh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -543,12 +363,7 @@ define float @cosh_f32(float %x) #0 {
 define float @tanh_f32(float %x) #0 {
 ; CHECK-LABEL: tanh_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl tanhf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b tanhf
   %val = call float @llvm.experimental.constrained.tanh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -556,12 +371,7 @@ define float @tanh_f32(float %x) #0 {
 define float @pow_f32(float %x, float %y) #0 {
 ; CHECK-LABEL: pow_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl powf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b powf
   %val = call float @llvm.experimental.constrained.pow.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -569,12 +379,7 @@ define float @pow_f32(float %x, float %y) #0 {
 define float @log_f32(float %x) #0 {
 ; CHECK-LABEL: log_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl logf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b logf
   %val = call float @llvm.experimental.constrained.log.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -582,12 +387,7 @@ define float @log_f32(float %x) #0 {
 define float @log10_f32(float %x) #0 {
 ; CHECK-LABEL: log10_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl log10f
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b log10f
   %val = call float @llvm.experimental.constrained.log10.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -595,12 +395,7 @@ define float @log10_f32(float %x) #0 {
 define float @log2_f32(float %x) #0 {
 ; CHECK-LABEL: log2_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl log2f
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b log2f
   %val = call float @llvm.experimental.constrained.log2.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -608,12 +403,7 @@ define float @log2_f32(float %x) #0 {
 define float @exp_f32(float %x) #0 {
 ; CHECK-LABEL: exp_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl expf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b expf
   %val = call float @llvm.experimental.constrained.exp.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -621,12 +411,7 @@ define float @exp_f32(float %x) #0 {
 define float @exp2_f32(float %x) #0 {
 ; CHECK-LABEL: exp2_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl exp2f
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b exp2f
   %val = call float @llvm.experimental.constrained.exp2.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -1207,12 +992,7 @@ define double @sqrt_f64(double %x) #0 {
 define double @powi_f64(double %x, i32 %y) #0 {
 ; CHECK-LABEL: powi_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __powidf2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __powidf2
   %val = call double @llvm.experimental.constrained.powi.f64(double %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1220,12 +1000,7 @@ define double @powi_f64(double %x, i32 %y) #0 {
 define double @sin_f64(double %x) #0 {
 ; CHECK-LABEL: sin_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl sin
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b sin
   %val = call double @llvm.experimental.constrained.sin.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1233,12 +1008,7 @@ define double @sin_f64(double %x) #0 {
 define double @cos_f64(double %x) #0 {
 ; CHECK-LABEL: cos_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl cos
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b cos
   %val = call double @llvm.experimental.constrained.cos.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1246,12 +1016,7 @@ define double @cos_f64(double %x) #0 {
 define double @tan_f64(double %x) #0 {
 ; CHECK-LABEL: tan_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl tan
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b tan
   %val = call double @llvm.experimental.constrained.tan.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1259,12 +1024,7 @@ define double @tan_f64(double %x) #0 {
 define double @asin_f64(double %x) #0 {
 ; CHECK-LABEL: asin_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl asin
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b asin
   %val = call double @llvm.experimental.constrained.asin.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1272,12 +1032,7 @@ define double @asin_f64(double %x) #0 {
 define double @acos_f64(double %x) #0 {
 ; CHECK-LABEL: acos_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl acos
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b acos
   %val = call double @llvm.experimental.constrained.acos.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1285,12 +1040,7 @@ define double @acos_f64(double %x) #0 {
 define double @atan_f64(double %x) #0 {
 ; CHECK-LABEL: atan_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl atan
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b atan
   %val = call double @llvm.experimental.constrained.atan.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1298,12 +1048,7 @@ define double @atan_f64(double %x) #0 {
 define double @atan2_f64(double %x, double %y) #0 {
 ; CHECK-LABEL: atan2_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl atan2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b atan2
   %val = call double @llvm.experimental.constrained.atan2.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1311,12 +1056,7 @@ define double @atan2_f64(double %x, double %y) #0 {
 define double @sinh_f64(double %x) #0 {
 ; CHECK-LABEL: sinh_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl sinh
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b sinh
   %val = call double @llvm.experimental.constrained.sinh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1324,12 +1064,7 @@ define double @sinh_f64(double %x) #0 {
 define double @cosh_f64(double %x) #0 {
 ; CHECK-LABEL: cosh_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl cosh
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b cosh
   %val = call double @llvm.experimental.constrained.cosh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1337,12 +1072,7 @@ define double @cosh_f64(double %x) #0 {
 define double @tanh_f64(double %x) #0 {
 ; CHECK-LABEL: tanh_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl tanh
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b tanh
   %val = call double @llvm.experimental.constrained.tanh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1350,12 +1080,7 @@ define double @tanh_f64(double %x) #0 {
 define double @pow_f64(double %x, double %y) #0 {
 ; CHECK-LABEL: pow_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl pow
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b pow
   %val = call double @llvm.experimental.constrained.pow.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1363,12 +1088,7 @@ define double @pow_f64(double %x, double %y) #0 {
 define double @log_f64(double %x) #0 {
 ; CHECK-LABEL: log_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl log
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b log
   %val = call double @llvm.experimental.constrained.log.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1376,12 +1096,7 @@ define double @log_f64(double %x) #0 {
 define double @log10_f64(double %x) #0 {
 ; CHECK-LABEL: log10_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl log10
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b log10
   %val = call double @llvm.experimental.constrained.log10.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1389,12 +1104,7 @@ define double @log10_f64(double %x) #0 {
 define double @log2_f64(double %x) #0 {
 ; CHECK-LABEL: log2_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl log2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b log2
   %val = call double @llvm.experimental.constrained.log2.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1402,12 +1112,7 @@ define double @log2_f64(double %x) #0 {
 define double @exp_f64(double %x) #0 {
 ; CHECK-LABEL: exp_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl exp
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b exp
   %val = call double @llvm.experimental.constrained.exp.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1415,12 +1120,7 @@ define double @exp_f64(double %x) #0 {
 define double @exp2_f64(double %x) #0 {
 ; CHECK-LABEL: exp2_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl exp2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b exp2
   %val = call double @llvm.experimental.constrained.exp2.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1899,66 +1599,86 @@ define fp128 @frem_f128(fp128 %x, fp128 %y) #0 {
 }
 
 define fp128 @fma_f128(fp128 %x, fp128 %y, fp128 %z) #0 {
-; CHECK-LABEL: fma_f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl fmal
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fma_f128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl fmal
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fma_f128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    b fmal
   %val = call fp128 @llvm.experimental.constrained.fma.f128(fp128 %x, fp128 %y, fp128 %z, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
 
 define i32 @fptosi_i32_f128(fp128 %x) #0 {
-; CHECK-LABEL: fptosi_i32_f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixtfsi
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fptosi_i32_f128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl __fixtfsi
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fptosi_i32_f128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    b __fixtfsi
   %val = call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 define i32 @fptoui_i32_f128(fp128 %x) #0 {
-; CHECK-LABEL: fptoui_i32_f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixunstfsi
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fptoui_i32_f128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl __fixunstfsi
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fptoui_i32_f128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    b __fixunstfsi
   %val = call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 define i64 @fptosi_i64_f128(fp128 %x) #0 {
-; CHECK-LABEL: fptosi_i64_f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixtfdi
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fptosi_i64_f128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl __fixtfdi
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fptosi_i64_f128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    b __fixtfdi
   %val = call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i64 %val
 }
 
 define i64 @fptoui_i64_f128(fp128 %x) #0 {
-; CHECK-LABEL: fptoui_i64_f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixunstfdi
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fptoui_i64_f128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl __fixunstfdi
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fptoui_i64_f128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    b __fixunstfdi
   %val = call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i64 %val
 }
@@ -2042,14 +1762,18 @@ define fp128 @uitofp_f128_i128(i128 %x) #0 {
 }
 
 define fp128 @sqrt_f128(fp128 %x) #0 {
-; CHECK-LABEL: sqrt_f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl sqrtl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqrt_f128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl sqrtl
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqrt_f128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    b sqrtl
   %val = call fp128 @llvm.experimental.constrained.sqrt.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2057,12 +1781,7 @@ define fp128 @sqrt_f128(fp128 %x) #0 {
 define fp128 @powi_f128(fp128 %x, i32 %y) #0 {
 ; CHECK-LABEL: powi_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __powitf2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __powitf2
   %val = call fp128 @llvm.experimental.constrained.powi.f128(fp128 %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2070,12 +1789,7 @@ define fp128 @powi_f128(fp128 %x, i32 %y) #0 {
 define fp128 @sin_f128(fp128 %x) #0 {
 ; CHECK-LABEL: sin_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl sinl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b sinl
   %val = call fp128 @llvm.experimental.constrained.sin.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2083,12 +1797,7 @@ define fp128 @sin_f128(fp128 %x) #0 {
 define fp128 @cos_f128(fp128 %x) #0 {
 ; CHECK-LABEL: cos_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl cosl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b cosl
   %val = call fp128 @llvm.experimental.constrained.cos.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2096,12 +1805,7 @@ define fp128 @cos_f128(fp128 %x) #0 {
 define fp128 @tan_f128(fp128 %x) #0 {
 ; CHECK-LABEL: tan_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl tanl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b tanl
   %val = call fp128 @llvm.experimental.constrained.tan.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2109,12 +1813,7 @@ define fp128 @tan_f128(fp128 %x) #0 {
 define fp128 @asin_f128(fp128 %x) #0 {
 ; CHECK-LABEL: asin_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl asinl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b asinl
   %val = call fp128 @llvm.experimental.constrained.asin.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2122,12 +1821,7 @@ define fp128 @asin_f128(fp128 %x) #0 {
 define fp128 @acos_f128(fp128 %x) #0 {
 ; CHECK-LABEL: acos_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl acosl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b acosl
   %val = call fp128 @llvm.experimental.constrained.acos.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2135,12 +1829,7 @@ define fp128 @acos_f128(fp128 %x) #0 {
 define fp128 @atan_f128(fp128 %x) #0 {
 ; CHECK-LABEL: atan_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl atanl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b atanl
   %val = call fp128 @llvm.experimental.constrained.atan.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2148,12 +1837,7 @@ define fp128 @atan_f128(fp128 %x) #0 {
 define fp128 @atan2_f128(fp128 %x, fp128 %y) #0 {
 ; CHECK-LABEL: atan2_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl atan2l
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b atan2l
   %val = call fp128 @llvm.experimental.constrained.atan2.f128(fp128 %x, fp128 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2161,12 +1845,7 @@ define fp128 @atan2_f128(fp128 %x, fp128 %y) #0 {
 define fp128 @sinh_f128(fp128 %x) #0 {
 ; CHECK-LABEL: sinh_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl sinhl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b sinhl
   %val = call fp128 @llvm.experimental.constrained.sinh.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2174,12 +1853,7 @@ define fp128 @sinh_f128(fp128 %x) #0 {
 define fp128 @cosh_f128(fp128 %x) #0 {
 ; CHECK-LABEL: cosh_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl coshl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b coshl
   %val = call fp128 @llvm.experimental.constrained.cosh.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2187,12 +1861,7 @@ define fp128 @cosh_f128(fp128 %x) #0 {
 define fp128 @tanh_f128(fp128 %x) #0 {
 ; CHECK-LABEL: tanh_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl tanhl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b tanhl
   %val = call fp128 @llvm.experimental.constrained.tanh.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2200,12 +1869,7 @@ define fp128 @tanh_f128(fp128 %x) #0 {
 define fp128 @pow_f128(fp128 %x, fp128 %y) #0 {
 ; CHECK-LABEL: pow_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl powl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b powl
   %val = call fp128 @llvm.experimental.constrained.pow.f128(fp128 %x, fp128 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2213,12 +1877,7 @@ define fp128 @pow_f128(fp128 %x, fp128 %y) #0 {
 define fp128 @log_f128(fp128 %x) #0 {
 ; CHECK-LABEL: log_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl logl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b logl
   %val = call fp128 @llvm.experimental.constrained.log.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2226,12 +1885,7 @@ define fp128 @log_f128(fp128 %x) #0 {
 define fp128 @log10_f128(fp128 %x) #0 {
 ; CHECK-LABEL: log10_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl log10l
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b log10l
   %val = call fp128 @llvm.experimental.constrained.log10.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2239,12 +1893,7 @@ define fp128 @log10_f128(fp128 %x) #0 {
 define fp128 @log2_f128(fp128 %x) #0 {
 ; CHECK-LABEL: log2_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl log2l
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b log2l
   %val = call fp128 @llvm.experimental.constrained.log2.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2252,12 +1901,7 @@ define fp128 @log2_f128(fp128 %x) #0 {
 define fp128 @exp_f128(fp128 %x) #0 {
 ; CHECK-LABEL: exp_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl expl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b expl
   %val = call fp128 @llvm.experimental.constrained.exp.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2265,12 +1909,7 @@ define fp128 @exp_f128(fp128 %x) #0 {
 define fp128 @exp2_f128(fp128 %x) #0 {
 ; CHECK-LABEL: exp2_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl exp2l
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b exp2l
   %val = call fp128 @llvm.experimental.constrained.exp2.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2278,12 +1917,7 @@ define fp128 @exp2_f128(fp128 %x) #0 {
 define fp128 @rint_f128(fp128 %x) #0 {
 ; CHECK-LABEL: rint_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl rintl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b rintl
   %val = call fp128 @llvm.experimental.constrained.rint.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2291,25 +1925,24 @@ define fp128 @rint_f128(fp128 %x) #0 {
 define fp128 @nearbyint_f128(fp128 %x) #0 {
 ; CHECK-LABEL: nearbyint_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl nearbyintl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b nearbyintl
   %val = call fp128 @llvm.experimental.constrained.nearbyint.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
 
 define i32 @lrint_f128(fp128 %x) #0 {
-; CHECK-LABEL: lrint_f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl lrintl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: lrint_f128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    b lrintl
+;
+; CHECK-GI-LABEL: lrint_f128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl rintl
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    b __fixtfsi
   %val = call i32 @llvm.experimental.constrained.lrint.i32.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
@@ -2317,12 +1950,7 @@ define i32 @lrint_f128(fp128 %x) #0 {
 define i64 @llrint_f128(fp128 %x) #0 {
 ; CHECK-LABEL: llrint_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl llrintl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b llrintl
   %val = call i64 @llvm.experimental.constrained.llrint.i64.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i64 %val
 }
@@ -2330,12 +1958,7 @@ define i64 @llrint_f128(fp128 %x) #0 {
 define fp128 @maxnum_f128(fp128 %x, fp128 %y) #0 {
 ; CHECK-LABEL: maxnum_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl fmaxl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b fmaxl
   %val = call fp128 @llvm.experimental.constrained.maxnum.f128(fp128 %x, fp128 %y, metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2343,12 +1966,7 @@ define fp128 @maxnum_f128(fp128 %x, fp128 %y) #0 {
 define fp128 @minnum_f128(fp128 %x, fp128 %y) #0 {
 ; CHECK-LABEL: minnum_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl fminl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b fminl
   %val = call fp128 @llvm.experimental.constrained.minnum.f128(fp128 %x, fp128 %y, metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2356,12 +1974,7 @@ define fp128 @minnum_f128(fp128 %x, fp128 %y) #0 {
 define fp128 @ceil_f128(fp128 %x) #0 {
 ; CHECK-LABEL: ceil_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl ceill
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b ceill
   %val = call fp128 @llvm.experimental.constrained.ceil.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2369,25 +1982,24 @@ define fp128 @ceil_f128(fp128 %x) #0 {
 define fp128 @floor_f128(fp128 %x) #0 {
 ; CHECK-LABEL: floor_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl floorl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b floorl
   %val = call fp128 @llvm.experimental.constrained.floor.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
 
 define i32 @lround_f128(fp128 %x) #0 {
-; CHECK-LABEL: lround_f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl lroundl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: lround_f128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    b lroundl
+;
+; CHECK-GI-LABEL: lround_f128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundl
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    b __fixtfsi
   %val = call i32 @llvm.experimental.constrained.lround.i32.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
@@ -2395,12 +2007,7 @@ define i32 @lround_f128(fp128 %x) #0 {
 define i64 @llround_f128(fp128 %x) #0 {
 ; CHECK-LABEL: llround_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl llroundl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b llroundl
   %val = call i64 @llvm.experimental.constrained.llround.i64.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret i64 %val
 }
@@ -2408,12 +2015,7 @@ define i64 @llround_f128(fp128 %x) #0 {
 define fp128 @round_f128(fp128 %x) #0 {
 ; CHECK-LABEL: round_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl roundl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b roundl
   %val = call fp128 @llvm.experimental.constrained.round.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2421,12 +2023,7 @@ define fp128 @round_f128(fp128 %x) #0 {
 define fp128 @trunc_f128(fp128 %x) #0 {
 ; CHECK-LABEL: trunc_f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl truncl
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b truncl
   %val = call fp128 @llvm.experimental.constrained.trunc.f128(fp128 %x, metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2897,12 +2494,7 @@ define double @fpext_f64_f32(float %x) #0 {
 define fp128 @fpext_f128_f32(float %x) #0 {
 ; CHECK-LABEL: fpext_f128_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __extendsftf2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __extendsftf2
   %val = call fp128 @llvm.experimental.constrained.fpext.f128.f32(float %x, metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -2910,12 +2502,7 @@ define fp128 @fpext_f128_f32(float %x) #0 {
 define fp128 @fpext_f128_f64(double %x) #0 {
 ; CHECK-LABEL: fpext_f128_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __extenddftf2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __extenddftf2
   %val = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double %x, metadata !"fpexcept.strict") #0
   ret fp128 %val
 }
@@ -3290,6 +2877,3 @@ declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 declare fp128 @llvm.experimental.constrained.fpext.f128.f32(float, metadata)
 declare fp128 @llvm.experimental.constrained.fpext.f128.f64(double, metadata)
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-GI: {{.*}}
-; CHECK-SD: {{.*}}

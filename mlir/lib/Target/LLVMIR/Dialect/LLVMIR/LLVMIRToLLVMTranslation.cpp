@@ -61,6 +61,52 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
                                           LLVM::ModuleImport &moduleImport) {
   llvm::Intrinsic::ID intrinsicID = inst->getIntrinsicID();
 
+  // llvm.fma and llvm.fmuladd have *two* MLIR handlers registered for the
+  // same LLVM intrinsic ID: a constrained op (LLVM_ConstrainedFMAIntr /
+  // LLVM_ConstrainedFMulAddIntr) and a regular op (LLVM_FMAOp /
+  // LLVM_FMulAddOp). The auto-generated .inc dispatch lists the constrained
+  // handler first and always ends with an unconditional `return success()`,
+  // so the regular handler is never reachable for calls that carry no FP
+  // bundles. Handle these two intrinsics explicitly before falling through to
+  // the .inc dispatch, dispatching on whether the call has FP bundles.
+  bool hasFPBundles =
+      inst->getOperandBundle(llvm::LLVMContext::OB_fp_except).has_value() ||
+      inst->getOperandBundle(llvm::LLVMContext::OB_fp_control).has_value();
+
+  if (!hasFPBundles && (intrinsicID == llvm::Intrinsic::fma ||
+                        intrinsicID == llvm::Intrinsic::fmuladd)) {
+    SmallVector<llvm::Value *> args(inst->args());
+    ArrayRef<llvm::Value *> llvmOperands(args);
+    SmallVector<llvm::OperandBundleUse> llvmOpBundles;
+    llvmOpBundles.reserve(inst->getNumOperandBundles());
+    for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
+      llvmOpBundles.push_back(inst->getOperandBundleAt(i));
+
+    SmallVector<Value> mlirOperands;
+    SmallVector<NamedAttribute> mlirAttrs;
+    if (failed(moduleImport.convertIntrinsicArguments(
+            llvmOperands, llvmOpBundles, false, {}, {}, mlirOperands,
+            mlirAttrs)))
+      return failure();
+
+    SmallVector<Type> resultTypes = {moduleImport.convertType(inst->getType())};
+    Location loc = moduleImport.translateLoc(inst->getDebugLoc());
+
+    if (intrinsicID == llvm::Intrinsic::fmuladd) {
+      auto op = LLVM::FMulAddOp::create(odsBuilder, loc, resultTypes,
+                                        mlirOperands, mlirAttrs);
+      moduleImport.setFastmathFlagsAttr(inst, op);
+      moduleImport.mapValue(inst) = op;
+      return success();
+    }
+    // intrinsicID == llvm::Intrinsic::fma
+    auto op =
+        LLVM::FMAOp::create(odsBuilder, loc, resultTypes, mlirOperands, mlirAttrs);
+    moduleImport.setFastmathFlagsAttr(inst, op);
+    moduleImport.mapValue(inst) = op;
+    return success();
+  }
+
   // Check if the intrinsic is convertible to an MLIR dialect counterpart and
   // copy the arguments to an an LLVM operands array reference for conversion.
   if (isConvertibleIntrinsic(intrinsicID)) {

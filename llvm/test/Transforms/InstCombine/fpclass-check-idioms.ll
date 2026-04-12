@@ -92,6 +92,7 @@ define i1 @f32_fcinf(float %a) {
 define i1 @f32_fcinf_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcinf_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
 ; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 516)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -204,6 +205,7 @@ define i1 @f32_fczero(float %a) {
 define i1 @f32_fczero_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fczero_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
 ; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 96)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -290,6 +292,7 @@ define <2 x i1> @f32_fcinf_vec(<2 x float> %a) {
 define <2 x i1> @f32_fcinf_vec_strictfp(<2 x float> %a) strictfp {
 ; CHECK-LABEL: define <2 x i1> @f32_fcinf_vec_strictfp(
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[A]])
 ; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A]], i32 516)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;

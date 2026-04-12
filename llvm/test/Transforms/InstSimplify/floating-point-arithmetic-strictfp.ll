@@ -4,7 +4,7 @@
 ; fneg (fsub -0.0, X) ==> X
 define float @fsub_-0_x(float %a) #0 {
 ; CHECK-LABEL: @fsub_-0_x(
-; CHECK-NEXT:    [[T1:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[T1:%.*]] = call float @llvm.fsub.f32(float -0.000000e+00, float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[RET:%.*]] = fneg float [[T1]]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
@@ -15,7 +15,7 @@ define float @fsub_-0_x(float %a) #0 {
 
 define <2 x float> @fsub_-0_x_vec(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fsub_-0_x_vec(
-; CHECK-NEXT:    [[T1:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> splat (float -0.000000e+00), <2 x float> [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[T1:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> splat (float -0.000000e+00), <2 x float> [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[RET:%.*]] = fneg <2 x float> [[T1]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
@@ -26,7 +26,7 @@ define <2 x float> @fsub_-0_x_vec(<2 x float> %a) #0 {
 
 define <2 x float> @fsub_-0_x_vec_poison_elts(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fsub_-0_x_vec_poison_elts(
-; CHECK-NEXT:    [[T1:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> <float -0.000000e+00, float poison>, <2 x float> [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[T1:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> <float -0.000000e+00, float poison>, <2 x float> [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    [[RET:%.*]] = fneg <2 x float> [[T1]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
@@ -37,7 +37,7 @@ define <2 x float> @fsub_-0_x_vec_poison_elts(<2 x float> %a) #0 {
 
 define <2 x float> @fsub_negzero_vec_poison_elts(<2 x float> %x) #0 {
 ; CHECK-LABEL: @fsub_negzero_vec_poison_elts(
-; CHECK-NEXT:    [[R:%.*]] = call nsz <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> <float poison, float -0.000000e+00>, <2 x float> [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[R:%.*]] = call nsz <2 x float> @llvm.fsub.v2f32(<2 x float> <float poison, float -0.000000e+00>, <2 x float> [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %r = call nsz <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float><float poison, float -0.0>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -47,8 +47,8 @@ define <2 x float> @fsub_negzero_vec_poison_elts(<2 x float> %x) #0 {
 ; fsub -0.0, (fsub -0.0, X) ==> X
 define float @fsub_-0_-0_x(float %a) #0 {
 ; CHECK-LABEL: @fsub_-0_-0_x(
-; CHECK-NEXT:    [[T1:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[T1]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[T11:%.*]] = call float @llvm.fsub.f32(float -0.000000e+00, float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.fsub.f32(float -0.000000e+00, float [[T11]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %t1 = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -59,7 +59,9 @@ define float @fsub_-0_-0_x(float %a) #0 {
 ; fsub -0.0, (fneg X) ==> X
 define float @fneg_x(float %a) #0 {
 ; CHECK-LABEL: @fneg_x(
-; CHECK-NEXT:    ret float [[A:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = fneg float [[A1:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fsub.f32(float -0.000000e+00, float [[T1]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %t1 = fneg float %a
   %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %t1, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -68,8 +70,8 @@ define float @fneg_x(float %a) #0 {
 
 define <2 x float> @fsub_-0_-0_x_vec(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fsub_-0_-0_x_vec(
-; CHECK-NEXT:    [[T1:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> splat (float -0.000000e+00), <2 x float> [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> splat (float -0.000000e+00), <2 x float> [[T1]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[T11:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> splat (float -0.000000e+00), <2 x float> [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> splat (float -0.000000e+00), <2 x float> [[T11]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %t1 = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float><float -0.0, float -0.0>, <2 x float> %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -79,7 +81,9 @@ define <2 x float> @fsub_-0_-0_x_vec(<2 x float> %a) #0 {
 
 define <2 x float> @fneg_x_vec(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fneg_x_vec(
-; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = fneg <2 x float> [[A1:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> splat (float -0.000000e+00), <2 x float> [[T1]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret <2 x float> [[A]]
 ;
   %t1 = fneg <2 x float> %a
   %ret = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float><float -0.0, float -0.0>, <2 x float> %t1, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -88,8 +92,8 @@ define <2 x float> @fneg_x_vec(<2 x float> %a) #0 {
 
 define <2 x float> @fsub_-0_-0_x_vec_poison_elts(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fsub_-0_-0_x_vec_poison_elts(
-; CHECK-NEXT:    [[T1:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> <float poison, float -0.000000e+00>, <2 x float> [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> <float -0.000000e+00, float poison>, <2 x float> [[T1]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[T11:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> <float poison, float -0.000000e+00>, <2 x float> [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> <float -0.000000e+00, float poison>, <2 x float> [[T11]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %t1 = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float><float poison, float -0.0>, <2 x float> %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -99,7 +103,9 @@ define <2 x float> @fsub_-0_-0_x_vec_poison_elts(<2 x float> %a) #0 {
 
 define <2 x float> @fneg_x_vec_poison_elts(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fneg_x_vec_poison_elts(
-; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = fneg <2 x float> [[A1:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> <float -0.000000e+00, float poison>, <2 x float> [[T1]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret <2 x float> [[A]]
 ;
   %t1 = fneg <2 x float> %a
   %ret = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float><float -0.0, float poison>, <2 x float> %t1, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -109,8 +115,8 @@ define <2 x float> @fneg_x_vec_poison_elts(<2 x float> %a) #0 {
 ; fsub -0.0, (fsub 0.0, X) != X
 define float @fsub_-0_0_x(float %a) #0 {
 ; CHECK-LABEL: @fsub_-0_0_x(
-; CHECK-NEXT:    [[T1:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[T1]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[T11:%.*]] = call float @llvm.fsub.f32(float 0.000000e+00, float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.fsub.f32(float -0.000000e+00, float [[T11]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %t1 = call float @llvm.experimental.constrained.fsub.f32(float 0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -121,8 +127,8 @@ define float @fsub_-0_0_x(float %a) #0 {
 ; fsub 0.0, (fsub -0.0, X) != X
 define float @fsub_0_-0_x(float %a) #0 {
 ; CHECK-LABEL: @fsub_0_-0_x(
-; CHECK-NEXT:    [[T1:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[T1]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[T11:%.*]] = call float @llvm.fsub.f32(float -0.000000e+00, float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.fsub.f32(float 0.000000e+00, float [[T11]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %t1 = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -133,7 +139,8 @@ define float @fsub_0_-0_x(float %a) #0 {
 ; fsub X, 0 ==> X
 define float @fsub_x_0(float %x) #0 {
 ; CHECK-LABEL: @fsub_x_0(
-; CHECK-NEXT:    ret float [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.fsub.f32(float [[X1:%.*]], float 0.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
@@ -141,7 +148,8 @@ define float @fsub_x_0(float %x) #0 {
 
 define <2 x float> @fsub_x_0_vec_poison(<2 x float> %x) #0 {
 ; CHECK-LABEL: @fsub_x_0_vec_poison(
-; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> [[X1:%.*]], <2 x float> <float poison, float 0.000000e+00>) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret <2 x float> [[X]]
 ;
   %r = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> %x, <2 x float><float poison, float 0.0>, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret <2 x float> %r
@@ -150,7 +158,8 @@ define <2 x float> @fsub_x_0_vec_poison(<2 x float> %x) #0 {
 ; fadd X, -0 ==> X
 define float @fadd_x_n0(float %a) #0 {
 ; CHECK-LABEL: @fadd_x_n0(
-; CHECK-NEXT:    ret float [[A:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fadd.f32(float [[A1:%.*]], float -0.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %ret = call float @llvm.experimental.constrained.fadd.f32(float %a, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %ret
@@ -158,7 +167,8 @@ define float @fadd_x_n0(float %a) #0 {
 
 define <2 x float> @fadd_x_n0_vec_poison_elt(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fadd_x_n0_vec_poison_elt(
-; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call <2 x float> @llvm.fadd.v2f32(<2 x float> [[A1:%.*]], <2 x float> <float -0.000000e+00, float poison>) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret <2 x float> [[A]]
 ;
   %ret = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float> <float -0.0, float poison>, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret <2 x float> %ret
@@ -167,7 +177,7 @@ define <2 x float> @fadd_x_n0_vec_poison_elt(<2 x float> %a) #0 {
 ; fadd X, 0 ==> X
 define float @fadd_x_p0(float %a) #0 {
 ; CHECK-LABEL: @fadd_x_p0(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.fadd.f32(float [[A:%.*]], float 0.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %ret = call float @llvm.experimental.constrained.fadd.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -176,7 +186,7 @@ define float @fadd_x_p0(float %a) #0 {
 
 define <2 x float> @fadd_x_p0_vec_poison_elt(<2 x float> %a) #0 {
 ; CHECK-LABEL: @fadd_x_p0_vec_poison_elt(
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[A:%.*]], <2 x float> <float 0.000000e+00, float poison>, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.fadd.v2f32(<2 x float> [[A:%.*]], <2 x float> <float 0.000000e+00, float poison>) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %ret = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float> <float 0.0, float poison>, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -186,7 +196,8 @@ define <2 x float> @fadd_x_p0_vec_poison_elt(<2 x float> %a) #0 {
 ; fmul X, 1.0 ==> X
 define double @fmul_X_1(double %a) #0 {
 ; CHECK-LABEL: @fmul_X_1(
-; CHECK-NEXT:    ret double [[A:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call double @llvm.fmul.f64(double 1.000000e+00, double [[A1:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret double [[A]]
 ;
   %b = call double @llvm.experimental.constrained.fmul.f64(double 1.0, double %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret double %b
@@ -195,7 +206,8 @@ define double @fmul_X_1(double %a) #0 {
 ; Originally PR2642
 define <4 x float> @fmul_X_1_vec(<4 x float> %x) #0 {
 ; CHECK-LABEL: @fmul_X_1_vec(
-; CHECK-NEXT:    ret <4 x float> [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call <4 x float> @llvm.fmul.v4f32(<4 x float> [[X1:%.*]], <4 x float> splat (float 1.000000e+00)) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret <4 x float> [[X]]
 ;
   %m = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float> %x, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret <4 x float> %m
@@ -204,7 +216,8 @@ define <4 x float> @fmul_X_1_vec(<4 x float> %x) #0 {
 ; fdiv X, 1.0 ==> X
 define float @fdiv_x_1(float %a) #0 {
 ; CHECK-LABEL: @fdiv_x_1(
-; CHECK-NEXT:    ret float [[A:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fdiv.f32(float [[A1:%.*]], float 1.000000e+00) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %ret = call float @llvm.experimental.constrained.fdiv.f32(float %a, float 1.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
 
@@ -216,8 +229,8 @@ define float @fdiv_x_1(float %a) #0 {
 ; an arbitrary sign bit.
 define float @fabs_sqrt(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt(
-; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[SQRT1:%.*]] = call float @llvm.sqrt.f32(float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT1]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %sqrt = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -228,8 +241,8 @@ define float @fabs_sqrt(float %a) #0 {
 ; The fabs can't be eliminated because the nnan sqrt may still return -0.
 define float @fabs_sqrt_nnan(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nnan(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]]) #[[ATTR0]]
+; CHECK-NEXT:    [[SQRT1:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %sqrt = call nnan float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -240,8 +253,8 @@ define float @fabs_sqrt_nnan(float %a) #0 {
 ; The fabs can't be eliminated because the nsz sqrt may still return NaN.
 define float @fabs_sqrt_nsz(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nsz(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]]) #[[ATTR0]]
+; CHECK-NEXT:    [[SQRT1:%.*]] = call nsz float @llvm.sqrt.f32(float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %sqrt = call nsz float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -251,7 +264,8 @@ define float @fabs_sqrt_nsz(float %a) #0 {
 
 define float @fabs_sqrt_nnan_nsz(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %sqrt = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -262,7 +276,8 @@ define float @fabs_sqrt_nnan_nsz(float %a) #0 {
 define float @fabs_sqrt_nnan_fabs(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nnan_fabs(
 ; CHECK-NEXT:    [[B:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
-; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.experimental.constrained.sqrt.f32(float [[B]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[B]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %b = call float @llvm.fabs.f32(float %a) #0
@@ -275,8 +290,8 @@ define float @fabs_sqrt_nnan_fabs(float %a) #0 {
 
 define float @fsub_fsub_common_op(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_common_op(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[S]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S1:%.*]] = call float @llvm.fsub.f32(float [[Y:%.*]], float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fsub.f32(float [[Y]], float [[S1]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -286,8 +301,8 @@ define float @fsub_fsub_common_op(float %x, float %y) #0 {
 
 define <2 x float> @fsub_fsub_common_op_vec(<2 x float> %x, <2 x float> %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_common_op_vec(
-; CHECK-NEXT:    [[S:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> [[Y:%.*]], <2 x float> [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> [[Y]], <2 x float> [[S]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S1:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> [[Y:%.*]], <2 x float> [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz <2 x float> @llvm.fsub.v2f32(<2 x float> [[Y]], <2 x float> [[S1]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %s = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> %y, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -300,8 +315,8 @@ define <2 x float> @fsub_fsub_common_op_vec(<2 x float> %x, <2 x float> %y) #0 {
 
 define float @fsub_fsub_wrong_common_op(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_wrong_common_op(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[S]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S1:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fsub.f32(float [[Y]], float [[S1]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call float @llvm.experimental.constrained.fsub.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -314,8 +329,8 @@ define float @fsub_fsub_wrong_common_op(float %x, float %y) #0 {
 
 define float @fsub_fsub_common_op_wrong_commute(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_common_op_wrong_commute(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[S]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S1:%.*]] = call float @llvm.fsub.f32(float [[Y:%.*]], float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fsub.f32(float [[S1]], float [[Y]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -328,8 +343,8 @@ define float @fsub_fsub_common_op_wrong_commute(float %x, float %y) #0 {
 
 define float @fsub_fsub_wrong_common_op_wrong_commute(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fsub_wrong_common_op_wrong_commute(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[S]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S1:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fsub.f32(float [[S1]], float [[Y]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call float @llvm.experimental.constrained.fsub.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -341,8 +356,8 @@ define float @fsub_fsub_wrong_common_op_wrong_commute(float %x, float %y) #0 {
 
 define float @fadd_fsub_common_op(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_common_op(
-; CHECK-NEXT:    [[A:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[A]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[A1:%.*]] = call float @llvm.fadd.f32(float [[Y:%.*]], float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fsub.f32(float [[A1]], float [[Y]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = call float @llvm.experimental.constrained.fadd.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -354,8 +369,8 @@ define float @fadd_fsub_common_op(float %x, float %y) #0 {
 
 define <2 x float> @fadd_fsub_common_op_commute_vec(<2 x float> %x, <2 x float> %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_common_op_commute_vec(
-; CHECK-NEXT:    [[A:%.*]] = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> [[A]], <2 x float> [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[A1:%.*]] = call <2 x float> @llvm.fadd.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz <2 x float> @llvm.fsub.v2f32(<2 x float> [[A1]], <2 x float> [[Y]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %a = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %x, <2 x float> %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -368,8 +383,8 @@ define <2 x float> @fadd_fsub_common_op_commute_vec(<2 x float> %x, <2 x float> 
 
 define float @fadd_fsub_common_op_wrong_commute(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_common_op_wrong_commute(
-; CHECK-NEXT:    [[A:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[A1:%.*]] = call float @llvm.fadd.f32(float [[Y:%.*]], float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fsub.f32(float [[Y]], float [[A1]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = call float @llvm.experimental.constrained.fadd.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -382,8 +397,8 @@ define float @fadd_fsub_common_op_wrong_commute(float %x, float %y) #0 {
 
 define float @fadd_fsub_common_op_wrong_commute_commute(float %x, float %y) #0 {
 ; CHECK-LABEL: @fadd_fsub_common_op_wrong_commute_commute(
-; CHECK-NEXT:    [[A:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fsub.f32(float [[Y]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[A1:%.*]] = call float @llvm.fadd.f32(float [[X:%.*]], float [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fsub.f32(float [[Y]], float [[A1]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -395,8 +410,8 @@ define float @fadd_fsub_common_op_wrong_commute_commute(float %x, float %y) #0 {
 
 define <2 x float> @fsub_fadd_common_op_vec(<2 x float> %x, <2 x float> %y) #0 {
 ; CHECK-LABEL: @fsub_fadd_common_op_vec(
-; CHECK-NEXT:    [[S:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[Y]], <2 x float> [[S]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S2:%.*]] = call <2 x float> @llvm.fsub.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz <2 x float> @llvm.fadd.v2f32(<2 x float> [[Y]], <2 x float> [[S2]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %s = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> %x, <2 x float> %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -408,8 +423,8 @@ define <2 x float> @fsub_fadd_common_op_vec(<2 x float> %x, <2 x float> %y) #0 {
 
 define float @fsub_fadd_common_op_commute(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fadd_common_op_commute(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float [[Y:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fadd.f32(float [[S]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S2:%.*]] = call float @llvm.fsub.f32(float [[X:%.*]], float [[Y:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fadd.f32(float [[S2]], float [[Y]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call float @llvm.experimental.constrained.fsub.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -422,8 +437,8 @@ define float @fsub_fadd_common_op_commute(float %x, float %y) #0 {
 
 define float @fsub_fadd_common_op_wrong_commute(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fadd_common_op_wrong_commute(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fadd.f32(float [[Y]], float [[S]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S2:%.*]] = call float @llvm.fsub.f32(float [[Y:%.*]], float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fadd.f32(float [[Y]], float [[S2]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -436,8 +451,8 @@ define float @fsub_fadd_common_op_wrong_commute(float %x, float %y) #0 {
 
 define float @fsub_fadd_common_op_wrong_commute_commute(float %x, float %y) #0 {
 ; CHECK-LABEL: @fsub_fadd_common_op_wrong_commute_commute(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[Y:%.*]], float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.experimental.constrained.fadd.f32(float [[S]], float [[Y]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[S2:%.*]] = call float @llvm.fsub.f32(float [[Y:%.*]], float [[X:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc nsz float @llvm.fadd.f32(float [[S2]], float [[Y]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call float @llvm.experimental.constrained.fsub.f32(float %y, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -449,8 +464,8 @@ define float @fsub_fadd_common_op_wrong_commute_commute(float %x, float %y) #0 {
 
 define float @maxnum_with_poszero_op(float %a) #0 {
 ; CHECK-LABEL: @maxnum_with_poszero_op(
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[A:%.*]], float 0.000000e+00, metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX]]) #[[ATTR0]]
+; CHECK-NEXT:    [[MAX1:%.*]] = call float @llvm.maxnum.f32(float [[A:%.*]], float 0.000000e+00) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %max = call float @llvm.experimental.constrained.maxnum.f32(float %a, float 0.0, metadata !"fpexcept.ignore")
@@ -460,9 +475,9 @@ define float @maxnum_with_poszero_op(float %a) #0 {
 
 define float @maxnum_with_poszero_op_commute(float %a) #0 {
 ; CHECK-LABEL: @maxnum_with_poszero_op_commute(
-; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float 0.000000e+00, float [[SQRT]], metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX]]) #[[ATTR0]]
+; CHECK-NEXT:    [[SQRT2:%.*]] = call float @llvm.sqrt.f32(float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[MAX1:%.*]] = call float @llvm.maxnum.f32(float 0.000000e+00, float [[SQRT2]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %sqrt = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -473,10 +488,10 @@ define float @maxnum_with_poszero_op_commute(float %a) #0 {
 
 define float @maxnum_with_negzero_op(float %a) #0 {
 ; CHECK-LABEL: @maxnum_with_negzero_op(
-; CHECK-NEXT:    [[NNAN:%.*]] = call nnan float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABSA:%.*]] = call float @llvm.fabs.f32(float [[NNAN]]) #[[ATTR0]]
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float -0.000000e+00, float [[FABSA]], metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX]]) #[[ATTR0]]
+; CHECK-NEXT:    [[NNAN2:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABSA:%.*]] = call float @llvm.fabs.f32(float [[NNAN2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[MAX1:%.*]] = call float @llvm.maxnum.f32(float -0.000000e+00, float [[FABSA]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %nnan = call nnan float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -488,10 +503,10 @@ define float @maxnum_with_negzero_op(float %a) #0 {
 
 define float @maxnum_with_negzero_op_commute(float %a) #0 {
 ; CHECK-LABEL: @maxnum_with_negzero_op_commute(
-; CHECK-NEXT:    [[NNAN:%.*]] = call nnan float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABSA:%.*]] = call float @llvm.fabs.f32(float [[NNAN]]) #[[ATTR0]]
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[FABSA]], float -0.000000e+00, metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX]]) #[[ATTR0]]
+; CHECK-NEXT:    [[NNAN2:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABSA:%.*]] = call float @llvm.fabs.f32(float [[NNAN2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[MAX1:%.*]] = call float @llvm.maxnum.f32(float [[FABSA]], float -0.000000e+00) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX1]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %nnan = call nnan float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -505,8 +520,8 @@ define float @maxnum_with_negzero_op_commute(float %a) #0 {
 
 define float @maxnum_with_pos_one_op(float %a) #0 {
 ; CHECK-LABEL: @maxnum_with_pos_one_op(
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.experimental.constrained.maxnum.f32(float [[A:%.*]], float 1.000000e+00, metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MAX]]) #[[ATTR0]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.maxnum.f32(float [[A:%.*]], float 1.000000e+00) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[FABS1:%.*]] = call float @llvm.fabs.f32(float [[FABS]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %max = call float @llvm.experimental.constrained.maxnum.f32(float %a, float 1.0, metadata !"fpexcept.ignore")
@@ -530,5 +545,43 @@ declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, me
 
 declare float @llvm.experimental.constrained.maxnum.f32(float, float, metadata)
 declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
+
+; Tests for the new FP intrinsic form with explicit fp.control/fp.except operand
+; bundles.  InstSimplify has no folding rules for these calls (no
+; Intrinsic::fadd case), so they pass through unchanged.  These functions
+; verify that the IR is valid and that InstSimplify correctly preserves calls
+; with non-default FP environment overrides.
+
+define float @new_fadd_neg0_ignore(float %a) #0 {
+; CHECK-LABEL: @new_fadd_neg0_ignore(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fadd.f32(float [[A:%.*]], float -0.000000e+00) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.fadd.f32(float %a, float -0.0)
+  [ "fp.except"(metadata !"ignore") ]
+  ret float %r
+}
+
+define float @new_fadd_neg0_rtz(float %a) #0 {
+; CHECK-LABEL: @new_fadd_neg0_rtz(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fadd.f32(float [[A:%.*]], float -0.000000e+00) [ "fp.control"(metadata !"rtz") ]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.fadd.f32(float %a, float -0.0)
+  [ "fp.control"(metadata !"rtz") ]
+  ret float %r
+}
+
+define float @new_fadd_neg0_rtz_ignore(float %a) #0 {
+; CHECK-LABEL: @new_fadd_neg0_rtz_ignore(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fadd.f32(float [[A:%.*]], float -0.000000e+00) [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @llvm.fadd.f32(float %a, float -0.0)
+  [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"ignore") ]
+  ret float %r
+}
+
+declare float @llvm.fadd.f32(float, float)
 
 attributes #0 = { strictfp }

@@ -179,6 +179,15 @@ public:
   /// fails.
   RoundingModeAttr matchRoundingModeAttr(llvm::Value *value);
 
+  /// Extracts the FP exception behavior attribute from the fp.except operand
+  /// bundle of `inst`. Returns the default (ignore) behavior when absent.
+  FPExceptionBehaviorAttr
+  matchFPExceptionBehaviorAttrFromBundle(llvm::CallInst *inst);
+
+  /// Extracts the rounding mode attribute from the fp.control operand bundle of
+  /// `inst`. Returns the default (NearestTiesToEven) mode when absent.
+  RoundingModeAttr matchRoundingModeAttrFromBundle(llvm::CallInst *inst);
+
   /// Converts `value` to an array of alias scopes or returns failure if the
   /// conversion fails.
   FailureOr<SmallVector<AliasScopeAttr>>

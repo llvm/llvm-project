@@ -1198,7 +1198,9 @@ define void @experimental_constrained_fpext(float %s, <4 x float> %v) {
   ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} maytrap : f32 to f64
   %2 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.maytrap")
   ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} strict : f32 to f64
-  %3 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.strict")
+  ; Use new bundle format: old-format fpext.strict auto-upgrades to a plain
+  ; fpext instruction (losing constrained semantics), so use explicit bundle.
+  %3 = call double @llvm.fpext.f64.f32(float %s) [ "fp.except"(metadata !"strict") ]
   ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} ignore : vector<4xf32> to vector<4xf64>
   %6 = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float> %v, metadata !"fpexcept.ignore")
   ret void

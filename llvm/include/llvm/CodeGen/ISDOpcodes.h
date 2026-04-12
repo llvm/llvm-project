@@ -1671,6 +1671,11 @@ LLVM_ABI bool isVPBinaryOp(unsigned Opcode);
 /// Whether this is a vector-predicated reduction opcode.
 LLVM_ABI bool isVPReduction(unsigned Opcode);
 
+/// Returns true if \p Opcode is a floating-point operation — i.e., a node that
+/// computes an FP result, converts between FP precisions, compares FP values,
+/// or otherwise performs floating-point arithmetic.
+LLVM_ABI bool isFPOpcode(unsigned Opcode);
+
 /// The operand position of the vector mask.
 LLVM_ABI std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
 

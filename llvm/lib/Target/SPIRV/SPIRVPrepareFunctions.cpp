@@ -23,9 +23,11 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -347,21 +349,6 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   FSHIntrinsic->setCalledFunction(FSHFunc);
 }
 
-static void lowerConstrainedFPCmpIntrinsic(
-    ConstrainedFPCmpIntrinsic *ConstrainedCmpIntrinsic,
-    SmallVector<Instruction *> &EraseFromParent) {
-  if (!ConstrainedCmpIntrinsic)
-    return;
-  // Extract the floating-point values being compared
-  Value *LHS = ConstrainedCmpIntrinsic->getArgOperand(0);
-  Value *RHS = ConstrainedCmpIntrinsic->getArgOperand(1);
-  FCmpInst::Predicate Pred = ConstrainedCmpIntrinsic->getPredicate();
-  IRBuilder<> Builder(ConstrainedCmpIntrinsic);
-  Value *FCmp = Builder.CreateFCmp(Pred, LHS, RHS);
-  ConstrainedCmpIntrinsic->replaceAllUsesWith(FCmp);
-  EraseFromParent.push_back(dyn_cast<Instruction>(ConstrainedCmpIntrinsic));
-}
-
 static void lowerExpectAssume(IntrinsicInst *II) {
   // If we cannot use the SPV_KHR_expect_assume extension, then we need to
   // ignore the intrinsic and move on. It should be removed later on by LLVM.
@@ -405,23 +392,86 @@ static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
   return true;
 }
 
-static void
-lowerConstrainedFmuladd(IntrinsicInst *II,
-                        SmallVector<Instruction *> &EraseFromParent) {
-  auto *FPI = cast<ConstrainedFPIntrinsic>(II);
-  Value *A = FPI->getArgOperand(0);
-  Value *Mul = FPI->getArgOperand(1);
-  Value *Add = FPI->getArgOperand(2);
-  IRBuilder<> Builder(II->getParent());
-  Builder.SetInsertPoint(II);
-  std::optional<RoundingMode> Rounding = FPI->getRoundingMode();
-  Value *Product = Builder.CreateFMul(A, Mul, II->getName() + ".mul");
-  Value *Result = Builder.CreateConstrainedFPBinOp(
-      Intrinsic::experimental_constrained_fadd, Product, Add, {},
-      II->getName() + ".add", nullptr, Rounding);
-  II->replaceAllUsesWith(Result);
-  EraseFromParent.push_back(II);
+// Attach a SPIRV FPRoundingMode decoration (via spv_assign_decoration) to
+// Inst for the rounding mode RM. Does nothing if RM is Dynamic or unknown.
+static void attachFPRoundingModeDecoration(Instruction *Inst, RoundingMode RM,
+                                           IRBuilder<> &Builder) {
+  unsigned SPIRVMode = std::numeric_limits<unsigned>::max();
+  switch (RM) {
+  case RoundingMode::NearestTiesToEven:
+    SPIRVMode = SPIRV::FPRoundingMode::FPRoundingMode::RTE;
+    break;
+  case RoundingMode::TowardNegative:
+    SPIRVMode = SPIRV::FPRoundingMode::FPRoundingMode::RTN;
+    break;
+  case RoundingMode::TowardPositive:
+    SPIRVMode = SPIRV::FPRoundingMode::FPRoundingMode::RTP;
+    break;
+  case RoundingMode::TowardZero:
+    SPIRVMode = SPIRV::FPRoundingMode::FPRoundingMode::RTZ;
+    break;
+  default:
+    return;
+  }
+  LLVMContext &Ctx = Inst->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  MDNode *RMNode = MDNode::get(
+      Ctx, {ConstantAsMetadata::get(
+                ConstantInt::get(Int32Ty, SPIRV::Decoration::FPRoundingMode)),
+            ConstantAsMetadata::get(ConstantInt::get(Int32Ty, SPIRVMode))});
+  Builder.SetInsertPoint(Inst->getNextNode());
+  Builder.CreateIntrinsic(
+      Intrinsic::spv_assign_decoration, {Inst->getType()},
+      {Inst, MetadataAsValue::get(Ctx, MDNode::get(Ctx, {RMNode}))});
 }
+
+// Lower a new-style FP binary intrinsic (e.g. @llvm.fmul.f32) with an optional
+// fp.control bundle to a plain FP instruction. If the bundle specifies a
+// non-dynamic rounding mode, also attach a SPIRV FPRoundingMode decoration to
+// the emitted instruction so the rounding mode is preserved.
+static void
+lowerNewFPBinopForSPIRV(CallInst *CI, Instruction::BinaryOps PlainOpc,
+                        SmallVector<Instruction *> &EraseFromParent) {
+  IRBuilder<> Builder(CI->getParent());
+  Builder.SetInsertPoint(CI);
+  Value *A = CI->getArgOperand(0);
+  Value *B = CI->getArgOperand(1);
+  Value *Result = Builder.CreateBinOp(PlainOpc, A, B, CI->getName());
+
+  // If a non-dynamic rounding mode is specified via fp.control bundle, attach
+  // a SPIRV FPRoundingMode decoration to the new plain instruction.
+  RoundingMode RM = CI->getRoundingMode();
+  if (CI->getOperandBundle(LLVMContext::OB_fp_control).has_value() &&
+      RM != RoundingMode::Dynamic)
+    attachFPRoundingModeDecoration(cast<Instruction>(Result), RM, Builder);
+
+  CI->replaceAllUsesWith(Result);
+  EraseFromParent.push_back(CI);
+}
+
+// Lower @llvm.fmuladd with an optional fp.control bundle. Only called when the
+// bundle carries a non-dynamic rounding mode (checked by the caller). We expand
+// to fmul + fadd and attach FPRoundingMode decorations to both instructions so
+// the rounding mode is preserved in the SPIRV output.
+static void
+lowerNewFmuladd(CallInst *CI,
+                SmallVector<Instruction *> &EraseFromParent) {
+  IRBuilder<> Builder(CI->getParent());
+  Builder.SetInsertPoint(CI);
+  Value *A = CI->getArgOperand(0);
+  Value *Mul = CI->getArgOperand(1);
+  Value *Add = CI->getArgOperand(2);
+  Value *Product = Builder.CreateFMul(A, Mul, CI->getName() + ".mul");
+  Value *Result = Builder.CreateFAdd(Product, Add, CI->getName() + ".add");
+
+  RoundingMode RM = CI->getRoundingMode();
+  attachFPRoundingModeDecoration(cast<Instruction>(Product), RM, Builder);
+  attachFPRoundingModeDecoration(cast<Instruction>(Result), RM, Builder);
+
+  CI->replaceAllUsesWith(Result);
+  EraseFromParent.push_back(CI);
+}
+
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
@@ -480,16 +530,71 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerPtrAnnotation(II);
         Changed = true;
         break;
-      case Intrinsic::experimental_constrained_fmuladd:
-        lowerConstrainedFmuladd(II, EraseFromParent);
+      // New-style FP intrinsics (produced by auto-upgrade of constrained ops):
+      // lower to a plain FP instruction. Non-default rounding modes encoded in
+      // the fp.control bundle are preserved via a SPIRV FPRoundingMode
+      // decoration emitted by lowerNewFPBinopForSPIRV.
+      case Intrinsic::fadd:
+        lowerNewFPBinopForSPIRV(Call, Instruction::FAdd, EraseFromParent);
         Changed = true;
         break;
-      case Intrinsic::experimental_constrained_fcmp:
-      case Intrinsic::experimental_constrained_fcmps:
-        lowerConstrainedFPCmpIntrinsic(dyn_cast<ConstrainedFPCmpIntrinsic>(II),
-                                       EraseFromParent);
+      case Intrinsic::fsub:
+        lowerNewFPBinopForSPIRV(Call, Instruction::FSub, EraseFromParent);
         Changed = true;
         break;
+      case Intrinsic::fmul:
+        lowerNewFPBinopForSPIRV(Call, Instruction::FMul, EraseFromParent);
+        Changed = true;
+        break;
+      case Intrinsic::fdiv:
+        lowerNewFPBinopForSPIRV(Call, Instruction::FDiv, EraseFromParent);
+        Changed = true;
+        break;
+      case Intrinsic::frem:
+        lowerNewFPBinopForSPIRV(Call, Instruction::FRem, EraseFromParent);
+        Changed = true;
+        break;
+      case Intrinsic::fmuladd:
+        // Only lower fmuladd when it carries a non-default fp.control bundle
+        // (non-dynamic rounding mode).  Without bundles, let SPIRV handle it
+        // natively so it can emit OpExtInst Fma via GLSL.std.450.
+        if (Call->getOperandBundle(LLVMContext::OB_fp_control).has_value() &&
+            Call->getRoundingMode() != RoundingMode::Dynamic) {
+          lowerNewFmuladd(Call, EraseFromParent);
+          Changed = true;
+        }
+        break;
+      case Intrinsic::fcmps: {
+        // Signaling FP compare – SPIRV has no separate signaling compare
+        // instruction; lower to a plain fcmp.
+        Value *LHS = Call->getArgOperand(0);
+        Value *RHS = Call->getArgOperand(1);
+        auto *PredMD =
+            cast<MetadataAsValue>(Call->getArgOperand(2))->getMetadata();
+        FCmpInst::Predicate Pred = StringSwitch<FCmpInst::Predicate>(
+                                       cast<MDString>(PredMD)->getString())
+                                       .Case("oeq", FCmpInst::FCMP_OEQ)
+                                       .Case("ogt", FCmpInst::FCMP_OGT)
+                                       .Case("oge", FCmpInst::FCMP_OGE)
+                                       .Case("olt", FCmpInst::FCMP_OLT)
+                                       .Case("ole", FCmpInst::FCMP_OLE)
+                                       .Case("one", FCmpInst::FCMP_ONE)
+                                       .Case("ord", FCmpInst::FCMP_ORD)
+                                       .Case("uno", FCmpInst::FCMP_UNO)
+                                       .Case("ueq", FCmpInst::FCMP_UEQ)
+                                       .Case("ugt", FCmpInst::FCMP_UGT)
+                                       .Case("uge", FCmpInst::FCMP_UGE)
+                                       .Case("ult", FCmpInst::FCMP_ULT)
+                                       .Case("ule", FCmpInst::FCMP_ULE)
+                                       .Case("une", FCmpInst::FCMP_UNE)
+                                       .Default(FCmpInst::BAD_FCMP_PREDICATE);
+        IRBuilder<> Builder(Call);
+        Value *FCmp = Builder.CreateFCmp(Pred, LHS, RHS, Call->getName());
+        Call->replaceAllUsesWith(FCmp);
+        EraseFromParent.push_back(Call);
+        Changed = true;
+        break;
+      }
       default:
         if (TM.getTargetTriple().getVendor() == Triple::AMD ||
             any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {

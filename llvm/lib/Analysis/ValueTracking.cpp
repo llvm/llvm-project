@@ -5231,8 +5231,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
       break;
     }
-    case Intrinsic::sqrt:
-    case Intrinsic::experimental_constrained_sqrt: {
+    case Intrinsic::sqrt: {
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
       if (InterestedClasses & fcNan)
@@ -5429,9 +5428,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::log:
     case Intrinsic::log10:
     case Intrinsic::log2:
-    case Intrinsic::experimental_constrained_log:
-    case Intrinsic::experimental_constrained_log10:
-    case Intrinsic::experimental_constrained_log2:
     case Intrinsic::amdgcn_log: {
       Type *EltTy = II->getType()->getScalarType();
 
@@ -5506,8 +5502,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                           Known, Q, Depth + 1);
       break;
     }
-    case Intrinsic::experimental_constrained_sitofp:
-    case Intrinsic::experimental_constrained_uitofp:
+    case Intrinsic::sitofp:
+    case Intrinsic::uitofp:
       // Cannot produce nan
       Known.knownNot(fcNan);
 
@@ -5517,7 +5513,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // Integers cannot be subnormal
       Known.knownNot(fcSubnormal);
 
-      if (IID == Intrinsic::experimental_constrained_uitofp)
+      if (IID == Intrinsic::uitofp)
         Known.signBitMustBeZero();
 
       // TODO: Copy inf handling from instructions

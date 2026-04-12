@@ -54,7 +54,7 @@ define i1 @float.1.strict(i1 %cmp) #0 {
 ; CHECK:       if.true:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float 1.000000e+00, float 1.000000e+00, metadata !"ueq", metadata !"fpexcept.strict") #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @llvm.fcmps.f32(float 1.000000e+00, float 1.000000e+00, metadata !"ueq")
 ; CHECK-NEXT:    ret i1 true
 ;
 
@@ -79,7 +79,7 @@ define i1 @float.2.defaultenv(i1 %cmp) #0 {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[P:%.*]] = phi float [ 1.000000e+00, [[ENTRY:%.*]] ], [ 2.000000e+00, [[IF_TRUE]] ]
-; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
 
@@ -103,7 +103,7 @@ define i1 @float.2.maytrap(i1 %cmp) #0 {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[P:%.*]] = phi float [ 1.000000e+00, [[ENTRY:%.*]] ], [ 2.000000e+00, [[IF_TRUE]] ]
-; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq") [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
 
@@ -127,7 +127,7 @@ define i1 @float.2.strict(i1 %cmp) #0 {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[P:%.*]] = phi float [ 1.000000e+00, [[ENTRY:%.*]] ], [ 2.000000e+00, [[IF_TRUE]] ]
-; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq")
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
 
@@ -151,7 +151,7 @@ define i1 @float.3.defaultenv(float %f, i1 %cmp) #0 {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[P:%.*]] = phi float [ 1.000000e+00, [[ENTRY:%.*]] ], [ [[F:%.*]], [[IF_TRUE]] ]
-; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
 
@@ -175,7 +175,7 @@ define i1 @float.3.maytrap(float %f, i1 %cmp) #0 {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[P:%.*]] = phi float [ 1.000000e+00, [[ENTRY:%.*]] ], [ [[F:%.*]], [[IF_TRUE]] ]
-; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq") [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
 
@@ -199,7 +199,7 @@ define i1 @float.3.strict(float %f, i1 %cmp) #0 {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[P:%.*]] = phi float [ 1.000000e+00, [[ENTRY:%.*]] ], [ [[F:%.*]], [[IF_TRUE]] ]
-; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.fcmps.f32(float [[P]], float 1.000000e+00, metadata !"ueq")
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
 
@@ -273,7 +273,7 @@ define i1 @float.4_unreachable.strict(float %f, i1 %cmp) #0 {
 ; CHECK:       if.true:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float 1.000000e+00, float 1.000000e+00, metadata !"une", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @llvm.fcmps.f32(float 1.000000e+00, float 1.000000e+00, metadata !"une")
 ; CHECK-NEXT:    ret i1 false
 ;
 

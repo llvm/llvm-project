@@ -7301,13 +7301,6 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     return nullptr;
   }
-  case Intrinsic::experimental_constrained_fma: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    if (Value *V = simplifyFPOp(Args, {}, Q, *FPI->getExceptionBehavior(),
-                                *FPI->getRoundingMode()))
-      return V;
-    return nullptr;
-  }
   case Intrinsic::fma:
   case Intrinsic::fmuladd: {
     if (Value *V = simplifyFPOp(Args, {}, Q, fp::ebIgnore,
@@ -7387,37 +7380,27 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     return nullptr;
   }
-  case Intrinsic::experimental_constrained_fadd: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFAddInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_fsub: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFSubInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_fmul: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFMulInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_fdiv: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFDivInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_frem: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFRemInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_ldexp:
+  case Intrinsic::fadd:
+    return simplifyFAddInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
+                            Call->getExceptionBehavior(),
+                            Call->getRoundingMode());
+  case Intrinsic::fsub:
+    return simplifyFSubInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
+                            Call->getExceptionBehavior(),
+                            Call->getRoundingMode());
+  case Intrinsic::fmul:
+    return simplifyFMulInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
+                            Call->getExceptionBehavior(),
+                            Call->getRoundingMode());
+  case Intrinsic::fdiv:
+    return simplifyFDivInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
+                            Call->getExceptionBehavior(),
+                            Call->getRoundingMode());
+  case Intrinsic::frem:
+    return simplifyFRemInst(Args[0], Args[1], Call->getFastMathFlags(), Q,
+                            Call->getExceptionBehavior(),
+                            Call->getRoundingMode());
+  case Intrinsic::ldexp:
     return simplifyLdexp(Args[0], Args[1], Q, true);
   case Intrinsic::experimental_gc_relocate: {
     GCRelocateInst &GCR = *cast<GCRelocateInst>(Call);
@@ -7509,7 +7492,7 @@ Value *llvm::simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
 }
 
 Value *llvm::simplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q) {
-  assert(isa<ConstrainedFPIntrinsic>(Call));
+  assert(isa<IntrinsicInst>(Call) && Intrinsic::isConstrainedFPIntrinsic(cast<IntrinsicInst>(Call)->getIntrinsicID()));
   SmallVector<Value *, 4> Args(Call->args());
   if (Value *V = tryConstantFoldCall(Call, Call->getCalledOperand(), Args, Q))
     return V;

@@ -135,6 +135,14 @@ public:
   /// course of IR transformations
   LLVM_ABI static bool mayLowerToFunctionCall(Intrinsic::ID IID);
 
+  /// Check if \p ID represents a function that may access FP environment and
+  /// may have FP operand bundles.
+  ///
+  /// Access to FP environment means that in the strict FP environment the
+  /// function has read/write memory effect, which is used to maintain proper
+  /// instructions ordering.
+  static bool isFloatingPointOperation(Intrinsic::ID IID);
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
     auto *F = dyn_cast_or_null<Function>(I->getCalledOperand());
@@ -640,11 +648,6 @@ public:
     return getFunctionalIntrinsicIDForVP(getIntrinsicID());
   }
 
-  // Equivalent non-predicated constrained ID
-  std::optional<unsigned> getConstrainedIntrinsicID() const {
-    return getConstrainedIntrinsicIDForVP(getIntrinsicID());
-  }
-
   // Equivalent non-predicated opcode
   LLVM_ABI static std::optional<unsigned>
   getFunctionalOpcodeForVP(Intrinsic::ID ID);
@@ -653,9 +656,6 @@ public:
   LLVM_ABI static std::optional<Intrinsic::ID>
   getFunctionalIntrinsicIDForVP(Intrinsic::ID ID);
 
-  // Equivalent non-predicated constrained ID
-  LLVM_ABI static std::optional<Intrinsic::ID>
-  getConstrainedIntrinsicIDForVP(Intrinsic::ID ID);
 };
 
 /// This represents vector predication reduction intrinsics.
@@ -728,43 +728,6 @@ public:
 };
 
 
-/// This is the common base class for constrained floating point intrinsics.
-class ConstrainedFPIntrinsic : public IntrinsicInst {
-public:
-  LLVM_ABI unsigned getNonMetadataArgCount() const;
-  LLVM_ABI std::optional<RoundingMode> getRoundingMode() const;
-  LLVM_ABI std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
-  LLVM_ABI bool isDefaultFPEnvironment() const;
-
-  // Methods for support type inquiry through isa, cast, and dyn_cast:
-  LLVM_ABI static bool classof(const IntrinsicInst *I);
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
-/// Constrained floating point compare intrinsics.
-class ConstrainedFPCmpIntrinsic : public ConstrainedFPIntrinsic {
-public:
-  LLVM_ABI FCmpInst::Predicate getPredicate() const;
-  bool isSignaling() const {
-    return getIntrinsicID() == Intrinsic::experimental_constrained_fcmps;
-  }
-
-  // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const IntrinsicInst *I) {
-    switch (I->getIntrinsicID()) {
-    case Intrinsic::experimental_constrained_fcmp:
-    case Intrinsic::experimental_constrained_fcmps:
-      return true;
-    default:
-      return false;
-    }
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
 
 /// This class represents min/max intrinsics.
 class MinMaxIntrinsic : public IntrinsicInst {

@@ -821,27 +821,17 @@ Function *Intrinsic::getDeclarationIfExists(Module *M, ID id,
 #include "llvm/IR/IntrinsicImpl.inc"
 
 bool Intrinsic::isConstrainedFPIntrinsic(ID QID) {
-  switch (QID) {
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:
-#include "llvm/IR/ConstrainedOps.def"
-#undef INSTRUCTION
-    return true;
-  default:
-    return false;
-  }
+  // llvm.fcmps is the new-form signaling FP compare intrinsic.  It has
+  // IntrInaccessibleMemOnly (always strict by default) and uses fp.except
+  // bundle for exception observability — treat it as a constrained intrinsic
+  // for the purposes of dead-instruction analysis.
+  return QID == Intrinsic::fcmps;
 }
 
 bool Intrinsic::hasConstrainedFPRoundingModeOperand(Intrinsic::ID QID) {
-  switch (QID) {
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return ROUND_MODE == 1;
-#include "llvm/IR/ConstrainedOps.def"
-#undef INSTRUCTION
-  default:
-    return false;
-  }
+  // All experimental_constrained_* intrinsics have been removed from
+  // Intrinsics.td. No constrained FP intrinsic IDs exist; always false.
+  return false;
 }
 
 using DeferredIntrinsicMatchPair =

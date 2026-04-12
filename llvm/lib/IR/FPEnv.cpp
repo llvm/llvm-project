@@ -14,9 +14,6 @@
 
 #include "llvm/IR/FPEnv.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include <optional>
 
 using namespace llvm;
@@ -32,6 +29,17 @@ llvm::convertStrToRoundingMode(StringRef RoundingArg) {
       .Case("round.downward", RoundingMode::TowardNegative)
       .Case("round.upward", RoundingMode::TowardPositive)
       .Case("round.towardzero", RoundingMode::TowardZero)
+      .Default(std::nullopt);
+}
+
+std::optional<RoundingMode> llvm::convertBundleToRoundingMode(StringRef RoundingArg) {
+  return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
+      .Case("dyn", RoundingMode::Dynamic)
+      .Case("rte", RoundingMode::NearestTiesToEven)
+      .Case("rmm", RoundingMode::NearestTiesToAway)
+      .Case("rtn", RoundingMode::TowardNegative)
+      .Case("rtp", RoundingMode::TowardPositive)
+      .Case("rtz", RoundingMode::TowardZero)
       .Default(std::nullopt);
 }
 
@@ -63,12 +71,48 @@ llvm::convertRoundingModeToStr(RoundingMode UseRounding) {
   return RoundingStr;
 }
 
+std::optional<StringRef> llvm::convertRoundingModeToBundle(RoundingMode UseRounding) {
+  std::optional<StringRef> RoundingStr;
+  switch (UseRounding) {
+  case RoundingMode::Dynamic:
+    RoundingStr = "dyn";
+    break;
+  case RoundingMode::NearestTiesToEven:
+    RoundingStr = "rte";
+    break;
+  case RoundingMode::NearestTiesToAway:
+    RoundingStr = "rmm";
+    break;
+  case RoundingMode::TowardNegative:
+    RoundingStr = "rtn";
+    break;
+  case RoundingMode::TowardPositive:
+    RoundingStr = "rtp";
+    break;
+  case RoundingMode::TowardZero:
+    RoundingStr = "rtz";
+    break;
+  default:
+    break;
+  }
+  return RoundingStr;
+}
+
 std::optional<fp::ExceptionBehavior>
 llvm::convertStrToExceptionBehavior(StringRef ExceptionArg) {
   return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
       .Case("fpexcept.ignore", fp::ebIgnore)
       .Case("fpexcept.maytrap", fp::ebMayTrap)
       .Case("fpexcept.strict", fp::ebStrict)
+      .Default(std::nullopt);
+}
+
+std::optional<fp::ExceptionBehavior>
+llvm::convertBundleToExceptionBehavior(StringRef ExceptionArg) {
+  return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
+      .Case("ignore", fp::ebIgnore)
+      .Case("maytrap", fp::ebMayTrap)
+      .Case("strict", fp::ebStrict)
       .Default(std::nullopt);
 }
 
@@ -89,43 +133,20 @@ llvm::convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
   return ExceptStr;
 }
 
-Intrinsic::ID llvm::getConstrainedIntrinsicID(const Instruction &Instr) {
-  Intrinsic::ID IID = Intrinsic::not_intrinsic;
-  switch (Instr.getOpcode()) {
-  case Instruction::FCmp:
-    // Unlike other instructions FCmp can be mapped to one of two intrinsic
-    // functions. We choose the non-signaling variant.
-    IID = Intrinsic::experimental_constrained_fcmp;
+std::optional<StringRef>
+llvm::convertExceptionBehaviorToBundle(fp::ExceptionBehavior UseExcept) {
+  std::optional<StringRef> ExceptStr;
+  switch (UseExcept) {
+  case fp::ebStrict:
+    ExceptStr = "strict";
     break;
-
-    // Instructions
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Instruction::NAME:                                                      \
-    IID = Intrinsic::INTRINSIC;                                                \
+  case fp::ebIgnore:
+    ExceptStr = "ignore";
     break;
-#define FUNCTION(NAME, NARG, ROUND_MODE, INTRINSIC)
-#define CMP_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)
-#include "llvm/IR/ConstrainedOps.def"
-
-  // Intrinsic calls.
-  case Instruction::Call:
-    if (auto *IntrinCall = dyn_cast<IntrinsicInst>(&Instr)) {
-      switch (IntrinCall->getIntrinsicID()) {
-#define FUNCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                            \
-  case Intrinsic::NAME:                                                        \
-    IID = Intrinsic::INTRINSIC;                                                \
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)
-#define CMP_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)
-#include "llvm/IR/ConstrainedOps.def"
-      default:
-        break;
-      }
-    }
-    break;
-  default:
+  case fp::ebMayTrap:
+    ExceptStr = "maytrap";
     break;
   }
-
-  return IID;
+  return ExceptStr;
 }
+

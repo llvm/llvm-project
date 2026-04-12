@@ -67,6 +67,17 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
   }
 }
 
+bool IntrinsicInst::isFloatingPointOperation(Intrinsic::ID IID) {
+  switch (IID) {
+#define FP_OP(NAME, D) case Intrinsic::NAME:
+#define FP_INTRINSIC(NAME) case Intrinsic::NAME:
+#include "llvm/IR/FloatingPointOps.def"
+    return true;
+  default:
+    return false;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 /// DbgVariableIntrinsic - This is the common base class for debug info
 /// intrinsics for variables.
@@ -274,44 +285,6 @@ void InstrProfCallsite::setCallee(Value *Callee) {
   setArgOperand(4, Callee);
 }
 
-std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
-  unsigned NumOperands = arg_size();
-  Metadata *MD = nullptr;
-  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2));
-  if (MAV)
-    MD = MAV->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return std::nullopt;
-  return convertStrToRoundingMode(cast<MDString>(MD)->getString());
-}
-
-std::optional<fp::ExceptionBehavior>
-ConstrainedFPIntrinsic::getExceptionBehavior() const {
-  unsigned NumOperands = arg_size();
-  Metadata *MD = nullptr;
-  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1));
-  if (MAV)
-    MD = MAV->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return std::nullopt;
-  return convertStrToExceptionBehavior(cast<MDString>(MD)->getString());
-}
-
-bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
-  std::optional<fp::ExceptionBehavior> Except = getExceptionBehavior();
-  if (Except) {
-    if (*Except != fp::ebIgnore)
-      return false;
-  }
-
-  std::optional<RoundingMode> Rounding = getRoundingMode();
-  if (Rounding) {
-    if (*Rounding != RoundingMode::NearestTiesToEven)
-      return false;
-  }
-
-  return true;
-}
 
 static FCmpInst::Predicate getFPPredicateFromMD(const Value *Op) {
   Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
@@ -335,28 +308,6 @@ static FCmpInst::Predicate getFPPredicateFromMD(const Value *Op) {
       .Default(FCmpInst::BAD_FCMP_PREDICATE);
 }
 
-FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
-  return getFPPredicateFromMD(getArgOperand(2));
-}
-
-unsigned ConstrainedFPIntrinsic::getNonMetadataArgCount() const {
-  // All constrained fp intrinsics have "fpexcept" metadata.
-  unsigned NumArgs = arg_size() - 1;
-
-  // Some intrinsics have "round" metadata.
-  if (Intrinsic::hasConstrainedFPRoundingModeOperand(getIntrinsicID()))
-    NumArgs -= 1;
-
-  // Compare intrinsics take their predicate as metadata.
-  if (isa<ConstrainedFPCmpIntrinsic>(this))
-    NumArgs -= 1;
-
-  return NumArgs;
-}
-
-bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
-  return Intrinsic::isConstrainedFPIntrinsic(I->getIntrinsicID());
-}
 
 ElementCount VPIntrinsic::getStaticVectorLength() const {
   auto GetVectorLengthOfType = [](const Type *T) -> ElementCount {
@@ -549,19 +500,6 @@ constexpr static bool doesVPHaveNoFunctionalEquivalent(Intrinsic::ID ID) {
                 getFunctionalIntrinsicIDForVP(Intrinsic::VPID));
 #include "llvm/IR/VPIntrinsics.def"
 
-// Equivalent non-predicated constrained intrinsic
-std::optional<Intrinsic::ID>
-VPIntrinsic::getConstrainedIntrinsicIDForVP(Intrinsic::ID ID) {
-  switch (ID) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CONSTRAINEDFP(CID) return Intrinsic::CID;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  return std::nullopt;
-}
 
 Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
   switch (IROPC) {

@@ -68,6 +68,9 @@ Changes to the LLVM IR
 
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
+* Updated semantics of `llvm.type.checked.load.relative` to match that of
+  `llvm.load.relative`.
+* Floating-point operand bundles have been added.
 
 Changes to LLVM infrastructure
 ------------------------------

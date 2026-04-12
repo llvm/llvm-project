@@ -4609,20 +4609,9 @@ static Value* buildFMulAdd(llvm::Instruction *MulOp, Value *Addend,
   if (negAdd)
     Addend = Builder.CreateFNeg(Addend, "neg");
 
-  Value *FMulAdd = nullptr;
-  if (Builder.getIsFPConstrained()) {
-    assert(isa<llvm::ConstrainedFPIntrinsic>(MulOp) &&
-           "Only constrained operation should be created when Builder is in FP "
-           "constrained mode");
-    FMulAdd = Builder.CreateConstrainedFPCall(
-        CGF.CGM.getIntrinsic(llvm::Intrinsic::experimental_constrained_fmuladd,
-                             Addend->getType()),
-        {MulOp0, MulOp1, Addend});
-  } else {
-    FMulAdd = Builder.CreateCall(
-        CGF.CGM.getIntrinsic(llvm::Intrinsic::fmuladd, Addend->getType()),
-        {MulOp0, MulOp1, Addend});
-  }
+  Value *FMulAdd = Builder.CreateCall(
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::fmuladd, Addend->getType()),
+      {MulOp0, MulOp1, Addend});
   MulOp->eraseFromParent();
 
   return FMulAdd;
@@ -4693,7 +4682,7 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
 
   if (auto *LHSBinOp = dyn_cast<llvm::CallBase>(LHS)) {
     if (LHSBinOp->getIntrinsicID() ==
-            llvm::Intrinsic::experimental_constrained_fmul &&
+            llvm::Intrinsic::fmul &&
         (LHSBinOp->use_empty() || NegLHS)) {
       // If we looked through fneg, erase it.
       if (NegLHS)
@@ -4703,7 +4692,7 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
   }
   if (auto *RHSBinOp = dyn_cast<llvm::CallBase>(RHS)) {
     if (RHSBinOp->getIntrinsicID() ==
-            llvm::Intrinsic::experimental_constrained_fmul &&
+            llvm::Intrinsic::fmul &&
         (RHSBinOp->use_empty() || NegRHS)) {
       // If we looked through fneg, erase it.
       if (NegRHS)

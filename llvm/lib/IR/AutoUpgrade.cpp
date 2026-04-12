@@ -1488,6 +1488,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       break; // No other 'experimental.vector.*'.
     }
+    if (Name.consume_front("experimental.constrained.")) {
+      // All experimental_constrained_* intrinsics are superseded by new FP
+      // intrinsics with fp.control/fp.except operand bundles. Signal
+      // UpgradeIntrinsicCall to handle the replacement (NewFn=nullptr pattern).
+      NewFn = nullptr;
+      return true;
+    }
     if (Name.consume_front("experimental.stepvector.")) {
       Intrinsic::ID ID = Intrinsic::stepvector;
       rename(F);
@@ -4956,6 +4963,250 @@ static Value *upgradeVectorSplice(CallBase *CI, IRBuilder<> &Builder) {
                                   Builder.getInt32(std::abs(OffsetVal))});
 }
 
+/// Map an experimental_constrained_* operation name to the corresponding
+/// new FP intrinsic ID (llvm.fadd, llvm.sqrt, etc.).
+static Intrinsic::ID getNewFPIntrinsicForConstrainedName(StringRef OpName) {
+  return StringSwitch<Intrinsic::ID>(OpName)
+      .Case("fadd",    Intrinsic::fadd)
+      .Case("fsub",    Intrinsic::fsub)
+      .Case("fmul",    Intrinsic::fmul)
+      .Case("fdiv",    Intrinsic::fdiv)
+      .Case("frem",    Intrinsic::frem)
+      .Case("fma",     Intrinsic::fma)
+      .Case("fmuladd", Intrinsic::fmuladd)
+      .Case("fcmp",    Intrinsic::fcmp)
+      .Case("fcmps",   Intrinsic::fcmps)
+      .Case("fptoui",  Intrinsic::fptoui)
+      .Case("fptosi",  Intrinsic::fptosi)
+      .Case("uitofp",  Intrinsic::uitofp)
+      .Case("sitofp",  Intrinsic::sitofp)
+      .Case("fptrunc", Intrinsic::fptrunc)
+      .Case("fpext",   Intrinsic::fpext)
+      .Case("sqrt",    Intrinsic::sqrt)
+      .Case("powi",    Intrinsic::powi)
+      .Case("ldexp",   Intrinsic::ldexp)
+      .Case("sin",     Intrinsic::sin)
+      .Case("asin",    Intrinsic::asin)
+      .Case("cos",     Intrinsic::cos)
+      .Case("acos",    Intrinsic::acos)
+      .Case("tan",     Intrinsic::tan)
+      .Case("atan",    Intrinsic::atan)
+      .Case("atan2",   Intrinsic::atan2)
+      .Case("sinh",    Intrinsic::sinh)
+      .Case("cosh",    Intrinsic::cosh)
+      .Case("tanh",    Intrinsic::tanh)
+      .Case("pow",     Intrinsic::pow)
+      .Case("log",     Intrinsic::log)
+      .Case("log10",   Intrinsic::log10)
+      .Case("log2",    Intrinsic::log2)
+      .Case("exp",     Intrinsic::exp)
+      .Case("exp2",    Intrinsic::exp2)
+      .Case("rint",    Intrinsic::rint)
+      .Case("nearbyint", Intrinsic::nearbyint)
+      .Case("lrint",   Intrinsic::lrint)
+      .Case("llrint",  Intrinsic::llrint)
+      .Case("ceil",    Intrinsic::ceil)
+      .Case("floor",   Intrinsic::floor)
+      .Case("round",   Intrinsic::round)
+      .Case("roundeven", Intrinsic::roundeven)
+      .Case("trunc",   Intrinsic::trunc)
+      .Case("lround",  Intrinsic::lround)
+      .Case("llround", Intrinsic::llround)
+      .Case("minnum",  Intrinsic::minnum)
+      .Case("maxnum",  Intrinsic::maxnum)
+      .Case("minimum", Intrinsic::minimum)
+      .Case("maximum", Intrinsic::maximum)
+      .Default(Intrinsic::not_intrinsic);
+}
+
+/// Upgrade a call to an experimental_constrained_* intrinsic to either:
+///   - A plain IR instruction (fadd, fcmp, fptoui, etc.) when rounding and
+///     exception behavior are at their defaults (Dynamic + ebStrict), or
+///   - The corresponding new FP intrinsic (llvm.fadd, llvm.fcmp, etc.) with
+///     fp.control and/or fp.except operand bundles when non-default.
+// Read a rounding-mode or exception-behavior string from a MetadataAsValue arg.
+static StringRef getConstrainedFPMetaStr(Value *V) {
+  if (auto *MAV = dyn_cast<MetadataAsValue>(V))
+    if (auto *MDS = dyn_cast<MDString>(MAV->getMetadata()))
+      return MDS->getString();
+  return {};
+}
+
+// Parse the FCmp predicate from the metadata arg at position 2 of a constrained
+// fcmp intrinsic.  Mirrors getFPPredicateFromMD in IntrinsicInst.cpp.
+static FCmpInst::Predicate getConstrainedFCmpPred(CallBase *CI) {
+  return StringSwitch<FCmpInst::Predicate>(
+             getConstrainedFPMetaStr(CI->getArgOperand(2)))
+      .Case("oeq", FCmpInst::FCMP_OEQ)
+      .Case("ogt", FCmpInst::FCMP_OGT)
+      .Case("oge", FCmpInst::FCMP_OGE)
+      .Case("olt", FCmpInst::FCMP_OLT)
+      .Case("ole", FCmpInst::FCMP_OLE)
+      .Case("one", FCmpInst::FCMP_ONE)
+      .Case("ord", FCmpInst::FCMP_ORD)
+      .Case("uno", FCmpInst::FCMP_UNO)
+      .Case("ueq", FCmpInst::FCMP_UEQ)
+      .Case("ugt", FCmpInst::FCMP_UGT)
+      .Case("uge", FCmpInst::FCMP_UGE)
+      .Case("ult", FCmpInst::FCMP_ULT)
+      .Case("ule", FCmpInst::FCMP_ULE)
+      .Case("une", FCmpInst::FCMP_UNE)
+      .Default(FCmpInst::BAD_FCMP_PREDICATE);
+}
+
+static Value *upgradeConstrainedFPIntrinsicCall(CallBase *CI, StringRef Name,
+                                                IRBuilder<> &Builder) {
+  LLVMContext &Ctx = CI->getContext();
+  Type *RetTy = CI->getType();
+
+  // Extract the operation name (part before first '.' in Name).
+  // e.g., "fadd.f32" -> "fadd", "sqrt.f64" -> "sqrt"
+  StringRef OpName = Name.split('.').first;
+
+  // Determine whether this intrinsic carries a rounding-mode metadata arg.
+  // Operations WITHOUT rounding mode:
+  // fpext, fptosi, fptoui, fcmp, fcmps, ceil, floor, trunc, round, roundeven,
+  // lround, llround, maxnum, minnum, maximum, minimum
+  bool HasRM = !StringSwitch<bool>(OpName)
+      .Cases({"fpext", "fptosi", "fptoui"}, true)
+      .Cases({"fcmp", "fcmps"}, true)
+      .Cases({"ceil", "floor", "trunc"}, true)
+      .Cases({"round", "roundeven"}, true)
+      .Cases({"lround", "llround"}, true)
+      .Cases({"maxnum", "minnum", "maximum", "minimum"}, true)
+      .Default(false);
+
+  // Parse rounding mode (second-to-last arg when present).
+  std::optional<RoundingMode> RM;
+  if (HasRM) {
+    StringRef RMS = getConstrainedFPMetaStr(CI->getArgOperand(CI->arg_size() - 2));
+    if (RMS.empty())
+      return nullptr; // malformed
+    RM = convertStrToRoundingMode(RMS);
+    if (!RM)
+      return nullptr;
+  }
+
+  // Parse exception behavior (always the last metadata arg).
+  StringRef EBS = getConstrainedFPMetaStr(CI->getArgOperand(CI->arg_size() - 1));
+  if (EBS.empty())
+    return nullptr; // malformed
+  std::optional<fp::ExceptionBehavior> EB = convertStrToExceptionBehavior(EBS);
+  if (!EB)
+    return nullptr;
+
+  bool DefaultRM = !RM || *RM == RoundingMode::Dynamic;
+  bool DefaultEB = *EB == fp::ebStrict;
+
+  // Collect the non-metadata value args.
+  // Layout: [value args...] [predicate?] [rounding mode?] [exception behavior]
+  bool IsFCmp  = (OpName == "fcmp");
+  bool IsFCmps = (OpName == "fcmps");
+  bool IsCompare = IsFCmp || IsFCmps;
+  unsigned NArgs = CI->arg_size() - 1; // always has EB
+  if (HasRM)
+    NArgs -= 1;
+  if (IsCompare)
+    NArgs -= 1; // predicate at arg[2] is metadata
+
+  SmallVector<Value *, 4> Args;
+  for (unsigned I = 0; I < NArgs; I++)
+    Args.push_back(CI->getArgOperand(I));
+
+  if (DefaultRM && DefaultEB) {
+    // Emit a plain IR instruction for operations that have one.
+    if (OpName == "fadd")
+      return Builder.CreateFAdd(Args[0], Args[1], CI->getName());
+    if (OpName == "fsub")
+      return Builder.CreateFSub(Args[0], Args[1], CI->getName());
+    if (OpName == "fmul")
+      return Builder.CreateFMul(Args[0], Args[1], CI->getName());
+    if (OpName == "fdiv")
+      return Builder.CreateFDiv(Args[0], Args[1], CI->getName());
+    if (OpName == "frem")
+      return Builder.CreateFRem(Args[0], Args[1], CI->getName());
+    // fcmp/fcmps with default EB (strict) still emits llvm.fcmp/llvm.fcmps with
+    // an explicit fp.except.strict bundle.  A plain `fcmp` would be treated as
+    // side-effect-free by the optimizer and could be DCE'd even in a strictfp
+    // function, losing the FP exception semantics.  The explicit bundle keeps
+    // the call alive and tells the backend to use the strict lowering path.
+    // Fall through for both.
+    if (OpName == "fptoui")
+      return Builder.CreateFPToUI(Args[0], RetTy, CI->getName());
+    if (OpName == "fptosi")
+      return Builder.CreateFPToSI(Args[0], RetTy, CI->getName());
+    if (OpName == "uitofp")
+      return Builder.CreateUIToFP(Args[0], RetTy, CI->getName());
+    if (OpName == "sitofp")
+      return Builder.CreateSIToFP(Args[0], RetTy, CI->getName());
+    if (OpName == "fptrunc")
+      return Builder.CreateFPTrunc(Args[0], RetTy, CI->getName());
+    if (OpName == "fpext")
+      return Builder.CreateFPExt(Args[0], RetTy, CI->getName());
+    // All other ops (math intrinsics): fall through to emit as plain intrinsic.
+  }
+
+  Intrinsic::ID NewID = getNewFPIntrinsicForConstrainedName(OpName);
+  if (NewID == Intrinsic::not_intrinsic)
+    return nullptr;
+
+  SmallVector<OperandBundleDef, 2> Bundles;
+  if (!DefaultRM)
+    addFPRoundingBundle(Ctx, Bundles, *RM);
+  // Always add an explicit fp.except bundle for fcmp/fcmps so that the call
+  // cannot be silently removed as dead code (a plain `fcmp` has no side
+  // effects in LLVM's model even inside a strictfp function).
+  if (!DefaultEB || IsCompare)
+    addFPExceptionBundle(Ctx, Bundles, *EB);
+
+  // For fcmp/fcmps: append the predicate as a trailing metadata arg (matches
+  // int_fcmp / int_fcmps signatures which take (float, float, metadata_pred)).
+  if (IsCompare) {
+    FCmpInst::Predicate Pred = getConstrainedFCmpPred(CI);
+    auto *PredMD = MDString::get(Ctx, CmpInst::getPredicateName(Pred));
+    Args.push_back(MetadataAsValue::get(Ctx, PredMD));
+  }
+
+  // Build the overload type list.  Most FP intrinsics are overloaded on the
+  // float return/operand type; a few additionally overload on a second type.
+  SmallVector<Type *, 2> Tys;
+  Intrinsic::ID TmpID = NewID;
+  switch (TmpID) {
+  // Comparisons: overloaded on input float type (return is i1).
+  case Intrinsic::fcmp:
+  case Intrinsic::fcmps:
+    Tys = {Args[0]->getType()};
+    break;
+  // Conversions/rounding where return int type and input float type differ.
+  case Intrinsic::fptoui:
+  case Intrinsic::fptosi:
+  case Intrinsic::uitofp:
+  case Intrinsic::sitofp:
+  case Intrinsic::fptrunc:
+  case Intrinsic::fpext:
+  // int_l{l}rint / int_l{l}round: [anyint], [anyfloat] — two overloaded types.
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
+  case Intrinsic::lround:
+  case Intrinsic::llround:
+    Tys = {RetTy, Args[0]->getType()};
+    break;
+  // Integer-exponent ops: float type + distinct int type.
+  case Intrinsic::powi:
+  case Intrinsic::ldexp:
+    Tys = {RetTy, Args[1]->getType()};
+    break;
+  default:
+    // All other FP ops: overloaded solely on the float type.
+    Tys = {RetTy};
+    break;
+  }
+
+  // Bundle-aware overload: (ID, Types, Args, Bundles, FMFSource, Name).
+  return Builder.CreateIntrinsic(NewID, Tys, Args, Bundles, nullptr,
+                                 CI->getName());
+}
+
 static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
                                           Function *F, IRBuilder<> &Builder) {
   if (Name.starts_with("to.fp16")) {
@@ -5001,6 +5252,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
+    bool IsConstrainedFP = Name.consume_front("experimental.constrained.");
     bool IsOldSplice =
         (Name.consume_front("experimental.vector.splice") ||
          Name.consume_front("vector.splice")) &&
@@ -5021,6 +5273,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else if (IsDbg) {
       upgradeDbgIntrinsicToDbgRecord(Name, CI);
+    } else if (IsConstrainedFP) {
+      Rep = upgradeConstrainedFPIntrinsicCall(CI, Name, Builder);
+      // If upgrade returned nullptr the intrinsic has malformed metadata;
+      // leave it in place so the verifier can diagnose it properly.
+      if (!Rep)
+        return;
     } else if (IsOldSplice) {
       Rep = upgradeVectorSplice(CI, Builder);
     } else if (Name.consume_front("convert.")) {
@@ -5759,7 +6017,9 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    if (F != NewFn)
+    // Guard with use_empty() in case any call site could not be upgraded (e.g.,
+    // malformed metadata) and was left in place for the verifier to diagnose.
+    if (F != NewFn && F->use_empty())
       F->eraseFromParent();
   }
 }
@@ -6355,7 +6615,8 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
   void visitCallBase(CallBase &Call) {
     if (!Call.isStrictFP())
       return;
-    if (isa<ConstrainedFPIntrinsic>(&Call))
+    if (auto *II = dyn_cast<IntrinsicInst>(&Call);
+        II && Intrinsic::isConstrainedFPIntrinsic(II->getIntrinsicID()))
       return;
     // If we get here, the caller doesn't have the strictfp attribute
     // but this callsite does. Replace the strictfp attribute with nobuiltin.

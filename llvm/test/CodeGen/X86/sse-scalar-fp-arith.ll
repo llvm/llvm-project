@@ -1441,3 +1441,228 @@ define float @PR26515(<4 x float> %0) nounwind {
   %4 = extractelement <4 x float> %3, i64 0
   ret float %4
 }
+
+; llvm.fadd/fsub/fmul intrinsics lower to the same SSE/AVX scalar instructions
+; as plain fadd/fsub/fmul — the fp.control operand bundle only affects backends
+; that support per-instruction FTZ (e.g. NVPTX), not X86.
+
+define <4 x float> @test_fadd_ss_intrinsic(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: test_fadd_ss_intrinsic:
+; SSE:       # %bb.0:
+; SSE-NEXT:    addss %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: test_fadd_ss_intrinsic:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %1 = extractelement <4 x float> %b, i32 0
+  %2 = extractelement <4 x float> %a, i32 0
+  %add = call float @llvm.fadd.f32(float %2, float %1)
+  %3 = insertelement <4 x float> %a, float %add, i32 0
+  ret <4 x float> %3
+}
+
+define <4 x float> @test_fsub_ss_intrinsic(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: test_fsub_ss_intrinsic:
+; SSE:       # %bb.0:
+; SSE-NEXT:    subss %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: test_fsub_ss_intrinsic:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %1 = extractelement <4 x float> %b, i32 0
+  %2 = extractelement <4 x float> %a, i32 0
+  %sub = call float @llvm.fsub.f32(float %2, float %1)
+  %3 = insertelement <4 x float> %a, float %sub, i32 0
+  ret <4 x float> %3
+}
+
+define <4 x float> @test_fmul_ss_intrinsic(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: test_fmul_ss_intrinsic:
+; SSE:       # %bb.0:
+; SSE-NEXT:    mulss %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: test_fmul_ss_intrinsic:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %1 = extractelement <4 x float> %b, i32 0
+  %2 = extractelement <4 x float> %a, i32 0
+  %mul = call float @llvm.fmul.f32(float %2, float %1)
+  %3 = insertelement <4 x float> %a, float %mul, i32 0
+  ret <4 x float> %3
+}
+
+define <2 x double> @test_fadd_sd_intrinsic(<2 x double> %a, <2 x double> %b) {
+; SSE-LABEL: test_fadd_sd_intrinsic:
+; SSE:       # %bb.0:
+; SSE-NEXT:    addsd %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: test_fadd_sd_intrinsic:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %1 = extractelement <2 x double> %b, i32 0
+  %2 = extractelement <2 x double> %a, i32 0
+  %add = call double @llvm.fadd.f64(double %2, double %1)
+  %3 = insertelement <2 x double> %a, double %add, i32 0
+  ret <2 x double> %3
+}
+
+define <2 x double> @test_fsub_sd_intrinsic(<2 x double> %a, <2 x double> %b) {
+; SSE-LABEL: test_fsub_sd_intrinsic:
+; SSE:       # %bb.0:
+; SSE-NEXT:    subsd %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: test_fsub_sd_intrinsic:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %1 = extractelement <2 x double> %b, i32 0
+  %2 = extractelement <2 x double> %a, i32 0
+  %sub = call double @llvm.fsub.f64(double %2, double %1)
+  %3 = insertelement <2 x double> %a, double %sub, i32 0
+  ret <2 x double> %3
+}
+
+define <2 x double> @test_fmul_sd_intrinsic(<2 x double> %a, <2 x double> %b) {
+; SSE-LABEL: test_fmul_sd_intrinsic:
+; SSE:       # %bb.0:
+; SSE-NEXT:    mulsd %xmm1, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: test_fmul_sd_intrinsic:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %1 = extractelement <2 x double> %b, i32 0
+  %2 = extractelement <2 x double> %a, i32 0
+  %mul = call double @llvm.fmul.f64(double %2, double %1)
+  %3 = insertelement <2 x double> %a, double %mul, i32 0
+  ret <2 x double> %3
+}
+
+declare float @llvm.fadd.f32(float, float)
+declare float @llvm.fsub.f32(float, float)
+declare float @llvm.fmul.f32(float, float)
+declare double @llvm.fadd.f64(double, double)
+declare double @llvm.fsub.f64(double, double)
+declare double @llvm.fmul.f64(double, double)
+declare float @llvm.fneg.f32(float)
+declare double @llvm.fneg.f64(double)
+
+; llvm.fneg intrinsic lowers to the same negation as plain 'fneg' IR —
+; the fp.control operand bundle only affects backends that support
+; per-instruction FTZ (e.g. NVPTX), not X86.
+define float @test_fneg_f32_intrinsic(float %a) {
+; X86-SSE-LABEL: test_fneg_f32_intrinsic:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; X86-AVX1-LABEL: test_fneg_f32_intrinsic:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    pushl %eax
+; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
+; X86-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vmovss %xmm0, (%esp)
+; X86-AVX1-NEXT:    flds (%esp)
+; X86-AVX1-NEXT:    popl %eax
+; X86-AVX1-NEXT:    .cfi_def_cfa_offset 4
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX512-LABEL: test_fneg_f32_intrinsic:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    pushl %eax
+; X86-AVX512-NEXT:    .cfi_def_cfa_offset 8
+; X86-AVX512-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX512-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX512-NEXT:    vxorps %xmm0, %xmm1, %xmm0
+; X86-AVX512-NEXT:    vmovss %xmm0, (%esp)
+; X86-AVX512-NEXT:    flds (%esp)
+; X86-AVX512-NEXT:    popl %eax
+; X86-AVX512-NEXT:    .cfi_def_cfa_offset 4
+; X86-AVX512-NEXT:    retl
+;
+; X64-SSE-LABEL: test_fneg_f32_intrinsic:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX1-LABEL: test_fneg_f32_intrinsic:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX512-LABEL: test_fneg_f32_intrinsic:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX512-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; X64-AVX512-NEXT:    retq
+  %r = call float @llvm.fneg.f32(float %a)
+  ret float %r
+}
+
+define double @test_fneg_f64_intrinsic(double %a) {
+; X86-SSE-LABEL: test_fneg_f64_intrinsic:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %ebp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE-NEXT:    .cfi_offset %ebp, -8
+; X86-SSE-NEXT:    movl %esp, %ebp
+; X86-SSE-NEXT:    .cfi_def_cfa_register %ebp
+; X86-SSE-NEXT:    andl $-8, %esp
+; X86-SSE-NEXT:    subl $8, %esp
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movlps %xmm0, (%esp)
+; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    movl %ebp, %esp
+; X86-SSE-NEXT:    popl %ebp
+; X86-SSE-NEXT:    .cfi_def_cfa %esp, 4
+; X86-SSE-NEXT:    retl
+;
+; X86-AVX-LABEL: test_fneg_f64_intrinsic:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    pushl %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
+; X86-AVX-NEXT:    .cfi_offset %ebp, -8
+; X86-AVX-NEXT:    movl %esp, %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
+; X86-AVX-NEXT:    andl $-8, %esp
+; X86-AVX-NEXT:    subl $8, %esp
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vmovlps %xmm0, (%esp)
+; X86-AVX-NEXT:    fldl (%esp)
+; X86-AVX-NEXT:    movl %ebp, %esp
+; X86-AVX-NEXT:    popl %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa %esp, 4
+; X86-AVX-NEXT:    retl
+;
+; X64-SSE-LABEL: test_fneg_f64_intrinsic:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX-LABEL: test_fneg_f64_intrinsic:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
+  %r = call double @llvm.fneg.f64(double %a)
+  ret double %r
+}

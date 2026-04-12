@@ -458,73 +458,11 @@ public:
 
 Instruction *
 PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
-  const Instruction &OldInst = *II;
-  Instruction *NewInst = nullptr;
-  if (HostFuncIsStrictFP) {
-    Intrinsic::ID CIID = getConstrainedIntrinsicID(OldInst);
-    if (CIID != Intrinsic::not_intrinsic) {
-      // Instead of cloning the instruction, a call to constrained intrinsic
-      // should be created.
-      // Assume the first arguments of constrained intrinsics are the same as
-      // the operands of original instruction.
-
-      // Determine overloaded types of the intrinsic.
-      SmallVector<Type *, 2> TParams;
-      SmallVector<Intrinsic::IITDescriptor, 8> Descriptor;
-      getIntrinsicInfoTableEntries(CIID, Descriptor);
-      for (unsigned I = 0, E = Descriptor.size(); I != E; ++I) {
-        Intrinsic::IITDescriptor Operand = Descriptor[I];
-        switch (Operand.Kind) {
-        case Intrinsic::IITDescriptor::Overloaded:
-          if (Operand.getOverloadKind() !=
-              Intrinsic::IITDescriptor::AK_MatchType) {
-            if (I == 0)
-              TParams.push_back(OldInst.getType());
-            else
-              TParams.push_back(OldInst.getOperand(I - 1)->getType());
-          }
-          break;
-        case Intrinsic::IITDescriptor::SameVecWidth:
-          ++I;
-          break;
-        default:
-          break;
-        }
-      }
-
-      // Create intrinsic call.
-      LLVMContext &Ctx = NewFunc->getContext();
-      Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(),
-                                                        CIID, TParams);
-      SmallVector<Value *, 4> Args;
-      unsigned NumOperands = OldInst.getNumOperands();
-      if (isa<CallInst>(OldInst))
-        --NumOperands;
-      for (unsigned I = 0; I < NumOperands; ++I) {
-        Value *Op = OldInst.getOperand(I);
-        Args.push_back(Op);
-      }
-      if (const auto *CmpI = dyn_cast<FCmpInst>(&OldInst)) {
-        FCmpInst::Predicate Pred = CmpI->getPredicate();
-        StringRef PredName = FCmpInst::getPredicateName(Pred);
-        Args.push_back(MetadataAsValue::get(Ctx, MDString::get(Ctx, PredName)));
-      }
-
-      // The last arguments of a constrained intrinsic are metadata that
-      // represent rounding mode (absents in some intrinsics) and exception
-      // behavior. The inlined function uses default settings.
-      if (Intrinsic::hasConstrainedFPRoundingModeOperand(CIID))
-        Args.push_back(
-            MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.tonearest")));
-      Args.push_back(
-          MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore")));
-
-      NewInst = CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
-    }
-  }
-  if (!NewInst)
-    NewInst = II->clone();
-  return NewInst;
+  // Plain FP instructions cloned into a strictfp function are semantically
+  // correct without conversion — the strictfp attribute on the function
+  // governs their behavior. The old path that replaced them with
+  // experimental_constrained_* intrinsics is no longer needed.
+  return II->clone();
 }
 
 /// The specified block is found to be reachable, clone it and
@@ -1003,12 +941,10 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// constant arguments cause a significant amount of code in the callee to be
 /// dead.  Since this doesn't produce an exact copy of the input, it can't be
 /// used for things like CloneFunction or CloneModule.
-void llvm::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
-                                     ValueToValueMapTy &VMap,
-                                     bool ModuleLevelChanges,
-                                     SmallVectorImpl<ReturnInst *> &Returns,
-                                     const char *NameSuffix,
-                                     ClonedCodeInfo &CodeInfo) {
+void llvm::CloneAndPruneFunctionInto(
+    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
+    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
+    const char *NameSuffix, ClonedCodeInfo &CodeInfo) {
   CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo);
 }

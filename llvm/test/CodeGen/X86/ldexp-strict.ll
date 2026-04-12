@@ -12,11 +12,8 @@
 define float @test_strict_ldexp_f32_i32(ptr addrspace(1) %out, float %a, i32 %b) nounwind #2 {
 ; X64-LABEL: test_strict_ldexp_f32_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movl %esi, %edi
-; X64-NEXT:    callq ldexpf@PLT
-; X64-NEXT:    popq %rax
-; X64-NEXT:    retq
+; X64-NEXT:    jmp ldexpf@PLT # TAILCALL
   %result = call float @llvm.experimental.constrained.ldexp.f32.i32(float %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %result
 }
@@ -24,11 +21,8 @@ define float @test_strict_ldexp_f32_i32(ptr addrspace(1) %out, float %a, i32 %b)
 define double @test_strict_ldexp_f64_i32(ptr addrspace(1) %out, double %a, i32 %b) nounwind #2 {
 ; X64-LABEL: test_strict_ldexp_f64_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movl %esi, %edi
-; X64-NEXT:    callq ldexp@PLT
-; X64-NEXT:    popq %rax
-; X64-NEXT:    retq
+; X64-NEXT:    jmp ldexp@PLT # TAILCALL
   %result = call double @llvm.experimental.constrained.ldexp.f64.i32(double %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %result
 }

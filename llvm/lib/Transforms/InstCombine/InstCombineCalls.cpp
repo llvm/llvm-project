@@ -2011,7 +2011,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // prevents it from being removed. In some cases however the side effect is
   // actually absent. To detect this case, call SimplifyConstrainedFPCall. If it
   // returns a replacement, the call may be removed.
-  if (CI.use_empty() && isa<ConstrainedFPIntrinsic>(CI)) {
+  if (CI.use_empty() && Intrinsic::isConstrainedFPIntrinsic(CI.getIntrinsicID())) {
     if (simplifyConstrainedFPCall(&CI, SQ.getWithInstruction(&CI)))
       return eraseInstFromFunction(CI);
   }
@@ -3271,7 +3271,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     ///
     // TODO: If we cared, should insert a canonicalize for x
     Value *SelectCond, *SelectLHS, *SelectRHS;
-    if (match(II->getArgOperand(1),
+    if (!II->use_empty() &&
+        match(II->getArgOperand(1),
               m_OneUse(m_Select(m_Value(SelectCond), m_Value(SelectLHS),
                                 m_Value(SelectRHS))))) {
       Value *NewLdexp = nullptr;

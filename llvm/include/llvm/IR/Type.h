@@ -196,6 +196,8 @@ public:
     return getTypeID() == PPC_FP128TyID;
   }
 
+  LLVM_ABI const fltSemantics *hasFltSemantics() const;
+
   LLVM_ABI const fltSemantics &getFltSemantics() const;
 
   /// Return true if this is X86 AMX.

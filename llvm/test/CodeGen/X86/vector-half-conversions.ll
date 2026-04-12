@@ -439,13 +439,11 @@ define <2 x float> @cvt_2i16_to_2f32_constrained(<2 x i16> %a0) nounwind strictf
 ;
 ; F16C-LABEL: cvt_2i16_to_2f32_constrained:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_2i16_to_2f32_constrained:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = bitcast <2 x i16> %a0 to <2 x half>
@@ -778,9 +776,10 @@ define <16 x float> @cvt_16i16_to_16f32_constrained(<16 x i16> %a0) nounwind str
 ;
 ; F16C-LABEL: cvt_16i16_to_16f32_constrained:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; F16C-NEXT:    vcvtph2ps %xmm1, %ymm1
-; F16C-NEXT:    vcvtph2ps %xmm0, %ymm0
+; F16C-NEXT:    vcvtph2ps %xmm0, %ymm2
+; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; F16C-NEXT:    vcvtph2ps %xmm0, %ymm1
+; F16C-NEXT:    vmovaps %ymm2, %ymm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_16i16_to_16f32_constrained:
@@ -1644,14 +1643,12 @@ define <2 x double> @cvt_2i16_to_2f64_constrained(<2 x i16> %a0) nounwind strict
 ;
 ; F16C-LABEL: cvt_2i16_to_2f64_constrained:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_2i16_to_2f64_constrained:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -1775,10 +1772,10 @@ define <8 x double> @cvt_8i16_to_8f64_constrained(<8 x i16> %a0) nounwind strict
 ;
 ; F16C-LABEL: cvt_8i16_to_8f64_constrained:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vcvtph2ps %xmm0, %ymm0
-; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; F16C-NEXT:    vcvtph2ps %xmm0, %ymm1
+; F16C-NEXT:    vcvtps2pd %xmm1, %ymm0
+; F16C-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; F16C-NEXT:    vcvtps2pd %xmm1, %ymm1
-; F16C-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_8i16_to_8f64_constrained:

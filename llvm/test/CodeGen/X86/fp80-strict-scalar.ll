@@ -38,7 +38,6 @@ define x86_fp80 @fadd_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    faddp %st, %st(1)
-; X86-NEXT:    wait
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fadd_fp80:
@@ -46,7 +45,6 @@ define x86_fp80 @fadd_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    faddp %st, %st(1)
-; X64-NEXT:    wait
 ; X64-NEXT:    retq
   %ret = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 %a, x86_fp80 %b,
                                                                     metadata !"round.dynamic",
@@ -60,7 +58,6 @@ define x86_fp80 @fsub_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsubp %st, %st(1)
-; X86-NEXT:    wait
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fsub_fp80:
@@ -68,7 +65,6 @@ define x86_fp80 @fsub_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fsubp %st, %st(1)
-; X64-NEXT:    wait
 ; X64-NEXT:    retq
   %ret = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 %a, x86_fp80 %b,
                                                                     metadata !"round.dynamic",
@@ -82,7 +78,6 @@ define x86_fp80 @fmul_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fmulp %st, %st(1)
-; X86-NEXT:    wait
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fmul_fp80:
@@ -90,7 +85,6 @@ define x86_fp80 @fmul_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fmulp %st, %st(1)
-; X64-NEXT:    wait
 ; X64-NEXT:    retq
   %ret = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 %a, x86_fp80 %b,
                                                                     metadata !"round.dynamic",
@@ -104,7 +98,6 @@ define x86_fp80 @fdiv_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fdivp %st, %st(1)
-; X86-NEXT:    wait
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fdiv_fp80:
@@ -112,7 +105,6 @@ define x86_fp80 @fdiv_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fdivp %st, %st(1)
-; X64-NEXT:    wait
 ; X64-NEXT:    retq
   %ret = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 %a, x86_fp80 %b,
                                                                     metadata !"round.dynamic",
@@ -213,14 +205,12 @@ define x86_fp80 @fsqrt_fp80(x86_fp80 %a) nounwind strictfp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
-; X86-NEXT:    wait
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fsqrt_fp80:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fsqrt
-; X64-NEXT:    wait
 ; X64-NEXT:    retq
   %ret = call x86_fp80 @llvm.experimental.constrained.sqrt.f80(x86_fp80 %a,
                                                                     metadata !"round.dynamic",
@@ -589,7 +579,7 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    fldt 8(%ebp)
 ; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NEXT:    fcom %st(1)
+; X86-NEXT:    fucom %st(1)
 ; X86-NEXT:    wait
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    xorl %edx, %edx
@@ -604,7 +594,6 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X86-NEXT:  .LBB18_2:
 ; X86-NEXT:    fstp %st(0)
 ; X86-NEXT:    fsubrp %st, %st(1)
-; X86-NEXT:    wait
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    orl $3072, %ecx # imm = 0xC00
@@ -627,14 +616,12 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X64-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; X64-NEXT:    wait
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    fcomi %st(1), %st
-; X64-NEXT:    wait
+; X64-NEXT:    fucomi %st(1), %st
 ; X64-NEXT:    setbe %al
 ; X64-NEXT:    fldz
 ; X64-NEXT:    fcmovbe %st(1), %st
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    fsubrp %st, %st(1)
-; X64-NEXT:    wait
 ; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
 ; X64-NEXT:    orl $3072, %ecx # imm = 0xC00

@@ -25,13 +25,8 @@ define half @fceil32(half %f) #0 {
 ;
 ; AVX-LABEL: fceil32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -61,13 +56,8 @@ define half @ffloor32(half %f) #0 {
 ;
 ; AVX-LABEL: ffloor32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -97,13 +87,8 @@ define half @ftrunc32(half %f) #0 {
 ;
 ; AVX-LABEL: ftrunc32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -133,13 +118,8 @@ define half @frint32(half %f) #0 {
 ;
 ; AVX-LABEL: frint32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -170,13 +150,8 @@ define half @fnearbyint32(half %f) #0 {
 ;
 ; AVX-LABEL: fnearbyint32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -207,13 +182,8 @@ define half @froundeven16(half %f) #0 {
 ;
 ; AVX-LABEL: froundeven16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -242,41 +212,25 @@ define half @fround16(half %f) #0 {
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: fround16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    callq roundf@PLT
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX-NEXT:    popq %rax
-; AVX-NEXT:    retq
-;
 ; X86-LABEL: fround16:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; X86-NEXT:    vmovss %xmm0, (%esp)
-; X86-NEXT:    calll roundf
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    wait
-; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vandps %xmm1, %xmm0, %xmm1
+; X86-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; X86-NEXT:    vorps %xmm2, %xmm1, %xmm1
+; X86-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vrndscalesh $11, %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fround16:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; X64-NEXT:    callq roundf@PLT
-; X64-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; X64-NEXT:    popq %rax
+; X64-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm1
+; X64-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; X64-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; X64-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vrndscalesh $11, %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
 
   %res = call half @llvm.experimental.constrained.round.f16(

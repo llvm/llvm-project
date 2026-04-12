@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1362,6 +1363,11 @@ static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
   if (!APF.isDenormal())
     return CFP;
 
+  if (auto *CB = dyn_cast_or_null<CallBase>(Inst)) {
+    auto Mode = IsOutput ? CB->getOutputDenormMode() : CB->getInputDenormMode();
+    return flushDenormalConstant(CFP->getType(), APF, *Mode);
+  }
+
   DenormalMode Mode = getInstrDenormalMode(Inst, CFP->getType());
   return flushDenormalConstant(CFP->getType(), APF,
                                IsOutput ? Mode.Output : Mode.Input);
@@ -1946,24 +1952,16 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::rint:
   case Intrinsic::canonicalize:
 
-  // Constrained intrinsics can be folded if FP environment is known
-  // to compiler.
-  case Intrinsic::experimental_constrained_fma:
-  case Intrinsic::experimental_constrained_fmuladd:
-  case Intrinsic::experimental_constrained_fadd:
-  case Intrinsic::experimental_constrained_fsub:
-  case Intrinsic::experimental_constrained_fmul:
-  case Intrinsic::experimental_constrained_fdiv:
-  case Intrinsic::experimental_constrained_frem:
-  case Intrinsic::experimental_constrained_ceil:
-  case Intrinsic::experimental_constrained_floor:
-  case Intrinsic::experimental_constrained_round:
-  case Intrinsic::experimental_constrained_roundeven:
-  case Intrinsic::experimental_constrained_trunc:
-  case Intrinsic::experimental_constrained_nearbyint:
-  case Intrinsic::experimental_constrained_rint:
-  case Intrinsic::experimental_constrained_fcmp:
-  case Intrinsic::experimental_constrained_fcmps:
+  // New FP intrinsics (llvm.fadd, llvm.fsub, etc.) carry rounding mode and
+  // exception behavior via operand bundles. They can be folded when those
+  // bundles permit (see mayFoldNewFPIntrinsic).
+  case Intrinsic::fadd:
+  case Intrinsic::fsub:
+  case Intrinsic::fmul:
+  case Intrinsic::fdiv:
+  case Intrinsic::frem:
+  case Intrinsic::fcmp:
+  case Intrinsic::fcmps:
 
   case Intrinsic::experimental_cttz_elts:
     return true;
@@ -2313,10 +2311,10 @@ static bool getConstIntOrUndef(Value *Op, const APInt *&C) {
 ///
 /// \param CI Constrained intrinsic call.
 /// \param St Exception flags raised during constant evaluation.
-static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
+static bool mayFoldConstrained(const CallBase *CI,
                                APFloat::opStatus St) {
-  std::optional<RoundingMode> ORM = CI->getRoundingMode();
-  std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+  RoundingMode ORM = CI->getRoundingMode();
+  fp::ExceptionBehavior EB = CI->getExceptionBehavior();
 
   // If the operation does not change exception status flags, it is safe
   // to fold.
@@ -2330,7 +2328,7 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
 
   // If FP exceptions are ignored, fold the call, even if such exception is
   // raised.
-  if (EB && *EB != fp::ExceptionBehavior::ebStrict)
+  if (EB != fp::ExceptionBehavior::ebStrict)
     return true;
 
   // Leave the calculation for runtime so that exception flags be correctly set
@@ -2338,17 +2336,51 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
   return false;
 }
 
+/// Like mayFoldConstrained, but for new FP intrinsics (llvm.fadd etc.) that
+/// carry rounding mode and exception behavior via operand bundles.
+static bool mayFoldNewFPIntrinsic(const CallBase *CI, APFloat::opStatus St) {
+  // If the operation produced no exception, the result does not depend on
+  // rounding mode or exception behavior.
+  if (St == APFloat::opStatus::opOK)
+    return true;
+
+  // If evaluation raised an FP exception, the result can depend on the rounding
+  // mode.  If the rounding mode is dynamic (unknown at compile time), folding is
+  // not safe.
+  if (CI->getRoundingMode() == RoundingMode::Dynamic)
+    return false;
+
+  // If exceptions are ignored (ebIgnore / ebMayTrap), fold even if an exception
+  // was raised.
+  if (CI->getExceptionBehavior() != fp::ExceptionBehavior::ebStrict)
+    return true;
+
+  // Leave the calculation for runtime so exception flags are set correctly.
+  return false;
+}
+
+/// Returns the rounding mode that should be used for constant evaluation of a
+/// new FP intrinsic (llvm.fadd etc.).  Mirrors getEvaluationRoundingMode().
+static RoundingMode getEvaluationRoundingModeForNewFP(const CallBase *CI) {
+  RoundingMode RM = CI->getRoundingMode();
+  if (RM == RoundingMode::Dynamic)
+    // Evaluate in nearest-even; if no exception is raised the result is exact
+    // and independent of the actual runtime rounding mode.
+    return RoundingMode::NearestTiesToEven;
+  return RM;
+}
+
 /// Returns the rounding mode that should be used for constant evaluation.
 static RoundingMode
-getEvaluationRoundingMode(const ConstrainedFPIntrinsic *CI) {
-  std::optional<RoundingMode> ORM = CI->getRoundingMode();
-  if (!ORM || *ORM == RoundingMode::Dynamic)
+getEvaluationRoundingMode(const CallBase *CI) {
+  RoundingMode ORM = CI->getRoundingMode();
+  if (ORM == RoundingMode::Dynamic)
     // Even if the rounding mode is unknown, try evaluating the operation.
     // If it does not raise inexact exception, rounding was not applied,
     // so the result is exact and does not depend on rounding mode. Whether
     // other FP exceptions are raised, it does not depend on rounding mode.
     return RoundingMode::NearestTiesToEven;
-  return *ORM;
+  return ORM;
 }
 
 /// Try to constant fold llvm.canonicalize for the given caller and value.
@@ -2564,40 +2596,39 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     switch (IntrinsicID) {
     default:
       break;
-    case Intrinsic::experimental_constrained_nearbyint:
-    case Intrinsic::experimental_constrained_rint: {
-      auto CI = cast<ConstrainedFPIntrinsic>(Call);
-      RM = CI->getRoundingMode();
-      if (!RM || *RM == RoundingMode::Dynamic)
+    case Intrinsic::nearbyint:
+    case Intrinsic::rint: {
+      RoundingMode CallRM = Call->getRoundingMode();
+      if (CallRM == RoundingMode::Dynamic)
         return nullptr;
+      RM = CallRM;
       break;
     }
-    case Intrinsic::experimental_constrained_round:
+    case Intrinsic::round:
       RM = APFloat::rmNearestTiesToAway;
       break;
-    case Intrinsic::experimental_constrained_ceil:
+    case Intrinsic::ceil:
       RM = APFloat::rmTowardPositive;
       break;
-    case Intrinsic::experimental_constrained_floor:
+    case Intrinsic::floor:
       RM = APFloat::rmTowardNegative;
       break;
-    case Intrinsic::experimental_constrained_trunc:
+    case Intrinsic::trunc:
       RM = APFloat::rmTowardZero;
       break;
     }
     if (RM) {
-      auto CI = cast<ConstrainedFPIntrinsic>(Call);
       if (U.isFinite()) {
         APFloat::opStatus St = U.roundToIntegral(*RM);
-        if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
+        if (IntrinsicID == Intrinsic::rint &&
             St == APFloat::opInexact) {
-          std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+          fp::ExceptionBehavior EB = Call->getExceptionBehavior();
           if (EB == fp::ebStrict)
             return nullptr;
         }
       } else if (U.isSignaling()) {
-        std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
-        if (EB && *EB != fp::ebIgnore)
+        fp::ExceptionBehavior EB = Call->getExceptionBehavior();
+        if (EB != fp::ebIgnore)
           return nullptr;
         U = APFloat::getQNaN(U.getSemantics());
       }
@@ -3155,11 +3186,29 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 }
 
 static Constant *evaluateCompare(const APFloat &Op1, const APFloat &Op2,
-                                 const ConstrainedFPIntrinsic *Call) {
+                                 const IntrinsicInst *Call) {
   APFloat::opStatus St = APFloat::opOK;
-  auto *FCmp = cast<ConstrainedFPCmpIntrinsic>(Call);
-  FCmpInst::Predicate Cond = FCmp->getPredicate();
-  if (FCmp->isSignaling()) {
+  Metadata *MD =
+      cast<MetadataAsValue>(Call->getArgOperand(2))->getMetadata();
+  FCmpInst::Predicate Cond =
+      StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
+          .Case("oeq", FCmpInst::FCMP_OEQ)
+          .Case("ogt", FCmpInst::FCMP_OGT)
+          .Case("oge", FCmpInst::FCMP_OGE)
+          .Case("olt", FCmpInst::FCMP_OLT)
+          .Case("ole", FCmpInst::FCMP_OLE)
+          .Case("one", FCmpInst::FCMP_ONE)
+          .Case("ord", FCmpInst::FCMP_ORD)
+          .Case("uno", FCmpInst::FCMP_UNO)
+          .Case("ueq", FCmpInst::FCMP_UEQ)
+          .Case("ugt", FCmpInst::FCMP_UGT)
+          .Case("uge", FCmpInst::FCMP_UGE)
+          .Case("ult", FCmpInst::FCMP_ULT)
+          .Case("ule", FCmpInst::FCMP_ULE)
+          .Case("une", FCmpInst::FCMP_UNE)
+          .Default(FCmpInst::BAD_FCMP_PREDICATE);
+  bool IsSignaling = (Call->getIntrinsicID() == Intrinsic::fcmps);
+  if (IsSignaling) {
     if (Op1.isNaN() || Op2.isNaN())
       St = APFloat::opInvalidOp;
   } else {
@@ -3167,7 +3216,11 @@ static Constant *evaluateCompare(const APFloat &Op1, const APFloat &Op2,
       St = APFloat::opInvalidOp;
   }
   bool Result = FCmpInst::compare(Op1, Op2, Cond);
-  if (mayFoldConstrained(const_cast<ConstrainedFPCmpIntrinsic *>(FCmp), St))
+
+  // Compares are independent of rounding mode, so only exception behavior
+  // matters: fold unless an exception was raised *and* EB is strict.
+  fp::ExceptionBehavior EB = Call->getExceptionBehavior();
+  if (St == APFloat::opOK || EB != fp::ebStrict)
     return ConstantInt::get(Call->getType()->getScalarType(), Result);
   return nullptr;
 }
@@ -3300,44 +3353,93 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
   }
 
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
-    const APFloat &Op1V = Op1->getValueAPF();
+    ConstantFP *Op1F =
+        flushDenormalConstantFP(const_cast<ConstantFP *>(Op1), Call, false);
+    if (!Op1F)
+      return nullptr;
+    const APFloat &Op1V = Op1F->getValueAPF();
 
     if (const auto *Op2 = dyn_cast<ConstantFP>(Operands[1])) {
       if (Op2->getType() != Op1->getType())
         return nullptr;
-      const APFloat &Op2V = Op2->getValueAPF();
+      ConstantFP *Op2F =
+          flushDenormalConstantFP(const_cast<ConstantFP *>(Op2), Call, false);
+      if (!Op2F)
+        return nullptr;
+      const APFloat &Op2V = Op2F->getValueAPF();
 
-      if (const auto *ConstrIntr =
-              dyn_cast_if_present<ConstrainedFPIntrinsic>(Call)) {
+      const auto *ConstrIntr =
+          (Call && isa<IntrinsicInst>(Call) &&
+           Intrinsic::isConstrainedFPIntrinsic(
+               cast<IntrinsicInst>(Call)->getIntrinsicID()))
+              ? cast<IntrinsicInst>(Call)
+              : nullptr;
+      if (ConstrIntr) {
         RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
         APFloat Res = Op1V;
         APFloat::opStatus St;
         switch (IntrinsicID) {
         default:
           return nullptr;
-        case Intrinsic::experimental_constrained_fadd:
+        case Intrinsic::fadd:
           St = Res.add(Op2V, RM);
           break;
-        case Intrinsic::experimental_constrained_fsub:
+        case Intrinsic::fsub:
           St = Res.subtract(Op2V, RM);
           break;
-        case Intrinsic::experimental_constrained_fmul:
+        case Intrinsic::fmul:
           St = Res.multiply(Op2V, RM);
           break;
-        case Intrinsic::experimental_constrained_fdiv:
+        case Intrinsic::fdiv:
           St = Res.divide(Op2V, RM);
           break;
-        case Intrinsic::experimental_constrained_frem:
+        case Intrinsic::frem:
           St = Res.mod(Op2V);
           break;
-        case Intrinsic::experimental_constrained_fcmp:
-        case Intrinsic::experimental_constrained_fcmps:
+        case Intrinsic::fcmp:
+        case Intrinsic::fcmps:
           return evaluateCompare(Op1V, Op2V, ConstrIntr);
         }
-        if (mayFoldConstrained(const_cast<ConstrainedFPIntrinsic *>(ConstrIntr),
-                               St))
-          return ConstantFP::get(Ty, Res);
+        if (mayFoldConstrained(ConstrIntr, St)) {
+          DenormalMode::DenormalModeKind Mode = *Call->getOutputDenormMode();
+          return flushDenormalConstant(Op2->getType(), Res, Mode);
+        }
         return nullptr;
+      }
+
+      // Handle new FP intrinsics (llvm.fadd, llvm.fsub, etc.) with optional
+      // fp.control / fp.except operand bundles.
+      switch (IntrinsicID) {
+      case Intrinsic::fcmp:
+      case Intrinsic::fcmps: {
+        const auto *FcmpII = cast<IntrinsicInst>(Call);
+        return evaluateCompare(Op1V, Op2V, FcmpII);
+      }
+      case Intrinsic::fadd:
+      case Intrinsic::fsub:
+      case Intrinsic::fmul:
+      case Intrinsic::fdiv:
+      case Intrinsic::frem: {
+        RoundingMode RM = getEvaluationRoundingModeForNewFP(Call);
+        APFloat Res = Op1V;
+        APFloat::opStatus St;
+        switch (IntrinsicID) {
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        case Intrinsic::fadd: St = Res.add(Op2V, RM); break;
+        case Intrinsic::fsub: St = Res.subtract(Op2V, RM); break;
+        case Intrinsic::fmul: St = Res.multiply(Op2V, RM); break;
+        case Intrinsic::fdiv: St = Res.divide(Op2V, RM); break;
+        case Intrinsic::frem: St = Res.mod(Op2V); break;
+        }
+        if (mayFoldNewFPIntrinsic(Call, St)) {
+          DenormalMode::DenormalModeKind Mode = *Call->getOutputDenormMode();
+          return flushDenormalConstant(Op2->getType(), Res, Mode);
+        }
+        return nullptr;
+      }
+      default:
+        break;
       }
 
       switch (IntrinsicID) {
@@ -3915,20 +4017,25 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         const APFloat &C2 = Op2->getValueAPF();
         const APFloat &C3 = Op3->getValueAPF();
 
-        if (const auto *ConstrIntr = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
+        const auto *ConstrIntr =
+            (Call && isa<IntrinsicInst>(Call) &&
+             Intrinsic::isConstrainedFPIntrinsic(
+                 cast<IntrinsicInst>(Call)->getIntrinsicID()))
+                ? cast<IntrinsicInst>(Call)
+                : nullptr;
+        if (ConstrIntr) {
           RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
           APFloat Res = C1;
           APFloat::opStatus St;
           switch (IntrinsicID) {
           default:
             return nullptr;
-          case Intrinsic::experimental_constrained_fma:
-          case Intrinsic::experimental_constrained_fmuladd:
+          case Intrinsic::fma:
+          case Intrinsic::fmuladd:
             St = Res.fusedMultiplyAdd(C2, C3, RM);
             break;
           }
-          if (mayFoldConstrained(
-                  const_cast<ConstrainedFPIntrinsic *>(ConstrIntr), St))
+          if (mayFoldConstrained(ConstrIntr, St))
             return ConstantFP::get(Ty, Res);
           return nullptr;
         }

@@ -1,0 +1,121 @@
+//===- llvm/IR/FloatingPointOps.def - FP intrinsics -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Defines the set of intrinsics classified as floating-point operations.
+//
+// Two macro forms:
+//
+//   FP_OP(intrinsic_name, isd_opcode_name)
+//     - An FP intrinsic that lowers to a single ISD opcode.
+//     - isFloatingPointOperation() uses column 1 (Intrinsic::NAME).
+//     - ISD::isFPOpcode() uses column 2 (ISD::ISD_NAME).
+//
+//   FP_INTRINSIC(intrinsic_name)
+//     - An FP intrinsic whose ISD opcode is already covered by another FP_OP
+//       entry, or maps to a shared opcode (e.g. SETCC) not exclusively FP.
+//     - isFloatingPointOperation() uses it; ISD::isFPOpcode() does not.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef FP_OP
+#define FP_OP(N, D)
+#endif
+
+#ifndef FP_INTRINSIC
+#define FP_INTRINSIC(N)
+#endif
+
+// Basic FP arithmetic
+FP_OP(fadd,             FADD)
+FP_OP(fsub,             FSUB)
+FP_OP(fmul,             FMUL)
+FP_OP(fdiv,             FDIV)
+FP_OP(frem,             FREM)
+FP_OP(fneg,             FNEG)
+FP_OP(fabs,             FABS)
+
+// FMA family
+FP_OP(fma,              FMA)
+FP_OP(fmuladd,          FMULADD)
+
+// FP type conversions (float <-> float)
+FP_OP(fptrunc,          FP_ROUND)
+FP_OP(fpext,            FP_EXTEND)
+FP_INTRINSIC(fptrunc_round)  // also lowers to FP_ROUND; ISD already covered above
+
+// Integer/FP conversions
+FP_OP(sitofp,           SINT_TO_FP)
+FP_OP(uitofp,           UINT_TO_FP)
+FP_OP(fptosi,           FP_TO_SINT)
+FP_OP(fptoui,           FP_TO_UINT)
+
+// FP comparison (SETCC is shared with integer; kept as FP_INTRINSIC)
+FP_INTRINSIC(fcmp)
+
+// Math / transcendental
+FP_OP(sqrt,             FSQRT)
+// cbrt: no llvm.cbrt intrinsic; FCBRT is ISD-only (handled in isFPOpcode)
+FP_OP(sin,              FSIN)
+FP_OP(cos,              FCOS)
+FP_OP(tan,              FTAN)
+FP_OP(asin,             FASIN)
+FP_OP(acos,             FACOS)
+FP_OP(atan,             FATAN)
+FP_OP(atan2,            FATAN2)
+FP_OP(sinh,             FSINH)
+FP_OP(cosh,             FCOSH)
+FP_OP(tanh,             FTANH)
+FP_OP(pow,              FPOW)
+FP_OP(powi,             FPOWI)
+FP_OP(ldexp,            FLDEXP)
+FP_OP(frexp,            FFREXP)
+FP_OP(log,              FLOG)
+FP_OP(log2,             FLOG2)
+FP_OP(log10,            FLOG10)
+FP_OP(exp,              FEXP)
+FP_OP(exp2,             FEXP2)
+FP_OP(exp10,            FEXP10)
+
+// FP rounding
+FP_OP(ceil,             FCEIL)
+FP_OP(trunc,            FTRUNC)
+FP_OP(rint,             FRINT)
+FP_OP(nearbyint,        FNEARBYINT)
+FP_OP(round,            FROUND)
+FP_OP(roundeven,        FROUNDEVEN)
+FP_OP(floor,            FFLOOR)
+FP_OP(lround,           LROUND)
+FP_OP(llround,          LLROUND)
+FP_OP(lrint,            LRINT)
+FP_OP(llrint,           LLRINT)
+
+// FP min/max
+FP_OP(minnum,           FMINNUM)
+FP_OP(maxnum,           FMAXNUM)
+FP_OP(minimum,          FMINIMUM)
+FP_OP(maximum,          FMAXIMUM)
+FP_OP(minimumnum,       FMINIMUMNUM)
+FP_OP(maximumnum,       FMAXIMUMNUM)
+
+// FP special / decomposition
+FP_OP(copysign,         FCOPYSIGN)
+FP_OP(canonicalize,     FCANONICALIZE)
+FP_OP(is_fpclass,       IS_FPCLASS)
+FP_OP(sincos,           FSINCOS)
+FP_OP(modf,             FMODF)
+
+// Vector FP reductions
+FP_OP(vector_reduce_fadd,    VECREDUCE_FADD)
+FP_OP(vector_reduce_fmul,    VECREDUCE_FMUL)
+FP_OP(vector_reduce_fmax,    VECREDUCE_FMAX)
+FP_OP(vector_reduce_fmin,    VECREDUCE_FMIN)
+FP_OP(vector_reduce_fmaximum, VECREDUCE_FMAXIMUM)
+FP_OP(vector_reduce_fminimum, VECREDUCE_FMINIMUM)
+
+#undef FP_OP
+#undef FP_INTRINSIC

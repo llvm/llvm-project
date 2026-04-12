@@ -170,10 +170,8 @@ define <vscale x 4 x float> @foldable_vfadd(<vscale x 4 x float> %passthru, <vsc
 define <vscale x 4 x float> @unfoldable_constrained_fadd(<vscale x 4 x float> %passthru, <vscale x 4 x float> %x, <vscale x 4 x float> %y, iXLen %vl) strictfp {
 ; CHECK-LABEL: unfoldable_constrained_fadd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfadd.vv v10, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vfadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x float> @llvm.experimental.constrained.fadd(<vscale x 4 x float> %x, <vscale x 4 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   %b = call <vscale x 4 x float> @llvm.riscv.vmv.v.v.nxv4f32(<vscale x 4 x float> %passthru, <vscale x 4 x float> %a, iXLen %vl) strictfp

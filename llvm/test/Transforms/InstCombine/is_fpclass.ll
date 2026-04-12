@@ -856,6 +856,8 @@ define i1 @test_class_is_not_nan_nnan_src(float %x) {
 
 define i1 @test_class_is_not_nan_nnan_src_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_not_nan_nnan_src_strict(
+; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NNAN]], i32 988) #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan float %x, 1.0
@@ -916,6 +918,8 @@ define i1 @test_class_is_not_inf_ninf_src(float %x) {
 
 define i1 @test_class_is_not_inf_ninf_src_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_not_inf_ninf_src_strict(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 475) #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 true
 ;
   %ninf = fadd ninf float %x, 1.0
@@ -2075,7 +2079,8 @@ define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan(float %arg)
 ; -> pinf|psubnormal|snan
 define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(float %arg) strictfp {
 ; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 661) #[[ATTR0]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 661) #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg) strictfp
@@ -2406,7 +2411,8 @@ define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan(float 
 ; strictfp doesn't matter
 define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(float %arg) strictfp {
 ; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 361) #[[ATTR0]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 361) #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg) strictfp

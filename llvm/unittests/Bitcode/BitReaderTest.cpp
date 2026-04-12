@@ -14,6 +14,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -172,19 +173,25 @@ TEST(BitReaderTest, MaterializeConstrainedFPStrictFP) {
   ASSERT_FALSE(Foo->materialize());
   EXPECT_FALSE(Foo->empty());
 
+  // After auto-upgrade, llvm.experimental.constrained.sqrt.f64 with
+  // round.tonearest + fpexcept.strict becomes llvm.sqrt.f64 with an
+  // fp.control { "rte" } bundle.  The strict FP semantics are now encoded
+  // in the operand bundle rather than the call-site strictfp attribute.
+  bool FoundSqrtCall = false;
   for (auto &BB : *Foo) {
-    auto It = BB.begin();
-    while (It != BB.end()) {
-      Instruction &I = *It;
-      ++It;
-
+    for (auto &I : BB) {
       if (auto *Call = dyn_cast<CallBase>(&I)) {
-        EXPECT_TRUE(Call->isStrictFP());
-        EXPECT_FALSE(Call->isNoBuiltin());
+        if (auto *II = dyn_cast<IntrinsicInst>(Call);
+            II && II->getIntrinsicID() == Intrinsic::sqrt) {
+          FoundSqrtCall = true;
+          EXPECT_TRUE(
+              Call->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+          EXPECT_FALSE(Call->isNoBuiltin());
+        }
       }
     }
   }
-
+  EXPECT_TRUE(FoundSqrtCall);
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
 }
 

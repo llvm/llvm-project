@@ -594,13 +594,12 @@ define void @strict_fp_metadata(double %a) {
 ; CHECK-LABEL: define void @strict_fp_metadata(
 ; CHECK-SAME: double [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 1, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.sqrt.f64(double noundef [[A]])
-; CHECK-NEXT:    [[DIV:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[CONV]], double [[CALL]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double 1.000000e+00, [[CALL]]
 ; CHECK-NEXT:    store double [[DIV]], ptr @x, align 8
-; CHECK-NEXT:    [[MUL:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[DIV]], double [[DIV]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[DIV]], [[DIV]]
 ; CHECK-NEXT:    store double [[MUL]], ptr @r1, align 8
-; CHECK-NEXT:    [[DIV2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A]], double [[CALL]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv double [[A]], [[CALL]]
 ; CHECK-NEXT:    store double [[DIV2]], ptr @r2, align 8
 ; CHECK-NEXT:    ret void
 ;

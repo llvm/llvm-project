@@ -66,13 +66,13 @@ if.end:
 define float @add_twice_fpexcept_strict(float %x, float %y, i32 %n) #0 {
 ; CHECK-LABEL: add_twice_fpexcept_strict:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov s2, r1
+; CHECK-NEXT:    vmov s0, r1
 ; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vadd.f32 s0, s4, s2
-; CHECK-NEXT:    vaddne.f32 s2, s4, s2
-; CHECK-NEXT:    vmulne.f32 s0, s0, s2
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-NEXT:    vmul.f32 s2, s0, s0
+; CHECK-NEXT:    vmoveq.f32 s2, s0
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    bx lr
 entry:
   %add = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -96,8 +96,9 @@ define float @add_twice_round_dynamic(float %x, float %y, i32 %n) #0 {
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
-; CHECK-NEXT:    vmulne.f32 s0, s0, s0
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmul.f32 s2, s0, s0
+; CHECK-NEXT:    vmoveq.f32 s2, s0
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    bx lr
 entry:
   %add = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0

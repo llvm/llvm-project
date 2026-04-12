@@ -3279,6 +3279,170 @@ A "convergencectrl" operand bundle is only valid on a ``convergent`` operation.
 When present, the operand bundle must contain exactly one value of token type.
 See the :doc:`ConvergentOperations` document for details.
 
+.. _ob_fp:
+
+Floating-point Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These operand bundles are attached to call instructions that perform
+floating-point operations requiring non-default control of the
+:ref:`floating-point environment <floatenv>` — rounding mode, denormal
+handling, or exception behavior.  There are two independent bundle tags:
+``fp.control`` and ``fp.except``.  Either or both may appear on a call;
+their absence means "use the target default."
+
+.. _fpcontrolbundle:
+
+``fp.control`` Bundle
+"""""""""""""""""""""
+
+An operand bundle tagged ``"fp.control"`` carries one or more metadata string
+operands describing the FP control modes in effect for the call.  Two kinds
+of mode are supported: rounding mode and denormal behavior.
+
+**Rounding mode** is a single metadata string.  Exactly one rounding-mode
+operand may appear.  If no rounding-mode operand is present the operation
+uses the hardware control register's current value (dynamic rounding).  In
+the :ref:`default FP environment <floatenv>` that is round-to-nearest,
+ties-to-even.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 40
+
+   * - Value
+     - Meaning
+   * - ``"rte"``
+     - Round to nearest, ties to even (IEEE default)
+   * - ``"rtz"``
+     - Round toward zero (truncation)
+   * - ``"rtp"``
+     - Round toward positive infinity (ceiling)
+   * - ``"rtn"``
+     - Round toward negative infinity (floor)
+   * - ``"rmm"``
+     - Round to nearest, ties away from zero
+   * - ``"dyn"``
+     - Rounding mode is read from the hardware control register at runtime
+
+Examples:
+
+.. code-block:: llvm
+
+    ; Add two floats, rounding toward zero instead of the default round-to-nearest.
+    %r = call float @llvm.fadd.f32(float %a, float %b)
+             [ "fp.control"(metadata !"rtz") ]
+
+    ; Divide, rounding toward positive infinity, with strict exception tracking.
+    %r = call float @llvm.fdiv.f32(float %a, float %b)
+             [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"strict") ]
+
+    ; Multiply with an explicitly dynamic rounding mode (optimizer must assume
+    ; rounding mode can change between calls).
+    %r = call float @llvm.fmul.f32(float %a, float %b)
+             [ "fp.control"(metadata !"dyn") ]
+
+**Denormal behavior** is specified separately for inputs and outputs using
+operands of the form ``"denorm.in=<mode>"`` and ``"denorm.out=<mode>"``.
+Each applies to all floating-point types unless overridden for ``float``
+specifically with ``"denorm.f32.in=<mode>"`` or ``"denorm.f32.out=<mode>"``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 40
+
+   * - Mode
+     - Meaning
+   * - ``"ieee"``
+     - Preserve denormals (IEEE behavior)
+   * - ``"zero"``
+     - Flush denormals to zero, preserving sign (±0.0)
+   * - ``"pzero"``
+     - Flush denormals to positive zero (+0.0)
+   * - ``"dyn"``
+     - Denormal mode is read from a hardware register at runtime
+
+Examples:
+
+.. code-block:: llvm
+
+    ; Flush denormal inputs to +0.0 before truncating.
+    call float @llvm.trunc.f32(float %x)
+             [ "fp.control"(metadata !"denorm.in=pzero") ]
+
+    ; Globally flush denormal inputs to signed zero, but override for f32
+    ; inputs to use IEEE behavior (preserve denormals).
+    call float @llvm.trunc.f32(float %x)
+             [ "fp.control"(metadata !"denorm.in=zero", metadata !"denorm.f32.in=ieee") ]
+
+    ; Combine a rounding mode with denormal flushing.
+    %r = call float @llvm.fadd.f32(float %a, float %b)
+             [ "fp.control"(metadata !"rtz", metadata !"denorm.in=zero",
+                            metadata !"denorm.out=zero") ]
+
+.. _fpexceptbundle:
+
+``fp.except`` Bundle
+""""""""""""""""""""
+
+An operand bundle tagged ``"fp.except"`` describes how the call interacts
+with the hardware FP exception status flags.  It contains a single metadata
+string operand.  When this bundle is absent on a call that does not have
+``memory(inaccessiblemem: readwrite)`` semantics (e.g. a plain
+:ref:`fadd <i_fadd>` instruction or an :ref:`llvm.fadd <int_fadd>` intrinsic
+without an ``fp.except`` bundle), the optimizer assumes exceptions need not be
+preserved.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 40
+
+   * - Value
+     - Meaning
+   * - ``"ignore"``
+     - FP exception flags are not observed.  The optimizer may freely
+       eliminate, reorder, or transform the operation in ways that would
+       change what exceptions are raised.
+   * - ``"maytrap"``
+     - The operation may raise a hardware exception (signal), but the
+       program does not read the sticky exception flags.  The optimizer must
+       not suppress the operation or introduce new exceptions, but has some
+       freedom to reorder with respect to flag reads.
+   * - ``"strict"``
+     - FP exceptions are precisely tracked.  The program may read the sticky
+       exception-status flags and must see exactly the exceptions raised by
+       this operation in program order.  The optimizer must not eliminate,
+       duplicate, or reorder the call with respect to any other
+       exception-observable operation.
+
+When ``fp.except`` is present with any value, the call is given
+``memory(inaccessiblemem: readwrite)`` and ``willreturn`` attributes, making
+it non-speculatable.  Calls with ``"ignore"`` may still be CSE'd if they are
+otherwise identical; ``"strict"`` calls may not.
+
+Examples:
+
+.. code-block:: llvm
+
+    ; Divide with exceptions ignored — optimizer may hoist, sink, or fold freely.
+    %r = call float @llvm.fdiv.f32(float %a, float %b)
+             [ "fp.except"(metadata !"ignore") ]
+
+    ; Multiply rounding toward zero; program traps on overflow but doesn't
+    ; poll the status flags.
+    %r = call float @llvm.fmul.f32(float %a, float %b)
+             [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"maytrap") ]
+
+    ; Add with strict exception tracking — the Inexact or Overflow flag must
+    ; be raised exactly as IEEE 754 requires, in program order.
+    %r = call float @llvm.fadd.f32(float %a, float %b)
+             [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"strict") ]
+
+    ; Signaling compare — raises Invalid if either operand is a NaN.
+    ; With "strict", the exception is precisely preserved.
+    %c = call i1 @llvm.fcmps.f32(float %x, float %y, metadata !"oeq")
+             [ "fp.except"(metadata !"strict") ]
+
 .. _deactivationsymbol:
 
 Deactivation Symbol Operand Bundles
@@ -4054,8 +4218,9 @@ round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 Running LLVM code in an environment where these assumptions are not met
 typically leads to undefined behavior. The ``strictfp`` and
 :ref:`denormal_fpenv <denormal_fpenv>` attributes as well as
-:ref:`Constrained Floating-Point Intrinsics <constrainedfp>` can be
-used to weaken LLVM's assumptions and ensure defined behavior in
+:ref:`FP arithmetic intrinsics <fpintrin>` with
+:ref:`floating-point operand bundles<ob_fp>` can be used to
+weaken LLVM's assumptions and ensure defined behavior in
 non-default floating-point environments; see their respective
 documentation for details.
 
@@ -4109,8 +4274,8 @@ Floating-point math operations are allowed to treat all NaNs as if they were
 quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0.
 
 Code that requires different behavior than this should use the
-:ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
-In particular, constrained intrinsics rule out the "Unchanged NaN propagation"
+:ref:`FP arithmetic intrinsics <fpintrin>` with ``fp.except`` operand bundles.
+In particular, those intrinsics rule out the "Unchanged NaN propagation"
 case; they are guaranteed to return a QNaN.
 
 Unfortunately, due to hard-or-impossible-to-fix issues, LLVM violates its own
@@ -10459,6 +10624,9 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
+See also the :ref:`llvm.fneg <int_fneg>` intrinsic, which accepts an optional
+``fp.control`` operand bundle for non-default denormal handling.
+
 Example:
 """"""""
 
@@ -10564,6 +10732,10 @@ This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
 
+See also the :ref:`llvm.fadd <int_fadd>` intrinsic, which accepts
+:ref:`fp.control and fp.except <ob_fp>` operand bundles for non-default FP
+environment control.
+
 Example:
 """"""""
 
@@ -10659,6 +10831,10 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
+
+See also the :ref:`llvm.fsub <int_fsub>` intrinsic, which accepts
+:ref:`fp.control and fp.except <ob_fp>` operand bundles for non-default FP
+environment control.
 
 Example:
 """"""""
@@ -10756,6 +10932,10 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
+
+See also the :ref:`llvm.fmul <int_fmul>` intrinsic, which accepts
+:ref:`fp.control and fp.except <ob_fp>` operand bundles for non-default FP
+environment control.
 
 Example:
 """"""""
@@ -10894,6 +11074,10 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
+
+See also the :ref:`llvm.fdiv <int_fdiv>` intrinsic, which accepts
+:ref:`fp.control and fp.except <ob_fp>` operand bundles for non-default FP
+environment control.
 
 Example:
 """"""""
@@ -11050,6 +11234,10 @@ environment <floatenv>`.
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
+
+See also the :ref:`llvm.frem <int_frem>` intrinsic, which accepts
+:ref:`fp.control and fp.except <ob_fp>` operand bundles for non-default FP
+environment control.
 
 Example:
 """"""""
@@ -13409,6 +13597,8 @@ The '``fcmp``' instruction takes three operands. The first operand is
 the condition code indicating the kind of comparison to perform. It is
 not a value, just a keyword. The possible condition codes are:
 
+.. _fcmp_md_cc:
+
 #. ``false``: no comparison, always returns false
 #. ``oeq``: ordered and equal
 #. ``ogt``: ordered and greater than
@@ -13435,6 +13625,8 @@ They must have identical types.
 
 Semantics:
 """"""""""
+
+.. _fcmp_md_cc_sem:
 
 The '``fcmp``' instruction compares ``op1`` and ``op2`` according to the
 condition code given as ``cond``. If the operands are vectors, then the
@@ -13478,6 +13670,10 @@ Any set of fast-math flags are legal on an ``fcmp`` instruction, but the
 only flags that have any effect on its semantics are those that allow
 assumptions to be made about the values of input arguments; namely
 ``nnan``, ``ninf``, and ``reassoc``. See :ref:`fastmath` for more information.
+
+See also the :ref:`llvm.fcmp <int_fcmp>` intrinsic (quiet comparison with
+optional :ref:`fp.control and fp.except <ob_fp>` bundles) and the
+:ref:`llvm.fcmps <int_fcmps>` intrinsic (signaling comparison).
 
 Example:
 """"""""
@@ -18406,8 +18602,8 @@ This function returns the same values as the libm ``rint`` functions
 would, and handles error conditions in the same way. Since LLVM assumes the
 :ref:`default floating-point environment <floatenv>`, the rounding mode is
 assumed to be set to "nearest", so halfway cases are rounded to the even
-integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`
-to avoid that assumption.
+integer. Use :ref:`FP arithmetic intrinsics <fpintrin>` with an
+``fp.control`` bundle to avoid that assumption.
 
 .. _int_nearbyint:
 
@@ -18448,8 +18644,8 @@ This function returns the same values as the libm ``nearbyint``
 functions would, and handles error conditions in the same way. Since LLVM
 assumes the :ref:`default floating-point environment <floatenv>`, the rounding
 mode is assumed to be set to "nearest", so halfway cases are rounded to the even
-integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` to
-avoid that assumption.
+integer. Use :ref:`FP arithmetic intrinsics <fpintrin>` with an
+``fp.control`` bundle to avoid that assumption.
 
 .. _int_round:
 
@@ -28276,1973 +28472,462 @@ It does not read any memory and can be speculated.
 
 
 
-.. _constrainedfp:
+.. _fpintrin:
 
-Constrained Floating-Point Intrinsics
--------------------------------------
+FP Arithmetic Intrinsics
+------------------------
 
-These intrinsics are used to provide special handling of floating-point
-operations when specific rounding mode or floating-point exception behavior is
-required.  By default, LLVM optimization passes assume that the rounding mode is
-round-to-nearest and that floating-point exceptions will not be monitored.
-Constrained FP intrinsics are used to support non-default rounding modes and
-accurately preserve exception behavior without compromising LLVM's ability to
-optimize FP code when the default behavior is used.
+These intrinsics are intrinsic-form equivalents of the standard floating-point
+instructions (:ref:`fadd <i_fadd>`, :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`,
+:ref:`fdiv <i_fdiv>`, :ref:`frem <i_frem>`, :ref:`fneg <i_fneg>`,
+and :ref:`fcmp <i_fcmp>`).  Unlike the plain instructions, they may carry
+:ref:`fp.control and fp.except <ob_fp>` operand bundles to express per-call FP
+environment requirements.
 
-If any FP operation in a function is constrained then they all must be
-constrained. This is required for correct LLVM IR. Optimizations that
-move code around can create miscompiles if mixing of constrained and normal
-operations is done. The correct way to mix constrained and less constrained
-operations is to use the rounding mode and exception handling metadata to
-mark constrained intrinsics as having LLVM's default behavior.
+When no operand bundles are present, an intrinsic behaves identically to the
+corresponding instruction.  In particular, fast-math flags attached to the call
+have the same meaning as they do on the corresponding instruction.
 
-Each of these intrinsics corresponds to a normal floating-point operation. The
-data arguments and the return value are the same as the corresponding FP
-operation.
+When an ``fp.except`` bundle is present, the call is treated as potentially
+raising an FP exception and must be given ``memory(inaccessiblemem: readwrite)``
+semantics; such calls are not speculatable and must be treated conservatively by
+DCE and CSE.  ``llvm.fcmps`` is always non-speculatable regardless of whether an
+``fp.except`` bundle is present, because a signaling comparison can raise an
+Invalid Operation exception whenever a NaN operand is encountered.
 
-The rounding mode argument is a metadata string specifying what
-assumptions, if any, the optimizer can make when transforming constant
-values. Some constrained FP intrinsics omit this argument. If required
-by the intrinsic, this argument must be one of the following strings:
+All FP arithmetic intrinsics accept an optional ``fp.control``
+:ref:`operand bundle <ob_fp>` specifying the rounding mode and denormal handling
+for that operation.
 
-::
+.. _int_fadd:
 
-      "round.dynamic"
-      "round.tonearest"
-      "round.downward"
-      "round.upward"
-      "round.towardzero"
-      "round.tonearestaway"
-
-If this argument is "round.dynamic" optimization passes must assume that the
-rounding mode is unknown and may change at runtime.  No transformations that
-depend on rounding mode may be performed in this case.
-
-The other possible values for the rounding mode argument correspond to the
-similarly named IEEE rounding modes.  If the argument is any of these values
-optimization passes may perform transformations as long as they are consistent
-with the specified rounding mode.
-
-For example, 'x-0'->'x' is not a valid transformation if the rounding mode is
-"round.downward" or "round.dynamic" because if the value of 'x' is +0 then
-'x-0' should evaluate to '-0' when rounding downward.  However, this
-transformation is legal for all other rounding modes.
-
-For values other than "round.dynamic" optimization passes may assume that the
-actual runtime rounding mode (as defined in a target-specific manner) matches
-the specified rounding mode, but this is not guaranteed.  Using a specific
-non-dynamic rounding mode which does not match the actual rounding mode at
-runtime results in undefined behavior.
-
-The exception behavior argument is a metadata string describing the floating
-point exception semantics that required for the intrinsic. This argument
-must be one of the following strings:
-
-::
-
-      "fpexcept.ignore"
-      "fpexcept.maytrap"
-      "fpexcept.strict"
-
-If this argument is "fpexcept.ignore" optimization passes may assume that the
-exception status flags will not be read and that floating-point exceptions will
-be masked.  This allows transformations to be performed that may change the
-exception semantics of the original code.  For example, FP operations may be
-speculatively executed in this case whereas they must not be for either of the
-other possible values of this argument.
-
-If the exception behavior argument is "fpexcept.maytrap" optimization passes
-must avoid transformations that may raise exceptions that would not have been
-raised by the original code (such as speculatively executing FP operations), but
-passes are not required to preserve all exceptions that are implied by the
-original code.  For example, exceptions may be potentially hidden by constant
-folding.
-
-If the exception behavior argument is "fpexcept.strict" all transformations must
-strictly preserve the floating-point exception semantics of the original code.
-Any FP exception that would have been raised by the original code must be raised
-by the transformed code, and the transformed code must not raise any FP
-exceptions that would not have been raised by the original code.  This is the
-exception behavior argument that will be used if the code being compiled reads
-the FP exception status flags, but this mode can also be used with code that
-unmasks FP exceptions.
-
-The number and order of floating-point exceptions is NOT guaranteed.  For
-example, a series of FP operations that each may raise exceptions may be
-vectorized into a single instruction that raises each unique exception a single
-time.
-
-Proper :ref:`function attributes <fnattrs>` usage is required for the
-constrained intrinsics to function correctly.
-
-All function *calls* done in a function that uses constrained floating
-point intrinsics must have the ``strictfp`` attribute either on the
-calling instruction or on the declaration or definition of the function
-being called.
-
-All function *definitions* that use constrained floating point intrinsics
-must have the ``strictfp`` attribute.
-
-'``llvm.experimental.constrained.fadd``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.fadd.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
+This is an overloaded intrinsic. You can use ``llvm.fadd`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
 ::
 
-      declare <type>
-      @llvm.experimental.constrained.fadd(<type> <op1>, <type> <op2>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
+      declare half      @llvm.fadd.f16(half %op1, half %op2)
+      declare bfloat    @llvm.fadd.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.fadd.f32(float %op1, float %op2)
+      declare double    @llvm.fadd.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.fadd.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.fadd.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.fadd.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fadd``' intrinsic returns the sum of its
-two arguments.
-
+Intrinsic form of the :ref:`fadd <i_fadd>` instruction.  Returns the
+floating-point sum of its two operands.
 
 Arguments:
 """"""""""
 
-The first two arguments to the '``llvm.experimental.constrained.fadd``'
-intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
-of floating-point values. Both arguments must have identical types.
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.
+The arguments and return value are floating-point numbers of the same type.
+Optional operand bundles ``fp.control`` and ``fp.except`` are described in
+:ref:`Floating-point Operand Bundles <ob_fp>`.
 
 Semantics:
 """"""""""
 
-The value produced is the floating-point sum of the two value arguments and has
-the same type as the arguments.
+Equivalent to the :ref:`fadd <i_fadd>` instruction.  When ``fp.except`` is
+absent the call is ``memory(none)`` and speculatable.  When ``fp.except`` is
+present the call is ``memory(inaccessiblemem: readwrite) willreturn`` and may
+not be reordered past other exception-observable operations.
 
+Example:
+""""""""
 
-'``llvm.experimental.constrained.fsub``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+      ; Add in round-toward-zero mode, preserving any FP exception.
+      %r = call float @llvm.fadd.f32(float %a, float %b)
+               [ "fp.control"(metadata !"rtz"), "fp.except"(metadata !"strict") ]
+
+.. _int_fsub:
+
+'``llvm.fsub.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
+This is an overloaded intrinsic. You can use ``llvm.fsub`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
 ::
 
-      declare <type>
-      @llvm.experimental.constrained.fsub(<type> <op1>, <type> <op2>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
+      declare half      @llvm.fsub.f16(half %op1, half %op2)
+      declare bfloat    @llvm.fsub.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.fsub.f32(float %op1, float %op2)
+      declare double    @llvm.fsub.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.fsub.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.fsub.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.fsub.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fsub``' intrinsic returns the difference
-of its two arguments.
-
+Intrinsic form of the :ref:`fsub <i_fsub>` instruction.  Returns the
+floating-point difference of its two operands.
 
 Arguments:
 """"""""""
 
-The first two arguments to the '``llvm.experimental.constrained.fsub``'
-intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
-of floating-point values. Both arguments must have identical types.
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.
+The arguments and return value are floating-point numbers of the same type.
+Optional operand bundles ``fp.control`` and ``fp.except`` are described in
+:ref:`Floating-point Operand Bundles <ob_fp>`.
 
 Semantics:
 """"""""""
 
-The value produced is the floating-point difference of the two value arguments
-and has the same type as the arguments.
+Equivalent to the :ref:`fsub <i_fsub>` instruction.  When ``fp.except`` is
+absent the call is ``memory(none)`` and speculatable.  When ``fp.except`` is
+present the call is ``memory(inaccessiblemem: readwrite) willreturn`` and may
+not be reordered past other exception-observable operations.
 
+Example:
+""""""""
 
-'``llvm.experimental.constrained.fmul``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+      ; Subtract with downward rounding and strict exception tracking.
+      %r = call double @llvm.fsub.f64(double %a, double %b)
+               [ "fp.control"(metadata !"rtn"), "fp.except"(metadata !"strict") ]
+
+.. _int_fmul:
+
+'``llvm.fmul.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
+This is an overloaded intrinsic. You can use ``llvm.fmul`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
 ::
 
-      declare <type>
-      @llvm.experimental.constrained.fmul(<type> <op1>, <type> <op2>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
+      declare half      @llvm.fmul.f16(half %op1, half %op2)
+      declare bfloat    @llvm.fmul.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.fmul.f32(float %op1, float %op2)
+      declare double    @llvm.fmul.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.fmul.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.fmul.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.fmul.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fmul``' intrinsic returns the product of
-its two arguments.
-
+Intrinsic form of the :ref:`fmul <i_fmul>` instruction.  Returns the
+floating-point product of its two operands.
 
 Arguments:
 """"""""""
 
-The first two arguments to the '``llvm.experimental.constrained.fmul``'
-intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
-of floating-point values. Both arguments must have identical types.
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.
+The arguments and return value are floating-point numbers of the same type.
+Optional operand bundles ``fp.control`` and ``fp.except`` are described in
+:ref:`Floating-point Operand Bundles <ob_fp>`.
 
 Semantics:
 """"""""""
 
-The value produced is the floating-point product of the two value arguments and
-has the same type as the arguments.
+Equivalent to the :ref:`fmul <i_fmul>` instruction.  When ``fp.except`` is
+absent the call is ``memory(none)`` and speculatable.  When ``fp.except`` is
+present the call is ``memory(inaccessiblemem: readwrite) willreturn`` and may
+not be reordered past other exception-observable operations.
 
+Example:
+""""""""
 
-'``llvm.experimental.constrained.fdiv``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+      ; Multiply with upward rounding, allowing the operation to trap.
+      %r = call float @llvm.fmul.f32(float %a, float %b)
+               [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"maytrap") ]
+
+.. _int_fdiv:
+
+'``llvm.fdiv.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
+This is an overloaded intrinsic. You can use ``llvm.fdiv`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
 ::
 
-      declare <type>
-      @llvm.experimental.constrained.fdiv(<type> <op1>, <type> <op2>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
+      declare half      @llvm.fdiv.f16(half %op1, half %op2)
+      declare bfloat    @llvm.fdiv.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.fdiv.f32(float %op1, float %op2)
+      declare double    @llvm.fdiv.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.fdiv.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.fdiv.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.fdiv.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fdiv``' intrinsic returns the quotient of
-its two arguments.
-
+Intrinsic form of the :ref:`fdiv <i_fdiv>` instruction.  Returns the
+floating-point quotient of its two operands.
 
 Arguments:
 """"""""""
 
-The first two arguments to the '``llvm.experimental.constrained.fdiv``'
-intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
-of floating-point values. Both arguments must have identical types.
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.
+The arguments and return value are floating-point numbers of the same type.
+Optional operand bundles ``fp.control`` and ``fp.except`` are described in
+:ref:`Floating-point Operand Bundles <ob_fp>`.
 
 Semantics:
 """"""""""
 
-The value produced is the floating-point quotient of the two value arguments and
-has the same type as the arguments.
+Equivalent to the :ref:`fdiv <i_fdiv>` instruction.  When ``fp.except`` is
+absent the call is ``memory(none)`` and speculatable.  When ``fp.except`` is
+present the call is ``memory(inaccessiblemem: readwrite) willreturn`` and may
+not be reordered past other exception-observable operations.
 
+Example:
+""""""""
 
-'``llvm.experimental.constrained.frem``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+      ; Divide toward positive infinity, preserving the DivideByZero exception.
+      %r = call double @llvm.fdiv.f64(double %a, double %b)
+               [ "fp.control"(metadata !"rtp"), "fp.except"(metadata !"strict") ]
+
+.. _int_frem:
+
+'``llvm.frem.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
+This is an overloaded intrinsic. You can use ``llvm.frem`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
 ::
 
-      declare <type>
-      @llvm.experimental.constrained.frem(<type> <op1>, <type> <op2>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
+      declare half      @llvm.frem.f16(half %op1, half %op2)
+      declare bfloat    @llvm.frem.bf16(bfloat %op1, bfloat %op2)
+      declare float     @llvm.frem.f32(float %op1, float %op2)
+      declare double    @llvm.frem.f64(double %op1, double %op2)
+      declare x86_fp80  @llvm.frem.f80(x86_fp80 %op1, x86_fp80 %op2)
+      declare fp128     @llvm.frem.f128(fp128 %op1, fp128 %op2)
+      declare ppc_fp128 @llvm.frem.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.frem``' intrinsic returns the remainder
-from the division of its two arguments.
-
+Intrinsic form of the :ref:`frem <i_frem>` instruction.  Returns the
+floating-point remainder of dividing the first operand by the second.
 
 Arguments:
 """"""""""
 
-The first two arguments to the '``llvm.experimental.constrained.frem``'
-intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
-of floating-point values. Both arguments must have identical types.
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.  The rounding mode argument has no effect, since
-the result of frem is never rounded, but the argument is included for
-consistency with the other constrained floating-point intrinsics.
+The arguments and return value are floating-point numbers of the same type.
+Optional operand bundles ``fp.control`` and ``fp.except`` are described in
+:ref:`Floating-point Operand Bundles <ob_fp>`.
 
 Semantics:
 """"""""""
 
-The value produced is the floating-point remainder from the division of the two
-value arguments and has the same type as the arguments.  The remainder has the
-same sign as the dividend.
+Equivalent to the :ref:`frem <i_frem>` instruction.  When ``fp.except`` is
+absent the call is ``memory(none)`` and speculatable.  When ``fp.except`` is
+present the call is ``memory(inaccessiblemem: readwrite) willreturn`` and may
+not be reordered past other exception-observable operations.
 
-'``llvm.experimental.constrained.fma``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example:
+""""""""
+
+::
+
+      ; Compute remainder with strict exception tracking.
+      %r = call float @llvm.frem.f32(float %a, float %b)
+               [ "fp.except"(metadata !"strict") ]
+
+.. _int_fneg:
+
+'``llvm.fneg.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
+This is an overloaded intrinsic. You can use ``llvm.fneg`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
 ::
 
-      declare <type>
-      @llvm.experimental.constrained.fma(<type> <op1>, <type> <op2>, <type> <op3>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
+      declare half      @llvm.fneg.f16(half %op1)
+      declare bfloat    @llvm.fneg.bf16(bfloat %op1)
+      declare float     @llvm.fneg.f32(float %op1)
+      declare double    @llvm.fneg.f64(double %op1)
+      declare x86_fp80  @llvm.fneg.f80(x86_fp80 %op1)
+      declare fp128     @llvm.fneg.f128(fp128 %op1)
+      declare ppc_fp128 @llvm.fneg.ppcf128(ppc_fp128 %op1)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fma``' intrinsic returns the result of a
-fused-multiply-add operation on its arguments.
+Intrinsic form of the :ref:`fneg <i_fneg>` instruction.  Returns the
+floating-point negation of its operand.
 
 Arguments:
 """"""""""
 
-The first three arguments to the '``llvm.experimental.constrained.fma``'
-intrinsic must be :ref:`floating-point <t_floating>` or :ref:`vector
-<t_vector>` of floating-point values. All arguments must have identical types.
-
-The fourth and fifth arguments specify the rounding mode and exception behavior
-as described above.
+The argument and return value are floating-point numbers of the same type.
+An optional ``fp.control`` bundle may specify denormal handling; ``fp.except``
+is not applicable because ``fneg`` cannot raise FP exceptions.
 
 Semantics:
 """"""""""
 
-The result produced is the product of the first two arguments added to the third
-argument computed with infinite precision, and then rounded to the target
-precision.
+Equivalent to the :ref:`fneg <i_fneg>` instruction.  Always ``memory(none)``
+and speculatable.
 
-'``llvm.experimental.constrained.fptoui``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example:
+""""""""
+
+::
+
+      ; Negate with denormal inputs flushed to positive zero.
+      %r = call float @llvm.fneg.f32(float %x)
+               [ "fp.control"(metadata !"denorm.in=pzero") ]
+
+.. _int_fcmp:
+
+'``llvm.fcmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
+This is an overloaded intrinsic. You can use ``llvm.fcmp`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
 ::
 
-      declare <ty2>
-      @llvm.experimental.constrained.fptoui(<type> <value>,
-                                          metadata <exception behavior>)
+      declare i1        @llvm.fcmp.f16(half %op1, half %op2, metadata %cc)
+      declare i1        @llvm.fcmp.bf16(bfloat %op1, bfloat %op2, metadata %cc)
+      declare i1        @llvm.fcmp.f32(float %op1, float %op2, metadata %cc)
+      declare i1        @llvm.fcmp.f64(double %op1, double %op2, metadata %cc)
+      declare i1        @llvm.fcmp.f80(x86_fp80 %op1, x86_fp80 %op2, metadata %cc)
+      declare i1        @llvm.fcmp.f128(fp128 %op1, fp128 %op2, metadata %cc)
+      declare i1        @llvm.fcmp.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2, metadata %cc)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fptoui``' intrinsic converts a
-floating-point ``value`` to its unsigned integer equivalent of type ``ty2``.
+Intrinsic form of the :ref:`fcmp <i_fcmp>` instruction.  Performs a **quiet**
+floating-point comparison: raises an FP Invalid Operation exception only if an
+operand is a signaling NaN (sNaN).  For vector types the return type is a
+vector of ``i1`` with the same number of elements as the operands.
 
 Arguments:
 """"""""""
 
-The first argument to the '``llvm.experimental.constrained.fptoui``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values.
+The two operands must be floating-point numbers of the same type.  The third
+argument is a metadata string giving the comparison predicate; valid values are
+:ref:`the same as for the fcmp instruction <fcmp_md_cc>`: ``"oeq"``,
+``"ogt"``, ``"oge"``, ``"olt"``, ``"ole"``, ``"one"``, ``"ord"``, ``"ueq"``,
+``"ugt"``, ``"uge"``, ``"ult"``, ``"ule"``, ``"une"``, ``"uno"``, ``"true"``,
+and ``"false"``.
 
-The second argument specifies the exception behavior as described above.
+Optional operand bundles ``fp.control`` and ``fp.except`` are described in
+:ref:`Floating-point Operand Bundles <ob_fp>`.
 
 Semantics:
 """"""""""
 
-The result produced is an unsigned integer converted from the floating
-point argument. The value is truncated, so it is rounded towards zero.
+The comparison semantics :ref:`follow those of the fcmp instruction
+<fcmp_md_cc_sem>`.  When ``fp.except`` is absent the call is ``memory(none)``
+and speculatable.  When ``fp.except`` is present the call is
+``memory(inaccessiblemem: readwrite) willreturn``.
 
-'``llvm.experimental.constrained.fptosi``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example:
+""""""""
+
+::
+
+      ; Quiet ordered-equal compare, preserving any Invalid exception from sNaN.
+      %c = call i1 @llvm.fcmp.f32(float %a, float %b, metadata !"oeq")
+               [ "fp.except"(metadata !"strict") ]
+
+.. _int_fcmps:
+
+'``llvm.fcmps.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
+This is an overloaded intrinsic. You can use ``llvm.fcmps`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
 ::
 
-      declare <ty2>
-      @llvm.experimental.constrained.fptosi(<type> <value>,
-                                          metadata <exception behavior>)
+      declare i1        @llvm.fcmps.f16(half %op1, half %op2, metadata %cc)
+      declare i1        @llvm.fcmps.bf16(bfloat %op1, bfloat %op2, metadata %cc)
+      declare i1        @llvm.fcmps.f32(float %op1, float %op2, metadata %cc)
+      declare i1        @llvm.fcmps.f64(double %op1, double %op2, metadata %cc)
+      declare i1        @llvm.fcmps.f80(x86_fp80 %op1, x86_fp80 %op2, metadata %cc)
+      declare i1        @llvm.fcmps.f128(fp128 %op1, fp128 %op2, metadata %cc)
+      declare i1        @llvm.fcmps.ppcf128(ppc_fp128 %op1, ppc_fp128 %op2, metadata %cc)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fptosi``' intrinsic converts
-:ref:`floating-point <t_floating>` ``value`` to type ``ty2``.
+Performs a **signaling** floating-point comparison.  Unlike
+:ref:`llvm.fcmp <int_fcmp>`, a signaling comparison raises an FP Invalid
+Operation exception whenever either operand is any NaN — including quiet NaNs
+(qNaN).  There is no corresponding plain instruction; the closest equivalent is
+:ref:`fcmp <i_fcmp>`.  For vector types the return type is a vector of ``i1``
+with the same number of elements as the operands.
 
 Arguments:
 """"""""""
 
-The first argument to the '``llvm.experimental.constrained.fptosi``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values.
-
-The second argument specifies the exception behavior as described above.
+Same as :ref:`llvm.fcmp <int_fcmp>`.
 
 Semantics:
 """"""""""
 
-The result produced is a signed integer converted from the floating
-point argument. The value is truncated, so it is rounded towards zero.
+``llvm.fcmps`` is always ``memory(inaccessiblemem: readwrite) willreturn``
+regardless of whether an ``fp.except`` bundle is present, because it can always
+raise an exception when a NaN operand is encountered.  The ``fp.except`` bundle
+controls whether that exception must be preserved in the surrounding code.
 
-'``llvm.experimental.constrained.uitofp``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.experimental.constrained.uitofp(<type> <value>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.uitofp``' intrinsic converts an
-unsigned integer ``value`` to a floating-point of type ``ty2``.
-
-Arguments:
-""""""""""
-
-The first argument to the '``llvm.experimental.constrained.uitofp``'
-intrinsic must be an :ref:`integer <t_integer>` or :ref:`vector
-<t_vector>` of integer values.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-An inexact floating-point exception will be raised if rounding is required.
-Any result produced is a floating point value converted from the input
-integer argument.
-
-'``llvm.experimental.constrained.sitofp``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
+Example:
+""""""""
 
 ::
 
-      declare <ty2>
-      @llvm.experimental.constrained.sitofp(<type> <value>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
+      ; Signaling compare — preserve the Invalid exception on NaN.
+      %r = call i1 @llvm.fcmps.f32(float %a, float %b, metadata !"oeq")
+               [ "fp.except"(metadata !"strict") ]
 
-Overview:
-"""""""""
 
-The '``llvm.experimental.constrained.sitofp``' intrinsic converts a
-signed integer ``value`` to a floating-point of type ``ty2``.
+.. _int_noalias_scope_decl:
 
-Arguments:
-""""""""""
-
-The first argument to the '``llvm.experimental.constrained.sitofp``'
-intrinsic must be an :ref:`integer <t_integer>` or :ref:`vector
-<t_vector>` of integer values.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-An inexact floating-point exception will be raised if rounding is required.
-Any result produced is a floating point value converted from the input
-integer argument.
-
-'``llvm.experimental.constrained.fptrunc``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.experimental.constrained.fptrunc(<type> <value>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.fptrunc``' intrinsic truncates ``value``
-to type ``ty2``.
-
-Arguments:
-""""""""""
-
-The first argument to the '``llvm.experimental.constrained.fptrunc``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values. This argument must be larger in size
-than the result.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-The result produced is a floating point value truncated to be smaller in size
-than the argument.
-
-'``llvm.experimental.constrained.fpext``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.experimental.constrained.fpext(<type> <value>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.fpext``' intrinsic extends a
-floating-point ``value`` to a larger floating-point value.
-
-Arguments:
-""""""""""
-
-The first argument to the '``llvm.experimental.constrained.fpext``'
-intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values. This argument must be smaller in size
-than the result.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-The result produced is a floating point value extended to be larger in size
-than the argument. All restrictions that apply to the fpext instruction also
-apply to this intrinsic.
-
-'``llvm.experimental.constrained.fcmp``' and '``llvm.experimental.constrained.fcmps``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.experimental.constrained.fcmp(<type> <op1>, <type> <op2>,
-                                          metadata <condition code>,
-                                          metadata <exception behavior>)
-      declare <ty2>
-      @llvm.experimental.constrained.fcmps(<type> <op1>, <type> <op2>,
-                                           metadata <condition code>,
-                                           metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.fcmp``' and
-'``llvm.experimental.constrained.fcmps``' intrinsics return a boolean
-value or vector of boolean values based on comparison of its arguments.
-
-If the arguments are floating-point scalars, then the result type is a
-boolean (:ref:`i1 <t_integer>`).
-
-If the arguments are floating-point vectors, then the result type is a
-vector of boolean with the same number of elements as the arguments being
-compared.
-
-The '``llvm.experimental.constrained.fcmp``' intrinsic performs a quiet
-comparison operation while the '``llvm.experimental.constrained.fcmps``'
-intrinsic performs a signaling comparison operation.
-
-Arguments:
-""""""""""
-
-The first two arguments to the '``llvm.experimental.constrained.fcmp``'
-and '``llvm.experimental.constrained.fcmps``' intrinsics must be
-:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
-of floating-point values. Both arguments must have identical types.
-
-The third argument is the condition code indicating the kind of comparison
-to perform. It must be a metadata string with one of the following values:
-
-.. _fcmp_md_cc:
-
-- "``oeq``": ordered and equal
-- "``ogt``": ordered and greater than
-- "``oge``": ordered and greater than or equal
-- "``olt``": ordered and less than
-- "``ole``": ordered and less than or equal
-- "``one``": ordered and not equal
-- "``ord``": ordered (no nans)
-- "``ueq``": unordered or equal
-- "``ugt``": unordered or greater than
-- "``uge``": unordered or greater than or equal
-- "``ult``": unordered or less than
-- "``ule``": unordered or less than or equal
-- "``une``": unordered or not equal
-- "``uno``": unordered (either nans)
-
-*Ordered* means that neither argument is a NAN while *unordered* means
-that either argument may be a NAN.
-
-The fourth argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-``op1`` and ``op2`` are compared according to the condition code given
-as the third argument. If the arguments are vectors, then the
-vectors are compared element by element. Each comparison performed
-always yields an :ref:`i1 <t_integer>` result, as follows:
-
-.. _fcmp_md_cc_sem:
-
-- "``oeq``": yields ``true`` if both arguments are not a NAN and ``op1``
-  is equal to ``op2``.
-- "``ogt``": yields ``true`` if both arguments are not a NAN and ``op1``
-  is greater than ``op2``.
-- "``oge``": yields ``true`` if both arguments are not a NAN and ``op1``
-  is greater than or equal to ``op2``.
-- "``olt``": yields ``true`` if both arguments are not a NAN and ``op1``
-  is less than ``op2``.
-- "``ole``": yields ``true`` if both arguments are not a NAN and ``op1``
-  is less than or equal to ``op2``.
-- "``one``": yields ``true`` if both arguments are not a NAN and ``op1``
-  is not equal to ``op2``.
-- "``ord``": yields ``true`` if both arguments are not a NAN.
-- "``ueq``": yields ``true`` if either argument is a NAN or ``op1`` is
-  equal to ``op2``.
-- "``ugt``": yields ``true`` if either argument is a NAN or ``op1`` is
-  greater than ``op2``.
-- "``uge``": yields ``true`` if either argument is a NAN or ``op1`` is
-  greater than or equal to ``op2``.
-- "``ult``": yields ``true`` if either argument is a NAN or ``op1`` is
-  less than ``op2``.
-- "``ule``": yields ``true`` if either argument is a NAN or ``op1`` is
-  less than or equal to ``op2``.
-- "``une``": yields ``true`` if either argument is a NAN or ``op1`` is
-  not equal to ``op2``.
-- "``uno``": yields ``true`` if either argument is a NAN.
-
-The quiet comparison operation performed by
-'``llvm.experimental.constrained.fcmp``' will only raise an exception
-if either argument is a SNAN.  The signaling comparison operation
-performed by '``llvm.experimental.constrained.fcmps``' will raise an
-exception if either argument is a NAN (QNAN or SNAN). Such an exception
-does not preclude a result being produced (e.g., exception might only
-set a flag), therefore the distinction between ordered and unordered
-comparisons is also relevant for the
-'``llvm.experimental.constrained.fcmps``' intrinsic.
-
-'``llvm.experimental.constrained.fmuladd``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.fmuladd(<type> <op1>, <type> <op2>,
-                                             <type> <op3>,
-                                             metadata <rounding mode>,
-                                             metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.fmuladd``' intrinsic represents
-multiply-add expressions that can be fused if the code generator determines
-that (a) the target instruction set has support for a fused operation,
-and (b) that the fused operation is more efficient than the equivalent,
-separate pair of mul and add instructions.
-
-Arguments:
-""""""""""
-
-The first three arguments to the '``llvm.experimental.constrained.fmuladd``'
-intrinsic must be floating-point or vector of floating-point values.
-All three arguments must have identical types.
-
-The fourth and fifth arguments specify the rounding mode and exception behavior
-as described above.
-
-Semantics:
-""""""""""
-
-The expression:
-
-::
-
-      %0 = call float @llvm.experimental.constrained.fmuladd.f32(%a, %b, %c,
-                                                                 metadata <rounding mode>,
-                                                                 metadata <exception behavior>)
-
-is equivalent to the expression:
-
-::
-
-      %0 = call float @llvm.experimental.constrained.fmul.f32(%a, %b,
-                                                              metadata <rounding mode>,
-                                                              metadata <exception behavior>)
-      %1 = call float @llvm.experimental.constrained.fadd.f32(%0, %c,
-                                                              metadata <rounding mode>,
-                                                              metadata <exception behavior>)
-
-except that it is unspecified whether rounding will be performed between the
-multiplication and addition steps. Fusion is not guaranteed, even if the target
-platform supports it.
-If a fused multiply-add is required, the corresponding
-:ref:`llvm.experimental.constrained.fma <int_fma>` intrinsic function should be
-used instead.
-This never sets errno, just as '``llvm.experimental.constrained.fma.*``'.
-
-Constrained libm-equivalent Intrinsics
---------------------------------------
-
-In addition to the basic floating-point operations for which constrained
-intrinsics are described above, there are constrained versions of various
-operations which provide equivalent behavior to a corresponding libm function.
-These intrinsics allow the precise behavior of these operations with respect to
-rounding mode and exception behavior to be controlled.
-
-As with the basic constrained floating-point intrinsics, the rounding mode
-and exception behavior arguments only control the behavior of the optimizer.
-They do not change the runtime floating-point environment.
-
-
-'``llvm.experimental.constrained.sqrt``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.sqrt(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.sqrt``' intrinsic returns the square root
-of the specified value, returning the same value as the libm '``sqrt``'
-functions would, but without setting ``errno``.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the nonnegative square root of the specified value.
-If the value is less than negative zero, a floating-point exception occurs
-and the return value is architecture specific.
-
-
-'``llvm.experimental.constrained.pow``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.pow(<type> <op1>, <type> <op2>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.pow``' intrinsic returns the first argument
-raised to the (positive or negative) power specified by the second argument.
-
-Arguments:
-""""""""""
-
-The first two arguments and the return value are floating-point numbers of the
-same type.  The second argument specifies the power to which the first argument
-should be raised.
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the first value raised to the second power,
-returning the same values as the libm ``pow`` functions would, and
-handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.powi``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.powi(<type> <op1>, i32 <op2>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.powi``' intrinsic returns the first argument
-raised to the (positive or negative) power specified by the second argument. The
-order of evaluation of multiplications is not defined. When a vector of
-floating-point type is used, the second argument remains a scalar integer value.
-
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.  The second argument is a 32-bit signed integer specifying the power to
-which the first argument should be raised.
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the first value raised to the second power with an
-unspecified sequence of rounding operations.
-
-
-'``llvm.experimental.constrained.ldexp``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type0>
-      @llvm.experimental.constrained.ldexp(<type0> <op1>, <type1> <op2>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.ldexp``' performs the ldexp function.
-
-
-Arguments:
-""""""""""
-
-The first argument and the return value are :ref:`floating-point
-<t_floating>` or :ref:`vector <t_vector>` of floating-point values of
-the same type. The second argument is an integer with the same number
-of elements.
-
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function multiplies the first argument by 2 raised to the second
-argument's power. If the first argument is NaN or infinite, the same
-value is returned. If the result underflows a zero with the same sign
-is returned. If the result overflows, the result is an infinity with
-the same sign.
-
-
-'``llvm.experimental.constrained.sin``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.sin(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.sin``' intrinsic returns the sine of the
-first argument.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the sine of the specified argument, returning the
-same values as the libm ``sin`` functions would, and handles error
-conditions in the same way.
-
-
-'``llvm.experimental.constrained.cos``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.cos(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.cos``' intrinsic returns the cosine of the
-first argument.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the cosine of the specified argument, returning the
-same values as the libm ``cos`` functions would, and handles error
-conditions in the same way.
-
-
-'``llvm.experimental.constrained.tan``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.tan(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.tan``' intrinsic returns the tangent of the
-first argument.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the tangent of the specified argument, returning the
-same values as the libm ``tan`` functions would, and handles error
-conditions in the same way.
-
-'``llvm.experimental.constrained.asin``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.asin(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.asin``' intrinsic returns the arcsine of the
-first operand.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the arcsine of the specified operand, returning the
-same values as the libm ``asin`` functions would, and handles error
-conditions in the same way.
-
-
-'``llvm.experimental.constrained.acos``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.acos(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.acos``' intrinsic returns the arccosine of the
-first operand.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the arccosine of the specified operand, returning the
-same values as the libm ``acos`` functions would, and handles error
-conditions in the same way.
-
-
-'``llvm.experimental.constrained.atan``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.atan(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.atan``' intrinsic returns the arctangent of the
-first operand.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the arctangent of the specified operand, returning the
-same values as the libm ``atan`` functions would, and handles error
-conditions in the same way.
-
-'``llvm.experimental.constrained.atan2``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.atan2(<type> <op1>,
-                                           <type> <op2>,
-                                           metadata <rounding mode>,
-                                           metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.atan2``' intrinsic returns the arctangent
-of ``<op1>`` divided by ``<op2>`` accounting for the quadrant.
-
-Arguments:
-""""""""""
-
-The first two arguments and the return value are floating-point numbers of the
-same type.
-
-The third and fourth arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the quadrant-specific arctangent using the specified
-operands, returning the same values as the libm ``atan2`` functions would, and
-handles error conditions in the same way.
-
-'``llvm.experimental.constrained.sinh``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.sinh(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.sinh``' intrinsic returns the hyperbolic sine of the
-first operand.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the hyperbolic sine of the specified operand, returning the
-same values as the libm ``sinh`` functions would, and handles error
-conditions in the same way.
-
-
-'``llvm.experimental.constrained.cosh``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.cosh(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.cosh``' intrinsic returns the hyperbolic cosine of the
-first operand.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the hyperbolic cosine of the specified operand, returning the
-same values as the libm ``cosh`` functions would, and handles error
-conditions in the same way.
-
-
-'``llvm.experimental.constrained.tanh``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.tanh(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.tanh``' intrinsic returns the hyperbolic tangent of the
-first operand.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the hyperbolic tangent of the specified operand, returning the
-same values as the libm ``tanh`` functions would, and handles error
-conditions in the same way.
-
-'``llvm.experimental.constrained.exp``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.exp(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.exp``' intrinsic computes the base-e
-exponential of the specified value.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``exp`` functions
-would, and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.exp2``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.exp2(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.exp2``' intrinsic computes the base-2
-exponential of the specified value.
-
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``exp2`` functions
-would, and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.log``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.log(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.log``' intrinsic computes the base-e
-logarithm of the specified value.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``log`` functions
-would, and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.log10``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.log10(<type> <op1>,
-                                           metadata <rounding mode>,
-                                           metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.log10``' intrinsic computes the base-10
-logarithm of the specified value.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``log10`` functions
-would, and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.log2``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.log2(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.log2``' intrinsic computes the base-2
-logarithm of the specified value.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``log2`` functions
-would, and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.rint``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.rint(<type> <op1>,
-                                          metadata <rounding mode>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.rint``' intrinsic returns the first
-argument rounded to the nearest integer. It may raise an inexact floating-point
-exception if the argument is not an integer.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``rint`` functions
-would, and handles error conditions in the same way.  The rounding mode is
-described, not determined, by the rounding mode argument.  The actual rounding
-mode is determined by the runtime floating-point environment.  The rounding
-mode argument is only intended as information to the compiler.
-
-
-'``llvm.experimental.constrained.lrint``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <inttype>
-      @llvm.experimental.constrained.lrint(<fptype> <op1>,
-                                           metadata <rounding mode>,
-                                           metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.lrint``' intrinsic returns the first
-argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. If the rounded value is too
-large to fit into the result type, an invalid exception is raised, and the
-return value is a non-deterministic value (equivalent to `freeze poison`).
-
-Arguments:
-""""""""""
-
-The first argument is a floating-point number. The return value is an
-integer type. Not all types are supported on all targets. The supported
-types are the same as the ``llvm.lrint`` intrinsic and the ``lrint``
-libm functions.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``lrint`` functions
-would, and handles error conditions in the same way.
-
-The rounding mode is described, not determined, by the rounding mode
-argument.  The actual rounding mode is determined by the runtime floating-point
-environment.  The rounding mode argument is only intended as information
-to the compiler.
-
-If the runtime floating-point environment is using the default rounding mode
-then the results will be the same as the ``llvm.lrint`` intrinsic.
-
-
-'``llvm.experimental.constrained.llrint``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <inttype>
-      @llvm.experimental.constrained.llrint(<fptype> <op1>,
-                                            metadata <rounding mode>,
-                                            metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.llrint``' intrinsic returns the first
-argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. If the rounded value is too
-large to fit into the result type, an invalid exception is raised, and the
-return value is a non-deterministic value (equivalent to `freeze poison`).
-
-Arguments:
-""""""""""
-
-The first argument is a floating-point number. The return value is an
-integer type. Not all types are supported on all targets. The supported
-types are the same as the ``llvm.llrint`` intrinsic and the ``llrint``
-libm functions.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``llrint`` functions
-would, and handles error conditions in the same way.
-
-The rounding mode is described, not determined, by the rounding mode
-argument.  The actual rounding mode is determined by the runtime floating-point
-environment.  The rounding mode argument is only intended as information
-to the compiler.
-
-If the runtime floating-point environment is using the default rounding mode
-then the results will be the same as the ``llvm.llrint`` intrinsic.
-
-
-'``llvm.experimental.constrained.nearbyint``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.nearbyint(<type> <op1>,
-                                               metadata <rounding mode>,
-                                               metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.nearbyint``' intrinsic returns the first
-argument rounded to the nearest integer. It will not raise an inexact
-floating-point exception if the argument is not an integer.
-
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``nearbyint`` functions
-would, and handles error conditions in the same way.  The rounding mode is
-described, not determined, by the rounding mode argument.  The actual rounding
-mode is determined by the runtime floating-point environment.  The rounding
-mode argument is only intended as information to the compiler.
-
-
-'``llvm.experimental.constrained.maxnum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.maxnum(<type> <op1>, <type> <op2>
-                                            metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.maxnum``' intrinsic returns the maximum
-of the two arguments.
-
-Arguments:
-""""""""""
-
-The first two arguments and the return value are floating-point numbers
-of the same type.
-
-The third argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function follows the IEEE 754-2008 semantics for maxNum.
-
-
-'``llvm.experimental.constrained.minnum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.minnum(<type> <op1>, <type> <op2>
-                                            metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.minnum``' intrinsic returns the minimum
-of the two arguments.
-
-Arguments:
-""""""""""
-
-The first two arguments and the return value are floating-point numbers
-of the same type.
-
-The third argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function follows the IEEE 754-2008 semantics for minNum.
-
-
-'``llvm.experimental.constrained.maximum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.maximum(<type> <op1>, <type> <op2>
-                                             metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.maximum``' intrinsic returns the maximum
-of the two arguments, propagating NaNs and treating -0.0 as less than +0.0.
-
-Arguments:
-""""""""""
-
-The first two arguments and the return value are floating-point numbers
-of the same type.
-
-The third argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function follows semantics specified in the draft of IEEE 754-2019.
-
-
-'``llvm.experimental.constrained.minimum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.minimum(<type> <op1>, <type> <op2>
-                                             metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.minimum``' intrinsic returns the minimum
-of the two arguments, propagating NaNs and treating -0.0 as less than +0.0.
-
-Arguments:
-""""""""""
-
-The first two arguments and the return value are floating-point numbers
-of the same type.
-
-The third argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function follows semantics specified in the draft of IEEE 754-2019.
-
-
-'``llvm.experimental.constrained.ceil``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.ceil(<type> <op1>,
-                                          metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.ceil``' intrinsic returns the ceiling of the
-first argument.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``ceil`` functions
-would and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.floor``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.floor(<type> <op1>,
-                                           metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.floor``' intrinsic returns the floor of the
-first argument.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``floor`` functions
-would and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.round``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.round(<type> <op1>,
-                                           metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.round``' intrinsic returns the first
-argument rounded to the nearest integer.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``round`` functions
-would and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.roundeven``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.roundeven(<type> <op1>,
-                                               metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.roundeven``' intrinsic returns the first
-argument rounded to the nearest integer in floating-point format, rounding
-halfway cases to even (that is, to the nearest value that is an even integer),
-regardless of the current rounding direction.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function implements IEEE 754 operation ``roundToIntegralTiesToEven``. It
-also behaves in the same way as C standard function ``roundeven`` and can signal
-the invalid operation exception for a SNAN argument.
-
-
-'``llvm.experimental.constrained.lround``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <inttype>
-      @llvm.experimental.constrained.lround(<fptype> <op1>,
-                                            metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.lround``' intrinsic returns the first
-argument rounded to the nearest integer with ties away from zero.  It will
-raise an inexact floating-point exception if the argument is not an integer.
-If the rounded value is too large to fit into the result type, an invalid
-exception is raised, and the return value is a non-deterministic value
-(equivalent to `freeze poison`).
-
-Arguments:
-""""""""""
-
-The first argument is a floating-point number. The return value is an
-integer type. Not all types are supported on all targets. The supported
-types are the same as the ``llvm.lround`` intrinsic and the ``lround``
-libm functions.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``lround`` functions
-would and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.llround``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <inttype>
-      @llvm.experimental.constrained.llround(<fptype> <op1>,
-                                             metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.llround``' intrinsic returns the first
-argument rounded to the nearest integer with ties away from zero. It will
-raise an inexact floating-point exception if the argument is not an integer.
-If the rounded value is too large to fit into the result type, an invalid
-exception is raised, and the return value is a non-deterministic value
-(equivalent to `freeze poison`).
-
-Arguments:
-""""""""""
-
-The first argument is a floating-point number. The return value is an
-integer type. Not all types are supported on all targets. The supported
-types are the same as the ``llvm.llround`` intrinsic and the ``llround``
-libm functions.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``llround`` functions
-would and handles error conditions in the same way.
-
-
-'``llvm.experimental.constrained.trunc``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.trunc(<type> <op1>,
-                                           metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.trunc``' intrinsic returns the first
-argument rounded to the nearest integer not larger in magnitude than the
-argument.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``trunc`` functions
-would and handles error conditions in the same way.
+Alias Scope Intrinsics
+----------------------
 
 .. _int_experimental_noalias_scope_decl:
 

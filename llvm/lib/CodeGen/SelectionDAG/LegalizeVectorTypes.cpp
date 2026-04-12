@@ -227,9 +227,54 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_TernaryOp(N);
     break;
 
-#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-  case ISD::STRICT_##DAGN:
-#include "llvm/IR/ConstrainedOps.def"
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FREM:
+  case ISD::STRICT_FP_EXTEND:
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+  case ISD::STRICT_FACOS:
+  case ISD::STRICT_FASIN:
+  case ISD::STRICT_FATAN:
+  case ISD::STRICT_FATAN2:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FCOSH:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
+  case ISD::STRICT_FLDEXP:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FSINH:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FTAN:
+  case ISD::STRICT_FTANH:
+  case ISD::STRICT_FTRUNC:
     R = ScalarizeVecRes_StrictFPOp(N);
     break;
 
@@ -1571,9 +1616,54 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_CMP(N, Lo, Hi);
     break;
 
-#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-  case ISD::STRICT_##DAGN:
-#include "llvm/IR/ConstrainedOps.def"
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FREM:
+  case ISD::STRICT_FP_EXTEND:
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+  case ISD::STRICT_FACOS:
+  case ISD::STRICT_FASIN:
+  case ISD::STRICT_FATAN:
+  case ISD::STRICT_FATAN2:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FCOSH:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
+  case ISD::STRICT_FLDEXP:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FSINH:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FTAN:
+  case ISD::STRICT_FTANH:
+  case ISD::STRICT_FTRUNC:
     SplitVecRes_StrictFPOp(N, Lo, Hi);
     break;
 
@@ -5238,9 +5328,54 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_BinaryWithExtraScalarOp(N);
     break;
 
-#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-  case ISD::STRICT_##DAGN:
-#include "llvm/IR/ConstrainedOps.def"
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FREM:
+  case ISD::STRICT_FP_EXTEND:
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+  case ISD::STRICT_FACOS:
+  case ISD::STRICT_FASIN:
+  case ISD::STRICT_FATAN:
+  case ISD::STRICT_FATAN2:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FCOSH:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
+  case ISD::STRICT_FLDEXP:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FSINH:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FTAN:
+  case ISD::STRICT_FTANH:
+  case ISD::STRICT_FTRUNC:
     Res = WidenVecRes_StrictFP(N);
     break;
 

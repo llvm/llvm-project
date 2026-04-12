@@ -40,12 +40,6 @@ emitBinaryExpMaybeConstrainedFPBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
 
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
-  if (CGF.Builder.getIsFPConstrained()) {
-    Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID,
-                                       {Src0->getType(), Src1->getType()});
-    return CGF.Builder.CreateConstrainedFPCall(F, {Src0, Src1});
-  }
-
   Function *F =
       CGF.CGM.getIntrinsic(IntrinsicID, {Src0->getType(), Src1->getType()});
   return CGF.Builder.CreateCall(F, {Src0, Src1});
@@ -2201,7 +2195,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case Builtin::BIscalbn:
   case Builtin::BI__builtin_scalbn:
     return emitBinaryExpMaybeConstrainedFPBuiltin(
-        *this, E, Intrinsic::ldexp, Intrinsic::experimental_constrained_ldexp);
+        *this, E, Intrinsic::ldexp, 0);
   default:
     return nullptr;
   }

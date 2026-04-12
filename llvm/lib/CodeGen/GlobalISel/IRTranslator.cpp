@@ -306,9 +306,23 @@ void IRTranslator::addMachineCFGPred(CFGEdge Edge, MachineBasicBlock *NewPred) {
   MachinePreds[Edge].push_back(NewPred);
 }
 
+static bool targetSupportsBF16Type(const MachineFunction *MF) {
+  return MF->getTarget().getTargetTriple().isSPIRV();
+}
+
+static bool containsBF16Type(const User &U) {
+  // BF16 cannot currently be represented by LLT, to avoid miscompiles we
+  // prevent any instructions using them. FIXME: This can be removed once LLT
+  // supports bfloat.
+  return U.getType()->getScalarType()->isBFloatTy() ||
+         any_of(U.operands(), [](Value *V) {
+           return V->getType()->getScalarType()->isBFloatTy();
+         });
+}
+
 bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
                                      MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   // Get or create a virtual register for each value.
@@ -330,7 +344,7 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
 
 bool IRTranslator::translateUnaryOp(unsigned Opcode, const User &U,
                                     MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
@@ -350,7 +364,7 @@ bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
 
 bool IRTranslator::translateCompare(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   auto *CI = cast<CmpInst>(&U);
@@ -367,7 +381,12 @@ bool IRTranslator::translateCompare(const User &U,
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
-  else
+  else if (MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
+    // In a strictfp function, plain fcmp instructions still need strict
+    // semantics (e.g. when auto-upgraded from experimental_constrained_fcmp).
+    MIRBuilder.buildInstr(TargetOpcode::G_STRICT_FCMP, {Res},
+                          {Pred, Op0, Op1}, Flags);
+  } else
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
 
   return true;
@@ -904,7 +923,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   auto Cst = getOrCreateVReg(
       *ConstantInt::get(SValue.getType(), JTH.Last - JTH.First));
   Cst = MIB.buildZExtOrTrunc(PtrScalarTy, Cst).getReg(0);
-  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::integer(1), Sub, Cst);
+  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::scalar(1), Sub, Cst);
 
   auto BrCond = MIB.buildBrCond(Cmp.getReg(0), *JT.Default);
 
@@ -935,7 +954,7 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     return;
   }
 
-  const LLT i1Ty = LLT::integer(1);
+  const LLT i1Ty = LLT::scalar(1);
   // Build the compare.
   if (!CB.CmpMHS) {
     const auto *CI = dyn_cast<ConstantInt>(CB.CmpRHS);
@@ -1147,7 +1166,7 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   if (!B.FallthroughUnreachable) {
     // Conditional branch to the default block.
     auto RangeCst = MIB.buildConstant(SwitchOpTy, B.Range);
-    auto RangeCmp = MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, LLT::integer(1),
+    auto RangeCmp = MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, LLT::scalar(1),
                                   RangeSub, RangeCst);
     MIB.buildBrCond(RangeCmp, *B.Default);
   }
@@ -1173,16 +1192,15 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     // would need to be to shift a 1 bit in that position.
     auto MaskTrailingZeros =
         MIB.buildConstant(SwitchTy, llvm::countr_zero(B.Mask));
-    Cmp = MIB.buildICmp(ICmpInst::ICMP_EQ, LLT::integer(1), Reg,
-                        MaskTrailingZeros)
-              .getReg(0);
+    Cmp =
+        MIB.buildICmp(ICmpInst::ICMP_EQ, LLT::scalar(1), Reg, MaskTrailingZeros)
+            .getReg(0);
   } else if (PopCount == BB.Range) {
     // There is only one zero bit in the range, test for it directly.
     auto MaskTrailingOnes =
         MIB.buildConstant(SwitchTy, llvm::countr_one(B.Mask));
-    Cmp =
-        MIB.buildICmp(CmpInst::ICMP_NE, LLT::integer(1), Reg, MaskTrailingOnes)
-            .getReg(0);
+    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Reg, MaskTrailingOnes)
+              .getReg(0);
   } else {
     // Make desired shift.
     auto CstOne = MIB.buildConstant(SwitchTy, 1);
@@ -1192,7 +1210,7 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     auto CstMask = MIB.buildConstant(SwitchTy, B.Mask);
     auto AndOp = MIB.buildAnd(SwitchTy, SwitchVal, CstMask);
     auto CstZero = MIB.buildConstant(SwitchTy, 0);
-    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::integer(1), AndOp, CstZero)
+    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), AndOp, CstZero)
               .getReg(0);
   }
 
@@ -1577,7 +1595,7 @@ bool IRTranslator::translateBitCast(const User &U,
 
 bool IRTranslator::translateCast(unsigned Opcode, const User &U,
                                  MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   uint32_t Flags = 0;
@@ -1739,7 +1757,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     SrcRegs.push_back(SrcReg);
   }
 
-  LLT SizeTy = LLT::integer(MinPtrSize);
+  LLT SizeTy = LLT::scalar(MinPtrSize);
 
   // The size operand should be the minimum of the pointer sizes.
   Register &SizeOpReg = SrcRegs[SrcRegs.size() - 1];
@@ -2074,66 +2092,23 @@ bool IRTranslator::translateSimpleIntrinsic(const CallInst &CI,
   return true;
 }
 
-// TODO: Include ConstainedOps.def when all strict instructions are defined.
-static unsigned getConstrainedOpcode(Intrinsic::ID ID) {
+/// Map new-form FP intrinsic (llvm.fadd etc.) to the corresponding G_STRICT_*
+/// opcode, or return 0 if no strict form is available.
+static unsigned getBundledFPStrictGOpcode(Intrinsic::ID ID) {
   switch (ID) {
-  case Intrinsic::experimental_constrained_fadd:
-    return TargetOpcode::G_STRICT_FADD;
-  case Intrinsic::experimental_constrained_fsub:
-    return TargetOpcode::G_STRICT_FSUB;
-  case Intrinsic::experimental_constrained_fmul:
-    return TargetOpcode::G_STRICT_FMUL;
-  case Intrinsic::experimental_constrained_fdiv:
-    return TargetOpcode::G_STRICT_FDIV;
-  case Intrinsic::experimental_constrained_frem:
-    return TargetOpcode::G_STRICT_FREM;
-  case Intrinsic::experimental_constrained_fma:
-    return TargetOpcode::G_STRICT_FMA;
-  case Intrinsic::experimental_constrained_sqrt:
-    return TargetOpcode::G_STRICT_FSQRT;
-  case Intrinsic::experimental_constrained_ldexp:
-    return TargetOpcode::G_STRICT_FLDEXP;
-  case Intrinsic::experimental_constrained_fcmp:
-    return TargetOpcode::G_STRICT_FCMP;
-  case Intrinsic::experimental_constrained_fcmps:
-    return TargetOpcode::G_STRICT_FCMPS;
-  default:
-    return 0;
+  case Intrinsic::fadd: return TargetOpcode::G_STRICT_FADD;
+  case Intrinsic::fsub: return TargetOpcode::G_STRICT_FSUB;
+  case Intrinsic::fmul: return TargetOpcode::G_STRICT_FMUL;
+  case Intrinsic::fdiv: return TargetOpcode::G_STRICT_FDIV;
+  case Intrinsic::frem: return TargetOpcode::G_STRICT_FREM;
+  case Intrinsic::fma:  return TargetOpcode::G_STRICT_FMA;
+  case Intrinsic::sqrt: return TargetOpcode::G_STRICT_FSQRT;
+  case Intrinsic::ldexp: return TargetOpcode::G_STRICT_FLDEXP;
+  default: return 0;
   }
 }
 
-bool IRTranslator::translateConstrainedFPIntrinsic(
-  const ConstrainedFPIntrinsic &FPI, MachineIRBuilder &MIRBuilder) {
-  fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
-
-  unsigned Opcode = getConstrainedOpcode(FPI.getIntrinsicID());
-  if (!Opcode)
-    return false;
-
-  uint32_t Flags = MachineInstr::copyFlagsFromInstruction(FPI);
-  if (EB == fp::ExceptionBehavior::ebIgnore)
-    Flags |= MachineInstr::NoFPExcept;
-
-  if (Opcode == TargetOpcode::G_STRICT_FCMP ||
-      Opcode == TargetOpcode::G_STRICT_FCMPS) {
-    auto *FPCmp = cast<ConstrainedFPCmpIntrinsic>(&FPI);
-    Register Operand0 = getOrCreateVReg(*FPCmp->getArgOperand(0));
-    Register Operand1 = getOrCreateVReg(*FPCmp->getArgOperand(1));
-    Register Result = getOrCreateVReg(FPI);
-    MIRBuilder.buildInstr(Opcode, {Result}, {}, Flags)
-        .addPredicate(FPCmp->getPredicate())
-        .addUse(Operand0)
-        .addUse(Operand1);
-    return true;
-  }
-
-  SmallVector<llvm::SrcOp, 4> VRegs;
-  for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
-    VRegs.push_back(getOrCreateVReg(*FPI.getArgOperand(I)));
-
-  MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(FPI)}, VRegs, Flags);
-  return true;
-}
+// TODO: Include ConstainedOps.def when all strict instructions are defined.
 
 std::optional<MCRegister> IRTranslator::getArgPhysReg(Argument &Arg) {
   auto VRegs = getOrCreateVRegs(Arg);
@@ -2224,6 +2199,98 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   // a vreg, and uses for each arg operand, then translate it.
   if (translateSimpleIntrinsic(CI, ID, MIRBuilder))
     return true;
+
+  // Redirect new-form FP intrinsics with non-default bundles to G_STRICT_*.
+  {
+    fp::ExceptionBehavior EB = CI.getExceptionBehavior();
+    RoundingMode RM = CI.getRoundingMode();
+    if (EB != fp::ebStrict || RM != RoundingMode::Dynamic) {
+      if (unsigned StrictOp = getBundledFPStrictGOpcode(ID)) {
+        uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
+        if (EB == fp::ebIgnore)
+          Flags |= MachineInstr::NoFPExcept;
+        SmallVector<SrcOp, 4> VRegs;
+        for (const auto &Arg : CI.args()) {
+          // Skip metadata args (e.g., predicates passed as MetadataAsValue).
+          if (!isa<MetadataAsValue>(Arg.get()))
+            VRegs.push_back(getOrCreateVReg(*Arg.get()));
+        }
+        MIRBuilder.buildInstr(StrictOp, {getOrCreateVReg(CI)}, VRegs, Flags);
+        return true;
+      }
+    }
+  }
+
+  // llvm.fcmps is a signaling FP comparison — inherently strict regardless of
+  // explicit bundles.  llvm.fcmp with an explicit fp.except bundle also needs
+  // the strict path.
+  if (ID == Intrinsic::fcmps ||
+      (ID == Intrinsic::fcmp &&
+       CI.getOperandBundle(LLVMContext::OB_fp_except).has_value())) {
+    bool IsSignaling = (ID == Intrinsic::fcmps);
+    auto *MD = cast<MetadataAsValue>(CI.getArgOperand(2))->getMetadata();
+    FCmpInst::Predicate Pred =
+        StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
+            .Case("oeq", FCmpInst::FCMP_OEQ)
+            .Case("ogt", FCmpInst::FCMP_OGT)
+            .Case("oge", FCmpInst::FCMP_OGE)
+            .Case("olt", FCmpInst::FCMP_OLT)
+            .Case("ole", FCmpInst::FCMP_OLE)
+            .Case("one", FCmpInst::FCMP_ONE)
+            .Case("ord", FCmpInst::FCMP_ORD)
+            .Case("uno", FCmpInst::FCMP_UNO)
+            .Case("ueq", FCmpInst::FCMP_UEQ)
+            .Case("ugt", FCmpInst::FCMP_UGT)
+            .Case("uge", FCmpInst::FCMP_UGE)
+            .Case("ult", FCmpInst::FCMP_ULT)
+            .Case("ule", FCmpInst::FCMP_ULE)
+            .Case("une", FCmpInst::FCMP_UNE)
+            .Default(FCmpInst::BAD_FCMP_PREDICATE);
+    assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
+           "invalid predicate in llvm.fcmp/fcmps");
+    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
+    fp::ExceptionBehavior EB = CI.getExceptionBehavior();
+    if (EB == fp::ebIgnore)
+      Flags |= MachineInstr::NoFPExcept;
+    Register Op0 = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Op1 = getOrCreateVReg(*CI.getArgOperand(1));
+    Register Res = getOrCreateVReg(CI);
+    unsigned Opcode = IsSignaling ? TargetOpcode::G_STRICT_FCMPS
+                                  : TargetOpcode::G_STRICT_FCMP;
+    MIRBuilder.buildInstr(Opcode, {Res}, {Pred, Op0, Op1}, Flags);
+    return true;
+  }
+
+  // llvm.fcmp without any fp.except bundle = a non-strict FP comparison.
+  // Translate it the same way as a plain `fcmp` instruction.
+  if (ID == Intrinsic::fcmp) {
+    auto *MD = cast<MetadataAsValue>(CI.getArgOperand(2))->getMetadata();
+    FCmpInst::Predicate Pred =
+        StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
+            .Case("oeq", FCmpInst::FCMP_OEQ)
+            .Case("ogt", FCmpInst::FCMP_OGT)
+            .Case("oge", FCmpInst::FCMP_OGE)
+            .Case("olt", FCmpInst::FCMP_OLT)
+            .Case("ole", FCmpInst::FCMP_OLE)
+            .Case("one", FCmpInst::FCMP_ONE)
+            .Case("ord", FCmpInst::FCMP_ORD)
+            .Case("uno", FCmpInst::FCMP_UNO)
+            .Case("ueq", FCmpInst::FCMP_UEQ)
+            .Case("ugt", FCmpInst::FCMP_UGT)
+            .Case("uge", FCmpInst::FCMP_UGE)
+            .Case("ult", FCmpInst::FCMP_ULT)
+            .Case("ule", FCmpInst::FCMP_ULE)
+            .Case("une", FCmpInst::FCMP_UNE)
+            .Default(FCmpInst::BAD_FCMP_PREDICATE);
+    assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
+           "invalid predicate in llvm.fcmp");
+    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
+    Register Op0 = getOrCreateVReg(*CI.getArgOperand(0));
+    Register Op1 = getOrCreateVReg(*CI.getArgOperand(1));
+    Register Res = getOrCreateVReg(CI);
+    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
+    return true;
+  }
 
   switch (ID) {
   default:
@@ -2687,11 +2754,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateVectorDeinterleave2Intrinsic(CI, MIRBuilder);
   }
 
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
-  case Intrinsic::INTRINSIC:
-#include "llvm/IR/ConstrainedOps.def"
-    return translateConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(CI),
-                                           MIRBuilder);
+    // experimental_constrained_* intrinsics are removed; auto-upgrade replaces
+    // them before IRTranslator runs.
   case Intrinsic::experimental_convergence_anchor:
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_loop:
@@ -2709,7 +2773,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
 bool IRTranslator::translateInlineAsm(const CallBase &CB,
                                       MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(CB))
+  if (containsBF16Type(CB) && !targetSupportsBF16Type(MF))
     return false;
 
   const InlineAsmLowering *ALI = MF->getSubtarget().getInlineAsmLowering();
@@ -2800,7 +2864,7 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
 }
 
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   const CallInst &CI = cast<CallInst>(U);
@@ -3071,7 +3135,7 @@ bool IRTranslator::translateInvoke(const User &U,
 /// intrinsics such as amdgcn.kill.
 bool IRTranslator::translateCallBr(const User &U,
                                    MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(U))
+  if (containsBF16Type(U))
     return false; // see translateCall
 
   const CallBrInst &I = cast<CallBrInst>(U);
@@ -3288,8 +3352,7 @@ bool IRTranslator::translateInsertElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(2));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT VecIdxTy =
-        MRI->getType(Idx).changeElementSize(PreferredVecIdxWidth);
+    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildInsertVectorElement(Res, Val, Elt, Idx);
@@ -3370,8 +3433,7 @@ bool IRTranslator::translateExtractElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(1));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT VecIdxTy =
-        MRI->getType(Idx).changeElementSize(PreferredVecIdxWidth);
+    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
@@ -3539,7 +3601,7 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
 
 bool IRTranslator::translateAtomicRMW(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(U))
+  if (containsBF16Type(U) && !targetSupportsBF16Type(MF))
     return false;
 
   const AtomicRMWInst &I = cast<AtomicRMWInst>(U);
@@ -3886,22 +3948,6 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
   return true;
 }
 
-bool IRTranslator::mayTranslateUserTypes(const User &U) const {
-  const TargetMachine &TM = TLI->getTargetMachine();
-  if (LLT::getUseExtended())
-    return true;
-
-  // BF16 cannot currently be represented by default LLT. To avoid miscompiles
-  // we prevent any instructions using them by default in all targets that do
-  // not explicitly enable it via LLT::setUseExtended(true).
-  // SPIRV target is exception.
-  return TM.getTargetTriple().isSPIRV() ||
-         (!U.getType()->getScalarType()->isBFloatTy() &&
-          !any_of(U.operands(), [](Value *V) {
-            return V->getType()->getScalarType()->isBFloatTy();
-          }));
-}
-
 bool IRTranslator::finalizeBasicBlock(const BasicBlock &BB,
                                       MachineBasicBlock &MBB) {
   for (auto &BTB : SL->BitTestCases) {
@@ -4102,7 +4148,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // Perform the comparison.
   auto Cmp =
-      CurBuilder->buildICmp(CmpInst::ICMP_NE, LLT::integer(1), Guard, GuardVal);
+      CurBuilder->buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Guard, GuardVal);
   // If the guard/stackslot do not equal, branch to failure MBB.
   CurBuilder->buildBrCond(Cmp, *SPD.getFailureMBB());
   // Otherwise branch to success MBB.
@@ -4299,7 +4345,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);
     VRegArgs.push_back(VRegs);
 
-    if (CLI->supportSwiftError() && Arg.hasSwiftErrorAttr()) {
+    if (Arg.hasSwiftErrorAttr()) {
       assert(VRegs.size() == 1 && "Too many vregs for Swift error");
       SwiftError.setCurrentVReg(EntryBB, SwiftError.getFunctionArg(), VRegs[0]);
     }

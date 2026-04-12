@@ -227,7 +227,9 @@ define i32 @strict_convert_signed(double %x) {
 define i32 @strict_convert_unsigned(float %x) {
 ; CHECK-LABEL: strict_convert_unsigned:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu w0, s0
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: strict_convert_unsigned:

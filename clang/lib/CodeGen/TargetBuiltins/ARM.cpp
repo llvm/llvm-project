@@ -343,18 +343,9 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
 // Depending on mode, this may be a constrained floating-point intrinsic.
 static Value *emitCallMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
                                                 unsigned IntrinsicID,
-                                                unsigned ConstrainedIntrinsicID,
                                                 llvm::Type *Ty,
                                                 ArrayRef<Value *> Args) {
-  Function *F;
-  if (CGF.Builder.getIsFPConstrained())
-    F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Ty);
-  else
-    F = CGF.CGM.getIntrinsic(IntrinsicID, Ty);
-
-  if (CGF.Builder.getIsFPConstrained())
-    return CGF.Builder.CreateConstrainedFPCall(F, Args);
-
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Ty);
   return CGF.Builder.CreateCall(F, Args);
 }
 
@@ -430,17 +421,12 @@ Value *CodeGenFunction::EmitNeonCall(Function *F, SmallVectorImpl<Value*> &Ops,
   unsigned j = 0;
   for (Function::const_arg_iterator ai = F->arg_begin(), ae = F->arg_end();
        ai != ae; ++ai, ++j) {
-    if (F->isConstrainedFPIntrinsic())
-      if (ai->getType()->isMetadataTy())
-        continue;
     if (shift > 0 && shift == j)
       Ops[j] = EmitNeonShiftVector(Ops[j], ai->getType(), rightshift);
     else
       Ops[j] = Builder.CreateBitCast(Ops[j], ai->getType(), name);
   }
 
-  if (F->isConstrainedFPIntrinsic())
-    return Builder.CreateConstrainedFPCall(F, Ops, name);
   return Builder.CreateCall(F, Ops, name);
 }
 
@@ -1462,7 +1448,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
 
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
     return emitCallMaybeConstrainedFPBuiltin(
-        *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, Ty,
+        *this, Intrinsic::fma, Ty,
         {Ops[1], Ops[2], Ops[0]});
   }
   case NEON::BI__builtin_neon_vld1_v:
@@ -1614,9 +1600,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, NameHint);
   case NEON::BI__builtin_neon_vrndi_v:
   case NEON::BI__builtin_neon_vrndiq_v:
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_nearbyint
-              : Intrinsic::nearbyint;
+    Int = Intrinsic::nearbyint;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, NameHint);
   case NEON::BI__builtin_neon_vrshr_n_v:
   case NEON::BI__builtin_neon_vrshrq_n_v:
@@ -5814,14 +5798,14 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vfmah_f16:
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
     return emitCallMaybeConstrainedFPBuiltin(
-        *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, HalfTy,
+        *this, Intrinsic::fma, HalfTy,
         {Ops[1], Ops[2], Ops[0]});
   case NEON::BI__builtin_neon_vfmsh_f16: {
     Value *Neg = Builder.CreateFNeg(Ops[1], "vsubh");
 
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
     return emitCallMaybeConstrainedFPBuiltin(
-        *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, HalfTy,
+        *this, Intrinsic::fma, HalfTy,
         {Neg, Ops[2], Ops[0]});
   }
   case NEON::BI__builtin_neon_vaddd_s64:
@@ -6102,8 +6086,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[1] = Builder.CreateShuffleVector(Ops[1], Ops[1], SV, "lane");
 
     Ops.pop_back();
-    Int = Builder.getIsFPConstrained() ? Intrinsic::experimental_constrained_fma
-                                       : Intrinsic::fma;
+    Int = Intrinsic::fma;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "fmla");
   }
   case NEON::BI__builtin_neon_vfma_laneq_v: {
@@ -6118,7 +6101,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       Ops[2] = Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
       Value *Result;
       Result = emitCallMaybeConstrainedFPBuiltin(
-          *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma,
+          *this, Intrinsic::fma,
           DoubleTy, {Ops[1], Ops[2], Ops[0]});
       return Builder.CreateBitCast(Result, Ty);
     }
@@ -6133,7 +6116,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[2] = Builder.CreateShuffleVector(Ops[2], Ops[2], SV, "lane");
 
     return emitCallMaybeConstrainedFPBuiltin(
-        *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, Ty,
+        *this, Intrinsic::fma, Ty,
         {Ops[2], Ops[1], Ops[0]});
   }
   case NEON::BI__builtin_neon_vfmaq_laneq_v: {
@@ -6143,7 +6126,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[2] = Builder.CreateBitCast(Ops[2], Ty);
     Ops[2] = EmitNeonSplat(Ops[2], cast<ConstantInt>(Ops[3]));
     return emitCallMaybeConstrainedFPBuiltin(
-        *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, Ty,
+        *this, Intrinsic::fma, Ty,
         {Ops[2], Ops[1], Ops[0]});
   }
   case NEON::BI__builtin_neon_vfmah_lane_f16:
@@ -6155,7 +6138,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Type *Ty = ConvertType(E->getCallReturnType(getContext()));
     Ops[2] = Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
     return emitCallMaybeConstrainedFPBuiltin(
-        *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, Ty,
+        *this, Intrinsic::fma, Ty,
         {Ops[1], Ops[2], Ops[0]});
   }
   case NEON::BI__builtin_neon_vmull_v:
@@ -6257,86 +6240,60 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Int = usgn ? Intrinsic::aarch64_neon_uqrshrn : Intrinsic::aarch64_neon_sqrshrn;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vqrshrn_n");
   case NEON::BI__builtin_neon_vrndah_f16: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_round
-              : Intrinsic::round;
+    Int = Intrinsic::round;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrnda");
   }
   case NEON::BI__builtin_neon_vrnda_v:
   case NEON::BI__builtin_neon_vrndaq_v: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_round
-              : Intrinsic::round;
+    Int = Intrinsic::round;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrnda");
   }
   case NEON::BI__builtin_neon_vrndih_f16: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_nearbyint
-              : Intrinsic::nearbyint;
+    Int = Intrinsic::nearbyint;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndi");
   }
   case NEON::BI__builtin_neon_vrndmh_f16: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_floor
-              : Intrinsic::floor;
+    Int = Intrinsic::floor;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndm");
   }
   case NEON::BI__builtin_neon_vrndm_v:
   case NEON::BI__builtin_neon_vrndmq_v: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_floor
-              : Intrinsic::floor;
+    Int = Intrinsic::floor;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrndm");
   }
   case NEON::BI__builtin_neon_vrndnh_f16: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_roundeven
-              : Intrinsic::roundeven;
+    Int = Intrinsic::roundeven;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndn");
   }
   case NEON::BI__builtin_neon_vrndn_v:
   case NEON::BI__builtin_neon_vrndnq_v: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_roundeven
-              : Intrinsic::roundeven;
+    Int = Intrinsic::roundeven;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrndn");
   }
   case NEON::BI__builtin_neon_vrndns_f32: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_roundeven
-              : Intrinsic::roundeven;
+    Int = Intrinsic::roundeven;
     return EmitNeonCall(CGM.getIntrinsic(Int, FloatTy), Ops, "vrndn");
   }
   case NEON::BI__builtin_neon_vrndph_f16: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_ceil
-              : Intrinsic::ceil;
+    Int = Intrinsic::ceil;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndp");
   }
   case NEON::BI__builtin_neon_vrndp_v:
   case NEON::BI__builtin_neon_vrndpq_v: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_ceil
-              : Intrinsic::ceil;
+    Int = Intrinsic::ceil;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrndp");
   }
   case NEON::BI__builtin_neon_vrndxh_f16: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_rint
-              : Intrinsic::rint;
+    Int = Intrinsic::rint;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndx");
   }
   case NEON::BI__builtin_neon_vrndx_v:
   case NEON::BI__builtin_neon_vrndxq_v: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_rint
-              : Intrinsic::rint;
+    Int = Intrinsic::rint;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrndx");
   }
   case NEON::BI__builtin_neon_vrndh_f16: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_trunc
-              : Intrinsic::trunc;
+    Int = Intrinsic::trunc;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndz");
   }
   case NEON::BI__builtin_neon_vrnd32x_f32:
@@ -6369,9 +6326,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
   case NEON::BI__builtin_neon_vrnd_v:
   case NEON::BI__builtin_neon_vrndq_v: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_trunc
-              : Intrinsic::trunc;
+    Int = Intrinsic::trunc;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrndz");
   }
   case NEON::BI__builtin_neon_vcvt_f64_v:
@@ -6516,16 +6471,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vpminnm");
   }
   case NEON::BI__builtin_neon_vsqrth_f16: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_sqrt
-              : Intrinsic::sqrt;
+    Int = Intrinsic::sqrt;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vsqrt");
   }
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_sqrt
-              : Intrinsic::sqrt;
+    Int = Intrinsic::sqrt;
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vsqrt");
   }

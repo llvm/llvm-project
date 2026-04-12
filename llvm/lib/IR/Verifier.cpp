@@ -49,6 +49,7 @@
 
 #include "llvm/IR/Verifier.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -58,6 +59,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
@@ -76,6 +78,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -611,7 +614,6 @@ private:
   void visitUserOp1(Instruction &I);
   void visitUserOp2(Instruction &I) { visitUserOp1(I); }
   void visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call);
-  void visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI);
   void visitVPIntrinsic(VPIntrinsic &VPI);
   void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
@@ -4087,7 +4089,8 @@ void Verifier::visitCallBase(CallBase &Call) {
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
        FoundPtrauthBundle = false, FoundKCFIBundle = false,
-       FoundAttachedCallBundle = false;
+       FoundAttachedCallBundle = false, FoundFpeControlBundle = false,
+       FoundFpeExceptBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -4150,6 +4153,76 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
+    } else if (Tag == LLVMContext::OB_fp_control) {
+      Check(!FoundFpeControlBundle, "Multiple \"fp.control\" operand bundles",
+            Call);
+      bool FoundRoundingMode = false;
+      bool FoundInDenormalMode = false;
+      bool FoundOutDenormalMode = false;
+      bool FoundF32InDenormalMode = false;
+      bool FoundF32OutDenormalMode = false;
+      for (auto &U : BU.Inputs) {
+        Value *V = U.get();
+        Check(isa<MetadataAsValue>(V),
+              "Value of a \"fp.control\" bundle operand must be a metadata",
+              Call);
+        Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+        Check(isa<MDString>(MD),
+              "Value of a \"fp.control\" bundle operand must be a string",
+              Call);
+        StringRef Item = cast<MDString>(MD)->getString();
+        if (convertBundleToRoundingMode(Item)) {
+          Check(!FoundRoundingMode, "Rounding mode is specified more that once",
+                Call);
+          FoundRoundingMode = true;
+        } else if (Item.consume_front("denorm.in=")) {
+          Check(!FoundInDenormalMode,
+                "Input denormal mode is specified more that once", Call);
+          FoundInDenormalMode = true;
+          Check(parseDenormalKindFromOperandBundle(Item),
+                "Invalid input denormal mode", Call);
+        } else if (Item.consume_front("denorm.out=")) {
+          Check(!FoundOutDenormalMode,
+                "Output denormal mode is specified more that once", Call);
+          FoundOutDenormalMode = true;
+          Check(parseDenormalKindFromOperandBundle(Item),
+                "Invalid output denormal mode", Call);
+        } else if (Item.consume_front("denorm.f32.in=")) {
+          Check(!FoundF32InDenormalMode,
+                "F32 input denormal mode is specified more than once", Call);
+          FoundF32InDenormalMode = true;
+          Check(parseDenormalKindFromOperandBundle(Item),
+                "Invalid F32 input denormal mode", Call);
+        } else if (Item.consume_front("denorm.f32.out=")) {
+          Check(!FoundF32OutDenormalMode,
+                "F32 output denormal mode is specified more than once", Call);
+          FoundF32OutDenormalMode = true;
+          Check(parseDenormalKindFromOperandBundle(Item),
+                "Invalid F32 output denormal mode", Call);
+        } else {
+          CheckFailed("Unrecognized value in \"fp.control\" bundle operand",
+                      Call);
+        }
+      }
+      FoundFpeControlBundle = true;
+    } else if (Tag == LLVMContext::OB_fp_except) {
+      Check(!FoundFpeExceptBundle, "Multiple \"fp.except\" operand bundles",
+            Call);
+      Check(BU.Inputs.size() == 1,
+            "Expected exactly one \"fp.except\" bundle operand", Call);
+      auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
+      Check(V, "Value of a \"fp.except\" bundle operand must be a metadata",
+            Call);
+      auto *MDS = dyn_cast<MDString>(V->getMetadata());
+      Check(MDS, "Value of a \"fp.except\" bundle operand must be a string",
+            Call);
+      auto EB = convertBundleToExceptionBehavior(MDS->getString());
+      Check(
+          EB.has_value(),
+          "Value of a \"fp.except\" bundle operand is not a correct exception "
+          "behavior",
+          Call);
+      FoundFpeExceptBundle = true;
     }
   }
 
@@ -6157,12 +6230,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 #undef BEGIN_REGISTER_VP_INTRINSIC
     visitVPIntrinsic(cast<VPIntrinsic>(Call));
     break;
-#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
-  case Intrinsic::INTRINSIC:
-#include "llvm/IR/ConstrainedOps.def"
-#undef INSTRUCTION
-    visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(Call));
-    break;
   case Intrinsic::dbg_declare: // llvm.dbg.declare
   case Intrinsic::dbg_value:   // llvm.dbg.value
   case Intrinsic::dbg_assign:  // llvm.dbg.assign
@@ -7603,140 +7670,6 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
           &VPI);
     break;
   }
-  }
-}
-
-void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
-  unsigned NumOperands = FPI.getNonMetadataArgCount();
-  bool HasRoundingMD =
-      Intrinsic::hasConstrainedFPRoundingModeOperand(FPI.getIntrinsicID());
-
-  // Add the expected number of metadata operands.
-  NumOperands += (1 + HasRoundingMD);
-
-  // Compare intrinsics carry an extra predicate metadata operand.
-  if (isa<ConstrainedFPCmpIntrinsic>(FPI))
-    NumOperands += 1;
-  Check((FPI.arg_size() == NumOperands),
-        "invalid arguments for constrained FP intrinsic", &FPI);
-
-  switch (FPI.getIntrinsicID()) {
-  case Intrinsic::experimental_constrained_lrint:
-  case Intrinsic::experimental_constrained_llrint: {
-    Type *ValTy = FPI.getArgOperand(0)->getType();
-    Type *ResultTy = FPI.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &FPI);
-    break;
-  }
-
-  case Intrinsic::experimental_constrained_lround:
-  case Intrinsic::experimental_constrained_llround: {
-    Type *ValTy = FPI.getArgOperand(0)->getType();
-    Type *ResultTy = FPI.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &FPI);
-    break;
-  }
-
-  case Intrinsic::experimental_constrained_fcmp:
-  case Intrinsic::experimental_constrained_fcmps: {
-    auto Pred = cast<ConstrainedFPCmpIntrinsic>(&FPI)->getPredicate();
-    Check(CmpInst::isFPPredicate(Pred),
-          "invalid predicate for constrained FP comparison intrinsic", &FPI);
-    break;
-  }
-
-  case Intrinsic::experimental_constrained_fptosi:
-  case Intrinsic::experimental_constrained_fptoui: {
-    Value *Operand = FPI.getArgOperand(0);
-    ElementCount SrcEC;
-    Check(Operand->getType()->isFPOrFPVectorTy(),
-          "Intrinsic first argument must be floating point", &FPI);
-    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      SrcEC = cast<VectorType>(OperandT)->getElementCount();
-    }
-
-    Operand = &FPI;
-    Check(SrcEC.isNonZero() == Operand->getType()->isVectorTy(),
-          "Intrinsic first argument and result disagree on vector use", &FPI);
-    Check(Operand->getType()->isIntOrIntVectorTy(),
-          "Intrinsic result must be an integer", &FPI);
-    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      Check(SrcEC == cast<VectorType>(OperandT)->getElementCount(),
-            "Intrinsic first argument and result vector lengths must be equal",
-            &FPI);
-    }
-    break;
-  }
-
-  case Intrinsic::experimental_constrained_sitofp:
-  case Intrinsic::experimental_constrained_uitofp: {
-    Value *Operand = FPI.getArgOperand(0);
-    ElementCount SrcEC;
-    Check(Operand->getType()->isIntOrIntVectorTy(),
-          "Intrinsic first argument must be integer", &FPI);
-    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      SrcEC = cast<VectorType>(OperandT)->getElementCount();
-    }
-
-    Operand = &FPI;
-    Check(SrcEC.isNonZero() == Operand->getType()->isVectorTy(),
-          "Intrinsic first argument and result disagree on vector use", &FPI);
-    Check(Operand->getType()->isFPOrFPVectorTy(),
-          "Intrinsic result must be a floating point", &FPI);
-    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      Check(SrcEC == cast<VectorType>(OperandT)->getElementCount(),
-            "Intrinsic first argument and result vector lengths must be equal",
-            &FPI);
-    }
-    break;
-  }
-
-  case Intrinsic::experimental_constrained_fptrunc:
-  case Intrinsic::experimental_constrained_fpext: {
-    Value *Operand = FPI.getArgOperand(0);
-    Type *OperandTy = Operand->getType();
-    Value *Result = &FPI;
-    Type *ResultTy = Result->getType();
-    Check(OperandTy->isFPOrFPVectorTy(),
-          "Intrinsic first argument must be FP or FP vector", &FPI);
-    Check(ResultTy->isFPOrFPVectorTy(),
-          "Intrinsic result must be FP or FP vector", &FPI);
-    Check(OperandTy->isVectorTy() == ResultTy->isVectorTy(),
-          "Intrinsic first argument and result disagree on vector use", &FPI);
-    if (OperandTy->isVectorTy()) {
-      Check(cast<VectorType>(OperandTy)->getElementCount() ==
-                cast<VectorType>(ResultTy)->getElementCount(),
-            "Intrinsic first argument and result vector lengths must be equal",
-            &FPI);
-    }
-    if (FPI.getIntrinsicID() == Intrinsic::experimental_constrained_fptrunc) {
-      Check(OperandTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits(),
-            "Intrinsic first argument's type must be larger than result type",
-            &FPI);
-    } else {
-      Check(OperandTy->getScalarSizeInBits() < ResultTy->getScalarSizeInBits(),
-            "Intrinsic first argument's type must be smaller than result type",
-            &FPI);
-    }
-    break;
-  }
-
-  default:
-    break;
-  }
-
-  // If a non-metadata argument is passed in a metadata slot then the
-  // error will be caught earlier when the incorrect argument doesn't
-  // match the specification in the intrinsic call table. Thus, no
-  // argument type check is needed here.
-
-  Check(FPI.getExceptionBehavior().has_value(),
-        "invalid exception behavior argument", &FPI);
-  if (HasRoundingMD) {
-    Check(FPI.getRoundingMode().has_value(), "invalid rounding mode argument",
-          &FPI);
   }
 }
 

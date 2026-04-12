@@ -49,31 +49,43 @@ enum ExceptionBehavior : uint8_t {
 /// metadata.
 LLVM_ABI std::optional<RoundingMode> convertStrToRoundingMode(StringRef);
 
+/// Returns a valid RoundingMode enumerator given a string that is used as
+/// rounding mode specifier in operand bundles.
+std::optional<RoundingMode> convertBundleToRoundingMode(StringRef);
+
 /// For any RoundingMode enumerator, returns a string valid as input in
 /// constrained intrinsic rounding mode metadata.
 LLVM_ABI std::optional<StringRef> convertRoundingModeToStr(RoundingMode);
+
+/// For any RoundingMode enumerator, returns a string to be used in operand
+/// bundles.
+std::optional<StringRef> convertRoundingModeToBundle(RoundingMode);
 
 /// Returns a valid ExceptionBehavior enumerator when given a string
 /// valid as input in constrained intrinsic exception behavior metadata.
 LLVM_ABI std::optional<fp::ExceptionBehavior>
     convertStrToExceptionBehavior(StringRef);
 
+/// Returns a valid ExceptionBehavior enumerator given a string from the operand
+/// bundle argument.
+std::optional<fp::ExceptionBehavior>
+    convertBundleToExceptionBehavior(StringRef);
+
 /// For any ExceptionBehavior enumerator, returns a string valid as
 /// input in constrained intrinsic exception behavior metadata.
 LLVM_ABI std::optional<StringRef>
     convertExceptionBehaviorToStr(fp::ExceptionBehavior);
+
+/// Return string representing the given exception behavior for use in operand
+/// bundles
+std::optional<StringRef>
+    convertExceptionBehaviorToBundle(fp::ExceptionBehavior);
 
 /// Returns true if the exception handling behavior and rounding mode
 /// match what is used in the default floating point environment.
 inline bool isDefaultFPEnvironment(fp::ExceptionBehavior EB, RoundingMode RM) {
   return EB == fp::ebIgnore && RM == RoundingMode::NearestTiesToEven;
 }
-
-/// Returns constrained intrinsic id to represent the given instruction in
-/// strictfp function. If the instruction is already a constrained intrinsic or
-/// does not have a constrained intrinsic counterpart, the function returns
-/// zero.
-LLVM_ABI Intrinsic::ID getConstrainedIntrinsicID(const Instruction &Instr);
 
 /// Returns true if the rounding mode RM may be QRM at compile time or
 /// at run time.

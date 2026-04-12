@@ -173,7 +173,7 @@ define signext i32 @q_to_i32(fp128 %m) #0 {
   ; CHECK-NEXT:   liveins: $v2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK-NEXT:   [[XSCVQPSWZ:%[0-9]+]]:vrrc = XSCVQPSWZ [[COPY]]
+  ; CHECK-NEXT:   [[XSCVQPSWZ:%[0-9]+]]:vrrc = nofpexcept XSCVQPSWZ [[COPY]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vslrc = COPY killed [[XSCVQPSWZ]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vfrc = COPY killed [[COPY1]].sub_64
   ; CHECK-NEXT:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY2]]
@@ -191,7 +191,7 @@ define i64 @q_to_i64(fp128 %m) #0 {
   ; CHECK-NEXT:   liveins: $v2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK-NEXT:   [[XSCVQPSDZ:%[0-9]+]]:vrrc = XSCVQPSDZ [[COPY]]
+  ; CHECK-NEXT:   [[XSCVQPSDZ:%[0-9]+]]:vrrc = nofpexcept XSCVQPSDZ [[COPY]]
   ; CHECK-NEXT:   [[MFVRD:%[0-9]+]]:g8rc = MFVRD killed [[XSCVQPSDZ]]
   ; CHECK-NEXT:   $x3 = COPY [[MFVRD]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -206,7 +206,7 @@ define i64 @q_to_u64(fp128 %m) #0 {
   ; CHECK-NEXT:   liveins: $v2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK-NEXT:   [[XSCVQPUDZ:%[0-9]+]]:vrrc = XSCVQPUDZ [[COPY]]
+  ; CHECK-NEXT:   [[XSCVQPUDZ:%[0-9]+]]:vrrc = nofpexcept XSCVQPUDZ [[COPY]]
   ; CHECK-NEXT:   [[MFVRD:%[0-9]+]]:g8rc = MFVRD killed [[XSCVQPUDZ]]
   ; CHECK-NEXT:   $x3 = COPY [[MFVRD]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -221,7 +221,7 @@ define zeroext i32 @q_to_u32(fp128 %m) #0 {
   ; CHECK-NEXT:   liveins: $v2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK-NEXT:   [[XSCVQPUWZ:%[0-9]+]]:vrrc = XSCVQPUWZ [[COPY]]
+  ; CHECK-NEXT:   [[XSCVQPUWZ:%[0-9]+]]:vrrc = nofpexcept XSCVQPUWZ [[COPY]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vslrc = COPY killed [[XSCVQPUWZ]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vfrc = COPY killed [[COPY1]].sub_64
   ; CHECK-NEXT:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY2]]

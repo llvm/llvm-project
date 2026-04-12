@@ -2080,6 +2080,30 @@ RoundingModeAttr ModuleImport::matchRoundingModeAttr(llvm::Value *value) {
       convertRoundingModeFromLLVM(*optLLVM));
 }
 
+FPExceptionBehaviorAttr
+ModuleImport::matchFPExceptionBehaviorAttrFromBundle(llvm::CallInst *inst) {
+  if (inst->getOperandBundle(llvm::LLVMContext::OB_fp_except).has_value())
+    return builder.getAttr<FPExceptionBehaviorAttr>(
+        convertFPExceptionBehaviorFromLLVM(inst->getExceptionBehavior()));
+  // No fp.except bundle: when auto-upgrading experimental_constrained_*
+  // intrinsics, fp.except is omitted only when exception behavior is "strict"
+  // (the constrained-FP default). Return strict to preserve semantics.
+  return builder.getAttr<FPExceptionBehaviorAttr>(
+      convertFPExceptionBehaviorFromLLVM(llvm::fp::ebStrict));
+}
+
+RoundingModeAttr
+ModuleImport::matchRoundingModeAttrFromBundle(llvm::CallInst *inst) {
+  if (inst->getOperandBundle(llvm::LLVMContext::OB_fp_control).has_value())
+    return builder.getAttr<RoundingModeAttr>(
+        convertRoundingModeFromLLVM(inst->getRoundingMode()));
+  // No fp.control bundle: when auto-upgrading experimental_constrained_*
+  // intrinsics, fp.control is omitted only when rounding mode is "dynamic"
+  // (the constrained-FP default). Return dynamic to preserve semantics.
+  return builder.getAttr<RoundingModeAttr>(
+      convertRoundingModeFromLLVM(llvm::RoundingMode::Dynamic));
+}
+
 FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);

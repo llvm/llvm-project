@@ -1028,6 +1028,16 @@ public:
                                      FMFSource FMFSource = {},
                                      const Twine &Name = "");
 
+  /// Create a call to intrinsic \p ID with \p Args, mangled using \p Types and
+  /// with operand bundles.
+  /// If \p FMFSource is provided, copy fast-math-flags from that instruction to
+  /// the intrinsic.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Type *> Types,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> OpBundles,
+                            Instruction *FMFSource = nullptr,
+                            const Twine &Name = "");
+
   /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
   /// the intrinsic.
@@ -1039,24 +1049,12 @@ public:
   /// Create call to the minnum intrinsic.
   Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
                       const Twine &Name = "") {
-    if (IsFPConstrained) {
-      return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_minnum, LHS, RHS, FMFSource,
-          Name);
-    }
-
     return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the maxnum intrinsic.
   Value *CreateMaxNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
                       const Twine &Name = "") {
-    if (IsFPConstrained) {
-      return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_maxnum, LHS, RHS, FMFSource,
-          Name);
-    }
-
     return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, FMFSource, Name);
   }
 
@@ -1092,7 +1090,6 @@ public:
   /// Create call to the ldexp intrinsic.
   Value *CreateLdexp(Value *Src, Value *Exp, FMFSource FMFSource = {},
                      const Twine &Name = "") {
-    assert(!IsFPConstrained && "TODO: Support strictfp");
     return CreateIntrinsic(Intrinsic::ldexp, {Src->getType(), Exp->getType()},
                            {Src, Exp}, FMFSource, Name);
   }
@@ -1100,12 +1097,6 @@ public:
   /// Create call to the fma intrinsic.
   Value *CreateFMA(Value *Factor1, Value *Factor2, Value *Summand,
                    FMFSource FMFSource = {}, const Twine &Name = "") {
-    if (IsFPConstrained) {
-      return CreateConstrainedFPIntrinsic(
-          Intrinsic::experimental_constrained_fma, {Factor1->getType()},
-          {Factor1, Factor2, Summand}, FMFSource, Name);
-    }
-
     return CreateIntrinsic(Intrinsic::fma, {Factor1->getType()},
                            {Factor1, Factor2, Summand}, FMFSource, Name);
   }
@@ -1414,6 +1405,15 @@ private:
     return MetadataAsValue::get(Context, ExceptMDS);
   }
 
+  /// Return true if the current constrained rounding mode or exception
+  /// behavior differs from the defaults (Dynamic rounding, ebStrict exception).
+  /// When false, plain IR instructions inside a strictfp function are
+  /// semantically equivalent to the intrinsic form with no bundles.
+  bool hasNonDefaultFPConstraints() const {
+    return DefaultConstrainedRounding != RoundingMode::Dynamic ||
+           DefaultConstrainedExcept != fp::ebStrict;
+  }
+
   Value *getConstrainedFPPredicate(CmpInst::Predicate Predicate) {
     assert(CmpInst::isFPPredicate(Predicate) &&
            Predicate != CmpInst::FCMP_FALSE &&
@@ -1644,9 +1644,9 @@ public:
 
   Value *CreateFAddFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fadd,
-                                      L, R, FMFSource, Name, FPMD);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::fadd, {L->getType()}, {L, R},
+                             FMFSource, Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FAdd, L, R, FMFSource.get(FMF)))
@@ -1663,9 +1663,9 @@ public:
 
   Value *CreateFSubFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fsub,
-                                      L, R, FMFSource, Name, FPMD);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::fsub, {L->getType()}, {L, R},
+                             FMFSource, Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FSub, L, R, FMFSource.get(FMF)))
@@ -1682,9 +1682,9 @@ public:
 
   Value *CreateFMulFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fmul,
-                                      L, R, FMFSource, Name, FPMD);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::fmul, {L->getType()}, {L, R},
+                             FMFSource, Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FMul, L, R, FMFSource.get(FMF)))
@@ -1701,9 +1701,9 @@ public:
 
   Value *CreateFDivFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fdiv,
-                                      L, R, FMFSource, Name, FPMD);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::fdiv, {L->getType()}, {L, R},
+                             FMFSource, Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMFSource.get(FMF)))
@@ -1720,9 +1720,9 @@ public:
 
   Value *CreateFRemFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_frem,
-                                      L, R, FMFSource, Name, FPMD);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::frem, {L->getType()}, {L, R},
+                             FMFSource, Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FRem, L, R, FMFSource.get(FMF)))
@@ -1786,28 +1786,6 @@ public:
       Accum = CreateLogicalOr(Accum, Ops[i]);
     return Accum;
   }
-
-  /// This function is like @ref CreateIntrinsic for constrained fp
-  /// intrinsics. It sets the rounding mode and exception behavior of
-  /// the created intrinsic call according to \p Rounding and \p
-  /// Except and it sets \p FPMathTag as the 'fpmath' metadata, using
-  /// defaults if a value equals nullopt/null.
-  LLVM_ABI CallInst *CreateConstrainedFPIntrinsic(
-      Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
-      FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag = nullptr,
-      std::optional<RoundingMode> Rounding = std::nullopt,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
-
-  LLVM_ABI CallInst *CreateConstrainedFPBinOp(
-      Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
-      const Twine &Name = "", MDNode *FPMathTag = nullptr,
-      std::optional<RoundingMode> Rounding = std::nullopt,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
-
-  LLVM_ABI CallInst *CreateConstrainedFPUnroundedBinOp(
-      Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
-      const Twine &Name = "", MDNode *FPMathTag = nullptr,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
   Value *CreateNeg(Value *V, const Twine &Name = "", bool HasNSW = false) {
     return CreateSub(Constant::getNullValue(V->getType()), V, Name,
@@ -2122,24 +2100,24 @@ public:
   }
 
   Value *CreateFPToUI(Value *V, Type *DestTy, const Twine &Name = "") {
-    if (IsFPConstrained)
-      return CreateConstrainedFPCast(Intrinsic::experimental_constrained_fptoui,
-                                     V, DestTy, nullptr, Name);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::fptoui, {DestTy, V->getType()}, {V},
+                             {}, Name);
     return CreateCast(Instruction::FPToUI, V, DestTy, Name);
   }
 
   Value *CreateFPToSI(Value *V, Type *DestTy, const Twine &Name = "") {
-    if (IsFPConstrained)
-      return CreateConstrainedFPCast(Intrinsic::experimental_constrained_fptosi,
-                                     V, DestTy, nullptr, Name);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::fptosi, {DestTy, V->getType()}, {V},
+                             {}, Name);
     return CreateCast(Instruction::FPToSI, V, DestTy, Name);
   }
 
   Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = "",
                       bool IsNonNeg = false) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPCast(Intrinsic::experimental_constrained_uitofp,
-                                     V, DestTy, nullptr, Name);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::uitofp, {DestTy, V->getType()}, {V},
+                             {}, Name);
     if (Value *Folded = Folder.FoldCast(Instruction::UIToFP, V, DestTy))
       return Folded;
     Instruction *I = Insert(new UIToFPInst(V, DestTy), Name);
@@ -2149,9 +2127,9 @@ public:
   }
 
   Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
-    if (IsFPConstrained)
-      return CreateConstrainedFPCast(Intrinsic::experimental_constrained_sitofp,
-                                     V, DestTy, nullptr, Name);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::sitofp, {DestTy, V->getType()}, {V},
+                             {}, Name);
     return CreateCast(Instruction::SIToFP, V, DestTy, Name);
   }
 
@@ -2162,10 +2140,9 @@ public:
 
   Value *CreateFPTruncFMF(Value *V, Type *DestTy, FMFSource FMFSource,
                           const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPCast(
-          Intrinsic::experimental_constrained_fptrunc, V, DestTy, FMFSource,
-          Name, FPMathTag);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::fptrunc, {DestTy, V->getType()}, {V},
+                             FMFSource, Name);
     return CreateCast(Instruction::FPTrunc, V, DestTy, Name, FPMathTag,
                       FMFSource);
   }
@@ -2177,9 +2154,9 @@ public:
 
   Value *CreateFPExtFMF(Value *V, Type *DestTy, FMFSource FMFSource,
                         const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPCast(Intrinsic::experimental_constrained_fpext,
-                                     V, DestTy, FMFSource, Name, FPMathTag);
+    if (IsFPConstrained && hasNonDefaultFPConstraints())
+      return CreateIntrinsic(Intrinsic::fpext, {DestTy, V->getType()}, {V},
+                             FMFSource, Name);
     return CreateCast(Instruction::FPExt, V, DestTy, Name, FPMathTag,
                       FMFSource);
   }
@@ -2299,12 +2276,6 @@ public:
             : Instruction::FPExt;
     return CreateCast(CastOp, V, DestTy, Name, FPMathTag);
   }
-
-  LLVM_ABI CallInst *CreateConstrainedFPCast(
-      Intrinsic::ID ID, Value *V, Type *DestTy, FMFSource FMFSource = {},
-      const Twine &Name = "", MDNode *FPMathTag = nullptr,
-      std::optional<RoundingMode> Rounding = std::nullopt,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
   // Provided to resolve 'CreateIntCast(Ptr, Ptr, "...")', giving a
   // compile time error, instead of converting the string to bool for the
@@ -2485,11 +2456,6 @@ private:
                                    FMFSource FMFSource, bool IsSignaling);
 
 public:
-  LLVM_ABI CallInst *CreateConstrainedFPCmp(
-      Intrinsic::ID ID, CmpInst::Predicate P, Value *L, Value *R,
-      const Twine &Name = "",
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
-
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Other Instructions
   //===--------------------------------------------------------------------===//
@@ -2511,24 +2477,13 @@ public:
   CallInst *CreateCall(FunctionType *FTy, Value *Callee,
                        ArrayRef<Value *> Args = {}, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMF);
-    return Insert(CI, Name);
+    return CreateCall(FTy, Callee, Args, DefaultOperandBundles, Name,
+                      FPMathTag);
   }
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> OpBundles,
-                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMF);
-    return Insert(CI, Name);
-  }
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr);
 
   CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args = {},
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
@@ -2542,11 +2497,6 @@ public:
     return CreateCall(Callee.getFunctionType(), Callee.getCallee(), Args,
                       OpBundles, Name, FPMathTag);
   }
-
-  LLVM_ABI CallInst *CreateConstrainedFPCall(
-      Function *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
-      std::optional<RoundingMode> Rounding = std::nullopt,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
   LLVM_ABI Value *CreateSelectWithUnknownProfile(Value *C, Value *True,
                                                  Value *False,
@@ -2791,6 +2741,24 @@ public:
   /// assumption on the provided pointer.
   LLVM_ABI CallInst *CreateDereferenceableAssumption(Value *PtrValue,
                                                      Value *SizeValue);
+
+  /// Create an operand bundle in the provided bundle set to represent given FP
+  /// rounding mode.
+  ///
+  /// If the rounding mode is not defined, adds the default rounding mode,
+  /// stored in this builder object.
+  void
+  createFPRoundingBundle(SmallVectorImpl<OperandBundleDef> &Bundles,
+                         std::optional<RoundingMode> Rounding = std::nullopt);
+
+  /// Create an operand bundle in the provided bundle set to represent FP
+  /// exception behavior.
+  ///
+  /// If the exception behavior is not defined, adds the default behavior,
+  /// stored in this builder object.
+  void createFPExceptionBundle(
+      SmallVectorImpl<OperandBundleDef> &Bundles,
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 };
 
 /// This provides a uniform API for creating instructions and inserting

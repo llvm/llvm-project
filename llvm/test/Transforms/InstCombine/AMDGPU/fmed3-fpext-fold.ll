@@ -608,26 +608,26 @@ define float @fmed3_f32_fpext_f16_unrepresentable_k2(half %arg0, half %arg1) #1 
 define float @fmed3_f32_fpext_f16_strictfp(half %arg0, half %arg1, half %arg2) #2 {
 ; UNKNOWN-LABEL: define float @fmed3_f32_fpext_f16_strictfp
 ; UNKNOWN-SAME: (half [[ARG0:%.*]], half [[ARG1:%.*]], half [[ARG2:%.*]]) #[[ATTR2:[0-9]+]] {
-; UNKNOWN-NEXT:    [[ARG0_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG0]], metadata !"fpexcept.strict")
-; UNKNOWN-NEXT:    [[ARG1_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG1]], metadata !"fpexcept.strict")
-; UNKNOWN-NEXT:    [[ARG2_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG2]], metadata !"fpexcept.strict")
-; UNKNOWN-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float [[ARG1_EXT]], float [[ARG2_EXT]]) #[[ATTR2]]
+; UNKNOWN-NEXT:    [[ARG0_EXT1:%.*]] = fpext half [[ARG0]] to float
+; UNKNOWN-NEXT:    [[ARG1_EXT2:%.*]] = fpext half [[ARG1]] to float
+; UNKNOWN-NEXT:    [[ARG2_EXT3:%.*]] = fpext half [[ARG2]] to float
+; UNKNOWN-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT1]], float [[ARG1_EXT2]], float [[ARG2_EXT3]]) #[[ATTR2]]
 ; UNKNOWN-NEXT:    ret float [[MED3]]
 ;
 ; GFX8-LABEL: define float @fmed3_f32_fpext_f16_strictfp
 ; GFX8-SAME: (half [[ARG0:%.*]], half [[ARG1:%.*]], half [[ARG2:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX8-NEXT:    [[ARG0_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG0]], metadata !"fpexcept.strict")
-; GFX8-NEXT:    [[ARG1_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG1]], metadata !"fpexcept.strict")
-; GFX8-NEXT:    [[ARG2_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG2]], metadata !"fpexcept.strict")
-; GFX8-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float [[ARG1_EXT]], float [[ARG2_EXT]]) #[[ATTR4:[0-9]+]]
+; GFX8-NEXT:    [[ARG0_EXT1:%.*]] = fpext half [[ARG0]] to float
+; GFX8-NEXT:    [[ARG1_EXT2:%.*]] = fpext half [[ARG1]] to float
+; GFX8-NEXT:    [[ARG2_EXT3:%.*]] = fpext half [[ARG2]] to float
+; GFX8-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT1]], float [[ARG1_EXT2]], float [[ARG2_EXT3]]) #[[ATTR3:[0-9]+]]
 ; GFX8-NEXT:    ret float [[MED3]]
 ;
 ; GFX9-LABEL: define float @fmed3_f32_fpext_f16_strictfp
 ; GFX9-SAME: (half [[ARG0:%.*]], half [[ARG1:%.*]], half [[ARG2:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX9-NEXT:    [[ARG0_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG0]], metadata !"fpexcept.strict")
-; GFX9-NEXT:    [[ARG1_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG1]], metadata !"fpexcept.strict")
-; GFX9-NEXT:    [[ARG2_EXT:%.*]] = call float @llvm.experimental.constrained.fpext.f32.f16(half [[ARG2]], metadata !"fpexcept.strict")
-; GFX9-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float [[ARG1_EXT]], float [[ARG2_EXT]]) #[[ATTR5:[0-9]+]]
+; GFX9-NEXT:    [[ARG0_EXT1:%.*]] = fpext half [[ARG0]] to float
+; GFX9-NEXT:    [[ARG1_EXT2:%.*]] = fpext half [[ARG1]] to float
+; GFX9-NEXT:    [[ARG2_EXT3:%.*]] = fpext half [[ARG2]] to float
+; GFX9-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT1]], float [[ARG1_EXT2]], float [[ARG2_EXT3]]) #[[ATTR4:[0-9]+]]
 ; GFX9-NEXT:    ret float [[MED3]]
 ;
   %arg0.ext = call float @llvm.experimental.constrained.fpext.f32.f16(half %arg0, metadata !"fpexcept.strict")

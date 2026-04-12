@@ -153,67 +153,67 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm2[1,0]
 ; AVX512VL-32-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
 ; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm3
+; AVX512VL-32-NEXT:    vucomisd %xmm1, %xmm3
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    kmovw %eax, %k1
 ; AVX512VL-32-NEXT:    movl %eax, %esi
 ; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm4 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubsd %xmm4, %xmm3, %xmm3
 ; AVX512VL-32-NEXT:    vmovsd %xmm3, (%esp)
-; AVX512VL-32-NEXT:    xorl %ebx, %ebx
-; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm2
-; AVX512VL-32-NEXT:    setae %bl
-; AVX512VL-32-NEXT:    kmovw %ebx, %k1
+; AVX512VL-32-NEXT:    xorl %eax, %eax
+; AVX512VL-32-NEXT:    vucomisd %xmm1, %xmm2
+; AVX512VL-32-NEXT:    setae %al
+; AVX512VL-32-NEXT:    kmovw %eax, %k1
 ; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
 ; AVX512VL-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
 ; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm3
-; AVX512VL-32-NEXT:    setae %al
-; AVX512VL-32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; AVX512VL-32-NEXT:    kmovw %eax, %k1
-; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm4 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubsd %xmm4, %xmm3, %xmm3
-; AVX512VL-32-NEXT:    vmovsd %xmm3, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    xorl %edx, %edx
-; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm2
-; AVX512VL-32-NEXT:    setae %dl
-; AVX512VL-32-NEXT:    kmovw %edx, %k1
-; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
-; AVX512VL-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm3
-; AVX512VL-32-NEXT:    setae %al
-; AVX512VL-32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; AVX512VL-32-NEXT:    kmovw %eax, %k1
+; AVX512VL-32-NEXT:    xorl %ecx, %ecx
+; AVX512VL-32-NEXT:    vucomisd %xmm1, %xmm3
+; AVX512VL-32-NEXT:    setae %cl
+; AVX512VL-32-NEXT:    kmovw %ecx, %k1
+; AVX512VL-32-NEXT:    movl %ecx, %edi
 ; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm4 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubsd %xmm4, %xmm3, %xmm3
 ; AVX512VL-32-NEXT:    vmovsd %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    xorl %ecx, %ecx
-; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm2
+; AVX512VL-32-NEXT:    vucomisd %xmm1, %xmm2
 ; AVX512VL-32-NEXT:    setae %cl
 ; AVX512VL-32-NEXT:    kmovw %ecx, %k1
 ; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
 ; AVX512VL-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm2
-; AVX512VL-32-NEXT:    setae %al
-; AVX512VL-32-NEXT:    kmovw %eax, %k1
-; AVX512VL-32-NEXT:    movl %eax, %edi
+; AVX512VL-32-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm2[1,0]
+; AVX512VL-32-NEXT:    xorl %edx, %edx
+; AVX512VL-32-NEXT:    vucomisd %xmm1, %xmm3
+; AVX512VL-32-NEXT:    setae %dl
+; AVX512VL-32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; AVX512VL-32-NEXT:    kmovw %edx, %k1
+; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm4 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubsd %xmm4, %xmm3, %xmm3
+; AVX512VL-32-NEXT:    vmovsd %xmm3, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    xorl %edx, %edx
+; AVX512VL-32-NEXT:    vucomisd %xmm1, %xmm2
+; AVX512VL-32-NEXT:    setae %dl
+; AVX512VL-32-NEXT:    kmovw %edx, %k1
 ; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
 ; AVX512VL-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomisd %xmm1, %xmm0
-; AVX512VL-32-NEXT:    setae %al
-; AVX512VL-32-NEXT:    kmovw %eax, %k1
+; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX512VL-32-NEXT:    xorl %ebx, %ebx
+; AVX512VL-32-NEXT:    vucomisd %xmm1, %xmm2
+; AVX512VL-32-NEXT:    setae %bl
+; AVX512VL-32-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; AVX512VL-32-NEXT:    kmovw %ebx, %k1
+; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vmovsd %xmm2, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    xorl %ebx, %ebx
+; AVX512VL-32-NEXT:    vucomisd %xmm1, %xmm0
+; AVX512VL-32-NEXT:    setae %bl
+; AVX512VL-32-NEXT:    kmovw %ebx, %k1
 ; AVX512VL-32-NEXT:    vmovsd %xmm1, %xmm1, %xmm1 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%esp)
@@ -234,40 +234,40 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    wait
-; AVX512VL-32-NEXT:    shll $31, %ebx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ebx
+; AVX512VL-32-NEXT:    shll $31, %eax
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512VL-32-NEXT:    vpinsrd $1, %ebx, %xmm0, %xmm0
+; AVX512VL-32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    shll $31, %esi
 ; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %esi
 ; AVX512VL-32-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
-; AVX512VL-32-NEXT:    shll $31, %edx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; AVX512VL-32-NEXT:    shll $31, %ecx
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512VL-32-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; AVX512VL-32-NEXT:    shll $31, %edx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX512VL-32-NEXT:    vpinsrd $3, %edx, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    shll $31, %ecx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX512VL-32-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; AVX512VL-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; AVX512VL-32-NEXT:    shll $31, %ecx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm2, %xmm2
-; AVX512VL-32-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm2
-; AVX512VL-32-NEXT:    shll $31, %eax
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX512VL-32-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
+; AVX512VL-32-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
 ; AVX512VL-32-NEXT:    shll $31, %edi
 ; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edi
+; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; AVX512VL-32-NEXT:    vpinsrd $3, %edi, %xmm1, %xmm1
+; AVX512VL-32-NEXT:    shll $31, %edx
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512VL-32-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; AVX512VL-32-NEXT:    shll $31, %eax
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    shll $31, %ebx
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ebx
+; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; AVX512VL-32-NEXT:    vpinsrd $1, %ebx, %xmm3, %xmm3
+; AVX512VL-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; AVX512VL-32-NEXT:    shll $31, %eax
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm3, %xmm3
-; AVX512VL-32-NEXT:    vpinsrd $3, %edi, %xmm3, %xmm3
+; AVX512VL-32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
 ; AVX512VL-32-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512VL-32-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm1
 ; AVX512VL-32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
@@ -445,7 +445,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vshufps {{.*#+}} xmm3 = xmm2[3,3,3,3]
 ; AVX512VL-32-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm3
+; AVX512VL-32-NEXT:    vucomiss %xmm1, %xmm3
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    kmovw %eax, %k1
 ; AVX512VL-32-NEXT:    movl %eax, %esi
@@ -453,59 +453,59 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vsubss %xmm4, %xmm3, %xmm3
 ; AVX512VL-32-NEXT:    vmovss %xmm3, (%esp)
 ; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX512VL-32-NEXT:    xorl %ebx, %ebx
-; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm3
-; AVX512VL-32-NEXT:    setae %bl
-; AVX512VL-32-NEXT:    kmovw %ebx, %k1
+; AVX512VL-32-NEXT:    xorl %eax, %eax
+; AVX512VL-32-NEXT:    vucomiss %xmm1, %xmm3
+; AVX512VL-32-NEXT:    setae %al
+; AVX512VL-32-NEXT:    kmovw %eax, %k1
 ; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm4 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubss %xmm4, %xmm3, %xmm3
 ; AVX512VL-32-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm3
-; AVX512VL-32-NEXT:    setae %al
-; AVX512VL-32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; AVX512VL-32-NEXT:    kmovw %eax, %k1
+; AVX512VL-32-NEXT:    xorl %ecx, %ecx
+; AVX512VL-32-NEXT:    vucomiss %xmm1, %xmm3
+; AVX512VL-32-NEXT:    setae %cl
+; AVX512VL-32-NEXT:    kmovw %ecx, %k1
+; AVX512VL-32-NEXT:    movl %ecx, %edi
 ; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm4 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubss %xmm4, %xmm3, %xmm3
 ; AVX512VL-32-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    xorl %edx, %edx
-; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm2
-; AVX512VL-32-NEXT:    setae %dl
-; AVX512VL-32-NEXT:    kmovw %edx, %k1
-; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
-; AVX512VL-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm2
-; AVX512VL-32-NEXT:    setae %al
-; AVX512VL-32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; AVX512VL-32-NEXT:    kmovw %eax, %k1
-; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
-; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
-; AVX512VL-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512VL-32-NEXT:    xorl %ecx, %ecx
-; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm2
+; AVX512VL-32-NEXT:    vucomiss %xmm1, %xmm2
 ; AVX512VL-32-NEXT:    setae %cl
 ; AVX512VL-32-NEXT:    kmovw %ecx, %k1
 ; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; AVX512VL-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm2
-; AVX512VL-32-NEXT:    setae %al
-; AVX512VL-32-NEXT:    kmovw %eax, %k1
-; AVX512VL-32-NEXT:    movl %eax, %edi
+; AVX512VL-32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX512VL-32-NEXT:    xorl %edx, %edx
+; AVX512VL-32-NEXT:    vucomiss %xmm1, %xmm2
+; AVX512VL-32-NEXT:    setae %dl
+; AVX512VL-32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; AVX512VL-32-NEXT:    kmovw %edx, %k1
 ; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; AVX512VL-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
-; AVX512VL-32-NEXT:    xorl %eax, %eax
-; AVX512VL-32-NEXT:    vcomiss %xmm1, %xmm0
-; AVX512VL-32-NEXT:    setae %al
-; AVX512VL-32-NEXT:    kmovw %eax, %k1
+; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX512VL-32-NEXT:    xorl %edx, %edx
+; AVX512VL-32-NEXT:    vucomiss %xmm1, %xmm2
+; AVX512VL-32-NEXT:    setae %dl
+; AVX512VL-32-NEXT:    kmovw %edx, %k1
+; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; AVX512VL-32-NEXT:    xorl %ebx, %ebx
+; AVX512VL-32-NEXT:    vucomiss %xmm1, %xmm2
+; AVX512VL-32-NEXT:    setae %bl
+; AVX512VL-32-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; AVX512VL-32-NEXT:    kmovw %ebx, %k1
+; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm3 {%k1} {z}
+; AVX512VL-32-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    xorl %ebx, %ebx
+; AVX512VL-32-NEXT:    vucomiss %xmm1, %xmm0
+; AVX512VL-32-NEXT:    setae %bl
+; AVX512VL-32-NEXT:    kmovw %ebx, %k1
 ; AVX512VL-32-NEXT:    vmovss %xmm1, %xmm1, %xmm1 {%k1} {z}
 ; AVX512VL-32-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
@@ -526,40 +526,40 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    wait
-; AVX512VL-32-NEXT:    shll $31, %ebx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ebx
+; AVX512VL-32-NEXT:    shll $31, %eax
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512VL-32-NEXT:    vpinsrd $1, %ebx, %xmm0, %xmm0
+; AVX512VL-32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    shll $31, %esi
 ; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %esi
 ; AVX512VL-32-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
-; AVX512VL-32-NEXT:    shll $31, %edx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; AVX512VL-32-NEXT:    shll $31, %ecx
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512VL-32-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; AVX512VL-32-NEXT:    shll $31, %edx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX512VL-32-NEXT:    vpinsrd $3, %edx, %xmm1, %xmm1
-; AVX512VL-32-NEXT:    shll $31, %ecx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX512VL-32-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; AVX512VL-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; AVX512VL-32-NEXT:    shll $31, %ecx
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm2, %xmm2
-; AVX512VL-32-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm2
-; AVX512VL-32-NEXT:    shll $31, %eax
-; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX512VL-32-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
+; AVX512VL-32-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
 ; AVX512VL-32-NEXT:    shll $31, %edi
 ; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edi
+; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; AVX512VL-32-NEXT:    vpinsrd $3, %edi, %xmm1, %xmm1
+; AVX512VL-32-NEXT:    shll $31, %edx
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512VL-32-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; AVX512VL-32-NEXT:    shll $31, %eax
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm2, %xmm2
+; AVX512VL-32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; AVX512VL-32-NEXT:    shll $31, %ebx
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %ebx
+; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; AVX512VL-32-NEXT:    vpinsrd $1, %ebx, %xmm3, %xmm3
+; AVX512VL-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; AVX512VL-32-NEXT:    shll $31, %eax
+; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm3, %xmm3
-; AVX512VL-32-NEXT:    vpinsrd $3, %edi, %xmm3, %xmm3
+; AVX512VL-32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
 ; AVX512VL-32-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512VL-32-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm1
 ; AVX512VL-32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
