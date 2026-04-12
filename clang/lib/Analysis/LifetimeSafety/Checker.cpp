@@ -125,7 +125,8 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
         return;
       }
-      // Suggest lifetimebound for parameter escaping through return.
+      // Suggest lifetimebound for parameter escaping through return or a field
+      // in constructor.
       if (!PVD->hasAttr<LifetimeBoundAttr>()) {
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
