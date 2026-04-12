@@ -76,6 +76,35 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
   return UsageOfThis.Used;
 }
 
+static bool hasSameParameterTypes(const CXXMethodDecl &MD1,
+                                  const CXXMethodDecl &MD2) {
+  if (MD1.getNumParams() != MD2.getNumParams())
+    return false;
+  for (unsigned I = 0, E = MD1.getNumParams(); I < E; ++I)
+    if (MD1.getParamDecl(I)->getType().getCanonicalType() !=
+        MD2.getParamDecl(I)->getType().getCanonicalType())
+      return false;
+  return true;
+}
+
+AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
+  const auto *Method = &Node;
+  const DeclContext::lookup_result LookupResult =
+      Method->getParent()->lookup(Method->getNameInfo().getName());
+  if (LookupResult.isSingleResult())
+    return false;
+
+  for (const Decl *D : LookupResult) {
+    if (const auto *Overload = dyn_cast<CXXMethodDecl>(D)) {
+      if (Overload != Method && !Overload->isConst() &&
+          hasSameParameterTypes(*Method, *Overload)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 void ConvertMemberFunctionsToStaticCheck::registerMatchers(
@@ -87,7 +116,7 @@ void ConvertMemberFunctionsToStaticCheck::registerMatchers(
               isVirtual(), isStatic(), hasTrivialBody(), isOverloadedOperator(),
               cxxConstructorDecl(), cxxDestructorDecl(), cxxConversionDecl(),
               isExplicitObjectMemberFunction(), isTemplate(),
-              isDependentContext(),
+              isDependentContext(), allOf(isConst(), hasNonConstOverload()),
               ofClass(anyOf(
                   isLambda(),
                   hasAnyDependentBases()) // Method might become virtual

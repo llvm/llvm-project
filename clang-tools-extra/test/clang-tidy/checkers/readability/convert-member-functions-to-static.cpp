@@ -235,3 +235,31 @@ struct NoFixitInMacro {
     return;
   }
 };
+
+
+struct OverloadedMethods {
+  void f() {
+    this->i++;
+  }
+  void f() const {
+    ;
+  };
+
+  void g(int) {
+    this->i++;
+  }
+  void g(int) const {
+    ;
+  };
+
+  void h(int) {
+    this->i++;
+  };
+  void h(float) const {
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'h' can be made static
+    // CHECK-FIXES: static void h(float) {
+    ;
+  };
+
+  int i = 0;
+};
