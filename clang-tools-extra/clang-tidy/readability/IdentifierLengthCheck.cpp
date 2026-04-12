@@ -90,12 +90,12 @@ void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
         this);
 }
 
-static unsigned countLinesToLastUse(const VarDecl *Var,
-                                    const SourceManager *SrcMgr,
-                                    ASTContext *Ctx) {
+static std::optional<unsigned> countLinesToLastUse(const VarDecl *Var,
+                                                   const SourceManager *SrcMgr,
+                                                   ASTContext *Ctx) {
   const auto *ParentScope = llvm::dyn_cast<FunctionDecl>(Var->getDeclContext());
   if (ParentScope == nullptr)
-    return 1;
+    return std::nullopt;
 
   auto AllRefs =
       utils::decl_ref_expr::allDeclRefExprs(*Var, *ParentScope, *Ctx);
@@ -111,6 +111,18 @@ static unsigned countLinesToLastUse(const VarDecl *Var,
   return LastUseLine - DeclLine + 1;
 }
 
+static bool isShortLived(const VarDecl *Var, const SourceManager *SrcMgr,
+                         ASTContext *Ctx, unsigned LineCountThreshold) {
+  if (LineCountThreshold == 0)
+    return false;
+
+  std::optional<unsigned> LineCount = countLinesToLastUse(Var, SrcMgr, Ctx);
+  if (LineCount && LineCount.value() <= LineCountThreshold)
+    return true;
+
+  return false;
+}
+
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *StandaloneVar = Result.Nodes.getNodeAs<VarDecl>("standaloneVar");
   if (StandaloneVar) {
@@ -123,9 +135,8 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredVariableNames.match(VarName))
       return;
 
-    if (LineCountThreshold > 0 &&
-        countLinesToLastUse(StandaloneVar, Result.SourceManager,
-                            Result.Context) <= LineCountThreshold)
+    if (isShortLived(StandaloneVar, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(StandaloneVar->getLocation(), ErrorMessage)
@@ -142,9 +153,8 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredExceptionVariableNames.match(VarName))
       return;
 
-    if (LineCountThreshold > 0 &&
-        countLinesToLastUse(ExceptionVarName, Result.SourceManager,
-                            Result.Context) <= LineCountThreshold)
+    if (isShortLived(ExceptionVarName, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(ExceptionVarName->getLocation(), ErrorMessage)
@@ -162,9 +172,8 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredLoopCounterNames.match(VarName))
       return;
 
-    if (LineCountThreshold > 0 &&
-        countLinesToLastUse(LoopVar, Result.SourceManager, Result.Context) <=
-            LineCountThreshold)
+    if (isShortLived(LoopVar, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(LoopVar->getLocation(), ErrorMessage)
@@ -182,9 +191,8 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredParameterNames.match(VarName))
       return;
 
-    if (LineCountThreshold > 0 &&
-        countLinesToLastUse(ParamVar, Result.SourceManager, Result.Context) <=
-            LineCountThreshold)
+    if (isShortLived(ParamVar, Result.SourceManager, Result.Context,
+                     LineCountThreshold))
       return;
 
     diag(ParamVar->getLocation(), ErrorMessage)
