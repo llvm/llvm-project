@@ -1939,6 +1939,19 @@ TEST_F(ComputeKnownFPClassTest, PowiInfBasic) {
   expectKnownFPClass(fcAllFlags, std::nullopt, A5);
   expectKnownFPClass(fcAllFlags, std::nullopt, A6);
   expectKnownFPClass(~fcInf, std::nullopt, A7);
+
+  // auto ExpectKnownNeverInf = [&](Instruction *I, bool Expected) {
+  //   KnownFPClass Known = computeKnownFPClass(I, M->getDataLayout(), fcInf);
+  //   EXPECT_EQ(Expected, Known.isKnownNeverInfinity());
+  // };
+
+  // ExpectKnownNeverInf(A, true);
+  // ExpectKnownNeverInf(A2, false);
+  // ExpectKnownNeverInf(A3, true);
+  // ExpectKnownNeverInf(A4, true);
+  // ExpectKnownNeverInf(A5, false);
+  // ExpectKnownNeverInf(A6, false);
+  // ExpectKnownNeverInf(A7, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, PowiInfSpecial) {
@@ -1960,7 +1973,7 @@ TEST_F(ComputeKnownFPClassTest, PowiInfSpecial) {
       "  ret float %A\n"
       "}\n");
   expectKnownFPClass(fcPosNormal | fcNan, std::nullopt, A);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A2);
+  expectKnownFPClass(fcPositive | fcNan, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(~fcInf, std::nullopt, A4);
   expectKnownFPClass(~fcInf, std::nullopt, A5);
