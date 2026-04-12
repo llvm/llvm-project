@@ -545,6 +545,10 @@ public:
   /// The indent level of this token. Copied from the surrounding line.
   unsigned IndentLevel = 0;
 
+  /// Block + continuation indent level, applied by the WhitespaceManager to
+  /// this token.
+  mutable unsigned AppliedIndentLevel = 0;
+
   /// Penalty for inserting a line break before this token.
   unsigned SplitPenalty = 0;
 
@@ -858,6 +862,21 @@ public:
       return ForcedPrecedence;
     return getBinOpPrecedence(Tok.getKind(), /*GreaterThanIsOperator=*/true,
                               /*CPlusPlus11=*/true);
+  }
+
+  template <typename T> [[nodiscard]] FormatToken *getPrevious(T A1) const {
+    FormatToken *Tok = Previous;
+    while (Tok && Tok->isNot(A1))
+      Tok = Tok->Previous;
+    return Tok;
+  }
+
+  template <typename... Ts>
+  [[nodiscard]] FormatToken *getPreviousOneOf(Ts... Ks) const {
+    FormatToken *Tok = Previous;
+    while (Tok && (Tok->isNot(Ks) && ...))
+      Tok = Tok->Previous;
+    return Tok;
   }
 
   /// Returns the previous token ignoring comments.

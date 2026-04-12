@@ -3560,6 +3560,40 @@ TEST_F(AlignmentTest, AlignInsidePreprocessorElseBlock) {
                Style);
 }
 
+TEST_F(AlignmentTest, ContinuedAligned) {
+  FormatStyle Style = getLLVMStyleWithColumns(60);
+  Style.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Style.TabWidth = Style.IndentWidth = Style.ContinuationIndentWidth = 4;
+
+  verifyFormat("for (;;) {\n"
+               "\tif (bar(aaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbb,\n"
+               "\t        cccccccccccccccccccccccccccccc)) {\n"
+               "\t\treturn {};\n"
+               "\t}\n"
+               "}",
+               Style);
+  verifyFormat("bar([]() {\n"
+               "\tconst AAAAAA aaaaa =\n"
+               "\t\tAAAAAAAAAA(foo(bbbbbbbbbbbbbbbbbbbbbbbbbb),\n"
+               "\t\t           foo(cccccccccccccccccccccccccc),\n"
+               "\t\t           foo(ddddddddddddddddddddddddd)) +\n"
+               "\t\teeeeeeeee;\n"
+               "});",
+               Style);
+
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
+  verifyFormat("bar(\n"
+               "\t[]() {\n"
+               "\t\tif constexpr (std::is_same_v<aaaaaa,\n"
+               "\t\t                             T>) // comment line 1\n"
+               "\t\t                                 // comment line 2\n"
+               "\t\t{\n"
+               "\t\t}\n"
+               "\t},\n"
+               "\tvariant);",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
