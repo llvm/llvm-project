@@ -15875,6 +15875,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   ArrayRef<Value *> VL = E->Scalars;
 
   Type *ScalarTy = getValueType(VL[0]);
+  if (SLPReVec && E->State == TreeEntry::Vectorize &&
+      E->getOpcode() == Instruction::InsertElement &&
+      !E->getOperand(1).back()->getType()->isVectorTy())
+    ScalarTy = ScalarTy->getScalarType();
   if (!isValidElementType(ScalarTy))
     return InstructionCost::getInvalid();
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
