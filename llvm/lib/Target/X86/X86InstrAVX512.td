@@ -11297,23 +11297,6 @@ multiclass avx512_unary_rm_vl_all<bits<8> opc_b, bits<8> opc_w,
                                     HasBWI>;
 }
 
-defm VPABS : avx512_unary_rm_vl_all<0x1C, 0x1D, 0x1E, 0x1F, "vpabs", abs,
-                                    SchedWriteVecALU>;
-
-// VPABS: Use 512bit version to implement 128/256 bit in case NoVLX.
-let Predicates = [HasAVX512, NoVLX] in {
-  def : Pat<(v4i64 (abs VR256X:$src)),
-            (EXTRACT_SUBREG
-                (VPABSQZrr
-                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src, sub_ymm)),
-             sub_ymm)>;
-  def : Pat<(v2i64 (abs VR128X:$src)),
-            (EXTRACT_SUBREG
-                (VPABSQZrr
-                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm)),
-             sub_xmm)>;
-}
-
 // Use 512bit version to implement 128/256 bit.
 multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
                                  AVX512VLVectorVTInfo _, Predicate prd> {
@@ -11336,14 +11319,32 @@ multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
   }
 }
 
-defm VPLZCNT    : avx512_unary_rm_vl_dq<0x44, 0x44, "vplzcnt", ctlz,
-                                        SchedWriteVecIMul, HasCDI>;
+//===---------------------------------------------------------------------===//
+// Integer Absolute - VPABSB, VPABW, VPABD and VPABQ
+//===---------------------------------------------------------------------===//
+
+defm VPABS : avx512_unary_rm_vl_all<0x1C, 0x1D, 0x1E, 0x1F, "vpabs", abs,
+                                    SchedWriteVecALU>;
+
+// VPABSQ: Use 512bit version to implement 128/256 bit in case NoVLX.
+defm : avx512_unary_lowering<"VPABSQ", abs, avx512vl_i64_info, HasAVX512>;
+
+//===---------------------------------------------------------------------===//
+// Test elements for earlier matching elements - VPCONFLICTD and VPCONFLICTQ
+//===---------------------------------------------------------------------===//
 
 // FIXME: Is there a better scheduler class for VPCONFLICT?
 defm VPCONFLICT : avx512_unary_rm_vl_dq<0xC4, 0xC4, "vpconflict", X86Conflict,
                                         SchedWriteVecALU, HasCDI>;
 
-// VPLZCNT: Use 512bit version to implement 128/256 bit in case NoVLX.
+//===---------------------------------------------------------------------===//
+// Counts number of leading zeros - VPLZCNTD and VPLZCNTQ
+//===---------------------------------------------------------------------===//
+
+defm VPLZCNT    : avx512_unary_rm_vl_dq<0x44, 0x44, "vplzcnt", ctlz,
+                                        SchedWriteVecIMul, HasCDI>;
+
+// VPLZCNTQ/D: Use 512bit version to implement 128/256 bit in case NoVLX.
 defm : avx512_unary_lowering<"VPLZCNTQ", ctlz, avx512vl_i64_info, HasCDI>;
 defm : avx512_unary_lowering<"VPLZCNTD", ctlz, avx512vl_i32_info, HasCDI>;
 
@@ -11355,6 +11356,7 @@ defm : avx512_unary_lowering<"VPLZCNTD", ctlz, avx512vl_i32_info, HasCDI>;
 defm VPOPCNT : avx512_unary_rm_vl_dq<0x55, 0x55, "vpopcnt", ctpop,
                                      SchedWriteVecALU, HasVPOPCNTDQ>;
 
+// VPOPCNTQ/D: Use 512bit version to implement 128/256 bit in case NoVLX.
 defm : avx512_unary_lowering<"VPOPCNTQ", ctpop, avx512vl_i64_info, HasVPOPCNTDQ>;
 defm : avx512_unary_lowering<"VPOPCNTD", ctpop, avx512vl_i32_info, HasVPOPCNTDQ>;
 
