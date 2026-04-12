@@ -550,8 +550,8 @@ Object JSONFormat::luEntityIdTableEntryToJSON(const EntityName &EN,
 /// (EntityName, EntityId) pair.
 static llvm::Expected<EntityIdTable> entityIdTableFromJSONImpl(
     const Array &EntityIdTableArray,
-    llvm::function_ref<llvm::Expected<std::pair<EntityName, EntityId>>(
-        const Object &)>
+    llvm::function_ref<
+        llvm::Expected<std::pair<EntityName, EntityId>>(const Object &)>
         EntryReader,
     llvm::function_ref<std::map<EntityName, EntityId> &(EntityIdTable &)>
         GetEntities) {
@@ -569,8 +569,7 @@ static llvm::Expected<EntityIdTable> entityIdTableFromJSONImpl(
           .build();
     }
 
-    auto ExpectedEntityIdTableEntry =
-        EntryReader(*OptEntityIdTableEntryObject);
+    auto ExpectedEntityIdTableEntry = EntryReader(*OptEntityIdTableEntryObject);
     if (!ExpectedEntityIdTableEntry) {
       return ErrorBuilder::wrap(ExpectedEntityIdTableEntry.takeError())
           .context(ErrorMessages::ReadingFromIndex, "EntityIdTable entry",

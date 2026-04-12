@@ -56,8 +56,8 @@ resolveNamespace(const NestedBuildNamespace &LUNamespace,
   case EntityLinkageType::Internal:
     // Qualify with the TU namespace first (to disambiguate across TUs),
     // then with the LU namespace.
-    return EntityNamespace.makeQualified(TUNamespace).makeQualified(
-        LUNamespace);
+    return EntityNamespace.makeQualified(TUNamespace)
+        .makeQualified(LUNamespace);
   case EntityLinkageType::External:
     return NestedBuildNamespace(LUNamespace);
   }
@@ -69,8 +69,7 @@ EntityId EntityLinker::resolveEntity(const EntityName &OldName,
                                      const EntityLinkage &Linkage,
                                      const NestedBuildNamespace &TUNamespace) {
   NestedBuildNamespace NewNamespace = resolveNamespace(
-      Output.LUNamespace, TUNamespace, OldName.Namespace,
-      Linkage.getLinkage());
+      Output.LUNamespace, TUNamespace, OldName.Namespace, Linkage.getLinkage());
 
   EntityName NewName(OldName.USR, OldName.Suffix, NewNamespace);
 
@@ -109,8 +108,8 @@ EntityLinker::resolve(const TUSummaryEncoding &Summary) {
 
     const EntityLinkage &Linkage = Iter->second;
 
-    EntityId NewId =
-        resolveEntity(OldName, Linkage, NestedBuildNamespace(Summary.TUNamespace));
+    EntityId NewId = resolveEntity(OldName, Linkage,
+                                   NestedBuildNamespace(Summary.TUNamespace));
 
     auto [_, Inserted] = EntityResolutionTable.insert({OldId, NewId});
     if (!Inserted) {
