@@ -1345,6 +1345,23 @@ Instruction *InstCombinerImpl::foldAddLikeCommutative(Value *LHS, Value *RHS,
     }
   }
 
+  // (A + C) + (B & ~C) == A + (B | C)
+  if (match(LHS, m_c_Add(m_Value(A), m_APInt(C1))) &&
+      match(RHS, m_c_And(m_Value(B), m_SpecificInt(~*C1)))) {
+    // Replacing one add with {or, add}. Avoid growth if both sides are shared.
+    if (!LHS->hasOneUse() && !RHS->hasOneUse())
+      return nullptr;
+
+    bool NSWOut = NSW && match(LHS, m_NSWAdd(m_Value(), m_Value()));
+    bool NUWOut = NUW && match(LHS, m_NUWAdd(m_Value(), m_Value()));
+    Value *NewOr = Builder.CreateOr(
+        B, Constant::getIntegerValue(LHS->getType(), *C1));
+    Instruction *NewAdd = BinaryOperator::CreateAdd(A, NewOr);
+    NewAdd->setHasNoSignedWrap(NSWOut);
+    NewAdd->setHasNoUnsignedWrap(NUWOut);
+    return NewAdd;
+  }
+
   return nullptr;
 }
 
@@ -1523,47 +1540,6 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   return nullptr;
 }
 
-static Instruction *
-foldAddWithMaskedOverwrite(BinaryOperator &Add,
-                           InstCombiner::BuilderTy &Builder) {
-  Value *LHS = Add.getOperand(0), *RHS = Add.getOperand(1);
-  Value *X, *Y;
-  const APInt *C;
-
-  auto Match = [&](Value *AddOp, Value *AndOp) -> Instruction * {
-    if (!match(AddOp, m_c_Add(m_Value(X), m_APInt(C))) ||
-        !match(AndOp, m_c_And(m_Value(Y), m_SpecificInt(~*C))))
-      return nullptr;
-
-    // Replacing one add with {or, add}. Avoid growth if both sides are shared.
-    if (!AddOp->hasOneUse() && !AndOp->hasOneUse())
-      return nullptr;
-
-    bool PreserveNSW = false;
-    bool PreserveNUW = false;
-    if (auto *InnerAdd = dyn_cast<OverflowingBinaryOperator>(AddOp)) {
-      PreserveNSW = Add.hasNoSignedWrap() && InnerAdd->hasNoSignedWrap();
-      PreserveNUW = Add.hasNoUnsignedWrap() && InnerAdd->hasNoUnsignedWrap();
-    }
-
-    Value *NewOr =
-        Builder.CreateOr(Y, Constant::getIntegerValue(Add.getType(), *C));
-    Value *NewAdd = Builder.CreateAdd(X, NewOr);
-    if (auto *NewAddInst = dyn_cast<Instruction>(NewAdd)) {
-      NewAddInst->setHasNoSignedWrap(PreserveNSW);
-      NewAddInst->setHasNoUnsignedWrap(PreserveNUW);
-
-      return NewAddInst;
-    }
-
-    return nullptr;
-  };
-
-  if (Instruction *I = Match(LHS, RHS))
-    return I;
-  return Match(RHS, LHS);
-}
-
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = simplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1643,10 +1619,6 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   if (Value *V = checkForNegativeOperand(I, Builder))
-    return replaceInstUsesWith(I, V);
-
-  // (X + C) + (Y & ~C) == X + (Y | C)
-  if (Value *V = foldAddWithMaskedOverwrite(I, Builder))
     return replaceInstUsesWith(I, V);
 
   // (A + 1) + ~B --> A - B
