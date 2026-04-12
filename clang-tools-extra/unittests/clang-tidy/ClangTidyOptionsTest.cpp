@@ -372,7 +372,7 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtils) {
                        false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  TestCheck TestCheck("performance-faster-string-find", &Context);
+  TestCheck TestCheck(&Context);
   utils::diagDeprecatedCheckAlias(TestCheck, Context,
                                   "performance-faster-string-find",
                                   "performance-prefer-single-char-overloads");
@@ -399,7 +399,7 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByCanonicalCheck) {
                        false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  TestCheck TestCheck("performance-faster-string-find", &Context);
+  TestCheck TestCheck(&Context);
   utils::diagDeprecatedCheckAlias(TestCheck, Context,
                                   "performance-faster-string-find",
                                   "performance-prefer-single-char-overloads");
@@ -419,7 +419,7 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtilsEnabledByWildcardAlias) {
                        false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  TestCheck TestCheck("performance-faster-string-find", &Context);
+  TestCheck TestCheck(&Context);
   utils::diagDeprecatedCheckAlias(TestCheck, Context,
                                   "performance-faster-string-find",
                                   "performance-prefer-single-char-overloads");
@@ -447,7 +447,7 @@ TEST(CheckOptionsValidation,
                        false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  TestCheck TestCheck("performance-faster-string-find", &Context);
+  TestCheck TestCheck(&Context);
   utils::diagDeprecatedCheckAlias(TestCheck, Context,
                                   "performance-faster-string-find",
                                   "performance-prefer-single-char-overloads");
@@ -467,7 +467,7 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByWildcard) {
                        false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  TestCheck TestCheck("performance-faster-string-find", &Context);
+  TestCheck TestCheck(&Context);
   utils::diagDeprecatedCheckAlias(TestCheck, Context,
                                   "performance-faster-string-find",
                                   "performance-prefer-single-char-overloads");
