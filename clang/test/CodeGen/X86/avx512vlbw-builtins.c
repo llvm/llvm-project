@@ -3740,6 +3740,15 @@ __m256i test_mm256_mask_dbsad_epu8(__m256i __W, __mmask16 __U, __m256i __A, __m2
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_dbsad_epu8(__W, __U, __A, __B, 170);
 }
+// Test masked version: mask=0x5555 (keep even elements, passthrough odd)
+TEST_CONSTEXPR(match_v16hu(_mm256_mask_dbsad_epu8(
+  ((__m256i)(__v16hu){99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99}),
+  (__mmask16)0x5555,
+  ((__m256i)(__v32qu){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}),
+  ((__m256i)(__v32qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}),
+  0), 4, 99, 12, 99, 28, 99, 44, 99, 4, 99, 12, 99, 28, 99, 44, 99));
 
 __m256i test_mm256_maskz_dbsad_epu8(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_maskz_dbsad_epu8
@@ -3747,6 +3756,13 @@ __m256i test_mm256_maskz_dbsad_epu8(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_dbsad_epu8(__U, __A, __B, 170);
 }
+// Test zero-masked version: mask=0xAAAA (keep odd elements, zero even)
+TEST_CONSTEXPR(match_v16hu(_mm256_maskz_dbsad_epu8((__mmask16)0xAAAA,
+  ((__m256i)(__v32qu){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}),
+  ((__m256i)(__v32qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}),
+  0), 0, 8, 0, 12, 0, 28, 0, 44, 0, 8, 0, 12, 0, 28, 0, 44));
 __mmask8 test_mm_movepi16_mask(__m128i __A) {
   // CHECK-LABEL: test_mm_movepi16_mask
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i16> %{{.*}}, zeroinitializer
