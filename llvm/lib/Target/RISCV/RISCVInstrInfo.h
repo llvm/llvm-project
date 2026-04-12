@@ -130,14 +130,14 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
+                                      int FrameIndex, MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
   MachineInstr *foldMemoryOperandImpl(
       MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
       MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
+      MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr) const override;
 
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
