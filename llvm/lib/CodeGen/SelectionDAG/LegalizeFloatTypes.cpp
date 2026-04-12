@@ -1148,42 +1148,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_SEQ(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_SEQ_FDOT(SDNode *N) {
-  // Inline the sequential expansion (VECREDUCE_SEQ_FDOT has acc in operand 0).
-  SDLoc dl(N);
-  SDValue AccOp = N->getOperand(0);
-  SDValue VecAOp = N->getOperand(1);
-  SDValue VecBOp = N->getOperand(2);
-  SDNodeFlags Flags = N->getFlags();
-  EVT VT = VecAOp.getValueType();
-  EVT EltVT = VT.getVectorElementType();
-  unsigned NumElts = VT.getVectorNumElements();
-  SmallVector<SDValue, 8> OpsA, OpsB;
-  DAG.ExtractVectorElements(VecAOp, OpsA, 0, NumElts);
-  DAG.ExtractVectorElements(VecBOp, OpsB, 0, NumElts);
-  SDValue Res = AccOp;
-  if (Flags.hasAllowContract())
-    for (unsigned i = 0; i < NumElts; i++)
-      Res = DAG.getNode(ISD::FMA, dl, EltVT, OpsA[i], OpsB[i], Res, Flags);
-  else
-    for (unsigned i = 0; i < NumElts; i++) {
-      SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, OpsA[i], OpsB[i], Flags);
-      Res = DAG.getNode(ISD::FADD, dl, EltVT, Res, Mul, Flags);
-    }
-  ReplaceValueWith(SDValue(N, 0), Res);
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeqDot(N, DAG));
   return SDValue();
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_FDOT(SDNode *N) {
-  // Decompose unordered FDOT to FMUL(vecA, vecB) + VECREDUCE_FADD(products).
-  SDLoc dl(N);
-  SDValue VecAOp = N->getOperand(0);
-  SDValue VecBOp = N->getOperand(1);
-  SDNodeFlags Flags = N->getFlags();
-  EVT VT = VecAOp.getValueType();
-  EVT EltVT = VT.getVectorElementType();
-  SDValue Products = DAG.getNode(ISD::FMUL, dl, VT, VecAOp, VecBOp, Flags);
-  ReplaceValueWith(SDValue(N, 0),
-                   DAG.getNode(ISD::VECREDUCE_FADD, dl, EltVT, Products, Flags));
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceDot(N, DAG));
   return SDValue();
 }
 
@@ -3191,42 +3161,12 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_SEQ_FDOT(SDNode *N) {
-  // Inline sequential expansion for the SEQ variant (acc in operand 0).
-  SDLoc dl(N);
-  SDValue AccOp = N->getOperand(0);
-  SDValue VecAOp = N->getOperand(1);
-  SDValue VecBOp = N->getOperand(2);
-  SDNodeFlags Flags = N->getFlags();
-  EVT VT = VecAOp.getValueType();
-  EVT EltVT = VT.getVectorElementType();
-  unsigned NumElts = VT.getVectorNumElements();
-  SmallVector<SDValue, 8> OpsA, OpsB;
-  DAG.ExtractVectorElements(VecAOp, OpsA, 0, NumElts);
-  DAG.ExtractVectorElements(VecBOp, OpsB, 0, NumElts);
-  SDValue Res = AccOp;
-  if (Flags.hasAllowContract())
-    for (unsigned i = 0; i < NumElts; i++)
-      Res = DAG.getNode(ISD::FMA, dl, EltVT, OpsA[i], OpsB[i], Res, Flags);
-  else
-    for (unsigned i = 0; i < NumElts; i++) {
-      SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, OpsA[i], OpsB[i], Flags);
-      Res = DAG.getNode(ISD::FADD, dl, EltVT, Res, Mul, Flags);
-    }
-  ReplaceValueWith(SDValue(N, 0), Res);
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeqDot(N, DAG));
   return SDValue();
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_FDOT(SDNode *N) {
-  // Decompose unordered FDOT to FMUL(vecA, vecB) + VECREDUCE_FADD(products).
-  SDLoc dl(N);
-  SDValue VecAOp = N->getOperand(0);
-  SDValue VecBOp = N->getOperand(1);
-  SDNodeFlags Flags = N->getFlags();
-  EVT VT = VecAOp.getValueType();
-  EVT EltVT = VT.getVectorElementType();
-  SDValue Products = DAG.getNode(ISD::FMUL, dl, VT, VecAOp, VecBOp, Flags);
-  ReplaceValueWith(SDValue(N, 0),
-                   DAG.getNode(ISD::VECREDUCE_FADD, dl, EltVT, Products, Flags));
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceDot(N, DAG));
   return SDValue();
 }
 

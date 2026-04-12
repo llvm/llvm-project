@@ -12259,6 +12259,51 @@ SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) cons
   return Res;
 }
 
+SDValue TargetLowering::expandVecReduceSeqDot(SDNode *Node,
+                                               SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  SDValue AccOp = Node->getOperand(0);
+  SDValue VecA = Node->getOperand(1);
+  SDValue VecB = Node->getOperand(2);
+  SDNodeFlags Flags = Node->getFlags();
+
+  EVT VT = VecA.getValueType();
+  EVT EltVT = VT.getVectorElementType();
+
+  if (VT.isScalableVector())
+    report_fatal_error("Expanding reductions for scalable vectors is undefined.");
+
+  unsigned NumElts = VT.getVectorNumElements();
+  SmallVector<SDValue, 8> OpsA, OpsB;
+  DAG.ExtractVectorElements(VecA, OpsA, 0, NumElts);
+  DAG.ExtractVectorElements(VecB, OpsB, 0, NumElts);
+
+  SDValue Res = AccOp;
+  if (Flags.hasAllowContract())
+    for (unsigned i = 0; i < NumElts; i++)
+      Res = DAG.getNode(ISD::FMA, dl, EltVT, OpsA[i], OpsB[i], Res, Flags);
+  else
+    for (unsigned i = 0; i < NumElts; i++) {
+      SDValue Mul = DAG.getNode(ISD::FMUL, dl, EltVT, OpsA[i], OpsB[i], Flags);
+      Res = DAG.getNode(ISD::FADD, dl, EltVT, Res, Mul, Flags);
+    }
+  return Res;
+}
+
+SDValue TargetLowering::expandVecReduceDot(SDNode *Node,
+                                            SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  SDValue VecA = Node->getOperand(0);
+  SDValue VecB = Node->getOperand(1);
+  SDNodeFlags Flags = Node->getFlags();
+
+  EVT VT = VecA.getValueType();
+  EVT EltVT = VT.getVectorElementType();
+
+  SDValue Products = DAG.getNode(ISD::FMUL, dl, VT, VecA, VecB, Flags);
+  return DAG.getNode(ISD::VECREDUCE_FADD, dl, EltVT, Products, Flags);
+}
+
 bool TargetLowering::expandREM(SDNode *Node, SDValue &Result,
                                SelectionDAG &DAG) const {
   EVT VT = Node->getValueType(0);
