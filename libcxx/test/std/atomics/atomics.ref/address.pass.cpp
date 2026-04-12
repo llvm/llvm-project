@@ -8,6 +8,7 @@
 
 // REQUIRES: std-at-least-c++26
 
+// TODO: Update test after https://llvm.org/PR121414 lands.
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-deprecated-volatile
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile
 
