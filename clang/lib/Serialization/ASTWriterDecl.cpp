@@ -2181,7 +2181,6 @@ void ASTDeclWriter::VisitExplicitInstantiationDecl(
     ExplicitInstantiationDecl *D) {
   VisitDecl(D);
   Record.AddDeclRef(D->getSpecialization());
-  Record.AddSourceLocation(D->getEndLoc());
   Record.AddSourceLocation(D->getExternLoc());
   Record.AddSourceLocation(D->getTagKWLoc());
   Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());

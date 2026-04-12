@@ -1789,17 +1789,35 @@ void ExplicitInstantiationDecl::anchor() {}
 
 ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
     ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
-    SourceLocation EndLoc, SourceLocation ExternLoc,
-    SourceLocation TemplateLoc, SourceLocation TagKWLoc,
-    NestedNameSpecifierLoc QualifierLoc,
+    SourceLocation ExternLoc, SourceLocation TemplateLoc,
+    SourceLocation TagKWLoc, NestedNameSpecifierLoc QualifierLoc,
     const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
     TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
   return new (C, DC) ExplicitInstantiationDecl(
-      DC, Specialization, EndLoc, ExternLoc, TemplateLoc, TagKWLoc,
-      QualifierLoc, ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
+      DC, Specialization, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
+      ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
 }
 
 ExplicitInstantiationDecl *
 ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ExplicitInstantiationDecl(EmptyShell());
+}
+
+SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
+  if (TypeAsWritten) {
+    if (auto FTL = TypeAsWritten->getTypeLoc().getAs<FunctionTypeLoc>())
+      return FTL.getRParenLoc();
+    if (TemplateArgsAsWritten)
+      return TemplateArgsAsWritten->RAngleLoc;
+    // Static data member: end at the name.
+    return NameLoc;
+  }
+  if (TemplateArgsAsWritten)
+    return TemplateArgsAsWritten->RAngleLoc;
+  return NameLoc;
+}
+
+SourceRange ExplicitInstantiationDecl::getSourceRange() const {
+  SourceLocation Begin = ExternLoc.isValid() ? ExternLoc : getLocation();
+  return SourceRange(Begin, getEndLoc());
 }

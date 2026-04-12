@@ -1336,8 +1336,7 @@ void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   }
 }
 
-void DeclPrinter::VisitExplicitInstantiationDecl(
-    ExplicitInstantiationDecl *D) {
+void DeclPrinter::VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D) {
   if (D->isExternTemplate())
     Out << "extern ";
   Out << "template ";

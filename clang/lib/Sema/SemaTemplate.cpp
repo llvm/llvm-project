@@ -9318,14 +9318,14 @@ static void StripImplicitInstantiation(NamedDecl *D, bool MinGW) {
 /// explicit template instantiation statement, and add it to \p CurContext.
 static void addExplicitInstantiationDecl(
     ASTContext &Context, DeclContext *CurContext, const CXXScopeSpec &SS,
-    SourceLocation EndLoc, NamedDecl *Spec, SourceLocation ExternLoc,
-    SourceLocation TemplateLoc, SourceLocation TagKWLoc,
-    const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
-    TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
+    NamedDecl *Spec, SourceLocation ExternLoc, SourceLocation TemplateLoc,
+    SourceLocation TagKWLoc, const ASTTemplateArgumentListInfo *ArgsAsWritten,
+    SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
+    TemplateSpecializationKind TSK) {
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
   auto *EID = ExplicitInstantiationDecl::Create(
-      Context, CurContext, Spec, EndLoc, ExternLoc, TemplateLoc, TagKWLoc,
-      QualifierLoc, ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
+      Context, CurContext, Spec, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
+      ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
   CurContext->addDecl(EID);
 }
 
@@ -10433,8 +10433,8 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // Set the template specialization kind.
     Specialization->setTemplateSpecializationKind(TSK);
 
-    addExplicitInstantiationDecl(Context, CurContext, SS, RAngleLoc,
-                                 Specialization, ExternLoc, TemplateLoc, KWLoc,
+    addExplicitInstantiationDecl(Context, CurContext, SS, Specialization,
+                                 ExternLoc, TemplateLoc, KWLoc,
                                  Specialization->getTemplateArgsAsWritten(),
                                  TemplateNameLoc, nullptr, TSK);
     return Specialization;
@@ -10526,8 +10526,8 @@ DeclResult Sema::ActOnExplicitInstantiation(
     Specialization->setTemplateSpecializationKind(TSK);
   }
 
-  addExplicitInstantiationDecl(Context, CurContext, SS, RAngleLoc,
-                               Specialization, ExternLoc, TemplateLoc, KWLoc,
+  addExplicitInstantiationDecl(Context, CurContext, SS, Specialization,
+                               ExternLoc, TemplateLoc, KWLoc,
                                Specialization->getTemplateArgsAsWritten(),
                                TemplateNameLoc, nullptr, TSK);
   return Specialization;
@@ -10605,9 +10605,9 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                                                HasNoEffect))
       return true;
     if (HasNoEffect) {
-      addExplicitInstantiationDecl(Context, CurContext, SS, NameLoc, Record,
-                                   ExternLoc, TemplateLoc, KWLoc, nullptr,
-                                   NameLoc, nullptr, TSK);
+      addExplicitInstantiationDecl(Context, CurContext, SS, Record, ExternLoc,
+                                   TemplateLoc, KWLoc, nullptr, NameLoc,
+                                   nullptr, TSK);
       return TagD;
     }
   }
@@ -10645,9 +10645,9 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   if (TSK == TSK_ExplicitInstantiationDefinition)
     MarkVTableUsed(NameLoc, RecordDef, true);
 
-  addExplicitInstantiationDecl(Context, CurContext, SS, NameLoc, Record,
-                               ExternLoc, TemplateLoc, KWLoc, nullptr, NameLoc,
-                               nullptr, TSK);
+  addExplicitInstantiationDecl(Context, CurContext, SS, Record, ExternLoc,
+                               TemplateLoc, KWLoc, nullptr, NameLoc, nullptr,
+                               TSK);
   return TagD;
 }
 
@@ -10868,10 +10868,9 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
     if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Prev))
       ArgsAsWritten = VTSD->getTemplateArgsAsWritten();
-    addExplicitInstantiationDecl(
-        Context, CurContext, D.getCXXScopeSpec(), D.getSourceRange().getEnd(),
-        Prev, ExternLoc, TemplateLoc, SourceLocation(), ArgsAsWritten,
-        D.getIdentifierLoc(), T, TSK);
+    addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(), Prev,
+                                 ExternLoc, TemplateLoc, SourceLocation(),
+                                 ArgsAsWritten, D.getIdentifierLoc(), T, TSK);
     // Don't return the EID to the Parser — doing so would trigger
     // unrelated semantic actions (e.g. access checks via
     // FinalizeDeclaration).
@@ -11057,10 +11056,10 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       if (HasExplicitTemplateArgs)
         ArgsAsWritten =
             ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
-      addExplicitInstantiationDecl(
-          Context, CurContext, D.getCXXScopeSpec(),
-          D.getSourceRange().getEnd(), Specialization, ExternLoc, TemplateLoc,
-          SourceLocation(), ArgsAsWritten, D.getIdentifierLoc(), T, TSK);
+      addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(),
+                                   Specialization, ExternLoc, TemplateLoc,
+                                   SourceLocation(), ArgsAsWritten,
+                                   D.getIdentifierLoc(), T, TSK);
       // Don't return the EID to the Parser — doing so would trigger
       // unrelated semantic actions (e.g. access checks via
       // FinalizeDeclaration).
@@ -11123,12 +11122,11 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
 
   const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
   if (HasExplicitTemplateArgs)
-    ArgsAsWritten =
-        ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
-  addExplicitInstantiationDecl(
-      Context, CurContext, D.getCXXScopeSpec(), D.getSourceRange().getEnd(),
-      Specialization, ExternLoc, TemplateLoc, SourceLocation(), ArgsAsWritten,
-      D.getIdentifierLoc(), T, TSK);
+    ArgsAsWritten = ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
+  addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(),
+                               Specialization, ExternLoc, TemplateLoc,
+                               SourceLocation(), ArgsAsWritten,
+                               D.getIdentifierLoc(), T, TSK);
   // Don't return the EID to the Parser — doing so would trigger
   // unrelated semantic actions (e.g. access checks via FinalizeDeclaration).
   return (Decl *)nullptr;

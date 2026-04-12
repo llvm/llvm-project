@@ -3417,9 +3417,6 @@ class ExplicitInstantiationDecl : public Decl {
   /// The underlying specialization being explicitly instantiated.
   NamedDecl *Specialization = nullptr;
 
-  /// End location of the explicit instantiation statement.
-  SourceLocation EndLoc;
-
   /// Location of the 'extern' keyword (invalid if not extern template).
   SourceLocation ExternLoc;
 
@@ -3450,7 +3447,7 @@ class ExplicitInstantiationDecl : public Decl {
   unsigned TSK : 3;
 
   ExplicitInstantiationDecl(DeclContext *DC, NamedDecl *Specialization,
-                            SourceLocation EndLoc, SourceLocation ExternLoc,
+                            SourceLocation ExternLoc,
                             SourceLocation TemplateLoc, SourceLocation TagKWLoc,
                             NestedNameSpecifierLoc QualifierLoc,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten,
@@ -3458,7 +3455,7 @@ class ExplicitInstantiationDecl : public Decl {
                             TypeSourceInfo *TypeAsWritten,
                             TemplateSpecializationKind TSK)
       : Decl(ExplicitInstantiation, DC, TemplateLoc),
-        Specialization(Specialization), EndLoc(EndLoc), ExternLoc(ExternLoc),
+        Specialization(Specialization), ExternLoc(ExternLoc),
         TagKWLoc(TagKWLoc), QualifierLoc(QualifierLoc),
         TemplateArgsAsWritten(ArgsAsWritten), NameLoc(NameLoc),
         TypeAsWritten(TypeAsWritten), TSK(TSK) {
@@ -3478,9 +3475,8 @@ public:
 
   static ExplicitInstantiationDecl *
   Create(ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
-         SourceLocation EndLoc, SourceLocation ExternLoc,
-         SourceLocation TemplateLoc, SourceLocation TagKWLoc,
-         NestedNameSpecifierLoc QualifierLoc,
+         SourceLocation ExternLoc, SourceLocation TemplateLoc,
+         SourceLocation TagKWLoc, NestedNameSpecifierLoc QualifierLoc,
          const ASTTemplateArgumentListInfo *ArgsAsWritten,
          SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
          TemplateSpecializationKind TSK);
@@ -3490,11 +3486,8 @@ public:
 
   NamedDecl *getSpecialization() const { return Specialization; }
 
-  SourceRange getSourceRange() const override LLVM_READONLY {
-    SourceLocation Begin =
-        ExternLoc.isValid() ? ExternLoc : getLocation();
-    return SourceRange(Begin, EndLoc);
-  }
+  SourceRange getSourceRange() const override LLVM_READONLY;
+  SourceLocation getEndLoc() const LLVM_READONLY;
 
   SourceLocation getExternLoc() const { return ExternLoc; }
   SourceLocation getTemplateLoc() const { return getLocation(); }
