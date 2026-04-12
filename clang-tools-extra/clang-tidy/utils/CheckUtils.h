@@ -1,17 +1,24 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_CHECKUTILS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_CHECKUTILS_H
 
-#include "../ClangTidyDiagnosticConsumer.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang::tidy::utils {
 
-/// Returns true when a check is running under a deprecated name and the user
-/// should be prompted to migrate to CanonicalName.
-inline bool isDeprecatedAlias(const ClangTidyContext &Context,
-                              StringRef DeprecatedName,
-                              StringRef CanonicalName) {
-  return Context.isCheckEnabled(DeprecatedName) &&
-         !Context.isCheckEnabled(CanonicalName);
+/// Emits a configuration diagnostic when a deprecated check alias is enabled
+/// and the canonical check name is not also enabled.
+inline void diagDeprecatedCheckAlias(ClangTidyCheck &Check,
+                                     const ClangTidyContext &Context,
+                                     StringRef DeprecatedName,
+                                     StringRef CanonicalName) {
+  if (!Context.isCheckEnabled(DeprecatedName) ||
+      Context.isCheckEnabled(CanonicalName))
+    return;
+
+  Check.configurationDiag(
+      "%0 is deprecated and will be removed in a future release; "
+      "consider using %1 instead")
+      << DeprecatedName << CanonicalName;
 }
 
 } // namespace clang::tidy::utils

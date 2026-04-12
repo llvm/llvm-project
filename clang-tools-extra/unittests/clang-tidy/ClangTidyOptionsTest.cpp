@@ -366,10 +366,24 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtils) {
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  EXPECT_TRUE(
-      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
-                               "performance-prefer-single-char-overloads"));
+  TestCheck TestCheck("performance-faster-string-find", &Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_THAT(
+      DiagConsumer.take(),
+      ElementsAre(AllOf(
+          ToolDiagMessage("performance-faster-string-find is deprecated and "
+                          "will be removed in a future release; consider using "
+                          "performance-prefer-single-char-overloads instead"),
+          ToolDiagLevel(Warning))));
 }
 
 TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByCanonicalCheck) {
@@ -379,10 +393,18 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByCanonicalCheck) {
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  EXPECT_FALSE(
-      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
-                               "performance-prefer-single-char-overloads"));
+  TestCheck TestCheck("performance-faster-string-find", &Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_TRUE(DiagConsumer.take().empty());
 }
 
 TEST(CheckOptionsValidation, DeprecatedAliasUtilsEnabledByWildcardAlias) {
@@ -391,10 +413,24 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtilsEnabledByWildcardAlias) {
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  EXPECT_TRUE(
-      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
-                               "performance-prefer-single-char-overloads"));
+  TestCheck TestCheck("performance-faster-string-find", &Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_THAT(
+      DiagConsumer.take(),
+      ElementsAre(AllOf(
+          ToolDiagMessage("performance-faster-string-find is deprecated and "
+                          "will be removed in a future release; consider using "
+                          "performance-prefer-single-char-overloads instead"),
+          ToolDiagLevel(Warning))));
 }
 
 TEST(CheckOptionsValidation,
@@ -405,10 +441,18 @@ TEST(CheckOptionsValidation,
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  EXPECT_FALSE(
-      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
-                               "performance-prefer-single-char-overloads"));
+  TestCheck TestCheck("performance-faster-string-find", &Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_TRUE(DiagConsumer.take().empty());
 }
 
 TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByWildcard) {
@@ -417,10 +461,18 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByWildcard) {
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
-  EXPECT_FALSE(
-      utils::isDeprecatedAlias(Context, "performance-faster-string-find",
-                               "performance-prefer-single-char-overloads"));
+  TestCheck TestCheck("performance-faster-string-find", &Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_TRUE(DiagConsumer.take().empty());
 }
 
 TEST(CheckOptionsValidation, ValidIntOptions) {
