@@ -2432,6 +2432,51 @@ void owner_outlives_lifetimebound_source() {
 
 } // namespace track_origins_for_lifetimebound_record_type
 
+namespace gslpointer_construction_from_lifetimebound {
+// https://github.com/llvm/llvm-project/issues/175898
+struct Bar {};
+template <typename T> struct [[gsl::Pointer]] Pointer {
+  Pointer();
+  Pointer(const T &bar [[clang::lifetimebound]]);
+  Pointer(const Pointer<T> &p);
+  const T &operator*() const [[clang::lifetimebound]];
+};
+
+template <typename T> void use(T);
+
+void local_pointer() {
+  Pointer<int> p;
+  {
+    int v;
+    p = Pointer(v); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                 // expected-note {{destroyed here}}
+  use(*p);          // expected-note {{later used here}}
+}
+
+void nested_local_pointer() {
+  Pointer<Pointer<Pointer<Bar>>> ppp;
+  Pointer<Pointer<Bar>> pp;
+  Pointer<Bar> p;
+  {
+    Bar v;
+    p = Pointer(v);     // expected-warning {{object whose reference is captured does not live long enough}}
+    pp = Pointer(p);
+    ppp = Pointer(pp);
+  }                     // expected-note {{destroyed here}}
+  use(***ppp);          // expected-note {{later used here}}
+}
+
+struct PFieldFromParam {
+  Pointer<Bar> value;                      // function-note {{this field dangles}}
+  PFieldFromParam(Bar bar) : value(bar) {} // function-warning {{address of stack memory escapes to a field}}
+};
+
+struct PFieldFromTemp {
+  Pointer<Bar> value;                // function-note {{this field dangles}}
+  PFieldFromTemp() : value(Bar{}) {} // function-warning {{address of stack memory escapes to a field}}
+};
+
+} // namespace gslpointer_construction_from_lifetimebound
 namespace conditional_operator_control_flow {
 // https://github.com/llvm/llvm-project/issues/183895
 

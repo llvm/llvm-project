@@ -8782,7 +8782,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
     }
   }
 
-  if ((FloorX || CeilX) && FCmpInst::isCommutative(Pred)) {
+  if ((FloorX || CeilX) && FCmpInst::isCommutative(Pred) && LHS->hasOneUse()) {
     // fcmp pred floor(x), x => fcmp pred trunc(x), x
     // fcmp pred  ceil(x), x => fcmp pred trunc(x), x
     // where pred is oeq, one, ord, ueq, une, uno.
