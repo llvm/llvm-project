@@ -1545,7 +1545,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
 static bool IsLastNameArray(const parser::Designator &designator) {
   const auto &name{GetLastName(designator)};
   const evaluate::DataRef dataRef{*(name.symbol)};
-  return common::visit(
+  return common::visit( //
       common::visitors{
           [](const evaluate::SymbolRef &ref) {
             return ref->Rank() > 0 ||
@@ -1755,10 +1755,10 @@ void AccAttributeVisitor::CheckAssociatedLoop(
   using Bounds = parser::LoopControl::Bounds;
   for (const parser::DoConstruct *loop{&outerDoConstruct}; loop && level > 0;) {
     // Go through all nested loops to ensure index variable exists.
-    if (const parser::Name * ivName{GetLoopIndex(*loop)}) {
+    if (const parser::Name *ivName{GetLoopIndex(*loop)}) {
       if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
         if (auto &control{loop->GetLoopControl()}) {
-          if (const Bounds * b{std::get_if<Bounds>(&control->u)}) {
+          if (const Bounds *b{std::get_if<Bounds>(&control->u)}) {
             if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->Lower())}) {
               semantics::UnorderedSymbolSet lowerSyms =
                   evaluate::CollectSymbols(*lowerExpr);
@@ -2097,7 +2097,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
   }
   // If this symbol already has a data-sharing attribute then there is nothing
   // to do here.
-  if (const Symbol * symbol{iv.symbol}) {
+  if (const Symbol *symbol{iv.symbol}) {
     for (auto symMap : targetIt->objectWithDSA) {
       if (symMap.first->name() == symbol->name()) {
         return;
@@ -2860,7 +2860,7 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
     return nullptr;
   }
   if (auto *cb{GetProgramUnitOrBlockConstructContaining(GetContext().scope)
-                   .FindCommonBlock(name->source)}) {
+              .FindCommonBlock(name->source)}) {
     name->symbol = cb;
     return cb;
   }
