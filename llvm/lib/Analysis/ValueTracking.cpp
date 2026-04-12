@@ -5834,13 +5834,31 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::SIToFP:
   case Instruction::UIToFP: {
+    // Cannot produce nan
+    Known.knownNot(fcNan);
+
+    // Integers cannot be subnormal
+    Known.knownNot(fcSubnormal);
+
+    // sitofp and uitofp turn into +0.0 for zero.
+    Known.knownNot(fcNegZero);
+
+    // UIToFP is always non-negative regardless of known bits.
+    if (Op->getOpcode() == Instruction::UIToFP)
+      Known.signBitMustBeZero();
+
+    if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
+      break;
+
     KnownBits IntKnown =
         computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
     const fltSemantics &FltSem =
         Op->getType()->getScalarType()->getFltSemantics();
-    Known = Op->getOpcode() == Instruction::SIToFP
-                ? KnownFPClass::sitofp(IntKnown, FltSem)
-                : KnownFPClass::uitofp(IntKnown, FltSem);
+    KnownFPClass Known2 = Op->getOpcode() == Instruction::SIToFP
+                              ? KnownFPClass::sitofp(IntKnown, FltSem)
+                              : KnownFPClass::uitofp(IntKnown, FltSem);
+
+    Known = Known.unionWith(Known2);
     break;
   }
   case Instruction::ExtractElement: {

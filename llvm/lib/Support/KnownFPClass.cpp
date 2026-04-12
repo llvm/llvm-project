@@ -290,19 +290,6 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
 static KnownFPClass itofp_impl(const KnownBits &KnownSrc,
                                const fltSemantics &FltSem, bool IsSigned) {
   KnownFPClass Known;
-  // Cannot produce nan
-  Known.knownNot(fcNan);
-
-  // Integers cannot be subnormal
-  Known.knownNot(fcSubnormal);
-
-  // sitofp and uitofp turn into +0.0 for zero.
-  Known.knownNot(fcNegZero);
-
-  // UIToFP is always non-negative regardless of known bits.
-  if (!IsSigned)
-    Known.signBitMustBeZero();
-
   // If the integer is non-zero, the result cannot be +0.0
   if (KnownSrc.isNonZero())
     Known.knownNot(fcPosZero);
@@ -334,14 +321,14 @@ static KnownFPClass itofp_impl(const KnownBits &KnownSrc,
   return Known;
 }
 
-KnownFPClass KnownFPClass::sitofp(const KnownBits &SrcKnown,
+KnownFPClass KnownFPClass::sitofp(const KnownBits &KnownSrc,
                                   const fltSemantics &FltSem) {
-  return itofp_impl(SrcKnown, FltSem, /*IsSigned=*/true);
+  return itofp_impl(KnownSrc, FltSem, /*IsSigned=*/true);
 }
 
-KnownFPClass KnownFPClass::uitofp(const KnownBits &SrcKnown,
+KnownFPClass KnownFPClass::uitofp(const KnownBits &KnownSrc,
                                   const fltSemantics &FltSem) {
-  return itofp_impl(SrcKnown, FltSem, /*IsSigned=*/false);
+  return itofp_impl(KnownSrc, FltSem, /*IsSigned=*/false);
 }
 
 // Handle known sign bit and nan cases for fadd.
