@@ -28,8 +28,7 @@ static const FormatToken &getLineStart(const FormatToken &Tok) {
   return *Result;
 }
 
-static unsigned indentLevelFor(WhitespaceManager::Change const &C,
-                               FormatStyle const &Style) {
+static unsigned indentLevelFor(const WhitespaceManager::Change &C) {
   if (!C.AlignedTo)
     return C.Tok->IndentLevel;
 
@@ -1615,7 +1614,7 @@ void WhitespaceManager::generateChanges() {
       }
       // FIXME: This assert should hold if we computed the column correctly.
       // assert((int)C.StartOfTokenColumn >= C.Spaces);
-      unsigned IndentLevel = indentLevelFor(C, Style);
+      unsigned IndentLevel = indentLevelFor(C);
       appendIndentText(ReplacementText, IndentLevel, std::max(0, C.Spaces),
                        std::max((int)C.StartOfTokenColumn, C.Spaces) -
                            std::max(0, C.Spaces),

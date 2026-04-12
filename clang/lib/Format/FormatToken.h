@@ -546,7 +546,7 @@ public:
   unsigned IndentLevel = 0;
 
   /// Block + continuation indent level, applied by the WhitespaceManager to
-  /// this toke.
+  /// this token.
   mutable unsigned AppliedIndentLevel = 0;
 
   /// Penalty for inserting a line break before this token.
@@ -866,7 +866,7 @@ public:
 
   template <typename T> [[nodiscard]] FormatToken *getPrevious(T A1) const {
     FormatToken *Tok = Previous;
-    while (Tok && !Tok->is(A1))
+    while (Tok && Tok->isNot(A1))
       Tok = Tok->Previous;
     return Tok;
   }
@@ -874,7 +874,7 @@ public:
   template <typename... Ts>
   [[nodiscard]] FormatToken *getPreviousOneOf(Ts... Ks) const {
     FormatToken *Tok = Previous;
-    while (Tok && !((Tok->is(Ks) || ...)))
+    while (Tok && (Tok->isNot(Ks) && ...))
       Tok = Tok->Previous;
     return Tok;
   }
