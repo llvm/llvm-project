@@ -3899,6 +3899,12 @@ bool Sema::usesPartialOrExplicitSpecialization(
   return false;
 }
 
+static DeclContext *getAsDeclContextOrEnclosing(Decl *D) {
+  if (auto *DC = dyn_cast<DeclContext>(D))
+    return DC;
+  return D->getDeclContext();
+}
+
 /// Get the instantiation pattern to use to instantiate the definition of a
 /// given ClassTemplateSpecializationDecl (either the pattern of the primary
 /// template or of a partial specialization).
@@ -3953,11 +3959,15 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
 
       if (Result == TemplateDeductionResult::Success) {
         // Handle any dependent diags that might have been created for access
-        // checks Reject Candidate if it fails access checks.
-        if (Partial->isDependentContext()) {
+        // checks. Reject Candidate if it fails access checks.
+        if (!Partial->ddiags().empty()) {
+          auto *Decl = Partial->hasDefinition()
+                           ? Partial
+                           : Partial->getInstantiatedFromMember();
+          Sema::ContextRAII SavedContext(S, getAsDeclContextOrEnclosing(Decl));
           Sema::SFINAETrap Trap(S, Info);
           S.PerformDependentDiagnostics(
-              Partial, S.getTemplateInstantiationArgs(ClassTemplateSpec), true);
+              Partial, S.getTemplateInstantiationArgs(Partial), true);
           if (Trap.hasErrorOccurred()) {
             Result = TemplateDeductionResult::SubstitutionFailure;
           }
