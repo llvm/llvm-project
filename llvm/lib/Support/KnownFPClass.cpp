@@ -789,7 +789,8 @@ KnownFPClass KnownFPClass::frexp_mant(const KnownFPClass &KnownSrc,
 }
 
 KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
-                                 const KnownBits &ExpBits,
+                                 int ConstantRangeExpMin,
+                                 int ConstantRangeExpMax,
                                  const fltSemantics &Flt, DenormalMode Mode) {
   KnownFPClass Known;
   Known.propagateNaN(KnownSrc, /*PropagateSign=*/true);
@@ -807,20 +808,19 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
 
   unsigned Precision = APFloat::semanticsPrecision(Flt);
   const int MantissaBits = Precision - 1;
-
-  if (ExpBits.getSignedMinValue().sge(static_cast<int64_t>(MantissaBits)))
+  if (ConstantRangeExpMin >= MantissaBits)
     Known.knownNot(fcSubnormal);
 
-  if (ExpBits.isConstant() && ExpBits.getConstant().isZero()) {
+  if (ConstantRangeExpMin == 0 && ConstantRangeExpMax == 0) {
     // ldexp(x, 0) -> x, so propagate everything.
     Known.propagateCanonicalizingSrc(KnownSrc, Mode);
-  } else if (ExpBits.isNegative()) {
+  } else if (ConstantRangeExpMax <= 0) {
     // If we know the power is <= 0, can't introduce inf
     if (KnownSrc.isKnownNeverPosInfinity())
       Known.knownNot(fcPosInf);
     if (KnownSrc.isKnownNeverNegInfinity())
       Known.knownNot(fcNegInf);
-  } else if (ExpBits.isNonNegative()) {
+  } else if (ConstantRangeExpMin >= 0) {
     // If we know the power is >= 0, can't introduce subnormal or zero
     if (KnownSrc.isKnownNeverPosSubnormal())
       Known.knownNot(fcPosSubnormal);
@@ -833,6 +833,13 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
   }
 
   return Known;
+}
+
+KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
+                                 const KnownBits &ExpBits,
+                                 const fltSemantics &Flt, DenormalMode Mode) {
+  return ldexp(KnownSrc, ExpBits.getSignedMinValue().getSExtValue(),
+               ExpBits.getSignedMaxValue().getSExtValue(), Flt, Mode);
 }
 
 KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,

@@ -4867,6 +4867,50 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
   }
 }
 
+/// Compute the minimum and maximum values (inclusive) for the exponent of \p V,
+/// assuming it is not nan.
+static std::pair<int, int>
+computeKnownExponentRangeFromContext(const Value *V, const SimplifyQuery &Q) {
+  if (!Q.CxtI || !Q.DC || !Q.DT)
+    return {APFloat::IEK_NaN, APFloat::IEK_Inf};
+
+  for (CondBrInst *BI : Q.DC->conditionsFor(V)) {
+    const Value *A;
+    CmpPredicate Pred;
+    const APFloat *LimitC;
+    if (!match(BI->getCondition(),
+               m_FCmp(Pred, m_FAbs(m_Value(A)), m_Finite(LimitC))))
+      continue;
+
+    if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO ||
+        Pred == FCmpInst::FCMP_TRUE || Pred == FCmpInst::FCMP_FALSE)
+      continue;
+
+    APFloat::cmpResult CmpOne =
+        LimitC->compare(APFloat::getOne(LimitC->getSemantics()));
+    if (CmpOne > APFloat::cmpEqual)
+      continue;
+
+    // If fabs(x) <= K, K <= 1.0 => exponent min exp range
+    // if fabs(x) >= K, K <= 1.0 swap the successor
+    bool IsLessEqual =
+        Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
+        Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE ||
+        Pred == FCmpInst::FCMP_OEQ || Pred == FCmpInst::FCMP_UEQ;
+
+    BasicBlockEdge Edge1(BI->getParent(),
+                         BI->getSuccessor(IsLessEqual ? 0 : 1));
+    if (Q.DT->dominates(Edge1, Q.CxtI->getParent())) {
+      int Exp = ilogb(*LimitC);
+
+      // TODO: Figure out lower bound to detect no-underflow.
+      return {APFloat::IEK_NaN, Exp};
+    }
+  }
+
+  return {APFloat::IEK_NaN, APFloat::IEK_Inf};
+}
+
 static KnownFPClass computeKnownFPClassFromContext(const Value *V,
                                                    const SimplifyQuery &Q) {
   KnownFPClass KnownFromContext;
@@ -4990,6 +5034,7 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
 static bool isAbsoluteValueULEOne(const Value *V) {
   // TODO: Handle frexp
   // TODO: Other rounding intrinsics?
+  // TODO: Try computeKnownExponentRangeFromContext
 
   // fabs(x - floor(x)) <= 1
   const Value *SubFloorX;
@@ -5507,11 +5552,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // Can refine inf/zero handling based on the exponent operand.
       const FPClassTest ExpInfoMask = fcZero | fcSubnormal | fcInf;
 
-      KnownBits ExpBits;
-      if ((KnownSrc.KnownFPClasses & ExpInfoMask) != fcNone) {
-        const Value *ExpArg = II->getArgOperand(1);
-        ExpBits = computeKnownBits(ExpArg, DemandedElts, Q, Depth + 1);
-      }
+      const Value *ExpArg = II->getArgOperand(1);
+      ConstantRange ExpKnownRange =
+          ((KnownSrc.KnownFPClasses & ExpInfoMask) != fcNone)
+              ? computeConstantRange(ExpArg, /*ForSigned=*/true, Q, Depth + 1)
+              : ConstantRange::getFull(ExpArg->getType()->getIntegerBitWidth());
 
       const fltSemantics &Flt =
           II->getType()->getScalarType()->getFltSemantics();
@@ -5520,7 +5565,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       DenormalMode Mode =
           F ? F->getDenormalMode(Flt) : DenormalMode::getDynamic();
 
-      Known = KnownFPClass::ldexp(KnownSrc, ExpBits, Flt, Mode);
+      Known = KnownFPClass::ldexp(
+          KnownSrc, ExpKnownRange.getSignedMin().getSExtValue(),
+          ExpKnownRange.getSignedMax().getSExtValue(), Flt, Mode);
       break;
     }
     case Intrinsic::arithmetic_fence: {
@@ -10473,9 +10520,17 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
           MinExp -= (APFloat::semanticsPrecision(FltSem) - 1);
 
         int MaxExp = APFloat::semanticsMaxExponent(FltSem) + 1;
+
+        auto [AdjustedMin, AdjustedMax] =
+            computeKnownExponentRangeFromContext(FrexpSrc, SQ);
+
+        MinExp = std::max(AdjustedMin, MinExp);
+        MaxExp = std::min(AdjustedMax, MaxExp);
+
         CR = ConstantRange::getNonEmpty(
-            APInt(BitWidth, MinExp, /*isSigned=*/true),
-            APInt(BitWidth, MaxExp + 1, /*isSigned=*/true));
+            APInt(BitWidth, static_cast<int64_t>(MinExp), /*isSigned=*/true),
+            APInt(BitWidth, static_cast<int64_t>(MaxExp) + 1,
+                  /*isSigned=*/true));
       }
     }
   }
