@@ -11,7 +11,7 @@
 // <numeric>
 
 // template<class T>
-// constexpr T add_sat(T x, T y) noexcept;                     // freestanding
+// constexpr T saturating_sub(T x, T y) noexcept;                     // freestanding
 
 #include <concepts>
 #include <numeric>
@@ -20,7 +20,7 @@
 
 template <typename T, typename U>
 concept CanDo = requires(T x, U y) {
-  { std::add_sat(x, y) } -> std::same_as<T>;
+  { std::saturating_sub(x, y) } -> std::same_as<T>;
 };
 
 template <typename T, typename U>
@@ -65,7 +65,7 @@ constexpr void test() {
   // Contraint failure
   test_constraint_fail<bool>();
   test_constraint_fail<char>();
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#ifndef TEST_HAS_NO_INT128
   test_constraint_fail<wchar_t>();
 #endif
   test_constraint_fail<char8_t>();

@@ -41,6 +41,7 @@ Implemented Papers
 - P2440R1: ``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right`` (`Github <https://llvm.org/PR105184>`__)
 - P3936R1: Safer ``atomic_ref::address`` (`Github <https://llvm.org/PR189594>`__)
 - P3953R3: Rename ``std::runtime_format`` (`Github <https://llvm.org/PR189624>`__)
+- P4052R0: Renaming saturation arithmetic functions (`Github <https://llvm.org/PR189589>`__)
 
 Improvements and New Features
 -----------------------------

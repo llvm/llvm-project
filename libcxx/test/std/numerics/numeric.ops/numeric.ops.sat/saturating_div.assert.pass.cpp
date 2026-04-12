@@ -15,7 +15,7 @@
 // <numeric>
 
 // template<class T>
-// constexpr T div_sat(T x, T y) noexcept;                     // freestanding
+// constexpr T saturating_div(T x, T y) noexcept;                     // freestanding
 
 #include <cassert>
 #include <numeric>
@@ -25,7 +25,7 @@
 
 template <typename IntegerT>
 void test_runtime_assertion() {
-  TEST_LIBCPP_ASSERT_FAILURE((void)std::div_sat(IntegerT{27}, IntegerT{0}), "Division by 0 is undefined");
+  TEST_LIBCPP_ASSERT_FAILURE((void)std::saturating_div(IntegerT{27}, IntegerT{0}), "Division by 0 is undefined");
 }
 
 bool test() {
