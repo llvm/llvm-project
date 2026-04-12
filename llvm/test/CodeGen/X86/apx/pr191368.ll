@@ -183,6 +183,94 @@ b6:                                               ; preds = %b6, %b4
   br i1 %f2, label %b4, label %b6
 }
 
+define i32 @baz(ptr %a, ptr %b, ptr %c, ptr %d, i64 %e, i32 %f, i32 %g, i1 %h) nounwind {
+; CHECK-LABEL: baz:
+; CHECK:       # %bb.0: # %.split
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rsi
+; CHECK-NEXT:    pushq %rdi
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $72, %rsp
+; CHECK-NEXT:    movq %r9, %rdi
+; CHECK-NEXT:    movq %r8, %rbx
+; CHECK-NEXT:    movq %rdx, %r14
+; CHECK-NEXT:    movq %rcx, %r15
+; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r12d
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r13
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB2_1: # %.preheader14
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB2_3 Depth 2
+; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    jne .LBB2_6
+; CHECK-NEXT:  # %bb.2: # %j.preheader
+; CHECK-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB2_3: # %j
+; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    movl %eax, 0
+; CHECK-NEXT:    movq %r13, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r15, %rcx
+; CHECK-NEXT:    movq %r14, %rdx
+; CHECK-NEXT:    movq %rbx, %r8
+; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    callq *%rsi
+; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    movl %r12d, %eax
+; CHECK-NEXT:    je .LBB2_3
+; CHECK-NEXT:  # %bb.4: # %b2
+; CHECK-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-NEXT:    orl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    je .LBB2_1
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    movl $1, %esi
+; CHECK-NEXT:  .LBB2_6: # %.loopexit
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    addq $72, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    popq %rdi
+; CHECK-NEXT:    popq %rsi
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    retq
+.split:
+  br label %.preheader14
+
+.preheader14:                                     ; preds = %b2, %.split
+  %i = phi i32 [ %b3, %b2 ], [ 0, %.split ]
+  br i1 %h, label %.loopexit, label %j
+
+j:                                                ; preds = %j, %.preheader14
+  %b0 = phi i32 [ %g, %j ], [ %i, %.preheader14 ]
+  store i32 %b0, ptr null, align 4
+  %b1 = call i32 null(ptr %a, ptr %b, ptr %c, ptr null, ptr null, ptr %d, i64 %e)
+  br i1 %h, label %b2, label %j
+
+b2:                                               ; preds = %j
+  %b3 = or i32 %i, %f
+  br i1 %h, label %.loopexit, label %.preheader14
+
+.loopexit:                                        ; preds = %b2, %.preheader14
+  %b4 = phi i32 [ 0, %.preheader14 ], [ 1, %b2 ]
+  ret i32 %b4
+}
+
 define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK-LABEL: pr190962:
 ; CHECK:       # %bb.0:
@@ -202,7 +290,7 @@ define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    imulq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    je .LBB2_3
+; CHECK-NEXT:    je .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %l1
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r13
 ; CHECK-NEXT:    movq 0, %r15
@@ -210,15 +298,15 @@ define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK-NEXT:    movq 0, %r12
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    orq %r13, %r15
-; CHECK-NEXT:    jne .LBB2_2
+; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  # %bb.4: # %l2
 ; CHECK-NEXT:    movq %rax, %r14
 ; CHECK-NEXT:    movq %rbx, %rcx
 ; CHECK-NEXT:    callq f4
 ; CHECK-NEXT:    movl $1, %ebp
 ; CHECK-NEXT:    orq %r12, %r14
-; CHECK-NEXT:    je .LBB2_5
-; CHECK-NEXT:  .LBB2_2: # %common.ret1.sink.split
+; CHECK-NEXT:    je .LBB3_5
+; CHECK-NEXT:  .LBB3_2: # %common.ret1.sink.split
 ; CHECK-NEXT:    callq f3
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
@@ -226,7 +314,7 @@ define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK-NEXT:    movl %ebp, %r9d
 ; CHECK-NEXT:    callq f1
 ; CHECK-NEXT:    callq f3
-; CHECK-NEXT:  .LBB2_3: # %common.ret1
+; CHECK-NEXT:  .LBB3_3: # %common.ret1
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    popq %rbx
@@ -238,10 +326,10 @@ define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB2_5: # %l3
+; CHECK-NEXT:  .LBB3_5: # %l3
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    je .LBB2_3
+; CHECK-NEXT:    je .LBB3_3
 ; CHECK-NEXT:  # %bb.6: # %l4
 ; CHECK-NEXT:    movl $0, (%rsi)
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)

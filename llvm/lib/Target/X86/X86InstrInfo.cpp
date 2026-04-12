@@ -7558,7 +7558,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
     // Bail out if dst has been assigned a physical register. Otherwise, we
     // cannot update LiveRegMatrix properly.
-    if (VRM && VRM->getPhys(MI.getOperand(0).getReg()))
+    if (VRM && VRM->getPhys(MI.getOperand(0).getReg()) &&
+        MI.getOperand(0).getReg() != MI.getOperand(1).getReg())
       return nullptr;
   }
 
@@ -7615,7 +7616,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     if (NoNDDM && !IsTwoAddr) {
       Register SrcReg = MI.getOperand(1).getReg();
       unsigned SrcSub = MI.getOperand(1).getSubReg();
-      if (MI.killsRegister(SrcReg, /*TRI=*/nullptr))
+      if (MI.killsRegister(SrcReg, /*TRI=*/nullptr) ||
+          MI.getOperand(0).getReg() == SrcReg)
         return NewMI;
 
       const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
