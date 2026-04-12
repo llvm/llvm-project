@@ -31,9 +31,36 @@ struct BadAccessor {
   reference access(data_handle_type, std::size_t) const;
 };
 
+struct RefAccessor {
+  using offset_policy    = RefAccessor;
+  using element_type     = int&;
+  using reference        = int&;
+  using data_handle_type = int*;
+
+  reference access(data_handle_type p, std::size_t i) const { return p[i]; }
+};
+
+struct FuncAccessor {
+  using offset_policy    = FuncAccessor;
+  using element_type     = int();
+  using reference        = int (&)();
+  using data_handle_type = int (*)();
+  reference access(data_handle_type, std::size_t) const;
+};
+
 void incomplete_type() {
   // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter must be a complete object type}}
   [[maybe_unused]] std::mdspan<void, std::dextents<std::size_t, 2>, std::layout_right, BadAccessor> m;
+}
+
+void reference_type() {
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter must be a complete object type}}
+  [[maybe_unused]] std::mdspan<int&, std::dextents<std::size_t, 2>, std::layout_right, RefAccessor> m;
+}
+
+void function_type() {
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter must be a complete object type}}
+  [[maybe_unused]] std::mdspan<int(), std::dextents<std::size_t, 2>, std::layout_right, FuncAccessor> m;
 }
 
 void not_abstract_class() {
