@@ -69,3 +69,13 @@ define <64 x i8> @test_or_no_fold_multi_use(<64 x i8> %src, <64 x i8> %matrix, p
   %or = or disjoint <64 x i8> %gfni, splat(i8 8)
   ret <64 x i8> %or
 }
+
+define <64 x i8> @test_or_disjoint_overlap_with_imm(<64 x i8> %src, <64 x i8> %matrix) nounwind {
+; AVX512-LABEL: test_or_disjoint_overlap_with_imm:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %matrix, i8 8)
+  %or = or disjoint <64 x i8> %gfni, splat(i8 8)
+  ret <64 x i8> %or
+}
