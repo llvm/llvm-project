@@ -543,3 +543,11 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.hdr.wchar_macros
 )
+
+add_entrypoint_object(
+  wcsxfrm
+  SRCS
+    wcsxfrm.cpp
+  HDRS
+    wcsxfrm.h
+)
