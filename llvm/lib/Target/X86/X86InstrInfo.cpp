@@ -7485,8 +7485,8 @@ static void printFailMsgforFold(const MachineInstr &MI, unsigned Idx) {
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
-    unsigned Size, Align Alignment, bool AllowCommute,
-    MachineInstr *&CopyMI, VirtRegMap *VRM) const {
+    unsigned Size, Align Alignment, bool AllowCommute, MachineInstr *&CopyMI,
+    VirtRegMap *VRM) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
   unsigned Opc = MI.getOpcode();
 
