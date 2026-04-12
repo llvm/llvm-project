@@ -266,7 +266,7 @@ bool isConstexprUnknown(const Block *B) {
 }
 
 bool isConstexprUnknown(const Pointer &P) {
-  if (!P.isBlockPointer())
+  if (!P.isBlockPointer() || P.isZero())
     return false;
   return isConstexprUnknown(P.block());
 }
