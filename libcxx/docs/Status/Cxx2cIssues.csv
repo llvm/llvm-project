@@ -26,7 +26,7 @@
 "`LWG3892 <https://wg21.link/LWG3892>`__","Incorrect formatting of nested ranges and tuples","2023-11 (Kona)","|Complete|","17","`#105296 <https://github.com/llvm/llvm-project/issues/105296>`__",""
 "`LWG3897 <https://wg21.link/LWG3897>`__","``inout_ptr`` will not update raw pointer to 0","2023-11 (Kona)","|Complete|","19","`#105297 <https://github.com/llvm/llvm-project/issues/105297>`__",""
 "`LWG3946 <https://wg21.link/LWG3946>`__","The definition of ``const_iterator_t`` should be reworked","2023-11 (Kona)","","","`#105298 <https://github.com/llvm/llvm-project/issues/105298>`__",""
-"`LWG3947 <https://wg21.link/LWG3947>`__","Unexpected constraints on ``adjacent_transform_view::base()``","2023-11 (Kona)","","","`#105299 <https://github.com/llvm/llvm-project/issues/105299>`__",""
+"`LWG3947 <https://wg21.link/LWG3947>`__","Unexpected constraints on ``adjacent_transform_view::base()``","2023-11 (Kona)","|Complete|","22","`#105299 <https://github.com/llvm/llvm-project/issues/105299>`__",""
 "`LWG3948 <https://wg21.link/LWG3948>`__","``possibly-const-range and as-const-pointer`` should be ``noexcept``","2023-11 (Kona)","","","`#105300 <https://github.com/llvm/llvm-project/issues/105300>`__",""
 "`LWG3949 <https://wg21.link/LWG3949>`__","``std::atomic<bool>``'s trivial destructor dropped in C++17 spec wording","2023-11 (Kona)","","","`#105301 <https://github.com/llvm/llvm-project/issues/105301>`__",""
 "`LWG3951 <https://wg21.link/LWG3951>`__","[expected.object.swap]: Using ``value()`` instead of ``has_value()``","2023-11 (Kona)","|Complete|","16","`#105302 <https://github.com/llvm/llvm-project/issues/105302>`__",""
