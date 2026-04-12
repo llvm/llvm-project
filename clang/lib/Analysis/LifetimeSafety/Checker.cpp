@@ -67,7 +67,7 @@ private:
   FactManager &FactMgr;
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
-  const Decl *D;
+  const Decl *FD;
 
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
@@ -90,7 +90,7 @@ public:
                   LifetimeSafetySemaHelper *SemaHelper)
       : LoanPropagation(LoanPropagation), MovedLoans(MovedLoans),
         LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
-        AST(ADC.getASTContext()), D(ADC.getDecl()) {
+        AST(ADC.getASTContext()), FD(ADC.getDecl()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -130,9 +130,9 @@ public:
       if (!PVD->hasAttr<LifetimeBoundAttr>()) {
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
-        else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
-          if (isa<CXXConstructorDecl>(D))
-            AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+        else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF);
+                 FieldEsc && isa<CXXConstructorDecl>(FD))
+          AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
       }
       // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
       // field!
