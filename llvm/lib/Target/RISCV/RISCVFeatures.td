@@ -693,9 +693,6 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
                                  [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
-def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
-                      AssemblerPredicate<(all_of FeatureStdExtZvfbfa),
-                          "'Zvfbfa' (Additional BF16 vector compute support)">;
 
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;

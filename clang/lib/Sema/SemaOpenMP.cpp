@@ -20498,6 +20498,10 @@ static bool actOnOMPReductionKindClause(
         (DeclareReductionRef.isUnset() ||
          isa<UnresolvedLookupExpr>(DeclareReductionRef.get()))) {
       RD.push(RefExpr, DeclareReductionRef.get());
+      // Handle non-dependent inscan reduction variables in dependent contexts.
+      if (RD.RedModifier == OMPC_REDUCTION_inscan)
+        Stack->addDSA(D, RefExpr->IgnoreParens(), OMPC_reduction, nullptr,
+                      RD.RedModifier, ASE || OASE);
       continue;
     }
     if (BOK == BO_Comma && DeclareReductionRef.isUnset()) {

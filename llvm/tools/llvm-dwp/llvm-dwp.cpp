@@ -292,9 +292,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(MC, /*PIC=*/false));
   MC.setObjectFileInfo(MOFI.get());
-
-  MCTargetOptions Options;
-  auto MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, Options);
+  auto MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
   if (!MAB)
     return error("no asm backend for target " + TripleName, Context);
 

@@ -3141,6 +3141,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
+        ":SideEffectInterfaces",
         ":SparseTensorDialect",
         ":SparseTensorEnums",
         ":SparseTensorPassIncGen",

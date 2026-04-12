@@ -504,6 +504,11 @@ Changes in existing checks
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
 
+- Improved :doc:`readability-redundant-member-init
+  <clang-tidy/checks/readability/redundant-member-init>` check by adding an
+  `IgnoreMacros` option to suppress warnings when the initializer involves
+  macros that may expand differently in other configurations.
+
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
   false positive for nested ``#if`` directives using different builtin
