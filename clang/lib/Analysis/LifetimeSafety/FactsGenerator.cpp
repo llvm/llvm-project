@@ -410,12 +410,12 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
       markUseAsWrite(DRE_LHS);
   }
   if (!RHSList) {
-    // RHS has no tracked origins (e.g., assigning a non-lambda functor to a
-    // std::function). Emit a kill-only flow to clear old loans.
-    if (OriginList *LHSInner = LHSList->peelOuterOrigin())
-      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-          LHSInner->getOuterOriginID(), /*OIDSrc=*/std::nullopt,
-          /*KillDest=*/true));
+    // RHS has no tracked origins (e.g., assigning a callable without origins
+    // to std::function). Clear loans of the destination.
+    for (OriginList *LHSInner = LHSList->peelOuterOrigin(); LHSInner;
+         LHSInner = LHSInner->peelOuterOrigin())
+      CurrentBlockFacts.push_back(
+          FactMgr.createFact<KillOriginFact>(LHSInner->getOuterOriginID()));
     return;
   }
   // Kill the old loans of the destination origin and flow the new loans

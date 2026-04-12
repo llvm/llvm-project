@@ -43,12 +43,10 @@ void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << "\tDest: ";
   OM.dump(getDestOriginID(), OS);
   OS << "\n";
-  if (getSrcOriginID()) {
-    OS << "\tSrc:  ";
-    OM.dump(*getSrcOriginID(), OS);
-    OS << (getKillDest() ? "" : ", Merge");
-    OS << "\n";
-  }
+  OS << "\tSrc:  ";
+  OM.dump(getSrcOriginID(), OS);
+  OS << (getKillDest() ? "" : ", Merge");
+  OS << "\n";
 }
 
 void MovedOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
@@ -103,6 +101,13 @@ void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
 void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                          const OriginManager &) const {
   OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
+}
+
+void KillOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                          const OriginManager &OM) const {
+  OS << "KillOrigin (";
+  OM.dump(getKilledOrigin(), OS);
+  OS << ")\n";
 }
 
 llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {

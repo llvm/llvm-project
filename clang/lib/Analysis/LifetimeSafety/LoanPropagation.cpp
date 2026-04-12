@@ -55,14 +55,16 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
       case Fact::Kind::OriginFlow: {
         const auto *OF = F->getAs<OriginFlowFact>();
         CheckOrigin(OF->getDestOriginID());
-        if (OF->getSrcOriginID())
-          CheckOrigin(*OF->getSrcOriginID());
+        CheckOrigin(OF->getSrcOriginID());
         break;
       }
       case Fact::Kind::Use:
         for (const OriginList *Cur = F->getAs<UseFact>()->getUsedOrigins(); Cur;
              Cur = Cur->peelOuterOrigin())
           CheckOrigin(Cur->getOuterOriginID());
+        break;
+      case Fact::Kind::KillOrigin:
+        CheckOrigin(F->getAs<KillOriginFact>()->getKilledOrigin());
         break;
       case Fact::Kind::MovedOrigin:
       case Fact::Kind::OriginEscapes:
@@ -169,18 +171,21 @@ public:
 
   /// A flow from source to destination. If `KillDest` is true, this replaces
   /// the destination's loans with the source's. Otherwise, the source's loans
-  /// are merged into the destination's. If the source is nullopt, this is a
-  /// kill-only flow that clears the destination without adding new loans.
+  /// are merged into the destination's.
   Lattice transfer(Lattice In, const OriginFlowFact &F) {
     OriginID DestOID = F.getDestOriginID();
+    OriginID SrcOID = F.getSrcOriginID();
 
     LoanSet DestLoans =
         F.getKillDest() ? LoanSetFactory.getEmptySet() : getLoans(In, DestOID);
-    LoanSet SrcLoans = F.getSrcOriginID() ? getLoans(In, *F.getSrcOriginID())
-                                          : LoanSetFactory.getEmptySet();
+    LoanSet SrcLoans = getLoans(In, SrcOID);
     LoanSet MergedLoans = utils::join(DestLoans, SrcLoans, LoanSetFactory);
 
     return setLoans(In, DestOID, MergedLoans);
+  }
+
+  Lattice transfer(Lattice In, const KillOriginFact &F) {
+    return setLoans(In, F.getKilledOrigin(), LoanSetFactory.getEmptySet());
   }
 
   Lattice transfer(Lattice In, const ExpireFact &F) {
