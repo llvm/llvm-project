@@ -6165,9 +6165,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       bool NeverNegZero = Known.isKnownNeverLogicalNegZero(Mode);
       if (NeverPosZero != NeverNegZero) {
         if (NeverPosZero)
-          Known.KnownFPClasses |= fcPosZero | fcPosSubnormal;
+          Known.KnownFPClasses |= fcPosZero;
         if (NeverNegZero)
-          Known.KnownFPClasses |= fcNegZero | fcNegSubnormal;
+          Known.KnownFPClasses |= fcNegZero;
         Known.SignBit = std::nullopt;
       }
     }
