@@ -11335,7 +11335,7 @@ multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
 }
 
 //===---------------------------------------------------------------------===//
-// Integer Absolute - VPABSQ
+// Integer Absolute - VPABSB, VPABW, VPABD and VPABQ
 //===---------------------------------------------------------------------===//
 
 defm VPABS : avx512_unary_rm_vl_all<0x1C, 0x1D, 0x1E, 0x1F, "vpabs", abs,
