@@ -1826,3 +1826,19 @@ define i1 @test_fabs_used_is_fpclass_pzero(float %x) {
   %is_fpclass = call i1 @llvm.is.fpclass.f32(float %sel, i32 64)
   ret i1 %is_fpclass
 }
+
+define float @fabs_fneg_nsz_assume_neg(float %a) {
+; CHECK-LABEL: @fabs_fneg_nsz_assume_neg(
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %i32 = bitcast float %a to i32
+  %cmp = icmp slt i32 %i32, 0
+  call void @llvm.assume(i1 %cmp)
+  %b = fneg nsz float %a
+  %c = call float @llvm.fabs.f32(float %b)
+  ret float %c
+}
