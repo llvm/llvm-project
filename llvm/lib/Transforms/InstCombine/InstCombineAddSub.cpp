@@ -3015,6 +3015,13 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C)))) {
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
       Instruction *FDiv = BinaryOperator::CreateFDivFMF(X, NegC, &I);
+
+      // Intersect 'nsz' and 'ninf' because those special value exceptions may
+      // not apply to the fdiv. Everything else propagates from the fneg.
+      FastMathFlags FMF = I.getFastMathFlags();
+      FastMathFlags OpFMF = FNegOp->getFastMathFlags();
+      FDiv->setHasNoSignedZeros(FMF.noSignedZeros() && OpFMF.noSignedZeros());
+      FDiv->setHasNoInfs(FMF.noInfs() && OpFMF.noInfs());
       FDiv->copyMetadata(*FNegOp);
       return FDiv;
     }
