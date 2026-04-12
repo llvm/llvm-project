@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+gfni | FileCheck %s --check-prefixes=GFNIAVX,GFNIAVX1OR2,GFNIAVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+gfni | FileCheck %s --check-prefixes=GFNIAVX,GFNIAVX512,GFNIAVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+gfni | FileCheck %s --check-prefixes=GFNIAVX,GFNIAVX512,GFNIAVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+gfni,+avx512bitalg | FileCheck %s --check-prefixes=GFNIAVX,GFNIAVX512,GFNIAVX512BW
 
 define <16 x i8> @testv16i8(<16 x i8> %in) nounwind {
 ; GFNISSE-LABEL: testv16i8:
