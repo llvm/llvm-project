@@ -2551,6 +2551,16 @@ public:
   }
 };
 
+struct T {
+public:
+  std::string_view v;
+  void bar();
+  void foo() {
+    v = std::string("tmp"); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+    bar();                  // expected-note {{later used here}}
+  }
+};
+
 // FIXME: False-positive: the analysis tracks a, but not that it belongs to s1.
 void foo() {
   S s;
