@@ -862,7 +862,6 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
   return Known;
 }
 
-// TODO: Detect no-infinity cases
 KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
                                 const KnownBits &ExponentKnownBits) {
   KnownFPClass Known;
@@ -878,6 +877,33 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
 
     Known.knownNot(~(fcPosNormal | fcNan));
     return Known;
+  }
+
+  // powi(x, exp) --> inf
+  // when:
+  //   * powi(inf, exp), exp > 0
+  //   * powi(+/-0, exp), exp < 0
+  //   * powi(finite, exp) --> overflow, |exp| > 1 or powi(subnormal, -1)
+  {
+    APInt MinExp = ExponentKnownBits.getSignedMinValue();
+    APInt MaxExp = ExponentKnownBits.getSignedMaxValue();
+
+    // powi(inf, exp), exp > 0
+    bool MayInfSrc =
+        !KnownSrc.isKnownNever(fcInf) && MaxExp.isStrictlyPositive();
+
+    // powi(+/-0, exp), exp < 0
+    bool MayDivByZero = !KnownSrc.isKnownNever(fcZero) && MinExp.isNegative();
+
+    // powi(finite, exp) --> overflow, |exp| > 1 or powi(subnormal, -1)
+    bool MayFinite = !KnownSrc.isKnownNever(fcNormal | fcSubnormal);
+    bool MayAbsExpGT1 = MinExp.slt(-1) || MaxExp.sgt(1);
+    bool MayBeNegOne = ExponentKnownBits.Zero.isZero();
+    bool MaySubnormInv = !KnownSrc.isKnownNever(fcSubnormal) && MayBeNegOne;
+    bool MayOverflow = (MayFinite && MayAbsExpGT1) || MaySubnormInv;
+
+    if (!MayInfSrc && !MayDivByZero && !MayOverflow)
+      Known.knownNot(fcInf);
   }
 
   if (ExponentKnownBits.isEven()) {
