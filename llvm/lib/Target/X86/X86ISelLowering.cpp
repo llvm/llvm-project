@@ -59411,19 +59411,15 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
       SDValue Y = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
 
       // now check for NUW and NSW
-      SDNodeFlags flags;
+      SDNodeFlags Flags;
       // No unsigned wrap, both operands has their upper 33bits 0, making their
       // sum lower then max unsigned int32.
-      flags.setNoUnsignedWrap(true);
-      // Now check id node had NSW set true or false.
-      bool isNSW = N->getFlags().hasNoSignedWrap();
+      Flags.setNoUnsignedWrap(true);
+      Flags.setNoSignedWrap(DAG.willNotOverflowAdd(true, X, Y));
 
-      // Verify if new nodes has NSW.
-      isNSW = isNSW & DAG.willNotOverflowAdd(true, X, Y);
-      flags.setNoSignedWrap(isNSW);
-      auto addl = DAG.getNode(ISD::ADD, DL, MVT::i32, X, Y, flags);
+      SDValue Add32 = DAG.getNode(ISD::ADD, DL, MVT::i32, X, Y, Flags);
 
-      return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, addl);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Add32);
     }
   }
 
