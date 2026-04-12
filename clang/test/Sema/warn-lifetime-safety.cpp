@@ -2531,3 +2531,35 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 }
 
 } // namespace conditional_operator_control_flow
+
+namespace method_call_uses_field_origins {
+// https://github.com/llvm/llvm-project/issues/182945
+
+int val;
+
+struct S {
+public:
+  int* p_;
+  void bar();
+  void foo() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar();             // expected-note {{later used here}}
+    this->p_ = &val;
+  }
+};
+
+// FIXME: False-positive: the analysis tracks a, but not that it belongs to s1.
+void foo() {
+  S s;
+  {
+    int num;
+    s.p_ = &num;
+  }
+  s.bar();
+  s.p_ = &val;
+}
+
+} // namespace method_call_uses_field_origins

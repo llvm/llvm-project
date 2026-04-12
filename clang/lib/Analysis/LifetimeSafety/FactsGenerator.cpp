@@ -723,6 +723,19 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
         ThisList->getOuterOriginID(), Call));
 }
 
+void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
+                                                   const FunctionDecl *FD) {
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->isInstance())
+    return;
+
+  for (const auto *Field : MD->getParent()->fields()) {
+    OriginList *FieldList = getOriginsList(*Field);
+    if (FieldList)
+      CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(Call, FieldList));
+  }
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -737,6 +750,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
+  handleImplicitObjectFieldUses(Call, FD);
   if (!CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
