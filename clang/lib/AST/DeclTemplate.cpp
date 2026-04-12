@@ -1804,34 +1804,18 @@ ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
 }
 
 SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
+  // Pick the rightmost location among the name, template args, and type.
+  // For postfix types (arrays, function pointers) and function templates,
+  // the TypeLoc extends past the name. Cf. DeclaratorDecl::getSourceRange().
+  SourceLocation End = NameLoc;
+  if (TemplateArgsAsWritten && TemplateArgsAsWritten->RAngleLoc > End)
+    End = TemplateArgsAsWritten->RAngleLoc;
   if (TypeAsWritten) {
-    // template void S<int>::f<double>(double);
-    //                                       ^
-    if (auto FTL = TypeAsWritten->getTypeLoc().getAs<FunctionTypeLoc>())
-      return FTL.getRParenLoc();
-    // template int S<int>::var<double>;
-    //                                ^
-    if (TemplateArgsAsWritten)
-      return TemplateArgsAsWritten->RAngleLoc;
-    // For postfix declarators (arrays, function pointers, etc.), the TypeLoc
-    // extends past the name. Pick whichever location is later.
-    // Cf. DeclaratorDecl::getSourceRange().
-    // template int S<int>::arr[1];       -> ']'
-    // template void (*S<int>::fptr)(int) -> ')'
-    // template long S<int>::sval;        -> 'sval'
     SourceLocation TypeEnd = TypeAsWritten->getTypeLoc().getEndLoc();
-    if (TypeEnd.isValid() &&
-        TypeEnd.getRawEncoding() > NameLoc.getRawEncoding())
-      return TypeEnd;
-    return NameLoc;
+    if (TypeEnd.isValid() && TypeEnd > End)
+      End = TypeEnd;
   }
-  // template struct S<int>::Inner<double>;
-  //                               ^
-  if (TemplateArgsAsWritten)
-    return TemplateArgsAsWritten->RAngleLoc;
-  // template struct S<int>::Inner;
-  //                         ^
-  return NameLoc;
+  return End;
 }
 
 SourceRange ExplicitInstantiationDecl::getSourceRange() const {
