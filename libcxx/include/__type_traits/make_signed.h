@@ -74,6 +74,11 @@ struct _LIBCPP_NO_SPECIALIZATIONS make_signed {
   using type _LIBCPP_NODEBUG = __make_signed_t<_Tp>;
 };
 
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __make_signed_t<_Tp> __to_signed_like(_Tp __x) _NOEXCEPT {
+  return static_cast<__make_signed_t<_Tp> >(__x);
+}
+
 #if _LIBCPP_STD_VER >= 14
 template <class _Tp>
 using make_signed_t = __make_signed_t<_Tp>;

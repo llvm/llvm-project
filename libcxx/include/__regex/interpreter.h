@@ -106,7 +106,8 @@ enum class __state : uint8_t {
 
   // Jumps
   __relative_jump,
-  __conditional_jump,
+  __conditional_jump_forward,
+  __conditional_jump_backward,
 
   // Branches
   __branch_n_to_m_matcher,
@@ -515,11 +516,14 @@ pair<bool, size_t> __exec_lookahead(
         __current_pos += __read_uleb(__code, __current_pos);
       } break;
 
-      case __conditional_jump: {
+      case __conditional_jump_forward:
+      case __conditional_jump_backward: {
         _MatchingSetT __set;
         __builtin_memcpy(&__set, __code + __current_pos, sizeof(_MatchingSetT));
         __current_pos += sizeof(_MatchingSetT);
-        auto __jump_offset = __read_uleb(__code, __current_pos);
+        auto __jump_offset = std::__to_signed_like(__read_uleb(__code, __current_pos));
+        if (__st == __conditional_jump_backward)
+          __jump_offset *= -1;
         if (__current == __last)
           return {false, __counter};
         if (!(__set & (_MatchingSetT(1) << *__current)))
@@ -781,10 +785,11 @@ class __interpreter {
   // This function returns the set of characters that _might_ match - there is no guarantee that any characters will
   // actually be a match. This should never return an empty set, as that needs special handling.
   inline _MatchingSetWithEndT __get_possibly_matching_characters(const __interpreter_info<char>* __m, size_t __pos) {
-    switch (__m[__pos++].__state_) {
+    auto __state = __m[__pos++].__state_;
+    switch (__state) {
       using enum __state;
     case __match_any_except_newline:
-      return ~(_MatchingSetT(1) << '\n');
+      return ~(_MatchingSetT(1) << '\n' | _MatchingSetWithEndT(1) << 256);
 
     case __match_char:
       return _MatchingSetT(1) << __m[__pos].__char_;
@@ -831,11 +836,14 @@ class __interpreter {
       return ~_MatchingSetT();
     }
 
-    case __conditional_jump: {
+    case __conditional_jump_forward:
+    case __conditional_jump_backward: {
       _MatchingSetT __set;
       __builtin_memcpy(&__set, __m + __pos, sizeof(_MatchingSetT));
       __pos += sizeof(_MatchingSetT);
-      auto __jump_offset = __read_uleb(__m, __pos);
+      auto __jump_offset = std::__to_signed_like(__read_uleb(__m, __pos));
+      if (__state == __conditional_jump_backward)
+        __jump_offset *= -1;
       return __set | __get_possibly_matching_characters(__m, __pos + __jump_offset);
     }
 
@@ -860,6 +868,183 @@ class __interpreter {
 public:
   __interpreter(const _Traits& __traits, bool __find_longest) : __traits_(__traits), __find_longest_(__find_longest) {
     __machine_.reserve(16);
+  }
+
+  void __fix_jumps(size_t __updated_instruction, ssize_t __offset) {
+    vector<pair<size_t, ssize_t>> __todo;
+    __todo.emplace_back(__updated_instruction, __offset);
+    auto __code = __machine_.data();
+
+    while (!__todo.empty()) {
+      size_t __pos = 0;
+      switch (__code[__pos++].__state_) {
+        using enum __state;
+      case __start_anchor:
+      case __end_anchor:
+      case __multiline_start_anchor:
+      case __multiline_end_anchor:
+      case __match_any:
+      case __match_any_except_newline:
+      case __match_word_boundary:
+      case __match_no_word_boundary:
+        break;
+
+      // Consuming matches
+      case __match_char:
+      case __match_icase_char:
+        ++__pos;
+        break;
+
+      case __match_simple_character_list:
+        __pos += sizeof(_MatchingSetT);
+        break;
+
+      case __match_backref:
+      case __match_icase_backref:
+      case __marked_subexpression_begin:
+      case __marked_subexpression_end:
+        __read_uleb(__code, __pos);
+        break;
+
+      case __match_character_list:
+      case __match_no_character_list: {
+        static constexpr auto __buffer_size =
+            std::max(sizeof(typename _Traits::char_class_type) / sizeof(_CharT), size_t(1));
+        __pos += 2 * __buffer_size;
+        for (size_t __i = 0; __i != 6; ++__i)
+          __read_uleb(__code, __pos);
+      } break;
+
+      // Lookahead
+      case __positive_lookahead:
+      case __negative_lookahead:
+        std::__libcpp_unreachable();
+
+      // Jumps
+      case __relative_jump: {
+        auto __instr_start = __pos;
+        auto __jump_offset = __read_uleb(__code, __pos);
+        if (__pos < __todo.back().first && __pos + __jump_offset > __todo.back().first)
+          __jump_offset += __todo.back().second;
+        auto __num_size = __pos - __instr_start;
+        vector<__interpreter_info<_CharT>> __buffer;
+        __write_uleb(__buffer, __jump_offset);
+        if (__buffer.size() == __num_size) {
+          std::copy(__buffer.begin(), __buffer.end(), __code + __instr_start);
+        } else {
+
+        }
+      }
+
+      case __conditional_jump_forward:
+      case __conditional_jump_backward:
+
+      // Branches
+      case __branch_n_to_m_matcher:
+      case __branch_nongreedy_n_to_m_matcher:
+      case __branch_alternative:
+
+      // End state
+      case __end_state:
+        return;
+      }
+    }
+  }
+
+  void __optimize() {
+    auto __code  = __machine_.data();
+    size_t __pos = 0;
+    while (__pos != __machine_.size()) {
+      switch (__code[__pos++].__state_) {
+        using enum __state;
+      case __start_anchor:
+      case __end_anchor:
+      case __multiline_start_anchor:
+      case __multiline_end_anchor:
+      case __match_any:
+      case __match_any_except_newline:
+      case __match_word_boundary:
+      case __match_no_word_boundary:
+        break;
+
+      case __match_char:
+      case __match_icase_char:
+        ++__pos;
+        break;
+
+      case __match_simple_character_list:
+        __pos += sizeof(_MatchingSetT);
+        break;
+
+      case __match_backref:
+      case __match_icase_backref:
+      case __marked_subexpression_begin:
+      case __marked_subexpression_end:
+      case __relative_jump:
+        __read_uleb(__code, __pos);
+        break;
+
+      case __match_character_list:
+      case __match_no_character_list: {
+        static constexpr auto __buffer_size =
+            std::max(sizeof(typename _Traits::char_class_type) / sizeof(_CharT), size_t(1));
+        __pos += 2 * __buffer_size;
+        for (size_t __i = 0; __i != 6; ++__i)
+          __read_uleb(__code, __pos);
+      } break;
+
+      // Lookahead
+      case __positive_lookahead:
+      case __negative_lookahead:
+        return;
+
+      // Jumps
+      case __conditional_jump_forward:
+      case __conditional_jump_backward:
+        __pos += sizeof(_MatchingSetT);
+        __read_uleb(__code, __pos);
+        break;
+
+      // Branches
+      case __branch_n_to_m_matcher:
+      case __branch_nongreedy_n_to_m_matcher: {
+        auto __instr_start    = __pos - 1;
+        auto __loop_index     = __read_uleb(__code, __pos);
+        auto __again_pos_base = __pos;
+        auto __again_pos      = __again_pos_base - __read_uleb(__code, __pos);
+        auto __instr_size     = __pos - __instr_start;
+
+        if (__initial_loop_values_[__loop_index + 1].__int_ != 0 ||
+            __initial_loop_values_[__loop_index + 2].__int_ != numeric_limits<size_t>::max())
+          break;
+
+        if constexpr (__is_same(_CharT, char)) {
+          if (auto __expr1_set = __get_possibly_matching_characters(__machine_.data(), __again_pos);
+              (__expr1_set & __get_possibly_matching_characters(__machine_.data(), __pos)) == _MatchingSetT()) {
+            {
+              vector<__interpreter_info<_CharT>> __buffer;
+              __buffer.push_back(__state::__conditional_jump_backward);
+              __interpreter_info<_CharT> __sbuffer[sizeof(_MatchingSetT)];
+              __builtin_memcpy(__sbuffer, &__expr1_set, sizeof(_MatchingSetT));
+              __buffer.append_range(__sbuffer);
+              __write_uleb(__buffer, __instr_start - __again_pos);
+              __machine_.erase(__machine_.begin() + __instr_start, __machine_.begin() + __instr_start + __instr_size);
+              __machine_.insert(__machine_.begin() + __instr_start, __buffer.begin(), __buffer.end());
+              __fix_jumps(__instr_start, __buffer.size() - __instr_size);
+            }
+            [[clang::musttail]] return __optimize();
+          }
+        }
+        break;
+      }
+
+      case __branch_alternative:
+
+      // End state
+      case __end_state:
+        return;
+      }
+    }
   }
 
   void __push_any_matcher() { push_back(__state::__match_any); }
@@ -921,7 +1106,7 @@ public:
       if (__expr2_start != __machine_.size()) {
         if (auto __expr1_set = __get_possibly_matching_characters(__machine_.data(), __expr1_start);
             (__expr1_set & __get_possibly_matching_characters(__machine_.data(), __expr2_start)) == _MatchingSetT()) {
-          __buffer.push_back(__state::__conditional_jump);
+          __buffer.push_back(__state::__conditional_jump_forward);
           __interpreter_info<_CharT> __sbuffer[sizeof(_MatchingSetT)];
           __builtin_memcpy(__sbuffer, &__expr1_set, sizeof(_MatchingSetT));
           __buffer.append_range(__sbuffer);
