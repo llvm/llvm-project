@@ -73,6 +73,13 @@ void test_iterator_sentinel() {
     assert(s.size() == 1);
     assert(s.data() == std::data(arr));
   }
+
+  {
+    std::span s{std::begin(arr), std::cw<3>};
+    ASSERT_SAME_TYPE(decltype(s), std::span<int, 3>);
+    assert(s.size() == std::size(arr));
+    assert(s.data() == std::data(arr));
+  }
 #endif
 }
 
