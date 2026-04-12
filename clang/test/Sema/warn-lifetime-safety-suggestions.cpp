@@ -456,3 +456,42 @@ S forward(const MyObj &obj) { // expected-warning {{parameter in intra-TU functi
 }
 
 } // namespace track_origins_for_lifetimebound_record_type
+
+namespace capturing_constructor {
+struct A {
+  View v; // expected-note {{escapes to this field}}
+  A(const MyObj& obj) : v(obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+struct B {
+  const int* p; // expected-note {{escapes to this field}}
+  B(const int& r) : p(&r) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+struct C {
+  View v; // expected-note {{escapes to this field}}
+  C(View v_param) : v(v_param) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+struct D {
+  const int* p; // expected-note {{escapes to this field}}
+  D(const int* p_param) : p(p_param) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+} // namespace capturing_constructor
+
+namespace capturing_constructor_inference {
+struct B {
+  const MyObj* p; // expected-note {{escapes to this field}}
+  B(const MyObj& obj) : p(&obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+};
+
+void test(B& b_out) {
+  {
+    MyObj obj;
+    B b(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+    b_out = b;
+  } // expected-note {{destroyed here}}
+  (void)b_out; // expected-note {{later used here}}
+}
+} // namespace capturing_constructor_inference
+

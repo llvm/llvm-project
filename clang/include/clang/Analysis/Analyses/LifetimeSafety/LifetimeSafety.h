@@ -28,6 +28,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/MovedLoans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/ADT/PointerUnion.h"
 #include <cstddef>
 #include <memory>
 
@@ -88,10 +89,10 @@ public:
                                           const Expr *UseExpr,
                                           const Expr *InvalidationExpr) {}
 
-  // Suggests lifetime bound annotations for function paramters.
-  virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
-                                             const ParmVarDecl *ParmToAnnotate,
-                                             const Expr *EscapeExpr) {}
+  // Suggests lifetime bound annotations for function parameters.
+  virtual void suggestLifetimeboundToParmVar(
+      SuggestionScope Scope, const ParmVarDecl *ParmToAnnotate,
+      llvm::PointerUnion<const Expr *, const FieldDecl *> Target) {}
 
   // Reports misuse of [[clang::noescape]] when parameter escapes through return
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,

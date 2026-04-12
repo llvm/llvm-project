@@ -59,7 +59,7 @@ using EscapingTarget =
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
-  llvm::DenseMap<AnnotationTarget, const Expr *> AnnotationWarningsMap;
+  llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
@@ -67,6 +67,7 @@ private:
   FactManager &FactMgr;
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
+  const Decl *D;
 
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
@@ -89,7 +90,7 @@ public:
                   LifetimeSafetySemaHelper *SemaHelper)
       : LoanPropagation(LoanPropagation), MovedLoans(MovedLoans),
         LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
-        AST(ADC.getASTContext()) {
+        AST(ADC.getASTContext()), D(ADC.getDecl()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -126,9 +127,13 @@ public:
         return;
       }
       // Suggest lifetimebound for parameter escaping through return.
-      if (!PVD->hasAttr<LifetimeBoundAttr>())
+      if (!PVD->hasAttr<LifetimeBoundAttr>()) {
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
+        else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+          if (isa<CXXConstructorDecl>(D))
+            AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+      }
       // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
       // field!
     };
@@ -292,14 +297,22 @@ public:
   static void suggestWithScopeForParmVar(LifetimeSafetySemaHelper *SemaHelper,
                                          const ParmVarDecl *PVD,
                                          SourceManager &SM,
-                                         const Expr *EscapeExpr) {
+                                         EscapingTarget EscapeTarget) {
+    llvm::PointerUnion<const Expr *, const FieldDecl *> Target;
+    if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
+      Target = E;
+    else if (const auto *F = EscapeTarget.dyn_cast<const FieldDecl *>())
+      Target = F;
+    else
+      return;
+
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
       SemaHelper->suggestLifetimeboundToParmVar(
           SuggestionScope::CrossTU,
-          CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()), EscapeExpr);
+          CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()), Target);
     else
       SemaHelper->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
-                                                EscapeExpr);
+                                                Target);
   }
 
   static void
@@ -319,11 +332,15 @@ public:
     if (!SemaHelper)
       return;
     SourceManager &SM = AST.getSourceManager();
-    for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
+    for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
-        suggestWithScopeForParmVar(SemaHelper, PVD, SM, EscapeExpr);
-      else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>())
-        suggestWithScopeForImplicitThis(SemaHelper, MD, SM, EscapeExpr);
+        suggestWithScopeForParmVar(SemaHelper, PVD, SM, EscapeTarget);
+      else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
+        if (const auto *EscapeExpr = EscapeTarget.dyn_cast<const Expr *>())
+          suggestWithScopeForImplicitThis(SemaHelper, MD, SM, EscapeExpr);
+        else
+          llvm_unreachable("Implicit this can only escape via Expr (return)");
+      }
     }
   }
 
@@ -341,7 +358,7 @@ public:
   }
 
   void inferAnnotations() {
-    for (auto [Target, EscapeExpr] : AnnotationWarningsMap) {
+    for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
         if (!implicitObjectParamIsLifetimeBound(MD))
           SemaHelper->addLifetimeBoundToImplicitThis(cast<CXXMethodDecl>(MD));
