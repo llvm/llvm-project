@@ -308,24 +308,12 @@ LIBC_INLINE_VAR constexpr double ATAN_COEFFS[17][9] = {
 
 // Look-up table for atan(k/16) with k = 0..16.
 LIBC_INLINE_VAR constexpr double ATAN_K_OVER_16[17] = {
-    0.0,
-    0x1.ff55bb72cfdeap-5,
-    0x1.fd5ba9aac2f6ep-4,
-    0x1.7b97b4bce5b02p-3,
-    0x1.f5b75f92c80ddp-3,
-    0x1.362773707ebccp-2,
-    0x1.6f61941e4def1p-2,
-    0x1.a64eec3cc23fdp-2,
-    0x1.dac670561bb4fp-2,
-    0x1.0657e94db30dp-1,
-    0x1.1e00babdefeb4p-1,
-    0x1.345f01cce37bbp-1,
-    0x1.4978fa3269ee1p-1,
-    0x1.5d58987169b18p-1,
-    0x1.700a7c5784634p-1,
-    0x1.819d0b7158a4dp-1,
-    0x1.921fb54442d18p-1,
-};
+    0x0.000p+0,           0x1.ff55bb72cfdeap-5, 0x1.fd5ba9aac2f6ep-4,
+    0x1.7b97b4bce5b02p-3, 0x1.f5b75f92c80ddp-3, 0x1.362773707ebccp-2,
+    0x1.6f61941e4def1p-2, 0x1.a64eec3cc23fdp-2, 0x1.dac670561bb4fp-2,
+    0x1.0657e94db30dp-1,  0x1.1e00babdefeb4p-1, 0x1.345f01cce37bbp-1,
+    0x1.4978fa3269ee1p-1, 0x1.5d58987169b18p-1, 0x1.700a7c5784634p-1,
+    0x1.819d0b7158a4dp-1, 0x1.921fb54442d18p-1};
 
 // For |x| <= 1/32 and 0 <= i <= 16, return Q(x) such that:
 //   Q(x) ~ (atan(x + i/16) - atan(i/16)) / x.
