@@ -16,9 +16,7 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -26,22 +24,20 @@ using namespace llvm;
 
 namespace {
 
-class AArch64RedundantCondBranchImpl {
-public:
-  bool run(MachineFunction &MF);
-};
 class AArch64RedundantCondBranchLegacy : public MachineFunctionPass {
 public:
   static char ID;
   AArch64RedundantCondBranchLegacy() : MachineFunctionPass(ID) {}
 
+  StringRef getPassName() const override {
+    return "AArch64 Redundant Conditional Branch Elimination";
+  }
+
+protected:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
-  }
-  StringRef getPassName() const override {
-    return "AArch64 Redundant Conditional Branch Elimination";
   }
 };
 char AArch64RedundantCondBranchLegacy::ID = 0;
@@ -51,7 +47,7 @@ INITIALIZE_PASS(AArch64RedundantCondBranchLegacy, "aarch64-redundantcondbranch",
                 "AArch64 Redundant Conditional Branch Elimination pass", false,
                 false)
 
-bool AArch64RedundantCondBranchImpl::run(MachineFunction &MF) {
+static bool runAArch64RedundantCondBranch(MachineFunction &MF) {
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   bool Changed = false;
@@ -65,13 +61,13 @@ bool AArch64RedundantCondBranchLegacy::runOnMachineFunction(
   if (skipFunction(MF.getFunction()))
     return false;
 
-  return AArch64RedundantCondBranchImpl().run(MF);
+  return runAArch64RedundantCondBranch(MF);
 }
 
 PreservedAnalyses
 AArch64RedundantCondBranchPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &) {
-  if (AArch64RedundantCondBranchImpl().run(MF)) {
+  if (runAArch64RedundantCondBranch(MF)) {
     return getMachineFunctionPassPreservedAnalyses();
   }
   return PreservedAnalyses::all();
