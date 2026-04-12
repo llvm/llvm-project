@@ -9339,7 +9339,7 @@ static SourceLocation DiagLocForExplicitInstantiation(
   for (DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
     for (auto *Decl : DC->decls()) {
       if (auto *EID = dyn_cast<ExplicitInstantiationDecl>(Decl))
-        if (EID->getSpecialization() == D)
+        if (EID->getSpecialization()->getCanonicalDecl() == D->getCanonicalDecl())
           return EID->getTemplateLoc();
     }
   }

@@ -7,9 +7,18 @@ namespace ns {
     void method(T x) {}
     static T sval;
     template <typename U> void tmpl(U u) {}
+    template <typename U> static U mvar;
+    template <typename U> struct Nested {};
     struct Inner { T val; };
   };
   template <typename T> T S<T>::sval = T{};
+  template <typename T> template <typename U> U S<T>::mvar = U{};
+
+  template <typename T> struct A {
+    template <typename U> struct B {
+      template <typename V> void deep(V v) {}
+    };
+  };
 }
 
 // (a) function template
@@ -138,6 +147,35 @@ extern template struct ns::S<double>::Inner;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:39> col:8 explicit_instantiation_declaration extern template 'Inner'
 // CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<double>'
 // CHECK-NEXT: CXXRecord {{.*}} 'Inner'
+
+// member variable template
+template double ns::S<long>::mvar<double>;
+// CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:41> col:1 explicit_instantiation_definition template 'mvar'
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
+// CHECK-NEXT: VarTemplateSpecialization {{.*}} 'mvar' 'double'
+// CHECK-NEXT: TemplateArgument <col:35> type 'double'
+// CHECK-NEXT:   BuiltinType {{.*}} 'double'
+// CHECK-NEXT: BuiltinTypeLoc <col:10> 'double'
+
+// member class template
+template struct ns::S<long>::Nested<double>;
+// CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:43> col:1 explicit_instantiation_definition template 'Nested'
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
+// CHECK-NEXT: ClassTemplateSpecialization {{.*}} 'Nested'
+// CHECK-NEXT: TemplateArgument <col:37> type 'double'
+// CHECK-NEXT:   BuiltinType {{.*}} 'double'
+
+// deeply nested: A<int>::B<double>::deep<float>
+template void ns::A<int>::B<double>::deep<float>(float);
+// CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:55> col:1 explicit_instantiation_definition template 'deep'
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::A<int>::B<double>'
+// CHECK-NEXT: CXXMethod {{.*}} 'deep' 'void (float)'
+// CHECK-NEXT: TemplateArgument <col:43> type 'float'
+// CHECK-NEXT:   BuiltinType {{.*}} 'float'
+// CHECK-NEXT: FunctionProtoTypeLoc <col:10, col:55> 'void (float)' cdecl
+// CHECK-NEXT:   ParmVarDecl {{.*}} <col:50> col:55 'float'
+// CHECK-NEXT:     BuiltinTypeLoc <col:50> 'float'
+// CHECK-NEXT:   BuiltinTypeLoc <col:10> 'void'
 
 // Same-namespace explicit instantiation (no cross-namespace qualifier)
 namespace ns {
