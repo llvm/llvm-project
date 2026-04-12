@@ -20,8 +20,15 @@
 namespace __xray {
 
 // The machine codes for some instructions used in runtime patching.
+//
+// J2_jump encoding: bits [27:16] and [13:1] hold the PC-relative byte offset
+// divided by 4, with bits [15:14] = 0b11 for packet-end parse bits.
+// Formula: 0x5800c000 | ((ByteOffset >> 2) << 1)
 enum PatchOpcodes : uint32_t {
-  PO_JUMPI_1C = 0x5800c00e,     // jump #0x01c (PC + 0x01c)
+  PO_JUMPI_1C = 0x5800c00e,     // jump #0x01c (entry/exit sled, 28 bytes)
+  PO_JUMPI_30 = 0x5800c018,     // jump #0x030 (custom event sled, 48 bytes)
+  PO_JUMPI_3C = 0x5800c01e,     // jump #0x03c (typed event sled, 60 bytes)
+  PO_NOP = 0x7f00c000,          // { nop } with packet-end parse bits
   PO_CALLR_R6 = 0x50a6c000,     // indirect call: callr r6
   PO_TFR_IMM = 0x78000000,      // transfer immed
                                 // ICLASS 0x7 - S2-type A-type
@@ -176,13 +183,35 @@ bool patchFunctionTailExit(
 
 bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
                       const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  // FIXME: Implement in hexagon?
+  // The custom event sled (2 args) is 12 words = 48 bytes:
+  //   .Lxray_sled_N:
+  //     { jump .Lend }     <-- first word: jump over (disabled) / nop (enabled)
+  //     allocframe, sp adjust, 2 saves, 2 moves, call, 2 restores,
+  //     sp adjust, deallocframe
+  //   .Lend:
+  uint32_t *FirstAddress = reinterpret_cast<uint32_t *>(Sled.address());
+  if (Enable) {
+    WriteInstFlushCache(FirstAddress, uint32_t(PO_NOP));
+  } else {
+    WriteInstFlushCache(FirstAddress, uint32_t(PO_JUMPI_30));
+  }
   return false;
 }
 
 bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  // FIXME: Implement in hexagon?
+  // The typed event sled (3 args) is 15 words = 60 bytes:
+  //   .Lxray_sled_N:
+  //     { jump .Lend }     <-- first word: jump over (disabled) / nop (enabled)
+  //     allocframe, sp adjust, 3 saves, 3 moves, call, 3 restores,
+  //     sp adjust, deallocframe
+  //   .Lend:
+  uint32_t *FirstAddress = reinterpret_cast<uint32_t *>(Sled.address());
+  if (Enable) {
+    WriteInstFlushCache(FirstAddress, uint32_t(PO_NOP));
+  } else {
+    WriteInstFlushCache(FirstAddress, uint32_t(PO_JUMPI_3C));
+  }
   return false;
 }
 
