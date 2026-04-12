@@ -31,6 +31,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <vector>
 
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
@@ -274,22 +275,29 @@ EXTERN void __tgt_target_data_update_nowait_mapper(
       "update");
 }
 
+/// Holds dynamically allocated argument arrays when upgrading old-format
+/// kernel arguments to include the dyn_ptr slot.
+struct UpgradedArgBuffersTy {
+  llvm::SmallVector<void *, 0> BasePtrs;
+  llvm::SmallVector<void *, 0> Ptrs;
+  llvm::SmallVector<int64_t, 0> Sizes;
+  llvm::SmallVector<int64_t, 0> Types;
+  llvm::SmallVector<map_var_info_t, 0> Names;
+  llvm::SmallVector<void *, 0> Mappers;
+};
+
 static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
                                        KernelArgsTy &LocalKernelArgs,
+                                       UpgradedArgBuffersTy &Bufs,
                                        int32_t NumTeams, int32_t ThreadLimit) {
   if (KernelArgs->Version > OMP_KERNEL_ARG_VERSION)
     ODBG(ODT_Interface) << "Unexpected ABI version: " << KernelArgs->Version;
 
-  uint32_t UpgradedVersion = KernelArgs->Version;
-  if (KernelArgs->Version < OMP_KERNEL_ARG_VERSION) {
-    // The upgraded version will be based on the kernel launch environment.
-    if (KernelArgs->Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
-      UpgradedVersion = OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR - 1;
-    else
-      UpgradedVersion = OMP_KERNEL_ARG_VERSION;
-  }
-  if (UpgradedVersion != KernelArgs->Version) {
-    LocalKernelArgs.Version = UpgradedVersion;
+  // Versions before OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR used an older
+  // struct layout missing several fields. Reconstruct a complete struct.
+  if (KernelArgs->Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
+    // Maintain the version so the runtime can match the device ABI.
+    LocalKernelArgs.Version = KernelArgs->Version;
     LocalKernelArgs.NumArgs = KernelArgs->NumArgs;
     LocalKernelArgs.ArgBasePtrs = KernelArgs->ArgBasePtrs;
     LocalKernelArgs.ArgPtrs = KernelArgs->ArgPtrs;
@@ -320,6 +328,42 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
   CorrectMultiDim(KernelArgs->ThreadLimit);
   CorrectMultiDim(KernelArgs->NumTeams);
 
+  // Version 3 put the implicit argument at the front with no storage.
+  if (KernelArgs->Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
+    uint32_t NewSize = KernelArgs->NumArgs + 1;
+
+    Bufs.BasePtrs.resize(NewSize, nullptr);
+    Bufs.Ptrs.resize(NewSize, nullptr);
+    Bufs.Sizes.resize(NewSize, 0);
+    Bufs.Types.resize(NewSize, 0);
+    Bufs.Names.resize(NewSize, nullptr);
+    Bufs.Mappers.resize(NewSize, nullptr);
+
+    for (uint32_t I = 0; I < KernelArgs->NumArgs; ++I) {
+      Bufs.BasePtrs[I] = KernelArgs->ArgBasePtrs[I];
+      Bufs.Ptrs[I] = KernelArgs->ArgPtrs[I];
+      Bufs.Sizes[I] = KernelArgs->ArgSizes[I];
+      Bufs.Types[I] = KernelArgs->ArgTypes[I];
+      if (KernelArgs->ArgNames)
+        Bufs.Names[I] = KernelArgs->ArgNames[I];
+      if (KernelArgs->ArgMappers)
+        Bufs.Mappers[I] = KernelArgs->ArgMappers[I];
+    }
+
+    Bufs.Types[KernelArgs->NumArgs] =
+        OMP_TGT_MAPTYPE_TARGET_PARAM | OMP_TGT_MAPTYPE_LITERAL;
+
+    LocalKernelArgs = *KernelArgs;
+    LocalKernelArgs.NumArgs = NewSize;
+    LocalKernelArgs.ArgBasePtrs = Bufs.BasePtrs.data();
+    LocalKernelArgs.ArgPtrs = Bufs.Ptrs.data();
+    LocalKernelArgs.ArgSizes = Bufs.Sizes.data();
+    LocalKernelArgs.ArgTypes = Bufs.Types.data();
+    LocalKernelArgs.ArgNames = Bufs.Names.data();
+    LocalKernelArgs.ArgMappers = Bufs.Mappers.data();
+    return &LocalKernelArgs;
+  }
+
   return KernelArgs;
 }
 
@@ -342,10 +386,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   if (!IsTeams)
     KernelArgs->NumTeams[0] = NumTeams = 1;
 
-  // Auto-upgrade kernel args version 1 to 2.
   KernelArgsTy LocalKernelArgs;
-  KernelArgs =
-      upgradeKernelArgs(KernelArgs, LocalKernelArgs, NumTeams, ThreadLimit);
+  UpgradedArgBuffersTy UpgradedBufs;
+  KernelArgs = upgradeKernelArgs(KernelArgs, LocalKernelArgs, UpgradedBufs,
+                                 NumTeams, ThreadLimit);
 
   TIMESCOPE_WITH_DETAILS_AND_IDENT(
       "Runtime: target exe",
@@ -353,10 +397,17 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
           ";NumArgs=" + std::to_string(KernelArgs->NumArgs),
       Loc);
 
+  // The implicit dyn_ptr slot is always the last entry for versions that
+  // support it.  Exclude it from user-facing info output.
+  uint32_t UserArgCount = KernelArgs->NumArgs;
+  if (KernelArgs->Version >= OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR &&
+      UserArgCount > 0)
+    --UserArgCount;
+
   if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
-    printKernelArguments(Loc, DeviceId, KernelArgs->NumArgs,
-                         KernelArgs->ArgSizes, KernelArgs->ArgTypes,
-                         KernelArgs->ArgNames, "Entering OpenMP kernel");
+    printKernelArguments(Loc, DeviceId, UserArgCount, KernelArgs->ArgSizes,
+                         KernelArgs->ArgTypes, KernelArgs->ArgNames,
+                         "Entering OpenMP kernel");
 
   ODBG_OS(ODT_Kernel, [&](llvm::raw_ostream &Os) {
     for (uint32_t I = 0; I < KernelArgs->NumArgs; ++I) {

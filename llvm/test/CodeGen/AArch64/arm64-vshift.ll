@@ -2507,8 +2507,7 @@ define <1 x i64> @neon_ushl_vscalar_constant_shift(ptr %A) nounwind {
 define i64 @neon_ushl_scalar_constant_shift(ptr %A) nounwind {
 ; CHECK-SD-LABEL: neon_ushl_scalar_constant_shift:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    shl d0, d0, #1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
@@ -2800,8 +2799,7 @@ define <1 x i64> @neon_sshll_vscalar_constant_shift(ptr %A) nounwind {
 define i64 @neon_sshll_scalar_constant_shift(ptr %A) nounwind {
 ; CHECK-SD-LABEL: neon_sshll_scalar_constant_shift:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    shl d0, d0, #1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
@@ -2824,8 +2822,7 @@ define i64 @neon_sshll_scalar_constant_shift(ptr %A) nounwind {
 define i64 @neon_sshll_scalar_constant_shift_m1(ptr %A) nounwind {
 ; CHECK-SD-LABEL: neon_sshll_scalar_constant_shift_m1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    sshr d0, d0, #1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret

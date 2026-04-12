@@ -12,6 +12,8 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterNSNumber(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipUnlessDarwin
     def test_nsnumber_with_run_command(self):
         """Test formatters for  NS container classes."""

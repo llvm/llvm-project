@@ -1306,6 +1306,8 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   // Emit the linker options if present.
   emitLinkerDirectives(Streamer, M);
 
+  emitPseudoProbeDescMetadata(Streamer, M);
+
   unsigned VersionVal = 0;
   unsigned ImageInfoFlags = 0;
   StringRef SectionVal;
@@ -1594,7 +1596,7 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   // non_lazy_ptr stubs.
   SmallString<128> Name;
   StringRef Suffix = "$non_lazy_ptr";
-  Name += MMI->getModule()->getDataLayout().getPrivateGlobalPrefix();
+  Name += MMI->getModule()->getDataLayout().getInternalSymbolPrefix();
   Name += Sym->getName();
   Name += Suffix;
   MCSymbol *Stub = Ctx.getOrCreateSymbol(Name);

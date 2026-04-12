@@ -49,10 +49,10 @@
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -248,7 +248,7 @@ locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
       LocatedSymbol Macro;
       Macro.Name = std::string(M->Name);
       Macro.PreferredDeclaration = *Loc;
-      Macro.Definition = Loc;
+      Macro.Definition = std::move(Loc);
       Macro.ID = getSymbolID(M->Name, M->Info, AST.getSourceManager());
       return Macro;
     }
@@ -1478,7 +1478,7 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
   ReferencesResult::Reference Result;
   Result.Loc.range = rangeTillEOL(SM.getBufferData(SM.getMainFileID()),
                                   IncludeOnLine->HashOffset);
-  Result.Loc.uri = URIMainFile;
+  Result.Loc.uri = std::move(URIMainFile);
   Results.References.push_back(std::move(Result));
   return Results;
 }

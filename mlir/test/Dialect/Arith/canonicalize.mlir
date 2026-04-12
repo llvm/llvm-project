@@ -588,15 +588,6 @@ func.func @indexCastOfSignExtend(%arg0: i8) -> index {
   return %idx : index
 }
 
-// CHECK-LABEL: @indexCastOfSignExtend_exact
-//       CHECK:   %[[res:.+]] = arith.index_cast %arg0 exact : i8 to index
-//       CHECK:   return %[[res]]
-func.func @indexCastOfSignExtend_exact(%arg0: i8) -> index {
-  %ext = arith.extsi %arg0 : i8 to i16
-  %idx = arith.index_cast %ext exact : i16 to index
-  return %idx : index
-}
-
 // CHECK-LABEL: @indexCastUIOfUnsignedExtend
 //       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
 //       CHECK:   return %[[res]]
@@ -623,61 +614,6 @@ func.func @indexCastUIOfUnsignedExtend_nneg_on_castui(%arg0: i8) -> index {
   %ext = arith.extui %arg0 : i8 to i16
   %idx = arith.index_castui %ext nneg : i16 to index
   return %idx : index
-}
-
-// CHECK-LABEL: @indexCastUIOfUnsignedExtend_exact
-//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 exact : i8 to index
-//       CHECK:   return %[[res]]
-func.func @indexCastUIOfUnsignedExtend_exact(%arg0: i8) -> index {
-  %ext = arith.extui %arg0 : i8 to i16
-  %idx = arith.index_castui %ext exact : i16 to index
-  return %idx : index
-}
-
-// CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_exact
-//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 exact nneg : i8 to index
-//       CHECK:   return %[[res]]
-func.func @indexCastUIOfUnsignedExtend_nneg_exact(%arg0: i8) -> index {
-  %ext = arith.extui %arg0 nneg : i8 to i16
-  %idx = arith.index_castui %ext exact : i16 to index
-  return %idx : index
-}
-
-// index_castui(index_castui(x)) -> x only when exact is on the inner cast.
-// CHECK-LABEL: @indexCastUIOfIndexCastUI_no_exact
-//       CHECK:   arith.index_castui
-//       CHECK:   arith.index_castui
-func.func @indexCastUIOfIndexCastUI_no_exact(%arg0: i32) -> i32 {
-  %idx = arith.index_castui %arg0 : i32 to index
-  %res = arith.index_castui %idx : index to i32
-  return %res : i32
-}
-
-// CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_inner
-//       CHECK:   return %arg0 : i32
-func.func @indexCastUIOfIndexCastUI_exact_inner(%arg0: i32) -> i32 {
-  %idx = arith.index_castui %arg0 exact : i32 to index
-  %res = arith.index_castui %idx : index to i32
-  return %res : i32
-}
-
-// exact on outer only does NOT trigger the fold (outer exact on widening
-// is vacuously true and does not guarantee the inner truncation is lossless).
-// CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_outer
-//       CHECK:   arith.index_castui
-//       CHECK:   arith.index_castui
-func.func @indexCastUIOfIndexCastUI_exact_outer(%arg0: i32) -> i32 {
-  %idx = arith.index_castui %arg0 : i32 to index
-  %res = arith.index_castui %idx exact : index to i32
-  return %res : i32
-}
-
-// CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_both
-//       CHECK:   return %arg0 : i32
-func.func @indexCastUIOfIndexCastUI_exact_both(%arg0: i32) -> i32 {
-  %idx = arith.index_castui %arg0 exact : i32 to index
-  %res = arith.index_castui %idx exact : index to i32
-  return %res : i32
 }
 
 // CHECK-LABEL: @indexCastFold
@@ -787,6 +723,113 @@ func.func @indexCastUIFoldVectorIndexToInt() -> vector<3xi32> {
   %int = arith.index_castui %cst : vector<3xindex> to vector<3xi32>
   return %int : vector<3xi32>
 }
+
+// CHECK-LABEL: @indexCastOfIndexCast_lossless
+// The intermediate index type (64 bits) is at least as wide as i64 (64 bits),
+// so the round-trip is lossless and the chain folds away.
+//       CHECK:   return %arg0
+func.func @indexCastOfIndexCast_lossless(%arg0: i64) -> i64 {
+  %0 = arith.index_cast %arg0 : i64 to index
+  %1 = arith.index_cast %0 : index to i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_lossy
+// The intermediate i8 type (8 bits) is narrower than index (64 bits), so
+// folding would drop the truncation — must be preserved.
+//       CHECK:   %[[a:.+]] = arith.index_cast %arg0 : index to i8
+//       CHECK:   %[[b:.+]] = arith.index_cast %[[a]] : i8 to index
+//       CHECK:   return %[[b]]
+func.func @indexCastOfIndexCast_lossy(%arg0: index) -> index {
+  %0 = arith.index_cast %arg0 : index to i8
+  %1 = arith.index_cast %0 : i8 to index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_lossless
+// The intermediate index type is at least as wide as i64, so the chain folds.
+//       CHECK:   return %arg0
+func.func @indexCastUIOfIndexCastUI_lossless(%arg0: i64) -> i64 {
+  %0 = arith.index_castui %arg0 : i64 to index
+  %1 = arith.index_castui %0 : index to i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_lossy
+// The intermediate i8 is narrower than index, so the truncation must be kept.
+//       CHECK:   %[[a:.+]] = arith.index_castui %arg0 : index to i8
+//       CHECK:   %[[b:.+]] = arith.index_castui %[[a]] : i8 to index
+//       CHECK:   return %[[b]]
+func.func @indexCastUIOfIndexCastUI_lossy(%arg0: index) -> index {
+  %0 = arith.index_castui %arg0 : index to i8
+  %1 = arith.index_castui %0 : i8 to index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_3way_lossy
+// Regression test for the original bug: a 3-element chain where the outermost
+// cast pair would be incorrectly folded away, dropping the i8 truncation.
+//       CHECK:   %[[a:.*]] = arith.index_castui %arg0 : i64 to index
+//       CHECK:   %[[b:.*]] = arith.index_castui %[[a]] : index to i8
+//       CHECK:   %[[c:.*]] = arith.index_castui %[[b]] : i8 to index
+//       CHECK:   return %[[c]]
+func.func @indexCastUIOfIndexCastUI_3way_lossy(%arg0: i64) -> index {
+  %0 = arith.index_castui %arg0 : i64 to index
+  %1 = arith.index_castui %0 : index to i8
+  %2 = arith.index_castui %1 : i8 to index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_3way_lossy
+// Signed 3-way chain where the outermost pair folds (i64->index is lossless
+// since 64 >= 64) but the inner i8 truncation is preserved.  The net result
+// is that %2 becomes %0 directly, collapsing the last two casts.
+//       CHECK:   %[[a:.*]] = arith.index_cast %arg0 : i8 to index
+//       CHECK:   return %[[a]]
+func.func @indexCastOfIndexCast_3way_lossy(%arg0: i8) -> index {
+  %0 = arith.index_cast %arg0 : i8 to index
+  %1 = arith.index_cast %0 : index to i64
+  %2 = arith.index_cast %1 : i64 to index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_i8_roundtrip
+// i8 -> index -> i8: the intermediate index is at least as wide as i8 (64 >= 8),
+// so the round-trip is lossless and the chain folds away.
+//       CHECK:   return %arg0
+func.func @indexCastOfIndexCast_i8_roundtrip(%arg0: i8) -> i8 {
+  %0 = arith.index_cast %arg0 : i8 to index
+  %1 = arith.index_cast %0 : index to i8
+  return %1 : i8
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_vector_lossy
+// vector<3xi128> -> vector<3xindex> -> vector<3xi128>: i128 (128 bits) is wider
+// than the 64-bit index, so the cast is lossy and must NOT fold.
+//       CHECK:   %[[a:.+]] = arith.index_cast %arg0 : vector<3xi128> to vector<3xindex>
+//       CHECK:   %[[b:.+]] = arith.index_cast %[[a]] : vector<3xindex> to vector<3xi128>
+//       CHECK:   return %[[b]]
+func.func @indexCastOfIndexCast_vector_lossy(%arg0: vector<3xi128>) -> vector<3xi128> {
+  %0 = arith.index_cast %arg0 : vector<3xi128> to vector<3xindex>
+  %1 = arith.index_cast %0 : vector<3xindex> to vector<3xi128>
+  return %1 : vector<3xi128>
+}
+
+// -----
 
 // CHECK-LABEL: @signExtendConstant
 //       CHECK:   %[[cres:.+]] = arith.constant -2 : i16
@@ -939,7 +982,42 @@ func.func @truncUitofp_nneg(%arg0: i32) -> f32 {
   return %trunc : f32
 }
 
-// TODO: We should also add a test for not folding arith.extf on information loss.
+// CHECK-LABEL: @sitofpExtsi
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i8 to bf16
+//       CHECK:     return %[[SITOFP]]
+func.func @sitofpExtsi(%arg0: i8) -> bf16 {
+  %extsi = arith.extsi %arg0 : i8 to i32
+  %sitofp = arith.sitofp %extsi : i32 to bf16
+  return %sitofp : bf16
+}
+
+// CHECK-LABEL: @sitofpExtui
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i4 to bf16
+//       CHECK-NOT: sitofp
+//       CHECK:     return %[[UITOFP]]
+func.func @sitofpExtui(%arg0: i4) -> bf16 {
+  %extui = arith.extui %arg0 : i4 to i8
+  %sitofp = arith.sitofp %extui : i8 to bf16
+  return %sitofp : bf16
+}
+
+// CHECK-LABEL: @uitofpExtui
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i8 to bf16
+//       CHECK:     return %[[UITOFP]]
+func.func @uitofpExtui(%arg0: i8) -> bf16 {
+  %extui = arith.extui %arg0 : i8 to i32
+  %uitofp = arith.uitofp %extui : i32 to bf16
+  return %uitofp : bf16
+}
+
+// CHECK-LABEL: @sitofpExtui_nneg
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] nneg : i4 to bf16
+//       CHECK:     return %[[UITOFP]]
+func.func @sitofpExtui_nneg(%arg0: i4) -> bf16 {
+  %extui = arith.extui %arg0 nneg : i4 to i8
+  %sitofp = arith.sitofp %extui : i8 to bf16
+  return %sitofp : bf16
+}
 // This may happen when extending f8E5M2FNUZ to f16.
 
 // CHECK-LABEL: @truncConstant
@@ -3385,87 +3463,6 @@ func.func @unsignedExtendConstantResource() -> tensor<i16> {
   return %ext : tensor<i16>
 }
 
-// CHECK-LABEL: @extsi_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i16
-//       CHECK:   return %[[ZERO]] : i16
-func.func @extsi_i0() -> i16 {
-  %c0 = arith.constant 0 : i0
-  %extsi = arith.extsi %c0 : i0 to i16
-  return %extsi : i16
-}
-
-// CHECK-LABEL: @extui_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i16
-//       CHECK:   return %[[ZERO]] : i16
-func.func @extui_i0() -> i16 {
-  %c0 = arith.constant 0 : i0
-  %extui = arith.extui %c0 : i0 to i16
-  return %extui : i16
-}
-
-// CHECK-LABEL: @trunc_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @trunc_i0() -> i0 {
-  %cFF = arith.constant 0xFF : i8
-  %trunc = arith.trunci %cFF : i8 to i0
-  return %trunc : i0
-}
-
-// CHECK-LABEL: @shli_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @shli_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %shli = arith.shli %c0, %c0 : i0
-  return %shli : i0
-}
-
-// CHECK-LABEL: @shrsi_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @shrsi_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %shrsi = arith.shrsi %c0, %c0 : i0
-  return %shrsi : i0
-}
-
-// CHECK-LABEL: @shrui_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @shrui_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %shrui = arith.shrui %c0, %c0 : i0
-  return %shrui : i0
-}
-
-// CHECK-LABEL: @maxsi_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @maxsi_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %maxsi = arith.maxsi %c0, %c0 : i0
-  return %maxsi : i0
-}
-
-// CHECK-LABEL: @minsi_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @minsi_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %minsi = arith.minsi %c0, %c0 : i0
-  return %minsi : i0
-}
-
-// CHECK-LABEL: @mulsi_extended_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]], %[[ZERO]] : i0
-func.func @mulsi_extended_i0() -> (i0, i0) {
-  %c0 = arith.constant 0 : i0
-  %mulsi_extended:2 = arith.mulsi_extended %c0, %c0 : i0
-  return %mulsi_extended#0, %mulsi_extended#1 : i0, i0
-}
-
 // CHECK-LABEL: @sequences_fastmath_contract
 // CHECK-SAME: ([[ARG0:%.+]]: bf16)
 // CHECK: [[EXTF:%.+]] = arith.extf [[ARG0]]
@@ -3635,5 +3632,42 @@ func.func @unreachable() {
 func.func @cmpi_dynamic_shape_no_fold(%arg0: tensor<?xi32>) -> tensor<?xi1> {
   %0 = arith.cmpi eq, %arg0, %arg0 : tensor<?xi32>
   return %0 : tensor<?xi1>
+}
+
+// -----
+
+// arith.truncf of infinity to a FiniteOnly float type (f4E2M1FN) must not fold,
+// since the type has no infinity representation. Previously this would crash
+// inside APFloat::convert with llvm_unreachable("semantics don't support inf!").
+
+// CHECK-LABEL: @truncf_inf_to_finite_only_no_fold
+//       CHECK:   arith.truncf
+func.func @truncf_inf_to_finite_only_no_fold() -> f4E2M1FN {
+  %inf = arith.constant 0x7F800000 : f32
+  %result = arith.truncf %inf : f32 to f4E2M1FN
+  return %result : f4E2M1FN
+}
+
+// -----
+
+// arith.truncf of negative infinity to a FiniteOnly float type must not fold.
+
+// CHECK-LABEL: @truncf_neg_inf_to_finite_only_no_fold
+//       CHECK:   arith.truncf
+func.func @truncf_neg_inf_to_finite_only_no_fold() -> f4E2M1FN {
+  %neg_inf = arith.constant 0xFF800000 : f32
+  %result = arith.truncf %neg_inf : f32 to f4E2M1FN
+  return %result : f4E2M1FN
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_fold_f8
+//       CHECK:   %[[C:.*]] = arith.constant 2.000000e+00 : f8E5M2
+//       CHECK:   return %[[C]]
+func.func @convertf_fold_f8() -> f8E5M2 {
+  %c = arith.constant 2.0 : f8E4M3FN
+  %result = arith.convertf %c : f8E4M3FN to f8E5M2
+  return %result : f8E5M2
 }
 

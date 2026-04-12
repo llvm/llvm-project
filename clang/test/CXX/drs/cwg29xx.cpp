@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx11,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 %s
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
 // cxx98-no-diagnostics
 

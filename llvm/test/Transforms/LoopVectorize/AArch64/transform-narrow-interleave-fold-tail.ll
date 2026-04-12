@@ -25,8 +25,7 @@ define void @load_store_interleave_group(ptr noalias %data, i64 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr [[TMP4]], align 8

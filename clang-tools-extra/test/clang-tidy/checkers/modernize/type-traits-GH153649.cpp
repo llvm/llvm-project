@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-type-traits %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-type-traits %t
 
 namespace std {
 template <class> struct tuple_size {

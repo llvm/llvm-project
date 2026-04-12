@@ -107,9 +107,8 @@ gpu::GPUModuleOp SerializeGPUModuleBase::getGPUModuleOp() {
 // There are 2 ways to access IGC: AOT (ocloc) and JIT (L0 runtime).
 // - L0 runtime consumes IL and is external to MLIR codebase (rt wrappers).
 // - `ocloc` tool can be "queried" from within MLIR.
-FailureOr<SmallVector<char, 0>>
-SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
-                                        StringRef inputFormat) {
+FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::compileToBinary(
+    StringRef asmStr, StringRef inputFormat = "-spirv_input") {
   using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
   // Find the `ocloc` tool.
   std::optional<std::string> oclocCompiler = findTool("ocloc");
@@ -307,47 +306,13 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
       "The `SPIRV` target was not built. Please enable "
       "it when building LLVM.");
 #else
-
-  // Return SPIRV text if the compilation target is `assembly`.
-  // Note: Optimization passes are skipped and SPIRV extensions are
-  // not supported in this mode.
-  if (targetOptions.getCompilationTarget() ==
-      gpu::CompilationTarget::Assembly) {
-    FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
-    if (failed(targetMachine))
-      return getGPUModuleOp().emitError()
-             << "Target Machine unavailable for triple " << triple
-             << ", can't optimize with LLVM\n";
-
-    FailureOr<SmallString<0>> serializedISA =
-        translateModuleToISA(llvmModule, **targetMachine,
-                             [&]() { return getGPUModuleOp().emitError(); });
-    if (failed(serializedISA))
-      return getGPUModuleOp().emitError()
-             << "Failed translating the module to ISA." << triple
-             << ", can't compile with LLVM\n";
-
-#define DEBUG_TYPE "serialize-to-isa"
-    LLVM_DEBUG({
-      llvm::dbgs() << "SPIR-V for module: " << getGPUModuleOp().getNameAttr()
-                   << "\n";
-      llvm::dbgs() << *serializedISA << "\n";
-      llvm::dbgs().flush();
-    });
-#undef DEBUG_TYPE
-
-    // Make sure to include the null terminator.
-    StringRef bin(serializedISA->c_str(), serializedISA->size() + 1);
-    return SmallVector<char, 0>(bin.begin(), bin.end());
-  }
-
-  // Level zero runtime is set up to accept SPIR-V binary
   std::string serializedSPIRVBinary;
   std::string ErrMsg;
   std::vector<std::string> Opts;
   Opts.push_back(triple.str());
   Opts.push_back(std::to_string(optLevel));
 
+  // Translate the LLVM module to SPIR-V binary using LLVM's SPIR-V Backend API.
   bool success =
       SPIRVTranslateModule(&llvmModule, serializedSPIRVBinary, ErrMsg,
                            getDefaultSPIRVExtensions(), Opts);
@@ -361,8 +326,30 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
     return getGPUModuleOp().emitError()
            << "SPIRV code size must be a multiple of 4.";
 
-  StringRef bin(serializedSPIRVBinary.c_str(), serializedSPIRVBinary.size());
-  return SmallVector<char, 0>(bin.begin(), bin.end());
+  StringRef spirvBin(serializedSPIRVBinary.c_str(),
+                     serializedSPIRVBinary.size());
+
+  // Return SPIRV binary if the compilation target is `assembly`. Optimization
+  // and SPIR-V extensions are enabled for SPIR-V binary output in both paths
+  // (assembly and binary) as of now. SPIR-V binary
+  // is generated directly using the SPIR-V backends `SPIRVTranslateModule` API.
+  if (targetOptions.getCompilationTarget() ==
+      gpu::CompilationTarget::Assembly) {
+#define DEBUG_TYPE "serialize-to-isa"
+    LLVM_DEBUG({
+      llvm::dbgs() << "SPIR-V for module: " << getGPUModuleOp().getNameAttr()
+                   << "\n";
+      llvm::dbgs() << serializedSPIRVBinary << "\n";
+      llvm::dbgs().flush();
+    });
+#undef DEBUG_TYPE
+    return SmallVector<char, 0>(spirvBin.begin(), spirvBin.end());
+  }
+
+  // Return native binary. Compile the SPIR-V binary to native binary for Intel
+  // GPUs using `ocloc` compiler (Intel's OpenCL Offline Compiler).
+
+  return compileToBinary(spirvBin, "-spirv_input");
 #endif // LLVM_HAS_SPIRV_TARGET
 }
 

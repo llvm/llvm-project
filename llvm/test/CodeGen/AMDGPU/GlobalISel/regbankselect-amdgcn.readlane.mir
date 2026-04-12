@@ -2,6 +2,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-fast | FileCheck %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-greedy | FileCheck %s
 
+# TODO: Convert to -new-reg-bank-select after AGPRs support
+
 ---
 name: readlane_ss
 legalized: true

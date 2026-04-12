@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-nodiscard %t -- \
-// RUN:   -config="{CheckOptions: {modernize-use-nodiscard.ReplacementString: 'NO_DISCARD'}}" \
-// RUN:   -- -isystem %clang_tidy_headers
+// RUN:   -config="{CheckOptions: {modernize-use-nodiscard.ReplacementString: 'NO_DISCARD'}}"
 #include <string>
 
 namespace std {

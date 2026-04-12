@@ -233,6 +233,9 @@ public:
   /// The left shift operation (i.e. dstPos < srcPos) works in a similar way.
   void moveColumns(unsigned srcPos, unsigned num, unsigned dstPos);
 
+  /// Returns the matrix right-multiplied with `other`.
+  Matrix<T> postMultiply(const Matrix<T> &other) const;
+
 protected:
   /// The current number of rows, columns, and reserved columns. The underlying
   /// data vector is viewed as an nRows x nReservedColumns matrix, of which the
@@ -273,6 +276,15 @@ public:
   ///    the left of the pivots are nonnegative and strictly smaller than the
   ///    pivot.
   std::pair<IntMatrix, IntMatrix> computeHermiteNormalForm() const;
+
+  /// Given the current matrix M, returns the matrices U, D, V such that
+  /// UMV = D, where D is called the Smith Normal Form (SNF).
+  /// The matrices have the following properties:
+  ///   - U, V are unimodular. In other words, det(U), det(V) are 1 or -1;
+  ///     their inverses also contain integer entries.
+  ///   - D is diagonal.
+  ///   - For all i, the diagonal element D_{i, i} divides D_{i + 1, i + 1}.
+  std::tuple<IntMatrix, IntMatrix, IntMatrix> computeSmithNormalForm() const;
 
   /// Divide the first `nCols` of the specified row by their GCD.
   /// Returns the GCD of the first `nCols` of the specified row.

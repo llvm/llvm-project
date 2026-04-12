@@ -14,12 +14,12 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACCUTILSCG_H_
 #define MLIR_DIALECT_OPENACC_OPENACCUTILSCG_H_
 
+#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include <optional>
 
 namespace mlir {
-class Operation;
-
 namespace acc {
 
 /// Get the data layout for an operation.
@@ -33,6 +33,34 @@ namespace acc {
 /// \return The data layout if available, std::nullopt otherwise.
 std::optional<DataLayout> getDataLayout(Operation *op,
                                         bool allowDefault = true);
+
+/// Build an `acc.compute_region` operation by cloning a source region.
+///
+/// Creates a new `acc.compute_region` with the given launch arguments and
+/// origin string, then clones the operations from `regionToClone` into its
+/// body. Launch operands should be `acc.par_width` results (`index`); the
+/// region entry block gets matching `index` block arguments first, then
+/// arguments for each `ins` operand. Multi-block regions are wrapped with
+/// `scf.execute_region`.
+///
+/// The `mapping` is used and updated during cloning, allowing callers to
+/// track value correspondences. Optional `output`, `kernelFuncName`,
+/// `kernelModuleName`, and `stream` arguments are forwarded to the op.
+///
+/// When `inputArgsToMap` is non-empty, it is used as the key set for the
+/// clone mapping (instead of `inputArgs`). Use this when cloning a region
+/// that references one set of values (e.g. the source function's args) while
+/// the op's operands are another set (e.g. the current block's args).
+/// `inputArgsToMap` must have the same size as `inputArgs` when provided.
+ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
+                                   ValueRange inputArgs, llvm::StringRef origin,
+                                   Region &regionToClone,
+                                   RewriterBase &rewriter, IRMapping &mapping,
+                                   ValueRange output = {},
+                                   FlatSymbolRefAttr kernelFuncName = {},
+                                   FlatSymbolRefAttr kernelModuleName = {},
+                                   Value stream = {},
+                                   ValueRange inputArgsToMap = {});
 
 } // namespace acc
 } // namespace mlir

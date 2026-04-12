@@ -28,12 +28,12 @@ define void @example1() optsize {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr @b, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr @c, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr @c, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr @a, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], ptr @a, i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
@@ -45,7 +45,7 @@ define void @example1() optsize {
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv
   %3 = load i32, ptr %2, align 4
@@ -59,7 +59,7 @@ define void @example1() optsize {
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -85,14 +85,14 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr @b, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr @b, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 4
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -100,7 +100,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP3]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr @b, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
@@ -108,7 +108,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.if5:
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr @b, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [4 x i8], ptr @b, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i64 12
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
@@ -146,11 +146,11 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP18]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF19:%.*]], label [[PRED_STORE_CONTINUE20:%.*]]
 ; CHECK:       pred.store.if18:
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr @b, i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr @c, i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [4 x i8], ptr @c, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr @a, i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [4 x i8], ptr @a, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = and i32 [[TMP23]], [[TMP21]]
 ; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE20]]
@@ -159,11 +159,11 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[PRED_STORE_IF21:%.*]], label [[PRED_STORE_CONTINUE22:%.*]]
 ; CHECK:       pred.store.if20:
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr @b, i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP28]], align 4
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr @c, i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [4 x i8], ptr @c, i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr [[TMP30]], align 4
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, ptr @a, i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [4 x i8], ptr @a, i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = and i32 [[TMP31]], [[TMP29]]
 ; CHECK-NEXT:    store i32 [[TMP33]], ptr [[TMP32]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE22]]
@@ -172,24 +172,24 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    br i1 [[TMP34]], label [[PRED_STORE_IF23:%.*]], label [[PRED_STORE_CONTINUE24:%.*]]
 ; CHECK:       pred.store.if22:
 ; CHECK-NEXT:    [[TMP35:%.*]] = add i64 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i32, ptr @b, i64 [[TMP35]]
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = load i32, ptr [[TMP36]], align 4
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr @c, i64 [[TMP35]]
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [4 x i8], ptr @c, i64 [[TMP35]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = load i32, ptr [[TMP38]], align 4
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i32, ptr @a, i64 [[TMP35]]
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [4 x i8], ptr @a, i64 [[TMP35]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = and i32 [[TMP39]], [[TMP37]]
 ; CHECK-NEXT:    store i32 [[TMP41]], ptr [[TMP40]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE24]]
 ; CHECK:       pred.store.continue23:
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <4 x i1> [[TMP18]], i64 3
-; CHECK-NEXT:    br i1 [[TMP42]], label [[PRED_STORE_IF25:%.*]], label [[PRED_STORE_CONTINUE26]]
+; CHECK-NEXT:    br i1 [[TMP42]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE26]]
 ; CHECK:       pred.store.if24:
 ; CHECK-NEXT:    [[TMP43:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i32, ptr @b, i64 [[TMP43]]
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [4 x i8], ptr @b, i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = load i32, ptr [[TMP44]], align 4
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i32, ptr @c, i64 [[TMP43]]
+; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [4 x i8], ptr @c, i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = load i32, ptr [[TMP46]], align 4
-; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i32, ptr @a, i64 [[TMP43]]
+; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [4 x i8], ptr @a, i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = and i32 [[TMP47]], [[TMP45]]
 ; CHECK-NEXT:    store i32 [[TMP49]], ptr [[TMP48]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE26]]
@@ -207,16 +207,16 @@ define void @example2(i32 %n, i32 %x) optsize {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph5, label %.preheader
 
-..preheader_crit_edge:                            ; preds = %.lr.ph5
+..preheader_crit_edge:
   %phitmp = sext i32 %n to i64
   br label %.preheader
 
-.preheader:                                       ; preds = %..preheader_crit_edge, %0
+.preheader:
   %i.0.lcssa = phi i64 [ %phitmp, %..preheader_crit_edge ], [ 0, %0 ]
   %2 = icmp eq i32 %n, 0
   br i1 %2, label %._crit_edge, label %.lr.ph
 
-.lr.ph5:                                          ; preds = %0, %.lr.ph5
+.lr.ph5:
   %indvars.iv6 = phi i64 [ %indvars.iv.next7, %.lr.ph5 ], [ 0, %0 ]
   %3 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv6
   store i32 %x, ptr %3, align 4
@@ -225,7 +225,7 @@ define void @example2(i32 %n, i32 %x) optsize {
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %..preheader_crit_edge, label %.lr.ph5
 
-.lr.ph:                                           ; preds = %.preheader, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ %i.0.lcssa, %.preheader ]
   %.02 = phi i32 [ %4, %.lr.ph ], [ %n, %.preheader ]
   %4 = add nsw i32 %.02, -1
@@ -240,7 +240,7 @@ define void @example2(i32 %n, i32 %x) optsize {
   %11 = icmp eq i32 %4, 0
   br i1 %11, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %.preheader
+._crit_edge:
   ret void
 }
 
@@ -325,7 +325,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %1 = icmp eq i32 %n, 0
   br i1 %1, label %._crit_edge, label %.lr.ph
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %.05 = phi i32 [ %2, %.lr.ph ], [ %n, %0 ]
   %.014 = phi ptr [ %5, %.lr.ph ], [ %p, %0 ]
   %.023 = phi ptr [ %3, %.lr.ph ], [ %q, %0 ]
@@ -337,7 +337,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %6 = icmp eq i32 %2, 0
   br i1 %6, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }
 
@@ -363,7 +363,7 @@ define void @example23(ptr nocapture %src, ptr nocapture %dst) optsize {
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i32 [ 0, %0 ], [ %7, %1 ]
@@ -377,7 +377,7 @@ define void @example23(ptr nocapture %src, ptr nocapture %dst) optsize {
   %exitcond = icmp eq i32 %7, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -408,7 +408,7 @@ define void @example23b(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i32 [ 0, %0 ], [ %7, %1 ]
@@ -422,7 +422,7 @@ define void @example23b(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
   %exitcond = icmp eq i32 %7, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -502,7 +502,7 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i64 [ 0, %0 ], [ %7, %1 ]
@@ -516,7 +516,7 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
   %exitcond = icmp eq i64 %7, 257
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -594,7 +594,7 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i64 [ 0, %0 ], [ %7, %1 ]
@@ -608,6 +608,6 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
   %exitcond = icmp eq i64 %7, 257
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret i64 %7
 }

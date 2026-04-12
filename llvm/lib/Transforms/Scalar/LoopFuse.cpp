@@ -117,7 +117,7 @@ static cl::opt<FusionDependenceAnalysisChoice> FusionDependenceAnalysis(
                           "Use the dependence analysis interface"),
                clEnumValN(FUSION_DEPENDENCE_ANALYSIS_ALL, "all",
                           "Use all available analyses")),
-    cl::Hidden, cl::init(FUSION_DEPENDENCE_ANALYSIS_ALL));
+    cl::Hidden, cl::init(FUSION_DEPENDENCE_ANALYSIS_DA));
 
 static cl::opt<unsigned> FusionPeelMaxCount(
     "loop-fusion-peel-max-count", cl::init(0), cl::Hidden,
@@ -166,7 +166,7 @@ struct FusionCandidate {
   /// Are all of the members of this fusion candidate still valid
   bool Valid;
   /// Guard branch of the loop, if it exists
-  BranchInst *GuardBranch;
+  CondBrInst *GuardBranch;
   /// Peeling Paramaters of the Loop.
   TTI::PeelingPreferences PP;
   /// Can you Peel this Loop?
@@ -252,8 +252,7 @@ struct FusionCandidate {
   BasicBlock *getEntryBlock() const {
     if (GuardBranch)
       return GuardBranch->getParent();
-    else
-      return Preheader;
+    return Preheader;
   }
 
   /// After Peeling the loop is modified quite a bit, hence all of the Blocks
@@ -276,8 +275,6 @@ struct FusionCandidate {
   /// This method is only valid for guarded loops.
   BasicBlock *getNonLoopBlock() const {
     assert(GuardBranch && "Only valid on guarded loops.");
-    assert(GuardBranch->isConditional() &&
-           "Expecting guard to be a conditional branch.");
     if (Peeled)
       return GuardBranch->getSuccessor(1);
     return (GuardBranch->getSuccessor(0) == Preheader)
@@ -545,15 +542,13 @@ public:
 
         collectFusionCandidates(LV);
         Changed |= fuseCandidates();
+        // All loops in the candidate sets have a common parent (or no parent).
+        // Next loop vector will correspond to a different parent. It is safe
+        // to remove all the candidates currently in the set.
         FusionCandidates.clear();
       }
 
-      // Finished analyzing candidates at this level.
-      // Descend to the next level and clear all of the candidates currently
-      // collected. Note that it will not be possible to fuse any of the
-      // existing candidates with new candidates because the new candidates will
-      // be at a different nest level and thus not be control flow equivalent
-      // with all of the candidates collected so far.
+      // Finished analyzing candidates at this level. Descend to the next level.
       LLVM_DEBUG(dbgs() << "Descend one level!\n");
       LDT.descend();
     }
@@ -745,7 +740,7 @@ private:
         BasicBlock *Succ = CurrentBranch->getSuccessor(0);
         if (Succ == BB)
           Succ = CurrentBranch->getSuccessor(1);
-        ReplaceInstWithInst(CurrentBranch, BranchInst::Create(Succ));
+        ReplaceInstWithInst(CurrentBranch, UncondBrInst::Create(Succ));
       }
 
       DTU.applyUpdates(TreeUpdates);
@@ -1135,7 +1130,7 @@ private:
 
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
       const Loop *ExprL = Expr->getLoop();
-      SmallVector<const SCEV *, 2> Operands;
+      SmallVector<SCEVUse, 2> Operands;
       if (ExprL == &OldL) {
         append_range(Operands, Expr->operands());
         return SE.getAddRecExpr(Operands, &NewL, Expr->getNoWrapFlags());
@@ -1150,7 +1145,7 @@ private:
         return visit(Expr->getStart());
       }
 
-      for (const SCEV *Op : Expr->operands())
+      for (SCEVUse Op : Expr->operands())
         Operands.push_back(visit(Op));
       return SE.getAddRecExpr(Operands, ExprL, Expr->getNoWrapFlags());
     }
@@ -1271,6 +1266,13 @@ private:
 
       assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
+      if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
+                             "dependency\n");
+        NumDA++;
+        return true;
+      }
+
       unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
 
       // Check if the direction vector does not include greater direction. In
@@ -1291,7 +1293,6 @@ private:
         LLVM_DEBUG(
             dbgs() << "TODO: Implement pred/succ dependence handling!\n");
 
-      // TODO: Can we actually use the dependence info analysis here?
       return false;
     }
 
@@ -1318,14 +1319,12 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
       for (Instruction *ReadL1 : FC1.MemReads)
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
     }
@@ -1335,14 +1334,12 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
       for (Instruction *ReadL0 : FC0.MemReads)
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1,
                                     /* AnyDep */ false,
                                     FusionDependenceAnalysis)) {
-          InvalidDependencies++;
           return false;
         }
     }
@@ -1354,7 +1351,6 @@ private:
         for (auto &Op : I.operands())
           if (Instruction *Def = dyn_cast<Instruction>(Op))
             if (FC0.L->contains(Def->getParent())) {
-              InvalidDependencies++;
               return false;
             }
 
@@ -1379,8 +1375,7 @@ private:
     if (FC0.GuardBranch)
       return DT.dominates(FC0.getEntryBlock(), FC1.getEntryBlock()) &&
              FC0.ExitBlock->getSingleSuccessor() == FC1.getEntryBlock();
-    else
-      return FC0.ExitBlock == FC1.getEntryBlock();
+    return FC0.ExitBlock == FC1.getEntryBlock();
   }
 
   bool isEmptyPreheader(const FusionCandidate &FC) const {
@@ -1471,13 +1466,12 @@ private:
   /// Modify the latch branch of FC to be unconditional since successors of the
   /// branch are the same.
   void simplifyLatchBranch(const FusionCandidate &FC) const {
-    BranchInst *FCLatchBranch = dyn_cast<BranchInst>(FC.Latch->getTerminator());
+    CondBrInst *FCLatchBranch = dyn_cast<CondBrInst>(FC.Latch->getTerminator());
     if (FCLatchBranch) {
-      assert(FCLatchBranch->isConditional() &&
-             FCLatchBranch->getSuccessor(0) == FCLatchBranch->getSuccessor(1) &&
+      assert(FCLatchBranch->getSuccessor(0) == FCLatchBranch->getSuccessor(1) &&
              "Expecting the two successors of FCLatchBranch to be the same");
-      BranchInst *NewBranch =
-          BranchInst::Create(FCLatchBranch->getSuccessor(0));
+      UncondBrInst *NewBranch =
+          UncondBrInst::Create(FCLatchBranch->getSuccessor(0));
       ReplaceInstWithInst(FCLatchBranch, NewBranch);
     }
   }
@@ -1485,7 +1479,7 @@ private:
   /// Move instructions from FC0.Latch to FC1.Latch. If FC0.Latch has an unique
   /// successor, then merge FC0.Latch with its unique successor.
   void mergeLatch(const FusionCandidate &FC0, const FusionCandidate &FC1) {
-    moveInstructionsToTheBeginning(*FC0.Latch, *FC1.Latch, DT, PDT, DI);
+    moveInstructionsToTheBeginning(*FC0.Latch, *FC1.Latch, DT, PDT, DI, SE);
     if (BasicBlock *Succ = FC0.Latch->getUniqueSuccessor()) {
       MergeBlockIntoPredecessor(Succ, &DTU, &LI);
       DTU.flush();
@@ -1530,7 +1524,7 @@ private:
 
     // Move instructions from the preheader of FC1 to the end of the preheader
     // of FC0.
-    moveInstructionsToTheEnd(*FC1.Preheader, *FC0.Preheader, DT, PDT, DI);
+    moveInstructionsToTheEnd(*FC1.Preheader, *FC0.Preheader, DT, PDT, DI, SE);
 
     // Fusing guarded loops is handled slightly differently than non-guarded
     // loops and has been broken out into a separate method instead of trying to
@@ -1682,19 +1676,6 @@ private:
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
 
-    // Move instructions from FC0.Latch to FC1.Latch.
-    // Note: mergeLatch requires an updated DT.
-    mergeLatch(FC0, FC1);
-
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
-    // since merging the latches may affect the dispositions.
-    SE.forgetBlockAndLoopDispositions();
-
-    // Forget the cached SCEV values including the induction variable that may
-    // have changed after the fusion.
-    SE.forgetLoop(FC0.L);
-
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
@@ -1713,6 +1694,15 @@ private:
 
     // Delete the now empty loop L1.
     LI.erase(FC1.L);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
 
 #ifndef NDEBUG
     assert(!verifyFunction(*FC0.Header->getParent(), &errs()));
@@ -1787,11 +1777,11 @@ private:
     // of the FC0 Exit block to the beginning of the exit block of FC1.
     moveInstructionsToTheBeginning(
         (FC0.Peeled ? *FC0ExitBlockSuccessor : *FC0.ExitBlock), *FC1.ExitBlock,
-        DT, PDT, DI);
+        DT, PDT, DI, SE);
 
     // Move instructions from the guard block of FC1 to the end of the guard
     // block of FC0.
-    moveInstructionsToTheEnd(*FC1GuardBlock, *FC0GuardBlock, DT, PDT, DI);
+    moveInstructionsToTheEnd(*FC1GuardBlock, *FC0GuardBlock, DT, PDT, DI, SE);
 
     assert(FC0NonLoopBlock == FC1GuardBlock && "Loops are not adjacent");
 
@@ -1984,15 +1974,6 @@ private:
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
 
-    // Move instructions from FC0.Latch to FC1.Latch.
-    // Note: mergeLatch requires an updated DT.
-    mergeLatch(FC0, FC1);
-
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
-    // since merging the latches may affect the dispositions.
-    SE.forgetBlockAndLoopDispositions();
-
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
@@ -2011,6 +1992,15 @@ private:
 
     // Delete the now empty loop L1.
     LI.erase(FC1.L);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
 
 #ifndef NDEBUG
     assert(!verifyFunction(*FC0.Header->getParent(), &errs()));

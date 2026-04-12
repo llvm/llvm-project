@@ -81,10 +81,15 @@
 // RUN:   -mstack-protector-guard-reg=foo \
 // RUN:   -mstack-protector-guard-offset=0 %s 2>&1 | \
 // RUN: FileCheck -check-prefix=INVALID-REG-AARCH64 %s
+// RUN: %clang -### -target aarch64-linux-gnu -mstack-protector-guard=sysreg \
+// RUN:   -mstack-protector-guard-reg=tpidr_el0 \
+// RUN:   -mstack-protector-guard-offset=0 %s 2>&1 | \
+// RUN: FileCheck -check-prefix=CHECK-AARCH64-TPIDR %s
 
 // CHECK-AARCH64: "-cc1" {{.*}}"-mstack-protector-guard=sysreg" "-mstack-protector-guard-offset=0" "-mstack-protector-guard-reg=sp_el0"
 // INVALID-VALUE-AARCH64: error: invalid value 'tls' in 'mstack-protector-guard=', expected one of: sysreg global
-// INVALID-REG-AARCH64: error: invalid value 'foo' in 'mstack-protector-guard-reg='
+// INVALID-REG-AARCH64: error: invalid value 'foo' in 'mstack-protector-guard-reg=', expected one of: {sp_el0, tpidrro_el0, tpidr_el[012], far_el[12]}
+// CHECK-AARCH64-TPIDR: "-cc1" {{.*}}"-mstack-protector-guard=sysreg" "-mstack-protector-guard-offset=0" "-mstack-protector-guard-reg=tpidr_el0"
 
 // RUN: %clang -### -target riscv64-unknown-elf -mstack-protector-guard=tls -mstack-protector-guard-offset=24 -mstack-protector-guard-reg=tp %s 2>&1 | \
 // RUN:   FileCheck -v -check-prefix=CHECK-TLS-RISCV %s

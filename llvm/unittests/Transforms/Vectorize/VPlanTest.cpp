@@ -546,7 +546,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order.
     FromIterator.clear();
-    FromIterator.append(po_begin(Start), po_end(Start));
+    copy(post_order(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(10u, FromIterator.size());
     EXPECT_EQ(VPBB2, FromIterator[0]);
     EXPECT_EQ(R1BB3, FromIterator[1]);
@@ -597,7 +597,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order.
     FromIterator.clear();
-    FromIterator.append(po_begin(Start), po_end(Start));
+    copy(post_order(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(5u, FromIterator.size());
     EXPECT_EQ(R2BB2, FromIterator[0]);
     EXPECT_EQ(R2BB1, FromIterator[1]);
@@ -678,8 +678,9 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order, const VPRegionBlocks only.
     VPBlockDeepTraversalWrapper<const VPBlockBase *> StartConst(VPBB1);
-    SmallVector<const VPRegionBlock *> FromIteratorVPRegion(
-        VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(StartConst)));
+    SmallVector<const VPRegionBlock *> FromIteratorVPRegion;
+    copy(VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(StartConst)),
+         std::back_inserter(FromIteratorVPRegion));
     EXPECT_EQ(3u, FromIteratorVPRegion.size());
     EXPECT_EQ(R3, FromIteratorVPRegion[0]);
     EXPECT_EQ(R2, FromIteratorVPRegion[1]);
@@ -1442,9 +1443,26 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
   }
   {
+    VPValue *Op1 = Plan.getConstantInt(Int32, 1);
+    VPInstruction VPInst(Instruction::FNeg, {Op1},
+                         VPIRFlags::getDefaultFlags(Instruction::FNeg));
+    VPRecipeBase &Recipe = VPInst;
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
+  }
+  {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPPredInstPHIRecipe Recipe(Op1, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
+  }
+  {
+    VPIRValue *StartV = Plan.getZero(Int32);
+    VPCanonicalIVPHIRecipe Recipe(StartV, {});
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
@@ -1744,6 +1762,43 @@ TEST_F(VPRecipeTest, CastToVPSingleDefRecipe) {
   EXPECT_TRUE(isa<VPSingleDefRecipe>(B));
   // TODO: check other VPSingleDefRecipes.
 }
+
+TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
+  VPlan &Plan = getPlan();
+
+  // Initially, VF is not materialized.
+  EXPECT_FALSE(Plan.getVF().isMaterialized());
+
+  // Create a recipe that uses VF.
+  VPValue *VF = &Plan.getVF();
+  VPInstruction *I = new VPInstruction(VPInstruction::StepVector, {});
+  VPBasicBlock &VPBB = *Plan.createVPBasicBlock("");
+  VPBB.appendRecipe(I);
+  I->addOperand(VF);
+
+  // Replace VF with a constant.
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
+
+  // Now VF should be materialized.
+  EXPECT_TRUE(Plan.getVF().isMaterialized());
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
+  VPlan &Plan = getPlan();
+
+  // Materialize VF by replacing all uses.
+  VPValue *VF = &Plan.getVF();
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
+  EXPECT_TRUE(Plan.getVF().isMaterialized());
+
+  // Adding a new user to a materialized value should crash.
+  VPInstruction *I = new VPInstruction(VPInstruction::StepVector, {});
+  VPBasicBlock &VPBB = *Plan.createVPBasicBlock("");
+  VPBB.appendRecipe(I);
+  EXPECT_DEATH(I->addOperand(VF), "accessing materialized symbolic value");
+}
+#endif
 
 } // namespace
 } // namespace llvm

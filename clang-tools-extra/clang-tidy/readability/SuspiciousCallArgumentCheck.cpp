@@ -204,7 +204,7 @@ static bool applyLevenshteinHeuristic(StringRef Arg, StringRef Param,
                                       int8_t Threshold) {
   const std::size_t LongerLength = std::max(Arg.size(), Param.size());
   double Dist = Arg.edit_distance(Param);
-  Dist = (1.0 - Dist / LongerLength) * 100.0;
+  Dist = (1.0 - (Dist / LongerLength)) * 100.0;
   return Dist > Threshold;
 }
 

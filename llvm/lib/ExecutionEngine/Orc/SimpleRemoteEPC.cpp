@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -21,43 +22,6 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
   std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
   assert(Disconnected && "Destroyed without disconnection");
 #endif // NDEBUG
-}
-
-Expected<tpctypes::DylibHandle>
-SimpleRemoteEPC::loadDylib(const char *DylibPath) {
-  return EPCDylibMgr->open(DylibPath, 0);
-}
-
-/// Async helper to chain together calls to DylibMgr::lookupAsync to fulfill all
-/// all the requests.
-/// FIXME: The dylib manager should support multiple LookupRequests natively.
-static void
-lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
-                         ArrayRef<DylibManager::LookupRequest> Request,
-                         std::vector<tpctypes::LookupResult> Result,
-                         DylibManager::SymbolLookupCompleteFn Complete) {
-  if (Request.empty())
-    return Complete(std::move(Result));
-
-  auto &Element = Request.front();
-  DylibMgr.lookupAsync(Element.Handle, Element.Symbols,
-                       [&DylibMgr, Request, Complete = std::move(Complete),
-                        Result = std::move(Result)](auto R) mutable {
-                         if (!R)
-                           return Complete(R.takeError());
-                         Result.push_back({});
-                         Result.back().reserve(R->size());
-                         llvm::append_range(Result.back(), *R);
-
-                         lookupSymbolsAsyncHelper(
-                             DylibMgr, Request.drop_front(), std::move(Result),
-                             std::move(Complete));
-                       });
-}
-
-void SimpleRemoteEPC::lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
-                                         SymbolLookupCompleteFn Complete) {
-  lookupSymbolsAsyncHelper(*EPCDylibMgr, Request, {}, std::move(Complete));
 }
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
@@ -120,6 +84,14 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 
     getExecutionSession().reportError(std::move(Err));
   }
+}
+
+Expected<std::unique_ptr<DylibManager>>
+SimpleRemoteEPC::createDefaultDylibMgr() {
+  auto DM = EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this);
+  if (!DM)
+    return DM.takeError();
+  return std::make_unique<EPCGenericDylibManager>(std::move(*DM));
 }
 
 Error SimpleRemoteEPC::disconnect() {
@@ -368,12 +340,6 @@ Error SimpleRemoteEPC::setup(Setup S) {
            {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
            {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
     return Err;
-
-  if (auto DM =
-          EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this))
-    EPCDylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
-  else
-    return DM.takeError();
 
   // Set a default CreateMemoryManager if none is specified.
   if (!S.CreateMemoryManager)

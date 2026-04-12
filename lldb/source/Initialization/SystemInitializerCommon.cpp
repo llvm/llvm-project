@@ -62,8 +62,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
   }
 #endif
 
-  InitializeLLDBChannel();
-
+  LLDBLogChannel::Initialize();
   Diagnostics::Initialize();
   FileSystem::Initialize();
   HostInfo::Initialize();
@@ -90,15 +89,20 @@ llvm::Error SystemInitializerCommon::Initialize() {
 void SystemInitializerCommon::Terminate() {
   LLDB_SCOPED_TIMER();
 
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
+    defined(__OpenBSD__)
+  ProcessPOSIXLog::Terminate();
+#endif
 #if defined(_WIN32)
   ProcessWindowsLog::Terminate();
 #endif
+
+  process_gdb_remote::ProcessGDBRemoteLog::Terminate();
 
   Socket::Terminate();
   HostInfo::Terminate();
   Log::DisableAllLogChannels();
   FileSystem::Terminate();
   Diagnostics::Terminate();
-
-  TerminateLLDBChannel();
+  LLDBLogChannel::Terminate();
 }

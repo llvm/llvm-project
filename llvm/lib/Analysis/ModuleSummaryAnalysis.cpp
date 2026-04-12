@@ -766,7 +766,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
   // look for virtual function pointers.
   const DataLayout &DL = M.getDataLayout();
   if (auto *C = dyn_cast<ConstantStruct>(I)) {
-    StructType *STy = dyn_cast<StructType>(C->getType());
+    StructType *STy = C->getType();
     assert(STy);
     const StructLayout *SL = DL.getStructLayout(C->getType());
 

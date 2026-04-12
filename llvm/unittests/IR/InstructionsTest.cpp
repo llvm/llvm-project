@@ -129,18 +129,20 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
   }
 }
 
-TEST(InstructionsTest, BranchInst) {
+TEST(InstructionsTest, UncondBrInst) {
   LLVMContext C;
 
-  // Make a BasicBlocks
-  BasicBlock* bb0 = BasicBlock::Create(C);
-  BasicBlock* bb1 = BasicBlock::Create(C);
+  // Make a BasicBlock
+  BasicBlock *bb0 = BasicBlock::Create(C);
 
-  // Mandatory BranchInst
-  const BranchInst* b0 = BranchInst::Create(bb0);
+  const UncondBrInst *b0 = UncondBrInst::Create(bb0);
 
-  EXPECT_TRUE(b0->isUnconditional());
-  EXPECT_FALSE(b0->isConditional());
+  // Test legacy BranchInst API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+  EXPECT_TRUE(cast<BranchInst>(b0)->isUnconditional());
+  EXPECT_FALSE(cast<BranchInst>(b0)->isConditional());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+
   EXPECT_EQ(1U, b0->getNumSuccessors());
 
   // check num operands
@@ -151,14 +153,29 @@ TEST(InstructionsTest, BranchInst) {
 
   EXPECT_EQ(b0->op_end(), std::next(b0->op_begin()));
 
+  // clean up
+  delete b0;
+  delete bb0;
+}
+
+TEST(InstructionsTest, CondBrInst) {
+  LLVMContext C;
+
+  // Make a BasicBlocks
+  BasicBlock *bb0 = BasicBlock::Create(C);
+  BasicBlock *bb1 = BasicBlock::Create(C);
+
   IntegerType* Int1 = IntegerType::get(C, 1);
   Constant* One = ConstantInt::getTrue(Int1);
 
-  // Conditional BranchInst
-  BranchInst* b1 = BranchInst::Create(bb0, bb1, One);
+  CondBrInst *b1 = CondBrInst::Create(One, bb0, bb1);
 
-  EXPECT_FALSE(b1->isUnconditional());
-  EXPECT_TRUE(b1->isConditional());
+  // Test legacy BranchInst API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+  EXPECT_FALSE(cast<BranchInst>(b1)->isUnconditional());
+  EXPECT_TRUE(cast<BranchInst>(b1)->isConditional());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+
   EXPECT_EQ(2U, b1->getNumSuccessors());
 
   // check num operands
@@ -173,22 +190,21 @@ TEST(InstructionsTest, BranchInst) {
   EXPECT_EQ(One, b1->getCondition());
   ++b;
 
-  // check ELSE
-  EXPECT_EQ(bb1, *b);
-  EXPECT_EQ(bb1, b1->getOperand(1));
-  EXPECT_EQ(bb1, b1->getSuccessor(1));
-  ++b;
-
   // check THEN
   EXPECT_EQ(bb0, *b);
-  EXPECT_EQ(bb0, b1->getOperand(2));
+  EXPECT_EQ(bb0, b1->getOperand(1));
   EXPECT_EQ(bb0, b1->getSuccessor(0));
+  ++b;
+
+  // check ELSE
+  EXPECT_EQ(bb1, *b);
+  EXPECT_EQ(bb1, b1->getOperand(2));
+  EXPECT_EQ(bb1, b1->getSuccessor(1));
   ++b;
 
   EXPECT_EQ(b1->op_end(), b);
 
   // clean up
-  delete b0;
   delete b1;
 
   delete bb0;

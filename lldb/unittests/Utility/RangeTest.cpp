@@ -43,6 +43,14 @@ TEST(RangeTest, Constructor) {
   EXPECT_EQ(8U, r.GetRangeEnd());
 }
 
+TEST(RangeTest, IsValid) {
+  RangeT range;
+  EXPECT_FALSE(range.IsValid());
+
+  range = RangeT(0x1, 0x0);
+  EXPECT_FALSE(range.IsValid());
+}
+
 TEST(RangeTest, Copy) {
   RangeT orig(3, 5);
   RangeT r = orig;
@@ -54,8 +62,9 @@ TEST(RangeTest, Copy) {
 
 TEST(RangeTest, Clear) {
   RangeT r(3, 5);
+  EXPECT_NE(r, RangeT());
   r.Clear();
-  EXPECT_TRUE(r == RangeT());
+  EXPECT_EQ(r, RangeT());
 }
 
 TEST(RangeTest, ClearWithStarAddress) {
@@ -70,6 +79,18 @@ TEST(RangeTest, SetRangeBase) {
   EXPECT_EQ(6U, r.GetRangeBase());
   EXPECT_EQ(11U, r.GetRangeEnd());
   EXPECT_EQ(5U, r.GetByteSize());
+}
+
+TEST(RangeTest, SetRangeEnd) {
+  RangeT r(0x100, 0x100);
+
+  r.SetRangeEnd(0xFF);
+  EXPECT_EQ(r.GetByteSize(), 0U);
+  EXPECT_FALSE(r.IsValid());
+
+  r.SetRangeEnd(0x101);
+  EXPECT_EQ(r.GetByteSize(), 1U);
+  EXPECT_TRUE(r.IsValid());
 }
 
 TEST(RangeTest, Slide) {

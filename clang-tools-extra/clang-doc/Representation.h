@@ -18,13 +18,128 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Execution.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/simple_ilist.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Mutex.h"
+#include "llvm/Support/StringSaver.h"
 #include <array>
+#include <memory>
 #include <optional>
 #include <string>
 
 namespace clang {
 namespace doc {
+
+class ConcurrentStringPool {
+public:
+  StringRef intern(StringRef Name) {
+    if (Name.empty())
+      return StringRef();
+
+    llvm::sys::SmartScopedLock<true> Lock(PoolMutex);
+    return Saver.save(Name);
+  }
+
+private:
+  llvm::sys::SmartMutex<true> PoolMutex;
+  llvm::BumpPtrAllocator Alloc;
+  llvm::UniqueStringSaver Saver{Alloc};
+};
+
+ConcurrentStringPool &getGlobalStringPool();
+
+extern thread_local llvm::BumpPtrAllocator TransientArena;
+extern thread_local llvm::BumpPtrAllocator PersistentArena;
+
+inline StringRef internString(const Twine &T) {
+  if (T.isTriviallyEmpty())
+    return StringRef();
+
+  if (T.isSingleStringRef()) {
+    StringRef S = T.getSingleStringRef();
+    if (S.empty())
+      return StringRef();
+    return getGlobalStringPool().intern(S);
+  }
+
+  SmallString<128> Buffer;
+  StringRef S = T.toStringRef(Buffer);
+  if (S.empty())
+    return StringRef();
+  return getGlobalStringPool().intern(S);
+}
+
+template <typename T>
+llvm::ArrayRef<T> allocateArray(llvm::SmallVectorImpl<T> &V,
+                                llvm::BumpPtrAllocator &Alloc) {
+  if (V.empty())
+    return llvm::ArrayRef<T>();
+  T *Allocated = (T *)Alloc.Allocate<T>(V.size());
+  std::uninitialized_move(V.begin(), V.end(), Allocated);
+  return llvm::ArrayRef<T>(Allocated, V.size());
+}
+
+template <typename T>
+llvm::ArrayRef<T> allocateArray(llvm::ArrayRef<T> V,
+                                llvm::BumpPtrAllocator &Alloc) {
+  if (V.empty())
+    return llvm::ArrayRef<T>();
+  T *Allocated = (T *)Alloc.Allocate<T>(V.size());
+  std::uninitialized_copy(V.begin(), V.end(), Allocated);
+  return llvm::ArrayRef<T>(Allocated, V.size());
+}
+
+template <typename T>
+llvm::ArrayRef<T> deepCopyArray(llvm::ArrayRef<T> V,
+                                llvm::BumpPtrAllocator &Alloc) {
+  if (V.empty())
+    return llvm::ArrayRef<T>();
+  T *Allocated = (T *)Alloc.Allocate<T>(V.size());
+  for (size_t Idx = 0; Idx < V.size(); ++Idx) {
+    new (Allocated + Idx) T(V[Idx], Alloc);
+  }
+  return llvm::ArrayRef<T>(Allocated, V.size());
+}
+
+// An abstraction for owned pointers. Initially mapped to OwnedPtr,
+// to be eventually transitioned to bare pointers in an arena.
+template <typename T> using OwnedPtr = T *;
+
+// An abstraction for vectors that are populated and read sequentially.
+// To be eventually transitioned to llvm::ArrayRef for arena storage.
+template <typename T> using OwningArray = std::vector<T>;
+
+// An abstraction for lists that are dynamically managed (inserted/removed).
+// To be eventually transitioned to llvm::simple_ilist.
+template <typename T> using OwningVec = llvm::simple_ilist<T>;
+
+// An abstraction for dynamic lists of owned pointers.
+// To be eventually transitioned to llvm::simple_ilist<T*> or similar.
+template <typename T> using OwningPtrVec = std::vector<OwnedPtr<T>>;
+
+// An abstraction for arrays of owned pointers.
+// To be eventually transitioned to arena-allocated arrays of bare pointers.
+template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
+
+// A helper function to create an owned pointer, abstracting away the memory
+// allocation mechanism.
+template <typename T, typename... Args>
+OwnedPtr<T> allocatePtr(Args &&...args) {
+  return new (TransientArena.Allocate<T>()) T(std::forward<Args>(args)...);
+}
+
+// An overload to explicitly allocate on an arena, returning a bare pointer.
+template <typename T, typename... Args>
+T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
+  return new (Alloc.Allocate<T>()) T(std::forward<Args>(args)...);
+}
+
+// A helper function to access the underlying pointer from an owned pointer,
+// abstracting away the pointer dereferencing mechanism.
+template <typename T> T *getPtr(const OwnedPtr<T> &O) { return O; }
 
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
@@ -68,15 +183,31 @@ enum class CommentKind {
   CK_Unknown
 };
 
+enum OutputFormatTy { md, yaml, html, json, md_mustache };
+
 CommentKind stringToCommentKind(llvm::StringRef KindStr);
 llvm::StringRef commentKindToString(CommentKind Kind);
 
 // A representation of a parsed comment.
-struct CommentInfo {
+struct CommentInfo : public llvm::ilist_node<CommentInfo> {
   CommentInfo() = default;
-  CommentInfo(CommentInfo &Other) = delete;
+  CommentInfo(const CommentInfo &Other) = default;
+  CommentInfo &operator=(const CommentInfo &Other) = default;
+  CommentInfo(const CommentInfo &Other, llvm::BumpPtrAllocator &Arena);
   CommentInfo(CommentInfo &&Other) = default;
   CommentInfo &operator=(CommentInfo &&Other) = default;
+
+  CommentInfo(CommentKind Kind, llvm::ArrayRef<CommentInfo> Children = {},
+              StringRef Text = StringRef(), StringRef Name = StringRef(),
+              StringRef CloseName = StringRef(),
+              StringRef Direction = StringRef(),
+              StringRef ParamName = StringRef(), bool Explicit = false,
+              bool SelfClosing = false, llvm::ArrayRef<StringRef> AttrKeys = {},
+              llvm::ArrayRef<StringRef> AttrValues = {})
+      : Children(Children), Direction(Direction), Name(Name),
+        ParamName(ParamName), CloseName(CloseName), Text(Text),
+        AttrKeys(AttrKeys), AttrValues(AttrValues), Kind(Kind),
+        SelfClosing(SelfClosing), Explicit(Explicit) {}
 
   bool operator==(const CommentInfo &Other) const;
 
@@ -86,18 +217,17 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  std::vector<std::unique_ptr<CommentInfo>>
+  llvm::ArrayRef<CommentInfo>
       Children;              // List of child comments for this CommentInfo.
-  SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
-  SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
-  SmallString<16> ParamName; // Parameter name (for (T)ParamCommand).
-  SmallString<16> CloseName; // Closing tag name (for VerbatimBlock).
-  SmallString<64> Text;      // Text of the comment.
-  llvm::SmallVector<SmallString<16>, 4>
-      AttrKeys; // List of attribute keys (for HTML).
-  llvm::SmallVector<SmallString<16>, 4>
+  StringRef Direction = {};  // Parameter direction (for (T)ParamCommand).
+  StringRef Name = {};       // Name of the comment (for Verbatim and HTML).
+  StringRef ParamName = {};  // Parameter name (for (T)ParamCommand).
+  StringRef CloseName = {};  // Closing tag name (for VerbatimBlock).
+  StringRef Text = {};       // Text of the comment.
+  llvm::ArrayRef<StringRef> AttrKeys; // List of attribute keys (for HTML).
+  llvm::ArrayRef<StringRef>
       AttrValues; // List of attribute values for each key (for HTML).
-  llvm::SmallVector<SmallString<16>, 4>
+  llvm::ArrayRef<StringRef>
       Args; // List of arguments to commands (for InlineCommand).
   CommentKind Kind = CommentKind::
       CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
@@ -111,7 +241,7 @@ struct CommentInfo {
                             // (for (T)ParamCommand).
 };
 
-struct Reference {
+struct Reference : public llvm::ilist_node<Reference> {
   // This variant (that takes no qualified name parameter) uses the Name as the
   // QualName (very useful in unit tests to reduce verbosity). This can't use an
   // empty string to indicate the default because we need to accept the empty
@@ -119,14 +249,17 @@ struct Reference {
   // "GlobalNamespace" as the name, but an empty QualName).
   Reference(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
             InfoType IT = InfoType::IT_default)
-      : USR(USR), RefType(IT), Name(Name), QualName(Name) {}
+      : USR(USR), RefType(IT), Name(internString(Name)),
+        QualName(internString(Name)) {}
   Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
             StringRef Path = StringRef())
-      : USR(USR), RefType(IT), Name(Name), QualName(QualName), Path(Path) {}
+      : USR(USR), RefType(IT), Name(internString(Name)),
+        QualName(internString(QualName)), Path(internString(Path)) {}
   Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
-            StringRef Path, SmallString<16> DocumentationFileName)
-      : USR(USR), RefType(IT), Name(Name), QualName(QualName), Path(Path),
-        DocumentationFileName(DocumentationFileName) {}
+            StringRef Path, StringRef DocumentationFileName)
+      : USR(USR), RefType(IT), Name(internString(Name)),
+        QualName(internString(QualName)), Path(internString(Path)),
+        DocumentationFileName(internString(DocumentationFileName)) {}
 
   bool operator==(const Reference &Other) const {
     return std::tie(USR, Name, QualName, RefType) ==
@@ -138,10 +271,10 @@ struct Reference {
   bool operator<(const Reference &Other) const { return Name < Other.Name; }
 
   /// Returns the path for this Reference relative to CurrentPath.
-  llvm::SmallString<64> getRelativeFilePath(const StringRef &CurrentPath) const;
+  StringRef getRelativeFilePath(const StringRef &CurrentPath) const;
 
   /// Returns the basename that should be used for this Reference.
-  llvm::SmallString<16> getFileBaseName() const;
+  StringRef getFileBaseName() const;
 
   SymbolID USR = SymbolID(); // Unique identifier for referenced decl
 
@@ -152,27 +285,27 @@ struct Reference {
   // Name of type (possibly unresolved). Not including namespaces or template
   // parameters (so for a std::vector<int> this would be "vector"). See also
   // QualName.
-  SmallString<16> Name;
+  StringRef Name = {};
 
   // Full qualified name of this type, including namespaces and template
   // parameter (for example this could be "std::vector<int>"). Contrast to
   // Name.
-  SmallString<16> QualName;
+  StringRef QualName = {};
 
   // Path of directory where the clang-doc generated file will be saved
   // (possibly unresolved)
-  llvm::SmallString<128> Path;
-  SmallString<16> DocumentationFileName;
+  StringRef Path = {};
+  StringRef DocumentationFileName = {};
 };
 
 // A Context is a reference that holds a relative path from a certain Info's
 // location.
 struct Context : public Reference {
   Context(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
-          StringRef Path, SmallString<16> DocumentationFileName)
+          StringRef Path, StringRef DocumentationFileName)
       : Reference(USR, Name, IT, QualName, Path, DocumentationFileName) {}
   explicit Context(const Info &I);
-  SmallString<128> RelativePath;
+  StringRef RelativePath = {};
 };
 
 // Holds the children of a record or namespace.
@@ -184,13 +317,13 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  std::vector<Reference> Namespaces;
-  std::vector<Reference> Records;
-  std::vector<FunctionInfo> Functions;
-  std::vector<EnumInfo> Enums;
-  std::vector<TypedefInfo> Typedefs;
-  std::vector<ConceptInfo> Concepts;
-  std::vector<VarInfo> Variables;
+  OwningVec<Reference> Namespaces;
+  OwningVec<Reference> Records;
+  OwningVec<FunctionInfo> Functions;
+  OwningVec<EnumInfo> Enums;
+  OwningVec<TypedefInfo> Typedefs;
+  OwningVec<ConceptInfo> Concepts;
+  OwningVec<VarInfo> Variables;
 
   void sort();
 };
@@ -220,20 +353,25 @@ struct TypeInfo {
 // name and default values in the future if needed.
 struct TemplateParamInfo {
   TemplateParamInfo() = default;
-  explicit TemplateParamInfo(StringRef Contents) : Contents(Contents) {}
+  explicit TemplateParamInfo(StringRef Contents)
+      : Contents(internString(Contents)) {}
 
   // The literal contents of the code for that specifies this template parameter
   // for this declaration. Typical values will be "class T" and
   // "typename T = int".
-  SmallString<16> Contents;
+  StringRef Contents = {};
 };
 
 struct TemplateSpecializationInfo {
+  TemplateSpecializationInfo() = default;
+  TemplateSpecializationInfo(const TemplateSpecializationInfo &Other,
+                             llvm::BumpPtrAllocator &Arena);
+
   // Indicates the declaration that this specializes.
   SymbolID SpecializationOf;
 
   // Template parameters applying to the specialized record/function.
-  std::vector<TemplateParamInfo> Params;
+  llvm::ArrayRef<TemplateParamInfo> Params;
 };
 
 struct ConstraintInfo {
@@ -242,18 +380,21 @@ struct ConstraintInfo {
       : ConceptRef(USR, Name, InfoType::IT_concept) {}
   Reference ConceptRef;
 
-  SmallString<16> ConstraintExpr;
+  StringRef ConstraintExpr = {};
 };
 
 // Records the template information for a struct or function that is a template
 // or an explicit template specialization.
 struct TemplateInfo {
+  TemplateInfo() = default;
+  TemplateInfo(const TemplateInfo &Other, llvm::BumpPtrAllocator &Arena);
+
   // May be empty for non-partial specializations.
-  std::vector<TemplateParamInfo> Params;
+  llvm::ArrayRef<TemplateParamInfo> Params;
 
   // Set when this is a specialization of another record/function.
   std::optional<TemplateSpecializationInfo> Specialization;
-  std::vector<ConstraintInfo> Constraints;
+  llvm::ArrayRef<ConstraintInfo> Constraints;
 };
 
 // Info for field types.
@@ -261,34 +402,38 @@ struct FieldTypeInfo : public TypeInfo {
   FieldTypeInfo() = default;
   FieldTypeInfo(const TypeInfo &TI, StringRef Name = StringRef(),
                 StringRef DefaultValue = StringRef())
-      : TypeInfo(TI), Name(Name), DefaultValue(DefaultValue) {}
+      : TypeInfo(TI), Name(internString(Name)),
+        DefaultValue(internString(DefaultValue)) {}
 
   bool operator==(const FieldTypeInfo &Other) const {
     return std::tie(Type, Name, DefaultValue) ==
            std::tie(Other.Type, Other.Name, Other.DefaultValue);
   }
 
-  SmallString<16> Name; // Name associated with this info.
+  StringRef Name = {}; // Name associated with this info.
 
   // When used for function parameters, contains the string representing the
   // expression of the default value, if any.
-  SmallString<16> DefaultValue;
+  StringRef DefaultValue = {};
 };
 
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
+  MemberTypeInfo(const MemberTypeInfo &Other, llvm::BumpPtrAllocator &Arena);
   MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access,
                  bool IsStatic = false)
       : FieldTypeInfo(TI, Name), Access(Access), IsStatic(IsStatic) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    return std::tie(Type, Name, Access, IsStatic, Description) ==
-           std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic,
-                    Other.Description);
+    if (std::tie(Type, Name, Access, IsStatic) !=
+        std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic))
+      return false;
+    return std::equal(Description.begin(), Description.end(),
+                      Other.Description.begin(), Other.Description.end());
   }
 
-  std::vector<CommentInfo> Description;
+  OwningVec<CommentInfo> Description;
 
   // Access level associated with this info (public, protected, private, none).
   // AS_public is set as default because the bitcode writer requires the enum
@@ -298,10 +443,10 @@ struct MemberTypeInfo : public FieldTypeInfo {
   bool IsStatic = false;
 };
 
-struct Location {
+struct Location : public llvm::ilist_node<Location> {
   Location(int StartLineNumber = 0, int EndLineNumber = 0,
            StringRef Filename = StringRef(), bool IsFileInRootDir = false)
-      : Filename(Filename), StartLineNumber(StartLineNumber),
+      : Filename(internString(Filename)), StartLineNumber(StartLineNumber),
         EndLineNumber(EndLineNumber), IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
@@ -320,7 +465,7 @@ struct Location {
            std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  SmallString<32> Filename;
+  StringRef Filename = {};
   int StartLineNumber = 0;
   int EndLineNumber = 0;
   bool IsFileInRootDir = false;
@@ -330,38 +475,38 @@ struct Location {
 struct Info {
   Info(InfoType IT = InfoType::IT_default, SymbolID USR = SymbolID(),
        StringRef Name = StringRef(), StringRef Path = StringRef())
-      : Path(Path), Name(Name), USR(USR), IT(IT) {}
+      : Path(internString(Path)), Name(internString(Name)), USR(USR), IT(IT) {}
 
+  Info(const Info &Other, llvm::BumpPtrAllocator &Arena);
   Info(const Info &Other) = delete;
   Info(Info &&Other) = default;
-  virtual ~Info() = default;
 
   Info &operator=(Info &&Other) = default;
 
   void mergeBase(Info &&I);
   bool mergeable(const Info &Other);
 
-  llvm::SmallString<16> extractName() const;
+  StringRef extractName() const;
 
   /// Returns the file path for this Info relative to CurrentPath.
-  llvm::SmallString<64> getRelativeFilePath(const StringRef &CurrentPath) const;
+  StringRef getRelativeFilePath(const StringRef &CurrentPath) const;
 
   /// Returns the basename that should be used for this Info.
-  llvm::SmallString<16> getFileBaseName() const;
+  StringRef getFileBaseName() const;
 
   // Path of directory where the clang-doc generated file will be saved.
-  llvm::SmallString<128> Path;
+  StringRef Path = {};
 
   // Unqualified name of the decl.
-  SmallString<16> Name;
+  StringRef Name = {};
 
   // The name used for the file that this info is documented in.
   // In the JSON generator, infos are documented in files with mangled names.
   // Thus, we keep track of the physical filename for linking purposes.
-  SmallString<16> DocumentationFileName;
+  StringRef DocumentationFileName = {};
 
   // List of parent namespaces for this decl.
-  llvm::SmallVector<Reference, 4> Namespace;
+  llvm::ArrayRef<Reference> Namespace;
 
   // Unique identifier for the decl described by this Info.
   SymbolID USR = SymbolID();
@@ -373,9 +518,7 @@ struct Info {
   InfoType IT = InfoType::IT_default;
 
   // Comment description of this decl.
-  std::vector<CommentInfo> Description;
-
-  SmallVector<Context, 4> Contexts;
+  OwningVec<CommentInfo> Description;
 };
 
 inline Context::Context(const Info &I)
@@ -397,6 +540,8 @@ struct SymbolInfo : public Info {
              StringRef Name = StringRef(), StringRef Path = StringRef())
       : Info(IT, USR, Name, Path) {}
 
+  SymbolInfo(const SymbolInfo &Other, llvm::BumpPtrAllocator &Arena);
+
   void merge(SymbolInfo &&I);
 
   bool operator<(const SymbolInfo &Other) const {
@@ -404,8 +549,9 @@ struct SymbolInfo : public Info {
     // generated in the order of the source code.
     // If the declaration location is the same, or not present
     // we sort by defined location otherwise fallback to the extracted name
-    if (Loc.size() > 0 && Other.Loc.size() > 0 && Loc[0] != Other.Loc[0])
-      return Loc[0] < Other.Loc[0];
+    if (Loc.size() > 0 && Other.Loc.size() > 0 &&
+        Loc.front() != Other.Loc.front())
+      return Loc.front() < Other.Loc.front();
 
     if (DefLoc && Other.DefLoc && *DefLoc != *Other.DefLoc)
       return *DefLoc < *Other.DefLoc;
@@ -414,28 +560,29 @@ struct SymbolInfo : public Info {
   }
 
   std::optional<Location> DefLoc;     // Location where this decl is defined.
-  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
-  SmallString<16> MangledName;
+  OwningVec<Location> Loc;            // Locations where this decl is declared.
+  StringRef MangledName = {};
   bool IsStatic = false;
 };
 
-struct FriendInfo : SymbolInfo {
+struct FriendInfo : public SymbolInfo, public llvm::ilist_node<FriendInfo> {
   FriendInfo() : SymbolInfo(InfoType::IT_friend) {}
   FriendInfo(SymbolID USR) : SymbolInfo(InfoType::IT_friend, USR) {}
   FriendInfo(const InfoType IT, const SymbolID &USR,
              const StringRef Name = StringRef())
       : SymbolInfo(IT, USR, Name) {}
+  FriendInfo(const FriendInfo &Other, llvm::BumpPtrAllocator &Arena);
   bool mergeable(const FriendInfo &Other);
   void merge(FriendInfo &&Other);
 
   Reference Ref;
   std::optional<TemplateInfo> Template;
   std::optional<TypeInfo> ReturnType;
-  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  llvm::ArrayRef<FieldTypeInfo> Params;
   bool IsClass = false;
 };
 
-struct VarInfo : SymbolInfo {
+struct VarInfo : public SymbolInfo, public llvm::ilist_node<VarInfo> {
   VarInfo() : SymbolInfo(InfoType::IT_variable) {}
   explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
 
@@ -446,7 +593,7 @@ struct VarInfo : SymbolInfo {
 
 // TODO: Expand to allow for documenting templating and default args.
 // Info for functions.
-struct FunctionInfo : public SymbolInfo {
+struct FunctionInfo : public SymbolInfo, public llvm::ilist_node<FunctionInfo> {
   FunctionInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_function, USR) {}
 
@@ -454,8 +601,8 @@ struct FunctionInfo : public SymbolInfo {
 
   Reference Parent;
   TypeInfo ReturnType;
-  llvm::SmallVector<FieldTypeInfo, 4> Params;
-  SmallString<256> Prototype;
+  llvm::ArrayRef<FieldTypeInfo> Params;
+  StringRef Prototype = {};
 
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
@@ -476,6 +623,8 @@ struct RecordInfo : public SymbolInfo {
   RecordInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
              StringRef Path = StringRef());
 
+  RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena);
+
   void merge(RecordInfo &&I);
 
   // Type of this record (struct, class, union, interface).
@@ -490,25 +639,24 @@ struct RecordInfo : public SymbolInfo {
   // When present, this record is a template or specialization.
   std::optional<TemplateInfo> Template;
 
-  llvm::SmallVector<MemberTypeInfo, 4>
-      Members;                             // List of info about record members.
-  llvm::SmallVector<Reference, 4> Parents; // List of base/parent records
-                                           // (does not include virtual
-                                           // parents).
-  llvm::SmallVector<Reference, 4>
+  llvm::ArrayRef<MemberTypeInfo> Members; // List of info about record members.
+  llvm::ArrayRef<Reference> Parents;      // List of base/parent records
+                                          // (does not include virtual
+                                          // parents).
+  llvm::ArrayRef<Reference>
       VirtualParents; // List of virtual base/parent records.
 
-  std::vector<BaseRecordInfo>
-      Bases; // List of base/parent records; this includes inherited methods and
-             // attributes
+  llvm::ArrayRef<BaseRecordInfo>
+      Bases; // List of base/parent records; this includes
+             // inherited methods and attributes
 
-  std::vector<FriendInfo> Friends;
+  llvm::ArrayRef<FriendInfo> Friends;
 
   ScopeChildren Children;
 };
 
 // Info for typedef and using statements.
-struct TypedefInfo : public SymbolInfo {
+struct TypedefInfo : public SymbolInfo, public llvm::ilist_node<TypedefInfo> {
   TypedefInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_typedef, USR) {}
 
@@ -520,7 +668,7 @@ struct TypedefInfo : public SymbolInfo {
   std::optional<TemplateInfo> Template;
 
   // Underlying type declaration
-  SmallString<16> TypeDeclaration;
+  StringRef TypeDeclaration = {};
 
   // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
@@ -529,8 +677,10 @@ struct TypedefInfo : public SymbolInfo {
   bool IsUsing = false;
 };
 
-struct BaseRecordInfo : public RecordInfo {
+struct BaseRecordInfo : public RecordInfo,
+                        public llvm::ilist_node<BaseRecordInfo> {
   BaseRecordInfo();
+  BaseRecordInfo(const BaseRecordInfo &Other, llvm::BumpPtrAllocator &Arena);
   BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path, bool IsVirtual,
                  AccessSpecifier Access, bool IsParent);
 
@@ -547,31 +697,34 @@ struct EnumValueInfo {
   explicit EnumValueInfo(StringRef Name = StringRef(),
                          StringRef Value = StringRef("0"),
                          StringRef ValueExpr = StringRef())
-      : Name(Name), Value(Value), ValueExpr(ValueExpr) {}
+      : Name(internString(Name)), Value(internString(Value)),
+        ValueExpr(internString(ValueExpr)) {}
+
+  EnumValueInfo(const EnumValueInfo &Other, llvm::BumpPtrAllocator &Arena);
 
   bool operator==(const EnumValueInfo &Other) const {
     return std::tie(Name, Value, ValueExpr) ==
            std::tie(Other.Name, Other.Value, Other.ValueExpr);
   }
 
-  SmallString<16> Name;
+  StringRef Name;
 
   // The computed value of the enumeration constant. This could be the result of
   // evaluating the ValueExpr, or it could be automatically generated according
   // to C rules.
-  SmallString<16> Value;
+  StringRef Value;
 
   // Stores the user-supplied initialization expression for this enumeration
   // constant. This will be empty for implicit enumeration values.
-  SmallString<16> ValueExpr;
+  StringRef ValueExpr;
 
   /// Comment description of this field.
-  std::vector<CommentInfo> Description;
+  OwningVec<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.
 // Info for types.
-struct EnumInfo : public SymbolInfo {
+struct EnumInfo : public SymbolInfo, public llvm::ilist_node<EnumInfo> {
   EnumInfo() : SymbolInfo(InfoType::IT_enum) {}
   EnumInfo(SymbolID USR) : SymbolInfo(InfoType::IT_enum, USR) {}
 
@@ -585,18 +738,18 @@ struct EnumInfo : public SymbolInfo {
   // this will be "short".
   std::optional<TypeInfo> BaseType;
 
-  llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
+  llvm::ArrayRef<EnumValueInfo> Members; // List of enum members.
 };
 
-struct ConceptInfo : public SymbolInfo {
+struct ConceptInfo : public SymbolInfo, public llvm::ilist_node<ConceptInfo> {
   ConceptInfo() : SymbolInfo(InfoType::IT_concept) {}
   ConceptInfo(SymbolID USR) : SymbolInfo(InfoType::IT_concept, USR) {}
 
   void merge(ConceptInfo &&I);
 
-  bool IsType;
+  bool IsType = false;
   TemplateInfo Template;
-  SmallString<16> ConstraintExpression;
+  StringRef ConstraintExpression = {};
 };
 
 struct Index : public Reference {
@@ -610,9 +763,10 @@ struct Index : public Reference {
   bool operator==(const SymbolID &Other) const { return USR == Other; }
   bool operator<(const Index &Other) const;
 
-  std::optional<SmallString<16>> JumpToSection;
-  std::vector<Index> Children;
+  std::optional<StringRef> JumpToSection;
+  llvm::StringMap<Index> Children;
 
+  std::vector<const Index *> getSortedChildren() const;
   void sort();
 };
 
@@ -621,15 +775,21 @@ struct Index : public Reference {
 // A standalone function to call to merge a vector of infos into one.
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
-llvm::Expected<std::unique_ptr<Info>>
-mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
+llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values);
+
+// Merges a single new Info into an existing Reduced Info (allocating it if
+// needed).
+llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
+                            doc::OwnedPtr<doc::Info> &&NewInfo,
+                            llvm::BumpPtrAllocator &Arena);
 
 struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
-                  clang::DiagnosticsEngine &Diags, bool FTimeTrace = false);
+                  clang::DiagnosticsEngine &Diags, OutputFormatTy Format,
+                  bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
@@ -653,10 +813,35 @@ struct ClangDocContext {
   // A pointer to a DiagnosticsEngine for error reporting.
   clang::DiagnosticsEngine &Diags;
   Index Idx;
+  OutputFormatTy Format;
   int Granularity; // Granularity of ftime trace
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on
 };
+
+// Ensure arena allocated types remain safe to allocate in the arena.
+// Only trivially destructible types are safe, so enforce that at compile-time.
+static_assert(std::is_trivially_destructible_v<CommentInfo>);
+static_assert(std::is_trivially_destructible_v<ConceptInfo>);
+static_assert(std::is_trivially_destructible_v<ConstraintInfo>);
+static_assert(std::is_trivially_destructible_v<EnumInfo>);
+static_assert(std::is_trivially_destructible_v<FieldTypeInfo>);
+static_assert(std::is_trivially_destructible_v<FriendInfo>);
+static_assert(std::is_trivially_destructible_v<FunctionInfo>);
+static_assert(std::is_trivially_destructible_v<Info>);
+static_assert(std::is_trivially_destructible_v<Location>);
+static_assert(std::is_trivially_destructible_v<MemberTypeInfo>);
+static_assert(std::is_trivially_destructible_v<NamespaceInfo>);
+static_assert(std::is_trivially_destructible_v<RecordInfo>);
+static_assert(std::is_trivially_destructible_v<Reference>);
+static_assert(std::is_trivially_destructible_v<ScopeChildren>);
+static_assert(std::is_trivially_destructible_v<SymbolInfo>);
+static_assert(std::is_trivially_destructible_v<TemplateInfo>);
+static_assert(std::is_trivially_destructible_v<TemplateParamInfo>);
+static_assert(std::is_trivially_destructible_v<TemplateSpecializationInfo>);
+static_assert(std::is_trivially_destructible_v<TypeInfo>);
+static_assert(std::is_trivially_destructible_v<TypedefInfo>);
+static_assert(std::is_trivially_destructible_v<VarInfo>);
 
 } // namespace doc
 } // namespace clang

@@ -23,7 +23,6 @@
 namespace llvm {
 
 class R600Subtarget;
-class AMDGPUTargetLowering;
 
 class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
   using BaseT = BasicTTIImplBase<R600TTIImpl>;
@@ -32,14 +31,14 @@ class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
   friend BaseT;
 
   const R600Subtarget *ST;
-  const AMDGPUTargetLowering *TLI;
+  const TargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
 
 public:
   explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
   const R600Subtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
+  const TargetLowering *getTLI() const { return TLI; }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
@@ -67,6 +66,15 @@ public:
                      unsigned Index, const Value *Op0, const Value *Op1,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 };
 
 } // end namespace llvm

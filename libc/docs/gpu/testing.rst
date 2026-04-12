@@ -10,10 +10,6 @@ Testing the GPU C library
    out of resource errors, or indefinite hangs. limiting the number of threads
    used while testing using ``LIBC_GPU_TEST_JOBS=<N>`` is highly recommended.
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Testing infrastructure
 ======================
 
@@ -98,7 +94,7 @@ Running tests
 
 Tests will only be built and run if a GPU target architecture is set and the
 corresponding loader utility was built. These can be overridden with the
-``LIBC_GPU_TEST_ARCHITECTURE`` and ``LIBC_GPU_LOADER_EXECUTABLE`` :ref:`CMake
+``LIBC_GPU_TEST_ARCHITECTURE`` and ``CMAKE_CROSSCOMPILING_EMULATOR`` :ref:`CMake
 options <gpu_cmake_options>`. Once built, they can be run like any other tests.
 The CMake target depends on how the library was built.
 

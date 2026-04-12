@@ -1,8 +1,7 @@
 // RUN: %libomptarget-compileopt-and-run-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
+// XFAIL: intelgpu
 
 #include <assert.h>
 #include <omp.h>

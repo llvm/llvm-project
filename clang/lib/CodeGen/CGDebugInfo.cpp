@@ -694,7 +694,9 @@ static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
 
   llvm::dwarf::SourceLanguage LangTag;
   if (LO.CPlusPlus) {
-    if (LO.HIP)
+    if (LO.HLSL)
+      LangTag = llvm::dwarf::DW_LANG_HLSL;
+    else if (LO.HIP)
       LangTag = llvm::dwarf::DW_LANG_HIP;
     else if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
@@ -732,7 +734,9 @@ GetDISourceLanguageName(const CodeGenModule &CGM) {
   uint32_t LangVersion = 0;
   llvm::dwarf::SourceLanguageName LangTag;
   if (LO.CPlusPlus) {
-    if (LO.HIP) {
+    if (LO.HLSL) {
+      LangTag = llvm::dwarf::DW_LNAME_HLSL;
+    } else if (LO.HIP) {
       LangTag = llvm::dwarf::DW_LNAME_HIP;
     } else if (LO.ObjC) {
       LangTag = llvm::dwarf::DW_LNAME_ObjC_plus_plus;
@@ -1103,6 +1107,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     if (!SingletonId)                                                          \
       SingletonId =                                                            \
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
+    return SingletonId;                                                        \
+  }
+#define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align)     \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_boolean);  \
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
@@ -2081,6 +2092,56 @@ void CGDebugInfo::CollectRecordLambdaFields(
   }
 }
 
+/// Build an llvm::ConstantDataArray from the initialized elements of an
+/// APValue array, using the narrowest integer type that fits the element width.
+template <typename T>
+static llvm::Constant *
+buildConstantDataArrayFromElements(llvm::LLVMContext &Ctx, const APValue &Arr) {
+  const unsigned NumElts = Arr.getArraySize();
+  SmallVector<T, 64> Vals(
+      NumElts,
+      Arr.hasArrayFiller()
+          ? static_cast<T>(Arr.getArrayFiller().getInt().getZExtValue())
+          : 0);
+  for (unsigned I : llvm::seq(Arr.getArrayInitializedElts()))
+    Vals[I] =
+        static_cast<T>(Arr.getArrayInitializedElt(I).getInt().getZExtValue());
+  return llvm::ConstantDataArray::get(Ctx, Vals);
+}
+
+/// Try to create an llvm::Constant for a constexpr array of integer elements.
+/// Handles arrays of char, short, int, long with element width up to 64 bits.
+/// Returns nullptr if the array cannot be represented.
+static llvm::Constant *tryEmitConstexprArrayAsConstant(CodeGenModule &CGM,
+                                                       const VarDecl *Var,
+                                                       const APValue *Value) {
+  const auto *ArrayTy = CGM.getContext().getAsConstantArrayType(Var->getType());
+  if (!ArrayTy)
+    return nullptr;
+
+  const QualType ElemQTy = ArrayTy->getElementType();
+  if (ElemQTy.isNull() || !ElemQTy->isIntegerType())
+    return nullptr;
+
+  const uint64_t ElemBitWidth = CGM.getContext().getTypeSize(ElemQTy);
+
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+  switch (ElemBitWidth) {
+  case 8:
+    return buildConstantDataArrayFromElements<uint8_t>(Ctx, *Value);
+  case 16:
+    return buildConstantDataArrayFromElements<uint16_t>(Ctx, *Value);
+  case 32:
+    return buildConstantDataArrayFromElements<uint32_t>(Ctx, *Value);
+  case 64:
+    return buildConstantDataArrayFromElements<uint64_t>(Ctx, *Value);
+  default:
+    // ConstantDataArray only supports 8/16/32/64-bit elements.
+    // Wider types (e.g. __int128) are not representable.
+    return nullptr;
+  }
+}
+
 llvm::DIDerivedType *
 CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
                                      const RecordDecl *RD) {
@@ -2103,6 +2164,8 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
         C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
       if (Value->isFloat())
         C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
+      if (Value->isArray())
+        C = tryEmitConstexprArrayAsConstant(CGM, Var, Value);
     }
   }
 
@@ -5927,15 +5990,14 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
-    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
-      if (!ED->getIdentifier()) {
-        Reconstitutable = false;
-        return false;
-      }
-      if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
-        Reconstitutable = false;
-        return false;
-      }
+    const EnumDecl *ED = ET->getDecl();
+    if (!ED->getIdentifier()) {
+      Reconstitutable = false;
+      return false;
+    }
+    if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
+      Reconstitutable = false;
+      return false;
     }
     return true;
   }

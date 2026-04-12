@@ -3,13 +3,7 @@
 // Definitions used in the tests
 // -----------------------------
 
-namespace std {
-template<class T> struct remove_reference { typedef T type; };
-template<class T> struct remove_reference<T&> { typedef T type; };
-template<class T> struct remove_reference<T&&> { typedef T type; };
-template< class T >
-constexpr typename remove_reference<T>::type&& move( T&& t ) noexcept;
-}
+#include <utility>
 
 struct NonTrivialMoveAssign {
   NonTrivialMoveAssign() = default;
@@ -31,6 +25,18 @@ struct TrivialMoveAssign {
 struct NoMoveAssign {
   NoMoveAssign& operator=(const NoMoveAssign&);
   NoMoveAssign& operator=(NoMoveAssign&&) = delete;
+};
+
+struct NoDefaultedMoveAssign {
+  NoDefaultedMoveAssign& operator=(const NoDefaultedMoveAssign&);
+  NoDefaultedMoveAssign& operator=(NoDefaultedMoveAssign&&) = default;
+  NoMoveAssign Field;
+};
+
+struct PrivateMoveAssign {
+  PrivateMoveAssign& operator=(const PrivateMoveAssign&);
+  private:
+  PrivateMoveAssign& operator=(PrivateMoveAssign&&);
 };
 
 template<class T>
@@ -283,6 +289,21 @@ void NonConvertibleNonTrivialMoveAssignInLoop(NonTrivialMoveAssign& target, NonT
     target = source;
 }
 
+// Check moving incomplete definition
+// ----------------------------------
+
+struct fwd_cls;
+struct fwd_cls {
+  void ConvertibleNonTrivialMoveAssignReferecingForwardDecl(fwd_cls src) {
+    // CHECK-MESSAGES: [[@LINE+2]]:13: warning: 'src' could be moved here [performance-use-std-move]
+    // CHECK-FIXES: *this = std::move(src);
+    *this = src;
+  }
+  fwd_cls &operator=(const fwd_cls &C);
+  fwd_cls &operator=(fwd_cls &&);
+};
+
+
 // Check moving for invalid / non profitable type or operation
 // -----------------------------------------------------------
 
@@ -299,4 +320,79 @@ void NonProfitableTrivialTypeAssign(int& target, int source) {
 void InvalidMoveAssign(NoMoveAssign& target, NoMoveAssign source) {
   // No message expected, moving is deleted.
   target = source;
+}
+
+void InvalidPrivateMoveAssign(PrivateMoveAssign& target, PrivateMoveAssign source) {
+  // No message expected, moving is private.
+  target = source;
+}
+
+void DeletedDefaultMoveAssign(NoDefaultedMoveAssign& target, NoDefaultedMoveAssign source) {
+  // No message expected, default move is invalid.
+  target = source;
+}
+
+// Check moving within control-flow
+// --------------------------------
+
+void ConvertibleNonTrivialMoveAssignWithinTestPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+  // CHECK-FIXES: target = std::move(source);
+  if (pred)
+    target = target;
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinTestPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  target = source;
+  if (pred)
+    source.stuff();
+}
+
+void ConvertibleNonTrivialMoveAssignWithinTestBothPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+  // CHECK-FIXES: target = std::move(source);
+  if (pred)
+    target = target;
+  else
+    target.stuff();
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinLoop(unsigned count, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  while(--count)
+    target = source;
+}
+
+void ConvertibleNonTrivialMoveAssignWithinTestMultiplePred(bool pred0, bool pred1, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  if(pred0) {
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
+    target = source;
+    // CHECK-FIXES: target = std::move(source);
+  }
+  else {
+    if (pred1) {
+      // CHECK-MESSAGES: [[@LINE+1]]:16: warning: 'source' could be moved here [performance-use-std-move]
+      target = source;
+      // CHECK-FIXES: target = std::move(source);
+    }
+    else {
+      target.stuff();
+    }
+  }
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinTestMultiplePred(bool pred0, bool pred1, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  target = source;
+  if(pred0) {
+    target.stuff();
+  }
+  else {
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
+    target = source;
+    // CHECK-FIXES: target = std::move(source);
+    if (pred1) {
+      target.stuff();
+    }
+  }
 }

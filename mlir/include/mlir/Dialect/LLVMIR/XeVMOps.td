@@ -80,6 +80,8 @@ def XeVM_1DBlockElemType : AnyTypeOf<[I8, I16, I32, I64]>;
 //   ir - invalidated after read
 //===----------------------------------------------------------------------===//
 
+def LoadCacheControl_Use_Default
+    : I32EnumAttrCase<"USE_DEFAULT", 0, "Use_Default">;
 def LoadCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
 def LoadCacheControl_L1uc_L2uc_L3c
@@ -110,7 +112,8 @@ def LoadCacheControlInvalidateRead
 def XeVM_LoadCacheControl
     : I32EnumAttr<
           "LoadCacheControl", "XeVM load ops cache control",
-          [LoadCacheControl_L1uc_L2uc_L3uc, LoadCacheControl_L1uc_L2uc_L3c,
+          [LoadCacheControl_Use_Default,
+           LoadCacheControl_L1uc_L2uc_L3uc, LoadCacheControl_L1uc_L2uc_L3c,
            LoadCacheControl_L1uc_L2c_L3uc, LoadCacheControl_L1uc_L2c_L3c,
            LoadCacheControl_L1c_L2uc_L3uc, LoadCacheControl_L1c_L2uc_L3c,
            LoadCacheControl_L1c_L2c_L3uc, LoadCacheControl_L1c_L2c_L3c,
@@ -136,6 +139,9 @@ def XeVM_LoadCacheControlAttr
 //   s - streaming
 //===----------------------------------------------------------------------===//
 
+
+def StoreCacheControl_Use_Default
+    : I32EnumAttrCase<"USE_DEFAULT", 0, "Use_Default">;
 def StoreCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
 def StoreCacheControl_L1uc_L2uc_L3wb
@@ -170,7 +176,8 @@ def StoreCacheControl_L1wb_L2uc_L3wb
 def XeVM_StoreCacheControl
     : I32EnumAttr<
           "StoreCacheControl", "XeVM store ops cache control",
-          [StoreCacheControl_L1uc_L2uc_L3uc, StoreCacheControl_L1uc_L2uc_L3wb,
+          [StoreCacheControl_Use_Default,
+           StoreCacheControl_L1uc_L2uc_L3uc, StoreCacheControl_L1uc_L2uc_L3wb,
            StoreCacheControl_L1uc_L2wb_L3uc, StoreCacheControl_L1uc_L2wb_L3wb,
            StoreCacheControl_L1wt_L2uc_L3uc, StoreCacheControl_L1wt_L2uc_L3wb,
            StoreCacheControl_L1wt_L2wb_L3uc, StoreCacheControl_L1wt_L2wb_L3wb,
@@ -519,11 +526,15 @@ def XeVM_ET_U4 : I32EnumAttrCase<"U4", 13, "u4">;
 def XeVM_ET_TF32 : I32EnumAttrCase<"TF32", 14, "tf32">;
 def XeVM_ET_F32 : I32EnumAttrCase<"F32", 15, "f32">;
 def XeVM_ET_S32 : I32EnumAttrCase<"S32", 16, "s32">;
+def XeVM_ET_E2M1 : I32EnumAttrCase<"E2M1", 17, "e2m1">;
+def XeVM_ET_BF8 : I32EnumAttrCase<"BF8", 18, "bf8">;
+def XeVM_ET_F8 : I32EnumAttrCase<"F8", 19, "f8">;
 
-def XeVM_ElemTypeAttr : I32EnumAttr<"ElemType", "XeVM element type",
-                                    [XeVM_ET_BF16, XeVM_ET_F16, XeVM_ET_S8,
-                                     XeVM_ET_U8, XeVM_ET_S4, XeVM_ET_U4,
-                                     XeVM_ET_TF32, XeVM_ET_F32, XeVM_ET_S32]> {
+def XeVM_ElemTypeAttr
+    : I32EnumAttr<"ElemType", "XeVM element type",
+                  [XeVM_ET_BF16, XeVM_ET_F16, XeVM_ET_S8, XeVM_ET_U8,
+                   XeVM_ET_S4, XeVM_ET_U4, XeVM_ET_TF32, XeVM_ET_F32,
+                   XeVM_ET_S32, XeVM_ET_E2M1, XeVM_ET_BF8, XeVM_ET_F8]> {
   let cppNamespace = "::mlir::xevm";
 }
 
@@ -583,6 +594,98 @@ def XeVM_MMAOp
 
   let assemblyFormat = [{
     $a `,` $b (`,` $c^)? ` `
+    `{`
+      `shape` `=` $shape `,`
+      `types` `=` $types
+    `}` attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeVM_TruncfSrcElemTypes
+    : I32EnumAttr<
+          "TruncfSrcElemTypes",
+          "Source element type for xevm.truncf", [XeVM_ET_F16, XeVM_ET_BF16]> {
+  let cppNamespace = "::mlir::xevm";
+}
+
+def XeVM_TruncfSrcElemTypeAttr : XeVM_Attr<"TruncfSrcElemType", "src_etype"> {
+  let parameters = (ins "xevm::TruncfSrcElemTypes":$etype);
+  let assemblyFormat = "`src_etype` `=` $etype";
+}
+
+def XeVM_TruncfDstElemTypes
+    : I32EnumAttr<"TruncfDstElemTypes",
+                  "Destination element type for xevm.truncf",
+                  [XeVM_ET_BF8, XeVM_ET_F8, XeVM_ET_E2M1]> {
+  let cppNamespace = "::mlir::xevm";
+}
+
+def XeVM_TruncfDstElemTypeAttr : XeVM_Attr<"TruncfDstElemType", "dst_etype"> {
+  let parameters = (ins "xevm::TruncfDstElemTypes":$etype);
+  let assemblyFormat = "`dst_etype` `=` $etype";
+}
+
+def XeVM_TruncfOp
+    : XeVM_Op<"truncf">,
+      Results<(outs AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8, I<4>]>, I8,
+                               I<4>]>:$dst)>,
+      Arguments<(ins AnyTypeOf<[FixedVectorOfRankAndType<[1], [F16, BF16]>, F16,
+                                BF16]>:$src,
+          XeVM_TruncfSrcElemTypeAttr:$src_etype,
+          XeVM_TruncfDstElemTypeAttr:$dst_etype)> {
+  let summary = "Floating point truncation from f16/bf16 to f8/bf8/f4";
+  let description = [{
+    The `xevm.truncf` operation truncates a floating point value from
+    f16/bf16 to f8/bf8/f4 format.
+  }];
+
+  let assemblyFormat = [{
+    $src ` ` `{` $src_etype `,` $dst_etype `}` attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeVM_MMAMxOp
+    : XeVM_Op<"mma_mx">,
+      Results<(outs FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$d)>,
+      Arguments<(ins FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$a,
+          FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$b,
+          AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8]>, I8]>:$scale_a,
+          AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8]>, I8]>:$scale_b,
+          Optional<FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>>:$c,
+          XeVM_MMAShapeAttr:$shape, XeVM_MMATypesAttr:$types)> {
+
+  let summary = "Subgroup matrix multiply-add with MxN shape and MX scaling";
+
+  let description = [{
+    The `xevm.mma_mx` is similar to `xevm.mma` has scale operands for A and B matrices.
+    It is a cooperative operation where all threads/lanes in a subgroup participates
+    and carries out matrix multiplication plus accumulation:
+
+      D = C + A x B
+
+      where the A, B, C input matrices and the result D have shapes:
+        - D : MxN
+        - C : MxN
+        - A : MxK
+        - B : KxN
+
+    Parameters:
+      * `a` - vector of matrix A elements.
+      * `b` - vector of matrix B elements.
+      * `scale_a` - vector or scalar of scaling factors for matrix A.
+      * `scale_b` - vector or scalar of scaling factors for matrix B.
+      * `c` - (optional) vector of matrix C elements.
+      * `shape` - the shape of the matrices, specified as `M`, `N`, and `K` values.
+      * `types` - the data types of the matrices, specified as `D`, `A`, `B`, and optionally `C`.
+
+  }];
+
+  let assemblyFormat = [{
+    $a `,` $b `,` $scale_a `,` $scale_b (`,` $c^)? ` `
     `{`
       `shape` `=` $shape `,`
       `types` `=` $types

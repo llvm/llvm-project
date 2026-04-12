@@ -26,6 +26,7 @@ Transforms/Coroutines/coro-noop.ll
 Transforms/Coroutines/coro-only-destroy-when-complete.ll
 Transforms/Coroutines/coro-spill-suspend.ll
 Transforms/Coroutines/coro-split-00.ll
+Transforms/Coroutines/coro-split-addrspace.ll
 Transforms/Coroutines/coro-split-alloc.ll
 Transforms/Coroutines/coro-split-dbg-labels.ll
 Transforms/Coroutines/coro-split-final-suspend.ll
@@ -79,9 +80,6 @@ Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
 Transforms/InstCombine/X86/x86-avx512-inseltpoison.ll
 Transforms/InstCombine/X86/x86-avx512.ll
-Transforms/InstCombine/and-or-icmps.ll
-Transforms/InstCombine/and2.ll
-Transforms/InstCombine/bit-checks.ll
 Transforms/InstCombine/bitreverse.ll
 Transforms/InstCombine/builtin-dynamic-object-size.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-negative-and-positive-thresholds.ll
@@ -118,7 +116,6 @@ Transforms/InstCombine/pow-1.ll
 Transforms/InstCombine/pow-3.ll
 Transforms/InstCombine/pow-sqrt.ll
 Transforms/InstCombine/pull-conditional-binop-through-shift.ll
-Transforms/InstCombine/select-and-or.ll
 Transforms/InstCombine/select-factorize.ll
 Transforms/InstCombine/select-min-max.ll
 Transforms/InstCombine/select-of-symmetric-selects.ll
@@ -176,3 +173,4 @@ Transforms/TailCallElim/inf-recursion.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
+tools/opt/mtune.ll

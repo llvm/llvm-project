@@ -34,7 +34,7 @@ void f(int i, int j) {
 // CIR:   %[[SEVENTEEN:.*]] = cir.const #cir.int<17> : !s32i
 // CIR:   %[[J_LOAD:.*]] = cir.load align(4) %[[J_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[I_LOAD:.*]] = cir.load align(4) %[[I_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:   %[[ADD:.*]] = cir.binop(add, %[[I_LOAD]], %[[J_LOAD]]) nsw : !s32i
+// CIR:   %[[ADD:.*]] = cir.add nsw %[[I_LOAD]], %[[J_LOAD]] : !s32i
 // CIR:   cir.store align(4) %[[ADD]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.store align(4) %[[SEVENTEEN]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.return
@@ -69,9 +69,9 @@ void copy_c(C &c1, C &c2) {
 // CIR:   cir.store %arg0, %[[THIS_ADDR]]
 // CIR:   cir.store %arg1, %[[ARG1_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
-// CIR:   %[[A_MEMBER:.*]] = cir.get_member %[[THIS]][0] {name = "a"}
+// CIR:   %[[A_MEMBER:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_A>
 // CIR:   %[[ARG1_LOAD:.*]] = cir.load{{.*}} %[[ARG1_ADDR]]
-// CIR:   %[[A_MEMBER_2:.*]] = cir.get_member %[[ARG1_LOAD]][0] {name = "a"}
+// CIR:   %[[A_MEMBER_2:.*]] = cir.cast bitcast %[[ARG1_LOAD]] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_A>
 // CIR:   %[[C_A:.*]] = cir.call @_ZN1AaSERKS_(%[[A_MEMBER]], %[[A_MEMBER_2]])
 // CIR:   %[[B_MEMBER:.*]] = cir.get_member %[[THIS]][1] {name = "b"}
 // CIR:   %[[B_VOID_PTR:.*]] = cir.cast bitcast %[[B_MEMBER]] : !cir.ptr<!cir.array<!rec_B x 16>> -> !cir.ptr<!void>
@@ -83,6 +83,32 @@ void copy_c(C &c1, C &c2) {
 // CIR:   cir.store %[[THIS]], %[[RET_ADDR]]
 // CIR:   %[[RET_VAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
 // CIR:   cir.return %[[RET_VAL]]
+
+// LLVM: define {{.*}} ptr @_ZN1CaSERKS_(ptr {{.*}} %[[THIS:.*]], ptr {{.*}} %[[ARG:.*]])
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   %[[ARG_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS]], ptr %[[THIS_ADDR]]
+// LLVM:   store ptr %[[ARG]], ptr %[[ARG_ADDR]]
+// LLVM:   %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// LLVM:   %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ADDR]]
+// LLVM:   %{{.*}} = call {{.*}} ptr @_ZN1AaSERKS_(ptr {{.*}} %[[THIS_LOAD]], ptr {{.*}} %[[ARG_LOAD]])
+// LLVM:   %[[B1:.*]] = getelementptr %struct.C, ptr %[[THIS_LOAD]], i32 0, i32 1
+// LLVM:   %[[ARG_LOAD2:.*]] = load ptr, ptr %[[ARG_ADDR]]
+// LLVM:   %[[B2:.*]] = getelementptr %struct.C, ptr %[[ARG_LOAD2]], i32 0, i32 1
+// LLVM:   %{{.*}} = call ptr @memcpy(ptr {{.*}} %[[B1]], ptr {{.*}} %[[B2]], i64 {{.*}} 64)
+
+// OGCG: define {{.*}} ptr @_ZN1CaSERKS_(ptr {{.*}} %[[THIS:.*]], ptr {{.*}} %[[ARG:.*]])
+// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
+// OGCG:   %[[ARG_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS]], ptr %[[THIS_ADDR]]
+// OGCG:   store ptr %[[ARG]], ptr %[[ARG_ADDR]]
+// OGCG:   %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// OGCG:   %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ADDR]]
+// OGCG:   %{{.*}} = call {{.*}} ptr @_ZN1AaSERKS_(ptr {{.*}} %[[THIS_LOAD]], ptr {{.*}} %[[ARG_LOAD]])
+// OGCG:   %[[B1:.*]] = getelementptr inbounds {{.*}} %struct.C, ptr %[[THIS_LOAD]], i32 0, i32 1
+// OGCG:   %[[ARG_LOAD2:.*]] = load ptr, ptr %[[ARG_ADDR]]
+// OGCG:   %[[B2:.*]] = getelementptr inbounds {{.*}} %struct.C, ptr %[[ARG_LOAD2]], i32 0, i32 1
+// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}} %[[B1]], ptr {{.*}} %[[B2]], i64 64, i1 false)
 
 // CIR: cir.func{{.*}} @_Z6copy_cR1CS0_(%arg0: !cir.ptr<!rec_C> {{.*}}, %arg1: !cir.ptr<!rec_C> {{.*}})
 // CIR:   %[[C1_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["c1", init, const]

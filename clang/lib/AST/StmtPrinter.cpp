@@ -600,7 +600,7 @@ void StmtPrinter::VisitCapturedStmt(CapturedStmt *Node) {
 }
 
 void StmtPrinter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *Node) {
-  PrintStmt(Node->getOutlinedFunctionDecl()->getBody());
+  PrintStmt(Node->getOriginalStmt());
 }
 
 void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
@@ -1445,6 +1445,11 @@ void StmtPrinter::VisitSYCLUniqueStableNameExpr(
   OS << "__builtin_sycl_unique_stable_name(";
   Node->getTypeSourceInfo()->getType().print(OS, Policy);
   OS << ")";
+}
+
+void StmtPrinter::VisitUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *Node) {
+  PrintStmt(Node->getOriginalStmt());
 }
 
 void StmtPrinter::VisitPredefinedExpr(PredefinedExpr *Node) {

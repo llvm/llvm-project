@@ -1,0 +1,28 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.global external dso_local @normal_var = #cir.int<10> : !s32i {alignment = 4 : i64}
+  // CHECK: cir.global external dso_local @normal_var = #cir.int<10> : !s32i {alignment = 4 : i64}
+
+  cir.global hidden external dso_local @hidden_var = #cir.int<10> : !s32i {alignment = 4 : i64}
+  // CHECK: cir.global hidden external dso_local @hidden_var = #cir.int<10> : !s32i {alignment = 4 : i64}
+
+  cir.global "private" internal dso_local @normal_static_var = #cir.int<10> : !s32i {alignment = 4 : i64}
+  // CHECK: cir.global "private" internal dso_local @normal_static_var = #cir.int<10> : !s32i {alignment = 4 : i64}
+
+  cir.global "private" hidden internal dso_local @hidden_static_var = #cir.int<10> : !s32i {alignment = 4 : i64}
+  // CHECK: cir.global "private" hidden internal dso_local @hidden_static_var = #cir.int<10> : !s32i {alignment = 4 : i64}
+
+  cir.func no_inline no_proto dso_local @normal_func() {
+    cir.return
+  }
+  // CHECK: cir.func no_inline no_proto dso_local @normal_func()
+  // CHECK:   cir.return
+
+  cir.func no_inline no_proto hidden dso_local @hidden_func() {
+    cir.return
+  }
+  // CHECK: cir.func no_inline no_proto hidden dso_local @hidden_func()
+  // CHECK:   cir.return
+}

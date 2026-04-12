@@ -146,8 +146,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
 
   switch (component.getKind()) {
   case VTableComponent::CK_UnusedFunctionPointer:
-    cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
-    return mlir::Attribute();
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
 
   case VTableComponent::CK_VCallOffset:
     return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
@@ -176,13 +175,33 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
 
     assert(!cir::MissingFeatures::cudaSupport());
 
+    auto getSpecialVirtFn = [&](StringRef name) -> cir::FuncOp {
+      assert(!cir::MissingFeatures::vtableRelativeLayout());
+
+      if (cgm.getLangOpts().OpenMP && cgm.getLangOpts().OpenMPIsTargetDevice &&
+          cgm.getTriple().isNVPTX())
+        cgm.errorNYI(gd.getDecl()->getSourceRange(),
+                     "getVTableComponent for OMP Device NVPTX");
+
+      cir::FuncType fnTy =
+          cgm.getBuilder().getFuncType({}, cgm.getBuilder().getVoidTy());
+      cir::FuncOp fnPtr = cgm.createRuntimeFunction(fnTy, name);
+
+      assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+      return fnPtr;
+    };
+
     cir::FuncOp fnPtr;
     if (cast<CXXMethodDecl>(gd.getDecl())->isPureVirtual()) {
-      cgm.errorNYI("getVTableComponent: CK_FunctionPointer: pure virtual");
-      return mlir::Attribute();
+      if (!pureVirtualFn)
+        pureVirtualFn =
+            getSpecialVirtFn(cgm.getCXXABI().getPureVirtualCallName());
+      fnPtr = pureVirtualFn;
     } else if (cast<CXXMethodDecl>(gd.getDecl())->isDeleted()) {
-      cgm.errorNYI("getVTableComponent: CK_FunctionPointer: deleted virtual");
-      return mlir::Attribute();
+      if (!deletedVirtualFn)
+        deletedVirtualFn =
+            getSpecialVirtFn(cgm.getCXXABI().getDeletedVirtualCallName());
+      fnPtr = deletedVirtualFn;
     } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
                layout.vtable_thunks()[nextVTableThunkIndex].first ==
                    componentIndex) {
@@ -193,7 +212,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       assert(!cir::MissingFeatures::pointerAuthentication());
     } else {
       // Otherwise we can use the method definition directly.
-      cir::FuncType fnTy = cgm.getTypes().getFunctionTypeForVTable(gd);
+      cir::FuncType fnTy = cgm.getTypes().getFunctionType(gd);
       fnPtr = cgm.getAddrOfFunction(gd, fnTy, /*ForVTable=*/true);
     }
 
@@ -746,8 +765,8 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
 
   // Create lexical scope - must stay alive for entire thunk generation.
   // startFunction() requires currLexScope to be set.
-  mlir::Location unknownLoc = builder.getUnknownLoc();
-  LexicalScope lexScope{*this, unknownLoc, entryBb};
+  SourceLocRAIIObject locRAII(*this, fn.getLoc());
+  LexicalScope lexScope{*this, fn.getLoc(), entryBb};
 
   startThunk(fn, gd, fnInfo, isUnprototyped);
   assert(!cir::MissingFeatures::generateDebugInfo());
@@ -808,7 +827,7 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
       mCtx.mangleThunk(md, thunkAdjustments, /*elideOverrideInfo=*/true, out);
   }
 
-  cir::FuncType thunkVTableTy = cgm.getTypes().getFunctionTypeForVTable(gd);
+  cir::FuncType thunkVTableTy = cgm.getTypes().getFunctionType(gd);
   cir::FuncOp thunk = cgm.getAddrOfThunk(name, thunkVTableTy, gd);
 
   // If we don't need to emit a definition, return this declaration as is.
@@ -919,4 +938,67 @@ void CIRGenVTables::emitThunks(GlobalDecl gd) {
 
   for (const ThunkInfo &thunk : *thunkInfoVector)
     maybeEmitThunk(gd, thunk, /*forVTable=*/false);
+}
+
+static bool shouldEmitAvailableExternallyVTable(const CIRGenModule &cgm,
+                                                const CXXRecordDecl *rd) {
+  return cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+         cgm.getCXXABI().canSpeculativelyEmitVTable(rd);
+}
+
+/// Given that we're currently at the end of the translation unit, and
+/// we've emitted a reference to the vtable for this class, should
+/// we define that vtable?
+static bool shouldEmitVTableAtEndOfTranslationUnit(CIRGenModule &cgm,
+                                                   const CXXRecordDecl *rd) {
+  // If vtable is internal then it has to be done.
+  if (!cgm.getVTables().isVTableExternal(rd))
+    return true;
+
+  // If it's external then maybe we will need it as available_externally.
+  return shouldEmitAvailableExternallyVTable(cgm, rd);
+}
+
+/// Given that at some point we emitted a reference to one or more
+/// vtables, and that we are now at the end of the translation unit,
+/// decide whether we should emit them.
+void CIRGenModule::emitDeferredVTables() {
+#ifndef NDEBUG
+  // Remember the size of DeferredVTables, because we're going to assume
+  // that this entire operation doesn't modify it.
+  size_t savedSize = deferredVTables.size();
+#endif
+  for (const CXXRecordDecl *rd : deferredVTables) {
+    if (shouldEmitVTableAtEndOfTranslationUnit(*this, rd))
+      vtables.generateClassData(rd);
+    else if (shouldOpportunisticallyEmitVTables())
+      opportunisticVTables.push_back(rd);
+  }
+
+  assert(savedSize == deferredVTables.size() &&
+         "deferred extra vtables during vtable emission?");
+  deferredVTables.clear();
+}
+
+void CIRGenModule::emitVTablesOpportunistically() {
+  // Try to emit external vtables as available_externally if they have emitted
+  // all inlined virtual functions.  It runs after EmitDeferred() and therefore
+  // is not allowed to create new references to things that need to be emitted
+  // lazily. Note that it also uses fact that we eagerly emitting RTTI.
+
+  assert(
+      (opportunisticVTables.empty() || shouldOpportunisticallyEmitVTables()) &&
+      "Only emit opportunistic vtables with optimizations");
+
+  for (const CXXRecordDecl *rd : opportunisticVTables) {
+    assert(getVTables().isVTableExternal(rd) &&
+           "This queue should only contain external vtables");
+    if (getCXXABI().canSpeculativelyEmitVTable(rd))
+      vtables.generateClassData(rd);
+  }
+  opportunisticVTables.clear();
+}
+
+bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
+  return codeGenOpts.OptimizationLevel > 0;
 }

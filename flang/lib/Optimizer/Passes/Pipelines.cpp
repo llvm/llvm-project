@@ -94,18 +94,16 @@ getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
 }
 
 void addDebugInfoPass(mlir::PassManager &pm,
-                      llvm::codegenoptions::DebugInfoKind debugLevel,
-                      llvm::OptimizationLevel optLevel,
-                      llvm::StringRef inputFilename, int32_t dwarfVersion,
-                      llvm::StringRef splitDwarfFile,
-                      llvm::StringRef dwarfDebugFlags) {
+                      const MLIRToLLVMPassPipelineConfig &config,
+                      llvm::StringRef inputFilename) {
   fir::AddDebugInfoOptions options;
-  options.debugLevel = getEmissionKind(debugLevel);
-  options.isOptimized = optLevel != llvm::OptimizationLevel::O0;
+  options.debugLevel = getEmissionKind(config.DebugInfo);
+  options.isOptimized = config.OptLevel != llvm::OptimizationLevel::O0;
   options.inputFilename = inputFilename;
-  options.dwarfVersion = dwarfVersion;
-  options.splitDwarfFile = splitDwarfFile;
-  options.dwarfDebugFlags = dwarfDebugFlags;
+  options.debugInfoForProfiling = config.DebugInfoForProfiling;
+  options.dwarfVersion = config.DwarfVersion;
+  options.splitDwarfFile = config.SplitDwarfFile;
+  options.dwarfDebugFlags = config.DwarfDebugFlags;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
@@ -142,9 +140,16 @@ void addLLVMDialectToLLVMPass(mlir::PassManager &pm,
   });
 }
 
-void addBoxedProcedurePass(mlir::PassManager &pm) {
-  addPassConditionally(pm, disableBoxedProcedureRewrite,
-                       [&]() { return fir::createBoxedProcedurePass(); });
+void addBoxedProcedurePass(mlir::PassManager &pm,
+                           bool enableSafeTrampolineFromConfig) {
+  addPassConditionally(pm, disableBoxedProcedureRewrite, [&]() {
+    fir::BoxedProcedurePassOptions opts;
+    // Support both the frontend -fsafe-trampoline flag (via config)
+    // and the cl::opt --safe-trampoline (for fir-opt/tco tools).
+    opts.useSafeTrampoline =
+        enableSafeTrampolineFromConfig || enableSafeTrampoline;
+    return fir::createBoxedProcedurePass(opts);
+  });
 }
 
 void addExternalNameConversionPass(mlir::PassManager &pm,
@@ -255,19 +260,22 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 /// Create a pass pipeline for lowering from HLFIR to FIR
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition
-/// \param optLevel - optimization level used for creating FIR optimization
-///   passes pipeline
+/// \param enableOpenMP - whether OpenMP lowering is enabled
+/// \param config - pipeline config (OptLevel, etc.)
 void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
-                                  llvm::OptimizationLevel optLevel) {
+                                  const MLIRToLLVMPassPipelineConfig &config) {
+  llvm::OptimizationLevel optLevel = config.OptLevel;
   if (optLevel.getSizeLevel() > 0 || optLevel.getSpeedupLevel() > 0) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
   }
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    addNestedPassToAllTopLevelOperations<PassConstructor>(
-        pm, hlfir::createSimplifyHLFIRIntrinsics);
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
+      return hlfir::createSimplifyHLFIRIntrinsics(
+          {/*allowNewSideEffects=*/false, config.fpMaxminBehavior});
+    });
   }
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createInlineElementals);
@@ -276,9 +284,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     pm.addPass(mlir::createCSEPass());
     // Run SimplifyHLFIRIntrinsics pass late after CSE,
     // and allow introducing operations with new side effects.
-    addNestedPassToAllTopLevelOperations<PassConstructor>(pm, []() {
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createSimplifyHLFIRIntrinsics(
-          {/*allowNewSideEffects=*/true});
+          {/*allowNewSideEffects=*/true, config.fpMaxminBehavior});
     });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createPropagateFortranVariableAttributes);
@@ -360,21 +368,17 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 }
 
 void createDebugPasses(mlir::PassManager &pm,
-                       llvm::codegenoptions::DebugInfoKind debugLevel,
-                       llvm::OptimizationLevel OptLevel,
-                       llvm::StringRef inputFilename, int32_t dwarfVersion,
-                       llvm::StringRef splitDwarfFile,
-                       llvm::StringRef dwarfDebugFlags) {
-  if (debugLevel != llvm::codegenoptions::NoDebugInfo)
-    addDebugInfoPass(pm, debugLevel, OptLevel, inputFilename, dwarfVersion,
-                     splitDwarfFile, dwarfDebugFlags);
+                       const MLIRToLLVMPassPipelineConfig &config,
+                       llvm::StringRef inputFilename) {
+  if (config.DebugInfo != llvm::codegenoptions::NoDebugInfo)
+    addDebugInfoPass(pm, config, inputFilename);
 }
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
                                          llvm::StringRef inputFilename) {
   pm.addPass(fir::createMIFOpConversion());
-  fir::addBoxedProcedurePass(pm);
+  fir::addBoxedProcedurePass(pm, config.EnableSafeTrampoline);
   if (config.OptLevel.isOptimizingForSpeed() && config.AliasAnalysis &&
       !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
@@ -385,9 +389,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
-  fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename,
-                         config.DwarfVersion, config.SplitDwarfFile,
-                         config.DwarfDebugFlags);
+  fir::createDebugPasses(pm, config, inputFilename);
   fir::addTargetRewritePass(pm);
   fir::addCompilerGeneratedNamesConversionPass(pm);
 
@@ -418,8 +420,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       {framePointerKind, config.InstrumentFunctionEntry,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
-       config.Reciprocals, config.PreferVectorWidth, /*tuneCPU=*/"",
-       setNoCapture, setNoAlias}));
+       config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
+       /*tuneCPU=*/"", setNoCapture, setNoAlias}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(
@@ -442,7 +444,7 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
     enableOpenMP = fir::EnableOpenMP::Full;
   if (config.EnableOpenMPSimd)
     enableOpenMP = fir::EnableOpenMP::Simd;
-  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config.OptLevel);
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
 
   // Add default optimizer pass pipeline.
   fir::createDefaultFIROptimizerPassPipeline(pm, config);

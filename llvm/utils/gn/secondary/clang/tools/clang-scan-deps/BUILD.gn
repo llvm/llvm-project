@@ -23,6 +23,7 @@ driver_executable("clang-scan-deps") {
     "//clang/lib/Tooling",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/Target:TargetsToBuild",
   ]
   sources = [ "ClangScanDeps.cpp" ]
 }

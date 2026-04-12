@@ -795,13 +795,13 @@ __DEVICE__
 double erfinv(double __x) { return __ocml_erfinv_f64(__x); }
 
 __DEVICE__
-double exp(double __x) { return __ocml_exp_f64(__x); }
+double exp(double __x) { return __builtin_exp(__x); }
 
 __DEVICE__
-double exp10(double __x) { return __ocml_exp10_f64(__x); }
+double exp10(double __x) { return __builtin_exp10(__x); }
 
 __DEVICE__
-double exp2(double __x) { return __ocml_exp2_f64(__x); }
+double exp2(double __x) { return __builtin_exp2(__x); }
 
 __DEVICE__
 double expm1(double __x) { return __ocml_expm1_f64(__x); }

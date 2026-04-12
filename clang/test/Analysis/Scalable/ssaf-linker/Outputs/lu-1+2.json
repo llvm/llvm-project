@@ -1,0 +1,652 @@
+{
+  "data": [
+    {
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "call_count": 3,
+            "callees": [
+              {
+                "@": 1
+              },
+              {
+                "@": 2
+              },
+              {
+                "@": 3
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 1,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": [
+              {
+                "@": 0
+              },
+              {
+                "@": 4
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 2,
+          "entity_summary": {
+            "call_count": 1,
+            "callees": [
+              {
+                "@": 5
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 3,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": [
+              {
+                "@": 0
+              },
+              {
+                "@": 1
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 4,
+          "entity_summary": {
+            "call_count": 1,
+            "callees": [
+              {
+                "@": 3
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 5,
+          "entity_summary": {
+            "call_count": 3,
+            "callees": [
+              {
+                "@": 0
+              },
+              {
+                "@": 3
+              },
+              {
+                "@": 4
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 6,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": [
+              {
+                "@": 0
+              },
+              {
+                "@": 8
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 7,
+          "entity_summary": {
+            "call_count": 1,
+            "callees": [
+              {
+                "@": 9
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 8,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": [
+              {
+                "@": 0
+              },
+              {
+                "@": 7
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 9,
+          "entity_summary": {
+            "call_count": 1,
+            "callees": [
+              {
+                "@": 8
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 10,
+          "entity_summary": {
+            "call_count": 3,
+            "callees": [
+              {
+                "@": 6
+              },
+              {
+                "@": 7
+              },
+              {
+                "@": 8
+              }
+            ]
+          }
+        }
+      ],
+      "summary_name": "Analysis1"
+    },
+    {
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "direct": {
+              "@": 3
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 1
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 4
+                },
+                "level": 2
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 1,
+          "entity_summary": {
+            "direct": {
+              "@": 0
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 2
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 5
+                },
+                "level": 2
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 2,
+          "entity_summary": {
+            "direct": {
+              "@": 1
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 3
+                },
+                "level": 1
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 3,
+          "entity_summary": {
+            "direct": {
+              "@": 4
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 0
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 2
+                },
+                "level": 2
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 4,
+          "entity_summary": {
+            "direct": {
+              "@": 5
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 1
+                },
+                "level": 1
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 5,
+          "entity_summary": {
+            "direct": {
+              "@": 2
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 0
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 3
+                },
+                "level": 2
+              },
+              {
+                "entity": {
+                  "@": 4
+                },
+                "level": 3
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 6,
+          "entity_summary": {
+            "direct": {
+              "@": 0
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 9
+                },
+                "level": 1
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 7,
+          "entity_summary": {
+            "direct": {
+              "@": 10
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 0
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 8
+                },
+                "level": 2
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 8,
+          "entity_summary": {
+            "direct": {
+              "@": 6
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 7
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 0
+                },
+                "level": 2
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 9,
+          "entity_summary": {
+            "direct": {
+              "@": 7
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 10
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 8
+                },
+                "level": 2
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 10,
+          "entity_summary": {
+            "direct": {
+              "@": 9
+            },
+            "indirect": [
+              {
+                "entity": {
+                  "@": 6
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 7
+                },
+                "level": 2
+              },
+              {
+                "entity": {
+                  "@": 0
+                },
+                "level": 3
+              }
+            ]
+          }
+        }
+      ],
+      "summary_name": "Analysis2"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@shared_ext#"
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu1.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@shared_int#"
+      }
+    },
+    {
+      "id": 6,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@shared_int#"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu1.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@shared_none#"
+      }
+    },
+    {
+      "id": 7,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@shared_none#"
+      }
+    },
+    {
+      "id": 3,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@unique_ext_tu1#"
+      }
+    },
+    {
+      "id": 8,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@unique_ext_tu2#"
+      }
+    },
+    {
+      "id": 4,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu1.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@unique_int_tu1#"
+      }
+    },
+    {
+      "id": 9,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@unique_int_tu2#"
+      }
+    },
+    {
+      "id": 5,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu1.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@unique_none_tu1#"
+      }
+    },
+    {
+      "id": 10,
+      "name": {
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "lu-1+2"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@unique_none_tu2#"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "type": "None"
+      }
+    },
+    {
+      "id": 3,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 4,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 5,
+      "linkage": {
+        "type": "None"
+      }
+    },
+    {
+      "id": 6,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 7,
+      "linkage": {
+        "type": "None"
+      }
+    },
+    {
+      "id": 8,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 9,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 10,
+      "linkage": {
+        "type": "None"
+      }
+    }
+  ],
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "lu-1+2"
+    }
+  ]
+}

@@ -20,7 +20,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
@@ -40,6 +40,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -497,7 +498,7 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  if (isa<ub::PoisonAttrInterface>(value))
+  if (matchPattern(value, ub::m_Poison()))
     return value.getDialect().materializeConstant(builder, value, type, loc);
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
@@ -1354,19 +1355,6 @@ ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
   return success();
 }
 
-bool ExtractOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-  // Allow extracting 1-element vectors instead of scalars.
-  auto isCompatible = [](TypeRange l, TypeRange r) {
-    auto vectorType = llvm::dyn_cast<VectorType>(l.front());
-    return vectorType && vectorType.getShape().equals({1}) &&
-           vectorType.getElementType() == r.front();
-  };
-  if (l.size() == 1 && r.size() == 1 &&
-      (isCompatible(l, r) || isCompatible(r, l)))
-    return true;
-  return l == r;
-}
-
 LogicalResult vector::ExtractOp::verify() {
   if (auto resTy = dyn_cast<VectorType>(getResult().getType()))
     if (resTy.getRank() == 0)
@@ -2112,7 +2100,7 @@ static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
 
 /// Fold a vector extract from is a poison source.
 static Attribute foldPoisonSrcExtractOp(Attribute srcAttr) {
-  if (isa_and_nonnull<ub::PoisonAttr>(srcAttr))
+  if (matchPattern(srcAttr, ub::m_Poison()))
     return srcAttr;
 
   return {};
@@ -2559,6 +2547,13 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
                                  SmallVectorImpl<OpFoldResult> &results) {
   if (succeeded(foldToElementsFromElements(*this, results)))
     return success();
+
+  // Y = ToElements(ShapeCast(X)) -> Y = ToElements(X)
+  if (auto shapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
+    setOperand(shapeCast.getSource());
+    return success();
+  }
+
   return foldToElementsOfBroadcast(*this, results);
 }
 
@@ -2712,7 +2707,7 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
                                                ArrayRef<Attribute> elements) {
   // Check for null or poison attributes before any processing.
   if (llvm::any_of(elements, [](Attribute attr) {
-        return !attr || isa<ub::PoisonAttrInterface>(attr);
+        return !attr || matchPattern(attr, ub::m_Poison());
       }))
     return {};
 
@@ -3161,7 +3156,7 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   }
   if (auto attr = llvm::dyn_cast<SplatElementsAttr>(adaptor.getSource()))
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
-  if (llvm::dyn_cast<ub::PoisonAttr>(adaptor.getSource()))
+  if (matchPattern(adaptor.getSource(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
   return {};
 }
@@ -3265,10 +3260,13 @@ LogicalResult ShuffleOp::verify() {
 }
 
 LogicalResult
-ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
+ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location> loc,
                             ShuffleOp::Adaptor adaptor,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
-  auto v1Type = llvm::cast<VectorType>(adaptor.getV1().getType());
+  auto v1Type = llvm::dyn_cast<VectorType>(adaptor.getV1().getType());
+  if (!v1Type) {
+    return emitOptionalError(loc, "expected vector type");
+  }
   auto v1Rank = v1Type.getRank();
   // Construct resulting type: leading dimension matches mask
   // length, all trailing dimensions match the operands.
@@ -3316,8 +3314,8 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     return {};
 
   // Fold shuffle poison, poison -> poison.
-  bool isV1Poison = isa<ub::PoisonAttr>(v1Attr);
-  bool isV2Poison = isa<ub::PoisonAttr>(v2Attr);
+  bool isV1Poison = matchPattern(v1Attr, ub::m_Poison());
+  bool isV2Poison = matchPattern(v2Attr, ub::m_Poison());
   if (isV1Poison && isV2Poison)
     return ub::PoisonAttr::get(getContext());
 
@@ -3474,12 +3472,66 @@ public:
   }
 };
 
+/// Pattern to replace usused shuffle operands / results with poison.
+///
+/// Example Input:
+///   %r = vector.shuffle %v1, %v2 [2, 3, 3, 3] : vector<2xi32>, vector<2xi32>
+///
+/// Example Output:
+///   %0 = ub.poison : vector<2xi32>
+///   %r = vector.shuffle %0, %v2 [2, 3, 3, 3] : vector<2xi32>, vector<2xi32>
+class FoldUnusedShuffleOperand final : public OpRewritePattern<ShuffleOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    // Replace with poison if all mask elements are poison.
+    if (llvm::all_of(op.getMask(), [](int64_t mask) {
+          return mask == ShuffleOp::kPoisonIndex;
+        })) {
+      rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType());
+      return success();
+    }
+
+    // Helper function to replace an operand with poison.
+    auto replaceOperandWithPoison = [&](OpOperand &operand) {
+      // Do not replace if the operand is already poison.
+      if (!matchPattern(operand.get(), ub::m_Poison())) {
+        Value poison = ub::PoisonOp::create(rewriter, op.getLoc(),
+                                            operand.get().getType());
+        rewriter.modifyOpInPlace(op, [&]() { operand.set(poison); });
+        return success();
+      }
+      return failure();
+    };
+
+    // Replace V1 with poison if it is not used.
+    int64_t leadingV1Size = op.getV1VectorType().getRank() > 0
+                                ? op.getV1VectorType().getDimSize(0)
+                                : 1;
+    bool isV1Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask < leadingV1Size;
+    });
+    if (!isV1Used && succeeded(replaceOperandWithPoison(op.getV1Mutable())))
+      return success();
+
+    // Replace V2 with poison if it is not used.
+    bool isV2Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask >= leadingV1Size;
+    });
+    if (!isV2Used && succeeded(replaceOperandWithPoison(op.getV2Mutable())))
+      return success();
+
+    return failure();
+  }
+};
 } // namespace
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp>(
-      context);
+  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp,
+              FoldUnusedShuffleOperand>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3724,8 +3776,8 @@ public:
         continue;
       }
 
-      SmallVector<Type> elementToInsertTypes(insertSize,
-                                             srcVectorType.getElementType());
+      Repeated<Type> elementToInsertTypes(insertSize,
+                                          srcVectorType.getElementType());
       // Get all elements from the vector in row-major order.
       auto elementsToInsert = vector::ToElementsOp::create(
           rewriter, op.getLoc(), elementToInsertTypes, valueToStore);
@@ -3764,6 +3816,11 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   // Make sure we do not create too many large constants.
   if (destTy.getNumElements() > maxVectorSizeFoldThreshold &&
       !insertOp->hasOneUse())
+    return {};
+
+  // Bail out on poison indices (kPoisonIndex = -1) to avoid computing an
+  // invalid (negative) linearized position which would cause UB below.
+  if (is_contained(insertOp.getStaticPosition(), InsertOp::kPoisonIndex))
     return {};
 
   // Calculate the linearized position for inserting elements.
@@ -4085,7 +4142,8 @@ public:
       return failure();
 
     // TODO: Support poison.
-    if (isa<ub::PoisonAttr>(vectorDestCst) || isa<ub::PoisonAttr>(sourceCst))
+    if (matchPattern(vectorDestCst, ub::m_Poison()) ||
+        matchPattern(sourceCst, ub::m_Poison()))
       return failure();
 
     // TODO: Handle non-unit strides when they become available.
@@ -6193,6 +6251,10 @@ LogicalResult GatherOp::verify() {
     return emitOpError("expected result dim to match mask dim");
   if (resVType != getPassThruVectorType())
     return emitOpError("expected pass_thru of same type as result type");
+  if (getAlignmentAttr() && !isa<MemRefType>(baseType)) {
+    return emitOpError(
+        "alignment is only supported for memref bases, not tensor bases");
+  }
   return success();
 }
 
@@ -6301,6 +6363,10 @@ LogicalResult ScatterOp::verify() {
     return emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore dim to match mask dim");
+  if (getAlignmentAttr() && !isa<MemRefType>(baseType)) {
+    return emitOpError(
+        "alignment is only supported for memref bases, not tensor bases");
+  }
   return success();
 }
 namespace {
@@ -6577,7 +6643,7 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
     return denseAttr.reshape(getType());
 
   // shape_cast(poison) -> poison
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource()))
+  if (matchPattern(adaptor.getSource(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   return {};
@@ -6691,6 +6757,22 @@ public:
   }
 };
 
+// vector.broadcast has two distinct semantic modes: duplication across leading
+// dimensions, and stretching across inner dimensions. This helper returns the
+// product of the inner-dimension stretching factors.
+int64_t getBroadcastStretchingFactor(ArrayRef<int64_t> srcShape,
+                                     ArrayRef<int64_t> dstShape) {
+  int stretchingFactor = 1;
+  int numLeadingDims = dstShape.size() - srcShape.size();
+  for (int i = 0, e = srcShape.size(); i < e; i++) {
+    int64_t dstDim = dstShape[numLeadingDims + i];
+    if (srcShape[i] == 1 && dstDim != 1) {
+      stretchingFactor *= dstDim;
+    }
+  }
+  return stretchingFactor;
+}
+
 /// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as Y = Broadcast(X)
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
@@ -6713,13 +6795,64 @@ public:
     // to
     // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
     VectorType dstVectorType = shapeCastOp.getResultVectorType();
-    if (srcIsScalar || isBroadcastableTo(srcVectorType, dstVectorType) ==
-                           BroadcastableToResult::Success) {
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          shapeCastOp, dstVectorType, broadcastOp.getSource());
-      return success();
+    ArrayRef<int64_t> dstShape = dstVectorType.getShape();
+    ArrayRef<int64_t> srcShape =
+        srcIsScalar ? ArrayRef<int64_t>{} : srcVectorType.getShape();
+    ArrayRef<int64_t> broadcastShape =
+        broadcastOp.getResultVectorType().getShape();
+
+    if (!srcIsScalar) {
+      if (isBroadcastableTo(srcVectorType, dstVectorType) !=
+          BroadcastableToResult::Success) {
+        return failure();
+      }
+      // Avoid folding if this would result in switching between the two
+      // distinct semantic modes of vector.broadcast (duplication vs
+      // stretching). See https://github.com/llvm/llvm-project/issues/190614.
+      // This is detected by a change in the stretching factor. However if the
+      // source has a single element, there is no ambiguity.
+      if (srcVectorType.getNumElements() != 1) {
+        if (getBroadcastStretchingFactor(srcShape, dstShape) !=
+            getBroadcastStretchingFactor(srcShape, broadcastShape)) {
+          return failure();
+        }
+      }
     }
-    return failure();
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shapeCastOp, dstVectorType,
+                                                     broadcastOp.getSource());
+    return success();
+  }
+};
+
+/// Pattern to rewrite Y = ShapeCast(FromElements(X)) as Y = FromElements(X)
+///
+/// BEFORE:
+///    %1 = vector.from_elements %c1, %c2, %c3 : vector<3xf32>
+///    %2 = vector.shape_cast %1 : vector<3xf32> to vector<1x3xf32>
+/// AFTER:
+///    %2 = vector.from_elements %c1, %c2, %c3 : vector<1x3xf32>
+///
+/// Note: this transformation is implemented as an OpRewritePattern, not as a
+/// fold, because we have to create new op FromElementsOp with updated result
+/// type. This cannot be done with a fold, because fold cannot create new ops
+/// and the existing FromElementsOp result type differs from the ShapeCastOp
+/// result type. Mutating the FromElementsOp (not root op) would violate the
+/// fold contract and break other users.
+class FoldShapeCastOfFromElements final : public OpRewritePattern<ShapeCastOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto fromElements = shapeCastOp.getSource().getDefiningOp<FromElementsOp>();
+    if (!fromElements)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<FromElementsOp>(
+        shapeCastOp, shapeCastOp.getResultVectorType(),
+        fromElements.getElements());
+    return success();
   }
 };
 
@@ -6727,9 +6860,8 @@ public:
 
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results
-      .add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder>(
-          context);
+  results.add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder,
+              FoldShapeCastOfFromElements>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6903,7 +7035,7 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
     return splat.reshape(getResultVectorType());
 
   // Eliminate poison transpose ops.
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
+  if (matchPattern(adaptor.getVector(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   // Eliminate identity transposes, and more generally any transposes that

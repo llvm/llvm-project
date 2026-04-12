@@ -100,13 +100,12 @@ define i64 @reverse_load_liveout_only(ptr %A) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 17, [[INDEX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP12]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP7]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP13]], align 4

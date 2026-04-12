@@ -767,3 +767,19 @@ subroutine test_cache_temp_in_designator(data, a)
 ! CHECK: hlfir.designate %[[DECL]]#0
 ! CHECK: acc.yield
 end subroutine
+
+
+subroutine full_array_cache()
+  integer :: k, j , kd, jd,y, x
+  real(8) :: tile(0:8,0:8)
+
+  !$acc parallel loop gang collapse(2)
+  do k = 1, kd
+    do j = 1, jd
+      !$acc cache(tile(:,:))
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPfull_array_cache()
+! CHECK: acc.cache var(%{{.*}}) bounds(%{{.*}})

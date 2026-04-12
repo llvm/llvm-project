@@ -24,6 +24,7 @@ def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
 def SYCLKernelCallStmt : StmtNode<Stmt>;
+def UnresolvedSYCLKernelCallStmt : StmtNode<Stmt>;
 
 // Break/continue.
 def LoopControlStmt : StmtNode<Stmt, 1>;
@@ -184,10 +185,11 @@ def RequiresExpr : StmtNode<Expr>;
 def CXXReflectExpr : StmtNode<Expr>;
 
 // Obj-C Expressions.
-def ObjCStringLiteral : StmtNode<Expr>;
-def ObjCBoxedExpr : StmtNode<Expr>;
-def ObjCArrayLiteral : StmtNode<Expr>;
-def ObjCDictionaryLiteral : StmtNode<Expr>;
+def ObjCObjectLiteral : StmtNode<Expr, 1>;
+def ObjCStringLiteral : StmtNode<ObjCObjectLiteral>;
+def ObjCBoxedExpr : StmtNode<ObjCObjectLiteral>;
+def ObjCArrayLiteral : StmtNode<ObjCObjectLiteral>;
+def ObjCDictionaryLiteral : StmtNode<ObjCObjectLiteral>;
 def ObjCEncodeExpr : StmtNode<Expr>;
 def ObjCMessageExpr : StmtNode<Expr>;
 def ObjCSelectorExpr : StmtNode<Expr>;
