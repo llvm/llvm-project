@@ -262,7 +262,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationLegacyPass(PR);
   initializeAArch64RedundantCondBranchLegacyPass(PR);
-  initializeAArch64StorePairSuppressPass(PR);
+  initializeAArch64StorePairSuppressLegacyPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);

@@ -50,4 +50,5 @@ MACHINE_FUNCTION_PASS("aarch64-redundantcondbranch", AArch64RedundantCondBranchP
 MACHINE_FUNCTION_PASS("aarch64-simd-scalar", AArch64AdvSIMDScalarPass())
 MACHINE_FUNCTION_PASS("aarch64-O0-prelegalizer-combiner",
                       AArch64O0PreLegalizerCombinerPass())
+MACHINE_FUNCTION_PASS("aarch64-stp-suppress", AArch64StorePairSuppressPass())
 #undef MACHINE_FUNCTION_PASS
