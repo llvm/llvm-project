@@ -1,0 +1,75 @@
+# REQUIRES: aarch64-registered-target
+# REQUIRES: asserts
+
+# RUN: llc -o /dev/null %s -mtriple=aarch64 -mattr=+fuse-address \
+# RUN:   -run-pass machine-scheduler -debug-only=machine-scheduler 2>&1 \
+# RUN:   | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-apple-macos -mcpu=apple-m5 \
+# RUN:   -run-pass machine-scheduler -debug-only=machine-scheduler 2>&1 \
+# RUN:   | FileCheck %s
+
+# Test macro fusion conflicts with other macro fusions and with ld/st clustering.
+
+# Fusion-fusion conflict: ADRP fans out to two loads at non-adjacent offsets
+# (so they are NOT clustered by LoadClusterDAGMutation). Both ADRP→LDR pairs
+# are valid address fusion pairs. SU(0)→SU(1) fuses first; when SU(0)→SU(2)
+# is attempted, SU(0) is already clustered.
+---
+name: fusion-fusion-conflict
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fusion-fusion-conflict
+    ; CHECK: Macro fuse: SU(0) - SU(1) /  ADRP - LDRXui
+    ; CHECK: Fusion conflict: cannot fuse SU(0) and SU(2) - already clustered
+    ; CHECK: SU(0): $x0 = ADRP 0
+    ; CHECK: SU(1): $x1 = LDRXui $x0, 5
+    ; CHECK: SU(2): $x2 = LDRXui $x0, 10
+    $x0 = ADRP 0
+    $x1 = LDRXui $x0, 5 :: (load (s64))
+    $x2 = LDRXui $x0, 10 :: (load (s64))
+    RET_ReallyLR
+...
+
+# Store-fusion conflict: two adjacent stores get clustered by
+# StoreClusterDAGMutation (runs before AArch64 macro fusion). Then address
+# fusion (ADRP + STRXui) is attempted but the store SUnit is already
+# clustered.
+---
+name: store-fusion-conflict
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: store-fusion-conflict
+    ; CHECK: Cluster ld/st SU(1) - SU(2)
+    ; CHECK: Fusion conflict: cannot fuse SU(0) and SU(1) - already clustered
+    ; CHECK: SU(0): $x1 = ADRP 0
+    ; CHECK: SU(1): STRXui $x0, $x1, 0 :: (store (s64))
+    ; CHECK: SU(2): STRXui $x0, $x1, 1 :: (store (s64))
+    $x1 = ADRP 0
+    STRXui $x0, $x1, 0 :: (store (s64))
+    STRXui $x0, $x1, 1 :: (store (s64))
+    RET_ReallyLR
+...
+
+# Load-fusion conflict: two adjacent loads get clustered by
+# LoadClusterDAGMutation. Then address fusion (ADRP + LDRXui) is attempted
+# but the load SUnit is already clustered.
+---
+name: load-fusion-conflict
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: load-fusion-conflict
+    ; CHECK: Cluster ld/st SU(1) - SU(2)
+    ; CHECK: Fusion conflict: cannot fuse SU(0) and SU(1) - already clustered
+    ; CHECK: SU(0): $x0 = ADRP 0
+    ; CHECK: SU(1): $x1 = LDRXui $x0, 0
+    ; CHECK: SU(2): $x2 = LDRXui $x0, 1
+    $x0 = ADRP 0
+    $x1 = LDRXui $x0, 0 :: (load (s64))
+    $x2 = LDRXui $x0, 1 :: (load (s64))
+    RET_ReallyLR
+...
