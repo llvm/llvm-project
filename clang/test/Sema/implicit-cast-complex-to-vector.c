@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=c %s
+// RUN: %clang_cc1 -fsyntax-only -verify=c %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify=cxx %s
 
 typedef char __attribute__((__vector_size__(64))) V;
