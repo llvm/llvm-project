@@ -1354,8 +1354,8 @@ Instruction *InstCombinerImpl::foldAddLikeCommutative(Value *LHS, Value *RHS,
 
     bool NSWOut = NSW && match(LHS, m_NSWAdd(m_Value(), m_Value()));
     bool NUWOut = NUW && match(LHS, m_NUWAdd(m_Value(), m_Value()));
-    Value *NewOr = Builder.CreateOr(
-        B, Constant::getIntegerValue(LHS->getType(), *C1));
+    Value *NewOr =
+        Builder.CreateOr(B, Constant::getIntegerValue(LHS->getType(), *C1));
     Instruction *NewAdd = BinaryOperator::CreateAdd(A, NewOr);
     NewAdd->setHasNoSignedWrap(NSWOut);
     NewAdd->setHasNoUnsignedWrap(NUWOut);
