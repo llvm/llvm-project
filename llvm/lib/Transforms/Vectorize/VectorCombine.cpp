@@ -2312,10 +2312,6 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
   if (!Ty->isIntegerTy())
     return false;
 
-  // TODO: Add big endian test coverage
-  if (DL->isBigEndian())
-    return false;
-
   // Restrict to disjoint cases so the mask vectors aren't overlapping.
   Instruction *X, *Y;
   if (!match(&I, m_DisjointOr(m_Instruction(X), m_Instruction(Y))))
@@ -2396,7 +2392,9 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
 
   // Build bool mask concatenation, bitcast back to scalar integer, and perform
   // any residual zero-extension or shifting.
-  Value *Concat = Builder.CreateShuffleVector(SrcX, SrcY, ConcatMask);
+  Value *Concat = DL->isBigEndian()
+                      ? Builder.CreateShuffleVector(SrcY, SrcX, ConcatMask)
+                      : Builder.CreateShuffleVector(SrcX, SrcY, ConcatMask);
   Worklist.pushValue(Concat);
 
   Value *Result = Builder.CreateBitCast(Concat, ConcatIntTy);
