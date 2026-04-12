@@ -261,5 +261,12 @@ struct OverloadedMethods {
     ;
   };
 
+  void j() {
+    this->i++;
+  }
+  int j() const {
+    ;
+  }
+
   int i = 0;
 };
