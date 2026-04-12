@@ -42,12 +42,20 @@ define i1 @extract_idx1_const_vec_isnan() nounwind {  ; vec = <QNaN, 2.0, +Inf, 
   ret i1 %res
 }
 
-define i1 @extract_oob_idx_const_vec_isnan() nounwind {  ; vec = <QNaN, 2.0, +Inf, -Inf>, idx=6 (OOB), isnan -> poison
+define i1 @extract_const_vec_unknown_idx_isnan(i32 %idx) nounwind {  ; vec = <QNaN, 2.0, +Inf, -Inf>, unknown idx, isnan -> cannot fold
+; CHECK-LABEL: extract_const_vec_unknown_idx_isnan:
+; CHECK:       # %bb.0:
+; CHECK:    fclass.s
+; CHECK:    ret
+  %elt = extractelement <4 x float> <float 0x7FF8000000000000, float 2.0, float 0x7FF0000000000000, float 0xFFF0000000000000>, i32 %idx
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
+  ret i1 %res
+}
+
+define i1 @extract_oob_idx_const_vec_isnan() nounwind {  ; vec = <QNaN, 2.0, +Inf, -Inf>, idx=6 (OOB) -> poison, folds away
 ; CHECK-LABEL: extract_oob_idx_const_vec_isnan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fclass.s a0, fa5
-; CHECK-NEXT:    andi a0, a0, 768
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
   %elt = extractelement <4 x float> <float 0x7FF8000000000000, float 2.0, float 0x7FF0000000000000, float 0xFFF0000000000000>, i32 6
   %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 3)  ; 0x3 = nan
@@ -72,6 +80,26 @@ define i1 @extract_scalable_fabs_isneg(<vscale x 4 x float> %a0) nounwind {
 ; CHECK-NEXT:    ret
   %abs = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> %a0)
   %elt = extractelement <vscale x 4 x float> %abs, i32 0
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
+  ret i1 %res
+}
+
+define i1 @extract_const_vec_unknown_idx_isneg(i32 %idx) nounwind {  ; vec = <-1, 2, -3, 4>, unknown idx, isneg -> cannot fold
+; CHECK-LABEL: extract_const_vec_unknown_idx_isneg:
+; CHECK:       # %bb.0:
+; CHECK:    fclass.s
+; CHECK:    ret
+  %elt = extractelement <4 x float> <float -1.0, float 2.0, float -3.0, float 4.0>, i32 %idx
+  %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
+  ret i1 %res
+}
+
+define i1 @extract_const_vec_known_neg_idx_isneg() nounwind {  ; vec = <-1, 2, -3, 4>, idx=0, isneg -> true
+; CHECK-LABEL: extract_const_vec_known_neg_idx_isneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+  %elt = extractelement <4 x float> <float -1.0, float 2.0, float -3.0, float 4.0>, i32 0
   %res = call i1 @llvm.is.fpclass.f32(float %elt, i32 60)  ; 0x3C = negative
   ret i1 %res
 }
