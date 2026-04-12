@@ -17,20 +17,18 @@ define void @test(ptr %ptr.i8, ptr %ptr.float) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 true, label [[BB10:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T:%.*]] = add i64 [[T4:%.*]], 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[T4]] = phi i64 [ [[T]], [[BB2]] ], [ 0, [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[T7:%.*]] = icmp eq i64 [[T4]], 0
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PTR_I8]], i64 [[T4]]
+; CHECK-NEXT:    [[T7:%.*]] = icmp eq i64 0, 0
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PTR_I8]], i64 0
 ; CHECK-NEXT:    br label [[BB14:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    store i8 undef, ptr [[SCEVGEP]], align 1
 ; CHECK-NEXT:    [[T6:%.*]] = load ptr, ptr [[PTR_FLOAT]], align 8
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[T6]], i64 16
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[T4]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 0
 ; CHECK-NEXT:    store i8 undef, ptr [[SCEVGEP2]], align 1
 ; CHECK-NEXT:    br label [[BB14]]
 ;
@@ -71,8 +69,6 @@ define fastcc void @TransformLine() nounwind {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[LOOP0:%.*]]
 ; CHECK:       loop0:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[LOOP0]] ], [ -2, [[BB:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP0]], label [[BB0:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
@@ -85,7 +81,8 @@ define fastcc void @TransformLine() nounwind {
 ; CHECK-NEXT:    [[I1_NEXT]] = add i32 [[I1]], 1
 ; CHECK-NEXT:    br i1 true, label [[BB5_BB6SPLIT_CRIT_EDGE:%.*]], label [[LOOP1]]
 ; CHECK:       bb5.bb6split_crit_edge:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV_NEXT]], [[I1_NEXT]]
+; CHECK-NEXT:    [[I1_NEXT_LCSSA:%.*]] = phi i32 [ [[I1_NEXT]], [[BB5]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 -1, [[I1_NEXT_LCSSA]]
 ; CHECK-NEXT:    br label [[BB6SPLIT:%.*]]
 ; CHECK:       bb6splitsplit:
 ; CHECK-NEXT:    br label [[BB6SPLIT]]

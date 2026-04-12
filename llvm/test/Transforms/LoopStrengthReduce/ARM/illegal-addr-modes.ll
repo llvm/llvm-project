@@ -30,11 +30,12 @@ define ptr @negativeOneCase(ptr returned %a, ptr nocapture readonly %b, i32 %n) 
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_COND2_PREHEADER:%.*]], label [[WHILE_COND]]
 ; CHECK:       while.cond2.preheader:
+; CHECK-NEXT:    [[INCDEC_PTR_LCSSA:%.*]] = phi ptr [ [[INCDEC_PTR]], [[WHILE_COND]] ]
 ; CHECK-NEXT:    br label [[WHILE_COND2:%.*]]
 ; CHECK:       while.cond2:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[WHILE_BODY5:%.*]] ], [ 0, [[WHILE_COND2_PREHEADER]] ]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[LSR_IV]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[INCDEC_PTR]], i32 [[LSR_IV]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[INCDEC_PTR_LCSSA]], i32 [[LSR_IV]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[N]], [[LSR_IV]]
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[WHILE_END8:%.*]], label [[WHILE_BODY5]]
 ; CHECK:       while.body5:
@@ -43,7 +44,7 @@ define ptr @negativeOneCase(ptr returned %a, ptr nocapture readonly %b, i32 %n) 
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    br label [[WHILE_COND2]]
 ; CHECK:       while.end8:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[INCDEC_PTR]], i32 [[N]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[INCDEC_PTR_LCSSA]], i32 [[N]]
 ; CHECK-NEXT:    store i8 0, ptr [[SCEVGEP]], align 1
 ; CHECK-NEXT:    ret ptr [[A]]
 ;

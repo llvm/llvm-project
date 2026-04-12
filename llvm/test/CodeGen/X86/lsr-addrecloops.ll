@@ -13,25 +13,25 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK:       # %bb.0: # %.preheader263
 ; CHECK-NEXT:    leaq (,%rcx,4), %r9
 ; CHECK-NEXT:    movl $1, %r10d
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_20: # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  .LBB0_18: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    incq %r10
 ; CHECK-NEXT:    addq %r9, %rax
 ; CHECK-NEXT:    cmpq %r10, %rcx
-; CHECK-NEXT:    je .LBB0_18
+; CHECK-NEXT:    je .LBB0_19
 ; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vucomiss %xmm0, %xmm1
-; CHECK-NEXT:    jne .LBB0_20
-; CHECK-NEXT:    jp .LBB0_20
+; CHECK-NEXT:    jne .LBB0_18
+; CHECK-NEXT:    jp .LBB0_18
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vucomiss %xmm0, %xmm1
-; CHECK-NEXT:    jne .LBB0_20
-; CHECK-NEXT:    jp .LBB0_20
+; CHECK-NEXT:    jne .LBB0_18
+; CHECK-NEXT:    jp .LBB0_18
 ; CHECK-NEXT:  # %bb.3: # %vector.body807.preheader
 ; CHECK-NEXT:    leaq 1(%rcx), %rdx
 ; CHECK-NEXT:    movl %edx, %esi
@@ -49,15 +49,14 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_6: # %vector.body807
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    leaq (%rdi,%r9), %r11
-; CHECK-NEXT:    vmovups %ymm0, (%rax,%r11)
-; CHECK-NEXT:    vmovups %ymm0, 1(%rax,%r11)
-; CHECK-NEXT:    vmovups %ymm0, 2(%rax,%r11)
-; CHECK-NEXT:    vmovups %ymm0, 3(%rax,%r11)
-; CHECK-NEXT:    vmovups %ymm0, 4(%rax,%r11)
-; CHECK-NEXT:    vmovups %ymm0, 5(%rax,%r11)
-; CHECK-NEXT:    vmovups %ymm0, 6(%rax,%r11)
-; CHECK-NEXT:    vmovups %ymm0, 7(%rax,%r11)
+; CHECK-NEXT:    vmovups %ymm0, (%rax,%r9)
+; CHECK-NEXT:    vmovups %ymm0, 1(%rax,%r9)
+; CHECK-NEXT:    vmovups %ymm0, 2(%rax,%r9)
+; CHECK-NEXT:    vmovups %ymm0, 3(%rax,%r9)
+; CHECK-NEXT:    vmovups %ymm0, 4(%rax,%r9)
+; CHECK-NEXT:    vmovups %ymm0, 5(%rax,%r9)
+; CHECK-NEXT:    vmovups %ymm0, 6(%rax,%r9)
+; CHECK-NEXT:    vmovups %ymm0, 7(%rax,%r9)
 ; CHECK-NEXT:    addq $8, %r9
 ; CHECK-NEXT:    cmpq %r9, %r10
 ; CHECK-NEXT:    jne .LBB0_6
@@ -65,25 +64,25 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    je .LBB0_10
 ; CHECK-NEXT:  # %bb.8: # %vector.body807.epil.preheader
-; CHECK-NEXT:    addq %rdi, %r9
+; CHECK-NEXT:    addq %rax, %r9
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_9: # %vector.body807.epil
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    leaq (%r9,%r10), %r11
-; CHECK-NEXT:    vmovups %ymm0, (%rax,%r11)
+; CHECK-NEXT:    vmovups %ymm0, (%r9,%r10)
 ; CHECK-NEXT:    incq %r10
 ; CHECK-NEXT:    cmpq %r10, %rsi
 ; CHECK-NEXT:    jne .LBB0_9
 ; CHECK-NEXT:  .LBB0_10: # %.lr.ph373
 ; CHECK-NEXT:    testb $1, %r8b
 ; CHECK-NEXT:    je .LBB0_11
-; CHECK-NEXT:  # %bb.19: # %scalar.ph839.preheader
+; CHECK-NEXT:  # %bb.20: # %scalar.ph839.preheader
 ; CHECK-NEXT:    movl $0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_11: # %vector.body847.preheader
+; CHECK-NEXT:    addq $96, %rax
 ; CHECK-NEXT:    movl %edx, %esi
 ; CHECK-NEXT:    andl $7, %esi
 ; CHECK-NEXT:    cmpq $7, %rcx
@@ -98,34 +97,32 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_14: # %vector.body847
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    leaq (%rdi,%rcx), %r8
-; CHECK-NEXT:    vmovups %ymm0, 96(%rax,%r8)
-; CHECK-NEXT:    vmovups %ymm0, 97(%rax,%r8)
-; CHECK-NEXT:    vmovups %ymm0, 98(%rax,%r8)
-; CHECK-NEXT:    vmovups %ymm0, 99(%rax,%r8)
-; CHECK-NEXT:    vmovups %ymm0, 100(%rax,%r8)
-; CHECK-NEXT:    vmovups %ymm0, 101(%rax,%r8)
-; CHECK-NEXT:    vmovups %ymm0, 102(%rax,%r8)
-; CHECK-NEXT:    vmovups %ymm0, 103(%rax,%r8)
+; CHECK-NEXT:    vmovups %ymm0, (%rax,%rcx)
+; CHECK-NEXT:    vmovups %ymm0, 1(%rax,%rcx)
+; CHECK-NEXT:    vmovups %ymm0, 2(%rax,%rcx)
+; CHECK-NEXT:    vmovups %ymm0, 3(%rax,%rcx)
+; CHECK-NEXT:    vmovups %ymm0, 4(%rax,%rcx)
+; CHECK-NEXT:    vmovups %ymm0, 5(%rax,%rcx)
+; CHECK-NEXT:    vmovups %ymm0, 6(%rax,%rcx)
+; CHECK-NEXT:    vmovups %ymm0, 7(%rax,%rcx)
 ; CHECK-NEXT:    addq $8, %rcx
 ; CHECK-NEXT:    cmpq %rcx, %rdx
 ; CHECK-NEXT:    jne .LBB0_14
 ; CHECK-NEXT:  .LBB0_15: # %common.ret.loopexit.unr-lcssa
 ; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    je .LBB0_18
+; CHECK-NEXT:    je .LBB0_19
 ; CHECK-NEXT:  # %bb.16: # %vector.body847.epil.preheader
-; CHECK-NEXT:    leaq 96(%rcx,%rdi), %rcx
-; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_17: # %vector.body847.epil
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    leaq (%rcx,%rdx), %rdi
-; CHECK-NEXT:    vmovups %ymm0, (%rax,%rdi)
-; CHECK-NEXT:    incq %rdx
-; CHECK-NEXT:    cmpq %rdx, %rsi
+; CHECK-NEXT:    vmovups %ymm0, (%rax,%rcx)
+; CHECK-NEXT:    incq %rcx
+; CHECK-NEXT:    cmpq %rcx, %rsi
 ; CHECK-NEXT:    jne .LBB0_17
-; CHECK-NEXT:  .LBB0_18: # %common.ret
+; CHECK-NEXT:  .LBB0_19: # %common.ret
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 .preheader263:

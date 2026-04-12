@@ -14,11 +14,12 @@ define void @is_not_null(ptr %baseptr) local_unnamed_addr align 2 personality pt
 ; CHECK:       header:
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[INCPTR:%.*]], [[LATCH:%.*]] ], [ [[BASEPTR:%.*]], [[PREHEADER:%.*]] ]
 ; CHECK-NEXT:    invoke void @maybe_throws()
-; CHECK-NEXT:    to label [[LATCH]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[LATCH]] unwind label [[LPAD:%.*]]
 ; CHECK:       lpad:
+; CHECK-NEXT:    [[PTR_LCSSA:%.*]] = phi ptr [ [[PTR]], [[HEADER]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
-; CHECK-NEXT:    [[PTR_IS_NOT_NULL:%.*]] = icmp ne ptr [[PTR]], null
+; CHECK-NEXT:            catch ptr null
+; CHECK-NEXT:    [[PTR_IS_NOT_NULL:%.*]] = icmp ne ptr [[PTR_LCSSA]], null
 ; CHECK-NEXT:    call void @use1(i1 [[PTR_IS_NOT_NULL]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       latch:

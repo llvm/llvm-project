@@ -22,7 +22,8 @@ define i32 @test_pr38847() {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[LSR]], -1
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP2:%.*]] = urem i32 [[LSR_IV_NEXT2]], 9
+; CHECK-NEXT:    [[LSR_IV_NEXT2_LCSSA:%.*]] = phi i32 [ [[LSR_IV_NEXT2]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = urem i32 [[LSR_IV_NEXT2_LCSSA]], 9
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -47,21 +48,21 @@ define i64 @test_pr58039() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ -4294967213, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP2]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 4294967295
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 [[LSR_IV_NEXT]], 12
+; CHECK-NEXT:    [[IV_NEXT_LCSSA1:%.*]] = phi i64 [ [[IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 82, 12
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 12
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 4294967221
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[IV_NEXT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP1]], 4294967221
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_NEXT_LCSSA1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[TMP]], 32
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i64 0, i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i64 0, i64 [[IV_NEXT_LCSSA]]
 ; CHECK-NEXT:    ret i64 [[SPEC_SELECT]]
 ;
 entry:
@@ -95,9 +96,7 @@ define i32 @test_pr62852() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], [[LOOP]] ], [ -1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 2, [[ENTRY]] ]
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[DEC_1:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV1]], 1
-; CHECK-NEXT:    [[DEC_1]] = add nsw i32 [[IV_1]], -1
 ; CHECK-NEXT:    call void @use(i64 [[TMP0]])
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[LSR_IV_NEXT]] to i32
@@ -105,9 +104,10 @@ define i32 @test_pr62852() {
 ; CHECK-NEXT:    [[CMP6_1:%.*]] = icmp sgt i32 [[TMP]], 0
 ; CHECK-NEXT:    br i1 [[CMP6_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT]])
-; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 [[DEC_1]], 53
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT_LCSSA]])
+; CHECK-NEXT:    call void @use(i64 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 -1, 53
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
@@ -148,31 +148,43 @@ define i64 @test_normalization_failure_in_any_extend(ptr %i, i64 %i1, i8 %i25) {
 ; CHECK:       loop.3.preheader:
 ; CHECK-NEXT:    br label [[LOOP_3:%.*]]
 ; CHECK:       loop.3:
-; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi i64 [ 0, [[LOOP_3_PREHEADER]] ], [ [[LSR_IV_NEXT6:%.*]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[LSR_IV6:%.*]] = phi i64 [ 0, [[LOOP_3_PREHEADER]] ], [ [[LSR_IV_NEXT7:%.*]], [[LOOP_3]] ]
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ 2, [[LOOP_3_PREHEADER]] ], [ [[LSR_IV_NEXT2:%.*]], [[LOOP_3]] ]
 ; CHECK-NEXT:    [[IV_5:%.*]] = phi i32 [ [[IV_5_NEXT:%.*]], [[LOOP_3]] ], [ 1, [[LOOP_3_PREHEADER]] ]
 ; CHECK-NEXT:    [[IV_5_NEXT]] = add nsw i32 [[IV_5]], -1
 ; CHECK-NEXT:    [[LSR:%.*]] = trunc i32 [[IV_5_NEXT]] to i8
 ; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add nsw i64 [[LSR_IV1]], -1
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[LSR_IV_NEXT2]] to i32
-; CHECK-NEXT:    [[LSR_IV_NEXT6]] = add nsw i64 [[LSR_IV5]], -1
+; CHECK-NEXT:    [[LSR_IV_NEXT7]] = add nsw i64 [[LSR_IV6]], -1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i32 [[TMP]], 0
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_3]], label [[LOOP_1_LATCH]]
 ; CHECK:       loop.1.latch:
+; CHECK-NEXT:    [[LSR_IV_NEXT7_LCSSA8:%.*]] = phi i64 [ [[LSR_IV_NEXT7]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT7_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT7]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[IV_5_NEXT_LCSSA5:%.*]] = phi i32 [ [[IV_5_NEXT]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[IV_5_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_5_NEXT]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT4_LCSSA:%.*]] = phi i8 [ [[LSR]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT2_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT2]], [[LOOP_3]] ]
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i32 [[IV_1]], 1
-; CHECK-NEXT:    [[TMP1]] = sub i64 [[TMP0]], [[LSR_IV_NEXT6]]
+; CHECK-NEXT:    [[TMP1]] = sub i64 [[TMP0]], [[LSR_IV_NEXT7_LCSSA8]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[IV_1_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[C_3]], label [[EXIT:%.*]], label [[LOOP_1_HEADER]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @use.i32(i32 [[IV_5_NEXT]])
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[IV_2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[LSR_IV_NEXT6]]
+; CHECK-NEXT:    [[LSR_IV_NEXT7_LCSSA_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT7_LCSSA]], [[LOOP_1_LATCH]] ]
+; CHECK-NEXT:    [[IV_2_LCSSA:%.*]] = phi i64 [ [[IV_2]], [[LOOP_1_LATCH]] ]
+; CHECK-NEXT:    [[IV_5_NEXT_LCSSA5_LCSSA:%.*]] = phi i32 [ [[IV_5_NEXT_LCSSA5]], [[LOOP_1_LATCH]] ]
+; CHECK-NEXT:    [[IV_5_NEXT_LCSSA_LCSSA:%.*]] = phi i32 [ [[IV_5_NEXT_LCSSA]], [[LOOP_1_LATCH]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT4_LCSSA_LCSSA:%.*]] = phi i8 [ [[LSR_IV_NEXT4_LCSSA]], [[LOOP_1_LATCH]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT2_LCSSA_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT2_LCSSA]], [[LOOP_1_LATCH]] ]
+; CHECK-NEXT:    call void @use.i32(i32 [[IV_5_NEXT_LCSSA_LCSSA]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[IV_2_LCSSA]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[LSR_IV_NEXT7_LCSSA_LCSSA]]
 ; CHECK-NEXT:    call void @use(i64 [[TMP3]])
-; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i32 [[IV_5_NEXT]], 53
+; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2_LCSSA_LCSSA]])
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i32 [[IV_5_NEXT_LCSSA_LCSSA]], 53
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP5]], 53
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 [[LSR]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 [[LSR_IV_NEXT4_LCSSA_LCSSA]], [[TMP6]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[TMP7]])
 ; CHECK-NEXT:    [[I26:%.*]] = xor i8 [[I25]], 5
 ; CHECK-NEXT:    [[I27:%.*]] = zext i8 [[I26]] to i64

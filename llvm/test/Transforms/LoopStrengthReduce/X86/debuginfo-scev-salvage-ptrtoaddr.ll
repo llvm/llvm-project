@@ -16,11 +16,12 @@ define i64 @test(ptr %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P1]], -1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ [[TMP0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT1:%.*]], %[[LOOP]] ], [ [[TMP0]], %[[ENTRY]] ]
 ; CHECK-NEXT:      #dbg_value(i64 [[LSR_IV]], [[META4:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), [[META8:![0-9]+]])
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT1]] = add i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = phi i64 [ [[LSR_IV_NEXT1]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[LSR_IV_NEXT]]
 ;
 entry:

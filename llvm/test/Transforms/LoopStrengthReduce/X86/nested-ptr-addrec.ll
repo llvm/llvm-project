@@ -23,7 +23,8 @@ define void @test() {
 ; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 8
 ; CHECK-NEXT:    br i1 false, label [[LOOP2_HEADER]], label [[LOOP2_CONT:%.*]]
 ; CHECK:       loop2.cont:
-; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[SCEVGEP2]], align 1
+; CHECK-NEXT:    [[SCEVGEP2_LCSSA:%.*]] = phi ptr [ [[SCEVGEP2]], [[LOOP2_HEADER]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[SCEVGEP2_LCSSA]], align 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[V]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP_EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:

@@ -14,10 +14,11 @@ define i32 @test_01(i32 %a) {
 ; CHECK-NEXT:  [[EXITCOND:[^ ]+]] = icmp eq i32 [[IV_INC]], -80
 ; CHECK-NEXT:  br i1 [[EXITCOND]], label %exit, label %loop
 ; CHECK:       exit:
+; CHECK-NEXT:  [[IV_INC_LCSSA:[^ ]+]] = phi i32
 ; CHECK-NEXT:  [[B:[^ ]+]] = add i32 %a, 1
 ; CHECK-NEXT:  [[B2:[^ ]+]] = mul i32 [[B]], [[B]]
 ; CHECK-NEXT:  [[R1:[^ ]+]] = add i32 [[B2]], -1
-; CHECK-NEXT:  [[R2:[^ ]+]] = sub i32 [[R1]], [[IV_INC]]
+; CHECK-NEXT:  [[R2:[^ ]+]] = sub i32 [[R1]], [[IV_INC_LCSSA]]
 ; CHECK-NEXT:  ret i32 [[R2]]
 
 entry:
@@ -47,12 +48,13 @@ define i32 @test_02(i32 %a) {
 ; CHECK-NEXT:  [[EXITCOND:[^ ]+]] = icmp eq i32 [[IV_INC]], -80
 ; CHECK-NEXT:  br i1 [[EXITCOND]], label %exit, label %loop
 ; CHECK:       exit:
+; CHECK-NEXT:  [[IV_INC_LCSSA:[^ ]+]] = phi i32
 ; CHECK-NEXT:  [[B:[^ ]+]] = add i32 %a, 1
 ; CHECK-NEXT:  [[B2:[^ ]+]] = mul i32 [[B]], [[B]]
 ; CHECK-NEXT:  [[B4:[^ ]+]] = mul i32 [[B2]], [[B2]]
 ; CHECK-NEXT:  [[B8:[^ ]+]] = mul i32 [[B4]], [[B4]]
 ; CHECK-NEXT:  [[R1:[^ ]+]] = add i32 [[B8]], -1
-; CHECK-NEXT:  [[R2:[^ ]+]] = sub i32 [[R1]], [[IV_INC]]
+; CHECK-NEXT:  [[R2:[^ ]+]] = sub i32 [[R1]], [[IV_INC_LCSSA]]
 ; CHECK-NEXT:  ret i32 [[R2]]
 entry:
   br label %loop
@@ -83,6 +85,7 @@ define i32 @test_03(i32 %a) {
 ; CHECK-NEXT:  [[EXITCOND:[^ ]+]] = icmp eq i32 [[IV_INC]], -80
 ; CHECK-NEXT:  br i1 [[EXITCOND]], label %exit, label %loop
 ; CHECK:       exit:
+; CHECK-NEXT:  [[IV_INC_LCSSA:[^ ]+]] = phi i32
 ; CHECK-NEXT:  [[B:[^ ]+]] = add i32 %a, 1
 ; CHECK-NEXT:  [[B2:[^ ]+]] = mul i32 [[B]], [[B]]
 ; CHECK-NEXT:  [[B3:[^ ]+]] = mul i32 [[B]], [[B2]]
@@ -92,7 +95,7 @@ define i32 @test_03(i32 %a) {
 ; CHECK-NEXT:  [[B16:[^ ]+]] = mul i32 [[B8]], [[B8]]
 ; CHECK-NEXT:  [[B27:[^ ]+]] = mul i32 [[B11]], [[B16]]
 ; CHECK-NEXT:  [[R1:[^ ]+]] = add i32 [[B27]], -1
-; CHECK-NEXT:  [[R2:[^ ]+]] = sub i32 [[R1]], [[IV_INC]]
+; CHECK-NEXT:  [[R2:[^ ]+]] = sub i32 [[R1]], [[IV_INC_LCSSA]]
 ; CHECK-NEXT:  ret i32 [[R2]]
 entry:
   br label %loop
@@ -128,13 +131,14 @@ define i32 @test_04(i32 %a) {
 ; CHECK-NEXT:  [[EXITCOND:[^ ]+]] = icmp eq i32 [[IV_INC]], -80
 ; CHECK-NEXT:  br i1 [[EXITCOND]], label %exit, label %loop
 ; CHECK:       exit:
+; CHECK-NEXT:  [[IV_INC_LCSSA:[^ ]+]] = phi i32
 ; CHECK-NEXT:  [[B:[^ ]+]] = add i32 %a, 1
 ; CHECK-NEXT:  [[B2:[^ ]+]] = mul i32 [[B]], [[B]]
 ; CHECK-NEXT:  [[B4:[^ ]+]] = mul i32 [[B2]], [[B2]]
 ; CHECK-NEXT:  [[B8:[^ ]+]] = mul i32 [[B4]], [[B4]]
 ; CHECK-NEXT:  [[B16:[^ ]+]] = mul i32 [[B8]], [[B8]]
 ; CHECK-NEXT:  [[R1:[^ ]+]] = add i32 [[B16]], -1
-; CHECK-NEXT:  [[R2:[^ ]+]] = sub i32 [[R1]], [[IV_INC]]
+; CHECK-NEXT:  [[R2:[^ ]+]] = sub i32 [[R1]], [[IV_INC_LCSSA]]
 ; CHECK-NEXT:  ret i32 [[R2]]
 entry:
   br label %loop
@@ -225,6 +229,7 @@ define i32 @test_06(i32 %a, i32 %c) {
 ; CHECK-NEXT:  [[EXITCOND:[^ ]+]] = icmp eq i32 [[IV_INC]], -80
 ; CHECK-NEXT:  br i1 [[EXITCOND]], label %exit, label %loop
 ; CHECK:       exit:
+; CHECK-NEXT:  phi i32
 ; CHECK:       [[B:[^ ]+]] = add i32 %a, 1
 ; CHECK-NEXT:  [[B2:[^ ]+]] = mul i32 [[B]], [[B]]
 ; CHECK-NEXT:  [[B4:[^ ]+]] = mul i32 [[B2]], [[B2]]

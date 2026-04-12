@@ -39,8 +39,9 @@ leave:                                            ; preds = %for.end.i
 
 ; CHECK-LABEL: define void @f(
 ; CHECK: %[[PHI:.*]]  = phi i64 [ %[[IV_NEXT:.*]], {{.*}} ], [ 0, {{.*}} ]
-; CHECK: %[[ITOP:.*]] = inttoptr i64 %[[PHI]] to ptr
-; CHECK: %[[CMP:.*]]  = icmp eq ptr %[[ITOP]], null
+; CHECK: %[[PHI_LCSSA:.*]] = phi i64 [ %[[PHI]], %for.cond.i ]
+; CHECK: %[[PHI_LCSSA_1:.*]] = inttoptr i64 %[[PHI_LCSSA]] to ptr
+; CHECK: %[[CMP:.*]]  = icmp eq ptr %[[PHI_LCSSA_1]], null
 ; CHECK: %[[IV_NEXT]] = add i64 %[[PHI]], -4
 
 declare void @g()

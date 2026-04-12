@@ -16,7 +16,7 @@ target triple = "x86_64-apple-darwin"
 
 ; CHECK-LABEL: @test(
 ; CHECK: for.body:
-; CHECK: %lsr.iv
+; CHECK: %p.035
 ; CHECK-NOT: %dummyout
 ; CHECK: ret
 define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) nounwind uwtable ssp {
