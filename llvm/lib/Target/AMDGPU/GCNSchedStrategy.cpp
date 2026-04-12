@@ -1528,7 +1528,7 @@ bool PreRARematStage::initGCNSchedStage() {
                      }))
       continue;
 
-    // Do not rematerialize an instruction it it uses registers that aren't
+    // Do not rematerialize an instruction if it uses registers that aren't
     // available at its use. This ensures that we are not extending any live
     // range while rematerializing.
     SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot(true);
