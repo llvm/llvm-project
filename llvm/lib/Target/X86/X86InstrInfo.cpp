@@ -7544,7 +7544,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   bool NoNDDM = NonNDOpc && !Subtarget.hasNDDM();
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (NoNDDM && !MRI.isSSA()) {
+  if (NoNDDM && !IsTwoAddr && !MRI.isSSA()) {
     // Bail out if dst has subreg. It happens during register-coalescer from
     // 704B  %19:gr32 = SUB32rr_ND killed %0:gr32, killed %7:gr32, ...
     // 752B  undef %23.sub_32bit:gr64 = COPY killed %19:gr32
