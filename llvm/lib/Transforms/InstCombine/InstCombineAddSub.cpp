@@ -1528,23 +1528,35 @@ foldAddWithMaskedOverwrite(BinaryOperator &Add,
                            InstCombiner::BuilderTy &Builder) {
   Value *LHS = Add.getOperand(0), *RHS = Add.getOperand(1);
   Value *X, *Y;
-  const APInt *C, *Mask;
+  const APInt *C;
 
   auto Match = [&](Value *AddOp, Value *AndOp) -> Instruction * {
     if (!match(AddOp, m_c_Add(m_Value(X), m_APInt(C))) ||
-        !match(AndOp, m_c_And(m_Value(Y), m_APInt(Mask))) || *Mask != ~(*C))
+        !match(AndOp, m_c_And(m_Value(Y), m_SpecificInt(~*C))))
       return nullptr;
 
     // Replacing one add with {or, add}. Avoid growth if both sides are shared.
     if (!AddOp->hasOneUse() && !AndOp->hasOneUse())
       return nullptr;
 
+    bool PreserveNSW = false;
+    bool PreserveNUW = false;
+    if (auto *InnerAdd = dyn_cast<OverflowingBinaryOperator>(AddOp)) {
+      PreserveNSW = Add.hasNoSignedWrap() && InnerAdd->hasNoSignedWrap();
+      PreserveNUW = Add.hasNoUnsignedWrap() && InnerAdd->hasNoUnsignedWrap();
+    }
+
     Value *NewOr =
         Builder.CreateOr(Y, Constant::getIntegerValue(Add.getType(), *C));
-    Instruction *NewAdd = cast<Instruction>(Builder.CreateAdd(X, NewOr));
-    NewAdd->setHasNoSignedWrap(Add.hasNoSignedWrap());
-    NewAdd->setHasNoUnsignedWrap(Add.hasNoUnsignedWrap());
-    return NewAdd;
+    Value *NewAdd = Builder.CreateAdd(X, NewOr);
+    if (auto *NewAddInst = dyn_cast<Instruction>(NewAdd)) {
+      NewAddInst->setHasNoSignedWrap(PreserveNSW);
+      NewAddInst->setHasNoUnsignedWrap(PreserveNUW);
+
+      return NewAddInst;
+    }
+
+    return nullptr;
   };
 
   if (Instruction *I = Match(LHS, RHS))
