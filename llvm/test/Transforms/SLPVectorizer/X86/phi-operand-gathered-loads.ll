@@ -14,23 +14,13 @@ define void @test(ptr %this, i1 %cmp4.not) {
 ; CHECK:       [[IF_ELSE37]]:
 ; CHECK-NEXT:    br label %[[IF_END46]]
 ; CHECK:       [[IF_END46]]:
-; CHECK-NEXT:    [[DOTSINK264:%.*]] = phi i64 [ 160, %[[IF_ELSE37]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[DOTSINK262:%.*]] = phi i64 [ 0, %[[IF_ELSE37]] ], [ 1, %[[ENTRY]] ]
-; CHECK-NEXT:    [[DOTSINK261:%.*]] = phi i64 [ 1, %[[IF_ELSE37]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[M_PARTID038:%.*]] = getelementptr i8, ptr [[THIS]], i64 [[DOTSINK264]]
-; CHECK-NEXT:    [[M_INDEX042:%.*]] = getelementptr i8, ptr [[THIS]], i64 [[DOTSINK262]]
-; CHECK-NEXT:    [[M_INDEX144:%.*]] = getelementptr i8, ptr [[THIS]], i64 [[DOTSINK261]]
-; CHECK-NEXT:    [[DOTSINK:%.*]] = load i32, ptr [[M_INDEX144]], align 4
-; CHECK-NEXT:    [[DOTSINK186:%.*]] = load i32, ptr [[M_INDEX042]], align 4
-; CHECK-NEXT:    [[DOTSINK188:%.*]] = load i32, ptr [[M_PARTID038]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i64> [ <i64 160, i64 1, i64 0, i64 1>, %[[IF_ELSE37]] ], [ <i64 0, i64 0, i64 1, i64 0>, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[THIS]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <4 x ptr> [[TMP2]], <4 x i64> [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEWPT]], i64 92
-; CHECK-NEXT:    store i32 [[DOTSINK188]], ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEWPT]], i64 96
-; CHECK-NEXT:    store i32 [[DOTSINK]], ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEWPT]], i64 100
-; CHECK-NEXT:    store i32 [[DOTSINK186]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEWPT]], i64 104
-; CHECK-NEXT:    store i32 [[DOTSINK]], ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP3]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
