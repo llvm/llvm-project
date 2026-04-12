@@ -238,10 +238,16 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   MemoryBufferRef mbref = *buffer;
 
   if (ctx.arg.formatBinary) {
-    LoadJob job = {mbref, path,  LoadJob::Obj, false, false,
-                   false, false, nextGroupId,  {},    {}};
-    job.out.push_back(std::make_unique<BinaryFile>(ctx, mbref));
-    loadJobs.push_back(std::move(job));
+    loadJobs.push_back({mbref,
+                        path,
+                        LoadJob::Binary,
+                        false,
+                        false,
+                        false,
+                        false,
+                        nextGroupId,
+                        {},
+                        {}});
   } else {
     auto magic = identify_magic(mbref.getBuffer());
     if (magic == file_magic::unknown) {
@@ -2138,10 +2144,18 @@ void LinkerDriver::loadFiles() {
     parallelFor(0, loadJobs.size(), [&](size_t i) {
       LoadJob &job = loadJobs[i];
       switch (job.kind) {
+      case LoadJob::Obj:
+      case LoadJob::Bitcode:
+        job.out.push_back(makeFile(job.mbref,
+                                   job.kind == LoadJob::Bitcode
+                                       ? file_magic::bitcode
+                                       : file_magic::elf_relocatable,
+                                   "", 0, job.lazy));
+        break;
       case LoadJob::Archive: {
-        // Scan all archive members rather than using the archive symbol index.
-        // Most archives see high utilization rates and this is a net win. All
-        // members within one archive share the same group ID.
+        // Scan all archive members rather than using the archive symbol
+        // index. Most archives see high utilization rates and this is a net
+        // win. All members within one archive share the same group ID.
         auto members = getArchiveMembers(ctx, job);
         job.out.reserve(members.size());
         bool lazy = !job.inWholeArchive;
@@ -2167,13 +2181,8 @@ void LinkerDriver::loadFiles() {
         job.out.push_back(std::move(f));
         break;
       }
-      case LoadJob::Obj:
-      case LoadJob::Bitcode:
-        job.out.push_back(makeFile(job.mbref,
-                                   job.kind == LoadJob::Bitcode
-                                       ? file_magic::bitcode
-                                       : file_magic::elf_relocatable,
-                                   "", 0, job.lazy));
+      case LoadJob::Binary:
+        job.out.push_back(std::make_unique<BinaryFile>(ctx, job.mbref));
         break;
       }
       for (auto &m : job.out)
@@ -2181,6 +2190,10 @@ void LinkerDriver::loadFiles() {
     });
   }
 
+  size_t numFiles = 0;
+  for (auto &job : loadJobs)
+    numFiles += job.out.size();
+  files.reserve(files.size() + numFiles);
   for (auto &job : loadJobs) {
     if (job.kind == LoadJob::Archive)
       archiveFiles.emplace_back(job.path, (unsigned)job.out.size());

@@ -213,14 +213,14 @@ WithReason<int64_t> GetHeightWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version,
     SemanticsContext *semaCtx = nullptr);
 
-// Return the depth of the affected nests:
-//   {affected-depth, reason, must-be-perfect-nest}.
+/// Return the depth of the affected nest(s):
+///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version,
     SemanticsContext *semaCtx = nullptr);
-// Return the range of the affected nests in the sequence:
-//   {first, count, reason}.
-// If the range is "the whole sequence", the return value will be {1, -1, ...}.
+/// Return the range of the affected nests in the sequence:
+///   {first, count}.
+/// If the range is "the whole sequence", the return value will be {1, -1}.
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version,
     SemanticsContext *semaCtx = nullptr);

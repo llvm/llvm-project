@@ -177,7 +177,7 @@ struct VersionDefinition {
 
 // Deferred file-load job: one per input, expanded by loadFiles().
 struct LoadJob {
-  enum Kind : uint8_t { Obj, Bitcode, Archive, Shared };
+  enum Kind : uint8_t { Obj, Bitcode, Archive, Shared, Binary };
   llvm::MemoryBufferRef mbref;
   llvm::StringRef path;
   Kind kind;
