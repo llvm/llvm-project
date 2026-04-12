@@ -13,11 +13,11 @@
 // template<class charT, class... Args>
 // class basic_format_string<charT, type_identity_t<Args>...>
 //
-// basic_format_string(runtime-format-string<charT> s) noexcept : str(s.str) {}
+// basic_format_string(dynamic-format-string<charT> s) noexcept : str(s.str) {}
 //
 // Additional testing is done in
-// - libcxx/test/std/utilities/format/format.functions/format.runtime_format.pass.cpp
-// - libcxx/test/std/utilities/format/format.functions/format.locale.runtime_format.pass.cpp
+// - libcxx/test/std/utilities/format/format.functions/format.dynamic_format.pass.cpp
+// - libcxx/test/std/utilities/format/format.functions/format.locale.dynamic_format.pass.cpp
 
 #include <format>
 #include <cassert>
@@ -25,16 +25,16 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-  static_assert(noexcept(std::format_string<>{std::runtime_format(std::string_view{})}));
+  static_assert(noexcept(std::format_string<>{std::dynamic_format(std::string_view{})}));
   {
-    std::format_string<> s = std::runtime_format("}{invalid format string}{");
+    std::format_string<> s = std::dynamic_format("}{invalid format string}{");
     assert(s.get() == "}{invalid format string}{");
   }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  static_assert(noexcept(std::wformat_string<>{std::runtime_format(std::wstring_view{})}));
+  static_assert(noexcept(std::wformat_string<>{std::dynamic_format(std::wstring_view{})}));
   {
-    std::wformat_string<> s = std::runtime_format(L"}{invalid format string}{");
+    std::wformat_string<> s = std::dynamic_format(L"}{invalid format string}{");
     assert(s.get() == L"}{invalid format string}{");
   }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS

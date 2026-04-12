@@ -207,7 +207,7 @@
 "`P3826R5 <https://wg21.link/P3826R5>`__","Fix Sender Algorithm Customization","2026-03 (Croydon)","","","`#189620 <https://github.com/llvm/llvm-project/issues/189620>`__",""
 "`P3980R1 <https://wg21.link/P3980R1>`__","Task's Allocator Use","2026-03 (Croydon)","","","`#189621 <https://github.com/llvm/llvm-project/issues/189621>`__",""
 "`P4156R0 <https://wg21.link/P4156R0>`__","Rename meta::has_ellipsis_parameter to meta::is_vararg_function","2026-03 (Croydon)","","","`#189622 <https://github.com/llvm/llvm-project/issues/189622>`__",""
-"`P3953R3 <https://wg21.link/P3953R3>`__","Rename ``std::runtime_format``","2026-03 (Croydon)","","","`#189624 <https://github.com/llvm/llvm-project/issues/189624>`__",""
+"`P3953R3 <https://wg21.link/P3953R3>`__","Rename ``std::runtime_format``","2026-03 (Croydon)","|Complete|","23","`#189624 <https://github.com/llvm/llvm-project/issues/189624>`__",""
 "`P4052R0 <https://wg21.link/P4052R0>`__","Renaming saturation arithmetic functions","2026-03 (Croydon)","","","`#189589 <https://github.com/llvm/llvm-project/issues/189589>`__",""
 "`P3941R4 <https://wg21.link/P3941R4>`__","Scheduler Affinity","2026-03 (Croydon)","","","`#189627 <https://github.com/llvm/llvm-project/issues/189627>`__",""
 "`P3856R8 <https://wg21.link/P3856R8>`__","New reflection metafunction - is_structural_type (US NB comment 49)","2026-03 (Croydon)","","","`#189625 <https://github.com/llvm/llvm-project/issues/189625>`__",""
