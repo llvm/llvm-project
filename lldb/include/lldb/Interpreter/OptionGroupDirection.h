@@ -11,6 +11,8 @@
 
 #include "lldb/Interpreter/Options.h"
 
+#include <optional>
+
 namespace lldb_private {
 
 // OptionGroupDirection
@@ -28,10 +30,10 @@ public:
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-  lldb::RunDirection &GetDirection() { return m_direction; }
+  std::optional<lldb::RunDirection> &GetDirection() { return m_direction; }
 
 protected:
-  lldb::RunDirection m_direction;
+  std::optional<lldb::RunDirection> m_direction;
 };
 
 } // namespace lldb_private

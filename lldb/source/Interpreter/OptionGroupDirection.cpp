@@ -59,7 +59,7 @@ OptionGroupDirection::SetOptionValue(uint32_t option_idx,
 
 void OptionGroupDirection::OptionParsingStarting(
     ExecutionContext *execution_context) {
-  m_direction = eRunForward;
+  m_direction.reset();
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupDirection::GetDefinitions() {

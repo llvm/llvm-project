@@ -679,6 +679,9 @@ protected:
     ThreadPlanSP new_plan_sp;
     Status new_plan_status;
 
+    RunDirection direction = m_direction_options.GetDirection().value_or(
+        process->GetBaseDirection());
+
     if (m_step_type == eStepTypeInto) {
       StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
       assert(frame != nullptr);
@@ -752,8 +755,8 @@ protected:
             new_plan_status);
     } else if (m_step_type == eStepTypeTrace) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          false, m_direction_options.GetDirection(), abort_other_plans,
-          bool_stop_other_threads, new_plan_status);
+          false, direction, abort_other_plans, bool_stop_other_threads,
+          new_plan_status);
     } else if (m_step_type == eStepTypeTraceOver) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
           true, eRunForward, abort_other_plans, bool_stop_other_threads,
