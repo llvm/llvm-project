@@ -109,12 +109,11 @@ struct SimpleValue {
     if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
       if (Function *F = CI->getCalledFunction()) {
         switch (F->getIntrinsicID()) {
-        // New-form FP intrinsics (llvm.fadd, llvm.fsub, etc.) with fp.control
-        // and/or fp.except operand bundles follow the same CSE rules as their
-        // constrained predecessors:
-        //   - ebStrict or absent exception behavior → no CSE
-        //   - Dynamic or absent rounding mode → no CSE (unknown mode)
-        //   - Fixed non-strict EB + known RM → CSE allowed
+        // For FP intrinsics (llvm.fadd, llvm.fsub, etc.) with fp.control and/or
+        // fp.except operand bundles, CSE rules are as follows:
+        //   - ebStrict or absent exception behavior -> no CSE
+        //   - Dynamic or absent rounding mode -> no CSE (unknown mode)
+        //   - Fixed non-strict EB + known RM -> CSE allowed
         case Intrinsic::fadd:
         case Intrinsic::fsub:
         case Intrinsic::fmul:
@@ -1531,7 +1530,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(&Inst)) {
-      if ([[maybe_unused]] auto *CI = dyn_cast<IntrinsicInst>(&Inst);
+      if (auto *CI = dyn_cast<IntrinsicInst>(&Inst);
           CI && Intrinsic::isConstrainedFPIntrinsic(CI->getIntrinsicID())) {
         assert(CI->getExceptionBehavior() != fp::ebStrict &&
                "Unexpected ebStrict from SimpleValue::canHandle()");

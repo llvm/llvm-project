@@ -340,10 +340,8 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
 }
 
 // Emit an intrinsic where all operands are of the same type as the result.
-static Value *emitFPBuiltin(CodeGenFunction &CGF,
-                                                unsigned IntrinsicID,
-                                                llvm::Type *Ty,
-                                                ArrayRef<Value *> Args) {
+static Value *emitFPBuiltin(CodeGenFunction &CGF, unsigned IntrinsicID,
+                            llvm::Type *Ty, ArrayRef<Value *> Args) {
   Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Ty);
   return CGF.Builder.CreateCall(F, Args);
 }
@@ -1446,9 +1444,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     Ops[2] = Builder.CreateBitCast(Ops[2], Ty);
 
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
-    return emitFPBuiltin(
-        *this, Intrinsic::fma, Ty,
-        {Ops[1], Ops[2], Ops[0]});
+    return emitFPBuiltin(*this, Intrinsic::fma, Ty, {Ops[1], Ops[2], Ops[0]});
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v: {
@@ -5796,16 +5792,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateFDiv(Ops[0], Ops[1], "vdivh");
   case NEON::BI__builtin_neon_vfmah_f16:
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
-    return emitFPBuiltin(
-        *this, Intrinsic::fma, HalfTy,
-        {Ops[1], Ops[2], Ops[0]});
+    return emitFPBuiltin(*this, Intrinsic::fma, HalfTy,
+                         {Ops[1], Ops[2], Ops[0]});
   case NEON::BI__builtin_neon_vfmsh_f16: {
     Value *Neg = Builder.CreateFNeg(Ops[1], "vsubh");
 
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
-    return emitFPBuiltin(
-        *this, Intrinsic::fma, HalfTy,
-        {Neg, Ops[2], Ops[0]});
+    return emitFPBuiltin(*this, Intrinsic::fma, HalfTy, {Neg, Ops[2], Ops[0]});
   }
   case NEON::BI__builtin_neon_vaddd_s64:
   case NEON::BI__builtin_neon_vaddd_u64:
@@ -6099,9 +6092,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       Ops[2] = Builder.CreateBitCast(Ops[2], VTy);
       Ops[2] = Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
       Value *Result;
-      Result = emitFPBuiltin(
-          *this, Intrinsic::fma,
-          DoubleTy, {Ops[1], Ops[2], Ops[0]});
+      Result = emitFPBuiltin(*this, Intrinsic::fma, DoubleTy,
+                             {Ops[1], Ops[2], Ops[0]});
       return Builder.CreateBitCast(Result, Ty);
     }
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
@@ -6114,9 +6106,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                                cast<ConstantInt>(Ops[3]));
     Ops[2] = Builder.CreateShuffleVector(Ops[2], Ops[2], SV, "lane");
 
-    return emitFPBuiltin(
-        *this, Intrinsic::fma, Ty,
-        {Ops[2], Ops[1], Ops[0]});
+    return emitFPBuiltin(*this, Intrinsic::fma, Ty, {Ops[2], Ops[1], Ops[0]});
   }
   case NEON::BI__builtin_neon_vfmaq_laneq_v: {
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
@@ -6124,9 +6114,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
     Ops[2] = Builder.CreateBitCast(Ops[2], Ty);
     Ops[2] = EmitNeonSplat(Ops[2], cast<ConstantInt>(Ops[3]));
-    return emitFPBuiltin(
-        *this, Intrinsic::fma, Ty,
-        {Ops[2], Ops[1], Ops[0]});
+    return emitFPBuiltin(*this, Intrinsic::fma, Ty, {Ops[2], Ops[1], Ops[0]});
   }
   case NEON::BI__builtin_neon_vfmah_lane_f16:
   case NEON::BI__builtin_neon_vfmas_lane_f32:
@@ -6136,9 +6124,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vfmad_laneq_f64: {
     llvm::Type *Ty = ConvertType(E->getCallReturnType(getContext()));
     Ops[2] = Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
-    return emitFPBuiltin(
-        *this, Intrinsic::fma, Ty,
-        {Ops[1], Ops[2], Ops[0]});
+    return emitFPBuiltin(*this, Intrinsic::fma, Ty, {Ops[1], Ops[2], Ops[0]});
   }
   case NEON::BI__builtin_neon_vmull_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.

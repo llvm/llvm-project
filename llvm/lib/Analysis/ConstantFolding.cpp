@@ -1364,7 +1364,8 @@ static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
     return CFP;
 
   if (auto *CB = dyn_cast_or_null<CallBase>(Inst)) {
-    auto Mode = IsOutput ? CB->getOutputDenormMode() : CB->getInputDenormMode();
+    std::optional<DenormalMode::DenormalModeKind> Mode =
+        IsOutput ? CB->getOutputDenormMode() : CB->getInputDenormMode();
     return flushDenormalConstant(CFP->getType(), APF, *Mode);
   }
 
@@ -3207,7 +3208,7 @@ static Constant *evaluateCompare(const APFloat &Op1, const APFloat &Op2,
           .Case("ule", FCmpInst::FCMP_ULE)
           .Case("une", FCmpInst::FCMP_UNE)
           .Default(FCmpInst::BAD_FCMP_PREDICATE);
-  bool IsSignaling = (Call->getIntrinsicID() == Intrinsic::fcmps);
+  bool IsSignaling = Call->getIntrinsicID() == Intrinsic::fcmps;
   if (IsSignaling) {
     if (Op1.isNaN() || Op2.isNaN())
       St = APFloat::opInvalidOp;

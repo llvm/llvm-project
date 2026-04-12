@@ -73,8 +73,7 @@ llvm::Value *emitBuiltinWithOneOverloadedType(clang::CodeGen::CodeGenFunction &C
 }
 
 llvm::Value *emitUnaryFPBuiltin(clang::CodeGen::CodeGenFunction &CGF,
-                                const clang::CallExpr *E,
-                                unsigned IntrinsicID);
+                                const clang::CallExpr *E, unsigned IntrinsicID);
 
 llvm::Value *emitBinaryExpFPBuiltin(clang::CodeGen::CodeGenFunction &CGF,
                                     const clang::CallExpr *E,

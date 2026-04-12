@@ -2201,24 +2201,21 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
 
   // Redirect new-form FP intrinsics with non-default bundles to G_STRICT_*.
-  {
-    fp::ExceptionBehavior EB = CI.getExceptionBehavior();
-    RoundingMode RM = CI.getRoundingMode();
-    if (EB != fp::ebStrict || RM != RoundingMode::Dynamic) {
-      if (unsigned StrictOp = getBundledFPStrictGOpcode(ID)) {
-        uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
-        if (EB == fp::ebIgnore)
-          Flags |= MachineInstr::NoFPExcept;
-        SmallVector<SrcOp, 4> VRegs;
-        for (const auto &Arg : CI.args()) {
-          // Skip metadata args (e.g., predicates passed as MetadataAsValue).
-          if (!isa<MetadataAsValue>(Arg.get()))
-            VRegs.push_back(getOrCreateVReg(*Arg.get()));
-        }
-        MIRBuilder.buildInstr(StrictOp, {getOrCreateVReg(CI)}, VRegs, Flags);
-        return true;
-      }
+  fp::ExceptionBehavior EB = CI.getExceptionBehavior();
+  RoundingMode RM = CI.getRoundingMode();
+  if (unsigned StrictOp = getBundledFPStrictGOpcode(ID);
+      StrictOp && (EB != fp::ebStrict || RM != RoundingMode::Dynamic)) {
+    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
+    if (EB == fp::ebIgnore)
+      Flags |= MachineInstr::NoFPExcept;
+    SmallVector<SrcOp> VRegs;
+    for (const auto &Arg : CI.args()) {
+      // Skip metadata args (e.g., predicates passed as MetadataAsValue).
+      if (!isa<MetadataAsValue>(Arg.get()))
+        VRegs.push_back(getOrCreateVReg(*Arg.get()));
     }
+    MIRBuilder.buildInstr(StrictOp, {getOrCreateVReg(CI)}, VRegs, Flags);
+    return true;
   }
 
   // llvm.fcmps is a signaling FP comparison — inherently strict regardless of

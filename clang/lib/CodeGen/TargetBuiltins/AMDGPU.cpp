@@ -2180,8 +2180,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_scalbnf:
   case Builtin::BIscalbn:
   case Builtin::BI__builtin_scalbn:
-    return emitBinaryExpFPBuiltin(
-        *this, E, Intrinsic::ldexp);
+    return emitBinaryExpFPBuiltin(*this, E, Intrinsic::ldexp);
   default:
     return nullptr;
   }
