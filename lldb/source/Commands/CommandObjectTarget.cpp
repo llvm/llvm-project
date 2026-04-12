@@ -1929,8 +1929,8 @@ protected:
         size_t num_matched =
             FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matched == 0) {
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "unable to find an image that matches '{0}'", arg_cstr);
         }
       }
       // Dump all the modules we found.
@@ -2067,8 +2067,8 @@ protected:
             }
           }
         } else
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "unable to find an image that matches '{0}'", arg_cstr);
       }
     }
 
@@ -2152,8 +2152,8 @@ protected:
           std::lock_guard<std::recursive_mutex> guard(
               Module::GetAllocationModuleCollectionMutex());
 
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "unable to find an image that matches '{0}'", arg_cstr);
         }
       }
     }
@@ -2285,8 +2285,8 @@ protected:
         std::lock_guard<std::recursive_mutex> guard(
             Module::GetAllocationModuleCollectionMutex());
 
-        result.AppendWarningWithFormat(
-            "Unable to find an image that matches '%s'.\n", arg.c_str());
+        result.AppendWarningWithFormatv(
+            "unable to find an image that matches '{0}'", arg.c_str());
         continue;
       }
 
@@ -2369,8 +2369,8 @@ protected:
             }
           }
         } else
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "unable to find an image that matches '{0}'", arg_cstr);
       }
     }
 
@@ -2437,8 +2437,8 @@ protected:
               num_dumped++;
           }
           if (num_dumped == 0)
-            result.AppendWarningWithFormat(
-                "No source filenames matched '%s'.\n", arg_cstr);
+            result.AppendWarningWithFormatv("no source filenames matched '{0}'",
+                                            arg_cstr);
           else
             total_num_dumped += num_dumped;
         }
@@ -2596,8 +2596,8 @@ protected:
               num_dumped++;
           }
         } else
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "unable to find an image that matches '{0}'", arg_cstr);
       }
     }
 
@@ -2645,9 +2645,8 @@ protected:
               } else if (type == "oso") {
                 DumpOsoFilesTable(strm, *files);
               } else {
-                result.AppendWarningWithFormat(
-                    "Found unsupported debug info type '%s'.\n",
-                    type.str().c_str());
+                result.AppendWarningWithFormatv(
+                    "found unsupported debug info type '{0}'", type);
               }
               return true;
             });
@@ -3612,10 +3611,10 @@ protected:
       if (!func_unwinders_sp)
         continue;
 
-      result.GetOutputStream().Printf(
-          "UNWIND PLANS for %s`%s (start addr 0x%" PRIx64 ")\n",
-          sc.module_sp->GetPlatformFileSpec().GetFilename().AsCString(),
-          funcname.AsCString(), start_addr);
+      result.GetOutputStream().Format(
+          "UNWIND PLANS for {0}`{1} (start addr {2:x})\n",
+          sc.module_sp->GetPlatformFileSpec().GetFilename(), funcname,
+          start_addr);
 
       Args args;
       target->GetUserSpecifiedTrapHandlerNames(args);
@@ -3644,20 +3643,20 @@ protected:
 
       if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread)) {
-        result.GetOutputStream().Printf(
-            "Asynchronous (not restricted to call-sites) UnwindPlan is '%s'\n",
-            plan_sp->GetSourceName().AsCString());
+        result.GetOutputStream().Format(
+            "Asynchronous (not restricted to call-sites) UnwindPlan is '{0}'\n",
+            plan_sp->GetSourceName());
       }
       if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetUnwindPlanAtCallSite(*target, *thread)) {
-        result.GetOutputStream().Printf(
-            "Synchronous (restricted to call-sites) UnwindPlan is '%s'\n",
-            plan_sp->GetSourceName().AsCString());
+        result.GetOutputStream().Format(
+            "Synchronous (restricted to call-sites) UnwindPlan is '{0}'\n",
+            plan_sp->GetSourceName());
       }
       if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread)) {
-        result.GetOutputStream().Printf("Fast UnwindPlan is '%s'\n",
-                                        plan_sp->GetSourceName().AsCString());
+        result.GetOutputStream().Format("Fast UnwindPlan is '{0}'\n",
+                                        plan_sp->GetSourceName());
       }
 
       result.GetOutputStream().Printf("\n");
@@ -4123,8 +4122,8 @@ protected:
             }
           }
         } else
-          result.AppendWarningWithFormat(
-              "Unable to find an image that matches '%s'.\n", arg_cstr);
+          result.AppendWarningWithFormatv(
+              "unable to find an image that matches '{0}'", arg_cstr);
       }
     }
 
@@ -5472,13 +5471,14 @@ protected:
       return;
     }
 
-    result.AppendMessageWithFormat("%u frame provider(s) registered:\n\n",
-                                   descriptors.size());
+    Stream &strm = result.GetOutputStream();
+    strm << llvm::formatv("{0} frame provider(s) registered:\n\n",
+                          descriptors.size());
 
     for (const auto &entry : descriptors) {
       const ScriptedFrameProviderDescriptor &descriptor = entry.second;
-      descriptor.Dump(&result.GetOutputStream());
-      result.GetOutputStream().PutChar('\n');
+      descriptor.Dump(&strm);
+      strm.PutChar('\n');
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);

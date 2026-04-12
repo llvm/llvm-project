@@ -24,6 +24,21 @@ add_header_library(
 )
 
 add_header_library(
+  accept
+  HDRS
+    accept.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.accept
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.hdr.types.socklen_t
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
   connect
   HDRS
     connect.h
@@ -35,6 +50,18 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  listen
+  HDRS
+    listen.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.include.sys_syscall
 )
 

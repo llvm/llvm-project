@@ -1824,3 +1824,14 @@ namespace GH176402 {
     recursiveLambda(recursiveLambda, 5);
   }
 }
+namespace GH191016 {
+  template <typename T = int>
+  struct S {
+    template <typename Args = int>
+    constexpr static bool P = true;
+    template <typename... Args>
+    constexpr static bool Q = true;
+    S() requires P<> && Q<> {}
+  };
+  void test(){ S<int> s; }
+}

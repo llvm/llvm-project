@@ -262,21 +262,12 @@ func.func @_QMmPtest.fir() {
 // CHECK-DAG: x%x.fir#0 <-> x%x%p.fir#0: MayAlias
 
 // The addresses of different components of the same composite do not alias.
-//
-// TODO: Thus, all results below should be NoAlias.  However, AliasAnalysis
-// normally does not recognize when two values (x%x vs. x%i) are distinct
-// components of the same composite (x) as opposed to being potentially
-// overlapping parts of something, so it returns MayAlias.  There is special
-// handling for a pointer component (x%p) that does recognize it as separate
-// from other components (x%i).  But it does not yet distinguish the composite
-// (x) from a component (x%x) that is also a composite with a pointer component
-// (x%x%p).  Thus, because x and x%p can alias, it assumes x%x and x%p can too.
-// CHECK-DAG: x%x#0 <-> x%i#0: MayAlias
+// CHECK-DAG: x%x#0 <-> x%i#0: NoAlias
 // CHECK-DAG: x%p#0 <-> x%i#0: NoAlias
-// CHECK-DAG: x%x#0 <-> x%p#0: MayAlias
-// CHECK-DAG: x%x.fir#0 <-> x%i.fir#0: MayAlias
+// CHECK-DAG: x%x#0 <-> x%p#0: NoAlias
+// CHECK-DAG: x%x.fir#0 <-> x%i.fir#0: NoAlias
 // CHECK-DAG: x%p.fir#0 <-> x%i.fir#0: NoAlias
-// CHECK-DAG: x%x.fir#0 <-> x%p.fir#0: MayAlias
+// CHECK-DAG: x%x.fir#0 <-> x%p.fir#0: NoAlias
 
 func.func @_QMmPtest() {
   %0 = fir.alloca !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "x", uniq_name = "_QMmFtestEx"}

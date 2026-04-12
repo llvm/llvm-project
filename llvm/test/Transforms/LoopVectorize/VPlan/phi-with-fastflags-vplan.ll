@@ -2,7 +2,7 @@
 ; RUN: opt -p loop-vectorize -force-vector-width=4 -vplan-print-after="optimize$" -disable-output -S %s 2>&1 | FileCheck %s
 
 define void @f(ptr noalias %p, i1 %c) {
-; CHECK-LABEL: VPlan for loop in 'f'
+; CHECK-LABEL: 'f'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF

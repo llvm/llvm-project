@@ -318,6 +318,44 @@ body:             |
   EXPECT_TRUE(getMF().verify());
 }
 
+/// To rematerialize %3 along with all its dependencies before its only use in
+/// bb.1, we must first rematerialize %0 and %1 (in any order), then %2, and
+/// finally %3. The rematerializer had a rematerialization order bug wherein,
+/// because %0 is also used directly in the MI defining %3, it was
+/// rematerialized after %2, breaking the invariant that dependencies of a
+/// register must always be rematerialized before the register itself.
+TEST_F(RematerializerTest, MultiplePathsRematOrder) {
+  StringRef MIR = R"(
+name:            MultiplePathsRematOrder
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_ADD_U32_e32 %0, %1, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 %0, %2, implicit $exec
+  
+  bb.1:
+    S_NOP 0, implicit %3
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIRAndInit(MIR, "MultiplePathsRematOrder"));
+  Rematerializer &Remater = getRematerializer();
+  Rematerializer::DependencyReuseInfo DRI;
+
+  const unsigned MBB1 = 1;
+  const RegisterIdx Add02 = 3;
+
+  // This call would previously fail.
+  Remater.rematerializeToRegion(Add02, MBB1, DRI);
+
+  Remater.updateLiveIntervals();
+  EXPECT_TRUE(getMF().verify());
+}
+
 /// Rematerializes a single register to multiple regions, tracking that
 /// rematerializations are linked correctly and making sure that the original
 /// register is deleted automatically when it no longer has any uses.

@@ -19,39 +19,54 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   RecordInfo I;
   I.Name = "Foo";
   I.IsTypeDef = false;
-  I.Namespace.emplace_back(EmptySID, "GlobalNamespace", InfoType::IT_namespace);
+  Reference Ns[] = {
+      Reference(EmptySID, "GlobalNamespace", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
   I.Path = "GlobalNamespace";
   I.DefLoc = Location(1, 1, "main.cpp");
   I.TagType = TagTypeKind::Class;
 
   I.Template = TemplateInfo();
-  I.Template->Params.emplace_back("class T");
+  TemplateParamInfo TParams[] = {TemplateParamInfo("class T")};
+  I.Template->Params = llvm::ArrayRef(TParams);
 
-  I.Children.Enums.emplace_back();
-  I.Children.Enums.back().Name = "Color";
-  I.Children.Enums.back().Scoped = false;
-  I.Children.Enums.back().Members.emplace_back();
-  I.Children.Enums.back().Members.back().Name = "RED";
-  I.Children.Enums.back().Members.back().Value = "0";
+  EnumInfo E;
+  E.Name = "Color";
+  E.Scoped = false;
+  EnumValueInfo EV[] = {EnumValueInfo("RED", "0")};
+  E.Members = llvm::ArrayRef(EV);
+  I.Children.Enums.push_back(E);
 
-  I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_protected);
+  MemberTypeInfo M[] = {
+      MemberTypeInfo(TypeInfo("int"), "X", AccessSpecifier::AS_protected)};
+  I.Members = llvm::ArrayRef(M);
 
-  I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
-                       AccessSpecifier::AS_public, true);
-  I.Bases.back().Children.Functions.emplace_back();
-  I.Bases.back().Children.Functions.back().Name = "InheritedFunctionOne";
-  I.Bases.back().Members.emplace_back(TypeInfo("int"), "N",
-                                      AccessSpecifier::AS_public);
+  BaseRecordInfo B(EmptySID, "F", "path/to/F", true, AccessSpecifier::AS_public,
+                   true);
+  FunctionInfo F;
+  F.Name = "InheritedFunctionOne";
+  B.Children.Functions.push_back(F);
+  MemberTypeInfo BM[] = {
+      MemberTypeInfo(TypeInfo("int"), "N", AccessSpecifier::AS_public)};
+  B.Members = llvm::ArrayRef(BM);
+
+  BaseRecordInfo Bases[] = {std::move(B)};
+  I.Bases = llvm::ArrayRef(Bases);
 
   // F is in the global namespace
-  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "");
-  I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record,
-                                "path::to::G::G", "path/to/G");
+  Reference Parents[] = {Reference(EmptySID, "F", InfoType::IT_record, "")};
+  I.Parents = llvm::ArrayRef(Parents);
+  Reference VParents[] = {Reference(EmptySID, "G", InfoType::IT_record,
+                                    "path::to::G::G", "path/to/G")};
+  I.VirtualParents = llvm::ArrayRef(VParents);
 
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "path::to::A::r::ChildStruct", "path/to/A/r");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Name = "OneFunction";
+  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
+                        "path::to::A::r::ChildStruct", "path/to/A/r");
+  I.Children.Records.push_back(ChildStruct);
+
+  FunctionInfo F2;
+  F2.Name = "OneFunction";
+  I.Children.Functions.push_back(F2);
 
   auto G = getJSONGenerator();
   assert(G);
@@ -197,20 +212,26 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Path = "path/to/A";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
                          "path::to::A::Namespace::ChildNamespace",
                          "path/to/A/Namespace");
   I.Children.Namespaces.push_back(NewNamespace);
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "path::to::A::Namespace::ChildStruct",
-                                  "path/to/A/Namespace");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Name = "OneFunction";
-  I.Children.Functions.back().Access = AccessSpecifier::AS_none;
-  I.Children.Enums.emplace_back();
-  I.Children.Enums.back().Name = "OneEnum";
+
+  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
+                        "path::to::A::Namespace::ChildStruct",
+                        "path/to/A/Namespace");
+  I.Children.Records.push_back(ChildStruct);
+  FunctionInfo F;
+  F.Name = "OneFunction";
+  F.Access = AccessSpecifier::AS_none;
+  I.Children.Functions.push_back(F);
+
+  EnumInfo E;
+  E.Name = "OneEnum";
+  I.Children.Enums.push_back(E);
 
   auto G = getJSONGenerator();
   assert(G);

@@ -31,7 +31,75 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(OwnedPtr<CommentInfo>)
 
 namespace llvm {
+
+template <typename T>
+bool operator==(const llvm::simple_ilist<T> &LHS,
+                const llvm::simple_ilist<T> &RHS) {
+  auto LIt = LHS.begin(), LEnd = LHS.end();
+  auto RIt = RHS.begin(), REnd = RHS.end();
+  for (; LIt != LEnd && RIt != REnd; ++LIt, ++RIt) {
+    if (!(*LIt == *RIt))
+      return false;
+  }
+  return LIt == LEnd && RIt == REnd;
+}
+
+template <typename T>
+bool operator!=(const llvm::simple_ilist<T> &LHS,
+                const llvm::simple_ilist<T> &RHS) {
+  return !(LHS == RHS);
+}
+
 namespace yaml {
+
+// Provide SequenceTraits for ArrayRef<T*> since YAMLTraits only provides it for
+// MutableArrayRef
+template <typename T> struct SequenceTraits<ArrayRef<T *>> {
+  static size_t size(IO &io, ArrayRef<T *> &seq) { return seq.size(); }
+  static T *&element(IO &io, ArrayRef<T *> &seq, size_t index) {
+    // ArrayRef is not mutable, but YAML output only reads the value.
+    return const_cast<T *&>(seq[index]);
+  }
+};
+
+template <typename T> struct SequenceTraits<llvm::simple_ilist<T>> {
+  static size_t size(IO &io, llvm::simple_ilist<T> &seq) { return seq.size(); }
+  static T &element(IO &io, llvm::simple_ilist<T> &seq, size_t index) {
+    return *std::next(seq.begin(), index);
+  }
+};
+
+// Map pointers to the value mappings as clang-doc only does output
+// serialization.
+template <typename T> struct PointerMappingTraits {
+  static void mapping(IO &IO, T *&Val) {
+    if (Val)
+      MappingTraits<T>::mapping(IO, *Val);
+  }
+};
+
+template <>
+struct MappingTraits<clang::doc::Reference *>
+    : PointerMappingTraits<clang::doc::Reference> {};
+template <>
+struct MappingTraits<clang::doc::CommentInfo *>
+    : PointerMappingTraits<clang::doc::CommentInfo> {};
+template <>
+struct MappingTraits<clang::doc::FunctionInfo *>
+    : PointerMappingTraits<clang::doc::FunctionInfo> {};
+template <>
+struct MappingTraits<clang::doc::EnumInfo *>
+    : PointerMappingTraits<clang::doc::EnumInfo> {};
+template <>
+struct MappingTraits<clang::doc::TemplateParamInfo *>
+    : PointerMappingTraits<clang::doc::TemplateParamInfo> {};
+
+template <typename T> struct SequenceTraits<ArrayRef<T>> {
+  static size_t size(IO &io, llvm::ArrayRef<T> &seq) { return seq.size(); }
+  static T &element(IO &io, llvm::ArrayRef<T> &seq, size_t index) {
+    return const_cast<T &>(seq[index]);
+  }
+};
 
 // Enumerations to YAML output.
 
@@ -184,7 +252,7 @@ static void infoMapping(IO &IO, Info &I) {
 static void symbolInfoMapping(IO &IO, SymbolInfo &I) {
   infoMapping(IO, I);
   IO.mapOptional("DefLocation", I.DefLoc, std::optional<Location>());
-  IO.mapOptional("Location", I.Loc, llvm::SmallVector<Location, 2>());
+  IO.mapOptional("Location", I.Loc);
 }
 
 static void recordInfoMapping(IO &IO, RecordInfo &I) {
@@ -193,10 +261,10 @@ static void recordInfoMapping(IO &IO, RecordInfo &I) {
   IO.mapOptional("IsTypeDef", I.IsTypeDef, false);
   IO.mapOptional("Members", I.Members);
   IO.mapOptional("Bases", I.Bases);
-  IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());
+  IO.mapOptional("Parents", I.Parents, SmallVector<Reference, 4>());
   IO.mapOptional("VirtualParents", I.VirtualParents,
                  llvm::SmallVector<Reference, 4>());
-  IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
+  IO.mapOptional("ChildRecords", I.Children.Records);
   IO.mapOptional("ChildFunctions", I.Children.Functions);
   IO.mapOptional("ChildEnums", I.Children.Enums);
   IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
@@ -332,7 +400,7 @@ template <> struct MappingTraits<NamespaceInfo> {
     for (const auto &N : I.Children.Namespaces)
       TempNamespaces.push_back(N);
     IO.mapOptional("ChildNamespaces", TempNamespaces, std::vector<Reference>());
-    IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
+    IO.mapOptional("ChildRecords", I.Children.Records);
     IO.mapOptional("ChildFunctions", I.Children.Functions);
     IO.mapOptional("ChildEnums", I.Children.Enums);
     IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
@@ -432,13 +500,6 @@ template <> struct MappingTraits<TemplateInfo> {
 
 template <> struct MappingTraits<CommentInfo> {
   static void mapping(IO &IO, CommentInfo &I) { commentInfoMapping(IO, I); }
-};
-
-template <> struct MappingTraits<OwnedPtr<CommentInfo>> {
-  static void mapping(IO &IO, OwnedPtr<CommentInfo> &I) {
-    if (I)
-      commentInfoMapping(IO, *I);
-  }
 };
 
 } // end namespace yaml

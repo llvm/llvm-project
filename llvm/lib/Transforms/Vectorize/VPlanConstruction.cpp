@@ -528,6 +528,8 @@ static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
   }
 }
 
+/// Return an iterator range to iterate over pairs of matching phi nodes in
+/// \p Header and \p ScalarHeader, skipping the canonical IV in the former.
 static auto getMatchingPhisForScalarLoop(VPBasicBlock *Header,
                                          VPBasicBlock *ScalarHeader) {
   return zip_equal(drop_begin(Header->phis()), ScalarHeader->phis());

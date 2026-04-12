@@ -1197,6 +1197,28 @@ static StringRef exportSourceName(ExportSource s) {
   }
 }
 
+static int exportSourcePriority(ExportSource s) {
+  switch (s) {
+  case ExportSource::Directives:
+    return 1;
+  case ExportSource::ExportAll:
+    // Give directives (embedded in object files, from dllexport attributes)
+    // and linker generated exports (from /export-all-symbols) differing
+    // priority, to avoid warnings about conflicts between the two. In
+    // practice, there shouldn't be any conflicts between the two, as both
+    // should set the DATA flag consistently. Both have lower priority than
+    // def files and explicit export arguments.
+    return 2;
+  case ExportSource::Export:
+  case ExportSource::ModuleDefinition:
+    // Give the same priority to export arguments and def files; this produces
+    // warnings if they are duplicate and if they differ.
+    return 3;
+  default:
+    llvm_unreachable("unknown ExportSource");
+  }
+}
+
 // Performs error checking on all /export arguments.
 // It also sets ordinals.
 void SymbolTable::fixupExports() {
@@ -1264,11 +1286,23 @@ void SymbolTable::fixupExports() {
     // If the existing export comes from .OBJ directives, we are allowed to
     // overwrite it with /DEF: or /EXPORT without any warning, as MSVC link.exe
     // does.
-    if (existing->source == ExportSource::Directives) {
+    // Also silently override exports from /export-all-symbols with ones from
+    // def files and /EXPORT.
+    int existingPriority = exportSourcePriority(existing->source);
+    int newPriority = exportSourcePriority(e.source);
+    if (existingPriority < newPriority) {
+      // New definition with higher priority; don't warn, and replace the
+      // existing definition with this one.
       *existing = e;
       v[pair.first->second.second] = e;
       continue;
     }
+    if (existingPriority > newPriority) {
+      // New definition with lower priority; ignore the new one silently
+      // without warning.
+      continue;
+    }
+
     if (existing->source == e.source) {
       Warn(ctx) << "duplicate " << exportSourceName(existing->source)
                 << " option: " << e.name;

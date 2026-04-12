@@ -131,6 +131,26 @@ public:
     return true;
   }
 
+  void onProgramExit(const ubi::ProgramExitInfo &Info) override {
+    switch (Info.Kind) {
+    case ubi::ProgramExitInfo::ProgramExitKind::Returned:
+      return;
+    case ubi::ProgramExitInfo::ProgramExitKind::Failed:
+      return;
+    case ubi::ProgramExitInfo::ProgramExitKind::Exited:
+      errs() << "Program exited with code " << Info.ExitCode << '\n';
+      return;
+    case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
+      errs() << "Program aborted.\n";
+      return;
+    case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
+      errs() << "Program terminated.\n";
+      return;
+    }
+
+    llvm_unreachable("Unknown ProgramExitKind");
+  }
+
   void onUnrecognizedInstruction(Instruction &I) override {
     errs() << "Unrecognized instruction: " << I << '\n';
   }
@@ -207,7 +227,8 @@ int main(int argc, char **argv) {
     uint32_t PtrSize = Ctx.getDataLayout().getPointerSize();
     uint64_t PtrsSize = PtrSize * (InputArgv.size() + 1);
     auto ArgvPtrsMem = Ctx.allocate(PtrsSize, 8, "argv",
-                                    /*AS=*/0, ubi::MemInitKind::Zeroed);
+                                    /*AS=*/0, ubi::MemInitKind::Zeroed,
+                                    ubi::MemAllocKind::Global);
     if (!ArgvPtrsMem) {
       WithColor::error() << "Failed to allocate memory for argv pointers.\n";
       return 1;
@@ -215,7 +236,8 @@ int main(int argc, char **argv) {
     for (const auto &[Idx, Arg] : enumerate(InputArgv)) {
       uint64_t Size = Arg.length() + 1;
       auto ArgvStrMem = Ctx.allocate(Size, 8, "argv_str",
-                                     /*AS=*/0, ubi::MemInitKind::Zeroed);
+                                     /*AS=*/0, ubi::MemInitKind::Zeroed,
+                                     ubi::MemAllocKind::Global);
       if (!ArgvStrMem) {
         WithColor::error() << "Failed to allocate memory for argv strings.\n";
         return 1;
@@ -240,24 +262,33 @@ int main(int argc, char **argv) {
   ubi::EventHandler NoopHandler;
   VerboseEventHandler VerboseHandler;
   ubi::AnyValue RetVal;
-  if (!Ctx.runFunction(*EntryFn, Args, RetVal,
-                       Verbose ? VerboseHandler : NoopHandler)) {
+  ubi::ProgramExitInfo ExitInfo = Ctx.runFunction(
+      *EntryFn, Args, RetVal, Verbose ? VerboseHandler : NoopHandler);
+  switch (ExitInfo.Kind) {
+  case ubi::ProgramExitInfo::ProgramExitKind::Failed:
     WithColor::error() << "Execution of function '" << EntryFunc
                        << "' failed.\n";
     return 1;
+  case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
+  case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
+    return 134;
+  case ubi::ProgramExitInfo::ProgramExitKind::Exited:
+    return static_cast<int>(ExitInfo.ExitCode & 0xFF);
+  case ubi::ProgramExitInfo::ProgramExitKind::Returned:
+    // If the function returns an integer, return that as the exit code.
+    if (EntryFn->getReturnType()->isIntegerTy()) {
+      assert(!RetVal.isNone() && "Expected a return value from entry function");
+      if (RetVal.isPoison()) {
+        WithColor::error() << "Execution of function '" << EntryFunc
+                           << "' resulted in poison return value.\n";
+        return 1;
+      }
+      APInt Result = RetVal.asInteger();
+      return (int)Result.extractBitsAsZExtValue(
+          std::min(Result.getBitWidth(), 8U), 0);
+    }
+    return 0;
   }
 
-  // If the function returns an integer, return that as the exit code.
-  if (EntryFn->getReturnType()->isIntegerTy()) {
-    assert(!RetVal.isNone() && "Expected a return value from entry function");
-    if (RetVal.isPoison()) {
-      WithColor::error() << "Execution of function '" << EntryFunc
-                         << "' resulted in poison return value.\n";
-      return 1;
-    }
-    APInt Result = RetVal.asInteger();
-    return (int)Result.extractBitsAsZExtValue(
-        std::min(Result.getBitWidth(), 8U), 0);
-  }
-  return 0;
+  llvm_unreachable("Unknown ProgramExitKind");
 }

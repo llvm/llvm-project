@@ -403,12 +403,13 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   VPRecipeBase *R = V->getDefiningRecipe();
   VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
   VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
-  if (VPBB &&
-      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-    if (match(V->getDefiningRecipe(),
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
-      return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+  if (VPBB) {
+    if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
+      if (match(V->getDefiningRecipe(),
+                m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
+        return false;
+      return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    }
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
@@ -490,20 +491,24 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   // vector.ph:
   // Successor(s): for.body
   //
-  // <x1> vector loop: {
-  // vp<%2> = CANONICAL-IV
-  //   vector.body:
-  //     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>, vp<%0>
-  //     CLONE ir<%ee.addr> = getelementptr ir<0>, vp<%3>
-  //     WIDEN ir<%ee.load> = load ir<%ee.addr>
-  //     WIDEN vp<%4> = icmp eq ir<%ee.load>, ir<0>
-  //     EMIT vp<%5> = any-of vp<%4>
-  //     EMIT vp<%6> = add vp<%2>, vp<%0>
-  //     EMIT vp<%7> = icmp eq vp<%6>, ir<64>
-  //     EMIT branch-on-two-conds vp<%5>, vp<%7>
-  //   No successors
-  // }
-  // Successor(s): early.exit, middle.block
+  // for.body:
+  //   EMIT vp<%2> = phi ir<0>, vp<%index.next>
+  //   EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, for.inc ]
+  //   EMIT ir<%uncountable.addr> = getelementptr inbounds nuw ir<%pred>,ir<%iv>
+  //   EMIT ir<%uncountable.val> = load ir<%uncountable.addr>
+  //   EMIT ir<%uncountable.cond> = icmp sgt ir<%uncountable.val>, ir<500>
+  //   EMIT vp<%3> = masked-cond ir<%uncountable.cond>
+  // Successor(s): for.inc
+  //
+  // for.inc:
+  //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+  //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
+  //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+  //   EMIT vp<%4> = any-of ir<%3>
+  //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
+  //   EMIT vp<%6> = or vp<%4>, vp<%5>
+  //   EMIT branch-on-cond vp<%6>
+  // Successor(s): middle.block, for.body
   //
   // middle.block:
   // Successor(s): ir-bb<exit>, scalar.ph
@@ -677,9 +682,20 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
   VPInstruction *Increment = nullptr;
   VPSymbolicValue &VFxUF = Plan.getVFxUF();
 
-  auto SetIncrement = [&Increment](VPUser *U) {
-    assert(!Increment && "There must be a unique increment");
-    Increment = cast<VPInstruction>(U);
+  // Check if \p Step matches the expected increment step, accounting for
+  // materialization of VFxUF and UF.
+  auto IsIncrementStep = [&](VPValue *Step) -> bool {
+    if (!VFxUF.isMaterialized())
+      return Step == &VFxUF;
+    VPSymbolicValue &UF = Plan.getUF();
+    if (!UF.isMaterialized())
+      return Step == &UF;
+    unsigned ConcreteUF = Plan.getConcreteUF();
+    return (ConcreteUF == 1 &&
+            match(Step, m_VPInstruction<VPInstruction::VScale>())) ||
+           match(Step, m_Mul(m_SpecificInt(ConcreteUF),
+                             m_VPInstruction<VPInstruction::VScale>())) ||
+           match(Step, m_SpecificInt(ConcreteUF));
   };
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
@@ -687,30 +703,11 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
   assert(CanIV && "Expected loop region to have a canonical IV");
   for (VPUser *U : CanIV->users()) {
     VPValue *Step;
-    if (!match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))))
-      continue;
-
-    if (!VFxUF.isMaterialized()) {
-      if (Step == &VFxUF)
-        SetIncrement(U);
-      continue;
+    if (match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))) &&
+        IsIncrementStep(Step)) {
+      assert(!Increment && "There must be a unique increment");
+      Increment = cast<VPInstruction>(U);
     }
-
-    // VFxUF has been materialized; look for increment by UF.
-    VPSymbolicValue &UF = Plan.getUF();
-    if (!UF.isMaterialized()) {
-      if (Step == &UF)
-        SetIncrement(U);
-      continue;
-    }
-
-    unsigned ConcreteUF = Plan.getConcreteUF();
-    if ((ConcreteUF == 1 &&
-         match(Step, m_VPInstruction<VPInstruction::VScale>())) ||
-        match(Step, m_Mul(m_SpecificInt(ConcreteUF),
-                          m_VPInstruction<VPInstruction::VScale>())) ||
-        match(Step, m_SpecificInt(ConcreteUF)))
-      SetIncrement(U);
   }
 
   assert((!VFxUF.isMaterialized() || Increment) &&

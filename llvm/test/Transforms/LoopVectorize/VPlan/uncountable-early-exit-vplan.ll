@@ -4,7 +4,7 @@
 declare void @init(ptr)
 
 define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
-; CHECK-LABEL: VPlan for loop in 'multi_exiting_to_different_exits_live_in_exit_values'
+; CHECK-LABEL: 'multi_exiting_to_different_exits_live_in_exit_values'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -91,7 +91,7 @@ e2:
 }
 
 define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
-; CHECK-LABEL: VPlan for loop in 'multi_exiting_to_same_exit_live_in_exit_values'
+; CHECK-LABEL: 'multi_exiting_to_same_exit_live_in_exit_values'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -171,7 +171,7 @@ exit:
 }
 
 define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
-; CHECK-LABEL: VPlan for loop in 'multi_exiting_to_same_exit_live_in_exit_values_2'
+; CHECK-LABEL: 'multi_exiting_to_same_exit_live_in_exit_values_2'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -254,7 +254,7 @@ exit:
 }
 
 define i64 @two_early_exits_same_exit_with_constant_live_outs() {
-; CHECK-LABEL: VPlan for loop in 'two_early_exits_same_exit_with_constant_live_outs'
+; CHECK-LABEL: 'two_early_exits_same_exit_with_constant_live_outs'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF

@@ -64,7 +64,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 entry:
   br label %loop
 
-loop:                                         ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
   %red = phi float [ %red.next, %loop ], [ 0.0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
@@ -74,7 +74,7 @@ loop:                                         ; preds = %entry, %loop
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %exit, label %loop
 
-exit:                                          ; preds = %loop, %entry
+exit:
   ret float %red.next
 }
 
@@ -139,7 +139,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 entry:
   br label %loop
 
-loop:                                         ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
   %red = phi float [ %red.next, %loop ], [ 0.0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
@@ -150,7 +150,7 @@ loop:                                         ; preds = %entry, %loop
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %exit, label %loop
 
-exit:                                          ; preds = %loop, %entry
+exit:
   ret void
 }
 
