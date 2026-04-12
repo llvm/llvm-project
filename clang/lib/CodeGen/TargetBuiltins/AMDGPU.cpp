@@ -31,20 +31,6 @@ using namespace llvm;
 
 namespace {
 
-// Has second type mangled argument.
-static Value *
-emitBinaryExpMaybeConstrainedFPBuiltin(CodeGenFunction &CGF, const CallExpr *E,
-                                       Intrinsic::ID IntrinsicID,
-                                       Intrinsic::ID ConstrainedIntrinsicID) {
-  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
-
-  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
-  Function *F =
-      CGF.CGM.getIntrinsic(IntrinsicID, {Src0->getType(), Src1->getType()});
-  return CGF.Builder.CreateCall(F, {Src0, Src1});
-}
-
 // If \p E is not null pointer, insert address space cast to match return
 // type of \p E if necessary.
 Value *EmitAMDGPUDispatchPtr(CodeGenFunction &CGF,
@@ -2194,8 +2180,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_scalbnf:
   case Builtin::BIscalbn:
   case Builtin::BI__builtin_scalbn:
-    return emitBinaryExpMaybeConstrainedFPBuiltin(
-        *this, E, Intrinsic::ldexp, 0);
+    return emitBinaryExpFPBuiltin(
+        *this, E, Intrinsic::ldexp);
   default:
     return nullptr;
   }

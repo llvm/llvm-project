@@ -72,10 +72,13 @@ llvm::Value *emitBuiltinWithOneOverloadedType(clang::CodeGen::CodeGenFunction &C
   return CGF.Builder.CreateCall(F, Args, Name);
 }
 
-llvm::Value *emitUnaryMaybeConstrainedFPBuiltin(clang::CodeGen::CodeGenFunction &CGF,
-                                                const clang::CallExpr *E,
-                                                unsigned IntrinsicID,
-                                                unsigned ConstrainedIntrinsicID);
+llvm::Value *emitUnaryFPBuiltin(clang::CodeGen::CodeGenFunction &CGF,
+                                const clang::CallExpr *E,
+                                unsigned IntrinsicID);
+
+llvm::Value *emitBinaryExpFPBuiltin(clang::CodeGen::CodeGenFunction &CGF,
+                                    const clang::CallExpr *E,
+                                    llvm::Intrinsic::ID IntrinsicID);
 
 llvm::Value *EmitToInt(clang::CodeGen::CodeGenFunction &CGF, llvm::Value *V,
                        clang::QualType T, llvm::IntegerType *IntType);

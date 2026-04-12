@@ -340,8 +340,7 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
 }
 
 // Emit an intrinsic where all operands are of the same type as the result.
-// Depending on mode, this may be a constrained floating-point intrinsic.
-static Value *emitCallMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
+static Value *emitFPBuiltin(CodeGenFunction &CGF,
                                                 unsigned IntrinsicID,
                                                 llvm::Type *Ty,
                                                 ArrayRef<Value *> Args) {
@@ -1447,7 +1446,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     Ops[2] = Builder.CreateBitCast(Ops[2], Ty);
 
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
-    return emitCallMaybeConstrainedFPBuiltin(
+    return emitFPBuiltin(
         *this, Intrinsic::fma, Ty,
         {Ops[1], Ops[2], Ops[0]});
   }
@@ -5797,14 +5796,14 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateFDiv(Ops[0], Ops[1], "vdivh");
   case NEON::BI__builtin_neon_vfmah_f16:
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
-    return emitCallMaybeConstrainedFPBuiltin(
+    return emitFPBuiltin(
         *this, Intrinsic::fma, HalfTy,
         {Ops[1], Ops[2], Ops[0]});
   case NEON::BI__builtin_neon_vfmsh_f16: {
     Value *Neg = Builder.CreateFNeg(Ops[1], "vsubh");
 
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
-    return emitCallMaybeConstrainedFPBuiltin(
+    return emitFPBuiltin(
         *this, Intrinsic::fma, HalfTy,
         {Neg, Ops[2], Ops[0]});
   }
@@ -6100,7 +6099,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       Ops[2] = Builder.CreateBitCast(Ops[2], VTy);
       Ops[2] = Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
       Value *Result;
-      Result = emitCallMaybeConstrainedFPBuiltin(
+      Result = emitFPBuiltin(
           *this, Intrinsic::fma,
           DoubleTy, {Ops[1], Ops[2], Ops[0]});
       return Builder.CreateBitCast(Result, Ty);
@@ -6115,7 +6114,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                                cast<ConstantInt>(Ops[3]));
     Ops[2] = Builder.CreateShuffleVector(Ops[2], Ops[2], SV, "lane");
 
-    return emitCallMaybeConstrainedFPBuiltin(
+    return emitFPBuiltin(
         *this, Intrinsic::fma, Ty,
         {Ops[2], Ops[1], Ops[0]});
   }
@@ -6125,7 +6124,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
     Ops[2] = Builder.CreateBitCast(Ops[2], Ty);
     Ops[2] = EmitNeonSplat(Ops[2], cast<ConstantInt>(Ops[3]));
-    return emitCallMaybeConstrainedFPBuiltin(
+    return emitFPBuiltin(
         *this, Intrinsic::fma, Ty,
         {Ops[2], Ops[1], Ops[0]});
   }
@@ -6137,7 +6136,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vfmad_laneq_f64: {
     llvm::Type *Ty = ConvertType(E->getCallReturnType(getContext()));
     Ops[2] = Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
-    return emitCallMaybeConstrainedFPBuiltin(
+    return emitFPBuiltin(
         *this, Intrinsic::fma, Ty,
         {Ops[1], Ops[2], Ops[0]});
   }

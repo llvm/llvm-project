@@ -1230,39 +1230,33 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return FDiv;
   }
   case PPC::BI__builtin_ppc_fric:
-    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
-                           *this, E, Intrinsic::rint,
-                           0))
+    return RValue::get(emitUnaryFPBuiltin(
+                           *this, E, Intrinsic::rint))
         .getScalarVal();
   case PPC::BI__builtin_ppc_frim:
   case PPC::BI__builtin_ppc_frims:
-    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
-                           *this, E, Intrinsic::floor,
-                           0))
+    return RValue::get(emitUnaryFPBuiltin(
+                           *this, E, Intrinsic::floor))
         .getScalarVal();
   case PPC::BI__builtin_ppc_frin:
   case PPC::BI__builtin_ppc_frins:
-    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
-                           *this, E, Intrinsic::round,
-                           0))
+    return RValue::get(emitUnaryFPBuiltin(
+                           *this, E, Intrinsic::round))
         .getScalarVal();
   case PPC::BI__builtin_ppc_frip:
   case PPC::BI__builtin_ppc_frips:
-    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
-                           *this, E, Intrinsic::ceil,
-                           0))
+    return RValue::get(emitUnaryFPBuiltin(
+                           *this, E, Intrinsic::ceil))
         .getScalarVal();
   case PPC::BI__builtin_ppc_friz:
   case PPC::BI__builtin_ppc_frizs:
-    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
-                           *this, E, Intrinsic::trunc,
-                           0))
+    return RValue::get(emitUnaryFPBuiltin(
+                           *this, E, Intrinsic::trunc))
         .getScalarVal();
   case PPC::BI__builtin_ppc_fsqrt:
   case PPC::BI__builtin_ppc_fsqrts:
-    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
-                           *this, E, Intrinsic::sqrt,
-                           0))
+    return RValue::get(emitUnaryFPBuiltin(
+                           *this, E, Intrinsic::sqrt))
         .getScalarVal();
   case PPC::BI__builtin_ppc_test_data_class: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
