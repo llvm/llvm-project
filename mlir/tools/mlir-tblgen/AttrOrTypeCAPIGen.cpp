@@ -86,8 +86,15 @@ struct CAPIDefGenerator : DefGenerator {
                    bool isAttrGenerator)
       : DefGenerator(defs, os, defType, valueType, isAttrGenerator) {}
 
-  bool emitDecls(StringRef selectedDialect) override;
-  bool emitDefs(StringRef selectedDialect) override;  
+  bool emitDecls(StringRef selectedDialect) override {
+    return emitDeclsOrDefs(selectedDialect, EMIT_DECLS);
+  }
+  bool emitDefs(StringRef selectedDialect) override {
+    return emitDeclsOrDefs(selectedDialect, EMIT_DEFS);
+  }
+
+  bool emitDeclsOrDefs(StringRef selectedDialect, bool isDeclGenerator);
+
 };
 } // namespace
 
@@ -128,14 +135,36 @@ static std::string cppNamespaceToUpper(StringRef ns) {
   return prefix;
 }
 
-static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
-  StringRef cppType = param.getCppType();
-  if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
+// Inverse of cppNamespaceToPrefix: converts a lower-camel-case identifier like
+// "classDialectSomeMoreWords" into "class::dialect::SomeMoreWords", treating
+// the first `numNsParts` camel-case words as (lowercased) namespace segments.
+static std::string camelCaseToCppNamespace(StringRef name,
+                                           unsigned numNsParts = 2) {
+  std::string result;
+  unsigned partsSeen = 0;
+  size_t wordStart = 0;
+
+  for (size_t i = 1; i <= name.size() && partsSeen < numNsParts; ++i) {
+    if (i == name.size() ||
+        llvm::isUpper(static_cast<unsigned char>(name[i]))) {
+      result += name.slice(wordStart, i).lower() + "::";
+      wordStart = i;
+      ++partsSeen;
+    }
+  }
+
+  result += name.drop_front(wordStart).str();
+  return result;
+}
+
+static std::string mapParamTypeStringToCAPI(StringRef cppType,
+                                            const llvm::Init *def) {
+  if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(def)) {
     const Record *rec = defInit->getDef();
     if (rec->isSubClassOf("EnumParameter")) {
       std::string type = "";
       // type += toLower(namespacePrefix());
-      type += cppNamespaceToPrefix(param.getCppType());
+      type += cppNamespaceToPrefix(cppType);
       // type += rec->getValueAsString("underlyingEnumName");
       return type;
     }
@@ -146,7 +175,20 @@ static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
     return "MlirType";
   if (cppType == "Attribute" || cppType.ends_with("Attr"))
     return "MlirAttribute";
+  if (cppType == "::llvm::StringRef") {
+    return "StringRef";
+  }
   return cppType.str();
+}
+
+// TODO: Is there a common supertype for these two?
+
+static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
+  return mapParamTypeStringToCAPI(param.getCppType(), param.getDef());
+}
+
+static std::string mapParamTypeToCAPI(const Builder::Parameter &param) {
+  return mapParamTypeStringToCAPI(param.getCppType(), param.getDef());
 }
 
 static bool paramIsEnum(const AttrOrTypeParameter &param) {
@@ -159,17 +201,6 @@ static bool paramIsEnum(const AttrOrTypeParameter &param) {
     return false;
 }
 
-static SmallVector<MethodParameter>
-getGettorParams(ArrayRef<AttrOrTypeParameter> params,
-                std::initializer_list<MethodParameter> prefix) {
-  SmallVector<MethodParameter> builderParams;
-  builderParams.append(prefix.begin(), prefix.end());
-  for (auto &param : params) {
-    builderParams.emplace_back(mapParamTypeToCAPI(param), param.getName());
-  }
-  return builderParams;
-}
-
 static bool isEnumParam(const AttrOrTypeParameter &param) {
   // Do I need a case for StringInits? I've seen cases where some types are 
   // encoded as strings
@@ -179,6 +210,25 @@ static bool isEnumParam(const AttrOrTypeParameter &param) {
   } else {
     return false;
   }
+}
+
+
+static SmallVector<MethodParameter>
+getGettorParams(ArrayRef<AttrOrTypeParameter> params) {
+  SmallVector<MethodParameter> builderParams;
+  for (auto &param : params) {
+    builderParams.emplace_back(mapParamTypeToCAPI(param), param.getName(), false, isEnumParam(param));
+  }
+  return builderParams;
+}
+
+static SmallVector<MethodParameter>
+getGettorParams(ArrayRef<mlir::tblgen::Builder::Parameter> params) {
+  SmallVector<MethodParameter> builderParams;
+  for (auto &param : params) {
+    builderParams.emplace_back(mapParamTypeToCAPI(param), param.getName());
+  }
+  return builderParams;
 }
 
 static llvm::StringRef getDefCppType(const AttrOrTypeDef &def) {
@@ -196,16 +246,24 @@ static llvm::StringRef getDefCppType(const EnumInfo &def) {
 }
 
 
-static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypeParameter> params,
-                                raw_ostream &os, bool isAttrGenerator, bool isDeclGenerator) {
+
+static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<MethodParameter> params,
+                                raw_ostream &os, bool isAttrGenerator, bool isDeclGenerator, unsigned altIndex) {
   os << "MLIR_CAPI_EXPORTED ";
   if (isAttrGenerator)
     os << "MlirAttribute ";
   else
     os << "MlirType ";
-  os << llvm::StringRef(cppNamespaceToPrefix(def.getDialect().getCppNamespace())) << def.getCppClassName() << "Get(";
-  SmallVector<MethodParameter> params_ =
-      getGettorParams(params, {{"MlirContext", "context"}});
+  os << llvm::StringRef(cppNamespaceToPrefix(def.getDialect().getCppNamespace())) << def.getCppClassName() << "Get";
+  if (altIndex == 0) {
+    os << "(";
+  } else {
+    os << "Alt" << altIndex << "(";
+  }
+  SmallVector<MethodParameter> prefix = {{"MlirContext", "context"}};
+  SmallVector<MethodParameter> params_;
+  params_.insert(params_.begin(), prefix.begin(), prefix.end());
+  params_.insert(params_.end(), params.begin(), params.end());
   for (auto [i, param] : llvm::enumerate(params_)) {
     os << param.getType() << " " << param.getName()
        << (i < (params_.size() - 1) ? ", " : "");
@@ -221,12 +279,12 @@ static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypePar
     } 
     for (auto [i, param] : llvm::enumerate(params)) {
       // If this is an enum, just use C++ static cast
-      if (isEnumParam(param)) {
-        os << "static_cast<" << param.getCppType() << ">(" << param.getName() << ")";
+      if (param.isEnumParam()) {
+        os << "(" << camelCaseToCppNamespace(param.getType()) << ")" << param.getName();
       } else {
-        os << "llvm::cast<" << param.getCppType() << ">";
+        os << "llvm::cast<" << param.getType() << ">";
         // Is this a wrapped type? If so unwrap it, otherwised don't
-        if (llvm::StringRef(mapParamTypeToCAPI(param)).starts_with("Mlir")) {
+        if (param.getType().starts_with("Mlir")) {
           os << "(unwrap(" << param.getName() << "))";
         } else {
           os << "(" << param.getName() << ")";
@@ -405,11 +463,10 @@ static bool emitEnumAttrDecls(ArrayRef<const Record *> records, raw_ostream &os,
   }
 
   os << "\n";
-
   return false;
 }
 
-bool CAPIDefGenerator::emitDecls(StringRef selectedDialect) {
+bool CAPIDefGenerator::emitDeclsOrDefs(StringRef selectedDialect, bool isDeclGenerator) {
   emitSourceFileHeader((defType + "Def C API Def Declarations").str(), os);
 
   SmallVector<AttrOrTypeDef, 16> defs;
@@ -424,20 +481,24 @@ bool CAPIDefGenerator::emitDecls(StringRef selectedDialect) {
 
     ArrayRef<AttrOrTypeParameter> params = def.getParameters();
     emitAttrTypeHeader(name, os);
-    if (!llvm::any_of(params, isUnsupportedParam))
-      emitGettorDeclOrDef(def, params, os, isAttrGenerator, EMIT_DECLS);
+    if (!def.skipDefaultBuilders() && !llvm::any_of(params, isUnsupportedParam))
+      emitGettorDeclOrDef(def, getGettorParams(params), os, isAttrGenerator, isDeclGenerator, 0);
+    unsigned altNum = 1;
+    for (const AttrOrTypeBuilder &builder : def.getBuilders()) {
+      emitGettorDeclOrDef(def, getGettorParams(builder.getParameters()), os, isAttrGenerator, isDeclGenerator, altNum);
+      altNum++;
+    }
     emitTypeIDDecl(def, os);
     emitIsADecl(def, os, isAttrGenerator);
     if (def.genAccessors() && !params.empty())
-      emitAccessorDeclsOrDefs(def, params, os, isAttrGenerator, EMIT_DECLS);
+      emitAccessorDeclsOrDefs(def, params, os, isAttrGenerator, isDeclGenerator);
   }
-
   os << "\n";
 
   return false;
 }
 
-bool CAPIDefGenerator::emitDefs(StringRef selectedDialect) {
+/* bool CAPIDefGenerator::emitDefs(StringRef selectedDialect) {
   emitSourceFileHeader((defType + "Def C API Defs").str(), os);
 
   SmallVector<AttrOrTypeDef, 16> defs;
@@ -459,7 +520,7 @@ bool CAPIDefGenerator::emitDefs(StringRef selectedDialect) {
   }
 
   return false;
-}
+}*/
 
 namespace {
 /// A specialized generator for AttrDefs.

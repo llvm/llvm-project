@@ -46,6 +46,8 @@ public:
     /// parameter.
     std::optional<StringRef> getDefaultValue() const;
 
+    const llvm::Init *getDef() const { return def; };
+
   private:
     Parameter(std::optional<StringRef> name, const llvm::Init *def)
         : name(name), def(def) {}
