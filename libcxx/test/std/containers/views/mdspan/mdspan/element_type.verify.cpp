@@ -23,6 +23,19 @@ public:
   virtual void method() = 0;
 };
 
+struct BadAccessor {
+  using offset_policy    = BadAccessor;
+  using element_type     = void;
+  using reference        = void;
+  using data_handle_type = element_type*;
+  reference access(data_handle_type, std::size_t) const;
+};
+
+int incomplete_type() {
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter must be a complete object type}}
+  [[maybe_unused]] std::mdspan<void, std::dextents<std::size_t, 2>, std::layout_right, BadAccessor> m;
+}
+
 void not_abstract_class() {
   // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter may not be an abstract class}}
   [[maybe_unused]] std::mdspan<AbstractClass, std::extents<int>> m;
