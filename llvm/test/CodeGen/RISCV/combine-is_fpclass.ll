@@ -292,7 +292,7 @@ define i1 @sitofp_isposzero(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
-  %npz = or i32 %x, -2147483648 ; | 0x80000000: Set sign bit
+  %npz = or i32 %x, u0x80000000 ; Set sign bit
   %f = sitofp i32 %npz to float
   %res = call i1 @llvm.is.fpclass.f32(float %f, i32 64) ; 64 = pos_zero
   ret i1 %res
@@ -303,7 +303,7 @@ define i1 @sitofp_isneg(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
-  %nn = and i32 %x, 2147483647 ; & 0x7FFFFFFF: Clear sign bit
+  %nn = and i32 %x, u0x7fffffff ; Clear sign bit
   %f = sitofp i32 %nn to float
   %res = call i1 @llvm.is.fpclass.f32(float %f, i32 60) ; 60 = negative
   ret i1 %res
@@ -314,7 +314,7 @@ define i1 @sitofp_isnonneg(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
-  %n = or i32 %x, -2147483648 ; | 0x80000000: Set sign bit
+  %n = or i32 %x, u0x80000000 ; Set sign bit
   %f = sitofp i32 %n to float
   %res = call i1 @llvm.is.fpclass.f32(float %f, i32 960) ; 960 = positive
   ret i1 %res
@@ -436,7 +436,7 @@ define <4 x i1> @sitofp_v4_isposzero(<4 x i32> %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    ret
-  %npz = or <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648> ; | 0x80000000: Set sign bit
+  %npz = or <4 x i32> %x, <i32 u0x80000000, i32 u0x80000000, i32 u0x80000000, i32 u0x80000000> ; Set sign bit
   %f = sitofp <4 x i32> %npz to <4 x float>
   %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 64)  ; 64 = pos_zero
   ret <4 x i1> %res
@@ -448,7 +448,7 @@ define <4 x i1> @sitofp_v4_isneg(<4 x i32> %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    ret
-  %nn = and <4 x i32> %x, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647> ; & 0x7FFFFFFF: Clear sign bit
+  %nn = and <4 x i32> %x, <i32 u0x7fffffff, i32 u0x7fffffff, i32 u0x7fffffff, i32 u0x7fffffff> ; Clear sign bit
   %f = sitofp <4 x i32> %nn to <4 x float>
   %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 60) ; 60 = negative
   ret <4 x i1> %res
@@ -460,7 +460,7 @@ define <4 x i1> @sitofp_v4_isnonneg(<4 x i32> %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    ret
-  %n = or <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648> ;  | 0x80000000: Set sign bit
+  %n = or <4 x i32> %x, <i32 u0x80000000, i32 u0x80000000, i32 u0x80000000, i32 u0x80000000> ; Set sign bit
   %f = sitofp <4 x i32> %n to <4 x float>
   %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %f, i32 960) ; 960 = positive
   ret <4 x i1> %res
