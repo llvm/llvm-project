@@ -480,6 +480,11 @@ Changes in existing checks
   avoiding false positive on ``const`` member functions to static when they are
   a part of const/non-const overload pair.
 
+- Improved :doc:`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check to
+  correctly detect ``this`` usage within a member function with a call to an
+  overloaded method inside a generic lambda.
+
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
 
