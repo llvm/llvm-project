@@ -534,6 +534,56 @@ define <8 x bfloat> @ui2fp_v8i1_v8bf16(<8 x i1> %x) {
   ret <8 x bfloat> %z
 }
 
+define void @si2fp_v64i16_v64bf16(ptr %x, ptr %y) {
+; CHECK-LABEL: si2fp_v64i16_v64bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvt.f.x.v v16, v8
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v8, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
+; CHECK-NEXT:    vfwcvt.f.x.v v16, v24
+; CHECK-NEXT:    vfncvtbf16.f.f.w v24, v16
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslideup.vx v8, v24, a0
+; CHECK-NEXT:    vse16.v v8, (a1)
+; CHECK-NEXT:    ret
+  %a = load <64 x i16>, ptr %x
+  %d = sitofp <64 x i16> %a to <64 x bfloat>
+  store <64 x bfloat> %d, ptr %y
+  ret void
+}
+
+define void @ui2fp_v64i16_v64bf16(ptr %x, ptr %y) {
+; CHECK-LABEL: ui2fp_v64i16_v64bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvt.f.xu.v v16, v8
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v8, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
+; CHECK-NEXT:    vfwcvt.f.xu.v v16, v24
+; CHECK-NEXT:    vfncvtbf16.f.f.w v24, v16
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslideup.vx v8, v24, a0
+; CHECK-NEXT:    vse16.v v8, (a1)
+; CHECK-NEXT:    ret
+  %a = load <64 x i16>, ptr %x
+  %d = uitofp <64 x i16> %a to <64 x bfloat>
+  store <64 x bfloat> %d, ptr %y
+  ret void
+}
+
 define void @si2fp_v2i64_v2f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: si2fp_v2i64_v2f16:
 ; CHECK:       # %bb.0:
@@ -680,4 +730,72 @@ define <8 x half> @ui2fp_v8i1_v8f16(<8 x i1> %x) {
 ; ZVFHMIN-NEXT:    ret
   %z = uitofp <8 x i1> %x to <8 x half>
   ret <8 x half> %z
+}
+
+define void @si2fp_v64i16_v64f16(ptr %x, ptr %y) {
+; ZVFH-LABEL: si2fp_v64i16_v64f16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    li a2, 64
+; ZVFH-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; ZVFH-NEXT:    vle16.v v8, (a0)
+; ZVFH-NEXT:    vfcvt.f.x.v v8, v8
+; ZVFH-NEXT:    vse16.v v8, (a1)
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: si2fp_v64i16_v64f16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    li a2, 64
+; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; ZVFHMIN-NEXT:    vle16.v v8, (a0)
+; ZVFHMIN-NEXT:    li a0, 32
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.x.v v16, v8
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; ZVFHMIN-NEXT:    vslidedown.vx v24, v8, a0
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFHMIN-NEXT:    vfwcvt.f.x.v v16, v24
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v24, v16
+; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; ZVFHMIN-NEXT:    vslideup.vx v8, v24, a0
+; ZVFHMIN-NEXT:    vse16.v v8, (a1)
+; ZVFHMIN-NEXT:    ret
+  %a = load <64 x i16>, ptr %x
+  %d = sitofp <64 x i16> %a to <64 x half>
+  store <64 x half> %d, ptr %y
+  ret void
+}
+
+define void @ui2fp_v64i16_v64f16(ptr %x, ptr %y) {
+; ZVFH-LABEL: ui2fp_v64i16_v64f16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    li a2, 64
+; ZVFH-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; ZVFH-NEXT:    vle16.v v8, (a0)
+; ZVFH-NEXT:    vfcvt.f.xu.v v8, v8
+; ZVFH-NEXT:    vse16.v v8, (a1)
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: ui2fp_v64i16_v64f16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    li a2, 64
+; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; ZVFHMIN-NEXT:    vle16.v v8, (a0)
+; ZVFHMIN-NEXT:    li a0, 32
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v16, v8
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; ZVFHMIN-NEXT:    vslidedown.vx v24, v8, a0
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v16, v24
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v24, v16
+; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; ZVFHMIN-NEXT:    vslideup.vx v8, v24, a0
+; ZVFHMIN-NEXT:    vse16.v v8, (a1)
+; ZVFHMIN-NEXT:    ret
+  %a = load <64 x i16>, ptr %x
+  %d = uitofp <64 x i16> %a to <64 x half>
+  store <64 x half> %d, ptr %y
+  ret void
 }

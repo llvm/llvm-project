@@ -8062,12 +8062,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           (Subtarget.hasVInstructionsF16Minimal() &&
            !Subtarget.hasVInstructionsF16())) ||
          Op.getValueType().getScalarType() == MVT::bf16)) {
-      if (isPromotedOpNeedingSplit(Op, Subtarget))
+      MVT NVT =
+          MVT::getVectorVT(MVT::f32, Op.getValueType().getVectorElementCount());
+      if (!isTypeLegal(NVT))
         return SplitVectorOp(Op, DAG);
       // int -> f32
       SDLoc DL(Op);
-      MVT NVT =
-          MVT::getVectorVT(MVT::f32, Op.getValueType().getVectorElementCount());
       SDValue NC = DAG.getNode(Op.getOpcode(), DL, NVT, Op->ops());
       // f32 -> [b]f16
       return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), NC,
@@ -8082,12 +8082,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           (Subtarget.hasVInstructionsF16Minimal() &&
            !Subtarget.hasVInstructionsF16())) ||
          Op1.getValueType().getScalarType() == MVT::bf16)) {
-      if (isPromotedOpNeedingSplit(Op1, Subtarget))
+      MVT NVT = MVT::getVectorVT(MVT::f32,
+                                 Op1.getValueType().getVectorElementCount());
+      if (!isTypeLegal(NVT))
         return SplitVectorOp(Op, DAG);
       // [b]f16 -> f32
       SDLoc DL(Op);
-      MVT NVT = MVT::getVectorVT(MVT::f32,
-                                 Op1.getValueType().getVectorElementCount());
       SDValue WidenVec = DAG.getNode(ISD::FP_EXTEND, DL, NVT, Op1);
       // f32 -> int
       return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), WidenVec);
