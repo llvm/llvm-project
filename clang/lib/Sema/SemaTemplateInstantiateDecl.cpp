@@ -2106,7 +2106,6 @@ Decl *TemplateDeclInstantiator::VisitExplicitInstantiationDecl(
   // ExplicitInstantiationDecl is a source-info-only node and should not
   // appear inside a template pattern. Nothing to instantiate.
   llvm_unreachable("ExplicitInstantiationDecl should not be instantiated");
-  return nullptr;
 }
 
 Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {

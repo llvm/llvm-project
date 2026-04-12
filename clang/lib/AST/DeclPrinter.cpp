@@ -86,6 +86,7 @@ namespace {
     void VisitTemplateDecl(const TemplateDecl *D);
     void VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
+    void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
     void VisitClassTemplateSpecializationDecl(
                                             ClassTemplateSpecializationDecl *D);
     void VisitClassTemplatePartialSpecializationDecl(
@@ -1332,6 +1333,44 @@ void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
         Indent();
         Visit(I);
       }
+  }
+}
+
+void DeclPrinter::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  if (D->isExternTemplate())
+    Out << "extern ";
+  Out << "template ";
+
+  NamedDecl *Spec = D->getSpecialization();
+
+  // Build the qualified name with template arguments.
+  std::string Name;
+  llvm::raw_string_ostream NameOS(Name);
+  if (D->getQualifierLoc())
+    D->getQualifierLoc().getNestedNameSpecifier().print(NameOS, Policy);
+  Spec->printName(NameOS, Policy);
+  if (auto *ArgsAsWritten = D->getTemplateArgsAsWritten())
+    printTemplateArgumentList(NameOS, ArgsAsWritten->arguments(), Policy);
+
+  if (auto *RD = dyn_cast<RecordDecl>(Spec)) {
+    Out << RD->getKindName() << " " << Name;
+  } else if (auto *FD = dyn_cast<FunctionDecl>(Spec)) {
+    FD->getReturnType().print(Out, Policy);
+    Out << " " << Name << "(";
+    for (unsigned I = 0, N = FD->getNumParams(); I < N; ++I) {
+      if (I)
+        Out << ", ";
+      FD->getParamDecl(I)->print(Out, Policy);
+    }
+    if (FD->isVariadic()) {
+      if (FD->getNumParams())
+        Out << ", ";
+      Out << "...";
+    }
+    Out << ")";
+  } else if (auto *TSI = D->getTypeAsWritten()) {
+    TSI->getType().print(Out, Policy, Name);
   }
 }
 

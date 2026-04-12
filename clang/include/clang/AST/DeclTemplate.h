@@ -3407,12 +3407,6 @@ const Decl &adjustDeclToTemplate(const Decl &D);
 
 /// Represents an explicit instantiation of a template entity in source code.
 ///
-/// This node records source location information for an explicit instantiation
-/// statement. It does not participate in name lookup (inherits from Decl, not
-/// NamedDecl), and does not affect code generation. The underlying
-/// specialization decl (FunctionDecl, VarDecl, CXXRecordDecl, etc.) continues
-/// to handle all semantic and codegen responsibilities.
-///
 /// \code
 ///   template void ns::foo<int>(int);        // function template
 ///   extern template struct ns::S<int>;      // class template (extern)
@@ -3423,8 +3417,8 @@ class ExplicitInstantiationDecl : public Decl {
   /// The underlying specialization being explicitly instantiated.
   NamedDecl *Specialization = nullptr;
 
-  /// The source range of the entire explicit instantiation statement.
-  SourceRange Range;
+  /// End location of the explicit instantiation statement.
+  SourceLocation EndLoc;
 
   /// Location of the 'extern' keyword (invalid if not extern template).
   SourceLocation ExternLoc;
@@ -3455,8 +3449,8 @@ class ExplicitInstantiationDecl : public Decl {
   LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned TSK : 3;
 
-  ExplicitInstantiationDecl(DeclContext *DC, SourceRange Range,
-                            NamedDecl *Specialization, SourceLocation ExternLoc,
+  ExplicitInstantiationDecl(DeclContext *DC, NamedDecl *Specialization,
+                            SourceLocation EndLoc, SourceLocation ExternLoc,
                             SourceLocation TemplateLoc, SourceLocation TagKWLoc,
                             NestedNameSpecifierLoc QualifierLoc,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten,
@@ -3464,7 +3458,7 @@ class ExplicitInstantiationDecl : public Decl {
                             TypeSourceInfo *TypeAsWritten,
                             TemplateSpecializationKind TSK)
       : Decl(ExplicitInstantiation, DC, TemplateLoc),
-        Specialization(Specialization), Range(Range), ExternLoc(ExternLoc),
+        Specialization(Specialization), EndLoc(EndLoc), ExternLoc(ExternLoc),
         TagKWLoc(TagKWLoc), QualifierLoc(QualifierLoc),
         TemplateArgsAsWritten(ArgsAsWritten), NameLoc(NameLoc),
         TypeAsWritten(TypeAsWritten), TSK(TSK) {
@@ -3483,8 +3477,8 @@ public:
   friend class ASTDeclWriter;
 
   static ExplicitInstantiationDecl *
-  Create(ASTContext &C, DeclContext *DC, SourceRange Range,
-         NamedDecl *Specialization, SourceLocation ExternLoc,
+  Create(ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
+         SourceLocation EndLoc, SourceLocation ExternLoc,
          SourceLocation TemplateLoc, SourceLocation TagKWLoc,
          NestedNameSpecifierLoc QualifierLoc,
          const ASTTemplateArgumentListInfo *ArgsAsWritten,
@@ -3496,7 +3490,11 @@ public:
 
   NamedDecl *getSpecialization() const { return Specialization; }
 
-  SourceRange getSourceRange() const override LLVM_READONLY { return Range; }
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    SourceLocation Begin =
+        ExternLoc.isValid() ? ExternLoc : getLocation();
+    return SourceRange(Begin, EndLoc);
+  }
 
   SourceLocation getExternLoc() const { return ExternLoc; }
   SourceLocation getTemplateLoc() const { return getLocation(); }

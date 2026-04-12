@@ -2790,7 +2790,7 @@ void ASTDeclReader::VisitExplicitInstantiationDecl(
     ExplicitInstantiationDecl *D) {
   VisitDecl(D);
   D->Specialization = readDeclAs<NamedDecl>();
-  D->Range = readSourceRange();
+  D->EndLoc = readSourceLocation();
   D->ExternLoc = readSourceLocation();
   D->TagKWLoc = readSourceLocation();
   D->QualifierLoc = Record.readNestedNameSpecifierLoc();

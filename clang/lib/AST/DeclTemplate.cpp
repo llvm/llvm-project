@@ -1788,15 +1788,15 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
 void ExplicitInstantiationDecl::anchor() {}
 
 ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
-    ASTContext &C, DeclContext *DC, SourceRange Range,
-    NamedDecl *Specialization, SourceLocation ExternLoc,
+    ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
+    SourceLocation EndLoc, SourceLocation ExternLoc,
     SourceLocation TemplateLoc, SourceLocation TagKWLoc,
     NestedNameSpecifierLoc QualifierLoc,
     const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
     TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
   return new (C, DC) ExplicitInstantiationDecl(
-      DC, Range, Specialization, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
-      ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
+      DC, Specialization, EndLoc, ExternLoc, TemplateLoc, TagKWLoc,
+      QualifierLoc, ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
 }
 
 ExplicitInstantiationDecl *
