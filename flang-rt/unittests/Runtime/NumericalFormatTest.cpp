@@ -1022,12 +1022,12 @@ TEST(IOApiTests, ConfusingMinimization) {
 // Test AT edit descriptor (F2023) - trims trailing blanks on output
 TEST(IOApiTests, ATEditDescriptorOutput) {
   // Helper to test AT formatted output
-  auto testAT = [](const char *format, const char *input, std::size_t inputLen,
+  auto testAT = [](const char *format, const std::string &input,
                     const char *expect) {
     char buffer[800];
     auto cookie{IONAME(BeginInternalFormattedOutput)(
         buffer, sizeof buffer, format, std::strlen(format))};
-    EXPECT_TRUE(IONAME(OutputAscii)(cookie, input, inputLen));
+    EXPECT_TRUE(IONAME(OutputAscii)(cookie, input.data(), input.size()));
     auto status{IONAME(EndIoStatement)(cookie)};
     EXPECT_EQ(status, 0) << "AT test: '" << format << "' failed, status "
                          << static_cast<int>(status);
@@ -1041,11 +1041,12 @@ TEST(IOApiTests, ATEditDescriptorOutput) {
         << "' expected '" << expect << "' got '" << got << "'";
   };
 
-  // AT trims trailing blanks
-  testAT("(AT)", "hello     ", 10, "hello");
-  testAT("(AT)", "hello", 5, "hello");
-  testAT("(AT)", "  hi  ", 6, "  hi");
-  testAT("(AT)", "          ", 10, ""); // all blanks -> empty
+  // AT trims trailing blanks; use a marker character in the format so that the
+  // trimmed width is verified (replacing (AT) with (A) would shift '#' right).
+  testAT("(AT,'#')", "hello     ", "hello#");
+  testAT("(AT,'#')", "hello", "hello#");
+  testAT("(AT,'#')", "  hi  ", "  hi#");
+  testAT("(AT,'#')", "          ", "#"); // all blanks -> empty
 
   // A (without T) does NOT trim - outputs full length
   {

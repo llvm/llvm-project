@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test AT edit descriptor (Fortran 202X)
 
   character(10) :: str
@@ -32,6 +32,8 @@
   ! AT does not accept a width
   !ERROR: 'AT' edit descriptor does not accept a width value
   write(*, '(AT10)') str
+  !ERROR: 'AT' edit descriptor does not accept a width value
+  write(*, '(AT10.2)') str
 
   ! FORMAT statements are standalone; the compiler cannot know if they will
   ! be used with READ or WRITE, so no compile-time error is expected here.
