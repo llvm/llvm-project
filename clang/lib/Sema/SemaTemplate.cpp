@@ -9316,7 +9316,7 @@ static void StripImplicitInstantiation(NamedDecl *D, bool MinGW) {
 
 /// Create an ExplicitInstantiationDecl to record source-location info for an
 /// explicit template instantiation statement, and add it to \p CurContext.
-static ExplicitInstantiationDecl *addExplicitInstantiationDecl(
+static void addExplicitInstantiationDecl(
     ASTContext &Context, DeclContext *CurContext, const CXXScopeSpec &SS,
     NamedDecl *Spec, SourceLocation ExternLoc, SourceLocation TemplateLoc,
     SourceLocation TagKWLoc, const ASTTemplateArgumentListInfo *ArgsAsWritten,
@@ -9327,7 +9327,6 @@ static ExplicitInstantiationDecl *addExplicitInstantiationDecl(
       Context, CurContext, Spec, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
       ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
   CurContext->addDecl(EID);
-  return EID;
 }
 
 /// Compute the diagnostic location for an explicit instantiation
@@ -10869,10 +10868,10 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
     if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Prev))
       ArgsAsWritten = VTSD->getTemplateArgsAsWritten();
-    return addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(),
-                                        Prev, ExternLoc, TemplateLoc,
-                                        SourceLocation(), ArgsAsWritten,
-                                        D.getIdentifierLoc(), T, TSK);
+    addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(), Prev,
+                                 ExternLoc, TemplateLoc, SourceLocation(),
+                                 ArgsAsWritten, D.getIdentifierLoc(), T, TSK);
+    return (Decl *)nullptr;
   }
 
   // If the declarator is a template-id, translate the parser's template
@@ -11054,10 +11053,11 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       if (HasExplicitTemplateArgs)
         ArgsAsWritten =
             ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
-      return addExplicitInstantiationDecl(
-          Context, CurContext, D.getCXXScopeSpec(), Specialization, ExternLoc,
-          TemplateLoc, SourceLocation(), ArgsAsWritten, D.getIdentifierLoc(), T,
-          TSK);
+      addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(),
+                                   Specialization, ExternLoc, TemplateLoc,
+                                   SourceLocation(), ArgsAsWritten,
+                                   D.getIdentifierLoc(), T, TSK);
+      return (Decl *)nullptr;
     }
   }
 
@@ -11117,10 +11117,11 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
   if (HasExplicitTemplateArgs)
     ArgsAsWritten = ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
-  return addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(),
-                                      Specialization, ExternLoc, TemplateLoc,
-                                      SourceLocation(), ArgsAsWritten,
-                                      D.getIdentifierLoc(), T, TSK);
+  addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(),
+                               Specialization, ExternLoc, TemplateLoc,
+                               SourceLocation(), ArgsAsWritten,
+                               D.getIdentifierLoc(), T, TSK);
+  return (Decl *)nullptr;
 }
 
 TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
