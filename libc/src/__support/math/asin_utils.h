@@ -30,11 +30,6 @@ LIBC_INLINE_VAR constexpr DoubleDouble PI = {0x1.1a62633145c07p-53,
 LIBC_INLINE_VAR constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
                                                       0x1.921fb54442d18p0};
 
-// Scalar double constants for pi and pi/2, used by float-precision
-// implementations (acosf etc.).
-LIBC_INLINE_VAR constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
-LIBC_INLINE_VAR constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
-
 // > Q = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24|],
 //                 [|1, D...|], [0, 0.5]);
 // > dirtyinfnorm((asin(x) - x*Q)/x, [0, 0.5]);
