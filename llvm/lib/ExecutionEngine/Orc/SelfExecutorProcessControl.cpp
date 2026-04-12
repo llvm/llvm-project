@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -23,8 +24,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
     Triple TargetTriple, unsigned PageSize,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)),
-      IPMA(TargetTriple.isArch64Bit()) {
+    : ExecutorProcessControl(std::move(SSP), std::move(D)) {
 
   OwnedMemMgr = std::move(MemMgr);
   if (!OwnedMemMgr)
@@ -34,7 +34,6 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
-  this->MemAccess = &IPMA;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
 
@@ -109,6 +108,11 @@ Expected<std::unique_ptr<DylibManager>>
 SelfExecutorProcessControl::createDefaultDylibMgr() {
   char Prefix = TargetTriple.isOSBinFormatMachO() ? '_' : '\0';
   return std::make_unique<InProcessDylibManager>(Prefix);
+}
+
+Expected<std::unique_ptr<MemoryAccess>>
+SelfExecutorProcessControl::createDefaultMemoryAccess() {
+  return std::make_unique<InProcessMemoryAccess>(TargetTriple.isArch64Bit());
 }
 
 shared::CWrapperFunctionBuffer
