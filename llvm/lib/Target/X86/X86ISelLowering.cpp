@@ -32579,9 +32579,8 @@ static X86::CondCode matchAddCC(const AtomicRMWInst *AI, const Instruction *I) {
   Value *Op = AI->getOperand(1);
   CmpPredicate Pred;
 
-  // InstCombine-folded ZF form: icmp eq/ne (old + Op), 0  ->  icmp eq/ne old,
-  // -Op lock add sets ZF on the new value; old + Op == 0  <=>  old == -Op  [ZF]
-  if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value()))) {
+  // Folded from icmp eq/ne (old + Op), 0 to icmp eq/ne old, -Op.
+  if (match(I, m_c_ICmp(Pred, m_Neg(m_Specific(Op)), m_Value()))) {
     if (Pred == CmpInst::ICMP_EQ)
       return X86::COND_E;
     if (Pred == CmpInst::ICMP_NE)
@@ -32601,8 +32600,7 @@ static X86::CondCode matchSubCC(const AtomicRMWInst *AI, const Instruction *I) {
   Value *Op = AI->getOperand(1);
   CmpPredicate Pred;
 
-  // InstCombine-folded ZF form: icmp eq/ne (old - Op), 0  ->  icmp eq/ne old,
-  // Op lock sub sets ZF on the new value; old - Op == 0  <=>  old == Op  [ZF]
+  // Folded from icmp eq/ne (old - Op), 0 to icmp eq/ne old, Op.
   if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value()))) {
     if (Pred == CmpInst::ICMP_EQ)
       return X86::COND_E;
@@ -32665,10 +32663,9 @@ static X86::CondCode matchAndCC(const AtomicRMWInst *AI, const Instruction *I) {
     return X86::COND_INVALID;
   }
 
-  // When -C is a power of 2, the intermediate and is eliminated and the icmp
-  // can just compare old directly. lock and still sets ZF on (old & C), so:
-  //   (old & C) == 0 <=> old ult -C -> ZF == 1
-  //   (old & C) != 0 <=> old ugt ~C -> ZF == 0
+  // If -C is a power of 2:
+  //   (old & C) == 0 <=> old ult -C
+  //   (old & C) != 0 <=> old ugt ~C
   auto *CI = dyn_cast<ConstantInt>(Op);
   if (!CI)
     return X86::COND_INVALID;
@@ -32689,8 +32686,7 @@ static X86::CondCode matchXorCC(const AtomicRMWInst *AI, const Instruction *I) {
   Value *Op = AI->getOperand(1);
   CmpPredicate Pred;
 
-  // InstCombine-folded ZF form: icmp eq/ne (old ^ Op), 0  ->  icmp eq/ne old,
-  // Op lock xor sets ZF = (old ^ Op == 0) = (old == Op).
+  // Folded from icmp eq/ne (old ^ Op), 0 to icmp eq/ne old, Op.
   if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value()))) {
     if (Pred == CmpInst::ICMP_EQ)
       return X86::COND_E;
@@ -32706,9 +32702,6 @@ static X86::CondCode matchXorCC(const AtomicRMWInst *AI, const Instruction *I) {
   return X86::COND_INVALID;
 }
 
-/// Return the X86 condition code for a CmpArith atomic RMW pattern that can
-/// be lowered to a lock instruction + setcc, or COND_INVALID if the pattern
-/// is not recognised.
 static X86::CondCode getCmpArithCC(const AtomicRMWInst *AI) {
   if (!AI->hasOneUse())
     return X86::COND_INVALID;
