@@ -36,6 +36,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
@@ -5353,5 +5354,7 @@ void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
   AsmPrinter.EmitStackMaps = [](Module &M) {};
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
+
+AnalysisKey AsmPrinterAnalysis::Key;
 
 } // namespace llvm
