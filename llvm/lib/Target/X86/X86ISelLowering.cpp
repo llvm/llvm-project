@@ -24437,6 +24437,11 @@ unsigned X86TargetLowering::combineRepeatedFPDivisors() const {
   return 2;
 }
 
+bool X86TargetLowering::preferSDivSRASUB(EVT VT) const {
+  return !isOperationLegalOrCustom(ISD::MULHS, VT) &&
+         isTypeLegal(MVT::getIntegerVT(VT.getScalarSizeInBits() * 2));
+}
+
 SDValue
 X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                  SelectionDAG &DAG,

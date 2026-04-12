@@ -14816,6 +14816,8 @@ SDValue PPCTargetLowering::getRecipEstimate(SDValue Operand, SelectionDAG &DAG,
   return SDValue();
 }
 
+bool PPCTargetLowering::preferSDivSRASUB(EVT VT) const { return true; }
+
 unsigned PPCTargetLowering::combineRepeatedFPDivisors() const {
   // Note: This functionality is used only when arcp is enabled, and
   // on cores with reciprocal estimates (which are used when arcp is

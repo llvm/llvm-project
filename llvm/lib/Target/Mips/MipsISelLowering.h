@@ -495,6 +495,7 @@ class TargetRegisterClass;
 
     bool isLegalICmpImmediate(int64_t Imm) const override;
     bool isLegalAddImmediate(int64_t Imm) const override;
+    bool preferSDivSRASUB(EVT VT) const override;
 
     unsigned getJumpTableEncoding() const override;
     SDValue getPICJumpTableRelocBase(SDValue Table,

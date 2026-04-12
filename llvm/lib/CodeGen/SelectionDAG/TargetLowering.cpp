@@ -6675,6 +6675,8 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
 
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
+  bool UseInputSign = true;
+
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
     if (C->isZero())
       return false;
@@ -6698,6 +6700,9 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
       // If d < 0 and m > 0, subtract the numerator.
       NumeratorFactor = -1;
     }
+
+    UseInputSign &=
+        Divisor.isStrictlyPositive() && magics.Magic.isStrictlyPositive();
 
     MagicFactors.push_back(
         DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT));
@@ -6772,8 +6777,15 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   Q = DAG.getNode(ISD::SRA, dl, VT, Q, Shift);
   Created.push_back(Q.getNode());
 
-  // Extract the sign bit, mask it and add it to the quotient.
+  // Extract the sign bit, mask it and add/subtract it from the quotient.
   SDValue SignShift = DAG.getConstant(EltBits - 1, dl, ShVT);
+
+  // sign(MULHS(N0, M) >> sh) == sign(N0) iff M > 0 and d > 0.
+  if (UseInputSign && preferSDivSRASUB(VT)) {
+    SDValue T = DAG.getNode(ISD::SRA, dl, VT, N0, SignShift);
+    Created.push_back(T.getNode());
+    return DAG.getNode(ISD::SUB, dl, VT, Q, T);
+  }
   SDValue T = DAG.getNode(ISD::SRL, dl, VT, Q, SignShift);
   Created.push_back(T.getNode());
   T = DAG.getNode(ISD::AND, dl, VT, T, ShiftMask);

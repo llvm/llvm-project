@@ -25,11 +25,10 @@ define i32 @fold_srem_positive_even(i32 %x) {
 ; CHECK-LABEL: fold_srem_positive_even:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
+; CHECK-NEXT:    sarl $31, %edi
 ; CHECK-NEXT:    imulq $1037275121, %rax, %rcx # imm = 0x3DD38FF1
-; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    shrq $63, %rdx
 ; CHECK-NEXT:    sarq $40, %rcx
-; CHECK-NEXT:    addl %edx, %ecx
+; CHECK-NEXT:    subl %edi, %ecx
 ; CHECK-NEXT:    imull $1060, %ecx, %ecx # imm = 0x424
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
