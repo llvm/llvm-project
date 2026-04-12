@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <string>
 #include "AttrOrTypeFormatGen.h"
 #include "CppGenUtilities.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
@@ -121,6 +122,12 @@ static std::string cppNamespaceToPrefix(StringRef ns) {
   return result;
 }
 
+static std::string cppNamespaceToUpper(StringRef ns) {
+  std::string prefix = cppNamespaceToPrefix(ns);
+  std::transform(prefix.begin(), prefix.end(), prefix.begin(), ::toupper);
+  return prefix;
+}
+
 static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
   StringRef cppType = param.getCppType();
   if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
@@ -140,6 +147,16 @@ static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
   if (cppType == "Attribute" || cppType.ends_with("Attr"))
     return "MlirAttribute";
   return cppType.str();
+}
+
+static bool paramIsEnum(const AttrOrTypeParameter &param) {
+    if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
+      const Record *rec = defInit->getDef();
+      if (rec->isSubClassOf("EnumParameter")) {
+        return true;
+      }
+    }
+    return false;
 }
 
 static SmallVector<MethodParameter>
@@ -222,9 +239,10 @@ static void emitGettorDeclOrDef(const AttrOrTypeDef &def, ArrayRef<AttrOrTypePar
   }
 }
 
-static void emitAccessorDecls(const AttrOrTypeDef &def,
+static void emitAccessorDeclsOrDefs(const AttrOrTypeDef &def,
                               ArrayRef<AttrOrTypeParameter> params,
-                              raw_ostream &os, bool isAttrGenerator) {
+                              raw_ostream &os, bool isAttrGenerator, bool isDeclGenerator) {
+
   for (AttrOrTypeParameter param : params) {
     if (isUnsupportedParam(param))
       continue;
@@ -233,10 +251,28 @@ static void emitAccessorDecls(const AttrOrTypeDef &def,
     os << mapParamTypeToCAPI(param) << " " << cppNamespaceToPrefix(def.getDialect().getCppNamespace()) << def.getCppClassName()
        << "Get" << withCapitalFirstLetter(param.getName().str());
     if (isAttrGenerator)
-      os << "(MlirAttribute attr);";
+      os << "(MlirAttribute attr";
     else
-      os << "(MlirType type);";
-    os << "\n";
+      os << "(MlirType type";
+    if (isDeclGenerator) {
+      os << ");\n";
+     } else {
+      bool isEnumGenerator = paramIsEnum(param);
+      os << ") {\n";
+      if (!isEnumGenerator) {
+        os << "\treturn wrap(";
+      } else {
+        // Enums are enums not objects
+        os << "\treturn (" << mapParamTypeToCAPI(param) << ")";
+      }
+      os << "llvm::cast<" << getDefCppType(def) << ">(unwrap(attr)).get" << withCapitalFirstLetter(param.getName().str()) << "()";
+      if (!isEnumGenerator) {
+        // close the wrap
+        os << ")";
+      }
+      os << ";\n";
+      os << "}\n";
+     }
   }
 }
 
@@ -311,18 +347,10 @@ static void emitIsADecl(const AttrOrTypeDef &def, raw_ostream &os, bool isAttrGe
 }
 
 static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
-  {
-    llvm::IfDefEmitter scope(os, "GET_ENUM_CAPI_DECLS");
-    for (const auto *rec : records) {
-      EnumInfo enumInfo(*rec);
-      os << "#define GET_" + enumInfo.getEnumClassName().upper() +
-                "_ENUM_CAPI_DECL\n";
-    }
-  }
 
   for (const auto *rec : records) {
     EnumInfo enumInfo(*rec);
-    llvm::IfDefEmitter scope(os, "GET_" + enumInfo.getEnumClassName().upper() +
+    llvm::IfNDefGuardEmitter scope(os, "NO_" + cppNamespaceToUpper(enumInfo.getEnumClassName()) +
                                      "_ENUM_CAPI_DECL");
     os << "// " << enumInfo.getSummary() << "\n";
     os << "enum " << cppNamespaceToPrefix(enumInfo.getCppNamespace()) << enumInfo.getEnumClassName();
@@ -352,20 +380,6 @@ static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
 
 static bool emitEnumAttrDecls(ArrayRef<const Record *> records, raw_ostream &os,
                               StringRef selectedDialect) {
-  {
-    llvm::IfDefEmitter scope(os, "GET_ENUM_ATTR_CAPI_DECLS");
-    for (const auto *rec : records) {
-      AttrOrTypeDef attr(&*rec);
-      StringRef dialect = attr.getDialect().getName();
-      if (dialect != selectedDialect)
-        continue;
-      EnumInfo enumInfo(*attr.getDef()->getValueAsDef("enum"));
-      StringRef name = enumInfo.getEnumClassName();
-      os << "#define GET_" + cppNamespaceToPrefix(enumInfo.getCppNamespace()) + "_" + name.upper() +
-                "_ENUM_ATTR_CAPI_DECL\n";
-    }
-  }
-
   for (const Record *rec : records) {
     AttrOrTypeDef attr(&*rec);
     StringRef dialect = attr.getDialect().getName();
@@ -373,7 +387,7 @@ static bool emitEnumAttrDecls(ArrayRef<const Record *> records, raw_ostream &os,
       continue;
 
     EnumInfo enumInfo(*attr.getDef()->getValueAsDef("enum"));
-    llvm::IfDefEmitter scope(os, "GET_" + cppNamespaceToPrefix(enumInfo.getCppNamespace()) + "_" +
+    llvm::IfNDefGuardEmitter scope(os, "NO_" + cppNamespaceToUpper(enumInfo.getCppNamespace()) + "_" +
                                      enumInfo.getEnumClassName().upper() +
                                      "_ENUM_ATTR_CAPI_DECL");
 
@@ -403,19 +417,10 @@ bool CAPIDefGenerator::emitDecls(StringRef selectedDialect) {
   if (defs.empty())
     return false;
 
-  {
-    llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "_CAPI_DECLS");
-    for (const AttrOrTypeDef &def : defs) {
-      StringRef name = def.getCppClassName();
-      os << "#define GET_" + name.upper() + "_" + defType.upper() +
-                "_CAPI_DECL\n";
-    }
-  }
-
   for (const AttrOrTypeDef &def : defs) {
+    // StringRef name = cppNamespaceToPrefix(def.getCppClassName());
     StringRef name = def.getCppClassName();
-    llvm::IfDefEmitter scope(os, "GET_" + name.upper() + "_" + defType.upper() +
-                                     "_CAPI_DECL");
+    llvm::IfNDefGuardEmitter scope(os, "NO_" + name.upper() + "_CAPI_DECL");
 
     ArrayRef<AttrOrTypeParameter> params = def.getParameters();
     emitAttrTypeHeader(name, os);
@@ -424,7 +429,7 @@ bool CAPIDefGenerator::emitDecls(StringRef selectedDialect) {
     emitTypeIDDecl(def, os);
     emitIsADecl(def, os, isAttrGenerator);
     if (def.genAccessors() && !params.empty())
-      emitAccessorDecls(def, params, os, isAttrGenerator);
+      emitAccessorDeclsOrDefs(def, params, os, isAttrGenerator, EMIT_DECLS);
   }
 
   os << "\n";
@@ -441,12 +446,16 @@ bool CAPIDefGenerator::emitDefs(StringRef selectedDialect) {
     return false;
 
   for (const AttrOrTypeDef &def : defs) {
+    // StringRef name = cppNamespaceToPrefix(def.getCppClassName());
+    StringRef name = def.getCppClassName();
+    llvm::IfNDefGuardEmitter scope(os, "NO_" + name.upper() + "_CAPI_DECL");
     ArrayRef<AttrOrTypeParameter> params = def.getParameters();
     if (!llvm::any_of(params, isUnsupportedParam)) {
         emitGettorDeclOrDef(def, params, os, isAttrGenerator, EMIT_DEFS);
     }
     emitTypeIDDeclOrDef(def, os, EMIT_DEFS);
     emitIsADeclOrDef(def, os, isAttrGenerator, EMIT_DEFS);
+    emitAccessorDeclsOrDefs(def, params, os, isAttrGenerator, EMIT_DEFS);
   }
 
   return false;

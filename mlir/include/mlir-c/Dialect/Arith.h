@@ -30,16 +30,9 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Arith, arith);
 }
 #endif
 
-// Currently these are opt-in
-#define GET_ENUM_CAPI_DECLS
-#define GET_ENUM_ATTR_CAPI_DECLS
 #include "mlir/Dialect/Arith/IR/ArithOpsCAPIEnumAttrs.h.inc"
-#define GET_TYPE_CAPI_DECLS
 #include "mlir/Dialect/Arith/IR/ArithOpsCAPITypes.h.inc"
-#define GET_ATTR_CAPI_DECLS
 #include "mlir/Dialect/Arith/IR/ArithOpsCAPIAttrs.h.inc"
-
-#include "mlir/Dialect/Arith/IR/ArithOpsCAPIEnumAttrs.h.inc"
 
 #include "mlir/Dialect/Arith/Transforms/Passes.capi.h.inc"
 

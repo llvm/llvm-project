@@ -17,13 +17,8 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Index, index);
 
-// Currently these are opt-in
-#define GET_ENUM_CAPI_DECLS
-#define GET_ENUM_ATTR_CAPI_DECLS
 #include "mlir/Dialect/Index/IR/IndexOpsCAPIEnumAttrs.h.inc"
-#define GET_TYPE_CAPI_DECLS
 #include "mlir/Dialect/Index/IR/IndexOpsCAPITypes.h.inc"
-#define GET_ATTR_CAPI_DECLS
 #include "mlir/Dialect/Index/IR/IndexOpsCAPIAttrs.h.inc"
 
 #ifdef __cplusplus
