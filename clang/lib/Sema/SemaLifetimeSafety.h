@@ -131,9 +131,9 @@ public:
         << UseExpr->getSourceRange();
   }
 
-  void suggestLifetimeboundToParmVar(
-      SuggestionScope Scope, const ParmVarDecl *ParmToAnnotate,
-      llvm::PointerUnion<const Expr *, const FieldDecl *> Target) override {
+  void suggestLifetimeboundToParmVar(SuggestionScope Scope,
+                                     const ParmVarDecl *ParmToAnnotate,
+                                     EscapingTarget Target) override {
     unsigned DiagID =
         (Scope == SuggestionScope::CrossTU)
             ? diag::warn_lifetime_safety_cross_tu_param_suggestion

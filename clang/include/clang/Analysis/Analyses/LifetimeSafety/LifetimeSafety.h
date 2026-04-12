@@ -89,10 +89,13 @@ public:
                                           const Expr *UseExpr,
                                           const Expr *InvalidationExpr) {}
 
+  using EscapingTarget =
+      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
+
   // Suggests lifetime bound annotations for function parameters.
-  virtual void suggestLifetimeboundToParmVar(
-      SuggestionScope Scope, const ParmVarDecl *ParmToAnnotate,
-      llvm::PointerUnion<const Expr *, const FieldDecl *> Target) {}
+  virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
+                                             const ParmVarDecl *ParmToAnnotate,
+                                             EscapingTarget Target) {}
 
   // Reports misuse of [[clang::noescape]] when parameter escapes through return
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,

@@ -53,8 +53,7 @@ struct PendingWarning {
 
 using AnnotationTarget =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
-using EscapingTarget =
-    llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
+using EscapingTarget = LifetimeSafetySemaHelper::EscapingTarget;
 
 class LifetimeChecker {
 private:
@@ -298,21 +297,17 @@ public:
                                          const ParmVarDecl *PVD,
                                          SourceManager &SM,
                                          EscapingTarget EscapeTarget) {
-    llvm::PointerUnion<const Expr *, const FieldDecl *> Target;
-    if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
-      Target = E;
-    else if (const auto *F = EscapeTarget.dyn_cast<const FieldDecl *>())
-      Target = F;
-    else
+    if (llvm::isa<const VarDecl *>(EscapeTarget))
       return;
 
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
       SemaHelper->suggestLifetimeboundToParmVar(
           SuggestionScope::CrossTU,
-          CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()), Target);
+          CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
+          EscapeTarget);
     else
       SemaHelper->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
-                                                Target);
+                                                EscapeTarget);
   }
 
   static void
