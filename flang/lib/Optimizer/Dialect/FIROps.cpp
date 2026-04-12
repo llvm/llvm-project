@@ -21,6 +21,7 @@
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -178,8 +179,23 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
   assert(mlir::isa<fir::BaseBoxType>(val.getType()) && "expected box argument");
   while (val) {
     mlir::Operation *defOp = val.getDefiningOp();
-    if (!defOp)
+    if (!defOp) {
+      // TODO: we need a better way to identify definitely
+      // present boxes to allow more speculation.
+      // Maybe we should rely on [hl]fir.declare's inside
+      // acc.compute_region or use more generic interface
+      // (such as RegionBranchOpInterface) to map the block
+      // arguments to the operands (though, the meaning
+      // of operands/block-arguments of acc.compute_region
+      // is tricky).
+      if (mlir::Operation *accOp =
+              mlir::acc::getACCDataClauseOpForBlockArg(val)) {
+        val = mlir::acc::getVar(accOp);
+        continue;
+      }
+
       return true;
+    }
 
     if (auto varIface = mlir::dyn_cast<fir::FortranVariableOpInterface>(defOp))
       return varIface.isOptional();

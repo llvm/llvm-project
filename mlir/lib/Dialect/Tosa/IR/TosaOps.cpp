@@ -486,6 +486,15 @@ void MaxPool2dOp::print(OpAsmPrinter &parser) {
   printWithNanPropagationHandling(parser, *this);
 }
 
+ParseResult MaxPool2dAdaptiveOp::parse(OpAsmParser &parser,
+                                       OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MaxPool2dAdaptiveOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
 ParseResult ClampOp::parse(OpAsmParser &parser, OperationState &result) {
   return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
 }
@@ -1228,9 +1237,8 @@ struct AdaptivePoolingConstShapeValues {
 
 template <typename T>
 static constexpr bool IsSupportedAdaptivePoolConstShapeVerifyOp =
-    std::is_same_v<T, tosa::AvgPool2dAdaptiveOp>
-    // || std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>
-    ;
+    std::is_same_v<T, tosa::AvgPool2dAdaptiveOp> ||
+    std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>;
 
 template <typename T,
           typename std::enable_if<IsSupportedAdaptivePoolConstShapeVerifyOp<T>,
@@ -4085,12 +4093,54 @@ LogicalResult MaxPool2dOp::inferReturnTypeComponents(
                                  inferredReturnShapes);
 }
 
+LogicalResult MaxPool2dAdaptiveOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    MaxPool2dAdaptiveOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  ShapeAdaptor inputShape(adaptor.getInput().getType());
+
+  llvm::SmallVector<int64_t> kernelValues;
+  llvm::SmallVector<int64_t> strideValues;
+  llvm::SmallVector<int64_t> padValues;
+  if (tosa::getConstShapeValues(adaptor.getKernel().getDefiningOp(),
+                                kernelValues) &&
+      tosa::getConstShapeValues(adaptor.getStride().getDefiningOp(),
+                                strideValues) &&
+      tosa::getConstShapeValues(adaptor.getPad().getDefiningOp(), padValues)) {
+    return poolingInferReturnTypes(inputShape, kernelValues, strideValues,
+                                   padValues, inferredReturnShapes);
+  }
+
+  llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamic);
+  if (inputShape.hasRank()) {
+    outputShape[0] = inputShape.getDimSize(0);
+    outputShape[3] = inputShape.getDimSize(3);
+  }
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
 LogicalResult MaxPool2dOp::verify() {
   if (failed(verifySameElementTypes(*this, /* intype = */ getInput().getType(),
                                     /* outType = */ getOutput().getType())))
     return failure();
 
   if (failed(verifyPoolingOp(*this)))
+    return failure();
+
+  return success();
+}
+
+LogicalResult MaxPool2dAdaptiveOp::verify() {
+  if (failed(verifySameElementTypes(*this, /* intype = */ getInput().getType(),
+                                    /* outType = */ getOutput().getType())))
+    return failure();
+
+  AdaptivePoolingConstShapeValues values;
+  extractAdaptivePoolingConstShapeOperands(*this, values);
+
+  if (failed(verifyPoolingOpImpl(getOperation(), values.kernel, values.stride,
+                                 values.pad, getInput(), getOutput())))
     return failure();
 
   return success();

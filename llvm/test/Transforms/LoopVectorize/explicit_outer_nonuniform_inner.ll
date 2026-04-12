@@ -49,10 +49,10 @@ inner.body:
   %indvars.iv35 = phi i64 [ %indvars.iv38, %inner.ph ], [ %indvars.iv.next36, %inner.body ]
   %2 = add nsw i64 %indvars.iv35, %1
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
-  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
+  %3 = load i32, ptr %arrayidx, align 4
   %mul8 = mul nsw i32 %3, %3
   %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
-  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
+  store i32 %mul8, ptr %arrayidx12, align 4
   %indvars.iv.next36 = add nuw nsw i64 %indvars.iv35, 1
   %exitcond = icmp eq i64 %indvars.iv.next36, %wide.trip.count
   br i1 %exitcond, label %outer.inc, label %inner.body
@@ -96,10 +96,10 @@ inner.body:
   %indvars.iv = phi i64 [ 0, %inner.ph ], [ %indvars.iv.next, %inner.body ]
   %2 = add nsw i64 %indvars.iv, %1
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
-  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
+  %3 = load i32, ptr %arrayidx, align 4
   %mul8 = mul nsw i32 %3, %3
   %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
-  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
+  store i32 %mul8, ptr %arrayidx12, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %indvars.iv38
   br i1 %exitcond, label %outer.inc, label %inner.body
@@ -142,10 +142,10 @@ inner.body:
   %indvars.iv36 = phi i64 [ 0, %inner.ph ], [ %indvars.iv.next37, %inner.body ]
   %2 = add nsw i64 %indvars.iv36, %1
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
-  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
+  %3 = load i32, ptr %arrayidx, align 4
   %mul8 = mul nsw i32 %3, %3
   %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
-  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
+  store i32 %mul8, ptr %arrayidx12, align 4
   %indvars.iv.next37 = add nuw nsw i64 %indvars.iv36, %indvars.iv39
   %cmp2 = icmp slt i64 %indvars.iv.next37, %0
   br i1 %cmp2, label %inner.body, label %for.inc14
@@ -159,15 +159,6 @@ for.end15:
   ret void
 }
 
-!llvm.module.flags = !{!0}
-!llvm.ident = !{!1}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{!"clang version 6.0.0"}
-!2 = !{!3, !3, i64 0}
-!3 = !{!"int", !4, i64 0}
-!4 = !{!"omnipotent char", !5, i64 0}
-!5 = !{!"Simple C/C++ TBAA"}
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.width", i32 8}
 !8 = !{!"llvm.loop.vectorize.enable", i1 true}
