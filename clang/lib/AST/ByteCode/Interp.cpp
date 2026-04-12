@@ -2147,22 +2147,28 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
 
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth) {
-  const SourceInfo &E = S.Current->getSource(OpPC);
+  SourceInfo E = S.Current->getSource(OpPC);
   S.CCEDiag(E, diag::note_constexpr_invalid_cast)
       << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
-  if (Ptr.isDummy())
-    return false;
-  if (Ptr.isFunctionPointer())
+  if (Ptr.isIntegralPointer())
     return true;
 
-  if (Ptr.isBlockPointer() && !Ptr.isZero()) {
+  if (Ptr.isDummy())
+    return Ptr.getIndex() == 0;
+
+  if (!Ptr.isZero()) {
     // Only allow based lvalue casts if they are lossless.
     if (S.getASTContext().getTargetInfo().getPointerWidth(LangAS::Default) !=
         BitWidth)
       return Invalid(S, OpPC);
   }
   return true;
+}
+
+bool CheckIntegralAddressCast(InterpState &S, CodePtr OpPC, unsigned BitWidth) {
+  return (S.getASTContext().getTargetInfo().getPointerWidth(LangAS::Default) ==
+          BitWidth);
 }
 
 bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
@@ -2269,13 +2275,19 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC) {
 
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
                                              const Pointer &RHS) {
+  if (!LHS.pointsToStringLiteral() || !RHS.pointsToStringLiteral())
+    return false;
+
   unsigned LHSOffset = LHS.isOnePastEnd() ? LHS.getNumElems() : LHS.getIndex();
   unsigned RHSOffset = RHS.isOnePastEnd() ? RHS.getNumElems() : RHS.getIndex();
-  unsigned LHSLength = (LHS.getNumElems() - 1) * LHS.elemSize();
-  unsigned RHSLength = (RHS.getNumElems() - 1) * RHS.elemSize();
+  const auto *LHSLit = cast<StringLiteral>(LHS.getDeclDesc()->asExpr());
+  const auto *RHSLit = cast<StringLiteral>(RHS.getDeclDesc()->asExpr());
 
-  StringRef LHSStr((const char *)LHS.atIndex(0).getRawAddress(), LHSLength);
-  StringRef RHSStr((const char *)RHS.atIndex(0).getRawAddress(), RHSLength);
+  StringRef LHSStr(LHSLit->getBytes());
+  unsigned LHSLength = LHSStr.size();
+  StringRef RHSStr(RHSLit->getBytes());
+  unsigned RHSLength = RHSStr.size();
+
   int32_t IndexDiff = RHSOffset - LHSOffset;
   if (IndexDiff < 0) {
     if (static_cast<int32_t>(LHSLength) < -IndexDiff)
@@ -2291,11 +2303,11 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   StringRef Shorter;
   StringRef Longer;
   if (LHSLength < RHSLength) {
-    ShorterCharWidth = LHS.elemSize();
+    ShorterCharWidth = LHS.getFieldDesc()->getElemDataSize();
     Shorter = LHSStr;
     Longer = RHSStr;
   } else {
-    ShorterCharWidth = RHS.elemSize();
+    ShorterCharWidth = RHS.getFieldDesc()->getElemDataSize();
     Shorter = RHSStr;
     Longer = LHSStr;
   }
