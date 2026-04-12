@@ -1098,7 +1098,11 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
     // __has_include(__has_include))
     if (CurPPLexer->ParsingFilename)
       LexUnexpandedToken(FilenameTok);
-    else if ((getLangOpts().CPlusPlusModules && isImportingCXXNamedModules()) ||
+    else if ((getLangOpts().CPlusPlusModules &&
+              isImportingCXXNamedModules()) || // C++ import already checked in
+                                               // HandleModuleContextualKeyword,
+                                               // avoid duplicate check in
+                                               // LexHeaderName.
              isNextPPTokenHeaderNameOrOneOf(tok::less))
       CurPPLexer->LexIncludeFilename(FilenameTok);
     else
