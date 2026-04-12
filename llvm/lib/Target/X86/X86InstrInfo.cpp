@@ -7486,7 +7486,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
     unsigned Size, Align Alignment, bool AllowCommute,
-    MachineInstr *&CopyMI) const {
+    MachineInstr *&CopyMI, VirtRegMap *VRM) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
   unsigned Opc = MI.getOpcode();
 
@@ -7543,17 +7543,24 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // Utilize the mapping NonNDD if NDD memory variant is not preferred.
   bool NoNDDM = NonNDOpc && !Subtarget.hasNDDM();
 
-  // Bail out if dst has subreg. It happens during register-coalescer from
-  // 704B  %19:gr32 = SUB32rr_ND killed %0:gr32, killed %7:gr32, ...
-  // 752B  undef %23.sub_32bit:gr64 = COPY killed %19:gr32
-  // 768B  %25:gr32 = LEA64_32r killed %23:gr64, 1, killed %21:gr64_nosp, ...
-  // to
-  // 704B  undef %23.sub_32bit:gr64_with_sub_8bit = SUB32rr_ND %0:gr32, ...
-  // 768B  %25:gr32 = LEA64_32r %23:gr64_with_sub_8bit, 1, %21:gr64_nosp, ...
-  // Machine verifier fails if we try to tie %23 to the source.
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (NoNDDM && !MRI.isSSA() && MI.getOperand(0).getSubReg())
-    return nullptr;
+  if (NoNDDM && !MRI.isSSA()) {
+    // Bail out if dst has subreg. It happens during register-coalescer from
+    // 704B  %19:gr32 = SUB32rr_ND killed %0:gr32, killed %7:gr32, ...
+    // 752B  undef %23.sub_32bit:gr64 = COPY killed %19:gr32
+    // 768B  %25:gr32 = LEA64_32r killed %23:gr64, 1, killed %21:gr64_nosp, ...
+    // to
+    // 704B  undef %23.sub_32bit:gr64_with_sub_8bit = SUB32rr_ND %0:gr32, ...
+    // 768B  %25:gr32 = LEA64_32r %23:gr64_with_sub_8bit, 1, %21:gr64_nosp, ...
+    // Machine verifier fails if we try to tie %23 to the source.
+    if (MI.getOperand(0).getSubReg())
+      return nullptr;
+
+    // Bail out if dst has been assigned a physical register. Otherwise, we
+    // cannot update LiveRegMatrix properly.
+    if (VRM && VRM->getPhys(MI.getOperand(0).getReg()))
+      return nullptr;
+  }
 
   const X86FoldTableEntry *I =
       IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
@@ -7683,7 +7690,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   auto Impl = [&]() {
     return foldMemoryOperandImpl(
         MF, MI, Ops[0], MachineOperand::CreateFI(FrameIndex), InsertPt, Size,
-        Alignment, /*AllowCommute=*/true, CopyMI);
+        Alignment, /*AllowCommute=*/true, CopyMI, VRM);
   };
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     unsigned NewOpc = 0;
