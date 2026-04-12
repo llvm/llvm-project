@@ -883,7 +883,11 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
   // when:
   //   * powi(inf, exp), exp > 0
   //   * powi(+/-0, exp), exp < 0
-  //   * powi(finite, exp) --> overflow, |exp| > 1 or powi(subnormal, -1)
+  //   * powi(finite, exp), |exp| > 1
+  //   * powi(subnormal, -1)
+  // TODO:
+  //   This simple all or nothing approach. We can do better
+  //   and cover sign/parity and exp > 1 vs exp < -1 separately.
   {
     APInt MinExp = ExponentKnownBits.getSignedMinValue();
     APInt MaxExp = ExponentKnownBits.getSignedMaxValue();
@@ -895,14 +899,16 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
     // powi(+/-0, exp), exp < 0
     bool MayDivByZero = !KnownSrc.isKnownNever(fcZero) && MinExp.isNegative();
 
-    // powi(finite, exp) --> overflow, |exp| > 1 or powi(subnormal, -1)
+    // powi(finite, exp), |exp| > 1
     bool MayFinite = !KnownSrc.isKnownNever(fcNormal | fcSubnormal);
     bool MayAbsExpGT1 = MinExp.slt(-1) || MaxExp.sgt(1);
+    bool MayFiniteOverflow = MayFinite && MayAbsExpGT1;
+
+    // powi(subnormal, -1)
     bool MayBeNegOne = ExponentKnownBits.Zero.isZero();
     bool MaySubnormInv = !KnownSrc.isKnownNever(fcSubnormal) && MayBeNegOne;
-    bool MayOverflow = (MayFinite && MayAbsExpGT1) || MaySubnormInv;
 
-    if (!MayInfSrc && !MayDivByZero && !MayOverflow)
+    if (!MayInfSrc && !MayDivByZero && !MayFiniteOverflow && !MaySubnormInv)
       Known.knownNot(fcInf);
   }
 
