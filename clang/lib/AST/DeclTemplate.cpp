@@ -1805,15 +1805,32 @@ ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
 
 SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
   if (TypeAsWritten) {
+    // template void S<int>::f<double>(double);
+    //                                       ^
     if (auto FTL = TypeAsWritten->getTypeLoc().getAs<FunctionTypeLoc>())
       return FTL.getRParenLoc();
+    // template int S<int>::var<double>;
+    //                                ^
     if (TemplateArgsAsWritten)
       return TemplateArgsAsWritten->RAngleLoc;
-    // Static data member: end at the name.
+    // For postfix declarators (arrays, function pointers, etc.), the TypeLoc
+    // extends past the name. Pick whichever location is later.
+    // Cf. DeclaratorDecl::getSourceRange().
+    // template int S<int>::arr[1];       -> ']'
+    // template void (*S<int>::fptr)(int) -> ')'
+    // template long S<int>::sval;        -> 'sval'
+    SourceLocation TypeEnd = TypeAsWritten->getTypeLoc().getEndLoc();
+    if (TypeEnd.isValid() &&
+        TypeEnd.getRawEncoding() > NameLoc.getRawEncoding())
+      return TypeEnd;
     return NameLoc;
   }
+  // template struct S<int>::Inner<double>;
+  //                               ^
   if (TemplateArgsAsWritten)
     return TemplateArgsAsWritten->RAngleLoc;
+  // template struct S<int>::Inner;
+  //                         ^
   return NameLoc;
 }
 

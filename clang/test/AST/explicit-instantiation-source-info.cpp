@@ -6,12 +6,14 @@ namespace ns {
   template <typename T> struct S {
     void method(T x) {}
     static T sval;
+    static T arr[1];
     template <typename U> void tmpl(U u) {}
     template <typename U> static U mvar;
     template <typename U> struct Nested {};
     struct Inner { T val; };
   };
   template <typename T> T S<T>::sval = T{};
+  template <typename T> T S<T>::arr[1] = {};
   template <typename T> template <typename U> U S<T>::mvar = U{};
 
   template <typename T> struct A {
@@ -66,6 +68,14 @@ template long ns::S<long>::sval;
 // CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
 // CHECK-NEXT: Var {{.*}} 'sval' 'long'
 // CHECK-NEXT: BuiltinTypeLoc <col:10> 'long'
+
+// (e2) static data member with postfix type (array)
+template long ns::S<long>::arr[1];
+// CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:33> col:1 explicit_instantiation_definition template 'arr'
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
+// CHECK-NEXT: Var {{.*}} 'arr' 'long[1]'
+// CHECK-NEXT: ConstantArrayTypeLoc <col:10, col:33> 'long[1]' 1
+// CHECK-NEXT:   BuiltinTypeLoc <col:10> 'long'
 
 // (f) member function template
 template void ns::S<long>::tmpl<double>(double);

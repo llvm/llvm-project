@@ -688,9 +688,8 @@ public:
     // Traverse source-location sub-nodes: template arguments and
     // type-as-written.
     if (const auto *ArgsAsWritten = D->getTemplateArgsAsWritten())
-      for (unsigned I = 0, E = ArgsAsWritten->NumTemplateArgs; I != E; ++I)
-        Visit((*ArgsAsWritten)[I].getArgument(),
-              (*ArgsAsWritten)[I].getSourceRange());
+      for (const TemplateArgumentLoc &Loc : ArgsAsWritten->arguments())
+        Visit(Loc.getArgument(), Loc.getSourceRange());
     if (TypeSourceInfo *TSI = D->getTypeAsWritten())
       Visit(TSI->getTypeLoc());
   }

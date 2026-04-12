@@ -1357,19 +1357,20 @@ void DeclPrinter::VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D) {
   } else if (auto *FD = dyn_cast<FunctionDecl>(Spec)) {
     FD->getReturnType().print(Out, Policy);
     Out << " " << Name << "(";
-    for (unsigned I = 0, N = FD->getNumParams(); I < N; ++I) {
-      if (I)
-        Out << ", ";
-      FD->getParamDecl(I)->print(Out, Policy);
+    llvm::ListSeparator LS;
+    for (const ParmVarDecl *P : FD->parameters()) {
+      Out << LS;
+      P->print(Out, Policy);
     }
     if (FD->isVariadic()) {
-      if (FD->getNumParams())
-        Out << ", ";
+      Out << LS;
       Out << "...";
     }
     Out << ")";
   } else if (auto *TSI = D->getTypeAsWritten()) {
     TSI->getType().print(Out, Policy, Name);
+  } else {
+    llvm_unreachable("unexpected specialization kind");
   }
 }
 
