@@ -12,6 +12,9 @@ void doIt(Ts...);
 
 #define MY_MACRO(arg) doIt(arg, arg)
 
+int g = 0;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: variable name 'g' is too short, expected at least 3 characters [readability-identifier-length]
+
 void shouldWarn(int z)
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: parameter name 'z' is too short, expected at least 3 characters [readability-identifier-length]
 {
