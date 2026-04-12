@@ -11451,9 +11451,12 @@ public:
   }
 
   bool allowPhysRegDefInWindowScheduler(const MachineInstr *MI) const override {
-    // SUBS/ADDS with NZCV private to the backedge: the loop-carried counter
-    // dependency keeps Comp in stage 0, so NZCV never crosses a stage
-    // boundary.
+    // An NZCV def-use edge between Comp and CondBranch is safe so long as Comp
+    // is the only NZCV-defining instruction in the loop. We ensure that via
+    // IsNZCVBackedgePrivate, and the fact that the WindowScheduler does not use
+    // ModuloScheduleExpanderMVE. If it were not, we would need to ensure that
+    // either no such instruction is scheduled between Comp and CondBranch, or
+    // adjust the copied SUBS to a SUB (for example).
     return MI == Comp && IsNZCVBackedgePrivate &&
            !TII->isWhileOpcode(Comp->getOpcode());
   }
