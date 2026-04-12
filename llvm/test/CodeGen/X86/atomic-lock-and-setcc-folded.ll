@@ -16,17 +16,8 @@
 define i1 @lock_and_setne_folded(ptr %p) nounwind {
 ; CHECK-LABEL: lock_and_setne_folded:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    andq $-2, %rcx
-; CHECK-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
-; CHECK-NEXT:    cmpq $2, %rax
-; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    lock andq $-2, (%rdi)
+; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %old = atomicrmw and ptr %p, i64 -2 seq_cst
   %r = icmp ugt i64 %old, 1
@@ -37,17 +28,8 @@ define i1 @lock_and_setne_folded(ptr %p) nounwind {
 define i1 @lock_and_sete_folded(ptr %p) nounwind {
 ; CHECK-LABEL: lock_and_sete_folded:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_1: # %atomicrmw.start
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    andq $-2, %rcx
-; CHECK-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
-; CHECK-NEXT:    cmpq $2, %rax
-; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    lock andq $-2, (%rdi)
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %old = atomicrmw and ptr %p, i64 -2 seq_cst
   %r = icmp ult i64 %old, 2
@@ -58,17 +40,8 @@ define i1 @lock_and_sete_folded(ptr %p) nounwind {
 define i1 @lock_and_setne_folded_c4(ptr %p) nounwind {
 ; CHECK-LABEL: lock_and_setne_folded_c4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB2_1: # %atomicrmw.start
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    andq $-4, %rcx
-; CHECK-NEXT:    lock cmpxchgq %rcx, (%rdi)
-; CHECK-NEXT:    jne .LBB2_1
-; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
-; CHECK-NEXT:    cmpq $4, %rax
-; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    lock andq $-4, (%rdi)
+; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %old = atomicrmw and ptr %p, i64 -4 seq_cst
   %r = icmp ugt i64 %old, 3
