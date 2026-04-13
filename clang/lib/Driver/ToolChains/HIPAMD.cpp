@@ -260,6 +260,7 @@ void HIPAMDToolChain::addClangTargetOptions(
 
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
+  // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat) &&
       !getEffectiveTriple().isSPIRV()) {
