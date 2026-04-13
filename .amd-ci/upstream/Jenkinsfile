@@ -17,6 +17,8 @@ Boolean dualFlangBuild = actualTarget != upstreamBranch && actualTarget != stagi
 String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
 String notBuiltResultStr = Result.NOT_BUILT, successResultStr = Result.SUCCESS
 
+Boolean isAmdBranch = (env.BRANCH_NAME == stagingBranch || env.BRANCH_NAME.startsWith(releaseBranchPrefix))
+
 if (
     !(actualTarget in [stagingBranch, upstreamBranch]) &&
         !targetIsRelBranch
@@ -57,11 +59,7 @@ String buildTypeStaging = 'STAGING' // groovylint-disable-line UnusedVariable
 // buildType is processed during branch creation:
 String buildType = (isPrBranch ? buildTypePresub : buildTypeRelease)
 
-if (
-    !isPrBranch &&
-    env.BRANCH_NAME != stagingBranch &&
-    !env.BRANCH_NAME.startsWith(releaseBranchPrefix)
-) {
+if (!isPrBranch && !isAmdBranch) {
     // Treat it as 'presub'.
     buildType = buildTypePresub
 }
@@ -113,7 +111,7 @@ String skipStr = 'Skipping build.', contStr = 'Continuing build.'
 String contTimerReason = 'Timer trigger.' + space + contStr
 
 List propsList = []
-if (isPrBranch) {
+if (isPrBranch) { // Sic; don't want postsub on upstream-main to go through this block.
     propsList.add(
         disableConcurrentBuilds(abortPrevious: true)
     )
@@ -243,8 +241,7 @@ try {
                             browser: github(theUrl),
                             extensions: scm.extensions + [
                                 cloneOption(
-                                    depth: 2, // To compute the changelog.
-                                    honorRefspec: true, noTags: true, shallow: true,
+                                    honorRefspec: true, noTags: true,
                                     reference: referenceRepo + slash + llvmProjRepo
                                 ),
                                 firstBuildChangelog()
@@ -464,33 +461,6 @@ try {
 } catch (Exception e) {
     currentBuild.result = failureResultStr
     throw e
-}
-
-/*
- * For when work is skipped.
- * Code smell: this method is also in the main AOCC CommitCheck class.
- */
-void setStatusToLastCompleted() {
-    def previousBuild = currentBuild.previousBuild // groovylint-disable-line NoDef,VariableTypeRequired
-    // Default fallback:
-    String previousResult = 'SUCCESS' // Keep as a literal string because of scoping.
-    String nBStr = 'NOT_BUILT' // Keep as a literal string because of scoping.
-
-    while (
-        previousBuild &&
-            (!(previousBuild.result) || previousBuild.result == nBStr)
-    ) {
-        previousBuild = previousBuild.previousBuild
-    }
-
-    if (previousBuild && previousBuild.result) {
-        previousResult = previousBuild.result
-    } else {
-        previousResult = nBStr
-    }
-
-    echo('Setting build result to ' + previousResult + ' from a previous build.')
-    currentBuild.result = previousResult
 }
 
 /*
