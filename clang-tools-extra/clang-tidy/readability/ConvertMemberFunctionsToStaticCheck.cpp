@@ -76,8 +76,7 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
   return UsageOfThis.Used;
 }
 
-bool hasSameParameterTypes(const CXXMethodDecl &MD1,
-                                  const CXXMethodDecl &MD2) {
+bool hasSameParameterTypes(const CXXMethodDecl &MD1, const CXXMethodDecl &MD2) {
   if (MD1.getNumParams() != MD2.getNumParams())
     return false;
   for (unsigned I = 0, E = MD1.getNumParams(); I < E; ++I)
@@ -94,13 +93,12 @@ AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
   if (LookupResult.isSingleResult())
     return false;
 
-  for (const Decl *D : LookupResult) {
-    const auto *Overload = dyn_cast<CXXMethodDecl>(D);
-    if (Overload && Overload != Method && !Overload->isConst() &&
-        hasSameParameterTypes(*Method, *Overload))
-      return true;
-  }
-  return false;
+  return std::any_of(
+      LookupResult.begin(), LookupResult.end(), [Method](const Decl *D) {
+        const auto *Overload = dyn_cast<CXXMethodDecl>(D);
+        return Overload && Overload != Method && !Overload->isConst() &&
+               hasSameParameterTypes(*Method, *Overload);
+      });
 }
 
 } // namespace
