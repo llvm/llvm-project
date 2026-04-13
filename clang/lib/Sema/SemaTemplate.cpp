@@ -9326,9 +9326,7 @@ static void addExplicitInstantiationDecl(
   auto *EID = ExplicitInstantiationDecl::Create(
       Context, CurContext, Spec, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
       ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
-  if (auto *Prev = Context.getExplicitInstantiationDecl(Spec))
-    EID->setPreviousDecl(Prev);
-  Context.setExplicitInstantiationDecl(Spec, EID);
+  Context.addExplicitInstantiationDecl(Spec, EID);
   CurContext->addDecl(EID);
 }
 
@@ -9337,8 +9335,10 @@ static void addExplicitInstantiationDecl(
 static SourceLocation
 DiagLocForExplicitInstantiation(NamedDecl *D,
                                 SourceLocation PointOfInstantiation) {
-  if (auto *EID = D->getASTContext().getExplicitInstantiationDecl(D))
-    return EID->getTemplateLoc();
+  for (auto *EID : D->getASTContext().getExplicitInstantiationDecls(D))
+    if (EID->getTemplateSpecializationKind() ==
+        TSK_ExplicitInstantiationDefinition)
+      return EID->getTemplateLoc();
 
   // Explicit instantiations following a specialization have no effect and
   // hence no PointOfInstantiation. In that case, walk decl backwards
@@ -10429,10 +10429,10 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // Set the template specialization kind.
     Specialization->setTemplateSpecializationKind(TSK);
 
-    addExplicitInstantiationDecl(Context, CurContext, SS, Specialization,
-                                 ExternLoc, TemplateLoc, KWLoc,
-                                 Specialization->getTemplateArgsAsWritten(),
-                                 TemplateNameLoc, nullptr, TSK);
+    addExplicitInstantiationDecl(
+        Context, CurContext, SS, Specialization, ExternLoc, TemplateLoc, KWLoc,
+        ASTTemplateArgumentListInfo::Create(Context, TemplateArgs),
+        TemplateNameLoc, nullptr, TSK);
     return Specialization;
   }
 
@@ -10522,10 +10522,10 @@ DeclResult Sema::ActOnExplicitInstantiation(
     Specialization->setTemplateSpecializationKind(TSK);
   }
 
-  addExplicitInstantiationDecl(Context, CurContext, SS, Specialization,
-                               ExternLoc, TemplateLoc, KWLoc,
-                               Specialization->getTemplateArgsAsWritten(),
-                               TemplateNameLoc, nullptr, TSK);
+  addExplicitInstantiationDecl(
+      Context, CurContext, SS, Specialization, ExternLoc, TemplateLoc, KWLoc,
+      ASTTemplateArgumentListInfo::Create(Context, TemplateArgs),
+      TemplateNameLoc, nullptr, TSK);
   return Specialization;
 }
 

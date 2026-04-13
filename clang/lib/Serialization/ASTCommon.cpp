@@ -397,10 +397,10 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::ObjCProtocol:
   case Decl::ObjCInterface:
   case Decl::Empty:
-  case Decl::ExplicitInstantiation:
     return true;
 
   // Never redeclarable.
+  case Decl::ExplicitInstantiation:
   case Decl::UsingDirective:
   case Decl::Label:
   case Decl::UnresolvedUsingTypename:

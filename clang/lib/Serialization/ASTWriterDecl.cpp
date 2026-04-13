@@ -919,8 +919,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     }
   }
 
-  // Ensure associated ExplicitInstantiationDecl survives reduced BMI.
-  if (auto *EID = Record.getASTContext().getExplicitInstantiationDecl(D))
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
     Writer.GetDeclRef(EID);
 
   Record.push_back(D->param_size());
@@ -1971,8 +1971,8 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
       Writer.GetDeclRef(DG->getCanonicalDecl());
   }
 
-  // Ensure associated ExplicitInstantiationDecl survives reduced BMI.
-  if (auto *EID = Record.getASTContext().getExplicitInstantiationDecl(D))
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
     Writer.GetDeclRef(EID);
 
   Code = serialization::DECL_CLASS_TEMPLATE_SPECIALIZATION;
@@ -2044,8 +2044,8 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
     Record.AddDeclRef(D->getSpecializedTemplate()->getCanonicalDecl());
   }
 
-  // Ensure associated ExplicitInstantiationDecl survives reduced BMI.
-  if (auto *EID = Record.getASTContext().getExplicitInstantiationDecl(D))
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
     Writer.GetDeclRef(EID);
 
   Code = serialization::DECL_VAR_TEMPLATE_SPECIALIZATION;
@@ -2191,7 +2191,6 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
 
 void ASTDeclWriter::VisitExplicitInstantiationDecl(
     ExplicitInstantiationDecl *D) {
-  VisitRedeclarable(D);
   VisitDecl(D);
   Record.AddDeclRef(D->getSpecialization());
   Record.AddSourceLocation(D->getExternLoc());

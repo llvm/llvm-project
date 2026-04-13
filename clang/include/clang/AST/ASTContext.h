@@ -657,10 +657,9 @@ private:
 
   llvm::DenseMap<FieldDecl *, FieldDecl *> InstantiatedFromUnnamedFieldDecl;
 
-  /// Maps a canonical specialization Decl to the first
-  /// ExplicitInstantiationDecl that references it. Further EIDs for the same
-  /// specialization are chained via the Redeclarable mechanism.
-  llvm::DenseMap<const Decl *, ExplicitInstantiationDecl *>
+  /// Maps a canonical specialization Decl to all ExplicitInstantiationDecls
+  /// that reference it (declarations and definitions).
+  llvm::DenseMap<const Decl *, llvm::TinyPtrVector<ExplicitInstantiationDecl *>>
       ExplicitInstantiations;
 
   /// Mapping that stores the methods overridden by a given C++
@@ -1141,12 +1140,12 @@ public:
   /// Erase the attributes corresponding to the given declaration.
   void eraseDeclAttrs(const Decl *D);
 
-  /// Get the first ExplicitInstantiationDecl for a given specialization.
-  ExplicitInstantiationDecl *
-  getExplicitInstantiationDecl(const Decl *Spec) const;
+  /// Get all ExplicitInstantiationDecls for a given specialization.
+  ArrayRef<ExplicitInstantiationDecl *>
+  getExplicitInstantiationDecls(const Decl *Spec) const;
 
-  /// Set the ExplicitInstantiationDecl for a given specialization.
-  void setExplicitInstantiationDecl(const Decl *Spec,
+  /// Add an ExplicitInstantiationDecl for a given specialization.
+  void addExplicitInstantiationDecl(const Decl *Spec,
                                     ExplicitInstantiationDecl *EID);
 
   /// If this variable is an instantiated static data member of a

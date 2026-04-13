@@ -3413,18 +3413,12 @@ const Decl &adjustDeclToTemplate(const Decl &D);
 ///   template int ns::bar<int>;              // variable template
 ///   template void ns::S<int>::method(int);  // member function
 /// \endcode
-class ExplicitInstantiationDecl
-    : public Decl,
-      public Redeclarable<ExplicitInstantiationDecl> {
+class ExplicitInstantiationDecl : public Decl {
   /// The underlying specialization being explicitly instantiated.
   NamedDecl *Specialization = nullptr;
 
   /// Location of the 'extern' keyword (invalid if not extern template).
   SourceLocation ExternLoc;
-
-  /// Location of the struct/class/union keyword (for class template and
-  /// nested class instantiations; invalid otherwise).
-  SourceLocation TagKWLoc;
 
   /// Nested name specifier with source locations (e.g., ns::S<int>::).
   NestedNameSpecifierLoc QualifierLoc;
@@ -3437,60 +3431,55 @@ class ExplicitInstantiationDecl
   /// ns::foo<int>(int)').
   SourceLocation NameLoc;
 
-  /// Type source info for the declaration type:
-  ///   - Function templates / member functions: FunctionProtoTypeLoc with
-  ///     return type location and parameter type locations.
-  ///   - Variable templates / static data members: the declared type.
-  ///   - Class templates / nested classes: null.
-  TypeSourceInfo *TypeAsWritten = nullptr;
+  /// TagKWLoc and TypeAsWritten are mutually exclusive:
+  ///   - Class templates / nested classes: TagKWLoc is the location of the
+  ///     struct/class/union keyword; no TypeAsWritten.
+  ///   - Function / variable templates: TypeAsWritten has the declared type;
+  ///     no TagKWLoc.
+  union {
+    SourceLocation TagKWLoc;
+    TypeSourceInfo *TypeAsWritten;
+  };
 
   /// Whether this is a declaration (extern template) or definition (template).
   LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned TSK : 3;
 
-  using redeclarable_base = Redeclarable<ExplicitInstantiationDecl>;
+  /// Whether the specialization is a tag type (class template / nested class).
+  bool isTagInstantiation() const {
+    return Specialization && isa<TagDecl>(Specialization);
+  }
 
-  ExplicitInstantiationDecl *getNextRedeclarationImpl() override;
-  ExplicitInstantiationDecl *getPreviousDeclImpl() override;
-  ExplicitInstantiationDecl *getMostRecentDeclImpl() override;
-
-  ExplicitInstantiationDecl(ASTContext &C, DeclContext *DC,
-                            NamedDecl *Specialization, SourceLocation ExternLoc,
-                            SourceLocation TemplateLoc, SourceLocation TagKWLoc,
+  ExplicitInstantiationDecl(DeclContext *DC, NamedDecl *Specialization,
+                            SourceLocation ExternLoc,
+                            SourceLocation TemplateLoc,
+                            SourceLocation TagKWLoc_,
                             NestedNameSpecifierLoc QualifierLoc,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten,
                             SourceLocation NameLoc,
-                            TypeSourceInfo *TypeAsWritten,
+                            TypeSourceInfo *TypeAsWritten_,
                             TemplateSpecializationKind TSK)
-      : Decl(ExplicitInstantiation, DC, TemplateLoc), redeclarable_base(C),
+      : Decl(ExplicitInstantiation, DC, TemplateLoc),
         Specialization(Specialization), ExternLoc(ExternLoc),
-        TagKWLoc(TagKWLoc), QualifierLoc(QualifierLoc),
-        TemplateArgsAsWritten(ArgsAsWritten), NameLoc(NameLoc),
-        TypeAsWritten(TypeAsWritten), TSK(TSK) {
+        QualifierLoc(QualifierLoc), TemplateArgsAsWritten(ArgsAsWritten),
+        NameLoc(NameLoc), TSK(TSK) {
     // Note: ExternLoc and TSK can diverge in MSVC mode, where dllimport on
     // an explicit instantiation definition (no 'extern' keyword) causes
     // TSK to be changed to TSK_ExplicitInstantiationDeclaration.
+    if (isTagInstantiation())
+      TagKWLoc = TagKWLoc_;
+    else
+      TypeAsWritten = TypeAsWritten_;
   }
 
-  ExplicitInstantiationDecl(ASTContext &C, EmptyShell Empty)
-      : Decl(ExplicitInstantiation, Empty), redeclarable_base(C),
-        TSK(TSK_Undeclared) {}
+  ExplicitInstantiationDecl(EmptyShell Empty)
+      : Decl(ExplicitInstantiation, Empty), TagKWLoc() , TSK(TSK_Undeclared) {}
 
   virtual void anchor();
 
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
-
-  using redecl_range = redeclarable_base::redecl_range;
-  using redecl_iterator = redeclarable_base::redecl_iterator;
-
-  using redeclarable_base::getMostRecentDecl;
-  using redeclarable_base::getPreviousDecl;
-  using redeclarable_base::isFirstDecl;
-  using redeclarable_base::redecls;
-  using redeclarable_base::redecls_begin;
-  using redeclarable_base::redecls_end;
 
   static ExplicitInstantiationDecl *
   Create(ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
@@ -3503,13 +3492,6 @@ public:
   static ExplicitInstantiationDecl *CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID);
 
-  ExplicitInstantiationDecl *getCanonicalDecl() override {
-    return getFirstDecl();
-  }
-  const ExplicitInstantiationDecl *getCanonicalDecl() const {
-    return getFirstDecl();
-  }
-
   NamedDecl *getSpecialization() const { return Specialization; }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
@@ -3517,7 +3499,9 @@ public:
 
   SourceLocation getExternLoc() const { return ExternLoc; }
   SourceLocation getTemplateLoc() const { return getLocation(); }
-  SourceLocation getTagKWLoc() const { return TagKWLoc; }
+  SourceLocation getTagKWLoc() const {
+    return isTagInstantiation() ? TagKWLoc : SourceLocation();
+  }
   SourceLocation getNameLoc() const { return NameLoc; }
 
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
@@ -3526,7 +3510,9 @@ public:
     return TemplateArgsAsWritten;
   }
 
-  TypeSourceInfo *getTypeAsWritten() const { return TypeAsWritten; }
+  TypeSourceInfo *getTypeAsWritten() const {
+    return isTagInstantiation() ? nullptr : TypeAsWritten;
+  }
 
   TemplateSpecializationKind getTemplateSpecializationKind() const {
     return static_cast<TemplateSpecializationKind>(TSK);

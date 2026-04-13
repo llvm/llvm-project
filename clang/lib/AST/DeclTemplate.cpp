@@ -1794,26 +1794,13 @@ ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
     const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
     TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
   return new (C, DC) ExplicitInstantiationDecl(
-      C, DC, Specialization, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
+      DC, Specialization, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
       ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
 }
 
 ExplicitInstantiationDecl *
 ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) ExplicitInstantiationDecl(C, EmptyShell());
-}
-
-ExplicitInstantiationDecl *
-ExplicitInstantiationDecl::getNextRedeclarationImpl() {
-  return getNextRedeclaration();
-}
-
-ExplicitInstantiationDecl *ExplicitInstantiationDecl::getPreviousDeclImpl() {
-  return getPreviousDecl();
-}
-
-ExplicitInstantiationDecl *ExplicitInstantiationDecl::getMostRecentDeclImpl() {
-  return getMostRecentDecl();
+  return new (C, ID) ExplicitInstantiationDecl(EmptyShell());
 }
 
 SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
@@ -1823,8 +1810,8 @@ SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
   SourceLocation End = NameLoc;
   if (TemplateArgsAsWritten && TemplateArgsAsWritten->RAngleLoc > End)
     End = TemplateArgsAsWritten->RAngleLoc;
-  if (TypeAsWritten) {
-    SourceLocation TypeEnd = TypeAsWritten->getTypeLoc().getEndLoc();
+  if (auto *TSI = getTypeAsWritten()) {
+    SourceLocation TypeEnd = TSI->getTypeLoc().getEndLoc();
     if (TypeEnd.isValid() && TypeEnd > End)
       End = TypeEnd;
   }
