@@ -4704,7 +4704,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         I.second->claim();
     }
   }
-  
+
   llvm::Triple TargetTriple(C.getDriver().getTargetTriple());
   if (TargetTriple.getOS() == llvm::Triple::Vulkan ||
       TargetTriple.getOS() == llvm::Triple::ShaderModel) {
