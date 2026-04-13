@@ -59,7 +59,7 @@ define double @fdiv_reassoc_sin_reassoc_cos_strict(double %a) {
 
 define double @fdiv_sin_cos_reassoc_multiple_uses(double %a) {
 ; CHECK-LABEL: @fdiv_sin_cos_reassoc_multiple_uses(
-; CHECK-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[SINCOS:%.*]] = call reassoc { double, double } @llvm.sincos.f64(double [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { double, double } [[SINCOS]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[SINCOS]], 1
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double [[TMP1]], [[TMP2]]
@@ -75,7 +75,7 @@ define double @fdiv_sin_cos_reassoc_multiple_uses(double %a) {
 
 define double @fdiv_sin_cos_reassoc(double %a) {
 ; CHECK-LABEL: @fdiv_sin_cos_reassoc(
-; CHECK-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[SINCOS:%.*]] = call reassoc { double, double } @llvm.sincos.f64(double [[A:%.*]])
 ; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
 ; CHECK-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
 ; CHECK-NEXT:    [[TAN:%.*]] = fdiv reassoc double [[SIN]], [[COS]]
@@ -89,7 +89,7 @@ define double @fdiv_sin_cos_reassoc(double %a) {
 
 define float @fdiv_sinf_cosf_reassoc(float %a) {
 ; CHECK-LABEL: @fdiv_sinf_cosf_reassoc(
-; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[SINCOS:%.*]] = call reassoc { float, float } @llvm.sincos.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
 ; CHECK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
 ; CHECK-NEXT:    [[TANF:%.*]] = fdiv reassoc float [[SIN]], [[COS]]
@@ -103,7 +103,7 @@ define float @fdiv_sinf_cosf_reassoc(float %a) {
 
 define fp128 @fdiv_sinfp128_cosfp128_reassoc(fp128 %a) {
 ; CHECK-LABEL: @fdiv_sinfp128_cosfp128_reassoc(
-; CHECK-NEXT:    [[SINCOS:%.*]] = call { fp128, fp128 } @llvm.sincos.f128(fp128 [[A:%.*]])
+; CHECK-NEXT:    [[SINCOS:%.*]] = call reassoc { fp128, fp128 } @llvm.sincos.f128(fp128 [[A:%.*]])
 ; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { fp128, fp128 } [[SINCOS]], 0
 ; CHECK-NEXT:    [[COS:%.*]] = extractvalue { fp128, fp128 } [[SINCOS]], 1
 ; CHECK-NEXT:    [[TANL:%.*]] = fdiv reassoc fp128 [[SIN]], [[COS]]
