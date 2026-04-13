@@ -13478,8 +13478,8 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   }
 
   bool IsMLS = false;
-  if (Opc == ISD::SUB &&
-      ISD::isConstantSplatVectorAllZeros(Op1->getOperand(0).getNode())) {
+  if ((Opc == ISD::SUB && isZeroOrZeroSplat(Op1->getOperand(0))) ||
+      (Opc == ISD::FSUB && isZeroOrZeroSplatFP(Op1->getOperand(0)))) {
     Op1 = Op1->getOperand(1);
     Opc = Op1->getOpcode();
     IsMLS = true;
@@ -13539,6 +13539,13 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     EVT AccVT = Acc.getValueType();
     if (!IsMLS)
       return DAG.getNode(Opc, DL, AccVT, Acc, LHS, RHS);
+
+    if (AccVT.isFloatingPoint()) {
+      SDValue NewAcc = DAG.getNode(ISD::FNEG, DL, AccVT, Acc);
+      SDValue MLA = DAG.getNode(Opc, DL, AccVT, NewAcc, LHS, RHS);
+      return DAG.getNode(ISD::FNEG, DL, AccVT, MLA);
+    }
+
     SDValue Zero = DAG.getConstant(0, DL, AccVT);
     SDValue NewAcc = DAG.getNode(ISD::SUB, DL, AccVT, Zero, Acc);
     SDValue MLA = DAG.getNode(Opc, DL, AccVT, NewAcc, LHS, RHS);
@@ -13640,8 +13647,8 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   }
 
   bool IsMLS = false;
-  if (Op1Opcode == ISD::SUB &&
-      ISD::isConstantSplatVectorAllZeros(Op1->getOperand(0).getNode())) {
+  if ((Op1Opcode == ISD::SUB && isZeroOrZeroSplat(Op1->getOperand(0))) ||
+      (Op1Opcode == ISD::FSUB && isZeroOrZeroSplatFP(Op1->getOperand(0)))) {
     Op1 = Op1->getOperand(1);
     Op1Opcode = Op1->getOpcode();
     IsMLS = true;
@@ -13684,6 +13691,13 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   EVT AccVT = Acc.getValueType();
   if (!IsMLS)
     return DAG.getNode(NewOpcode, DL, AccVT, Acc, UnextOp1, Constant);
+
+  if (AccVT.isFloatingPoint()) {
+    SDValue NegAcc = DAG.getNode(ISD::FNEG, DL, AccVT, Acc);
+    SDValue MLA = DAG.getNode(NewOpcode, DL, AccVT, NegAcc, UnextOp1, Constant);
+    return DAG.getNode(ISD::FNEG, DL, AccVT, MLA);
+  }
+
   SDValue Zero = DAG.getConstant(0, DL, AccVT);
   SDValue NegAcc = DAG.getNode(ISD::SUB, DL, AccVT, Zero, Acc);
   SDValue MLA = DAG.getNode(NewOpcode, DL, AccVT, NegAcc, UnextOp1, Constant);
