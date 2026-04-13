@@ -2353,7 +2353,7 @@ Process::ReadUnsignedIntegersFromMemory(llvm::ArrayRef<addr_t> addresses,
     }
 
     DataExtractor data(range.data(), integer_byte_size, byte_order, addr_size);
-    offset_t offset = 0;
+    lldb::offset_t offset = 0;
     result.push_back(data.GetMaxU64(&offset, integer_byte_size));
     assert(offset == integer_byte_size);
   }
