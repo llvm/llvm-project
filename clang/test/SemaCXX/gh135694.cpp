@@ -20,3 +20,12 @@ bool b() {
 bool c() { return b<void>(); }
 
 }
+
+namespace GH135694_3 {
+
+void a(...);
+template<typename T, auto F> void b() {
+  decltype(F(void())) *p; // expected-error {{cannot pass expression of type 'void' to variadic function}}
+}
+void c() { b<void, a>(); } // expected-note {{in instantiation}}
+}
