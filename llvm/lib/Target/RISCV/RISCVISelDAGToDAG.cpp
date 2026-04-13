@@ -2953,6 +2953,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     unsigned EltSize = VT.getVectorElementType().getSizeInBits();
     APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
 
+    // Use LI for all ones since it can be compressed to c.li.
+    if (Val.isAllOnes()) {
+      SDNode *NewNode = CurDAG->getMachineNode(
+          RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
+          CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
+      ReplaceNode(Node, NewNode);
+      return;
+    }
+
     // Find the smallest splat.
     if (Val.getBitWidth() > 16 && Val.isSplat(16))
       Val = Val.trunc(16);
