@@ -314,6 +314,8 @@ static bool containsBF16Type(const User &U) {
   // BF16 cannot currently be represented by LLT, to avoid miscompiles we
   // prevent any instructions using them. FIXME: This can be removed once LLT
   // supports bfloat.
+  if (LLT::getUseExtended())
+    return false; // extended LLT can represent bfloat16 — don't block translation
   return U.getType()->getScalarType()->isBFloatTy() ||
          any_of(U.operands(), [](Value *V) {
            return V->getType()->getScalarType()->isBFloatTy();

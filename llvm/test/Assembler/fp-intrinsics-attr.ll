@@ -3,8 +3,8 @@
 ; Test to verify that constrained intrinsics are auto-upgraded on bitcode load.
 ; With default rounding mode (dynamic) and exception behavior (strict), arithmetic
 ; ops become plain instructions and math intrinsics become non-constrained calls.
-; fcmps (signaling compare) is upgraded to llvm.fcmps with no fp.except bundle
-; (strict is the default in a strictfp function).
+; fcmp/fcmps are upgraded to llvm.fcmp/llvm.fcmps with an explicit fp.except(strict)
+; bundle so the call is not treated as dead code by the optimizer.
 
 define void @func(double %a, double %b, double %c, i32 %i) strictfp {
 ; CHECK-LABEL: define void @func
@@ -55,8 +55,8 @@ define void @func(double %a, double %b, double %c, i32 %i) strictfp {
 ; CHECK-NEXT: {{.*}} = call double @llvm.round.f64(double [[A]])
 ; CHECK-NEXT: {{.*}} = call double @llvm.roundeven.f64(double [[A]])
 ; CHECK-NEXT: {{.*}} = call double @llvm.trunc.f64(double [[A]])
-; CHECK-NEXT: {{.*}} = fcmp oeq double [[A]], [[B]]
-; CHECK-NEXT: {{.*}} = call i1 @llvm.fcmps.f64(double [[A]], double [[B]], metadata !"oeq")
+; CHECK-NEXT: {{.*}} = call i1 @llvm.fcmp.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"strict") ]
+; CHECK-NEXT: {{.*}} = call i1 @llvm.fcmps.f64(double [[A]], double [[B]], metadata !"oeq") [ "fp.except"(metadata !"strict") ]
 ; CHECK-NEXT: ret void
 
   %add = call double @llvm.experimental.constrained.fadd.f64(
@@ -284,8 +284,9 @@ define void @func(double %a, double %b, double %c, i32 %i) strictfp {
   ret void
 }
 
-; fcmps is auto-upgraded to the new llvm.fcmps intrinsic (3 args: float, float, metadata pred).
+; fcmp/fcmps are auto-upgraded to llvm.fcmp/llvm.fcmps (3 args: float, float, metadata pred).
 ; Plain intrinsic declarations are emitted for the upgraded calls.
+; CHECK-DAG: declare i1 @llvm.fcmp.f64(double, double, metadata)
 ; CHECK-DAG: declare i1 @llvm.fcmps.f64(double, double, metadata) #[[ATTR1:[0-9]+]]
 ; CHECK-DAG: declare double @llvm.fma.f64(double, double, double)
 ; CHECK-DAG: declare double @llvm.fmuladd.f64(double, double, double)

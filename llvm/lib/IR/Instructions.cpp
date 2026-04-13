@@ -634,7 +634,6 @@ bool CallBase::hasClobberingOperandBundles() const {
 
 RoundingMode CallBase::getRoundingMode() const {
   // Try reading rounding mode from FP bundle.
-  std::optional<RoundingMode> RM;
   if (auto ControlBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
     for (auto &U : ControlBundle->Inputs) {
       Value *V = U.get();

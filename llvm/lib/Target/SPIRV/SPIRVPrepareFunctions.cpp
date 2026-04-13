@@ -564,9 +564,10 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
           Changed = true;
         }
         break;
+      case Intrinsic::fcmp:
       case Intrinsic::fcmps: {
-        // Signaling FP compare – SPIRV has no separate signaling compare
-        // instruction; lower to a plain fcmp.
+        // SPIRV has no separate non-signaling/signaling compare instruction;
+        // lower both llvm.fcmp and llvm.fcmps to a plain fcmp.
         Value *LHS = Call->getArgOperand(0);
         Value *RHS = Call->getArgOperand(1);
         auto *PredMD =
