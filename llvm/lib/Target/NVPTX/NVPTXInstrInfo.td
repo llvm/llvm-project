@@ -681,7 +681,7 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F8Name # "x2">,
-      Requires<[callSubTarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
+      Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
   }
 
   defm CVT_ : CVT_F8x2_TO_FP16x2<"e4m3">;
@@ -739,12 +739,12 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}.f16x2." # F6Name # "x2">,
-      Requires<[callSubTarget<"hasNarrowFPConversionSupport">]>;
+      Requires<[callSubtarget<"hasNarrowFPConversionSupport">]>;
     def bf16x2_ # F6Name # x2_scale :
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F6Name # "x2">,
-      Requires<[callSubTarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
+      Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
   }
 
   defm CVT_ : CVT_F6x2_TO_FP16x2<"e2m3">;
