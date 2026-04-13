@@ -2191,17 +2191,28 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
 
 void ASTDeclWriter::VisitExplicitInstantiationDecl(
     ExplicitInstantiationDecl *D) {
+  // Trailing-object flags must be the first thing written so the reader can
+  // allocate the right amount of trailing storage in CreateDeserialized.
+  unsigned Flags = 0;
+  if (D->hasTrailingQualifier())
+    Flags |= ExplicitInstantiationDecl::HasQualifierFlag;
+  if (D->hasTrailingArgsAsWritten())
+    Flags |= ExplicitInstantiationDecl::HasArgsAsWrittenFlag;
+  Record.push_back(Flags);
+
   VisitDecl(D);
   Record.AddDeclRef(D->getSpecialization());
   Record.AddSourceLocation(D->getExternLoc());
-  Record.AddSourceLocation(D->getTagKWLoc());
-  Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
-  Record.push_back(D->getTemplateArgsAsWritten() != nullptr);
-  if (D->getTemplateArgsAsWritten())
-    Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
   Record.AddSourceLocation(D->getNameLoc());
   Record.AddTypeSourceInfo(D->getTypeAsWritten());
   Record.push_back(D->getTemplateSpecializationKind());
+  // Trailing objects.
+  if (D->hasTrailingQualifier())
+    Record.AddNestedNameSpecifierLoc(
+        *D->getTrailingObjects<NestedNameSpecifierLoc>());
+  if (D->hasTrailingArgsAsWritten())
+    Record.AddASTTemplateArgumentListInfo(
+        *D->getTrailingObjects<const ASTTemplateArgumentListInfo *>());
   Code = serialization::DECL_EXPLICIT_INSTANTIATION;
 }
 

@@ -1785,22 +1785,65 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
   return D;
 }
 
-void ExplicitInstantiationDecl::anchor() {}
-
 ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
     ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
     SourceLocation ExternLoc, SourceLocation TemplateLoc,
-    SourceLocation TagKWLoc, NestedNameSpecifierLoc QualifierLoc,
+    NestedNameSpecifierLoc QualifierLoc,
     const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
     TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
-  return new (C, DC) ExplicitInstantiationDecl(
-      DC, Specialization, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
-      ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
+  unsigned Extra = additionalSizeToAlloc<NestedNameSpecifierLoc,
+                                         const ASTTemplateArgumentListInfo *>(
+      QualifierLoc ? 1 : 0, ArgsAsWritten ? 1 : 0);
+  return new (C, DC, Extra) ExplicitInstantiationDecl(
+      DC, Specialization, ExternLoc, TemplateLoc, QualifierLoc, ArgsAsWritten,
+      NameLoc, TypeAsWritten, TSK);
 }
 
 ExplicitInstantiationDecl *
-ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) ExplicitInstantiationDecl(EmptyShell());
+ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                              unsigned TrailingFlags) {
+  unsigned Extra = additionalSizeToAlloc<NestedNameSpecifierLoc,
+                                         const ASTTemplateArgumentListInfo *>(
+      (TrailingFlags & HasQualifierFlag) ? 1 : 0,
+      (TrailingFlags & HasArgsAsWrittenFlag) ? 1 : 0);
+  auto *D = new (C, ID, Extra) ExplicitInstantiationDecl(EmptyShell());
+  // Set the flags so the reader knows which trailing objects are present.
+  D->TypeAndFlags.setInt(TrailingFlags);
+  return D;
+}
+
+SourceLocation ExplicitInstantiationDecl::getTagKWLoc() const {
+  if (auto *TSI = getTypeAsWritten()) {
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getElaboratedKeywordLoc();
+    if (auto TL = TSI->getTypeLoc().getAs<TagTypeLoc>())
+      return TL.getElaboratedKeywordLoc();
+  }
+  return SourceLocation();
+}
+
+NestedNameSpecifierLoc ExplicitInstantiationDecl::getQualifierLoc() const {
+  // For function / variable templates, qualifier is a trailing object.
+  if (hasTrailingQualifier())
+    return *getTrailingObjects<NestedNameSpecifierLoc>();
+  // For tag types, qualifier is embedded in TypeSourceInfo.
+  if (auto *TSI = getTypeAsWritten()) {
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getQualifierLoc();
+    if (auto TL = TSI->getTypeLoc().getAs<TagTypeLoc>())
+      return TL.getQualifierLoc();
+  }
+  return NestedNameSpecifierLoc();
+}
+
+const ASTTemplateArgumentListInfo *
+ExplicitInstantiationDecl::getTemplateArgsAsWritten() const {
+  // For function / variable templates, args are a trailing object.
+  if (hasTrailingArgsAsWritten())
+    return *getTrailingObjects<const ASTTemplateArgumentListInfo *>();
+  // For class templates, args are encoded in the TemplateSpecializationTypeLoc
+  // and not returned here.
+  return nullptr;
 }
 
 SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
@@ -1808,8 +1851,14 @@ SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
   // For postfix types (arrays, function pointers) and function templates,
   // the TypeLoc extends past the name. Cf. DeclaratorDecl::getSourceRange().
   SourceLocation End = NameLoc;
-  if (TemplateArgsAsWritten && TemplateArgsAsWritten->RAngleLoc > End)
-    End = TemplateArgsAsWritten->RAngleLoc;
+  // Trailing template args (function / variable templates).
+  if (hasTrailingArgsAsWritten()) {
+    auto *Args = *getTrailingObjects<const ASTTemplateArgumentListInfo *>();
+    if (Args->RAngleLoc > End)
+      End = Args->RAngleLoc;
+  }
+  // TypeSourceInfo covers class template args and function/variable type
+  // extent.
   if (auto *TSI = getTypeAsWritten()) {
     SourceLocation TypeEnd = TSI->getTypeLoc().getEndLoc();
     if (TypeEnd.isValid() && TypeEnd > End)

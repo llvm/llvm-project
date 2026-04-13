@@ -9316,15 +9316,21 @@ static void StripImplicitInstantiation(NamedDecl *D, bool MinGW) {
 
 /// Create an ExplicitInstantiationDecl to record source-location info for an
 /// explicit template instantiation statement, and add it to \p CurContext.
+///
+/// For class templates / nested classes, the caller should build a
+/// TypeSourceInfo that encodes the tag keyword, qualifier, name, and template
+/// arguments, and pass empty QualifierLoc / null ArgsAsWritten.
+///
+/// For function / variable templates, the caller should pass TypeAsWritten for
+/// the declared type, and separate QualifierLoc / ArgsAsWritten.
 static void addExplicitInstantiationDecl(
-    ASTContext &Context, DeclContext *CurContext, const CXXScopeSpec &SS,
-    NamedDecl *Spec, SourceLocation ExternLoc, SourceLocation TemplateLoc,
-    SourceLocation TagKWLoc, const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
-    TemplateSpecializationKind TSK) {
-  NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
+    ASTContext &Context, DeclContext *CurContext, NamedDecl *Spec,
+    SourceLocation ExternLoc, SourceLocation TemplateLoc,
+    NestedNameSpecifierLoc QualifierLoc,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+    TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
   auto *EID = ExplicitInstantiationDecl::Create(
-      Context, CurContext, Spec, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
+      Context, CurContext, Spec, ExternLoc, TemplateLoc, QualifierLoc,
       ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
   Context.addExplicitInstantiationDecl(Spec, EID);
   CurContext->addDecl(EID);
@@ -10429,10 +10435,17 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // Set the template specialization kind.
     Specialization->setTemplateSpecializationKind(TSK);
 
-    addExplicitInstantiationDecl(
-        Context, CurContext, SS, Specialization, ExternLoc, TemplateLoc, KWLoc,
-        ASTTemplateArgumentListInfo::Create(Context, TemplateArgs),
-        TemplateNameLoc, nullptr, TSK);
+    {
+      ElaboratedTypeKeyword KW =
+          TypeWithKeyword::getKeywordForTagTypeKind(Kind);
+      TypeSourceInfo *TSI = Context.getTemplateSpecializationTypeInfo(
+          KW, KWLoc, SS.getWithLocInContext(Context), SourceLocation(), Name,
+          TemplateNameLoc, TemplateArgs, CTAI.CanonicalConverted,
+          Context.getTypeDeclType(Specialization));
+      addExplicitInstantiationDecl(
+          Context, CurContext, Specialization, ExternLoc, TemplateLoc,
+          NestedNameSpecifierLoc(), nullptr, TemplateNameLoc, TSI, TSK);
+    }
     return Specialization;
   }
 
@@ -10522,10 +10535,16 @@ DeclResult Sema::ActOnExplicitInstantiation(
     Specialization->setTemplateSpecializationKind(TSK);
   }
 
-  addExplicitInstantiationDecl(
-      Context, CurContext, SS, Specialization, ExternLoc, TemplateLoc, KWLoc,
-      ASTTemplateArgumentListInfo::Create(Context, TemplateArgs),
-      TemplateNameLoc, nullptr, TSK);
+  {
+    ElaboratedTypeKeyword KW = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
+    TypeSourceInfo *TSI = Context.getTemplateSpecializationTypeInfo(
+        KW, KWLoc, SS.getWithLocInContext(Context), SourceLocation(), Name,
+        TemplateNameLoc, TemplateArgs, CTAI.CanonicalConverted,
+        Context.getTypeDeclType(Specialization));
+    addExplicitInstantiationDecl(Context, CurContext, Specialization, ExternLoc,
+                                 TemplateLoc, NestedNameSpecifierLoc(), nullptr,
+                                 TemplateNameLoc, TSI, TSK);
+  }
   return Specialization;
 }
 
@@ -10601,9 +10620,18 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                                                HasNoEffect))
       return true;
     if (HasNoEffect) {
-      addExplicitInstantiationDecl(Context, CurContext, SS, Record, ExternLoc,
-                                   TemplateLoc, KWLoc, nullptr, NameLoc,
-                                   nullptr, TSK);
+      TagTypeKind TagKind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
+      ElaboratedTypeKeyword KW =
+          TypeWithKeyword::getKeywordForTagTypeKind(TagKind);
+      QualType TagTy = Context.getTagType(KW, SS.getScopeRep(), Record, false);
+      TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(TagTy);
+      auto TL = TSI->getTypeLoc().castAs<TagTypeLoc>();
+      TL.setElaboratedKeywordLoc(KWLoc);
+      TL.setQualifierLoc(SS.getWithLocInContext(Context));
+      TL.setNameLoc(NameLoc);
+      addExplicitInstantiationDecl(Context, CurContext, Record, ExternLoc,
+                                   TemplateLoc, NestedNameSpecifierLoc(),
+                                   nullptr, NameLoc, TSI, TSK);
       return TagD;
     }
   }
@@ -10641,9 +10669,20 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   if (TSK == TSK_ExplicitInstantiationDefinition)
     MarkVTableUsed(NameLoc, RecordDef, true);
 
-  addExplicitInstantiationDecl(Context, CurContext, SS, Record, ExternLoc,
-                               TemplateLoc, KWLoc, nullptr, NameLoc, nullptr,
-                               TSK);
+  {
+    TagTypeKind TagKind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
+    ElaboratedTypeKeyword KW =
+        TypeWithKeyword::getKeywordForTagTypeKind(TagKind);
+    QualType TagTy = Context.getTagType(KW, SS.getScopeRep(), Record, false);
+    TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(TagTy);
+    auto TL = TSI->getTypeLoc().castAs<TagTypeLoc>();
+    TL.setElaboratedKeywordLoc(KWLoc);
+    TL.setQualifierLoc(SS.getWithLocInContext(Context));
+    TL.setNameLoc(NameLoc);
+    addExplicitInstantiationDecl(Context, CurContext, Record, ExternLoc,
+                                 TemplateLoc, NestedNameSpecifierLoc(), nullptr,
+                                 NameLoc, TSI, TSK);
+  }
   return TagD;
 }
 
@@ -10864,9 +10903,10 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
     if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Prev))
       ArgsAsWritten = VTSD->getTemplateArgsAsWritten();
-    addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(), Prev,
-                                 ExternLoc, TemplateLoc, SourceLocation(),
-                                 ArgsAsWritten, D.getIdentifierLoc(), T, TSK);
+    addExplicitInstantiationDecl(
+        Context, CurContext, Prev, ExternLoc, TemplateLoc,
+        D.getCXXScopeSpec().getWithLocInContext(Context), ArgsAsWritten,
+        D.getIdentifierLoc(), T, TSK);
     return (Decl *)nullptr;
   }
 
@@ -11049,10 +11089,10 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       if (HasExplicitTemplateArgs)
         ArgsAsWritten =
             ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
-      addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(),
-                                   Specialization, ExternLoc, TemplateLoc,
-                                   SourceLocation(), ArgsAsWritten,
-                                   D.getIdentifierLoc(), T, TSK);
+      addExplicitInstantiationDecl(
+          Context, CurContext, Specialization, ExternLoc, TemplateLoc,
+          D.getCXXScopeSpec().getWithLocInContext(Context), ArgsAsWritten,
+          D.getIdentifierLoc(), T, TSK);
       return (Decl *)nullptr;
     }
   }
@@ -11113,10 +11153,10 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
   if (HasExplicitTemplateArgs)
     ArgsAsWritten = ASTTemplateArgumentListInfo::Create(Context, TemplateArgs);
-  addExplicitInstantiationDecl(Context, CurContext, D.getCXXScopeSpec(),
-                               Specialization, ExternLoc, TemplateLoc,
-                               SourceLocation(), ArgsAsWritten,
-                               D.getIdentifierLoc(), T, TSK);
+  addExplicitInstantiationDecl(Context, CurContext, Specialization, ExternLoc,
+                               TemplateLoc,
+                               D.getCXXScopeSpec().getWithLocInContext(Context),
+                               ArgsAsWritten, D.getIdentifierLoc(), T, TSK);
   return (Decl *)nullptr;
 }
 

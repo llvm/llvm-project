@@ -109,7 +109,6 @@ public:
   void mergeLambda(CXXRecordDecl *D, RedeclarableResult &Redecl, Decl &Context,
                    unsigned Number);
 
-
   /// \param KeyDeclID the decl ID of the key declaration \param D.
   /// GlobalDeclID() if \param is not a key declaration.
   /// See the comments of ASTReader::KeyDecls for the explanation
@@ -2789,25 +2788,28 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
 
 void ASTDeclReader::VisitExplicitInstantiationDecl(
     ExplicitInstantiationDecl *D) {
+  // Note: trailing flags were already read by ReadDeclRecord and passed to
+  // CreateDeserialized, so TypeAndFlags.getInt() is already set.
   VisitDecl(D);
-  D->Specialization = readDeclAs<NamedDecl>();
+  auto *Spec = readDeclAs<NamedDecl>();
+  D->SpecAndTSK.setPointer(Spec);
   D->ExternLoc = readSourceLocation();
-  SourceLocation TagKWLocVal = readSourceLocation();
-  D->QualifierLoc = Record.readNestedNameSpecifierLoc();
-  bool HasArgsAsWritten = Record.readInt();
-  if (HasArgsAsWritten)
-    D->TemplateArgsAsWritten = Record.readASTTemplateArgumentListInfo();
   D->NameLoc = readSourceLocation();
-  TypeSourceInfo *TypeAsWrittenVal = readTypeSourceInfo();
-  D->TSK = Record.readInt();
-  if (D->isTagInstantiation())
-    D->TagKWLoc = TagKWLocVal;
-  else
-    D->TypeAsWritten = TypeAsWrittenVal;
+  TypeSourceInfo *TSI = readTypeSourceInfo();
+  unsigned TSK = Record.readInt();
+  D->SpecAndTSK.setInt(TSK);
+  D->TypeAndFlags.setPointer(TSI); // preserves trailing flags in int bits
+  // Read trailing objects.
+  if (D->hasTrailingQualifier())
+    *D->getTrailingObjects<NestedNameSpecifierLoc>() =
+        Record.readNestedNameSpecifierLoc();
+  if (D->hasTrailingArgsAsWritten())
+    *D->getTrailingObjects<const ASTTemplateArgumentListInfo *>() =
+        Record.readASTTemplateArgumentListInfo();
 
   // Rebuild the ASTContext map from specialization to EID.
-  if (D->Specialization)
-    Reader.getContext().addExplicitInstantiationDecl(D->Specialization, D);
+  if (Spec)
+    Reader.getContext().addExplicitInstantiationDecl(Spec, D);
 }
 
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
@@ -4133,7 +4135,8 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     D = StaticAssertDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_EXPLICIT_INSTANTIATION:
-    D = ExplicitInstantiationDecl::CreateDeserialized(Context, ID);
+    D = ExplicitInstantiationDecl::CreateDeserialized(Context, ID,
+                                                      Record.readInt());
     break;
   case DECL_OBJC_METHOD:
     D = ObjCMethodDecl::CreateDeserialized(Context, ID);

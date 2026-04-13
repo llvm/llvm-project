@@ -3413,109 +3413,120 @@ const Decl &adjustDeclToTemplate(const Decl &D);
 ///   template int ns::bar<int>;              // variable template
 ///   template void ns::S<int>::method(int);  // member function
 /// \endcode
-class ExplicitInstantiationDecl : public Decl {
-  /// The underlying specialization being explicitly instantiated.
-  NamedDecl *Specialization = nullptr;
+///
+/// Layout is optimised for size (24 bytes of own fields):
+///   - SpecAndTSK: PointerIntPair packing the specialization pointer and TSK.
+///   - TypeAndFlags: PointerIntPair packing TypeSourceInfo (always non-null)
+///     and two trailing-object presence bits.
+///   - For class templates / nested classes the TypeSourceInfo encodes the tag
+///     keyword, qualifier, name, and template-argument locations.
+///   - For function / variable templates the qualifier and template arguments
+///     are stored as trailing objects.
+class ExplicitInstantiationDecl final
+    : public Decl,
+      private llvm::TrailingObjects<ExplicitInstantiationDecl,
+                                    NestedNameSpecifierLoc,
+                                    const ASTTemplateArgumentListInfo *> {
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend TrailingObjects;
+
+  /// The underlying specialization (low 3 bits: TSK).
+  llvm::PointerIntPair<NamedDecl *, 3, unsigned> SpecAndTSK;
+
+  /// TypeSourceInfo (low 2 bits: trailing-object flags).
+  /// Always non-null after construction.
+  ///   - Class templates: TemplateSpecializationTypeLoc encoding keyword,
+  ///     qualifier, template-name, and argument locations.
+  ///   - Nested classes: TagTypeLoc encoding keyword, qualifier, and name.
+  ///   - Function / variable templates: the declared type.
+  llvm::PointerIntPair<TypeSourceInfo *, 2, unsigned> TypeAndFlags;
 
   /// Location of the 'extern' keyword (invalid if not extern template).
   SourceLocation ExternLoc;
-
-  /// Nested name specifier with source locations (e.g., ns::S<int>::).
-  NestedNameSpecifierLoc QualifierLoc;
-
-  /// Template arguments as written (e.g., <int>). Null if the template
-  /// arguments were deduced.
-  const ASTTemplateArgumentListInfo *TemplateArgsAsWritten = nullptr;
 
   /// Location of the entity name (e.g., 'foo' in 'template void
   /// ns::foo<int>(int)').
   SourceLocation NameLoc;
 
-  /// TagKWLoc and TypeAsWritten are mutually exclusive:
-  ///   - Class templates / nested classes: TagKWLoc is the location of the
-  ///     struct/class/union keyword; no TypeAsWritten.
-  ///   - Function / variable templates: TypeAsWritten has the declared type;
-  ///     no TagKWLoc.
-  union {
-    SourceLocation TagKWLoc;
-    TypeSourceInfo *TypeAsWritten;
+  enum TrailingFlags : unsigned {
+    HasQualifierFlag = 1,
+    HasArgsAsWrittenFlag = 2,
   };
 
-  /// Whether this is a declaration (extern template) or definition (template).
-  LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
-  unsigned TSK : 3;
-
-  /// Whether the specialization is a tag type (class template / nested class).
-  bool isTagInstantiation() const {
-    return Specialization && isa<TagDecl>(Specialization);
+  size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
+    return hasTrailingQualifier() ? 1 : 0;
   }
 
-  ExplicitInstantiationDecl(DeclContext *DC, NamedDecl *Specialization,
-                            SourceLocation ExternLoc,
-                            SourceLocation TemplateLoc,
-                            SourceLocation TagKWLoc_,
-                            NestedNameSpecifierLoc QualifierLoc,
-                            const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                            SourceLocation NameLoc,
-                            TypeSourceInfo *TypeAsWritten_,
-                            TemplateSpecializationKind TSK)
+  bool hasTrailingQualifier() const {
+    return TypeAndFlags.getInt() & HasQualifierFlag;
+  }
+  bool hasTrailingArgsAsWritten() const {
+    return TypeAndFlags.getInt() & HasArgsAsWrittenFlag;
+  }
+
+  ExplicitInstantiationDecl(
+      DeclContext *DC, NamedDecl *Specialization, SourceLocation ExternLoc,
+      SourceLocation TemplateLoc, NestedNameSpecifierLoc QualifierLoc,
+      const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+      TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK)
       : Decl(ExplicitInstantiation, DC, TemplateLoc),
-        Specialization(Specialization), ExternLoc(ExternLoc),
-        QualifierLoc(QualifierLoc), TemplateArgsAsWritten(ArgsAsWritten),
-        NameLoc(NameLoc), TSK(TSK) {
-    // Note: ExternLoc and TSK can diverge in MSVC mode, where dllimport on
-    // an explicit instantiation definition (no 'extern' keyword) causes
-    // TSK to be changed to TSK_ExplicitInstantiationDeclaration.
-    if (isTagInstantiation())
-      TagKWLoc = TagKWLoc_;
-    else
-      TypeAsWritten = TypeAsWritten_;
+        SpecAndTSK(Specialization, TSK), ExternLoc(ExternLoc),
+        NameLoc(NameLoc) {
+    unsigned Flags = 0;
+    if (QualifierLoc) {
+      Flags |= HasQualifierFlag;
+      *getTrailingObjects<NestedNameSpecifierLoc>() = QualifierLoc;
+    }
+    if (ArgsAsWritten) {
+      Flags |= HasArgsAsWrittenFlag;
+      *getTrailingObjects<const ASTTemplateArgumentListInfo *>() =
+          ArgsAsWritten;
+    }
+    TypeAndFlags.setPointerAndInt(TypeAsWritten, Flags);
   }
 
   ExplicitInstantiationDecl(EmptyShell Empty)
-      : Decl(ExplicitInstantiation, Empty), TagKWLoc() , TSK(TSK_Undeclared) {}
-
-  virtual void anchor();
+      : Decl(ExplicitInstantiation, Empty) {}
 
 public:
-  friend class ASTDeclReader;
-  friend class ASTDeclWriter;
-
   static ExplicitInstantiationDecl *
   Create(ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
          SourceLocation ExternLoc, SourceLocation TemplateLoc,
-         SourceLocation TagKWLoc, NestedNameSpecifierLoc QualifierLoc,
+         NestedNameSpecifierLoc QualifierLoc,
          const ASTTemplateArgumentListInfo *ArgsAsWritten,
          SourceLocation NameLoc, TypeSourceInfo *TypeAsWritten,
          TemplateSpecializationKind TSK);
 
-  static ExplicitInstantiationDecl *CreateDeserialized(ASTContext &C,
-                                                       GlobalDeclID ID);
+  static ExplicitInstantiationDecl *
+  CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned TrailingFlags);
 
-  NamedDecl *getSpecialization() const { return Specialization; }
+  NamedDecl *getSpecialization() const { return SpecAndTSK.getPointer(); }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   SourceLocation getExternLoc() const { return ExternLoc; }
   SourceLocation getTemplateLoc() const { return getLocation(); }
-  SourceLocation getTagKWLoc() const {
-    return isTagInstantiation() ? TagKWLoc : SourceLocation();
-  }
   SourceLocation getNameLoc() const { return NameLoc; }
 
-  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
+  /// For class templates / nested classes, the tag keyword location is
+  /// stored inside TypeSourceInfo; otherwise returns an invalid location.
+  SourceLocation getTagKWLoc() const;
 
-  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    return TemplateArgsAsWritten;
-  }
+  /// For class templates / nested classes, the qualifier is stored inside
+  /// TypeSourceInfo; for function / variable templates it is a trailing object.
+  NestedNameSpecifierLoc getQualifierLoc() const;
 
-  TypeSourceInfo *getTypeAsWritten() const {
-    return isTagInstantiation() ? nullptr : TypeAsWritten;
-  }
+  /// For class templates, the template args are encoded in TypeSourceInfo
+  /// and this returns null.  For function / variable templates the args are
+  /// stored as a trailing object.
+  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const;
+
+  TypeSourceInfo *getTypeAsWritten() const { return TypeAndFlags.getPointer(); }
 
   TemplateSpecializationKind getTemplateSpecializationKind() const {
-    return static_cast<TemplateSpecializationKind>(TSK);
+    return static_cast<TemplateSpecializationKind>(SpecAndTSK.getInt());
   }
 
   bool isExternTemplate() const { return ExternLoc.isValid(); }
