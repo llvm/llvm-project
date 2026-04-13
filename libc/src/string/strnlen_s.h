@@ -1,4 +1,4 @@
-//===-- Implementation of strnlen------------------------------------------===//
+//===-- Implementation header for strnlen_s ----------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strnlen.h"
-#include "src/__support/macros/config.h"
-#include "src/string/string_utils.h"
+#ifndef LLVM_LIBC_SRC_STRING_STRNLEN_S_H
+#define LLVM_LIBC_SRC_STRING_STRNLEN_S_H
 
-#include "src/__support/common.h"
-#include <stddef.h>
+#include "hdr/types/size_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(size_t, strnlen, (const char *src, size_t n)) {
-  return internal::strnlen(src, n);
-}
+size_t strnlen_s(const char *src, size_t n);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_STRING_STRNLEN_S_H
