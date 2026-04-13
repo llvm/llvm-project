@@ -43,8 +43,8 @@ def note_fe_backend_resource_limit: Note<"%0 (%1) exceeds limit (%2) in '%3'">, 
 def remark_fe_backend_plugin: Remark<"%0">, BackendInfo, InGroup<RemarkBackendPlugin>;
 def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
-def err_spirv_requires_vulkan : Error<
-    "SPIR-V target requires a Vulkan environment (e.g. '-target spirv64-unknown-vulkan1.3')">;
+def err_fe_spirv_requires_vulkan : Error<
+    "SPIR-V target '%0' requires a Vulkan environment (e.g. '-target spirv64-unknown-vulkan1.3')">;
 
 def warn_fe_override_module : Warning<
     "overriding the module target triple with %0">,

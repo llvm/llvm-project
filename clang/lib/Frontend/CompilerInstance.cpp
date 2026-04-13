@@ -119,7 +119,7 @@ bool CompilerInstance::createTarget() {
   if (Triple.getArch() == llvm::Triple::spirv) {
     if (Triple.getOS() != llvm::Triple::Vulkan ||
         Triple.getVulkanVersion() == llvm::VersionTuple(0)) {
-      getDiagnostics().Report(diag::err_spirv_requires_vulkan) << Triple.str();
+      getDiagnostics().Report(diag::err_fe_spirv_requires_vulkan) << Triple.str();
       return false;
     }
   }
