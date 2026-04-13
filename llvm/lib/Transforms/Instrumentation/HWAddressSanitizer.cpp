@@ -286,9 +286,7 @@ static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
 
 static cl::opt<uint64_t> ClTagBits(
     "hwasan-tag-bits",
-    cl::desc("Additional masking for tags. This gets applied after "
-             "the architecture specific mask for the ignored pointer bits. "
-             "Must be > 16 and one less than a power of two."),
+    cl::desc("Restrict tag to at most N bits. Needs to be > 4."),
     cl::Hidden, cl::init(0));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
