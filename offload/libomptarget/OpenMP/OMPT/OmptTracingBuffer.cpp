@@ -32,8 +32,10 @@ static std::atomic<uint64_t> BufId{0};
 // Unique id in buffer flush order
 static std::atomic<uint64_t> FlushId{0};
 
-thread_local OmptTracingBufferMgr::BufPtr
-    OmptTracingBufferMgr::ArrayOfBufPtr[MAX_NUM_DEVICES];
+OmptTracingBufferMgr::BufPtr *OmptTracingBufferMgr::getArrayOfBufPtr() {
+  thread_local BufPtr Array[MAX_NUM_DEVICES]{};
+  return Array;
+}
 
 static uint64_t get_and_inc_buf_id() { return BufId++; }
 
@@ -418,7 +420,7 @@ OmptTracingBufferMgr::getDeviceSpecificBuffer(int64_t DeviceId) {
              << MAX_NUM_DEVICES - 1;
     return nullptr;
   }
-  return ArrayOfBufPtr[DeviceId];
+  return getArrayOfBufPtr()[DeviceId];
 }
 
 void OmptTracingBufferMgr::setDeviceSpecificBuffer(int64_t DeviceId,
@@ -429,7 +431,7 @@ void OmptTracingBufferMgr::setDeviceSpecificBuffer(int64_t DeviceId,
              << MAX_NUM_DEVICES - 1;
     return;
   }
-  ArrayOfBufPtr[DeviceId] = Buf;
+  getArrayOfBufPtr()[DeviceId] = Buf;
 }
 
 void OmptTracingBufferMgr::setTRStatus(void *Rec, TRStatus Status) {
@@ -681,7 +683,7 @@ void OmptTracingBufferMgr::waitForFlushCompletion() {
 
 void OmptTracingBufferMgr::init() {
   for (int i = 0; i < MAX_NUM_DEVICES; ++i)
-    ArrayOfBufPtr[i] = nullptr;
+    getArrayOfBufPtr()[i] = nullptr;
   ThreadFlushTracker = 0;
   ThreadShutdownTracker = 0;
   DoneTracing = false; // TODO make it a class member

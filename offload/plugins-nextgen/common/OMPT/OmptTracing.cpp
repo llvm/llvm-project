@@ -46,39 +46,44 @@ std::mutex llvm::omp::target::ompt::DeviceIdWritingMutex;
 using namespace llvm::omp::target::ompt;
 using namespace llvm::omp::target::debug;
 
-std::shared_ptr<llvm::sys::DynamicLibrary>
-    llvm::omp::target::ompt::ParentLibrary(nullptr);
-
 double llvm::omp::target::ompt::HostToDeviceSlope = .0;
 double llvm::omp::target::ompt::HostToDeviceOffset = .0;
 
-std::map<ompt_device_t *, int32_t> llvm::omp::target::ompt::Devices;
+// File-local helper to hold the parent library shared_ptr as a function-local
+// static, avoiding a global destructor.
+static std::shared_ptr<llvm::sys::DynamicLibrary> &getParentLibraryStorage() {
+  static std::shared_ptr<llvm::sys::DynamicLibrary> Lib(nullptr);
+  return Lib;
+}
 
 std::shared_ptr<llvm::sys::DynamicLibrary>
 llvm::omp::target::ompt::getParentLibrary() {
-  static bool ParentLibraryAssigned = false;
-  if (!ParentLibraryAssigned) {
+  if (!getParentLibraryStorage()) {
     setParentLibrary("libomptarget.so");
-    ParentLibraryAssigned = true;
   }
-  return ParentLibrary;
+  return getParentLibraryStorage();
 }
 
 void llvm::omp::target::ompt::setParentLibrary(const char *Filename) {
-  if (ParentLibrary)
+  if (getParentLibraryStorage())
     return;
   std::string ErrorMsg;
-  ParentLibrary = std::make_shared<llvm::sys::DynamicLibrary>(
+  getParentLibraryStorage() = std::make_shared<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(Filename, &ErrorMsg));
-  if ((ParentLibrary == nullptr) || (!ParentLibrary->isValid()))
+  if (!getParentLibraryStorage() || !getParentLibraryStorage()->isValid())
     REPORT() << "Failed to set parent library: " << ErrorMsg.c_str();
+}
+
+std::map<ompt_device_t *, int32_t> &llvm::omp::target::ompt::getDevices() {
+  static std::map<ompt_device_t *, int32_t> Devices;
+  return Devices;
 }
 
 int llvm::omp::target::ompt::getDeviceId(ompt_device_t *Device) {
   // Block other threads, which might trigger an erase (for the same device)
   std::unique_lock<std::mutex> Lock(DeviceIdWritingMutex);
-  auto DeviceIterator = Devices.find(Device);
-  if (Device == nullptr || DeviceIterator == Devices.end()) {
+  auto DeviceIterator = getDevices().find(Device);
+  if (Device == nullptr || DeviceIterator == getDevices().end()) {
     REPORT() << "Failed to get ID for Device=" << Device;
     return -1;
   }
@@ -93,8 +98,8 @@ void llvm::omp::target::ompt::setDeviceId(ompt_device_t *Device,
     return;
   }
   std::unique_lock<std::mutex> Lock(DeviceIdWritingMutex);
-  auto DeviceIterator = Devices.find(Device);
-  if (DeviceIterator != Devices.end()) {
+  auto DeviceIterator = getDevices().find(Device);
+  if (DeviceIterator != getDevices().end()) {
     auto CurrentDeviceId = DeviceIterator->second;
     if (DeviceId == CurrentDeviceId) {
       REPORT() << "Tried to duplicate OMPT Device= " << Device <<  " ID=" << DeviceId;
@@ -103,7 +108,7 @@ void llvm::omp::target::ompt::setDeviceId(ompt_device_t *Device,
     }
     return;
   }
-  Devices.emplace(Device, DeviceId);
+  getDevices().emplace(Device, DeviceId);
 }
 
 void llvm::omp::target::ompt::removeDeviceId(ompt_device_t *Device) {
@@ -113,8 +118,8 @@ void llvm::omp::target::ompt::removeDeviceId(ompt_device_t *Device) {
     return;
   }
   std::unique_lock<std::mutex> Lock(DeviceIdWritingMutex);
-  Devices.erase(Device);
-  TracedDevices.erase(DeviceId);
+  getDevices().erase(Device);
+  getTracedDevices().erase(DeviceId);
 }
 
 OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *Device,

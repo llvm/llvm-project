@@ -42,17 +42,25 @@ std::mutex llvm::omp::target::ompt::TraceControlMutex;
 std::mutex llvm::omp::target::ompt::TraceHashThreadMutex;
 std::mutex llvm::omp::target::ompt::BufferManagementFnMutex;
 
-std::unordered_map<int /*DeviceId*/, std::pair<ompt_callback_buffer_request_t,
-                                               ompt_callback_buffer_complete_t>>
-    llvm::omp::target::ompt::BufferManagementFns;
-
 thread_local uint32_t llvm::omp::target::ompt::TraceRecordNumGrantedTeams = 0;
 thread_local uint64_t llvm::omp::target::ompt::TraceRecordStartTime = 0;
 thread_local uint64_t llvm::omp::target::ompt::TraceRecordStopTime = 0;
 thread_local uint64_t llvm::omp::target::ompt::ThreadId =
     std::numeric_limits<uint64_t>::max();
 
-std::map<int32_t, uint64_t> llvm::omp::target::ompt::TracedDevices;
+// File-local helper returning a reference to the buffer-management map stored
+// as a function-local static, avoiding a global destructor.
+static auto &getBufferMgmt() {
+  static std::unordered_map<int, std::pair<ompt_callback_buffer_request_t,
+                                           ompt_callback_buffer_complete_t>>
+      M;
+  return M;
+}
+
+std::map<int32_t, uint64_t> &llvm::omp::target::ompt::getTracedDevices() {
+  static std::map<int32_t, uint64_t> TracedDevices;
+  return TracedDevices;
+}
 
 bool llvm::omp::target::ompt::TracingActive = false;
 
@@ -61,8 +69,8 @@ void llvm::omp::target::ompt::resetTimestamp(uint64_t *T) { *T = 0; }
 ompt_callback_buffer_request_t
 llvm::omp::target::ompt::getBufferRequestFn(int DeviceId) {
   std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
-  auto BufferMgrItr = BufferManagementFns.find(DeviceId);
-  if (BufferMgrItr == BufferManagementFns.end()) {
+  auto BufferMgrItr = getBufferMgmt().find(DeviceId);
+  if (BufferMgrItr == getBufferMgmt().end()) {
     return nullptr;
   }
   return BufferMgrItr->second.first;
@@ -71,8 +79,8 @@ llvm::omp::target::ompt::getBufferRequestFn(int DeviceId) {
 ompt_callback_buffer_complete_t
 llvm::omp::target::ompt::getBufferCompleteFn(int DeviceId) {
   std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
-  auto BufferMgrItr = BufferManagementFns.find(DeviceId);
-  if (BufferMgrItr == BufferManagementFns.end()) {
+  auto BufferMgrItr = getBufferMgmt().find(DeviceId);
+  if (BufferMgrItr == getBufferMgmt().end()) {
     return nullptr;
   }
   return BufferMgrItr->second.second;
@@ -82,29 +90,29 @@ void llvm::omp::target::ompt::setBufferManagementFns(
     int DeviceId, ompt_callback_buffer_request_t ReqFn,
     ompt_callback_buffer_complete_t CmpltFn) {
   std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
-  auto BufferMgrItr = BufferManagementFns.find(DeviceId);
-  if (BufferMgrItr != BufferManagementFns.end()) {
+  auto BufferMgrItr = getBufferMgmt().find(DeviceId);
+  if (BufferMgrItr != getBufferMgmt().end()) {
     REPORT() << "Buffer request and complete functions already exist for device  "
              << DeviceId  << "ignoring ...";
     return;
   }
-  BufferManagementFns[DeviceId] = std::make_pair(ReqFn, CmpltFn);
+  getBufferMgmt()[DeviceId] = std::make_pair(ReqFn, CmpltFn);
 }
 
 void llvm::omp::target::ompt::removeBufferManagementFns(int DeviceId) {
   std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
-  auto BufferMgrItr = BufferManagementFns.find(DeviceId);
-  if (BufferMgrItr == BufferManagementFns.end()) {
+  auto BufferMgrItr = getBufferMgmt().find(DeviceId);
+  if (BufferMgrItr == getBufferMgmt().end()) {
     REPORT() << "Buffer request and complete functions don't exist for device  "
              << DeviceId  << "ignoring ...";
     return;
   }
-  BufferManagementFns.erase(BufferMgrItr);
+  getBufferMgmt().erase(BufferMgrItr);
 }
 
 bool llvm::omp::target::ompt::isAllDeviceTracingStopped() {
   std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
-  return BufferManagementFns.empty();
+  return getBufferMgmt().empty();
 }
 
 void llvm::omp::target::ompt::ompt_callback_buffer_request(
@@ -137,11 +145,11 @@ inline bool checkDeviceTracingState(const uint64_t &TracingTypes) {
 
 void llvm::omp::target::ompt::enableDeviceTracing(int DeviceId) {
   std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
-  auto Device = TracedDevices.find(DeviceId);
-  if (Device == TracedDevices.end()) {
+  auto Device = getTracedDevices().find(DeviceId);
+  if (Device == getTracedDevices().end()) {
     uint64_t TracingTypes{0};
     setDeviceTracing(TracingTypes);
-    TracedDevices.emplace(DeviceId, TracingTypes);
+    getTracedDevices().emplace(DeviceId, TracingTypes);
   } else
     setDeviceTracing(Device->second);
   // In any case: at least one device is traced
@@ -150,16 +158,16 @@ void llvm::omp::target::ompt::enableDeviceTracing(int DeviceId) {
 
 void llvm::omp::target::ompt::disableDeviceTracing(int DeviceId) {
   std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
-  auto Device = TracedDevices.find(DeviceId);
-  if (Device == TracedDevices.end()) {
+  auto Device = getTracedDevices().find(DeviceId);
+  if (Device == getTracedDevices().end()) {
     uint64_t TracingTypes{0};
     resetDeviceTracing(TracingTypes);
-    TracedDevices.emplace(DeviceId, TracingTypes);
+    getTracedDevices().emplace(DeviceId, TracingTypes);
   } else
     resetDeviceTracing(Device->second);
 
   // Check for actively traced devices
-  for (auto &Dev : TracedDevices)
+  for (auto &Dev : getTracedDevices())
     if (checkDeviceTracingState(Dev.second))
       return;
 
@@ -175,8 +183,8 @@ bool llvm::omp::target::ompt::isTracingEnabled(int DeviceId,
 
 bool llvm::omp::target::ompt::isTracedDevice(int DeviceId) {
   std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
-  auto Device = TracedDevices.find(DeviceId);
-  if (Device != TracedDevices.end())
+  auto Device = getTracedDevices().find(DeviceId);
+  if (Device != getTracedDevices().end())
     return checkDeviceTracingState(Device->second);
 
   return false;
@@ -187,8 +195,8 @@ bool llvm::omp::target::ompt::isTracingTypeEnabled(int DeviceId,
   std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
   // Make sure we do not shift more than std::numeric_limits<uint64_t>::digits
   assert(EventTy < 64 && "Shift limit exceeded: EventTy must be less than 64");
-  auto Device = TracedDevices.find(DeviceId);
-  if (Device != TracedDevices.end() && EventTy < 64)
+  auto Device = getTracedDevices().find(DeviceId);
+  if (Device != getTracedDevices().end() && EventTy < 64)
     return (Device->second & (1UL << EventTy));
   return false;
 }
@@ -198,8 +206,8 @@ bool llvm::omp::target::ompt::isTracingTypeGroupEnabled(int DeviceId,
   std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
   // Make sure we do not shift more than std::numeric_limits<uint64_t>::digits
   assert(EventTy < 64 && "Shift limit exceeded: EventTy must be less than 64");
-  auto Device = TracedDevices.find(DeviceId);
-  if (Device != TracedDevices.end() && EventTy < 64) {
+  auto Device = getTracedDevices().find(DeviceId);
+  if (Device != getTracedDevices().end() && EventTy < 64) {
     auto TracedEvents = Device->second;
     switch (EventTy) {
     case ompt_callbacks_t::ompt_callback_target:
@@ -252,10 +260,10 @@ llvm::omp::target::ompt::setTraceEventTy(int DeviceId, unsigned int Enable,
                  << " Enable=" << Enable << " EventTy=" << EventTy;
 
   std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
-  if (TracedDevices.find(DeviceId) == TracedDevices.end())
-    TracedDevices.emplace(DeviceId, 0UL);
+  if (getTracedDevices().find(DeviceId) == getTracedDevices().end())
+    getTracedDevices().emplace(DeviceId, 0UL);
 
-  auto &TracedEventTy = TracedDevices[DeviceId];
+  auto &TracedEventTy = getTracedDevices()[DeviceId];
   bool Enabled = Enable > 0;
   if (EventTy == 0) {
     // Set / reset all supported types

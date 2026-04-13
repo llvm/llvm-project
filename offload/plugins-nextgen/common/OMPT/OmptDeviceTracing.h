@@ -85,18 +85,16 @@ extern double HostToDeviceSlope;
 /// Host to device constant clock offset
 extern double HostToDeviceOffset;
 
-/// Mapping of device pointers to their corresponding RTL device ID
-extern std::map<ompt_device_t *, int32_t> Devices;
+/// Access the map of device pointers to their corresponding RTL device ID
+std::map<ompt_device_t *, int32_t> &getDevices();
 
-/// Mapping of RTL device IDs to their currently enabled tracing event types.
-/// Note: Event type '0' (bit position) indicates if this device is traced.
-extern std::map<int32_t, uint64_t> TracedDevices;
+/// Access the map of RTL device IDs to their currently enabled tracing event
+/// types. Note: Event type '0' (bit position) indicates if this device is
+/// traced.
+std::map<int32_t, uint64_t> &getTracedDevices();
 
 /// OMPT global tracing status. Indicates if at least one device is traced.
 extern bool TracingActive;
-
-/// Parent library pointer
-extern std::shared_ptr<llvm::sys::DynamicLibrary> ParentLibrary;
 
 /// Get the parent library by pointer. If it is not already set, it will set the
 /// parent library pointer.
@@ -111,10 +109,10 @@ void setParentLibrary(const char *Filename);
 template <typename FT>
 void ensureFuncPtrLoaded(const std::string &FuncName, FT *FuncPtr) {
   if (*FuncPtr == nullptr) {
-    if ((ParentLibrary == nullptr && getParentLibrary() == nullptr) ||
-        !ParentLibrary->isValid())
+    auto Lib = getParentLibrary();
+    if (!Lib || !Lib->isValid())
       return;
-    void *SymbolPtr = ParentLibrary->getAddressOfSymbol(FuncName.c_str());
+    void *SymbolPtr = Lib->getAddressOfSymbol(FuncName.c_str());
     if (SymbolPtr == nullptr)
       return;
     *FuncPtr = reinterpret_cast<FT>(SymbolPtr);

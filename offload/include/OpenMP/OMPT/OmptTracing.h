@@ -102,8 +102,9 @@ ompt_set_result_t setTraceEventTy(int DeviceId, unsigned int Enable,
 /// Return thread id
 uint64_t getThreadId();
 
-/// See TracedDevices in OmptDeviceTracing.h
-extern std::map<int32_t, uint64_t> TracedDevices;
+/// Access the map of RTL device IDs to their currently enabled tracing event
+/// types. See also OmptDeviceTracing.h.
+std::map<int32_t, uint64_t> &getTracedDevices();
 /// Activate tracing on the given device
 void enableDeviceTracing(int DeviceId);
 /// Deactivate tracing on the given device
@@ -122,12 +123,6 @@ extern std::mutex TraceHashThreadMutex;
 /// Protect map from device-id to the corresponding buffer-request and
 /// buffer-completion callback functions.
 extern std::mutex BufferManagementFnMutex;
-
-/// Map from device-id to the corresponding buffer-request and buffer-completion
-/// callback functions.
-extern std::unordered_map<int, std::pair<ompt_callback_buffer_request_t,
-                                         ompt_callback_buffer_complete_t>>
-    BufferManagementFns;
 
 /// Thread local variables used by the plugin to communicate OMPT information
 /// that are then used to populate trace records. This method assumes a
