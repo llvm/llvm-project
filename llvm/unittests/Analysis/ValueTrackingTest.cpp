@@ -1913,7 +1913,7 @@ TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
   expectKnownFPClass(fcPositive, false, A7);
 }
 
-TEST_F(ComputeKnownFPClassTest, PowiInfBasic) {
+TEST_F(ComputeKnownFPClassTest, PowiInfFirst) {
   parseAssembly(
       "declare float @llvm.powi.f32.i32(float, i32)\n"
       "define float @test(i1 %cond, i32 %x, float %unknown,\n"
@@ -1940,21 +1940,21 @@ TEST_F(ComputeKnownFPClassTest, PowiInfBasic) {
   expectKnownFPClass(fcAllFlags, std::nullopt, A6);
   expectKnownFPClass(~fcInf, std::nullopt, A7);
 
-  // auto ExpectKnownNeverInf = [&](Instruction *I, bool Expected) {
-  //   KnownFPClass Known = computeKnownFPClass(I, M->getDataLayout(), fcInf);
-  //   EXPECT_EQ(Expected, Known.isKnownNeverInfinity());
-  // };
+  auto ExpectKnownNeverInf = [&](Instruction *I, bool Expected) {
+    KnownFPClass Known = computeKnownFPClass(I, M->getDataLayout(), fcInf);
+    EXPECT_EQ(Expected, Known.isKnownNeverInfinity());
+  };
 
-  // ExpectKnownNeverInf(A, true);
-  // ExpectKnownNeverInf(A2, false);
-  // ExpectKnownNeverInf(A3, true);
-  // ExpectKnownNeverInf(A4, true);
-  // ExpectKnownNeverInf(A5, false);
-  // ExpectKnownNeverInf(A6, false);
-  // ExpectKnownNeverInf(A7, true);
+  ExpectKnownNeverInf(A,  true);
+  ExpectKnownNeverInf(A2, false);
+  ExpectKnownNeverInf(A3, true);
+  ExpectKnownNeverInf(A4, true);
+  ExpectKnownNeverInf(A5, false);
+  ExpectKnownNeverInf(A6, false);
+  ExpectKnownNeverInf(A7, true);
 }
 
-TEST_F(ComputeKnownFPClassTest, PowiInfSpecial) {
+TEST_F(ComputeKnownFPClassTest, PowiInfSecond) {
   parseAssembly(
       "declare float @llvm.powi.f32.i32(float, i32)\n"
       "define float @test(i32 %x, float %unknown,\n"
