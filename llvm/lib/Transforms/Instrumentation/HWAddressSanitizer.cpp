@@ -52,6 +52,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
@@ -283,10 +284,10 @@ static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
                                       cl::desc("Use page aliasing in HWASan"),
                                       cl::Hidden, cl::init(false));
 
-static cl::opt<uint64_t> ClTagMask(
-    "hwasan-tag-mask",
-    cl::desc("Don't use the top bit of the pointer for alloca tags"),
-    cl::Hidden, cl::init(0));
+static cl::opt<uint64_t>
+    ClTagMask("hwasan-tag-mask",
+              cl::desc("Don't use the top bit of the pointer for alloca tags"),
+              cl::Hidden, cl::init(0));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -682,8 +683,14 @@ void HWAddressSanitizer::initializeModule() {
   DetectUseAfterScope = shouldDetectUseAfterScope(TargetTriple);
   PointerTagShift = IsX86_64 ? 57 : 56;
   TagMaskByte = IsX86_64 ? 0x3F : 0xFF;
-  if (ClTagMask)
+  if (ClTagMask) {
+    if ((TagMaskByte + 1) & TagMaskByte)
+      reportFatalUsageError(
+          "-hwasan-tag-mask must be one less than a power of two.");
+    if (TagMaskByte < 16)
+      reportFatalUsageError("-hwasan-tag-mask must >= 16");
     TagMaskByte &= ClTagMask;
+  }
 
   Mapping.init(TargetTriple, InstrumentWithCalls, CompileKernel);
 
