@@ -376,21 +376,15 @@ public:
 };
 
 bool isConvergenceIntrinsic(const Instruction *I) {
-  return match(
-      I, m_CombineOr(
-             m_Intrinsic<Intrinsic::experimental_convergence_entry>(),
-             m_CombineOr(
-                 m_Intrinsic<Intrinsic::experimental_convergence_loop>(),
-                 m_Intrinsic<Intrinsic::experimental_convergence_anchor>())));
+  return match(I, m_AnyIntrinsic<Intrinsic::experimental_convergence_entry,
+                                 Intrinsic::experimental_convergence_loop,
+                                 Intrinsic::experimental_convergence_anchor>());
 }
 
 bool expectIgnoredInIRTranslation(const Instruction *I) {
-  return match(
-      I,
-      m_CombineOr(
-          m_Intrinsic<Intrinsic::invariant_start>(),
-          m_CombineOr(m_Intrinsic<Intrinsic::spv_resource_handlefrombinding>(),
-                      m_Intrinsic<Intrinsic::spv_resource_getpointer>())));
+  return match(I, m_AnyIntrinsic<Intrinsic::invariant_start,
+                                 Intrinsic::spv_resource_handlefrombinding,
+                                 Intrinsic::spv_resource_getpointer>());
 }
 
 // Returns the source pointer from `I` ignoring intermediate ptrcast.
@@ -441,8 +435,9 @@ static void setInsertPointAfterDef(IRBuilder<> &B, Instruction *I) {
 }
 
 static bool requireAssignType(Instruction *I) {
-  return !match(I, m_CombineOr(m_Intrinsic<Intrinsic::invariant_start>(),
-                               m_Intrinsic<Intrinsic::invariant_end>()));
+  return !match(
+      I,
+      m_AnyIntrinsic<Intrinsic::invariant_start, Intrinsic::invariant_end>());
 }
 
 static inline void reportFatalOnTokenType(const Instruction *I) {
@@ -1625,8 +1620,7 @@ static void createSaturatedConversionDecoration(Instruction *I,
 }
 
 static void addSaturatedDecorationToIntrinsic(Instruction *I, IRBuilder<> &B) {
-  if (match(I, m_CombineOr(m_Intrinsic<Intrinsic::fptosi_sat>(),
-                           m_Intrinsic<Intrinsic::fptoui_sat>())))
+  if (match(I, m_AnyIntrinsic<Intrinsic::fptosi_sat, Intrinsic::fptoui_sat>()))
     createSaturatedConversionDecoration(I, B);
 }
 
@@ -2464,8 +2458,7 @@ bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
   // Add aliasing decorations to internal load and store intrinsics
   // and atomic instructions, skipping atomic store as it won't have ID to
   // attach the decoration.
-  if (match(Inst, m_CombineOr(m_Intrinsic<Intrinsic::spv_load>(),
-                              m_Intrinsic<Intrinsic::spv_store>())))
+  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>()))
     return true;
   auto *CI = dyn_cast<CallInst>(Inst);
   if (!CI)
