@@ -482,6 +482,21 @@ int __ompt_get_task_memory_internal(void **addr, size_t *size, int blocknum) {
 }
 
 //----------------------------------------------------------
+// target region support
+//----------------------------------------------------------
+
+int __ompt_set_frame_enter_internal(void *addr, int flags, int state) {
+  int gtid = __kmp_entry_gtid();
+  kmp_info_t *thr = __kmp_threads[gtid];
+
+  ompt_frame_t *ompt_frame = &OMPT_CUR_TASK_INFO(thr)->frame;
+  OMPT_FRAME_SET(ompt_frame, enter, addr, flags);
+  int old_state = thr->th.ompt_thread_info.state;
+  thr->th.ompt_thread_info.state = ompt_state_work_parallel;
+  return old_state;
+}
+
+//----------------------------------------------------------
 // team support
 //----------------------------------------------------------
 
