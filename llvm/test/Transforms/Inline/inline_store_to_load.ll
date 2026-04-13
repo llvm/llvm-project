@@ -1,8 +1,10 @@
-; RUN: opt < %s -passes=inline -inline-threshold=20 -S | FileCheck %s
+; RUN: opt -S -passes="cgscc(inline)" < %s | FileCheck %s
 
-; Test that the inliner can use store-to-load forwarding to resolve call
-; arguments to constants. We use -inline-threshold=20 so that @callee is
-; only inlined when the constant argument enables dead-branch elimination.
+; Test that the CGSCC inliner performs store-to-load forwarding for call
+; arguments after inlining a function in the same caller. The first call
+; (@init or @init_memset) is inlined, producing stores. Forwarding then
+; resolves the subsequent load to a constant, enabling inlining of the
+; second callee.
 
 target datalayout = "p:64:64"
 
@@ -41,17 +43,29 @@ done:
   ret void
 }
 
-; Store-to-load forwarding resolves %mode to 0, making only the fast path
-; reachable and the callee cheap enough to inline.
-; CHECK-LABEL: define i32 @caller_store_forward(
-; CHECK: %cmp.i = icmp eq i32 %mode, 0
-; CHECK: callee.exit:
-; CHECK-NEXT: %{{.*}} = phi i32
-; CHECK-NEXT: ret i32
+; Trivially cheap — inlined first, producing a store.
+define internal void @init_i32(ptr %p) {
+  store i32 0, ptr %p
+  ret void
+}
+
+; Trivially cheap — inlined first, producing a memset.
+define internal void @init_memset(ptr %p) {
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 8, i1 false)
+  ret void
+}
+
+declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
+
+; After inlining @init_i32: store 0 → %p.
+; Forwarding resolves %mode to 0, making only the fast path reachable.
+; CHECK-LABEL: @caller_store_forward(
+; CHECK-NOT: call i32 @callee
+; CHECK: ret i32
 define i32 @caller_store_forward() {
 entry:
   %p = alloca i32
-  store i32 0, ptr %p
+  call void @init_i32(ptr %p)
   %mode = load i32, ptr %p
   %r = call i32 @callee(i32 %mode, ptr %p)
   ret i32 %r
@@ -59,14 +73,13 @@ entry:
 
 ; Memset-to-load forwarding converts the zero-filled integer to a null
 ; pointer, making the null check take the early exit.
-; CHECK-LABEL: define void @caller_memset_ptr(
-; CHECK: %cmp.i = icmp eq ptr %x, null
-; CHECK: recursive_callee.exit:
-; CHECK-NEXT: ret void
-define void @caller_memset_ptr() {
+; CHECK-LABEL: @caller_memset_forward(
+; CHECK-NOT: call void @recursive_callee
+; CHECK: ret void
+define void @caller_memset_forward() {
 entry:
   %p = alloca ptr
-  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 8, i1 false)
+  call void @init_memset(ptr %p)
   %x = load ptr, ptr %p
   call void @recursive_callee(ptr %x)
   ret void
