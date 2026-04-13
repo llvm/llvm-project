@@ -893,11 +893,36 @@ def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for", [], [0]> {
 // Stack save/restore intrinsics.
 //
 
-def LLVM_StackSaveOp : LLVM_OneResultIntrOp<"stacksave", [0]> {
+// Technically, llvm.intrin.stacksave does not free the stack,
+// but MemFree<AutomaticAllocationScopeResource> seems to be
+// an appropriate effect to guarantee that the allocations
+// between stacksave/stackrestore cannot be moved out of
+// the stacksave/stackrestore "scope".
+// For example,
+//   %ptr = llvm.intrin.stacksave : !llvm.ptr
+//   %alloca = llvm.alloca %zero x i32 : (i32) -> !llvm.ptr
+//   ... = llvm.load %alloca : !llvm.ptr -> i32
+//   llvm.store %x, %alloca : i32, !llvm.ptr
+//   llvm.intrin.stackrestore %ptr : !llvm.ptr
+//
+// The 'llvm.alloca' should not be movable neither before
+// llvm.intrin.stacksave nor after llvm.intrin.stackrestore.
+// Moreover, llvm.intrin.stackrestore cannot be moved
+// above the load the the store.
+//
+// The 'Free' affect on 'AutomaticAllocationScopeResource'
+// for both stacksave and stackrestore should guarantee that.
+def LLVM_StackSaveOp
+    : LLVM_OneResultIntrOp<
+          "stacksave", [0], [],
+          [MemoryEffects<[MemFree<AutomaticAllocationScopeResource>]>]> {
   let assemblyFormat = "attr-dict `:` qualified(type($res))";
 }
 
-def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore", [0]> {
+def LLVM_StackRestoreOp
+    : LLVM_ZeroResultIntrOp<
+          "stackrestore", [0],
+          [MemoryEffects<[MemFree<AutomaticAllocationScopeResource>]>]> {
   let arguments = (ins LLVM_AnyPointer:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
