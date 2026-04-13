@@ -60,15 +60,15 @@ static bool CallFrameAddressIsValid(ABISP abi_sp, lldb::addr_t cfa) {
   return cfa != 0 && cfa != 1;
 }
 
-#define UNWIND_LOG(log, ...)                                                   \
-  LLDB_LOG(log, "{0}th{1}/fr{2} {3}",                                          \
-           llvm::indent(std::min(m_frame_number, 100U)),                       \
-           m_thread.GetIndexID(), m_frame_number, llvm::formatv(__VA_ARGS__))
+#define UNWIND_LOG_IMPL(LOG_FN, log, ...)                                      \
+  LOG_FN(log, "{0}th{1}/fr{2} {3}",                                            \
+         llvm::indent(std::min(m_frame_number, 100U)), m_thread.GetIndexID(),  \
+         m_frame_number, llvm::formatv(__VA_ARGS__))
+
+#define UNWIND_LOG(log, ...) UNWIND_LOG_IMPL(LLDB_LOG, log, __VA_ARGS__)
 
 #define UNWIND_LOG_VERBOSE(log, ...)                                           \
-  LLDB_LOG_VERBOSE(                                                            \
-      log, "{0}th{1}/fr{2} {3}", llvm::indent(std::min(m_frame_number, 100U)), \
-      m_thread.GetIndexID(), m_frame_number, llvm::formatv(__VA_ARGS__))
+  UNWIND_LOG_IMPL(LLDB_LOG_VERBOSE, log, __VA_ARGS__)
 
 RegisterContextUnwind::RegisterContextUnwind(Thread &thread,
                                              const SharedPtr &next_frame,
@@ -1958,14 +1958,14 @@ bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
   if (active_row &&
       active_row->GetCFAValue().GetValueType() !=
           UnwindPlan::Row::FAValue::unspecified) {
-    Log *log = GetLog(LLDBLog::Unwind);
     addr_t new_cfa;
     ProcessSP process_sp = m_thread.GetProcess();
     ABISP abi_sp = process_sp ? process_sp->GetABI() : nullptr;
     if (!ReadFrameAddress(m_fallback_unwind_plan_sp->GetRegisterKind(),
                           active_row->GetCFAValue(), new_cfa) ||
         !CallFrameAddressIsValid(abi_sp, new_cfa)) {
-      UNWIND_LOG(log, "failed to get cfa with fallback unwindplan");
+      UNWIND_LOG(GetLog(LLDBLog::Unwind),
+                 "failed to get cfa with fallback unwindplan");
       m_fallback_unwind_plan_sp.reset();
       return false;
     }
@@ -1982,7 +1982,8 @@ bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
 
     PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
 
-    UNWIND_LOG(log, "switched unconditionally to the fallback unwindplan {0}",
+    UNWIND_LOG(GetLog(LLDBLog::Unwind),
+               "switched unconditionally to the fallback unwindplan {0}",
                m_full_unwind_plan_sp->GetSourceName());
     return true;
   }
@@ -2043,13 +2044,13 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
 bool RegisterContextUnwind::ReadFrameAddress(
     lldb::RegisterKind row_register_kind, const UnwindPlan::Row::FAValue &fa,
     addr_t &address) {
-  Log *log = GetLog(LLDBLog::Unwind);
   RegisterValue reg_value;
 
   address = LLDB_INVALID_ADDRESS;
   addr_t cfa_reg_contents;
   ABISP abi_sp = m_thread.GetProcess()->GetABI();
 
+  Log *log = GetLog(LLDBLog::Unwind);
   switch (fa.GetValueType()) {
   case UnwindPlan::Row::FAValue::isRegisterDereferenced: {
     UNWIND_LOG(log, "CFA value via dereferencing reg");
@@ -2191,8 +2192,8 @@ lldb::addr_t RegisterContextUnwind::GetReturnAddressHint(int32_t plan_offset) {
                 *next->m_sym_ctx.symbol))
       hint += *expected_size;
     else {
-      Log *log = GetLog(LLDBLog::Unwind);
-      UNWIND_LOG_VERBOSE(log, "Could not retrieve parameter size: {0}",
+      UNWIND_LOG_VERBOSE(GetLog(LLDBLog::Unwind),
+                         "Could not retrieve parameter size: {0}",
                          fmt_consume(expected_size.takeError()));
       return LLDB_INVALID_ADDRESS;
     }
