@@ -246,6 +246,11 @@ public:
   unsigned getAllocSize() const { return AllocSize; }
   /// returns the size of an element when the structure is viewed as an array.
   unsigned getElemSize() const { return ElemSize; }
+  /// Returns the element data size, i.e. not what the size of
+  /// our primitive data type is, but what the data size of that is.
+  /// E.g., for PT_SInt32, that's 4 bytes.
+  unsigned getElemDataSize() const;
+
   /// Returns the size of the metadata.
   unsigned getMetadataSize() const { return MDSize; }
 

@@ -228,11 +228,21 @@ private:
 void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
   CurrentCI.Kind = stringToCommentKind(C->getCommentKindName());
   ConstCommentVisitor<ClangDocCommentVisitor>::visit(C);
-  for (comments::Comment *Child :
-       llvm::make_range(C->child_begin(), C->child_end())) {
-    CurrentCI.Children.emplace_back(allocatePtr<CommentInfo>());
-    ClangDocCommentVisitor Visitor(*CurrentCI.Children.back());
-    Visitor.parseComment(Child);
+
+  unsigned NumChildren = C->child_count();
+  if (NumChildren > 0) {
+    CommentInfo *ChildrenArray =
+        TransientArena.Allocate<CommentInfo>(NumChildren);
+    unsigned I = 0;
+    for (comments::Comment *Child :
+         llvm::make_range(C->child_begin(), C->child_end())) {
+      new (&ChildrenArray[I]) CommentInfo();
+      ClangDocCommentVisitor Visitor(ChildrenArray[I]);
+      Visitor.parseComment(Child);
+      I++;
+    }
+    CurrentCI.Children =
+        llvm::ArrayRef<CommentInfo>(ChildrenArray, NumChildren);
   }
 }
 
@@ -458,8 +468,10 @@ bool Serializer::shouldSerializeInfo(bool PublicOnly,
 //
 // See MakeAndInsertIntoParent().
 void Serializer::InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
-  Scope.Namespaces.emplace_back(Info.USR, Info.Name, InfoType::IT_namespace,
-                                Info.Name, getInfoRelativePath(Info.Namespace));
+  Reference *R = allocatePtr<Reference>(TransientArena, Info.USR, Info.Name,
+                                        InfoType::IT_namespace, Info.Name,
+                                        getInfoRelativePath(Info.Namespace));
+  Scope.Namespaces.push_back(*R);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
@@ -1013,8 +1025,7 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
     if (auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(ActualDecl)) {
       FunctionInfo TempInfo;
       parseParameters(TempInfo, FuncDecl);
-      F.Params.emplace();
-      F.Params = std::move(TempInfo.Params);
+      F.Params = allocateArray<FieldTypeInfo>(TempInfo.Params, TransientArena);
       F.ReturnType = getTypeInfoForType(FuncDecl->getReturnType(),
                                         FuncDecl->getLangOpts());
     }

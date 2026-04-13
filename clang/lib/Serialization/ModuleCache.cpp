@@ -10,6 +10,7 @@
 
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
@@ -151,6 +152,7 @@ clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
       llvm::sys::fs::openNativeFileForRead(FileName);
   if (!FD)
     return FD.takeError();
+  llvm::scope_exit CloseFD([&FD]() { llvm::sys::fs::closeFile(*FD); });
   llvm::sys::fs::file_status Status;
   if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
     return llvm::errorCodeToError(EC);
@@ -169,16 +171,6 @@ class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
 
 public:
-  void prepareForGetLock(StringRef ModuleFilename) override {
-    // This is a compiler-internal input/output, let's bypass the sandbox.
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-
-    // FIXME: Do this in LockFileManager and only if the directory doesn't
-    // exist.
-    StringRef Dir = llvm::sys::path::parent_path(ModuleFilename);
-    llvm::sys::fs::create_directories(Dir);
-  }
-
   std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) override {
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);

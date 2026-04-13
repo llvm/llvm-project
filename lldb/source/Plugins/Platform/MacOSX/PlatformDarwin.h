@@ -71,6 +71,8 @@ public:
   LocateExecutableScriptingResourcesForPlatform(
       Target *target, Module &module_spec, Stream &feedback_stream) override;
 
+  bool IsSymbolFileTrusted(Module &module) override;
+
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,

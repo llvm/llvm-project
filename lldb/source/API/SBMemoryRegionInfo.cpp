@@ -119,7 +119,7 @@ bool SBMemoryRegionInfo::IsMapped() {
 const char *SBMemoryRegionInfo::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetName().AsCString();
+  return m_opaque_up->GetName().AsCString(nullptr);
 }
 
 bool SBMemoryRegionInfo::HasDirtyMemoryPageList() {

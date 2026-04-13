@@ -91,11 +91,10 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
       continue;
     auto next = command.entries()[entry.index() + 1].ref();
     if (next == "int" || next == "short" || next == "char" || next == "long") {
-      result.AppendWarningWithFormat(
-          "unsigned %s being treated as two types. if you meant the combined "
-          "type "
-          "name use  quotes, as in \"unsigned %s\"\n",
-          next.str().c_str(), next.str().c_str());
+      result.AppendWarningWithFormatv(
+          "unsigned {0} being treated as two types. if you meant the combined "
+          "type name use quotes, as in \"unsigned {0}\"",
+          next);
       return true;
     }
   }
@@ -1293,9 +1292,9 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
     if (interpreter && !interpreter->CheckObjectExists(funct_name))
-      result.AppendWarningWithFormat(
-          "The provided function \"%s\" does not exist - "
-          "please define it before attempting to use this summary.\n",
+      result.AppendWarningWithFormatv(
+          "the provided function \"{0}\" does not exist - "
+          "please define it before attempting to use this summary",
           funct_name);
   } else if (!m_options.m_python_script
                   .empty()) // we have a quick 1-line script, just use it
@@ -1616,7 +1615,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2198,7 +2197,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   const char *python_class_name = impl->GetPythonClassName();
   if (interpreter && !interpreter->CheckObjectExists(python_class_name))
     result.AppendWarningWithFormatv(
-        "The provided class '{0}' does not exist - please define it "
+        "the provided class '{0}' does not exist - please define it "
         "before attempting to use this synthetic provider",
         llvm::StringRef(python_class_name));
 
@@ -2262,10 +2261,10 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter,
                              false)) {
       if (error)
-        *error = Status::FromErrorStringWithFormat(
-            "cannot add synthetic for type %s when "
+        *error = Status::FromErrorStringWithFormatv(
+            "cannot add synthetic for type {0} when "
             "filter is defined in same category!",
-            type_name.AsCString());
+            type_name);
       return false;
     }
   }
@@ -2281,7 +2280,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2404,11 +2403,11 @@ private:
       if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth,
                                false)) {
         if (error)
-          *error = Status::FromErrorStringWithFormat(
-              "cannot add filter for type %s when "
+          *error = Status::FromErrorStringWithFormatv(
+              "cannot add filter for type {0} when "
               "synthetic is defined in same "
               "category!",
-              type_name.AsCString());
+              type_name);
         return false;
       }
     }

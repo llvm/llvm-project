@@ -85,6 +85,10 @@ decltype(decl1) decl2; decl2
 const decltype(N::D()) decl3; decl3
 // CHECK-NEXT: (const N::D &) @0x{{[0-9a-f]+}}
 
+// Check printing of UnaryTransformType (this used to assert)
+__remove_extent(N::D)* decl4; decl4
+// CHECK-NEXT: (N::D *)
+
 // int i = 12;
 // int &iref = i;
 // iref

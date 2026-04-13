@@ -176,6 +176,7 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
   launch_info.SetArguments(args, true);
   launch_info.SetLaunchInSeparateProcessGroup(true);
   launch_info.GetFlags().Clear(eLaunchFlagDebug);
+  launch_info.GetEnvironment() = Host::GetEnvironment();
 
   auto exit_code = std::make_shared<std::optional<int>>();
   launch_info.SetMonitorProcessCallback(

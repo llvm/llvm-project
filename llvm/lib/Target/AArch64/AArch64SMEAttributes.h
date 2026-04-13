@@ -43,12 +43,10 @@ public:
     SM_Body = 1 << 2,         // aarch64_pstate_sm_body
     SME_ABI_Routine = 1 << 3, // Used for SME ABI routines to avoid lazy saves
     ZA_State_Agnostic = 1 << 4,
-    ZT0_Undef = 1 << 5, // Use to mark ZT0 as undef to avoid spills
     ZA_Shift = 6,
     ZA_Mask = 0b111 << ZA_Shift,
     ZT0_Shift = 9,
-    ZT0_Mask = 0b111 << ZT0_Shift,
-    CallSiteFlags_Mask = ZT0_Undef
+    ZT0_Mask = 0b111 << ZT0_Shift
   };
 
   SMEAttrs() = default;
@@ -134,7 +132,6 @@ public:
   bool isPreservesZT0() const {
     return decodeZT0State(Bitmask) == StateValue::Preserved;
   }
-  bool hasUndefZT0() const { return Bitmask & ZT0_Undef; }
   bool sharesZT0() const {
     StateValue State = decodeZT0State(Bitmask);
     return State == StateValue::In || State == StateValue::Out ||
@@ -146,10 +143,6 @@ public:
     SMEAttrs Merged(*this);
     Merged.set(Other.Bitmask);
     return Merged;
-  }
-
-  SMEAttrs withoutPerCallsiteFlags() const {
-    return (Bitmask & ~CallSiteFlags_Mask);
   }
 
   bool operator==(SMEAttrs const &Other) const {
@@ -197,8 +190,8 @@ public:
   }
 
   bool requiresPreservingZT0() const {
-    return caller().hasZT0State() && !callsite().hasUndefZT0() &&
-           !callee().sharesZT0() && !callee().hasAgnosticZAInterface();
+    return caller().hasZT0State() && !callee().sharesZT0() &&
+           !callee().hasAgnosticZAInterface();
   }
 
   bool requiresDisablingZABeforeCall() const {

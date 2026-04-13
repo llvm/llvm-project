@@ -117,6 +117,23 @@ static int getChildIndexIfExists(OwningVec<T> &Children, T &ChildToMerge) {
 }
 
 template <typename T>
+static void reduceChildren(llvm::simple_ilist<T> &Children,
+                           llvm::simple_ilist<T> &&ChildrenToMerge) {
+  while (!ChildrenToMerge.empty()) {
+    T *ChildToMerge = &ChildrenToMerge.front();
+    ChildrenToMerge.pop_front();
+
+    auto It = llvm::find_if(
+        Children, [&](const T &C) { return C.USR == ChildToMerge->USR; });
+    if (It == Children.end()) {
+      Children.push_back(*ChildToMerge);
+    } else {
+      It->merge(std::move(*ChildToMerge));
+    }
+  }
+}
+
+template <typename T>
 static void reduceChildren(OwningVec<T> &Children,
                            OwningVec<T> &&ChildrenToMerge) {
   for (auto &ChildToMerge : ChildrenToMerge) {
@@ -126,6 +143,14 @@ static void reduceChildren(OwningVec<T> &Children,
       continue;
     }
     Children[MergeIdx].merge(std::move(ChildToMerge));
+  }
+}
+
+template <typename Container>
+static void mergeUnkeyed(Container &Target, Container &&Source) {
+  for (auto &Item : Source) {
+    if (llvm::none_of(Target, [&](const auto &E) { return E == Item; }))
+      Target.push_back(std::move(Item));
   }
 }
 
@@ -171,7 +196,7 @@ bool CommentInfo::operator==(const CommentInfo &Other) const {
     return false;
 
   return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                    llvm::deref<std::equal_to<>>{});
+                    Other.Children.end());
 }
 
 bool CommentInfo::operator<(const CommentInfo &Other) const {
@@ -186,9 +211,9 @@ bool CommentInfo::operator<(const CommentInfo &Other) const {
     return true;
 
   if (FirstCI == SecondCI) {
-    return std::lexicographical_compare(
-        Children.begin(), Children.end(), Other.Children.begin(),
-        Other.Children.end(), llvm::deref<std::less<>>());
+    return std::lexicographical_compare(Children.begin(), Children.end(),
+                                        Other.Children.begin(),
+                                        Other.Children.end());
   }
 
   return false;
@@ -275,11 +300,7 @@ void Info::mergeBase(Info &&Other) {
   if (Namespace.empty())
     Namespace = std::move(Other.Namespace);
   // Unconditionally extend the description, since each decl may have a comment.
-  std::move(Other.Description.begin(), Other.Description.end(),
-            std::back_inserter(Description));
-  llvm::sort(Description);
-  auto Last = llvm::unique(Description);
-  Description.erase(Last, Description.end());
+  mergeUnkeyed(Description, std::move(Other.Description));
   if (ParentUSR == EmptySID)
     ParentUSR = Other.ParentUSR;
   if (DocumentationFileName.empty())
@@ -295,10 +316,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   if (!DefLoc)
     DefLoc = std::move(Other.DefLoc);
   // Unconditionally extend the list of locations, since we want all of them.
-  std::move(Other.Loc.begin(), Other.Loc.end(), std::back_inserter(Loc));
-  llvm::sort(Loc);
-  auto *Last = llvm::unique(Loc);
-  Loc.erase(Last, Loc.end());
+  mergeUnkeyed(Loc, std::move(Other.Loc));
   mergeBase(std::move(Other));
   if (MangledName.empty())
     MangledName = std::move(Other.MangledName);
@@ -510,7 +528,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 }
 
 void ScopeChildren::sort() {
-  llvm::sort(Namespaces);
+  Namespaces.sort();
   llvm::sort(Records);
   llvm::sort(Functions);
   llvm::sort(Enums);

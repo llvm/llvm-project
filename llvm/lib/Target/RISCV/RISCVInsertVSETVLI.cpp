@@ -138,7 +138,8 @@ private:
   void insertReadVL(MachineBasicBlock &MBB);
 
   bool canMutatePriorConfig(const MachineInstr &PrevMI, const MachineInstr &MI,
-                            const DemandedFields &Used) const;
+                            const DemandedFields &Used,
+                            MachineInstr *&AVLDefToMove) const;
   void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
   bool insertVSETMTK(MachineBasicBlock &MBB, TKTMMode Mode) const;
 };
@@ -744,9 +745,12 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
 
 // Return true if we can mutate PrevMI to match MI without changing any the
 // fields which would be observed.
+// If AVLDefToMove is non-null after the call, it points to an ADDI
+// instruction that needs to be moved before PrevMI.
 bool RISCVInsertVSETVLI::canMutatePriorConfig(
     const MachineInstr &PrevMI, const MachineInstr &MI,
-    const DemandedFields &Used) const {
+    const DemandedFields &Used, MachineInstr *&AVLDefToMove) const {
+  AVLDefToMove = nullptr;
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
@@ -769,8 +773,20 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
     if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
       VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
       VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
-      if (!VNI || !PrevVNI || VNI != PrevVNI)
-        return false;
+      if (!VNI || !PrevVNI || VNI != PrevVNI) {
+        // If the AVL is defined by a load immediate instruction (ADDI x0, imm),
+        // it can be moved earlier since it has no register dependencies.
+        if (!AVL.getReg().isVirtual())
+          return false;
+
+        MachineInstr *DefMI = MRI->getUniqueVRegDef(AVL.getReg());
+        if (!DefMI || !RISCVInstrInfo::isLoadImmediate(*DefMI) ||
+            DefMI->getParent() != PrevMI.getParent()) {
+          return false;
+        }
+        // Mark that this ADDI needs to be moved.
+        AVLDefToMove = DefMI;
+      }
     }
 
     // If we define VL and need to move the definition up, check we can extend
@@ -843,7 +859,8 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
         continue;
       }
 
-      if (canMutatePriorConfig(MI, *NextMI, Used)) {
+      MachineInstr *AVLDefToMove = nullptr;
+      if (canMutatePriorConfig(MI, *NextMI, Used, AVLDefToMove)) {
         if (!RISCVInstrInfo::isVLPreservingConfig(*NextMI)) {
           Register DefReg = NextMI->getOperand(0).getReg();
 
@@ -854,9 +871,18 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
           dropAVLUse(MI.getOperand(1));
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
-          else
+          else {
             MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(),
                                               false);
+
+            // If canMutatePriorConfig indicated that an ADDI needs to be moved,
+            // move it now.
+            if (AVLDefToMove) {
+              AVLDefToMove->moveBefore(&MI);
+              if (LIS)
+                LIS->handleMove(*AVLDefToMove);
+            }
+          }
           dropAVLUse(NextMI->getOperand(1));
 
           // The def of DefReg moved to MI, so extend the LiveInterval up to

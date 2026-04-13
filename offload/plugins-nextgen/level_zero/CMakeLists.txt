@@ -1,3 +1,10 @@
+# Find Level Zero headers and libraries
+find_path(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR NAMES level_zero/ze_api.h)
+if(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR)
+  find_library(LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY NAMES ze_loader)
+endif()
+
+
 # Create the library and add the default arguments.
 add_target_library(omptarget.rtl.level_zero LEVEL_ZERO)
 
@@ -22,13 +29,15 @@ target_include_directories(omptarget.rtl.level_zero PRIVATE
 
 target_include_directories(omptarget.rtl.level_zero PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
-  ${LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR}
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 )
 
-if (EXISTS ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY} AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
+if (LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building Level Zero NG plugin linked against level_zero library")
- if(UNIX)
+  target_include_directories(omptarget.rtl.level_zero PRIVATE
+    ${LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR}
+  )
+  if(UNIX)
     target_link_libraries(omptarget.rtl.level_zero PRIVATE
         ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY})
   elseif(WIN32)
@@ -44,7 +53,10 @@ if (EXISTS ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY} AND NOT "level_zero" IN_LIST L
   endif()
 else()
   message(STATUS "Building Level Zero NG plugin for dlopened level_zero")
-  target_sources(omptarget.rtl.level_zero PRIVATE src/L0DynWrapper.cpp)
+  target_include_directories(omptarget.rtl.level_zero PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_l0
+  )
+  target_sources(omptarget.rtl.level_zero PRIVATE dynamic_l0/L0DynWrapper.cpp)
 endif()
 
 option(LIBOMPTARGET_FORCE_LEVELZERO_TESTS "Build Level Zero libomptarget tests" OFF)

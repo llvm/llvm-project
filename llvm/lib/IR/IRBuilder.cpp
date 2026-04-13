@@ -927,12 +927,12 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
 }
 
 CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
-                                         ArrayRef<Type *> Types,
+                                         ArrayRef<Type *> OverloadTypes,
                                          ArrayRef<Value *> Args,
                                          FMFSource FMFSource,
                                          const Twine &Name) {
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Types);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, OverloadTypes);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }
 

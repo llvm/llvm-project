@@ -33,6 +33,13 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(OwnedPtr<CommentInfo>)
 namespace llvm {
 namespace yaml {
 
+template <typename T> struct SequenceTraits<llvm::ArrayRef<T>> {
+  static size_t size(IO &io, llvm::ArrayRef<T> &seq) { return seq.size(); }
+  static T &element(IO &io, llvm::ArrayRef<T> &seq, size_t index) {
+    return const_cast<T &>(seq[index]);
+  }
+};
+
 // Enumerations to YAML output.
 
 template <> struct ScalarEnumerationTraits<clang::AccessSpecifier> {
@@ -328,8 +335,10 @@ template <> struct MappingTraits<MemberTypeInfo> {
 template <> struct MappingTraits<NamespaceInfo> {
   static void mapping(IO &IO, NamespaceInfo &I) {
     infoMapping(IO, I);
-    IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
-                   OwningVec<Reference>());
+    std::vector<Reference> TempNamespaces;
+    for (const auto &N : I.Children.Namespaces)
+      TempNamespaces.push_back(N);
+    IO.mapOptional("ChildNamespaces", TempNamespaces, std::vector<Reference>());
     IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
     IO.mapOptional("ChildFunctions", I.Children.Functions);
     IO.mapOptional("ChildEnums", I.Children.Enums);
