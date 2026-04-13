@@ -2275,8 +2275,8 @@ void from_template_instantiation() {
 }
 
 struct FieldInitFromLifetimebound {
-  S value; // function-note {{this field dangles}}
-  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // function-warning {{address of stack memory escapes to a field}}
+  S value; // expected-note {{this field dangles}}
+  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{address of stack memory escapes to a field}}
 };
 
 S S::return_self_after_registration() const {
@@ -2467,13 +2467,13 @@ void nested_local_pointer() {
 }
 
 struct PFieldFromParam {
-  Pointer<Bar> value;                      // function-note {{this field dangles}}
-  PFieldFromParam(Bar bar) : value(bar) {} // function-warning {{address of stack memory escapes to a field}}
+  Pointer<Bar> value;                      // expected-note {{this field dangles}}
+  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{address of stack memory escapes to a field}}
 };
 
 struct PFieldFromTemp {
-  Pointer<Bar> value;                // function-note {{this field dangles}}
-  PFieldFromTemp() : value(Bar{}) {} // function-warning {{address of stack memory escapes to a field}}
+  Pointer<Bar> value;                // expected-note {{this field dangles}}
+  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{address of stack memory escapes to a field}}
 };
 
 } // namespace gslpointer_construction_from_lifetimebound
@@ -2531,3 +2531,24 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 }
 
 } // namespace conditional_operator_control_flow
+
+namespace CXXDefaultInitExprTests {
+struct Holder {
+  std::string_view view = std::string("temporary"); // expected-warning {{address of stack memory escapes to a field}} expected-note {{this field dangles}}
+  Holder() {}
+};
+} // namespace CXXDefaultInitExprTests
+
+namespace base_class_fields {
+struct X { int* x; }; // expected-note {{this field dangles}}
+struct Y : X {
+  int* y;
+  void bar() {
+    {
+      int a;
+      x = &a; // expected-warning {{address of stack memory escapes to a field}}
+    }
+    (void)x;
+  }
+};
+} // namespace base_class_fields
