@@ -1945,7 +1945,7 @@ TEST_F(ComputeKnownFPClassTest, PowiInfFirst) {
     EXPECT_EQ(Expected, Known.isKnownNeverInfinity());
   };
 
-  ExpectKnownNeverInf(A,  true);
+  ExpectKnownNeverInf(A, true);
   ExpectKnownNeverInf(A2, false);
   ExpectKnownNeverInf(A3, true);
   ExpectKnownNeverInf(A4, true);
