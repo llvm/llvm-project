@@ -115,7 +115,7 @@ define { i32, i32 } @swap16_hi_lo(i32 %a, i32 %b) {
 ; GFX11-TRUE16-LABEL: swap16_hi_lo:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_swap_b16 v1.h, v0.l
+; GFX11-TRUE16-NEXT:    v_swap_b16 v1.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: swap16_hi_lo:
@@ -134,7 +134,7 @@ define { i32, i32 } @swap16_hi_lo(i32 %a, i32 %b) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_swap_b16 v1.h, v0.l
+; GFX12-TRUE16-NEXT:    v_swap_b16 v1.l, v0.h
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: swap16_hi_lo:
@@ -218,7 +218,7 @@ define { i32, i32, i32 } @swap16_reuse(i32 %a, i32 %b) {
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v2, v3, v1, 0x7060302
-; GFX11-TRUE16-NEXT:    v_swap_b16 v3.l, v1.h
+; GFX11-TRUE16-NEXT:    v_swap_b16 v3.h, v1.l
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -242,7 +242,7 @@ define { i32, i32, i32 } @swap16_reuse(i32 %a, i32 %b) {
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_perm_b32 v2, v3, v1, 0x7060302
-; GFX12-TRUE16-NEXT:    v_swap_b16 v3.l, v1.h
+; GFX12-TRUE16-NEXT:    v_swap_b16 v3.h, v1.l
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
