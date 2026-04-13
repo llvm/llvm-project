@@ -729,9 +729,26 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   if (!MD || !MD->isInstance())
     return;
 
-  for (const auto *Field : MD->getParent()->fields())
-    if (auto *FieldList = getOriginsList(*Field))
-      CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(Call, FieldList));
+  const auto *ClassDecl = MD->getParent()->getDefinition();
+  if (!ClassDecl)
+    return;
+
+  const auto UseFields =
+      [&](const CXXRecordDecl *RD) {
+        for (const auto *Field : RD->fields())
+          if (auto *FieldList = getOriginsList(*Field)) {
+            CurrentBlockFacts.push_back(
+                FactMgr.createFact<UseFact>(Call, FieldList));
+            Field->dumpColor();
+          }
+      };
+
+  UseFields(ClassDecl);
+
+  ClassDecl->forallBases([&](const CXXRecordDecl *Base) {
+    UseFields(Base);
+    return true;
+  });
 }
 
 void FactsGenerator::handleFunctionCall(const Expr *Call,
