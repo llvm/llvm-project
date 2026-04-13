@@ -35,8 +35,7 @@ export float test_row1_col0() {
   return M[1][0];
 }
 
-// Verify the shuffle is emitted for non-constant init lists when the memory
-// layout is column-major, and not emitted when it is row-major.
+// Verify that elements are inserted at the correct positions according to the default matrix memory layout.
 
 export float2x3 test_dynamic(float a, float b, float c,
                              float d, float e, float f) {
@@ -44,17 +43,18 @@ export float2x3 test_dynamic(float a, float b, float c,
 // CHECK: [[A:%.*]] = load float, ptr %a.addr
 // CHECK: [[VECINIT0:%.*]] = insertelement <6 x float> poison, float [[A]], i32 0
 // CHECK: [[B:%.*]] = load float, ptr %b.addr
-// CHECK: [[VECINIT1:%.*]] = insertelement <6 x float> [[VECINIT0]], float [[B]], i32 1
+// COL-CHECK: [[VECINIT1:%.*]] = insertelement <6 x float> [[VECINIT0]], float [[B]], i32 2
+// ROW-CHECK: [[VECINIT1:%.*]] = insertelement <6 x float> [[VECINIT0]], float [[B]], i32 1
 // CHECK: [[C:%.*]] = load float, ptr %c.addr
-// CHECK: [[VECINIT2:%.*]] = insertelement <6 x float> [[VECINIT1]], float [[C]], i32 2
+// COL-CHECK: [[VECINIT2:%.*]] = insertelement <6 x float> [[VECINIT1]], float [[C]], i32 4
+// ROW-CHECK: [[VECINIT2:%.*]] = insertelement <6 x float> [[VECINIT1]], float [[C]], i32 2
 // CHECK: [[D:%.*]] = load float, ptr %d.addr
-// CHECK: [[VECINIT3:%.*]] = insertelement <6 x float> [[VECINIT2]], float [[D]], i32 3
+// COL-CHECK: [[VECINIT3:%.*]] = insertelement <6 x float> [[VECINIT2]], float [[D]], i32 1
+// ROW-CHECK: [[VECINIT3:%.*]] = insertelement <6 x float> [[VECINIT2]], float [[D]], i32 3
 // CHECK: [[E:%.*]] = load float, ptr %e.addr
-// CHECK: [[VECINIT4:%.*]] = insertelement <6 x float> [[VECINIT3]], float [[E]], i32 4
+// COL-CHECK: [[VECINIT4:%.*]] = insertelement <6 x float> [[VECINIT3]], float [[E]], i32 3
+// ROW-CHECK: [[VECINIT4:%.*]] = insertelement <6 x float> [[VECINIT3]], float [[E]], i32 4
 // CHECK: [[F:%.*]] = load float, ptr %f.addr
 // CHECK: [[VECINIT5:%.*]] = insertelement <6 x float> [[VECINIT4]], float [[F]], i32 5
-// COL-CHECK: shufflevector <6 x float> [[VECINIT5]], <6 x float> poison, <6 x i32> <i32 0, i32 3, i32 1, i32 4, i32 2, i32 5>
-// ROW-CHECK-NOT: shufflevector
-// ROW-CHECK: store <6 x float> [[VECINIT5]], ptr
   return (float2x3){a, b, c, d, e, f};
 }

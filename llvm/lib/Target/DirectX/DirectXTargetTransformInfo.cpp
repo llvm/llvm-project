@@ -62,6 +62,9 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_splitdouble:
   case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_readlane:
+  case Intrinsic::dx_wave_reduce_or:
+  case Intrinsic::dx_wave_reduce_xor:
+  case Intrinsic::dx_wave_reduce_and:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_min:
   case Intrinsic::dx_wave_reduce_sum:
@@ -74,6 +77,8 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_wave_uproduct:
   case Intrinsic::dx_wave_prefix_usum:
   case Intrinsic::dx_wave_prefix_uproduct:
+  case Intrinsic::dx_quad_read_across_x:
+  case Intrinsic::dx_quad_read_across_y:
   case Intrinsic::dx_imad:
   case Intrinsic::dx_umad:
   case Intrinsic::dx_ddx_coarse:

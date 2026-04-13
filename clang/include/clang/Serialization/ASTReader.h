@@ -185,8 +185,7 @@ public:
   /// otherwise.
   virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                        StringRef ModuleFilename,
-                                       StringRef SpecificModuleCachePath,
-                                       bool Complain) {
+                                       StringRef ContextHash, bool Complain) {
     return false;
   }
 
@@ -224,8 +223,9 @@ public:
   }
 
   /// This is called for each AST file loaded.
-  virtual void visitModuleFile(StringRef Filename,
-                               serialization::ModuleKind Kind) {}
+  virtual void visitModuleFile(ModuleFileName Filename,
+                               serialization::ModuleKind Kind,
+                               bool DirectlyImported) {}
 
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// input files of the AST file via \c visitInputFile, false otherwise.
@@ -304,8 +304,7 @@ public:
                              bool Complain) override;
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                StringRef ModuleFilename, bool ReadMacros,
@@ -315,8 +314,8 @@ public:
   void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
-  void visitModuleFile(StringRef Filename,
-                       serialization::ModuleKind Kind) override;
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override;
   bool visitInputFile(StringRef Filename, bool isSystem,
                       bool isOverridden, bool isExplicitModule) override;
   void readModuleFileExtension(
@@ -349,8 +348,7 @@ public:
                                bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
 };
@@ -968,8 +966,14 @@ private:
   SmallVector<serialization::SelectorID, 64> ReferencedSelectorsData;
 
   /// A snapshot of Sema's weak undeclared identifier tracking, for
-  /// generating warnings.
+  /// generating warnings. Note that this vector has 3n entries, being triplets
+  /// of the form C name, alias if any, and source location.
   SmallVector<serialization::IdentifierID, 64> WeakUndeclaredIdentifiers;
+
+  /// A snapshot of Sema's #redefine_extname'd undeclared identifier tracking,
+  /// for generating warnings. Note that this vector has 3n entries, being
+  /// triplets in the order of C name, asm name, and source location.
+  SmallVector<serialization::IdentifierID, 64> ExtnameUndeclaredIdentifiers;
 
   /// The IDs of type aliases for ext_vectors that exist in the chain.
   ///
@@ -1552,7 +1556,7 @@ public:
         : Mod(Mod), ImportedBy(ImportedBy), ImportLoc(ImportLoc) {}
   };
 
-  ASTReadResult ReadASTCore(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadASTCore(ModuleFileName FileName, ModuleKind Type,
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             SmallVectorImpl<ImportedModule> &Loaded,
                             off_t ExpectedSize, time_t ExpectedModTime,
@@ -1888,7 +1892,7 @@ public:
   /// NewLoadedModuleFile would refer to the address of the new loaded top level
   /// module. The state of NewLoadedModuleFile is unspecified if the AST file
   /// isn't loaded successfully.
-  ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadAST(ModuleFileName FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
                         unsigned ClientLoadCapabilities,
                         ModuleFile **NewLoadedModuleFile = nullptr);
@@ -2358,6 +2362,10 @@ public:
 
   void ReadWeakUndeclaredIdentifiers(
       SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WeakIDs) override;
+
+  void ReadExtnameUndeclaredIdentifiers(
+      SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &ExtnameIDs)
+      override;
 
   void ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) override;
 

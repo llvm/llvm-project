@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class NestedTemplateTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, debug_flags):
         self.build(dictionary=debug_flags)
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))

@@ -168,7 +168,7 @@ define <2 x i64> @testDoubleword(<2 x i64> %a, i64 %b, i64 %idx) {
 ; CHECK-32-NEXT:    add 5, 6, 6
 ; CHECK-32-NEXT:    addi 7, 1, -32
 ; CHECK-32-NEXT:    stxv 34, -32(1)
-; CHECK-32-NEXT:    rlwinm 6, 5, 2, 28, 29
+; CHECK-32-NEXT:    rlwinm 6, 5, 2, 28, 28
 ; CHECK-32-NEXT:    stwx 3, 7, 6
 ; CHECK-32-NEXT:    addi 3, 5, 1
 ; CHECK-32-NEXT:    addi 5, 1, -16

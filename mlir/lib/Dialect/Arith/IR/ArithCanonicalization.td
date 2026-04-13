@@ -288,12 +288,6 @@ def SelectI1ToNot :
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-// index_cast(index_cast(x)) -> x, if dstType == srcType.
-def IndexCastOfIndexCast :
-    Pat<(Arith_IndexCastOp:$res (Arith_IndexCastOp $x)),
-        (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
-
 // index_cast(extsi(x)) -> index_cast(x)
 def IndexCastOfExtSI :
     Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x)), (Arith_IndexCastOp $x)>;
@@ -301,12 +295,6 @@ def IndexCastOfExtSI :
 //===----------------------------------------------------------------------===//
 // IndexCastUIOp
 //===----------------------------------------------------------------------===//
-
-// index_castui(index_castui(x)) -> x, if dstType == srcType.
-def IndexCastUIOfIndexCastUI :
-    Pat<(Arith_IndexCastUIOp:$res (Arith_IndexCastUIOp $x, $nneg1), $nneg2),
-        (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
 
 // index_castui(extui(x)) -> index_castui(x)
 def IndexCastUIOfExtUI :
@@ -420,6 +408,29 @@ def TruncFUIToFPToUIToFP :
     Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x, $nneg), $rmf, $fmf),
         (Arith_UIToFPOp $x, $nneg),
         [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+
+//===----------------------------------------------------------------------===//
+// SIToFPOp
+//===----------------------------------------------------------------------===//
+
+// sitofp(extsi(x)) -> sitofp(x)
+def SIToFPOfExtSI :
+    Pat<(Arith_SIToFPOp (Arith_ExtSIOp $x)),
+        (Arith_SIToFPOp $x)>;
+
+// sitofp(extui(x)) -> uitofp(x)
+def SIToFPOfExtUI :
+    Pat<(Arith_SIToFPOp (Arith_ExtUIOp $x, $nneg)),
+        (Arith_UIToFPOp $x, $nneg)>;
+
+//===----------------------------------------------------------------------===//
+// UIToFPOp
+//===----------------------------------------------------------------------===//
+
+// uitofp(extui(x)) -> uitofp(x)
+def UIToFPOfExtUI :
+    Pat<(Arith_UIToFPOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
+        (Arith_UIToFPOp $x, $nneg1)>;
 
 //===----------------------------------------------------------------------===//
 // MulFOp

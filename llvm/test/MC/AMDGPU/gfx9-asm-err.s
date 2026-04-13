@@ -5,7 +5,7 @@ global_load_dword v[2:3], off
 // GFX9ERR: :[[@LINE-1]]:1: error: too few operands for instruction
 
 global_load_lds_dword v[2:3], off
-// GFX9ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX9ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx900): global_load_lds_dword
 
 s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_HOST_TRAP_ACK)
 // GFX9ERR: :[[@LINE-1]]:31: error: specified operation id is not supported on this GPU

@@ -599,6 +599,12 @@ namespace llvm {
                                  const SelectionDAG &DAG,
                                  const MachineMemOperand &MMO) const override;
 
+    bool isProfitableToCombineMinNumMaxNum(EVT VT) const override {
+      // X86 has instructions that correspond to cmp + select, so forming
+      // minnum/maxnum is not profitable.
+      return false;
+    }
+
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 

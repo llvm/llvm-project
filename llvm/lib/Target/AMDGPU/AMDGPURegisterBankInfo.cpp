@@ -1417,9 +1417,8 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
       MRI.setRegBank(LoadParts[i], AMDGPU::VGPRRegBank);
     }
 
-    MachineMemOperand *MMO = BaseMMO;
     if (i != 0)
-      BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset + 16 * i, MemSize);
+      BaseMMO = MF.getMachineMemOperand(BaseMMO, 16, MemSize);
 
     B.buildInstr(getSBufferLoadCorrespondingBufferLoadOpcode(MI.getOpcode()))
         .addDef(LoadParts[i])       // vdata
@@ -1430,7 +1429,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
         .addImm(ImmOffset + 16 * i) // offset(imm)
         .addImm(0)                  // cachepolicy, swizzled buffer(imm)
         .addImm(0)                  // idxen(imm)
-        .addMemOperand(MMO);
+        .addMemOperand(BaseMMO);
   }
 
   // TODO: If only the resource is a VGPR, it may be better to execute the
@@ -4075,8 +4074,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_INTRINSIC_ROUNDEVEN:
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
-  case AMDGPU::G_FMINIMUM:
-  case AMDGPU::G_FMAXIMUM:
   case AMDGPU::G_FMINIMUMNUM:
   case AMDGPU::G_FMAXIMUMNUM:
   case AMDGPU::G_INTRINSIC_TRUNC:
@@ -4087,6 +4084,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = Ty.getSizeInBits();
     if (Subtarget.hasSALUFloatInsts() && Ty.isScalar() &&
+        (Size == 32 || Size == 16) && isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  }
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMAXIMUM: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = Ty.getSizeInBits();
+    if (Subtarget.hasSALUMinimumMaximumInsts() && Ty.isScalar() &&
         (Size == 32 || Size == 16) && isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
@@ -5549,7 +5555,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
     case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
       OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      // LDS address goes into $vdst (VGPR).
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       unsigned M0Bank =
           getRegBankID(MI.getOperand(5).getReg(), MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[5] = AMDGPU::getValueMapping(M0Bank, 32);
@@ -5562,10 +5569,18 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_load_async_to_lds_b8:
     case Intrinsic::amdgcn_global_load_async_to_lds_b32:
     case Intrinsic::amdgcn_global_load_async_to_lds_b64:
-    case Intrinsic::amdgcn_global_load_async_to_lds_b128:
-    case Intrinsic::amdgcn_load_to_lds:
-    case Intrinsic::amdgcn_global_load_lds: {
+    case Intrinsic::amdgcn_global_load_async_to_lds_b128: {
       OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      // LDS address goes into $vdst/$vdata (VGPR).
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      break;
+    }
+    case Intrinsic::amdgcn_load_to_lds:
+    case Intrinsic::amdgcn_load_async_to_lds:
+    case Intrinsic::amdgcn_global_load_lds:
+    case Intrinsic::amdgcn_global_load_async_lds: {
+      OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      // LDS address goes into M0 (SGPR).
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }

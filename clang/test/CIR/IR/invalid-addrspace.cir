@@ -50,3 +50,23 @@ cir.func @lang_address_space_empty(%p : !cir.ptr<!u64i, lang_address_space()>) {
 cir.func @lang_address_space_invalid(%p : !cir.ptr<!u64i, lang_address_space(foobar)>) {
   cir.return
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+cir.global external target_address_space(1) @global_in_as1 = #cir.int<42> : !s32i
+cir.func @get_global_mismatched_address_space() {
+  // expected-error@+1 {{result type address space does not match the address space of the global @global_in_as1}}
+  %0 = cir.get_global @global_in_as1 : !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+cir.global external @global_default_as = #cir.int<0> : !s32i
+cir.func @get_global_unexpected_address_space() {
+  // expected-error@+1 {{result type address space does not match the address space of the global @global_default_as}}
+  %0 = cir.get_global @global_default_as : !cir.ptr<!s32i, target_address_space(1)>
+  cir.return
+}

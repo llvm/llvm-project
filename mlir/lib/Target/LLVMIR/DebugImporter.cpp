@@ -57,12 +57,21 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
       static_cast<
           std::underlying_type_t<llvm::DICompileUnit::DebugNameTableKind>>(
           node->getNameTableKind()));
+  SmallVector<DINodeAttr> imports;
+  if (node->getImportedEntities()) {
+    for (llvm::DIImportedEntity *importedEntity : node->getImportedEntities())
+      if (DINodeAttr nodeAttr =
+              translate(static_cast<llvm::DINode *>(importedEntity)))
+        imports.push_back(nodeAttr);
+  }
   return DICompileUnitAttr::get(
-      context, getOrCreateDistinctID(node),
+      context, /*recId=*/DistinctAttr{}, /*isRecSelf=*/false,
+      getOrCreateDistinctID(node),
       node->getSourceLanguage().getUnversionedName(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value(), nameTableKind.value(),
-      getStringAttrOrNull(node->getRawSplitDebugFilename()));
+      node->isOptimized(), emissionKind.value(),
+      node->isDebugInfoForProfiling(), nameTableKind.value(),
+      getStringAttrOrNull(node->getRawSplitDebugFilename()), imports);
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
@@ -104,6 +113,7 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
       translate(dyn_cast_or_null<llvm::DINode>(node->getExtraData()));
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
+      translate(node->getFile()), node->getLine(), translate(node->getScope()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
       node->getOffsetInBits(), node->getDWARFAddressSpace(),
       symbolizeDIFlags(node->getFlags()).value_or(DIFlags::Zero), extraData);
@@ -425,8 +435,9 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   return nullptr;
 }
 
-/// Get the `getRecSelf` constructor for the translated type of `node` if its
-/// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
+/// Get the `getRecSelf` constructor for the translated node if it participates
+/// in CyclicReplacerCache cycle breaking (recursive composite types,
+/// subprograms, or compile units).
 static function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
 getRecSelfConstructor(llvm::DINode *node) {
   using CtorType = function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
@@ -436,6 +447,9 @@ getRecSelfConstructor(llvm::DINode *node) {
       })
       .Case([&](llvm::DISubprogram *) {
         return CtorType(DISubprogramAttr::getRecSelf);
+      })
+      .Case([&](llvm::DICompileUnit *) {
+        return CtorType(DICompileUnitAttr::getRecSelf);
       })
       .Default(CtorType());
 }

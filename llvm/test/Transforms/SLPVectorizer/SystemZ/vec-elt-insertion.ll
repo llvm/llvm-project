@@ -73,7 +73,7 @@ define void @fun1(double %0) {
 ; REMARK-LABEL: Function: fun1
 ; REMARK: Args:
 ; REMARK:      - String:          'SLP vectorized with cost '
-; REMARK-NEXT: - Cost:            '-3'
+; REMARK-NEXT: - Cost:            '-2'
 
   br label %2
 

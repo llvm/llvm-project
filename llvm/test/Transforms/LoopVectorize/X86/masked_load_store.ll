@@ -17,9 +17,9 @@ target triple = "x86_64-pc_linux"
 ;  }
 ;}
 
-define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo1(
-; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -52,7 +52,7 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       [[SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo1(
-; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -131,7 +131,7 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo1(
-; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -212,14 +212,14 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
   %1 = load i32, ptr %arrayidx3, align 4
   %add = add nsw i32 %1, %0
@@ -227,20 +227,20 @@ if.then:                                          ; preds = %for.body
   store i32 %add, ptr %arrayidx7, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
 ; The same as @foo1 but all the pointers are address space 1 pointers.
 
-define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) nocapture readonly %B, ptr addrspace(1) nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) nocapture readonly %B, ptr addrspace(1) nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo1_addrspace1(
-; AVX1-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
@@ -273,7 +273,7 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX1:       [[SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo1_addrspace1(
-; AVX2-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
@@ -352,7 +352,7 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo1_addrspace1(
-; AVX512-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
@@ -433,14 +433,14 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %trigger, i64 %indvars.iv
   %0 = load i32, ptr addrspace(1) %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds i32, ptr addrspace(1) %B, i64 %indvars.iv
   %1 = load i32, ptr addrspace(1) %arrayidx3, align 4
   %add = add nsw i32 %1, %0
@@ -448,12 +448,12 @@ if.then:                                          ; preds = %for.body
   store i32 %add, ptr addrspace(1) %arrayidx7, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -468,9 +468,9 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo2(
-; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -504,7 +504,7 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       [[SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo2(
-; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -588,7 +588,7 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo2(
-; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
@@ -674,14 +674,14 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds float, ptr %B, i64 %indvars.iv
   %1 = load float, ptr %arrayidx3, align 4
   %conv = sitofp i32 %0 to float
@@ -690,12 +690,12 @@ if.then:                                          ; preds = %for.body
   store float %add, ptr %arrayidx7, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -710,9 +710,9 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo3(
-; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX1:       [[VECTOR_MEMCHECK]]:
@@ -775,7 +775,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       [[SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo3(
-; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
 ; AVX2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
@@ -838,7 +838,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2:       [[SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo3(
-; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
 ; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
@@ -926,14 +926,14 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds double, ptr %B, i64 %indvars.iv
   %1 = load double, ptr %arrayidx3, align 8
   %conv = sitofp i32 %0 to double
@@ -942,12 +942,12 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx7, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -962,9 +962,9 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) {
 ; AVX-LABEL: define void @foo4(
-; AVX-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; AVX-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX-NEXT:  [[ENTRY:.*]]:
 ; AVX-NEXT:    br label %[[FOR_BODY:.*]]
 ; AVX:       [[FOR_BODY]]:
@@ -990,7 +990,7 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: define void @foo4(
-; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*:]]
 ; AVX512-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
@@ -1031,14 +1031,14 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %1 = shl nuw nsw i64 %indvars.iv, 1
   %arrayidx3 = getelementptr inbounds double, ptr %B, i64 %1
   %2 = load double, ptr %arrayidx3, align 8
@@ -1048,12 +1048,12 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx7, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 16
   %cmp = icmp ult i64 %indvars.iv.next, 10000
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -1070,9 +1070,9 @@ for.end:                                          ; preds = %for.inc
 ;  }
 ;}
 
-define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr nocapture readonly %trigger) {
 ; AVX1-LABEL: define void @foo6(
-; AVX1-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*]]:
 ; AVX1-NEXT:    br label %[[FOR_BODY:.*]]
 ; AVX1:       [[FOR_BODY]]:
@@ -1096,7 +1096,7 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX1-NEXT:    ret void
 ;
 ; AVX2-LABEL: define void @foo6(
-; AVX2-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
 ; AVX2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
@@ -1175,7 +1175,7 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX2:       [[SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo6(
-; AVX512-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*:]]
 ; AVX512-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
@@ -1256,14 +1256,14 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %indvars.iv = phi i64 [ 4095, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx3 = getelementptr inbounds double, ptr %in, i64 %indvars.iv
   %1 = load double, ptr %arrayidx3, align 8
   %add = fadd double %1, 5.000000e-01
@@ -1271,12 +1271,12 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx5, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nsw i64 %indvars.iv, -1
   %cmp = icmp eq i64 %indvars.iv, 0
   br i1 %cmp, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }
 
@@ -1288,9 +1288,9 @@ for.end:                                          ; preds = %for.inc
 ;      out[i] = (double) 0.5;
 ; }
 
-define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) local_unnamed_addr #0 {
+define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) {
 ; AVX1-LABEL: define void @foo7(
-; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX1-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1382,7 +1382,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo7(
-; AVX2-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
 ; AVX2-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX2-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1474,7 +1474,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo7(
-; AVX512-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*:]]
 ; AVX512-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX512-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1569,11 +1569,11 @@ entry:
   %cmp5 = icmp eq i32 %size, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %size to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i8, ptr %trigger, i64 %indvars.iv
   %0 = load i8, ptr %arrayidx, align 1
@@ -1581,23 +1581,23 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %tobool = icmp eq i8 %1, 0
   br i1 %tobool, label %for.inc, label %land.lhs.true
 
-land.lhs.true:                                    ; preds = %for.body
+land.lhs.true:
   %arrayidx2 = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv
   %2 = load ptr, ptr %arrayidx2, align 8
   %cmp3 = icmp eq ptr %2, null
   br i1 %cmp3, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %land.lhs.true
+if.then:
   %arrayidx5 = getelementptr inbounds double, ptr %out, i64 %indvars.iv
   store double 5.000000e-01, ptr %arrayidx5, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %land.lhs.true, %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   ret void
 }
 
@@ -1609,9 +1609,9 @@ for.end:                                          ; preds = %for.inc, %entry
 ;      out[i] = (double) 0.5;
 ;}
 
-define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) local_unnamed_addr #0 {
+define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, ptr noalias nocapture readonly %trigger, i32 %size) {
 ; AVX1-LABEL: define void @foo8(
-; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX1-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX1-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1703,7 +1703,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX2-LABEL: define void @foo8(
-; AVX2-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX2-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
 ; AVX2-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX2-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1795,7 +1795,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo8(
-; AVX512-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; AVX512-SAME: ptr noalias captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]], ptr noalias readonly captures(none) [[TRIGGER:%.*]], i32 [[SIZE:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*:]]
 ; AVX512-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[SIZE]], 0
 ; AVX512-NEXT:    br i1 [[CMP5]], [[FOR_END:label %.*]], label %[[ITER_CHECK:.*]]
@@ -1890,11 +1890,11 @@ entry:
   %cmp5 = icmp eq i32 %size, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %size to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i8, ptr %trigger, i64 %indvars.iv
   %0 = load i8, ptr %arrayidx, align 1
@@ -1902,24 +1902,23 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %tobool = icmp eq i8 %1, 0
   br i1 %tobool, label %for.inc, label %land.lhs.true
 
-land.lhs.true:                                    ; preds = %for.body
+land.lhs.true:
   %arrayidx2 = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv
   %2 = load ptr, ptr %arrayidx2, align 8
   %cmp3 = icmp eq ptr %2, null
   br i1 %cmp3, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %land.lhs.true
+if.then:
   %arrayidx5 = getelementptr inbounds double, ptr %out, i64 %indvars.iv
   store double 5.000000e-01, ptr %arrayidx5, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %land.lhs.true, %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   ret void
 }
 
-attributes #0 = { norecurse nounwind }

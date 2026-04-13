@@ -481,7 +481,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
   default:
     llvm_unreachable("Illegal primitive type transformers!");
   }
-  PD.PT = static_cast<uint8_t>(PT);
+  PD.PT = PT;
   PrototypeDescriptorStr = PrototypeDescriptorStr.drop_back();
 
   // Compute the vector type transformers, it can only appear one time.
@@ -650,7 +650,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
       llvm_unreachable("Illegal complex type transformers!");
     }
   }
-  PD.VTM = static_cast<uint8_t>(VTM);
+  PD.VTM = VTM;
 
   // Compute the remain type transformers
   TypeModifier TM = TypeModifier::NoModifier;
@@ -688,7 +688,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
       llvm_unreachable("Illegal non-primitive type transformer!");
     }
   }
-  PD.TM = static_cast<uint8_t>(TM);
+  PD.TM = TM;
 
   return PD;
 }
@@ -972,9 +972,9 @@ static uint64_t computeRVVTypeHashValue(BasicType BT, int Log2LMUL,
   // | Log2LMUL + 3  | BT  | Proto.PT | Proto.TM | Proto.VTM |
   assert(Log2LMUL >= -3 && Log2LMUL <= 3);
   return (Log2LMUL + 3) | (static_cast<uint64_t>(BT) & 0xffff) << 8 |
-         ((uint64_t)(Proto.PT & 0xff) << 24) |
-         ((uint64_t)(Proto.TM & 0xff) << 32) |
-         ((uint64_t)(Proto.VTM & 0xff) << 40);
+         (static_cast<uint64_t>(Proto.PT) << 24) |
+         (static_cast<uint64_t>(Proto.TM) << 32) |
+         (static_cast<uint64_t>(Proto.VTM) << 40);
 }
 
 std::optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
@@ -1086,10 +1086,9 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       } else if (NF > 1) {
         if (IsTuple) {
           PrototypeDescriptor BasePtrOperand = Prototype[1];
-          PrototypeDescriptor MaskoffType = PrototypeDescriptor(
-              static_cast<uint8_t>(BaseTypeModifier::Vector),
-              static_cast<uint8_t>(getTupleVTM(NF)),
-              BasePtrOperand.TM & ~static_cast<uint8_t>(TypeModifier::Pointer));
+          PrototypeDescriptor MaskoffType =
+              PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                  BasePtrOperand.TM & ~TypeModifier::Pointer);
           NewPrototype.insert(NewPrototype.begin() + 1, MaskoffType);
         } else {
           // Convert
@@ -1097,7 +1096,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
           // to
           // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
           PrototypeDescriptor MaskoffType = NewPrototype[1];
-          MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+          MaskoffType.TM &= ~TypeModifier::Pointer;
           NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
         }
       }
@@ -1125,10 +1124,9 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     } else if (PolicyAttrs.isTUPolicy() && HasPassthruOp) {
       if (IsTuple) {
         PrototypeDescriptor BasePtrOperand = Prototype[0];
-        PrototypeDescriptor MaskoffType = PrototypeDescriptor(
-            static_cast<uint8_t>(BaseTypeModifier::Vector),
-            static_cast<uint8_t>(getTupleVTM(NF)),
-            BasePtrOperand.TM & ~static_cast<uint8_t>(TypeModifier::Pointer));
+        PrototypeDescriptor MaskoffType =
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                BasePtrOperand.TM & ~TypeModifier::Pointer);
         NewPrototype.insert(NewPrototype.begin(), MaskoffType);
       } else {
         // NF > 1 cases for segment load operations.
@@ -1137,7 +1135,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
         // to
         // (void, op0 address, op1 address, maskedoff0, maskedoff1, ...)
         PrototypeDescriptor MaskoffType = Prototype[1];
-        MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+        MaskoffType.TM &= ~TypeModifier::Pointer;
         NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
       }
     }

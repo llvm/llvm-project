@@ -83,7 +83,6 @@ libclc_configure_source_list(_gen_sources
   math/tanh.cl
   math/tanpi.cl
   math/tgamma.cl
-  subnormal_config.cl
 )
 
 set(OPENCL_CLSPV_SOURCES ${_clspv_sources} ${_gen_sources} PARENT_SCOPE)

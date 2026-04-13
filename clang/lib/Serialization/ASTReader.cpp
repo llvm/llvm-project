@@ -19,6 +19,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/AbstractTypeReader.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -208,11 +209,11 @@ ChainedASTReaderListener::ReadFileSystemOptions(const FileSystemOptions &FSOpts,
 
 bool ChainedASTReaderListener::ReadHeaderSearchOptions(
     const HeaderSearchOptions &HSOpts, StringRef ModuleFilename,
-    StringRef SpecificModuleCachePath, bool Complain) {
-  return First->ReadHeaderSearchOptions(HSOpts, ModuleFilename,
-                                        SpecificModuleCachePath, Complain) ||
-         Second->ReadHeaderSearchOptions(HSOpts, ModuleFilename,
-                                         SpecificModuleCachePath, Complain);
+    StringRef ContextHash, bool Complain) {
+  return First->ReadHeaderSearchOptions(HSOpts, ModuleFilename, ContextHash,
+                                        Complain) ||
+         Second->ReadHeaderSearchOptions(HSOpts, ModuleFilename, ContextHash,
+                                         Complain);
 }
 
 bool ChainedASTReaderListener::ReadPreprocessorOptions(
@@ -240,10 +241,11 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
   Second->needsSystemInputFileVisitation();
 }
 
-void ChainedASTReaderListener::visitModuleFile(StringRef Filename,
-                                               ModuleKind Kind) {
-  First->visitModuleFile(Filename, Kind);
-  Second->visitModuleFile(Filename, Kind);
+void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
+                                               ModuleKind Kind,
+                                               bool DirectlyImported) {
+  First->visitModuleFile(Filename, Kind, DirectlyImported);
+  Second->visitModuleFile(Filename, Kind, DirectlyImported);
 }
 
 bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
@@ -495,7 +497,10 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
   SmallVector<StringRef, 4> ReadFeatures(TargetOpts.FeaturesAsWritten.begin(),
                                          TargetOpts.FeaturesAsWritten.end());
   llvm::sort(ExistingFeatures);
+  ExistingFeatures.erase(llvm::unique(ExistingFeatures),
+                         ExistingFeatures.end());
   llvm::sort(ReadFeatures);
+  ReadFeatures.erase(llvm::unique(ReadFeatures), ReadFeatures.end());
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
@@ -960,25 +965,31 @@ bool SimpleASTReaderListener::ReadPreprocessorOptions(
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
 /// \returns true when the module cache paths differ.
-static bool checkModuleCachePath(
-    llvm::vfs::FileSystem &VFS, StringRef SpecificModuleCachePath,
-    StringRef ExistingSpecificModuleCachePath, StringRef ASTFilename,
-    DiagnosticsEngine *Diags, const LangOptions &LangOpts,
-    const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
-    const HeaderSearchOptions &ASTFileHSOpts) {
+static bool checkModuleCachePath(FileManager &FileMgr, StringRef ContextHash,
+                                 StringRef ExistingSpecificModuleCachePath,
+                                 StringRef ASTFilename,
+                                 DiagnosticsEngine *Diags,
+                                 const LangOptions &LangOpts,
+                                 const PreprocessorOptions &PPOpts,
+                                 const HeaderSearchOptions &HSOpts,
+                                 const HeaderSearchOptions &ASTFileHSOpts) {
+  std::string SpecificModuleCachePath = createSpecificModuleCachePath(
+      FileMgr, ASTFileHSOpts.ModuleCachePath, ASTFileHSOpts.DisableModuleHash,
+      std::string(ContextHash));
+
   if (!LangOpts.Modules || PPOpts.AllowPCHWithDifferentModulesCachePath ||
       SpecificModuleCachePath == ExistingSpecificModuleCachePath)
     return false;
-  auto EqualOrErr =
-      VFS.equivalent(SpecificModuleCachePath, ExistingSpecificModuleCachePath);
+  auto EqualOrErr = FileMgr.getVirtualFileSystem().equivalent(
+      SpecificModuleCachePath, ExistingSpecificModuleCachePath);
   if (EqualOrErr && *EqualOrErr)
     return false;
   if (Diags) {
     // If the module cache arguments provided from the command line are the
     // same, the mismatch must come from other arguments of the configuration
     // and not directly the cache path.
-    EqualOrErr =
-        VFS.equivalent(ASTFileHSOpts.ModuleCachePath, HSOpts.ModuleCachePath);
+    EqualOrErr = FileMgr.getVirtualFileSystem().equivalent(
+        ASTFileHSOpts.ModuleCachePath, HSOpts.ModuleCachePath);
     if (EqualOrErr && *EqualOrErr)
       Diags->Report(clang::diag::warn_ast_file_config_mismatch) << ASTFilename;
     else
@@ -991,14 +1002,14 @@ static bool checkModuleCachePath(
 
 bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                            StringRef ASTFilename,
-                                           StringRef SpecificModuleCachePath,
+                                           StringRef ContextHash,
                                            bool Complain) {
   const HeaderSearch &HeaderSearchInfo = PP.getHeaderSearchInfo();
-  return checkModuleCachePath(
-      Reader.getFileManager().getVirtualFileSystem(), SpecificModuleCachePath,
-      HeaderSearchInfo.getSpecificModuleCachePath(), ASTFilename,
-      Complain ? &Reader.Diags : nullptr, PP.getLangOpts(),
-      PP.getPreprocessorOpts(), HeaderSearchInfo.getHeaderSearchOpts(), HSOpts);
+  return checkModuleCachePath(Reader.getFileManager(), ContextHash,
+                              HeaderSearchInfo.getSpecificModuleCachePath(),
+                              ASTFilename, Complain ? &Reader.Diags : nullptr,
+                              PP.getLangOpts(), PP.getPreprocessorOpts(),
+                              HeaderSearchInfo.getHeaderSearchOpts(), HSOpts);
 }
 
 void PCHValidator::ReadCounter(const ModuleFile &M, uint32_t Value) {
@@ -2874,7 +2885,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       std::string ErrorStr = "could not find file '";
       ErrorStr += *Filename;
       ErrorStr += "' referenced by AST file '";
-      ErrorStr += F.FileName;
+      ErrorStr += F.FileName.str();
       ErrorStr += "'";
       Error(ErrorStr);
     }
@@ -2903,16 +2914,6 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     }
   }
 
-  struct Change {
-    enum ModificationKind {
-      Size,
-      ModTime,
-      Content,
-      None,
-    } Kind;
-    std::optional<int64_t> Old = std::nullopt;
-    std::optional<int64_t> New = std::nullopt;
-  };
   auto HasInputContentChanged = [&](Change OriginalChange) {
     assert(ValidateASTInputFilesContent &&
            "We should only check the content of the inputs with "
@@ -3187,8 +3188,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   if (HSOpts.ModulesValidateOncePerBuildSession && IsImplicitModule) {
     if (F.InputFilesValidationTimestamp >= HSOpts.BuildSessionTimestamp)
       return {std::nullopt, IgnoreError};
-    if (static_cast<uint64_t>(F.File.getModificationTime()) >=
-        HSOpts.BuildSessionTimestamp)
+    if (static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
       return {std::nullopt, IgnoreError};
   }
 
@@ -3302,7 +3302,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       }
 
       if (Listener)
-        Listener->visitModuleFile(F.FileName, F.Kind);
+        Listener->visitModuleFile(F.FileName, F.Kind, F.isDirectlyImported());
 
       if (Listener && Listener->needsInputFileVisitation()) {
         unsigned N = Listener->needsSystemInputFileVisitation() ? NumInputs
@@ -3471,8 +3471,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
+      unsigned ImplicitModuleSuffixLength = 0;
       ASTFileSignature StoredSignature;
-      std::string ImportedFile;
+      ModuleFileName ImportedFile;
       std::string StoredFile;
       bool IgnoreImportedByNote = false;
 
@@ -3494,17 +3495,21 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (!IsImportingStdCXXModule) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
+        ImplicitModuleSuffixLength = (unsigned)Record[Idx++];
 
         StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
         StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
                                                    SignatureBytes.end());
         Blob = Blob.substr(ASTFileSignature::size);
 
-        // Use BaseDirectoryAsWritten to ensure we use the same path in the
-        // ModuleCache as when writing.
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          ImportedFile = StoredFile;
+          ImportedFile = ImplicitModuleSuffixLength
+                             ? ModuleFileName::makeImplicit(
+                                   StoredFile, ImplicitModuleSuffixLength)
+                             : ModuleFileName::makeExplicit(StoredFile);
+          assert((ImportedKind == MK_ImplicitModule) ==
+                 (ImplicitModuleSuffixLength != 0));
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
@@ -4018,6 +4023,27 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         WeakUndeclaredIdentifiers.push_back(
           getGlobalIdentifierID(F, Record[I++]));
         WeakUndeclaredIdentifiers.push_back(
+            ReadSourceLocation(F, Record, I).getRawEncoding());
+      }
+      break;
+
+    case EXTNAME_UNDECLARED_IDENTIFIERS:
+      if (Record.size() % 3 != 0)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "invalid extname identifiers record");
+
+      // FIXME: Ignore #pragma redefine_extname'd, undeclared identifiers from
+      // non-original PCH files. This isn't the way to do it :)
+      ExtnameUndeclaredIdentifiers.clear();
+
+      // Translate the #pragma redefine_extname'd, undeclared identifiers into
+      // global IDs.
+      for (unsigned I = 0, N = Record.size(); I < N; /* in loop */) {
+        ExtnameUndeclaredIdentifiers.push_back(
+            getGlobalIdentifierID(F, Record[I++]));
+        ExtnameUndeclaredIdentifiers.push_back(
+            getGlobalIdentifierID(F, Record[I++]));
+        ExtnameUndeclaredIdentifiers.push_back(
             ReadSourceLocation(F, Record, I).getRawEncoding());
       }
       break;
@@ -4582,10 +4608,11 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     uint16_t Len = endian::readNext<uint16_t, llvm::endianness::little>(Data);
     StringRef Name = StringRef((const char*)Data, Len);
     Data += Len;
-    ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
-                              Kind == MK_ImplicitModule
-                          ? ModuleMgr.lookupByModuleName(Name)
-                          : ModuleMgr.lookupByFileName(Name));
+    ModuleFile *OM =
+        (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
+                 Kind == MK_ImplicitModule
+             ? ModuleMgr.lookupByModuleName(Name)
+             : ModuleMgr.lookupByFileName(ModuleFileName::makeExplicit(Name)));
     if (!OM) {
       std::string Msg = "refers to unknown module, cannot find ";
       Msg.append(std::string(Name));
@@ -4641,17 +4668,17 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
             << F.ModuleName << F.BaseDirectory << M->Directory->getName();
 
       if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities)) {
-        if (auto ASTFE = M ? M->getASTFile() : std::nullopt) {
+        if (auto ASTFileName = M ? M->getASTFileName() : nullptr) {
           // This module was defined by an imported (explicit) module.
-          Diag(diag::err_module_file_conflict) << F.ModuleName << F.FileName
-                                               << ASTFE->getName();
+          Diag(diag::err_module_file_conflict)
+              << F.ModuleName << F.FileName << *ASTFileName;
           // TODO: Add a note with the module map paths if they differ.
         } else {
           // This module was built with a different module map.
           Diag(diag::err_imported_module_not_found)
               << F.ModuleName << F.FileName
-              << (ImportedBy ? ImportedBy->FileName : "") << F.ModuleMapPath
-              << !ImportedBy;
+              << (ImportedBy ? ImportedBy->FileName.str() : "")
+              << F.ModuleMapPath << !ImportedBy;
           // In case it was imported by a PCH, there's a chance the user is
           // just missing to include the search path to the directory containing
           // the modulemap.
@@ -4907,7 +4934,8 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
   }
 }
 
-ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
+ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
+                                            ModuleKind Type,
                                             SourceLocation ImportLoc,
                                             unsigned ClientLoadCapabilities,
                                             ModuleFile **NewLoadedModuleFile) {
@@ -5183,35 +5211,29 @@ static unsigned moduleKindForDiagnostic(ModuleKind Kind) {
   llvm_unreachable("unknown module kind");
 }
 
-ASTReader::ASTReadResult
-ASTReader::ReadASTCore(StringRef FileName,
-                       ModuleKind Type,
-                       SourceLocation ImportLoc,
-                       ModuleFile *ImportedBy,
-                       SmallVectorImpl<ImportedModule> &Loaded,
-                       off_t ExpectedSize, time_t ExpectedModTime,
-                       ASTFileSignature ExpectedSignature,
-                       unsigned ClientLoadCapabilities) {
-  ModuleFile *M;
-  std::string ErrorStr;
-  ModuleManager::AddModuleResult AddResult
-    = ModuleMgr.addModule(FileName, Type, ImportLoc, ImportedBy,
-                          getGeneration(), ExpectedSize, ExpectedModTime,
-                          ExpectedSignature, readASTFileSignature,
-                          M, ErrorStr);
+ASTReader::ASTReadResult ASTReader::ReadASTCore(
+    ModuleFileName FileName, ModuleKind Type, SourceLocation ImportLoc,
+    ModuleFile *ImportedBy, SmallVectorImpl<ImportedModule> &Loaded,
+    off_t ExpectedSize, time_t ExpectedModTime,
+    ASTFileSignature ExpectedSignature, unsigned ClientLoadCapabilities) {
+  auto Result = ModuleMgr.addModule(
+      FileName, Type, ImportLoc, ImportedBy, getGeneration(), ExpectedSize,
+      ExpectedModTime, ExpectedSignature, readASTFileSignature);
+  ModuleFile *M = Result.getModule();
 
-  switch (AddResult) {
-  case ModuleManager::AlreadyLoaded:
+  switch (Result.getKind()) {
+  case AddModuleResult::AlreadyLoaded: {
     Diag(diag::remark_module_import)
         << M->ModuleName << M->FileName << (ImportedBy ? true : false)
         << (ImportedBy ? StringRef(ImportedBy->ModuleName) : StringRef());
     return Success;
+  }
 
-  case ModuleManager::NewlyLoaded:
+  case AddModuleResult::NewlyLoaded:
     // Load module file below.
     break;
 
-  case ModuleManager::Missing:
+  case AddModuleResult::Missing:
     // The module file was missing; if the client can handle that, return
     // it.
     if (ClientLoadCapabilities & ARR_Missing)
@@ -5219,11 +5241,12 @@ ASTReader::ReadASTCore(StringRef FileName,
 
     // Otherwise, return an error.
     Diag(diag::err_ast_file_not_found)
-        << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
-        << ErrorStr;
+        << moduleKindForDiagnostic(Type) << FileName;
+    if (!Result.getBufferError().empty())
+      Diag(diag::note_ast_file_buffer_failed) << Result.getBufferError();
     return Failure;
 
-  case ModuleManager::OutOfDate:
+  case AddModuleResult::OutOfDate:
     // We couldn't load the module file because it is out-of-date. If the
     // client can handle out-of-date, return it.
     if (ClientLoadCapabilities & ARR_OutOfDate)
@@ -5231,9 +5254,20 @@ ASTReader::ReadASTCore(StringRef FileName,
 
     // Otherwise, return an error.
     Diag(diag::err_ast_file_out_of_date)
-        << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
-        << ErrorStr;
+        << moduleKindForDiagnostic(Type) << FileName;
+    for (const auto &C : Result.getChanges()) {
+      Diag(diag::note_fe_ast_file_modified)
+          << C.Kind << (C.Old && C.New) << llvm::itostr(C.Old.value_or(0))
+          << llvm::itostr(C.New.value_or(0));
+    }
+    Diag(diag::note_ast_file_input_files_validation_status)
+        << Result.getValidationStatus();
+    if (!Result.getSignatureError().empty())
+      Diag(diag::note_ast_file_signature_failed) << Result.getSignatureError();
     return Failure;
+
+  case AddModuleResult::None:
+    llvm_unreachable("Unexpected value from adding module.");
   }
 
   assert(M && "Missing module file");
@@ -5872,18 +5906,16 @@ namespace {
     bool ReadTargetOptions(const TargetOptions &TargetOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
-      return checkTargetOptions(ExistingTargetOpts, TargetOpts, ModuleFilename,
+      return checkTargetOptions(TargetOpts, ExistingTargetOpts, ModuleFilename,
                                 nullptr, AllowCompatibleDifferences);
     }
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                 StringRef ASTFilename,
-                                 StringRef SpecificModuleCachePath,
+                                 StringRef ASTFilename, StringRef ContextHash,
                                  bool Complain) override {
       return checkModuleCachePath(
-          FileMgr.getVirtualFileSystem(), SpecificModuleCachePath,
-          ExistingSpecificModuleCachePath, ASTFilename, nullptr,
-          ExistingLangOpts, ExistingPPOpts, ExistingHSOpts, HSOpts);
+          FileMgr, ContextHash, ExistingSpecificModuleCachePath, ASTFilename,
+          nullptr, ExistingLangOpts, ExistingPPOpts, ExistingHSOpts, HSOpts);
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
@@ -6138,8 +6170,8 @@ bool ASTReader::readASTFileControlBlock(
         continue;
       }
 
-      // Skip Size and ModTime.
-      Idx += 1 + 1;
+      // Skip Size, ModTime and ImplicitModuleSuffix.
+      Idx += 1 + 1 + 1;
       // Skip signature.
       Blob = Blob.substr(ASTFileSignature::size);
 
@@ -6333,15 +6365,17 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                                        "too many submodules");
 
       if (!ParentModule) {
-        if (OptionalFileEntryRef CurFile = CurrentModule->getASTFile()) {
+        if ([[maybe_unused]] const ModuleFileKey *CurFileKey =
+                CurrentModule->getASTFileKey()) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
                     DisableValidationForModuleKind::Module)) {
-            assert(CurFile != F.File && "ModuleManager did not de-duplicate");
+            assert(*CurFileKey != F.FileKey &&
+                   "ModuleManager did not de-duplicate");
 
             Diag(diag::err_module_file_conflict)
-                << CurrentModule->getTopLevelModuleName() << CurFile->getName()
-                << F.File.getName();
+                << CurrentModule->getTopLevelModuleName()
+                << *CurrentModule->getASTFileName() << F.FileName;
 
             auto CurModMapFile =
                 ModMap.getContainingModuleMapFile(CurrentModule);
@@ -6355,7 +6389,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         }
 
         F.DidReadTopLevelSubmodule = true;
-        CurrentModule->setASTFile(F.File);
+        CurrentModule->setASTFileNameAndKey(F.FileName, F.FileKey);
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
       }
 
@@ -6705,10 +6739,10 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
   HSOpts.UseStandardSystemIncludes = Record[Idx++];
   HSOpts.UseStandardCXXIncludes = Record[Idx++];
   HSOpts.UseLibcxx = Record[Idx++];
-  std::string SpecificModuleCachePath = ReadString(Record, Idx);
+  std::string ContextHash = ReadString(Record, Idx);
 
-  return Listener.ReadHeaderSearchOptions(HSOpts, ModuleFilename,
-                                          SpecificModuleCachePath, Complain);
+  return Listener.ReadHeaderSearchOptions(HSOpts, ModuleFilename, ContextHash,
+                                          Complain);
 }
 
 bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
@@ -7253,6 +7287,18 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
         T.push_back({CurState, 0});
       else
         T[0].State = CurState;
+    }
+
+    // Restore the push stack so that unmatched pushes from a preamble are
+    // visible when the main file is parsed, allowing the corresponding
+    // `#pragma diagnostic pop` to succeed.
+    assert(Idx < Record.size() &&
+           "Invalid data, missing diagnostic push stack");
+    unsigned NumPushes = Record[Idx++];
+    for (unsigned I = 0; I != NumPushes; ++I) {
+      auto *State = ReadDiagState(*FirstState, false);
+      if (!F.isModule())
+        Diag.DiagStateOnPushStack.push_back(State);
     }
 
     // Don't try to read these mappings again.
@@ -9683,6 +9729,27 @@ void ASTReader::ReadWeakUndeclaredIdentifiers(
   WeakUndeclaredIdentifiers.clear();
 }
 
+void ASTReader::ReadExtnameUndeclaredIdentifiers(
+    SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &ExtnameIDs) {
+  if (ExtnameUndeclaredIdentifiers.empty())
+    return;
+
+  for (unsigned I = 0, N = ExtnameUndeclaredIdentifiers.size(); I < N; I += 3) {
+    IdentifierInfo *NameId =
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I]);
+    IdentifierInfo *ExtnameId =
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I+1]);
+    SourceLocation Loc =
+        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I+2]);
+    AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
+        getContext(), ExtnameId->getName(),
+        AttributeCommonInfo(ExtnameId, SourceRange(Loc),
+                            AttributeCommonInfo::Form::Pragma()));
+    ExtnameIDs.push_back(std::make_pair(NameId, Attr));
+  }
+  ExtnameUndeclaredIdentifiers.clear();
+}
+
 void ASTReader::ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) {
   for (unsigned Idx = 0, N = VTableUses.size(); Idx < N; /* In loop */) {
     ExternalVTableUse VT;
@@ -11386,6 +11453,11 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
+  case llvm::omp::OMPC_counts: {
+    unsigned NumCounts = Record.readInt();
+    C = OMPCountsClause::CreateEmpty(Context, NumCounts);
+    break;
+  }
   case llvm::omp::OMPC_permutation: {
     unsigned NumLoops = Record.readInt();
     C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
@@ -11795,6 +11867,16 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPCountsClause(OMPCountsClause *C) {
+  bool HasFill = Record.readBool();
+  if (HasFill)
+    C->setOmpFillIndex(Record.readInt());
+  C->setOmpFillLoc(Record.readSourceLocation());
+  for (Expr *&E : C->getCountsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }

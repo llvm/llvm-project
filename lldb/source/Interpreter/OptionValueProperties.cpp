@@ -380,11 +380,9 @@ Status OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
       if (dump_mask & ~eDumpOptionName)
         strm.PutChar(' ');
     }
-    if (is_json) {
-      strm.Printf(
-          "%s",
-          llvm::formatv("{0:2}", value_sp->ToJSON(exe_ctx)).str().c_str());
-    } else
+    if (is_json)
+      strm << llvm::formatv("{0:2}", value_sp->ToJSON(exe_ctx));
+    else
       value_sp->DumpValue(exe_ctx, strm, dump_mask);
   }
   return error;

@@ -2749,9 +2749,13 @@ violates the strict aliasing rules. For example:
        if Clang is able to inline this function. */
   }
 
-Strict aliasing can be explicitly enabled with ``-fstrict-aliasing`` and
-disabled with ``-fno-strict-aliasing``. ``clang-cl`` defaults to
-``-fno-strict-aliasing``. Otherwise, Clang defaults to ``-fstrict-aliasing``.
+.. option:: -fstrict-aliasing, -fno-strict-aliasing
+
+Strict aliasing can be explicitly enabled with :option:`-fstrict-aliasing` and
+disabled with :option:`-fno-strict-aliasing`. Windows MSVC platforms and UEFI
+platforms default to :option:`-fno-strict-aliasing`. Otherwise, Clang defaults
+to :option:`-fstrict-aliasing`. These options may also be affected by
+:option:`-Ofast`.
 
 C and C++ specify slightly different rules for strict aliasing. To improve
 language interoperability, Clang allows two types to alias if either language
@@ -2769,7 +2773,7 @@ works in one version of Clang may not work in another because of changes to the
 optimizer. Clang provides a :doc:`TypeSanitizer` to help detect
 violations of the strict aliasing rules, but it is currently still experimental.
 Code that is known to violate strict aliasing should generally be built with
-``-fno-strict-aliasing`` if the violation cannot be fixed.
+:option:`-fno-strict-aliasing` if the violation cannot be fixed.
 
 Clang supports several ways to fix a violation of strict aliasing:
 
@@ -5036,60 +5040,72 @@ Execute ``clang-cl /?`` to see a list of supported options:
     CL.EXE COMPATIBILITY OPTIONS:
       /?                      Display available options
       /arch:<value>           Set architecture for code generation
-      /Brepro-                Emit an object file which cannot be reproduced over time
-      /Brepro                 Emit an object file which can be reproduced over time
+      /arm64EC                Set build target to arm64ec
+      /Brepro-                Write current time into COFF output (default)
+      /Brepro                 Do not write current time into COFF output (breaks link.exe /incremental)
       /clang:<arg>            Pass <arg> to the clang driver
-      /C                      Don't discard comments when preprocessing
+      /C                      Do not discard comments when preprocessing
       /c                      Compile only
       /d1PP                   Retain macro definitions in /E mode
       /d1reportAllClassLayout Dump record layout information
-      /diagnostics:caret      Enable caret and column diagnostics (on by default)
+      /d2epilogunwindrequirev2
+                              Require generation of unwind v2 (epilog) information for x64 Windows
+      /d2epilogunwind         Best effort generate unwind v2 (epilog) information for x64 Windows
+      /diagnostics:caret      Enable caret and column diagnostics (default)
       /diagnostics:classic    Disable column and caret diagnostics
       /diagnostics:column     Disable caret diagnostics but keep column info
+      /diasdkdir <dir>        Path to the DIA SDK
       /D <macro[=value]>      Define macro
-      /EH<value>              Exception handling model
+      /EH<value>              Set exception handling model
       /EP                     Disable linemarker output and preprocess to stdout
       /execution-charset:<value>
-                              Runtime encoding, supports only UTF-8
+                              Set runtime encoding, supports only UTF-8
+      /external:env:<var>     Add dirs in env var <var> to include search path with warnings suppressed
+      /external:I <dir>       Add directory to include search path with warnings suppressed
+      /external:W0            Ignore warnings from system headers (default)
+      /external:W1            Enable -Wsystem-headers
+      /external:W2            Enable -Wsystem-headers
+      /external:W3            Enable -Wsystem-headers
+      /external:W4            Enable -Wsystem-headers
       /E                      Preprocess to stdout
-      /FA                     Output assembly code file during compilation
-      /Fa<file or directory>  Output assembly code to this file during compilation (with /FA)
-      /Fe<file or directory>  Set output executable file or directory (ends in / or \)
+      /FA<value>              Output assembly code file during compilation
+      /Fa<file or dir/>       Set assembly output file name (with /FA)
+      /Fe<file or dir/>       Set output executable file name
       /FI <value>             Include file before parsing
       /Fi<file>               Set preprocess output file name (with /P)
-      /Fo<file or directory>  Set output object file, or directory (ends in / or \) (with /c)
-      /fp:except-
-      /fp:except
-      /fp:fast
-      /fp:precise
-      /fp:strict
-      /Fp<filename>           Set pch filename (with /Yc and /Yu)
+      /Fo<file or dir/>       Set output object file (with /c)
+      /Fp<file>               Set pch file name (with /Yc and /Yu)
+      /fsanitize=address      Enable AddressSanitizer
+      /funcoverride:<function>
+                              Mark <function> as being replaceable by the Windows kernel loader
       /GA                     Assume thread-local variables are defined in the executable
       /Gd                     Set __cdecl as a default calling convention
       /GF-                    Disable string pooling
       /GF                     Enable string pooling (default)
-      /GR-                    Disable emission of RTTI data
+      /GR-                    Do not emit RTTI data
+      /Gregcall4              Set __regcall4 as a default calling convention to respect __regcall ABI v.4
       /Gregcall               Set __regcall as a default calling convention
-      /GR                     Enable emission of RTTI data
+      /GR                     Emit RTTI data (default)
       /Gr                     Set __fastcall as a default calling convention
       /GS-                    Disable buffer security check
       /GS                     Enable buffer security check (default)
       /Gs                     Use stack probes (default)
       /Gs<value>              Set stack probe size (default 4096)
-      /guard:<value>          Enable Control Flow Guard with /guard:cf,
-                              or only the table with /guard:cf,nochecks.
-                              Enable EH Continuation Guard with /guard:ehcont
+      /guard:<value>          Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks. Enable EH Continuation Guard with /guard:ehcont
       /Gv                     Set __vectorcall as a default calling convention
-      /Gw-                    Don't put each data item in its own section
+      /Gw-                    Do not put each data item in its own section (default)
       /Gw                     Put each data item in its own section
-      /GX-                    Disable exception handling
-      /GX                     Enable exception handling
-      /Gy-                    Don't put each function in its own section (default)
+      /GX-                    Deprecated (like not passing /EH)
+      /GX                     Deprecated; use /EHsc
+      /Gy-                    Do not put each function in its own section (default)
       /Gy                     Put each function in its own section
       /Gz                     Set __stdcall as a default calling convention
       /help                   Display available options
-      /imsvc <dir>            Add directory to system include search path, as if part of %INCLUDE%
+      /hotpatch               Create hotpatchable image
+      /imsvc <dir>            Add <dir> to system include search path, as if in %INCLUDE%
       /I <dir>                Add directory to include search path
+      /JMC-                   Disable just-my-code debugging (default)
+      /JMC                    Enable just-my-code debugging
       /J                      Make char type unsigned
       /LDd                    Create debug DLL
       /LD                     Create DLL
@@ -5098,143 +5114,364 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /MD                     Use DLL run-time
       /MTd                    Use static debug run-time
       /MT                     Use static run-time
-      /O0                     Disable optimization
-      /O1                     Optimize for size  (same as /Og     /Os /Oy /Ob2 /GF /Gy)
-      /O2                     Optimize for speed (same as /Og /Oi /Ot /Oy /Ob2 /GF /Gy)
+      /O1                     Optimize for size  (like /Og     /Os /Oy /Ob2 /GF /Gy)
+      /O2                     Optimize for speed (like /Og /Oi /Ot /Oy /Ob2 /GF /Gy)
       /Ob0                    Disable function inlining
-      /Ob1                    Only inline functions which are (explicitly or implicitly) marked inline
+      /Ob1                    Only inline functions explicitly or implicitly marked inline
       /Ob2                    Inline functions as deemed beneficial by the compiler
       /Ob3                    Same as /Ob2
       /Od                     Disable optimization
       /Og                     No effect
       /Oi-                    Disable use of builtin functions
       /Oi                     Enable use of builtin functions
+      /openmp-                Disable OpenMP support
+      /openmp:experimental    Enable OpenMP support with experimental SIMD support
+      /openmp                 Enable OpenMP support
       /Os                     Optimize for size (like clang -Os)
       /Ot                     Optimize for speed (like clang -O3)
-      /Ox                     Deprecated (same as /Og /Oi /Ot /Oy /Ob2); use /O2 instead
+      /Ox                     Deprecated (like /Og /Oi /Ot /Oy /Ob2); use /O2
       /Oy-                    Disable frame pointer omission (x86 only, default)
       /Oy                     Enable frame pointer omission (x86 only)
       /O<flags>               Set multiple /O flags at once; e.g. '/O2y-' for '/O2 /Oy-'
-      /o <file or directory>  Set output file or directory (ends in / or \)
+      /o <file or dir/>       Deprecated (set output file name); use /Fe or /Fe
+      /permissive-            Disable non conforming code from compiling (default)
+      /permissive             Enable some non conforming code to compile
       /P                      Preprocess to file
+      /Qgather-               Disable generation of gather instructions in auto-vectorization(x86 only)
+      /QIntel-jcc-erratum     Align branches within 32-byte boundaries to mitigate the performance impact of the Intel JCC erratum.
+      /Qscatter-              Disable generation of scatter instructions in auto-vectorization(x86 only)
       /Qvec-                  Disable the loop vectorization passes
       /Qvec                   Enable the loop vectorization passes
-      /showFilenames-         Don't print the name of each compiled file (default)
+      /showFilenames-         Do not print the name of each compiled file (default)
       /showFilenames          Print the name of each compiled file
+      /showIncludes:user      Like /showIncludes but omit system headers
       /showIncludes           Print info about included files to stderr
-      /source-charset:<value> Source encoding, supports only UTF-8
-      /std:<value>            Language standard to compile for
+      /source-charset:<value> Set source encoding, supports only UTF-8
+      /std:<value>            Set language version (c++14,c++17,c++20,c++23preview,c++latest,c11,c17)
       /TC                     Treat all source files as C
-      /Tc <filename>          Specify a C source file
+      /Tc <file>              Treat <file> as C source file
       /TP                     Treat all source files as C++
-      /Tp <filename>          Specify a C++ source file
+      /Tp <file>              Treat <file> as C++ source file
+      /tune:<value>           Set CPU for optimization without affecting instruction set
       /utf-8                  Set source and runtime encoding to UTF-8 (default)
       /U <macro>              Undefine macro
+      /vctoolsdir <dir>       Path to the VCToolChain
+      /vctoolsversion <value> For use with /winsysroot, defaults to newest found
       /vd<value>              Control vtordisp placement
+      /vlen=256               Set vector length of 256 bits for autovectorization and other optimizations
+      /vlen=512               Set vector length of 512 bits for autovectorization and other optimizations
+      /vlen                   Set default vector length for autovectorization and other optimizations
       /vmb                    Use a best-case representation method for member pointers
       /vmg                    Use a most-general representation for member pointers
       /vmm                    Set the default most-general representation to multiple inheritance
       /vms                    Set the default most-general representation to single inheritance
       /vmv                    Set the default most-general representation to virtual inheritance
-      /volatile:iso           Volatile loads and stores have standard semantics
-      /volatile:ms            Volatile loads and stores have acquire and release semantics
       /W0                     Disable all warnings
       /W1                     Enable -Wall
       /W2                     Enable -Wall
       /W3                     Enable -Wall
       /W4                     Enable -Wall and -Wextra
       /Wall                   Enable -Weverything
-      /WX-                    Do not treat warnings as errors
+      /winsdkdir <dir>        Path to the Windows SDK
+      /winsdkversion <value>  Full version of the Windows SDK, defaults to newest found
+      /winsysroot <dir>       Same as "/diasdkdir <dir>/DIA SDK" /vctoolsdir <dir>/VC/Tools/MSVC/<vctoolsversion> "/winsdkdir <dir>/Windows Kits/10"
+      /WX-                    Do not treat warnings as errors (default)
       /WX                     Treat warnings as errors
       /w                      Disable all warnings
-      /X                      Don't add %INCLUDE% to the include search path
+      /X                      Do not add %INCLUDE% to include search path
       /Y-                     Disable precompiled headers, overrides /Yc and /Yu
       /Yc<filename>           Generate a pch file for all code up to and including <filename>
       /Yu<filename>           Load a pch file and use it instead of all code up to and including <filename>
       /Z7                     Enable CodeView debug information in object files
-      /Zc:char8_t             Enable C++20 char8_t type
-      /Zc:char8_t-            Disable C++20 char8_t type
-      /Zc:dllexportInlines-   Don't dllexport/dllimport inline member functions of dllexport/import classes
+      /Zc:__STDC__            Define __STDC__
+      /Zc:alignedNew-         Disable C++17 aligned allocation functions
+      /Zc:alignedNew          Enable C++17 aligned allocation functions
+      /Zc:char8_t-            Disable char8_t from c++2a
+      /Zc:char8_t             Enable char8_t from C++2a
+      /Zc:dllexportInlines-   Do not dllexport/dllimport inline member functions of dllexport/import classes
       /Zc:dllexportInlines    dllexport/dllimport inline member functions of dllexport/import classes (default)
       /Zc:sizedDealloc-       Disable C++14 sized global deallocation functions
       /Zc:sizedDealloc        Enable C++14 sized global deallocation functions
       /Zc:strictStrings       Treat string literals as const
       /Zc:threadSafeInit-     Disable thread-safe initialization of static variables
       /Zc:threadSafeInit      Enable thread-safe initialization of static variables
+      /Zc:tlsGuards-          Disable on-demand initialization of thread-local variables
+      /Zc:tlsGuards           Enable on-demand initialization of thread-local variables
       /Zc:trigraphs-          Disable trigraphs (default)
       /Zc:trigraphs           Enable trigraphs
-      /Zc:twoPhase-           Disable two-phase name lookup in templates
+      /Zc:twoPhase-           Disable two-phase name lookup in templates (default)
       /Zc:twoPhase            Enable two-phase name lookup in templates
-      /Zi                     Alias for /Z7. Does not produce PDBs.
-      /Zl                     Don't mention any default libraries in the object file
-      /Zp                     Set the default maximum struct packing alignment to 1
-      /Zp<value>              Specify the default maximum struct packing alignment
+      /Zc:wchar_t-            Disable C++ builtin type wchar_t
+      /Zc:wchar_t             Enable C++ builtin type wchar_t (default)
+      /ZH:MD5                 Use MD5 for file checksums in debug info (default)
+      /ZH:SHA1                Use SHA1 for file checksums in debug info
+      /ZH:SHA_256             Use SHA256 for file checksums in debug info
+      /Zi                     Like /Z7
+      /Zl                     Do not let object file auto-link default libraries
+      /Zp                     Set default maximum struct packing alignment to 1
+      /Zp<value>              Set default maximum struct packing alignment
       /Zs                     Run the preprocessor, parser and semantic analysis stages
 
     OPTIONS:
       -###                    Print (but do not run) the commands to run for this compilation
       --analyze               Run the static analyzer
+      --config=<file>         Specify configuration file
+      --cuda-compile-host-device
+                              Compile CUDA code for both host and device (default). Has no effect on non-CUDA compilations.
+      --cuda-device-only      Compile CUDA code for device only
+      --cuda-feature=<value>  Manually specify the CUDA feature to use
+      --cuda-host-only        Compile CUDA code for host only. Has no effect on non-CUDA compilations.
+      --cuda-include-ptx=<value>
+                              Include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.
+      --cuda-noopt-device-debug
+                              Enable device-side debug info generation. Disables ptxas optimizations.
+      --cuda-path-ignore-env  Ignore environment variables to detect CUDA installation
+      --cuda-path=<value>     CUDA installation path
+      -cuid=<value>           An ID for compilation unit, which should be the same for the same compilation unit but different for different compilation units. It is used to externalize device-side static variables for single source offloading languages CUDA and HIP so that they can be accessed by the host code of the same compilation unit.
+      -darwin-target-variant <value>
+                              Generate code for an additional runtime variant of the deployment target
+      -emit-ast               Emit Clang AST files for source inputs
+      --end-no-unused-arguments
+                              Start emitting warnings for unused driver arguments
       -faddrsig               Emit an address-significance table
       -fansi-escape-codes     Use ANSI escape codes for diagnostics
       -fblocks                Enable the 'blocks' language feature
-      -fcf-protection=<value> Instrument control-flow architecture protection. Options: return, branch, full, none.
+      -fcaret-diagnostics-max-lines=<value>
+                              Set the maximum number of source lines to show in a caret diagnostic (0 = no limit).
+      -fcf-protection=<value> Instrument control-flow architecture protection
       -fcf-protection         Enable cf-protection in 'full' mode
-      -fcolor-diagnostics     Use colors in diagnostics
+      -fcodegen-data-generate=<path>
+                              Emit codegen data into the object file. LLD for MachO (currently) merges them into the specified <path>.
+      -fcodegen-data-generate Emit codegen data into the object file. LLD for MachO (currently) merges them into default.cgdata.
+      -fcodegen-data-use=<path>
+                              Use codegen data read from the specified <path>.
+      -fcodegen-data-use      Use codegen data read from default.cgdata to optimize the binary
+      -fcolor-diagnostics     Enable colors in diagnostics
+      -fcommon                Place uninitialized global variables in a common block
       -fcomplete-member-pointers
                               Require member pointer base types to be complete if they would be significant under the Microsoft ABI
+      -fcoverage-compilation-dir=<value>
+                              The compilation directory to embed in the coverage mapping.
       -fcoverage-mapping      Generate coverage mapping to enable code coverage analysis
+      -fcoverage-mcdc         Enable MC/DC criteria when generating code coverage
       -fcrash-diagnostics-dir=<dir>
                               Put crash-report files in <dir>
+      -fcrash-diagnostics=<value>
+                              Set level of crash diagnostic reporting, (option: off, compiler, all)
+      -fcrash-diagnostics     Enable crash diagnostic reporting (default)
+      -fcs-profile-generate=<directory>
+                              Generate instrumented code to collect context sensitive execution counts into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)
+      -fcs-profile-generate   Generate instrumented code to collect context sensitive execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)
+      -fcuda-short-ptr        Use 32-bit pointers for accessing const/local/shared address spaces
+      -fdebug-compilation-dir=<value>
+                              The compilation directory to embed in the debug info
       -fdebug-macro           Emit macro debug information
       -fdelayed-template-parsing
                               Parse templated function definitions at the end of the translation unit
+      -fdelete-null-pointer-checks
+                              Treat usage of null pointers as undefined behavior (default)
+      -fdevirtualize-speculatively
+                              Enables speculative devirtualization optimization.
       -fdiagnostics-absolute-paths
                               Print absolute paths in diagnostics
+      -fdiagnostics-color=<value>
+                              When to use colors in diagnostics
       -fdiagnostics-parseable-fixits
                               Print fix-its in machine parseable form
-      -flto=<value>           Set LTO mode to either 'full' or 'thin'
+      -fdriver-only           Only run the driver.
+      -feliminate-unused-debug-types
+                              Do not emit  debug info for defined but unused types
+      -fexcess-precision=<value>
+                              Allows control over excess precision on targets where native support for the precision types is not available. By default, excess precision is used to calculate intermediate results following the rules specified in ISO C99.
+      -fexperimental-library  Control whether unstable and experimental library features are enabled. This option enables various library features that are either experimental (also known as TSes), or have been but are not stable yet in the selected Standard Library implementation. It is not recommended to use this option in production code, since neither ABI nor API stability are guaranteed. This is intended to provide a preview of features that will ship in the future for experimentation purposes
+      -fexperimental-sanitize-metadata-ignorelist=<value>
+                              Disable sanitizer metadata for modules and functions that match the provided special case list
+      -fexperimental-sanitize-metadata=<value>
+                              Specify the type of metadata to emit for binary analysis sanitizers
+      -ffile-compilation-dir=<value>
+                              The compilation directory to embed in the debug info and coverage mapping.
+      -ffile-reproducible     Use the target's platform-specific path separator character when expanding the __FILE__ macro
+      -ffixed-x10             Reserve the x10 register (AArch64/RISC-V only)
+      -ffixed-x11             Reserve the x11 register (AArch64/RISC-V only)
+      -ffixed-x12             Reserve the x12 register (AArch64/RISC-V only)
+      -ffixed-x13             Reserve the x13 register (AArch64/RISC-V only)
+      -ffixed-x14             Reserve the x14 register (AArch64/RISC-V only)
+      -ffixed-x15             Reserve the x15 register (AArch64/RISC-V only)
+      -ffixed-x16             Reserve the x16 register (AArch64/RISC-V only)
+      -ffixed-x17             Reserve the x17 register (AArch64/RISC-V only)
+      -ffixed-x18             Reserve the x18 register (AArch64/RISC-V only)
+      -ffixed-x19             Reserve the x19 register (AArch64/RISC-V only)
+      -ffixed-x1              Reserve the x1 register (AArch64/RISC-V only)
+      -ffixed-x20             Reserve the x20 register (AArch64/RISC-V only)
+      -ffixed-x21             Reserve the x21 register (AArch64/RISC-V only)
+      -ffixed-x22             Reserve the x22 register (AArch64/RISC-V only)
+      -ffixed-x23             Reserve the x23 register (AArch64/RISC-V only)
+      -ffixed-x24             Reserve the x24 register (AArch64/RISC-V only)
+      -ffixed-x25             Reserve the x25 register (AArch64/RISC-V only)
+      -ffixed-x26             Reserve the x26 register (AArch64/RISC-V only)
+      -ffixed-x27             Reserve the x27 register (AArch64/RISC-V only)
+      -ffixed-x28             Reserve the x28 register (AArch64/RISC-V only)
+      -ffixed-x29             Reserve the x29 register (AArch64/RISC-V only)
+      -ffixed-x2              Reserve the x2 register (AArch64/RISC-V only)
+      -ffixed-x30             Reserve the x30 register (AArch64/RISC-V only)
+      -ffixed-x31             Reserve the x31 register (AArch64/RISC-V only)
+      -ffixed-x3              Reserve the x3 register (AArch64/RISC-V only)
+      -ffixed-x4              Reserve the x4 register (AArch64/RISC-V only)
+      -ffixed-x5              Reserve the x5 register (AArch64/RISC-V only)
+      -ffixed-x6              Reserve the x6 register (AArch64/RISC-V only)
+      -ffixed-x7              Reserve the x7 register (AArch64/RISC-V only)
+      -ffixed-x8              Reserve the x8 register (AArch64/RISC-V only)
+      -ffixed-x9              Reserve the x9 register (AArch64/RISC-V only)
+      -fforce-emit-vtables    Emits more virtual tables to improve devirtualization
+      -ffuchsia-api-level=<value>
+                              Set Fuchsia API level
+      -fgnuc-version=<value>  Sets various macros to claim compatibility with the given GCC version (default is 4.2.1)
+      -fgpu-allow-device-init Allow device side init function in HIP (experimental)
+      -fgpu-default-stream=<value>
+                              Specify default stream. The default value is 'legacy'. (CUDA/HIP only)
+      -fgpu-defer-diag        Defer host/device related diagnostic messages for CUDA/HIP
+      -fgpu-flush-denormals-to-zero
+                              Flush denormal floating point values to zero in CUDA/HIP device mode.
+      -fgpu-rdc               Generate relocatable device code, also known as separate compilation mode
+      -fgpu-sanitize          Enable sanitizer for supported offloading devices
+      -fhip-emit-relocatable  Compile HIP source to relocatable
+      -fhip-fp32-correctly-rounded-divide-sqrt
+                              Specify that single precision floating-point divide and sqrt used in the program source are correctly rounded (HIP device compilation only)
+      -fhip-kernel-arg-name   Specify that kernel argument names are preserved (HIP only)
+      -fhip-new-launch-api    Use new kernel launching API for HIP
+      -fimplicit-module-maps  Implicitly search the file system for module map files.
+      -finline-max-stacksize=<value>
+                              Suppress inlining of functions whose stack size exceeds the given value
+      -fintegrated-cc1        Run cc1 in-process
+      -fintegrated-objemitter Use internal machine object code emitter.
+      -flto=<value>           Set LTO mode
       -flto                   Enable LTO in 'full' mode
+      -fmacro-backtrace-limit=<value>
+                              Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit)
+      -fmemory-profile-use=<pathname>
+                              Use memory profile for profile-guided memory optimization
       -fmerge-all-constants   Allow merging of constants
-      -fmodule-file=<module_name>=<module-file>
-                              Use the specified module file that provides the module <module_name>
-      -fmodule-header=<header>
-                              Build <header> as a C++20 header unit
-      -fmodule-output=<path>
-                              Save intermediate module file results when compiling a standard C++ module unit.
+      -fmodule-file=[<name>=]<file>
+                              Specify the mapping of module name to precompiled module file, or load a module file if name is omitted.
+      -fmodule-header=<kind>  Build a C++20 Header Unit from a header that should be found in the user (fmodule-header=user) or system (fmodule-header=system) search path.
+      -fmodule-header         Build a C++20 Header Unit from a header
+      -fmodule-map-file=<file>
+                              Load this module map file
+      -fmodule-name=<name>    Specify the name of the module to build
+      -fmodule-output=<value> Save intermediate module file results when compiling a standard C++ module unit.
+      -fmodule-output         Save intermediate module file results when compiling a standard C++ module unit.
+      -fmodules-decluse       Require declaration of modules used within a module
+      -fmodules-embed-all-files<value>
+                              Embed the contents of all files read by this compilation into the produced module file.
+      -fmodules-ignore-macro=<value>
+                              Ignore the definition of the given macro when building and loading modules
+      -fmodules-search-all    Search even non-imported modules to resolve references
+      -fmodules-strict-decluse
+                              Like -fmodules-decluse but requires all headers to be in modules
+      -fmodules               Enable the 'modules' language feature
       -fms-compatibility-version=<value>
-                              Dot-separated value representing the Microsoft compiler version
-                              number to report in _MSC_VER (0 = don't define it; default is same value as installed cl.exe, or 1933)
+                              Dot-separated value representing the Microsoft compiler version number to report in _MSC_VER (0 = don't define it (default))
       -fms-compatibility      Enable full Microsoft Visual C++ compatibility
+      -fms-define-stdc        Define '__STDC__' to '1' in MSVC Compatibility mode
       -fms-extensions         Accept some non-standard constructs supported by the Microsoft compiler
-      -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER
-                              (0 = don't define it; default is same value as installed cl.exe, or 1933)
+      -fms-hotpatch           Ensure that all functions can be hotpatched at runtime
+      -fms-runtime-lib=<value>
+                              Select Windows run-time library
+      -fms-secure-hotpatch-functions-file=<value>
+                              Path to a file that contains a list of mangled names of functions that should be hot-patched for Windows Secure Hot-Patching
+      -fms-secure-hotpatch-functions-list=<value>
+                              List of mangled symbol names of functions that should be hot-patched for Windows Secure Hot-Patching
+      -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER (0 = don't define it (default))
       -fno-addrsig            Don't emit an address-significance table
+      -fno-assume-unique-vtables
+                              Disable optimizations based on vtable pointer identity
       -fno-builtin-<value>    Disable implicit builtin knowledge of a specific function
       -fno-builtin            Disable implicit builtin knowledge of functions
+      -fno-color-diagnostics  Disable colors in diagnostics
       -fno-complete-member-pointers
                               Do not require member pointer base types to be complete if they would be significant under the Microsoft ABI
       -fno-coverage-mapping   Disable code coverage analysis
+      -fno-coverage-mcdc      Disable MC/DC coverage criteria
       -fno-crash-diagnostics  Disable auto-generation of preprocessed source files and a script for reproduction during a clang crash
       -fno-debug-macro        Do not emit macro debug information
       -fno-delayed-template-parsing
                               Disable delayed template parsing
+      -fno-delete-null-pointer-checks
+                              Do not treat usage of null pointers as undefined behavior
+      -fno-eliminate-unused-debug-types
+                              Emit  debug info for defined but unused types
+      -fno-experimental-sanitize-metadata=<value>
+                              Disable emitting metadata for binary analysis sanitizers
+      -fno-file-reproducible  Use the host's platform-specific path separator character when expanding the __FILE__ macro
+      -fno-gpu-allow-device-init
+                              Don't allow device side init function in HIP (experimental)
+      -fno-gpu-defer-diag     Don't defer host/device related diagnostic messages for CUDA/HIP
+      -fno-hip-emit-relocatable
+                              Do not override toolchain to compile HIP source to relocatable
+      -fno-hip-fp32-correctly-rounded-divide-sqrt
+                              Don't specify that single precision floating-point divide and sqrt used in the program source are correctly rounded (HIP device compilation only)
+      -fno-hip-kernel-arg-name
+                              Don't specify that kernel argument names are preserved (HIP only)
+      -fno-hip-new-launch-api Don't use new kernel launching API for HIP
+      -fno-integrated-cc1     Spawn a separate process for each cc1
+      -fno-integrated-objemitter
+                              Use external machine object code emitter.
+      -fno-knr-functions      Disable support for K&R C function declarations
+      -fno-lto                Disable LTO mode (default)
+      -fno-offload-lto        Disable LTO mode (default) for offload compilation
+      -fno-offload-via-llvm   Don't use LLVM/Offload as portable offloading runtime.
+      -fno-profile-generate   Disable generation of profile instrumentation.
+      -fno-profile-instr-generate
+                              Disable generation of profile instrumentation.
+      -fno-profile-instr-use  Disable using instrumentation data for profile-guided optimization
+      -fno-pseudo-probe-for-profiling
+                              Do not emit pseudo probes for sample profiling
+      -fno-rtlib-defaultlib   On Windows, do not emit /defaultlib: directives to link compiler-rt libraries
+      -fno-sanitize-address-globals-dead-stripping
+                              Disable linker dead stripping of globals in AddressSanitizer
+      -fno-sanitize-address-outline-instrumentation
+                              Use default code inlining logic for the address sanitizer
       -fno-sanitize-address-poison-custom-array-cookie
                               Disable poisoning array cookies when using custom operator new[] in AddressSanitizer
       -fno-sanitize-address-use-after-scope
                               Disable use-after-scope detection in AddressSanitizer
       -fno-sanitize-address-use-odr-indicator
-                               Disable ODR indicator globals
-      -fno-sanitize-ignorelist Don't use ignorelist file for sanitizers
+                              Disable ODR indicator globals
+      -fno-sanitize-alloc-token-extended
+                              Disable extended coverage to custom allocation functions
+      -fno-sanitize-alloc-token-fast-abi
+                              Use the default AllocToken ABI
+      -fno-sanitize-annotate-debug-info=<value>
+                              Do not allow compiler to annotate sanitizer instrumentation with extra debug info for the specified sanitizers
+      -fno-sanitize-annotate-debug-info
+                              Do not allow compiler to annotate sanitizer instrumentation with extra debug info for any sanitizers
+      -fno-sanitize-cfi-canonical-jump-tables
+                              Do not make the jump table addresses canonical in the symbol table
       -fno-sanitize-cfi-cross-dso
                               Disable control flow integrity (CFI) checks for cross-DSO calls.
       -fno-sanitize-coverage=<value>
-                              Disable specified features of coverage instrumentation for Sanitizers
+                              Disable features of coverage instrumentation for Sanitizers
+      -fno-sanitize-debug-trap-reasons
+                              Alias for -fsanitize-debug-trap-reasons=none
+      -fno-sanitize-handler-preserve-all-regs
+                              Disable handlers with preserve_all calling convention
+      -fno-sanitize-hwaddress-experimental-aliasing
+                              Disable aliasing mode in HWAddressSanitizer
+      -fno-sanitize-ignorelist
+                              Don't use ignorelist file for sanitizers
+      -fno-sanitize-memory-param-retval
+                              Disable detection of uninitialized parameters and return values
       -fno-sanitize-memory-track-origins
                               Disable origins tracking in MemorySanitizer
       -fno-sanitize-memory-use-after-dtor
                               Disable use-after-destroy detection in MemorySanitizer
+      -fno-sanitize-merge=<value>
+                              Do not allow compiler to merge handlers for specified sanitizers
+      -fno-sanitize-merge     Do not allow compiler to merge handlers for any sanitizers
       -fno-sanitize-recover=<value>
                               Disable recovery for specified sanitizers
+      -fno-sanitize-stable-abi
+                              Conventional ABI instrumentation for sanitizer runtime. Default: Conventional
       -fno-sanitize-stats     Disable sanitizer statistics gathering.
       -fno-sanitize-thread-atomics
                               Disable atomic operations instrumentation in ThreadSanitizer
@@ -5244,64 +5481,132 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Disable memory access instrumentation in ThreadSanitizer
       -fno-sanitize-trap=<value>
                               Disable trapping for specified sanitizers
+      -fno-sanitize-trap      Disable trapping for all sanitizers
+      -fno-sanitize-type-outline-instrumentation
+                              Use code inlining logic for the type sanitizer
       -fno-standalone-debug   Limit debug information produced to reduce size of debug binary
-      -fno-strict-aliasing    Disable optimizations based on strict aliasing rules (default)
+      -fno-strict-aliasing    Disable optimizations based on strict aliasing rules
+      -fno-sycl               Disable SYCL C++ extensions
+      -fno-temp-file          Directly create compilation output files. This may lead to incorrect incremental builds if the compiler crashes
+      -fno-verify-intermediate-code
+                              Disable verification of LLVM IR
       -fobjc-runtime=<value>  Specify the target Objective-C runtime kind and version
+      -foffload-implicit-host-device-templates
+                              Template functions or specializations without host, device and global attributes have implicit host device attributes (CUDA/HIP only)
+      -foffload-lto=<value>   Set LTO mode for offload compilation
+      -foffload-lto           Enable LTO in 'full' mode for offload compilation
+      -foffload-via-llvm      Use LLVM/Offload as portable offloading runtime.
+      -fopenmp-target-jit     Emit code that can be JIT compiled for OpenMP offloading. Implies -foffload-lto=full
+      -fpch-instantiate-templates
+                              Instantiate templates already while building a PCH
+      -fprebuilt-module-path=<directory>
+                              Specify the prebuilt module path
       -fprofile-exclude-files=<value>
                               Instrument only functions from files where names don't match all the regexes separated by a semi-colon
       -fprofile-filter-files=<value>
                               Instrument only functions from files where names match any regex separated by a semi-colon
-      -fprofile-generate=<dirname>
-                              Generate instrumented code to collect execution counts into a raw profile file in the directory specified by the argument. The filename uses default_%m.profraw pattern
-                              (overridden by ``LLVM_PROFILE_FILE`` env var)
-      -fprofile-generate
-                              Generate instrumented code to collect execution counts into default_%m.profraw file
-                              (overridden by '=' form of option or ``LLVM_PROFILE_FILE`` env var)
-      -fprofile-instr-generate=<file_name_pattern>
-                              Generate instrumented code to collect execution counts into the file whose name pattern is specified as the argument
-                              (overridden by ``LLVM_PROFILE_FILE`` env var)
+      -fprofile-generate-cold-function-coverage=<directory>
+                              Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)
+      -fprofile-generate-cold-function-coverage
+                              Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
+      -fprofile-generate=<directory>
+                              Generate instrumented code to collect execution counts into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)
+      -fprofile-generate      Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)
+      -fprofile-instr-generate=<file>
+                              Generate instrumented code to collect execution counts into <file> (overridden by LLVM_PROFILE_FILE env var)
       -fprofile-instr-generate
-                              Generate instrumented code to collect execution counts into default.profraw file
-                              (overridden by '=' form of option or ``LLVM_PROFILE_FILE`` env var)
+                              Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
       -fprofile-instr-use=<value>
-                              Use instrumentation data for coverage testing or profile-guided optimization
-      -fprofile-use=<value>
                               Use instrumentation data for profile-guided optimization
+      -fprofile-list=<value>  Filename defining the list of functions/files to instrument. The file uses the sanitizer special case list format.
       -fprofile-remapping-file=<file>
                               Use the remappings described in <file> to match the profile data against names in the program
-      -fprofile-list=<file>
-                              Filename defining the list of functions/files to instrument
+      -fprofile-sample-use=<value>
+                              Enable sample-based profile guided optimizations
+      -fprofile-update=<method>
+                              Set update method of profile counters
+      -fprofile-use=<pathname>
+                              Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.
+      -fprotect-parens        Determines whether the optimizer honors parentheses when floating-point expressions are evaluated
+      -fpseudo-probe-for-profiling
+                              Emit pseudo probes for sample profiling
+      -frtlib-defaultlib      On Windows, emit /defaultlib: directives to link compiler-rt libraries (default)
+      -fsanitize-address-destructor=<value>
+                              Set the kind of module destructors emitted by AddressSanitizer instrumentation. These destructors are emitted to unregister instrumented global variables when code is unloaded (e.g. via `dlclose()`).
       -fsanitize-address-field-padding=<value>
                               Level of field padding for AddressSanitizer
       -fsanitize-address-globals-dead-stripping
                               Enable linker dead stripping of globals in AddressSanitizer
+      -fsanitize-address-outline-instrumentation
+                              Always generate function calls for address sanitizer instrumentation
       -fsanitize-address-poison-custom-array-cookie
                               Enable poisoning array cookies when using custom operator new[] in AddressSanitizer
       -fsanitize-address-use-after-return=<mode>
-                              Select the mode of detecting stack use-after-return in AddressSanitizer: never | runtime (default) | always
+                              Select the mode of detecting stack use-after-return in AddressSanitizer
       -fsanitize-address-use-after-scope
                               Enable use-after-scope detection in AddressSanitizer
       -fsanitize-address-use-odr-indicator
                               Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
-      -fsanitize-ignorelist=<value>
-                              Path to ignorelist file for sanitizers
+      -fsanitize-alloc-token-extended
+                              Enable extended coverage to custom allocation functions
+      -fsanitize-alloc-token-fast-abi
+                              Use the AllocToken fast ABI
+      -fsanitize-annotate-debug-info=<value>
+                              Annotate sanitizer instrumentation with extra debug info for the specified sanitizers, if supported
+      -fsanitize-annotate-debug-info
+                              Allow compiler to annotate sanitizer instrumentation with extra debug info for all sanitizers, where supported
+      -fsanitize-cfi-canonical-jump-tables
+                              Make the jump table addresses canonical in the symbol table
       -fsanitize-cfi-cross-dso
                               Enable control flow integrity (CFI) checks for cross-DSO calls.
+      -fsanitize-cfi-icall-experimental-normalize-integers
+                              Normalize integers in CFI indirect call type signature checks
       -fsanitize-cfi-icall-generalize-pointers
                               Generalize pointers in CFI indirect call type signature checks
+      -fsanitize-coverage-allowlist=<value>
+                              Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones
+      -fsanitize-coverage-ignorelist=<value>
+                              Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones
+      -fsanitize-coverage-stack-depth-callback-min=<M>
+                              Use callback for max stack depth tracing with minimum stack depth M
       -fsanitize-coverage=<value>
                               Specify the type of coverage instrumentation for Sanitizers
+      -fsanitize-debug-trap-reasons=<value>
+                              Set how trap reasons are emitted. `none` - Not emitted. This gives the smallest debug info; `basic` - Emit a fixed trap message per check type. This increases the debug info size but not as much as `detailed`; `detailed` - Emit a more detailed trap message. This increases the debug info size the most. Default is `detailed`.
+      -fsanitize-debug-trap-reasons
+                              Alias for -fsanitize-debug-trap-reasons=detailed
+      -fsanitize-handler-preserve-all-regs
+                              Enable handlers with preserve_all calling convention
       -fsanitize-hwaddress-abi=<value>
-                              Select the HWAddressSanitizer ABI to target (interceptor or platform, default interceptor)
+                              Select the HWAddressSanitizer ABI to target (interceptor or platform, default interceptor). This option is currently unused.
+      -fsanitize-hwaddress-experimental-aliasing
+                              Enable aliasing mode in HWAddressSanitizer
+      -fsanitize-ignorelist=<value>
+                              Path to ignorelist file for sanitizers
+      -fsanitize-kcfi-arity   Embed function arity information into the KCFI patchable function prefix
+      -fsanitize-kcfi-hash=<value>
+                              Select hash algorithm for KCFI type IDs (xxHash64, FNV-1a)
+      -fsanitize-memory-param-retval
+                              Enable detection of uninitialized parameters and return values
       -fsanitize-memory-track-origins=<value>
                               Enable origins tracking in MemorySanitizer
       -fsanitize-memory-track-origins
                               Enable origins tracking in MemorySanitizer
       -fsanitize-memory-use-after-dtor
                               Enable use-after-destroy detection in MemorySanitizer
+      -fsanitize-memtag-mode=<value>
+                              Set default MTE mode to 'sync' (default) or 'async'
+      -fsanitize-merge=<value>
+                              Allow compiler to merge handlers for specified sanitizers
+      -fsanitize-merge        Allow compiler to merge handlers for all sanitizers
       -fsanitize-recover=<value>
                               Enable recovery for specified sanitizers
+      -fsanitize-skip-hot-cutoff=<value>
+                              Exclude sanitization for the top hottest code responsible for the given fraction of PGO counters (0.0 [default] = skip none; 1.0 = skip all). Argument format: <sanitizer1>=<value1>,<sanitizer2>=<value2>,...
+      -fsanitize-stable-abi   Stable  ABI instrumentation for sanitizer runtime. Default: Conventional
       -fsanitize-stats        Enable sanitizer statistics gathering.
+      -fsanitize-system-ignorelist=<value>
+                              Path to system ignorelist file for sanitizers
       -fsanitize-thread-atomics
                               Enable atomic operations instrumentation in ThreadSanitizer (default)
       -fsanitize-thread-func-entry-exit
@@ -5309,32 +5614,345 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize-thread-memory-access
                               Enable memory access instrumentation in ThreadSanitizer (default)
       -fsanitize-trap=<value> Enable trapping for specified sanitizers
+      -fsanitize-trap         Enable trapping for all sanitizers
+      -fsanitize-type-outline-instrumentation
+                              Always generate function calls for type sanitizer instrumentation
+      -fsanitize-undefined-ignore-overflow-pattern=<value>
+                              Specify the overflow patterns to exclude from arithmetic sanitizer instrumentation
       -fsanitize-undefined-strip-path-components=<number>
                               Strip (or keep only, if negative) a given number of path components when emitting check metadata.
-      -fsanitize=<check>      Turn on runtime checks for various forms of undefined or suspicious
-                              behavior. See user manual for available checks
-      -fsplit-lto-unit        Enables splitting of the LTO unit.
+      -fsanitize=<check>      Turn on runtime checks for various forms of undefined or suspicious behavior. See user manual for available checks
+      -fsplit-lto-unit        Enables splitting of the LTO unit
       -fstandalone-debug      Emit full debug info for all types used by the program
-      -fstrict-aliasing	      Enable optimizations based on strict aliasing rules
+      -fstrict-aliasing       Enable optimizations based on strict aliasing rules
+      -fswift-async-fp=<option>
+                              Control emission of Swift async extended frame info
+      -fsycl-device-only      Compile SYCL code for device only
+      -fsycl-host-only        Compile SYCL code for host only. Has no effect on non-SYCL compilations
+      -fsycl                  Enable SYCL C++ extensions
       -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
-      -fdevirtualize-speculatively
-                              Enables speculative devirtualization optimization.
+      -fsystem-module         Build this module as a system module. Only used with -emit-module
+      -ftemporal-profile      Generate instrumented code to collect temporal information
+      -fthin-link-bitcode=<value>
+                              Write minimized bitcode to <file> for the ThinLTO thin link only
+      -fthinlto-distributor=<path>
+                              Path to the ThinLTO distributor process. If specified, ThinLTO backend compilations will be distributed by LLD
+      -fthinlto-index=<value> Perform ThinLTO importing using provided function summary index
+      -ftime-trace-granularity=<value>
+                              Minimum time granularity (in microseconds) traced by time profiler
+      -ftime-trace-verbose<value>
+                              Make time trace capture verbose event details (e.g. source filenames). This can increase the size of the output by 2-3 times
+      -ftime-trace=<value>    Similar to -ftime-trace. Specify the JSON file or a directory which will contain the JSON file
+      -ftime-trace            Turn on time profiler. Generates JSON file based on output filename.
+      -ftrivial-auto-var-init-max-size=<value>
+                              Stop initializing trivial automatic stack variables if var size exceeds the specified number of instances (in bytes)
+      -ftrivial-auto-var-init-stop-after=<value>
+                              Stop initializing trivial automatic stack variables after the specified number of instances
+      -ftrivial-auto-var-init=<value>
+                              Initialize trivial automatic stack variables. Defaults to 'uninitialized'
+      -fuse-cuid=<value>      Method to generate ID's for compilation units for single source offloading languages CUDA and HIP: 'hash' (ID's generated by hashing file path and command line options) | 'random' (ID's generated as random numbers) | 'none' (disabled). Default is 'hash'. This option will be overridden by option '-cuid=[ID]' if it is specified.
+      -fverify-intermediate-code
+                              Enable verification of LLVM IR
+      -fvirtual-function-elimination
+                              Enables dead virtual function elimination optimization. Requires -flto=full
       -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
+      -fwrapv-pointer         Treat pointer overflow as two's complement
+      -fwrapv                 Treat signed integer overflow as two's complement
+      -gcodeview-command-line Emit compiler path and command line into CodeView debug information
       -gcodeview-ghash        Emit type record hashes in a .debug$H section
       -gcodeview              Generate CodeView debug information
+      -gdwarf                 Generate source-level debug information with the default DWARF version
+      -gen-reproducer=<value> Emit reproducer on (option: off, crash (default), error, always)
+      -gkey-instructions      Enable Key Instructions, which reduces the jumpiness of debug stepping in optimized C/C++ code in some debuggers. DWARF only.
       -gline-directives-only  Emit debug line info directives only
       -gline-tables-only      Emit debug line number tables only
+      -gno-codeview-command-line
+                              Don't emit compiler path and command line into CodeView debug information
+      -gno-inline-line-tables Don't emit inline line tables.
+      --gpu-bundle-output     Bundle output files of HIP device compilation
+      --gpu-instrument-lib=<value>
+                              Instrument device library for HIP, which is a LLVM bitcode containing __cyg_profile_func_enter and __cyg_profile_func_exit
+      --gpu-max-threads-per-block=<value>
+                              Default max threads per block for kernel launch bounds for HIP
+      -gsplit-dwarf=<value>   Set DWARF fission mode
+      -gstrict-dwarf          Restrict DWARF features to those defined in the specified version, avoiding features from later versions.
+      -gstructor-decl-linkage-names
+                              Attach linkage names to C++ constructor/destructor declarations in DWARF.
+      -G <size>               Put objects of at most <size> bytes into small data section (MIPS / Hexagon)
+      -g                      Generate source-level debug information
+      --hip-device-lib=<value>
+                              HIP device library
+      --hip-link              Link clang-offload-bundler bundles for HIP
+      --hip-path=<value>      HIP runtime installation path, used for finding HIP version and adding HIP include path.
+      --hip-version=<value>   HIP version in the format of major.minor.patch
+      --hipspv-pass-plugin=<dsopath>
+                              path to a pass plugin for HIP to SPIR-V passes.
+      --hipstdpar-interpose-alloc
+                              Replace all memory allocation / deallocation calls with hipManagedMalloc / hipFree equivalents
+      --hipstdpar-path=<value>
+                              HIP Standard Parallel Algorithm Acceleration library path, used for finding and implicitly including the library header
+      --hipstdpar-prim-path=<value>
+                              rocPrim path, required by the HIP Standard Parallel Algorithm Acceleration library, used to implicitly include the rocPrim library
+      --hipstdpar-thrust-path=<value>
+                              rocThrust path, required by the HIP Standard Parallel Algorithm Acceleration library, used to implicitly include the rocThrust library
+      --hipstdpar             Enable HIP acceleration for standard parallel algorithms
+      -mabi=quadword-atomics  Enable quadword atomics ABI on AIX (AIX PPC64 only). Uses lqarx/stqcx. instructions.
+      -maix-struct-return     Return all structs in memory (PPC32 only)
+      -malign-branch-boundary=<value>
+                              Specify the boundary's size to align branches
+      -malign-branch=<value>  Specify types of branches to align
+      -malign-double          Align doubles to two words in structs (x86 only)
+      -mamdgpu-expand-waitcnt-profiling
+                              Expand s_waitcnt instructions to help PC-sampling profilers identify memory stalls. Instead of a single waitcnt(target), emits waitcnt(N-1), waitcnt(N-2), ..., waitcnt(target). (AMDGPU only)
+      -mamdgpu-ieee           Sets the IEEE bit in the expected default floating point  mode register. Floating point opcodes that support exception flag gathering quiet and propagate signaling NaN inputs per IEEE 754-2008. This option changes the ABI. (AMDGPU only)
+      -mamdgpu-precise-memory-op
+                              Enable precise memory mode (AMDGPU only)
+      -mannotate-tablejump    Enable annotate table jump instruction to correlate it with the jump table.
+      -mapx-features=<value>  Enable features of APX
+      -mapx-inline-asm-use-gpr32
+                              Enable use of GPR32 in inline assembly for APX
+      -march=<value>          For a list of available architectures for the target use '-mcpu=help'
+      -marm64x<value>         Link as a hybrid ARM64X image
+      -mbackchain             Link stack frames through backchain on System Z
+      -mbranch-protection=<value>
+                              Enforce targets of indirect branches and function returns
+      -mbranches-within-32B-boundaries
+                              Align selected branches (fused, jcc, jmp) within 32-byte boundary
+      -mcf-branch-label-scheme=<value>
+                              Select label scheme for branch control-flow architecture protection
+      -mcode-object-version=<value>
+                              Specify code object ABI version. Defaults to 6. (AMDGPU only)
+      -mconstructor-aliases   Enable emitting complete constructors and destructors as aliases when possible
+      -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
+      -mcrc                   Allow use of CRC instructions (ARM/Mips only)
+      -mdaz-ftz               Globally set the denormals-are-zero (DAZ) and flush-to-zero (FTZ) bits in the floating-point control register on program startup
+      -mdefault-visibility-export-mapping=<value>
+                              Mapping between default visibility and export
+      -mdiv32                 Use div.w[u] and mod.w[u] instructions with input not sign-extended.
+      -mdouble=<n             Force double to be <n> bits
+      -meabi <value>          Set EABI type. Default depends on triple)
+      -menable-experimental-extensions
+                              Enable use of experimental RISC-V extensions.
+      -mfentry                Insert calls to fentry at function entry (x86/SystemZ only)
+      -mfrecipe               Enable frecipe.{s/d} and frsqrte.{s/d}
+      -mfunction-return=<value>
+                              Replace returns with jumps to ``__x86_return_thunk`` (x86 only, error otherwise)
+      -mgeneral-regs-only     Generate code which only uses the general purpose registers (AArch64/x86 only)
+      -mglobal-merge          Enable merging of globals
+      -mguard=<value>         Enable or disable Control Flow Guard checks and guard tables emission
+      -mharden-sls=<value>    Select straight-line speculation hardening scope (ARM/AArch64/X86 only). <arg> must be: all, none, retbr(ARM/AArch64), blr(ARM/AArch64), comdat(ARM/AArch64), nocomdat(ARM/AArch64), return(X86), indirect-jmp(X86)
       -miamcu                 Use Intel MCU ABI
+      -mignore-xcoff-visibility
+                              Not emit the visibility attribute for asm in AIX OS or give all symbols 'unspecified' visibility in XCOFF object file
+      -mimplicit-float        Generate implicit floating point or vector instructions
+      -mincremental-linker-compatible
+                              (integrated-as) Emit an object file which can be used with an incremental linker
+      -mindirect-branch-cs-prefix
+                              Add cs prefix to call and jmp to indirect thunk
+      -mios-version-min=<value>
+                              Set iOS deployment target
+      -mlam-bh                Enable amswap[_db].{b/h} and amadd[_db].{b/h}
+      -mlamcas                Enable amcas[_db].{b/h/w/d}
+      -mlasx                  Enable Loongson Advanced SIMD Extension (LASX).
+      -mld-seq-sa             Do not generate same-address load-load barrier instructions (dbar 0x700)
+      -mlink-builtin-bitcode-postopt
+                              Link builtin bitcodes after the optimization pipeline
+      -mllvm=<arg>            Alias for -mllvm
       -mllvm <value>          Additional arguments to forward to LLVM's option processing
-      -nobuiltininc           Disable builtin #include directories
+      -mlong-calls            Generate branches with extended addressability, usually via indirect jumps.
+      -mlsx                   Enable Loongson SIMD Extension (LSX).
+      -mlvi-cfi               Enable only control-flow mitigations for Load Value Injection (LVI)
+      -mlvi-hardening         Enable all mitigations for Load Value Injection (LVI)
+      -mmacos-version-min=<value>
+                              Set macOS deployment target
+      -mms-bitfields          Set the default structure layout to be compatible with the Microsoft compiler standard
+      -mno-amdgpu-precise-memory-op
+                              Disable precise memory mode (AMDGPU only)
+      -mno-annotate-tablejump Disable annotate table jump instruction to correlate it with the jump table.
+      -mno-apx-features=<value>
+                              Disable features of APX
+      -mno-constructor-aliases
+                              Disable emitting complete constructors and destructors as aliases when possible
+      -mno-daz-ftz            Do not globally set the denormals-are-zero (DAZ) and flush-to-zero (FTZ) bits in the floating-point control register on program startup
+      -mno-div32              Do not use div.w[u] and mod.w[u] instructions with input not sign-extended.
+      -mno-frecipe            Disable frecipe.{s/d} and frsqrte.{s/d}
+      -mno-gather             Disable generation of gather instructions in auto-vectorization(x86 only)
+      -mno-global-merge       Disable merging of globals
+      -mno-implicit-float     Don't generate implicit floating point or vector instructions
+      -mno-incremental-linker-compatible
+                              (integrated-as) Emit an object file which cannot be used with an incremental linker
+      -mno-lam-bh             Disable amswap[_db].{b/h} and amadd[_db].{b/h}
+      -mno-lamcas             Disable amcas[_db].{b/h/w/d}
+      -mno-lasx               Disable Loongson Advanced SIMD Extension (LASX).
+      -mno-ld-seq-sa          Generate same-address load-load barrier instructions (dbar 0x700)
+      -mno-long-calls         Restore the default behaviour of not generating long calls
+      -mno-lsx                Disable Loongson SIMD Extension (LSX).
+      -mno-lvi-cfi            Disable control-flow mitigations for Load Value Injection (LVI)
+      -mno-lvi-hardening      Disable mitigations for Load Value Injection (LVI)
+      -mno-ms-bitfields       Do not set the default structure layout to be compatible with the Microsoft compiler standard
+      -mno-pic-data-is-text-relative
+                              Don't assume data segments are relative to text segment
+      -mno-regnames           Use only register numbers when writing assembly output
+      -mno-relax              Disable linker relaxation
+      -mno-scalar-strict-align
+                              Allow scalar memory accesses to be unaligned (RISC-V only)
+      -mno-scatter            Disable generation of scatter instructions in auto-vectorization(x86 only)
+      -mno-scq                Disable sc.q instruction.
+      -mno-seses              Disable speculative execution side effect suppression (SESES)
+      -mno-stack-arg-probe    Disable stack probes which are enabled by default
+      -mno-strict-align       Allow memory accesses to be unaligned (AArch64/LoongArch/RISC-V only)
+      -mno-tls-direct-seg-refs
+                              Disable direct TLS access through segment registers
+      -mno-tocdata=<value>    Specifies a list of variables to be exempt from the TOC data transformation.
+      -mno-tocdata            This is the default. TOC data transformation is not applied to any variables. Only variables specified explicitly in -mtocdata= will have the TOC data transformation.
+      -mno-unaligned-access   Force all memory accesses to be aligned (AArch32/MIPSr6 only)
+      -mno-unaligned-symbols  Expect external char-aligned symbols to be without ABI alignment (SystemZ only)
+      -mno-vector-strict-align
+                              Allow vector memory accesses to be unaligned (RISC-V only)
+      -mno-wavefrontsize64    Specify wavefront size 32 mode (AMDGPU only)
+      -mnop-mcount            Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.
+      -momit-leaf-frame-pointer
+                              Omit frame pointer setup for leaf functions
+      -mpacked-stack          Use packed stack layout (SystemZ only).
+      -mpad-max-prefix-size=<value>
+                              Specify maximum number of prefixes to use for padding
+      -mpic-data-is-text-relative
+                              Assume data segments are relative to text segment
+      -mprefer-vector-width=<value>
+                              Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.
+      -mprintf-kind=<value>   Specify the printf lowering scheme (AMDGPU only), allowed values are "hostcall"(printing happens during kernel execution, this scheme relies on hostcalls which require system to support pcie atomics) and "buffered"(printing happens after all kernel threads exit, this uses a printf buffer and does not rely on pcie atomic support)
+      -mqdsp6-compat          Enable hexagon-qdsp6 backward compatibility
+      -mrecip=<value>         Control use of approximate reciprocal and reciprocal square root instructions followed by <n> iterations of Newton-Raphson refinement. <value> = ( ['!'] ['vec-'] ('rcp'|'sqrt') [('h'|'s'|'d')] [':'<n>] ) | 'all' | 'default' | 'none'
+      -mrecip                 Equivalent to '-mrecip=all'
+      -mrecord-mcount         Generate a __mcount_loc section entry for each __fentry__ call.
+      -mregnames              Use full register names when writing assembly output
+      -mrelax-all             (integrated-as) Relax all machine instructions
+      -mrelax                 Enable linker relaxation
+      -mreserve-frame-pointer-reg
+                              Reserve the frame pointer register even if the function doesn't have a frame
+      -mrtd                   Make StdCall calling convention the default
+      -mrvv-vector-bits=<value>
+                              Specify the size in bits of an RVV vector register
+      -msave-reg-params       Save arguments passed by registers to ABI-defined stack positions
+      -mscalar-strict-align   Force all scalar memory accesses to be aligned (RISC-V only)
+      -mscq                   Enable sc.q instruction.
+      -mseses                 Enable speculative execution side effect suppression (SESES). Includes LVI control flow integrity mitigations
+      -msign-return-address=<value>
+                              Select return address signing scope
+      -msimd=<value>          Select the SIMD extension(s) to be enabled in LoongArch either 'none', 'lsx', 'lasx'.
+      -mskip-rax-setup        Skip setting up RAX register when passing variable arguments (x86 only)
+      -msmall-data-limit=<value>
+                              Put global and static data smaller than the limit into a special section
+      -msoft-float            Use software floating point
+      -msse2avx               Specify that the assembler should encode SSE instructions with VEX prefix
+      -mstack-alignment=<value>
+                              Set the stack alignment
+      -mstack-arg-probe       Enable stack probes
+      -mstack-probe-size=<value>
+                              Set the stack probe size
+      -mstack-protector-guard-offset=<value>
+                              Use the given offset for addressing the stack-protector guard
+      -mstack-protector-guard-reg=<value>
+                              Use the given reg for addressing the stack-protector guard
+      -mstack-protector-guard-symbol=<value>
+                              Use the given symbol for addressing the stack-protector guard
+      -mstack-protector-guard=<value>
+                              Use the given guard (global, tls) for addressing the stack-protector guard
+      -mstackrealign          Force realign the stack at entry to every function
+      -mstrict-align          Force all memory accesses to be aligned (AArch64/LoongArch/RISC-V only)
+      -msvr4-struct-return    Return small structs in registers (PPC32 only)
+      -mtargetos=<value>      Set the deployment target to be the specified OS and OS version
+      -mthread-model <value>  The thread model to use. Defaults to 'posix')
+      -mtls-dialect=<value>   Which thread-local storage dialect to use for dynamic accesses of TLS variables
+      -mtls-direct-seg-refs   Enable direct TLS access through segment registers (default)
+      -mtls-size=<value>      Specify bit size of immediate TLS offsets (AArch64 ELF only): 12 (for 4KB) | 24 (for 16MB, default) | 32 (for 4GB) | 48 (for 256TB, needs -mcmodel=large)
+      -mtocdata=<value>       Specifies a list of variables to which the TOC data transformation will be applied.
+      -mtocdata               All suitable variables will have the TOC data transformation applied
+      -mtune=<value>          Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86
+      -munaligned-access      Allow memory accesses to be unaligned (AArch32/MIPSr6 only)
+      -munaligned-symbols     Expect external char-aligned symbols to be without ABI alignment (SystemZ only)
+      -mvector-strict-align   Force all vector memory accesses to be aligned (RISC-V only)
+      -mwavefrontsize64       Specify wavefront size 64 mode (AMDGPU only)
+      -mxcoff-roptr           Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)
+      -mzos-target=<value>    Set the z/OS release of the runtime environment
+      --no-cuda-include-ptx=<value>
+                              Do not include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.
+      --no-cuda-version-check Don't error out if the detected version of the CUDA install is too low for the requested CUDA gpu architecture.
+      --no-default-config     Disable loading default configuration files
+      --no-gpu-bundle-output  Do not bundle output files of HIP device compilation
+      -no-hip-rt              Do not link against HIP runtime libraries
+      --no-offload-arch=<value>
+                              Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
+      --no-offload-new-driver Don't Use the new driver for offloading compilation.
+      --no-offloadlib         Do not link device library for CUDA/HIP/SYCL device compilation
+      --no-wasm-opt           Disable the wasm-opt optimizer
+      -nobuiltininc           Disable builtin #include directories only
+      -nostdinc               Disable both standard system #include directories and builtin #include directories
+      -object-file-name=<file>
+                              Set the output <file> for debug infos
+      --offload-arch-tool=<value>
+                              Tool used for detecting offloading architectures in the system.
+      --offload-arch=<value>  Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). If 'native' is used the compiler will detect locally installed architectures. For HIP offloading, the device architecture can be followed by target ID features delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.
+      --offload-compress      Compress offload device binaries (HIP only)
+      --offload-device-only   Only compile for the offloading device.
+      --offload-host-device   Compile for both the offloading host and device (default).
+      --offload-host-only     Only compile for the offloading host.
+      --offload-jobs=<value>  Specify the number of threads to use for device offloading tasks during compilation. Can be a positive integer or the string 'jobserver' to use the make-style jobserver from the environment.
+      --offload-new-driver    Use the new driver for offloading compilation.
+      --offload-targets=<value>
+                              Specify a list of target architectures to use for offloading.
+      --offloadlib            Link device libraries for GPU device compilation
+      --precompile            Only precompile the input
+      -print-diagnostic-options
+                              Print all of Clang's warning options
+      -print-effective-triple Print the effective target triple
+      -print-enabled-extensions
+                              Print the extensions enabled by the given target and -march/-mcpu options. (AArch64 and RISC-V only)
+      -print-file-name=<file> Print the full library path of <file>
+      -print-libgcc-file-name Print the library path for the currently used compiler runtime library ("libgcc.a" or "libclang_rt.builtins.*.a")
+      -print-library-module-manifest-path
+                              Print the path for the C++ Standard library module manifest
+      -print-prog-name=<name> Print the full program path of <name>
+      -print-resource-dir     Print the resource directory pathname
+      -print-rocm-search-dirs Print the paths used for finding ROCm installation
+      -print-runtime-dir      Print the directory pathname containing Clang's runtime libraries
+      -print-search-dirs      Print the paths used for finding libraries and programs
+      -print-supported-cpus   Print supported cpu models for the given target (if target is not specified,it will print the supported cpus for the default target)
+      -print-supported-extensions
+                              Print supported -march extensions (RISC-V, AArch64 and ARM only)
+      -print-target-triple    Print the normalized target triple
+      -print-targets          Print the registered targets
+      --ptxas-path=<value>    Path to ptxas (used for compiling CUDA code)
       -Qunused-arguments      Don't emit warning for unused driver arguments
-      -R<remark>              Enable the specified remark
+      -regcall4               Set __regcall4 as a default calling convention to respect __regcall ABI v.4
+      -resource-dir <value>   The directory which holds the compiler resource files
+      --rocm-device-lib-path=<value>
+                              ROCm device library path. Alternative to rocm-path.
+      --rocm-path=<value>     ROCm installation path, used for finding and automatically linking required bitcode libraries.
+      -rtlib=<value>          Compiler runtime library to use
+      --start-no-unused-arguments
+                              Don't emit warnings about unused arguments for the following arguments
+      -sycl-std=<value>       SYCL language standard to compile for.
       --target=<value>        Generate code for the given target
       --version               Print version information
+      -vfsoverlay <value>     Overlay the virtual filesystem described by file over the real file system. Additionally, pass this overlay file to the linker if it supports it
+      /volatile:iso           Volatile loads and stores have standard semantics
+      /volatile:ms            Volatile loads and stores have acquire and release semantics
       -v                      Show commands to run and use verbose output
+      --warning-suppression-mappings=<value>
+                              File containing diagnostic suppression mappings. See user manual for file format.
+      --wasm-opt              Enable the wasm-opt optimizer (default)
       -W<warning>             Enable the specified warning
-      -Xclang <arg>           Pass <arg> to the clang compiler
-      -Xclangas <arg>         Pass <arg> to the clang assembler
+      -Xclang=<arg>           Alias for -Xclang
+      -Xclangas=<arg>         Alias for -Xclangas
+      -Xclangas <arg>         Pass <arg> to clang -cc1as
+      -Xclang <arg>           Pass <arg> to clang -cc1
+      -Xcuda-ptxas <arg>      Pass <arg> to the ptxas assembler
+      -Xflang <arg>           Pass <arg> to the flang compiler
+      -Xlinker <arg>          Pass <arg> to the linker
+      -Xthinlto-distributor=<arg>
+                              Pass <arg> to the ThinLTO distributor process. Can be specified multiple times or with comma-separated values.
+      -x <language>           Treat subsequent input files as having type <language>
 
 The /clang: Option
 ^^^^^^^^^^^^^^^^^^

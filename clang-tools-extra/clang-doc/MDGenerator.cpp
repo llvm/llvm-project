@@ -8,6 +8,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -67,6 +68,80 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
   OS << "\n\n";
 }
 
+/// Writer for writing comments to a table cell in MD.
+///
+/// The writer traverses the comments recursively and outputs the
+/// comments into a stream.
+/// The formatter inserts single/double line breaks to retain the comment
+/// structure.
+///
+/// Usage :
+/// Initialize an object with a llvm::raw_ostream to output into.
+/// Call the write(C) function with an array of Comments 'C'.
+class TableCommentWriter {
+public:
+  explicit TableCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
+
+  void write(llvm::ArrayRef<CommentInfo> Comments) {
+    for (const auto &C : Comments)
+      writeTableSafeComment(C);
+
+    if (!Started)
+      OS << "--";
+  }
+
+private:
+  /// This function inserts breaks into the stream.
+  ///
+  /// We add a double break in between paragraphs.
+  /// Inside a paragraph, a single break between lines is maintained.
+  void insertSeparator() {
+    if (!Started)
+      return;
+    if (NeedsParagraphBreak) {
+      OS << "<br><br>";
+      NeedsParagraphBreak = false;
+    } else {
+      OS << "<br>";
+    }
+  }
+
+  /// This function processes every comment and its children recursively.
+  void writeTableSafeComment(const CommentInfo &I) {
+    switch (I.Kind) {
+    case CommentKind::CK_FullComment:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(Child);
+      break;
+
+    case CommentKind::CK_ParagraphComment:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(Child);
+      // Next content after a paragraph needs a break
+      NeedsParagraphBreak = true;
+      break;
+
+    case CommentKind::CK_TextComment:
+      if (!I.Text.empty()) {
+        insertSeparator();
+        OS << I.Text;
+        Started = true;
+      }
+      break;
+
+    // Handle other comment types (BlockCommand, InlineCommand, etc.)
+    default:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(Child);
+      break;
+    }
+  }
+
+  llvm::raw_ostream &OS;
+  bool Started = false;
+  bool NeedsParagraphBreak = false;
+};
+
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
                                     const ClangDocContext &CDCtx,
                                     const std::optional<Location> &DefLoc) {
@@ -78,19 +153,19 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
   switch (I.Kind) {
   case CommentKind::CK_FullComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_ParagraphComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     writeNewLine(OS);
     break;
 
   case CommentKind::CK_BlockCommandComment:
     OS << genEmphasis(I.Name) << " ";
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_InlineCommandComment:
@@ -102,13 +177,13 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
     std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
     OS << genEmphasis(I.ParamName) << I.Text << Direction << " ";
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
   }
 
   case CommentKind::CK_VerbatimBlockComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_VerbatimBlockLineComment:
@@ -163,14 +238,36 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
     OS << ": " << I.BaseType->Type.QualName << " ";
   }
-  OS << "|\n\n" << "--\n\n";
+  OS << "|\n\n";
 
-  std::string Buffer;
-  llvm::raw_string_ostream Members(Buffer);
-  if (!I.Members.empty())
-    for (const auto &N : I.Members)
-      Members << "| " << N.Name << " |\n";
-  writeLine(Members.str(), OS);
+  OS << "| Name | Value |";
+  if (!I.Members.empty()) {
+    bool HasComments = false;
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        HasComments = true;
+        OS << " Comments |";
+        break;
+      }
+    }
+    OS << "\n|---|---|";
+    if (HasComments)
+      OS << "---|";
+    OS << "\n";
+    for (const auto &N : I.Members) {
+      OS << "| " << N.Name << " ";
+      if (!N.Value.empty())
+        OS << "| " << N.Value << " ";
+      if (HasComments) {
+        OS << "| ";
+        TableCommentWriter CommentWriter(OS);
+        CommentWriter.write(N.Description);
+        OS << " ";
+      }
+      OS << "|\n";
+    }
+  }
+  OS << "\n";
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 

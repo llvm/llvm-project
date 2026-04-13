@@ -259,12 +259,17 @@ namespace ElementReferences {
 
 void ReferenceToVectorElement() {
   std::vector<int> v = {1, 2, 3};
-  int& ref = v[0];
-  v.push_back(4);
-  // FIXME: Detect this as a use of 'ref'.
-  // https://github.com/llvm/llvm-project/issues/180187
-  ref = 10;
+  int& ref = v[0]; // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(4);  // expected-note {{invalidated here}}
+  ref = 10;        // expected-note {{later used here}}
   (void)ref;
+}
+
+void PointerRefToVectorElement() {
+  std::vector<int*> v = {nullptr, nullptr};
+  int*& ref = v[0];     // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(nullptr); // expected-note {{invalidated here}}
+  ref = nullptr;        // expected-note {{later used here}}
 }
 
 void PointerToVectorElement() {
@@ -468,3 +473,42 @@ void FlatMapSubscriptMultipleCallsInvalidate(std::flat_map<int, int> mp, int a, 
 }
 
 } // namespace AssociativeContainers
+
+namespace lambda_capture_invalidation {
+void captured_view_invalidated_by_owner() {
+  std::string s = "42";
+  std::string_view p = s; // expected-warning {{object whose reference is captured is later invalidated}}
+  auto lambda = [=]() { return p; };
+  s.push_back('c');  // expected-note {{invalidated here}}
+  lambda();  // expected-note {{later used here}}
+}
+
+void multiple_captures_one_invalidated() {
+  std::string s1 = "a", s2 = "b";
+  std::string_view p1 = s1, p2 = s2; // expected-warning {{object whose reference is captured is later invalidated}}
+  auto lambda = [=]() { return p1.size() + p2.size(); };
+  s1.clear();  // expected-note {{invalidated here}}
+  lambda();  // expected-note {{later used here}}
+}
+
+// FIXME: By-ref captures flow only the outermost origin, so
+// invalidation of the captured view's pointee is not propagated.
+void ref_capture_owner_invalidated() {
+  std::string s = "42";
+  std::string_view p = s;
+  auto lambda = [&]() { return p; };
+  s.push_back('c');  // invalidates p
+  lambda();  // should warn: use-after-invalidate
+}
+
+// FIXME: Once inner origins are tracked, this case must remain a no-warning.
+// Reassigning `p` through the by-ref capture should invalidate the link to `s`.
+void ref_capture_reassigned_to_safe() {
+  std::string s = "42", safe = "not modified";
+  std::string_view p = s;
+  auto lambda = [&]() { return p; };
+  p = safe;  // p now points to 'safe', not 's'
+  s.push_back('c');  // does not invalidate p anymore
+  lambda();  // should not warn
+}
+} // namespace lambda_capture_invalidation

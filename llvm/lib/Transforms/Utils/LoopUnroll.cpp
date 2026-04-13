@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
@@ -344,6 +345,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    AssumptionCache *AC,
                                    const TargetTransformInfo *TTI,
+                                   ArrayRef<BasicBlock *> Blocks,
                                    AAResults *AA) {
   using namespace llvm::PatternMatch;
 
@@ -373,15 +375,15 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
-  const DataLayout &DL = L->getHeader()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
-  for (BasicBlock *BB : L->getBlocks()) {
+  for (BasicBlock *BB : Blocks) {
     // Remove repeated debug instructions after loop unrolling.
     if (BB->getParent()->getSubprogram())
       RemoveRedundantDbgInstrs(BB);
 
     for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
-      if (Value *V = simplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
+      if (Value *V = simplifyInstruction(
+              &Inst, {BB->getDataLayout(), nullptr, DT, AC}))
         if (LI->replacementPreservesLCSSAForm(&Inst, V))
           Inst.replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(&Inst))
@@ -515,13 +517,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     BasicBlock *FirstExitingBlock = nullptr;
     SmallVector<BasicBlock *> ExitingBlocks;
   };
-  DenseMap<BasicBlock *, ExitInfo> ExitInfos;
+  MapVector<BasicBlock *, ExitInfo> ExitInfos;
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   for (auto *ExitingBlock : ExitingBlocks) {
     // The folding code is not prepared to deal with non-branch instructions
     // right now.
-    auto *BI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBlock->getTerminator());
     if (!BI)
       continue;
 
@@ -572,12 +574,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // (2b) latch is conditional and is an exiting block
   // FIXME: The implementation can be extended to work with more complicated
   // cases, e.g. loops with multiple latches.
-  BranchInst *LatchBI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
+  Instruction *LatchTerm = LatchBlock->getTerminator();
 
   // A conditional branch which exits the loop, which can be optimized to an
   // unconditional branch in the unrolled loop in some cases.
   bool LatchIsExiting = L->isLoopExiting(LatchBlock);
-  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
+  if (!isa<UncondBrInst>(LatchTerm) &&
+      !(isa<CondBrInst>(LatchTerm) && LatchIsExiting)) {
     LLVM_DEBUG(
         dbgs() << "Can't unroll; a conditional latch must exit the loop");
     return LoopUnrollResult::Unmodified;
@@ -952,7 +955,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   SmallVector<DominatorTree::UpdateType> DTUpdates;
   auto SetDest = [&](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
-    auto *Term = cast<BranchInst>(Src->getTerminator());
+    auto *Term = cast<CondBrInst>(Src->getTerminator());
     const unsigned Idx = ExitOnTrue ^ WillExit;
     BasicBlock *Dest = Term->getSuccessor(Idx);
     BasicBlock *DeadSucc = Term->getSuccessor(1-Idx);
@@ -961,7 +964,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
     // Replace the conditional branch with an unconditional one.
-    auto *BI = BranchInst::Create(Dest, Term->getIterator());
+    auto *BI = UncondBrInst::Create(Dest, Term->getIterator());
     BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
@@ -1002,7 +1005,9 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   };
 
   // Fold branches for iterations where we know that they will exit or not
-  // exit.
+  // exit.  In the case of an iteration's latch, if we thus find
+  // *OriginalLoopProb is incorrect, set ProbUpdateRequired to true.
+  bool ProbUpdateRequired = false;
   for (auto &Pair : ExitInfos) {
     ExitInfo &Info = Pair.second;
     for (unsigned i = 0, e = Info.ExitingBlocks.size(); i != e; ++i) {
@@ -1025,6 +1030,14 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         if (!Info.FirstExitingBlock)
           Info.FirstExitingBlock = Info.ExitingBlocks[i];
         continue;
+      }
+
+      // For a latch, record any OriginalLoopProb contradiction.
+      if (!OriginalLoopProb.isUnknown() && IsLatch) {
+        BranchProbability ActualProb = *KnownWillExit
+                                           ? BranchProbability::getZero()
+                                           : BranchProbability::getOne();
+        ProbUpdateRequired |= OriginalLoopProb != ActualProb;
       }
 
       SetDest(Info.ExitingBlocks[i], *KnownWillExit, Info.ExitOnTrue);
@@ -1062,15 +1075,36 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     changeToUnreachable(Latches.back()->getTerminator(), PreserveLCSSA);
   }
 
+  // After merging adjacent blocks in Latches below:
+  // - CondLatches will list the blocks from Latches that are still terminated
+  //   with conditional branches.
+  // - For 1 <= I < CondLatches.size(), IterCounts[I] will store the number of
+  //   the original loop iterations through which control flows from
+  //   CondLatches[I-1] to CondLatches[I].
+  // - For I == 0 or I == CondLatches.size(), IterCounts[I] will store the
+  //   number of the original loop iterations through which control can flow
+  //   before CondLatches.front() or after CondLatches.back(), respectively,
+  //   without taking the unrolled loop's backedge, if any.
+  // - CondLatchNexts[I] will store the CondLatches[I] branch target for the
+  //   next of the original loop's iterations (as opposed to the exit target).
+  assert(ULO.Count == Latches.size() &&
+         "Expected one latch block per unrolled iteration");
+  std::vector<unsigned> IterCounts(1, 0);
+  std::vector<BasicBlock *> CondLatches;
+  std::vector<BasicBlock *> CondLatchNexts;
+  IterCounts.reserve(Latches.size() + 1);
+  CondLatches.reserve(Latches.size());
+  CondLatchNexts.reserve(Latches.size());
+
   // Merge adjacent basic blocks, if possible.
-  for (BasicBlock *Latch : Latches) {
-    BranchInst *Term = dyn_cast<BranchInst>(Latch->getTerminator());
-    assert((Term ||
+  for (auto [I, Latch] : enumerate(Latches)) {
+    ++IterCounts.back();
+    assert((isa<UncondBrInst, CondBrInst>(Latch->getTerminator()) ||
             (CompletelyUnroll && !LatchIsExiting && Latch == Latches.back())) &&
            "Need a branch as terminator, except when fully unrolling with "
            "unconditional latch");
-    if (Term && Term->isUnconditional()) {
-      BasicBlock *Dest = Term->getSuccessor(0);
+    if (auto *Term = dyn_cast<UncondBrInst>(Latch->getTerminator())) {
+      BasicBlock *Dest = Term->getSuccessor();
       BasicBlock *Fold = Dest->getUniquePredecessor();
       if (MergeBlockIntoPredecessor(Dest, /*DTU=*/DTUToUse, LI,
                                     /*MSSAU=*/nullptr, /*MemDep=*/nullptr,
@@ -1080,6 +1114,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         llvm::replace(Latches, Dest, Fold);
         llvm::erase(UnrolledLoopBlocks, Dest);
       }
+    } else if (isa<CondBrInst>(Latch->getTerminator())) {
+      IterCounts.push_back(0);
+      CondLatches.push_back(Latch);
+      CondLatchNexts.push_back(Headers[(I + 1) % Latches.size()]);
     }
   }
 
@@ -1122,21 +1160,26 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(!UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
+  Loop *OuterL = L->getParentLoop();
+  std::vector<BasicBlock *> Blocks;
+  // Update LoopInfo if the loop is completely removed.
+  if (CompletelyUnroll) {
+    Blocks = L->getBlocks();
+    LI->erase(L);
+    // We shouldn't try to use `L` anymore.
+    L = nullptr;
+  }
+
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.
-  simplifyLoopAfterUnroll(L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC,
-                          TTI, AA);
+  simplifyLoopAfterUnroll(
+      L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC, TTI,
+      CompletelyUnroll ? ArrayRef<BasicBlock *>(Blocks) : L->getBlocks(), AA);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;
 
-  Loop *OuterL = L->getParentLoop();
-  // Update LoopInfo if the loop is completely removed.
-  if (CompletelyUnroll) {
-    LI->erase(L);
-    // We shouldn't try to use `L` anymore.
-    L = nullptr;
-  } else {
+  if (!CompletelyUnroll) {
     // Update metadata for the loop's branch weights and estimated trip count:
     // - If ULO.Runtime, UnrollRuntimeLoopRemainder sets the guard branch
     //   weights, latch branch weights, and estimated trip count of the
@@ -1166,6 +1209,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     // each unrolled iteration's latch within it, we store the new trip count as
     // separate metadata.
     if (!OriginalLoopProb.isUnknown() && ULO.Runtime && EpilogProfitability) {
+      assert((CondLatches.size() == 1 &&
+              (ProbUpdateRequired || OriginalLoopProb.isOne())) &&
+             "Expected ULO.Runtime to give unrolled loop 1 conditional latch, "
+             "the backedge, requiring a probability update unless infinite");
       // Where p is always the probability of executing at least 1 more
       // iteration, the probability for at least n more iterations is p^n.
       setLoopProbability(L, OriginalLoopProb.pow(ULO.Count));
@@ -1249,6 +1296,15 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
     if (Name == S->getString())
       return MD;
   }
+  return nullptr;
+}
+
+// Returns the loop hint metadata node with the given name (for example,
+// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
+// returned.
+MDNode *llvm::getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+  if (MDNode *LoopID = L->getLoopID())
+    return GetUnrollMetadata(LoopID, Name);
   return nullptr;
 }
 

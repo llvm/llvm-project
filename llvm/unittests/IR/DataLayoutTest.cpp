@@ -815,17 +815,58 @@ TEST(DataLayoutTest, GlobalsAddressSpace) {
 }
 
 TEST(DataLayoutTest, VectorAlign) {
-  Expected<DataLayout> DL = DataLayout::parse("v64:64");
-  EXPECT_THAT_EXPECTED(DL, Succeeded());
-
   LLVMContext Context;
   Type *const FloatTy = Type::getFloatTy(Context);
-  Type *const V8F32Ty = FixedVectorType::get(FloatTy, 8);
+  Type *const V4F32 = FixedVectorType::get(FloatTy, 4);
+  Type *const V8F32 = FixedVectorType::get(FloatTy, 8);
+  Type *const HalfTy = Type::getHalfTy(Context);
+  Type *const V4F16 = FixedVectorType::get(HalfTy, 4);
 
-  // The alignment for a vector type larger than any specified vector type uses
-  // the natural alignment as a fallback.
-  EXPECT_EQ(Align(4 * 8), DL->getABITypeAlign(V8F32Ty));
-  EXPECT_EQ(Align(4 * 8), DL->getPrefTypeAlign(V8F32Ty));
+  {
+    Expected<DataLayout> DL = DataLayout::parse("v64:16:64-v128:32:128");
+    EXPECT_THAT_EXPECTED(DL, Succeeded());
+    EXPECT_FALSE(DL->vectorsAreElementAligned());
+
+    EXPECT_EQ(Align(2), DL->getABITypeAlign(V4F16));
+    EXPECT_EQ(Align(8), DL->getPrefTypeAlign(V4F16));
+
+    EXPECT_EQ(Align(4), DL->getABITypeAlign(V4F32));
+    EXPECT_EQ(Align(16), DL->getPrefTypeAlign(V4F32));
+
+    // The alignment for a vector type larger than any specified vector type
+    // uses the natural alignment as a fallback.
+    EXPECT_EQ(Align(4 * 8), DL->getABITypeAlign(V8F32));
+    EXPECT_EQ(Align(4 * 8), DL->getPrefTypeAlign(V8F32));
+  }
+
+  {
+    Expected<DataLayout> DL = DataLayout::parse("ve");
+    EXPECT_THAT_EXPECTED(DL, Succeeded());
+    EXPECT_TRUE(DL->vectorsAreElementAligned());
+
+    EXPECT_EQ(DL->getABITypeAlign(FloatTy), DL->getABITypeAlign(V4F32));
+    EXPECT_EQ(DL->getABITypeAlign(FloatTy), DL->getABITypeAlign(V8F32));
+    EXPECT_EQ(DL->getABITypeAlign(HalfTy), DL->getABITypeAlign(V4F16));
+
+    EXPECT_EQ(DL->getPrefTypeAlign(FloatTy), DL->getPrefTypeAlign(V4F32));
+    EXPECT_EQ(DL->getPrefTypeAlign(FloatTy), DL->getPrefTypeAlign(V8F32));
+    EXPECT_EQ(DL->getPrefTypeAlign(HalfTy), DL->getPrefTypeAlign(V4F16));
+  }
+
+  {
+    Expected<DataLayout> DL = DataLayout::parse("ve-v64:64-v128:128-v256:256");
+    EXPECT_THAT_EXPECTED(DL, Succeeded());
+    EXPECT_TRUE(DL->vectorsAreElementAligned());
+
+    // Specific vector alignments override "ve"
+    EXPECT_EQ(Align(16), DL->getABITypeAlign(V4F32));
+    EXPECT_EQ(Align(32), DL->getABITypeAlign(V8F32));
+    EXPECT_EQ(Align(8), DL->getABITypeAlign(V4F16));
+
+    EXPECT_EQ(Align(16), DL->getPrefTypeAlign(V4F32));
+    EXPECT_EQ(Align(32), DL->getPrefTypeAlign(V8F32));
+    EXPECT_EQ(Align(8), DL->getPrefTypeAlign(V4F16));
+  }
 }
 
 TEST(DataLayoutTest, Equality) {

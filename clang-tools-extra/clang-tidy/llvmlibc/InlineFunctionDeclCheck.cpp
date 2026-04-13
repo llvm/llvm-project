@@ -35,8 +35,7 @@ getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
 
 InlineFunctionDeclCheck::InlineFunctionDeclCheck(StringRef Name,
                                                  ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void InlineFunctionDeclCheck::registerMatchers(MatchFinder *Finder) {
   // Ignore functions that have been deleted.
@@ -67,7 +66,7 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Consider functions only in header files.
   if (!utils::isSpellingLocInHeaderFile(SrcBegin, *Result.SourceManager,
-                                        HeaderFileExtensions))
+                                        getHeaderFileExtensions()))
     return;
 
   // Ignore lambda functions as they are internal and implicit.
@@ -78,8 +77,7 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
   // Check if decl starts with LIBC_INLINE
   auto Loc = FullSourceLoc(Result.SourceManager->getFileLoc(SrcBegin),
                            *Result.SourceManager);
-  const llvm::StringRef SrcText =
-      Loc.getBufferData().drop_front(Loc.getFileOffset());
+  const StringRef SrcText = Loc.getBufferData().drop_front(Loc.getFileOffset());
   if (SrcText.starts_with("LIBC_INLINE"))
     return;
 

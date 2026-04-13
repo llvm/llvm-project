@@ -397,3 +397,26 @@ llvm.func @inline_test_return_arity_mismatch_callee(%arg0: f16, %arg1: f16) {
   %1 = "test.op_with_bitcast_type"(%arg1) : (f16) -> tensor<2xi32>
   "test.return"(%0, %1) : (tensor<4xf32>, tensor<2xi32>) -> ()
 }
+
+// Check that a functional_region_op with a multi-block region is inlined
+// correctly.  Previously the test dialect's handleTerminator(op, Block*)
+// was missing, causing an llvm_unreachable when the non-entry block's
+// test.return terminator was processed.
+// CHECK-LABEL: func @inline_functional_region_multiblock(
+func.func @inline_functional_region_multiblock(%arg0: i32) -> i32 {
+  // CHECK-NOT: call_indirect
+  // CHECK:     arith.addi
+  // CHECK:     arith.addi
+  // CHECK:     cf.br
+  // CHECK:     arith.addi
+  %fn = "test.functional_region_op"() ({
+  ^bb0(%a : i32):
+    %b = arith.addi %a, %a : i32
+    cf.br ^bb1(%b: i32)
+  ^bb1(%c: i32):
+    %d = arith.addi %c, %c : i32
+    "test.return"(%d) : (i32) -> ()
+  }) : () -> ((i32) -> i32)
+  %0 = call_indirect %fn(%arg0) : (i32) -> i32
+  return %0 : i32
+}

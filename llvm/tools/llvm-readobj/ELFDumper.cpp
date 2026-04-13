@@ -1623,82 +1623,9 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_MIPS_ARCH_64R6, "mips64r6")
 };
 
-// clang-format off
+#define X(NUM, ENUM, NAME) ENUM_ENT(ENUM, NAME),
 #define AMDGPU_MACH_ENUM_ENTS                                                  \
-  ENUM_ENT(EF_AMDGPU_MACH_NONE, "none"),                                       \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_R600, "r600"),                                  \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_R630, "r630"),                                  \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RS880, "rs880"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RV670, "rv670"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RV710, "rv710"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RV730, "rv730"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RV770, "rv770"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_CEDAR, "cedar"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_CYPRESS, "cypress"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_JUNIPER, "juniper"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_REDWOOD, "redwood"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_SUMO, "sumo"),                                  \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_BARTS, "barts"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_CAICOS, "caicos"),                              \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_CAYMAN, "cayman"),                              \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_TURKS, "turks"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1170, "gfx1170"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1310, "gfx1310"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic"),              \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic"),              \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC, "gfx12-5-generic")
-// clang-format on
+  AMDGPU_MACH_LIST(X) ENUM_ENT(EF_AMDGPU_MACH_NONE, "none")
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
     AMDGPU_MACH_ENUM_ENTS,
@@ -6141,7 +6068,8 @@ struct CoreNote {
   std::vector<CoreFileMapping> Mappings;
 };
 
-static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
+static Expected<CoreNote> readCoreNote(DataExtractor Desc,
+                                       unsigned AddressSize) {
   // Expected format of the NT_FILE note description:
   // 1. # of file mappings (call it N)
   // 2. Page size
@@ -6150,28 +6078,28 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
   // Each field is an Elf_Addr, except for filenames which are char* strings.
 
   CoreNote Ret;
-  const int Bytes = Desc.getAddressSize();
 
-  if (!Desc.isValidOffsetForAddress(2))
+  if (!Desc.isValidOffsetForDataOfSize(2, AddressSize))
     return createError("the note of size 0x" + Twine::utohexstr(Desc.size()) +
                        " is too short, expected at least 0x" +
-                       Twine::utohexstr(Bytes * 2));
+                       Twine::utohexstr(AddressSize * 2));
   if (Desc.getData().back() != 0)
     return createError("the note is not NUL terminated");
 
   uint64_t DescOffset = 0;
-  uint64_t FileCount = Desc.getAddress(&DescOffset);
-  Ret.PageSize = Desc.getAddress(&DescOffset);
+  uint64_t FileCount = Desc.getUnsigned(&DescOffset, AddressSize);
+  Ret.PageSize = Desc.getUnsigned(&DescOffset, AddressSize);
 
-  if (!Desc.isValidOffsetForAddress(3 * FileCount * Bytes))
+  if (!Desc.isValidOffsetForDataOfSize(3 * FileCount * AddressSize,
+                                       AddressSize))
     return createError("unable to read file mappings (found " +
                        Twine(FileCount) + "): the note of size 0x" +
                        Twine::utohexstr(Desc.size()) + " is too short");
 
   uint64_t FilenamesOffset = 0;
   DataExtractor Filenames(
-      Desc.getData().drop_front(DescOffset + 3 * FileCount * Bytes),
-      Desc.isLittleEndian(), Desc.getAddressSize());
+      Desc.getData().drop_front(DescOffset + 3 * FileCount * AddressSize),
+      Desc.isLittleEndian());
 
   Ret.Mappings.resize(FileCount);
   size_t I = 0;
@@ -6182,9 +6110,9 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
           "unable to read the file name for the mapping with index " +
           Twine(I) + ": the note of size 0x" + Twine::utohexstr(Desc.size()) +
           " is truncated");
-    Mapping.Start = Desc.getAddress(&DescOffset);
-    Mapping.End = Desc.getAddress(&DescOffset);
-    Mapping.Offset = Desc.getAddress(&DescOffset);
+    Mapping.Start = Desc.getUnsigned(&DescOffset, AddressSize);
+    Mapping.End = Desc.getUnsigned(&DescOffset, AddressSize);
+    Mapping.Offset = Desc.getUnsigned(&DescOffset, AddressSize);
     Mapping.Filename = Filenames.getCStrRef(&FilenamesOffset);
   }
 
@@ -6434,7 +6362,7 @@ static void processNotesHelper(
     for (const typename ELFT::Shdr &S : Sections) {
       if (S.sh_type != SHT_NOTE)
         continue;
-      StartNotesFn(expectedToStdOptional(Obj.getSectionName(S)), S.sh_offset,
+      StartNotesFn(expectedToOptional(Obj.getSectionName(S)), S.sh_offset,
                    S.sh_size, S.sh_addralign);
       Error Err = Error::success();
       size_t I = 0;
@@ -6556,10 +6484,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
-        DataExtractor DescExtractor(
-            Descriptor, ELFT::Endianness == llvm::endianness::little,
-            sizeof(Elf_Addr));
-        if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
+        DataExtractor DescExtractor(Descriptor, ELFT::Endianness ==
+                                                    llvm::endianness::little);
+        if (Expected<CoreNote> NoteOrErr =
+                readCoreNote(DescExtractor, sizeof(Elf_Addr))) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
           return Error::success();
         } else {
@@ -7242,7 +7170,8 @@ void ELFDumper<ELFT>::printStackSize(const Relocation<ELFT> &R,
   }
 
   uint64_t SymValue = Resolver(R.Type, Offset, RelocSymValue,
-                               Data.getAddress(&Offset), R.Addend.value_or(0));
+                               Data.getUnsigned(&Offset, sizeof(Elf_Addr)),
+                               R.Addend.value_or(0));
   this->printFunctionStackSize(SymValue, FunctionSec, StackSizeSec, Data,
                                &Offset);
 }
@@ -7258,7 +7187,7 @@ void ELFDumper<ELFT>::printNonRelocatableStackSizes(
     PrintHeader();
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, Obj.getSectionContents(Sec));
-    DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
+    DataExtractor Data(Contents, Obj.isLE());
     uint64_t Offset = 0;
     while (Offset < Contents.size()) {
       // The function address is followed by a ULEB representing the stack
@@ -7269,7 +7198,7 @@ void ELFDumper<ELFT>::printNonRelocatableStackSizes(
             " ended while trying to extract a stack size entry");
         break;
       }
-      uint64_t SymValue = Data.getAddress(&Offset);
+      uint64_t SymValue = Data.getUnsigned(&Offset, sizeof(Elf_Addr));
       if (!printFunctionStackSize(SymValue, /*FunctionSec=*/std::nullopt, Sec,
                                   Data, &Offset))
         break;
@@ -7335,7 +7264,7 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
     std::tie(IsSupportedFn, Resolver) = getRelocationResolver(this->ObjF);
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, Obj.getSectionContents(*StackSizesELFSec));
-    DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
+    DataExtractor Data(Contents, Obj.isLE());
 
     forEachRelocationDo(
         *RelocSec, [&](const Relocation<ELFT> &R, unsigned Ndx,
@@ -8452,8 +8381,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
     Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
         this->Obj.decodeBBAddrMap(*Sec, RelocSec, &PGOAnalyses);
     if (!BBAddrMapOrErr) {
-      this->reportUniqueWarning("unable to dump " + this->describe(*Sec) +
-                                ": " + toString(BBAddrMapOrErr.takeError()));
+      this->reportUniqueWarning("unable to dump BB addr map section: " +
+                                toString(BBAddrMapOrErr.takeError()));
       continue;
     }
     for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {
@@ -8733,10 +8662,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
-        DataExtractor DescExtractor(
-            Descriptor, ELFT::Endianness == llvm::endianness::little,
-            sizeof(Elf_Addr));
-        if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
+        DataExtractor DescExtractor(Descriptor, ELFT::Endianness ==
+                                                    llvm::endianness::little);
+        if (Expected<CoreNote> N =
+                readCoreNote(DescExtractor, sizeof(Elf_Addr))) {
           printCoreNoteLLVMStyle(*N, W);
           return Error::success();
         } else {
