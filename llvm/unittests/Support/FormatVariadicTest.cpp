@@ -412,8 +412,54 @@ TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
             formatv("0x{0:x-}", fmt_align(N, AlignStyle::Right, HexDigits, '0'))
                 .str());
 
+  // More examples
+
+  EXPECT_EQ("0x0000000abc",
+            printToString(format("0x%0*" PRIx64, 10, 0xABCULL)));
+  EXPECT_EQ("0x0000000abc",
+            formatv("0x{0:x-}", fmt_align(0xABCULL, AlignStyle::Right, 10, '0'))
+                .str());
+
   EXPECT_EQ("0x000000fe", printToString(format("0x%8.8" PRIx64, 0xfeULL)));
   EXPECT_EQ("0x000000fe", formatv("{0:x+8}", 0xfeULL).str());
+  EXPECT_EQ("0x000000fe", formatv("{0:x8}", 0xfeULL).str());
+
+  EXPECT_EQ("000000fe", printToString(format("%08" PRIx64, 0xfeULL)));
+  EXPECT_EQ("000000fe", formatv("{0:x-8}", 0xfeULL).str());
+
+  EXPECT_EQ("0x000000fb", printToString(format("0x%08.08" PRIx64, 0xfbULL)));
+  EXPECT_EQ("0x000000fb", formatv("{0:x+8}", 0xfbULL).str());
+
+  EXPECT_EQ("123", printToString(format("%x", 0x123)));
+  EXPECT_EQ("123", formatv("{0:x-}", 0x123).str());
+}
+
+TEST(FormatAndFormatvTest, StringPadding) {
+  // The expected string has 9 spaces after "abcd" and a closing bracket.
+  EXPECT_EQ("[abcd         ]",
+            printToString(format("[%s%*c", "abcd", 10, ']')));
+  // With formatv we can use padding but the closing bracket can be included in
+  // the format string and the padding needs to be one off.
+  EXPECT_EQ("[abcd         ]",
+            formatv("[{0}]", fmt_pad("abcd", 0, 10 - 1)).str());
+}
+
+TEST(FormatAndFormatvTest, Alignment) {
+  EXPECT_EQ("250            ", printToString(format("%-15" PRIu32, 0xfa)));
+  EXPECT_EQ("250            ", formatv("{0, -15}", 0xfa).str());
+  EXPECT_EQ("250            ",
+            formatv("{0}", fmt_align(0xfa, AlignStyle::Left, 15)).str());
+
+  EXPECT_EQ("  123", printToString(format("%5u", 123)));
+  EXPECT_EQ("  123", formatv("{0,5:d}", 123).str());
+  EXPECT_EQ("  123",
+            formatv("{0}", fmt_align(123, AlignStyle::Right, 5)).str());
+
+  EXPECT_EQ("001", printToString(format("%03d", 1)));
+  EXPECT_EQ("001", formatv("{0,0+3}", 1).str());
+
+  EXPECT_EQ("foo      ", printToString(format("%-9s", "foo")));
+  EXPECT_EQ("foo      ", formatv("{0,-9}", "foo").str());
 }
 
 TEST(FormatAndFormatvTest, NonNegativePlusInteger) {
