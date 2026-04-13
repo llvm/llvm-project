@@ -1,9 +1,9 @@
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
-; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: -prefer-tail-folding=fold-tail-else-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL,CHECK %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
-; RUN: -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN: -prefer-tail-folding=prefer-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=NO-VP,CHECK %s
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {

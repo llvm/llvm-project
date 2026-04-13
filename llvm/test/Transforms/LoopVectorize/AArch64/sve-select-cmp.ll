@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s --check-prefix=CHECK-VF4IC1
+; RUN:   -prefer-tail-folding=prefer-epilogue < %s | FileCheck %s --check-prefix=CHECK-VF4IC1
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s --check-prefix=CHECK-VF4IC4
+; RUN:   -prefer-tail-folding=prefer-epilogue < %s | FileCheck %s --check-prefix=CHECK-VF4IC4
 
 target triple = "aarch64-linux-gnu"
 

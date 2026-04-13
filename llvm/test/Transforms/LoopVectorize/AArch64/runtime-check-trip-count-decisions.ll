@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck --check-prefixes=CHECK,PREDICATED %s
-; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-predicate-over-epilogue=scalar-epilogue -S | FileCheck --check-prefixes=CHECK,SCALAR %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-tail-folding=fold-tail-else-epilogue -S | FileCheck --check-prefixes=CHECK,PREDICATED %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -prefer-tail-folding=prefer-epilogue -S | FileCheck --check-prefixes=CHECK,SCALAR %s
 
 ; This file contains the same function but with different trip-count PGO hints
 
