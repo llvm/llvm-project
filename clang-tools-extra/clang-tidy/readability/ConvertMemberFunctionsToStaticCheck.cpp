@@ -95,12 +95,10 @@ AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
     return false;
 
   for (const Decl *D : LookupResult) {
-    if (const auto *Overload = dyn_cast<CXXMethodDecl>(D)) {
-      if (Overload != Method && !Overload->isConst() &&
-          hasSameParameterTypes(*Method, *Overload)) {
-        return true;
-      }
-    }
+    const auto *Overload = dyn_cast<CXXMethodDecl>(D);
+    if (Overload && Overload != Method && !Overload->isConst() &&
+        hasSameParameterTypes(*Method, *Overload))
+      return true;
   }
   return false;
 }
