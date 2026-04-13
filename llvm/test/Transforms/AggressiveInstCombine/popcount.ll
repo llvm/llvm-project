@@ -681,7 +681,7 @@ define i24 @popcnt2_negative_i24(i24 noundef %0) {
 ; CHECK-NEXT:    ret i24 [[TMP16]]
 ;
   %2 = lshr i24 %0, 1
-  %3 = and i24 %2, 5592405  ; 0x555555
+  %3 = and i24 %2, u0x555555  ; 0x555555
   %4 = sub i24 %0, %3
   %5 = and i24 %4, 3355443  ; 0x333333
   %6 = lshr i24 %4, 2
