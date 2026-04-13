@@ -540,6 +540,11 @@ CUDA Support
 AIX Support
 ^^^^^^^^^^^
 
+- The driver default for the linker flag `-bcdtors` now defaults to `mbr`
+  (instead of `all`) which only extracts static init from archive members which
+  would otherwise be referenced.
+  (See https://www.ibm.com/docs/en/aix/7.2.0?topic=l-ld-command for details).
+
 NetBSD Support
 ^^^^^^^^^^^^^^
 
