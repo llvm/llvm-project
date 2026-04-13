@@ -13,7 +13,7 @@
 // [Note 1: The unnamed second template parameter to constant_wrapper is present
 // to aid argument-dependent lookup ([basic.lookup.argdep]) in finding overloads
 // for which constant_wrapper's wrapped value is a suitable argument, but for which
-// the constant_wrapper itself is not. — end note]
+// the constant_wrapper itself is not. - end note]
 
 #include <cassert>
 #include <concepts>

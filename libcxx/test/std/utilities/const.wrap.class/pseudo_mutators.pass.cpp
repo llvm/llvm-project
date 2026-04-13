@@ -327,6 +327,28 @@ static_assert(!HasShiftLeftAssign<std::constant_wrapper<OptsReturnNonStructural{
 static_assert(!HasShiftRightAssign<std::constant_wrapper<OptsReturnNonStructural{6}>,
                                    std::constant_wrapper<OptsReturnNonStructural{1}>>);
 
+// LWG 4383. constant_wrapper's pseudo-mutators are underconstrained
+// https://cplusplus.github.io/LWG/issue4383
+constexpr void lwg4383_f(auto t) {
+  if constexpr (requires { +t; }) // ok
+    +t;
+  if constexpr (requires { -t; }) // ok
+    -t;
+  if constexpr (requires { ++t; }) // no hard error
+    ++t;
+  if constexpr (requires { --t; }) // no hard error
+    --t;
+}
+
+struct S {
+  /* constexpr */ int operator+() const { return 0; }
+  /* constexpr */ int operator++() { return 0; }
+  constexpr void operator-() const {}
+  constexpr void operator--() {}
+};
+
+constexpr void lwg4383() { lwg4383_f(std::cw<S{}>); }
+
 constexpr bool test() {
   {
     // WithOps increment/decrement
@@ -415,6 +437,8 @@ constexpr bool test() {
     std::same_as<std::constant_wrapper<WithOps{1}>> decltype(auto) result10 = cwWithOps10 >>= icWithOps3;
     static_assert(result10.value.value == 1);
   }
+
+  lwg4383();
 
   return true;
 }
