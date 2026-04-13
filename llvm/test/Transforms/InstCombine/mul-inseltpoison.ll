@@ -781,7 +781,7 @@ define <2 x i8> @negate_if_true_commute(<2 x i8> %px, i1 %cond) {
 define <2 x i8> @negate_if_false_commute(<2 x i8> %px, <2 x i1> %cond) {
 ; CHECK-LABEL: @negate_if_false_commute(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 5>, [[PX:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <2 x i8> zeroinitializer, [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i8> [[X]], <2 x i8> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;

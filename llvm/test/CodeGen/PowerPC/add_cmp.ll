@@ -36,9 +36,7 @@ entry:
 
 ; CHECK: === addiCmpiUnsignedOverflow
 ; CHECK: Optimized lowered selection DAG: %bb.0 'addiCmpiUnsignedOverflow:entry'
-; CHECK:   [[REG1:t[0-9]+]]: i32 = truncate {{t[0-9]+}}
-; CHECK:   [[REG2:t[0-9]+]]: i32 = add nuw [[REG1]], Constant:i32<110>
-; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i32<100>, setugt:ch
+; CHECK:   {{t[0-9]+}}: ch,glue = CopyToReg {{t[0-9]+}}, Register:i64 $x3, Constant:i64<1>
 }
 
 define zeroext i1 @addiCmpiSignedOverflow(i16 signext %x) {
@@ -49,8 +47,5 @@ entry:
 
 ; CHECK: === addiCmpiSignedOverflow
 ; CHECK: Optimized lowered selection DAG: %bb.0 'addiCmpiSignedOverflow:entry'
-; CHECK:   [[REG1:t[0-9]+]]: i16 = truncate {{t[0-9]+}}
-; CHECK:   [[REG2:t[0-9]+]]: i16 = add nsw [[REG1]], Constant:i16<16>
-; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i16<-32767>, setgt:ch
+; CHECK:   {{t[0-9]+}}: ch,glue = CopyToReg {{t[0-9]+}}, Register:i64 $x3, Constant:i64<1>
 }
-

@@ -10004,10 +10004,12 @@ std::optional<bool> llvm::isImpliedByDomCondition(CmpPredicate Pred,
   return std::nullopt;
 }
 
-static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
-                              APInt &Upper, const InstrInfoQuery &IIQ,
-                              bool PreferSignedRange) {
-  unsigned Width = Lower.getBitWidth();
+static ConstantRange getRangeForBinOp(const BinaryOperator &BO,
+                                      const InstrInfoQuery &IIQ,
+                                      bool PreferSignedRange) {
+  unsigned Width = BO.getType()->getScalarSizeInBits();
+  APInt Lower(Width, 0);
+  APInt Upper(Width, 0);
   const APInt *C;
   switch (BO.getOpcode()) {
   case Instruction::Sub:
@@ -10227,6 +10229,7 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
   default:
     break;
   }
+  return ConstantRange::getNonEmpty(Lower, Upper);
 }
 
 static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
@@ -10389,12 +10392,14 @@ static ConstantRange getRangeForSelectPattern(const SelectInst &SI,
   }
 }
 
-static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
+static ConstantRange getRangeForFPToI(const Instruction *I) {
   // The maximum representable value of a half is 65504. For floats the maximum
   // value is 3.4e38 which requires roughly 129 bits.
   unsigned BitWidth = I->getType()->getScalarSizeInBits();
   if (!I->getOperand(0)->getType()->getScalarType()->isHalfTy())
-    return;
+    return ConstantRange::getFull(BitWidth);
+  APInt Lower(BitWidth, 0);
+  APInt Upper(BitWidth, 0);
   if (isa<FPToSIInst>(I) && BitWidth >= 17) {
     Lower = APInt(BitWidth, -65504, true);
     Upper = APInt(BitWidth, 65505);
@@ -10404,6 +10409,7 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
     // For a fptoui the lower limit is left as 0.
     Upper = APInt(BitWidth, 65505);
   }
+  return ConstantRange::getNonEmpty(Lower, Upper);
 }
 
 ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
@@ -10423,11 +10429,93 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   InstrInfoQuery IIQ(UseInstrInfo);
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
-    APInt Lower = APInt(BitWidth, 0);
-    APInt Upper = APInt(BitWidth, 0);
-    // TODO: Return ConstantRange.
-    setLimitsForBinOp(*BO, Lower, Upper, IIQ, ForSigned);
-    CR = ConstantRange::getNonEmpty(Lower, Upper);
+    CR = getRangeForBinOp(*BO, IIQ, ForSigned);
+    // For these opcodes, recurse into operands to get a tighter range than
+    // getRangeForBinOp can produce with constant-only operand matching.
+    switch (BO->getOpcode()) {
+    case Instruction::UDiv: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.udiv(RHS));
+      break;
+    }
+    case Instruction::SDiv: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/true,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/true,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.sdiv(RHS));
+      break;
+    }
+    case Instruction::URem: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.urem(RHS));
+      break;
+    }
+    case Instruction::SRem: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/true,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/true,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.srem(RHS));
+      break;
+    }
+    case Instruction::Mul: {
+      ConstantRange LHS =
+          computeConstantRange(BO->getOperand(0), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS =
+          computeConstantRange(BO->getOperand(1), /*ForSigned=*/false,
+                               UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      CR = CR.intersectWith(LHS.multiply(RHS));
+      break;
+    }
+    case Instruction::Add: {
+      ConstantRange LHS = computeConstantRange(
+          BO->getOperand(0), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS = computeConstantRange(
+          BO->getOperand(1), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      unsigned NoWrapKind =
+          cast<OverflowingBinaryOperator>(BO)->getNoWrapKind();
+      ConstantRange::PreferredRangeType RangeType =
+          ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+      ConstantRange Res = NoWrapKind
+                              ? LHS.addWithNoWrap(RHS, NoWrapKind, RangeType)
+                              : LHS.add(RHS);
+      CR = CR.intersectWith(Res);
+      break;
+    }
+    case Instruction::Sub: {
+      ConstantRange LHS = computeConstantRange(
+          BO->getOperand(0), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      ConstantRange RHS = computeConstantRange(
+          BO->getOperand(1), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+      unsigned NoWrapKind =
+          cast<OverflowingBinaryOperator>(BO)->getNoWrapKind();
+      ConstantRange::PreferredRangeType RangeType =
+          ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+      ConstantRange Res = NoWrapKind
+                              ? LHS.subWithNoWrap(RHS, NoWrapKind, RangeType)
+                              : LHS.sub(RHS);
+      CR = CR.intersectWith(Res);
+      break;
+    }
+    default:
+      break;
+    }
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
     CR = getRangeForIntrinsic(*II, UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
@@ -10437,13 +10525,13 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         SI->getFalseValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
     CR = CRTrue.unionWith(CRFalse);
     CR = CR.intersectWith(getRangeForSelectPattern(*SI, IIQ));
-  } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
-    APInt Lower = APInt(BitWidth, 0);
-    APInt Upper = APInt(BitWidth, 0);
-    // TODO: Return ConstantRange.
-    setLimitForFPToI(cast<Instruction>(V), Lower, Upper);
-    CR = ConstantRange::getNonEmpty(Lower, Upper);
-  } else if (const auto *A = dyn_cast<Argument>(V))
+  } else if (auto *TI = dyn_cast<TruncInst>(V)) {
+    ConstantRange SrcCR = computeConstantRange(
+        TI->getOperand(0), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+    CR = SrcCR.truncate(BitWidth, TI->getNoWrapKind());
+  } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V))
+    CR = getRangeForFPToI(cast<Instruction>(V));
+  else if (const auto *A = dyn_cast<Argument>(V))
     if (std::optional<ConstantRange> Range = A->getRange())
       CR = *Range;
 
@@ -10502,9 +10590,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       // Currently we just use information from comparisons.
       if (!Cmp || Cmp->getOperand(0) != V)
         continue;
-      // TODO: Set "ForSigned" parameter via Cmp->isSigned()?
       ConstantRange RHS =
-          computeConstantRange(Cmp->getOperand(1), /* ForSigned */ false,
+          computeConstantRange(Cmp->getOperand(1), Cmp->isSigned(),
                                UseInstrInfo, AC, I, DT, Depth + 1);
       CR = CR.intersectWith(
           ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));

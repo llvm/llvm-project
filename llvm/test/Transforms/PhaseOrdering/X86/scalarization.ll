@@ -22,7 +22,7 @@ define <4 x i32> @square(<4 x i32> %num, i32 %y, i32 %x, i32 %h, i32 %k, i32 %w,
 ; CHECK-NEXT:    [[OP_RDX9:%.*]] = add nsw i32 [[DIV]], [[DIV9]]
 ; CHECK-NEXT:    [[OP_RDX10:%.*]] = add i32 [[MUL5]], [[MUL13]]
 ; CHECK-NEXT:    [[OP_RDX11:%.*]] = add i32 [[MUL]], [[MUL21]]
-; CHECK-NEXT:    [[OP_RDX12:%.*]] = add i32 [[OP_RDX]], [[OP_RDX9]]
+; CHECK-NEXT:    [[OP_RDX12:%.*]] = add nsw i32 [[OP_RDX]], [[OP_RDX9]]
 ; CHECK-NEXT:    [[OP_RDX13:%.*]] = add i32 [[OP_RDX10]], [[OP_RDX11]]
 ; CHECK-NEXT:    [[OP_RDX14:%.*]] = add i32 [[OP_RDX12]], [[OP_RDX13]]
 ; CHECK-NEXT:    [[OP_RDX15:%.*]] = add i32 [[OP_RDX14]], [[Y:%.*]]

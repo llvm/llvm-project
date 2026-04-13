@@ -3561,6 +3561,237 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     // If we don't know the value of x.2, we don't know the value of x.1.
     EXPECT_TRUE(CR1.isFullSet());
   }
+  {
+    // udiv with bounded operands:
+    //  * x in [4, 8), y in [2, 4)
+    //  * udiv x, y = [4/3, 8/2) = [1, 4)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %x, i32 %y) {
+    %x.lo = icmp uge i32 %x, 4
+    call void @llvm.assume(i1 %x.lo)
+    %x.hi = icmp ult i32 %x, 8
+    call void @llvm.assume(i1 %x.hi)
+    %y.lo = icmp uge i32 %y, 2
+    call void @llvm.assume(i1 %y.lo)
+    %y.hi = icmp ult i32 %y, 4
+    call void @llvm.assume(i1 %y.hi)
+    %div = udiv i32 %x, %y
+    ret i32 %div
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Div = &findInstructionByName(F, "div");
+    ConstantRange CR = computeConstantRange(Div, false, true, &AC, Div);
+    EXPECT_EQ(1, CR.getLower());
+    EXPECT_EQ(4, CR.getUpper());
+  }
+  {
+    // mul with bounded operands:
+    //  * x in [2, 5), y in [3, 7)
+    //  * mul x, y = [2*3, 4*6+1) = [6, 25)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %x, i32 %y) {
+    %x.lo = icmp uge i32 %x, 2
+    call void @llvm.assume(i1 %x.lo)
+    %x.hi = icmp ult i32 %x, 5
+    call void @llvm.assume(i1 %x.hi)
+    %y.lo = icmp uge i32 %y, 3
+    call void @llvm.assume(i1 %y.lo)
+    %y.hi = icmp ult i32 %y, 7
+    call void @llvm.assume(i1 %y.hi)
+    %mul = mul i32 %x, %y
+    ret i32 %mul
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Mul = &findInstructionByName(F, "mul");
+    ConstantRange CR = computeConstantRange(Mul, false, true, &AC, Mul);
+    EXPECT_EQ(6, CR.getLower());
+    EXPECT_EQ(25, CR.getUpper());
+  }
+  {
+    // sdiv with bounded signed operands:
+    //  * x in [-8, -1], y in [2, 4)
+    //  * sdiv x, y = [-4, 0)  (most negative: -8/2=-4, most positive: -1/3=0)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %x, i32 %y) {
+    %x.lo = icmp sge i32 %x, -8
+    call void @llvm.assume(i1 %x.lo)
+    %x.hi = icmp sle i32 %x, -1
+    call void @llvm.assume(i1 %x.hi)
+    %y.lo = icmp sge i32 %y, 2
+    call void @llvm.assume(i1 %y.lo)
+    %y.hi = icmp slt i32 %y, 4
+    call void @llvm.assume(i1 %y.hi)
+    %div = sdiv i32 %x, %y
+    ret i32 %div
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Div = &findInstructionByName(F, "div");
+    ConstantRange CR = computeConstantRange(Div, true, true, &AC, Div);
+    // ConstantRange upper bound is exclusive: range is [-4, 0] = [-4, 1).
+    EXPECT_EQ(APInt(32, -4, true), CR.getLower());
+    EXPECT_EQ(APInt(32, 1, true), CR.getUpper());
+  }
+  {
+    // urem with bounded operands:
+    //  * x in [5, 10), y in [3, 6)
+    //  * urem x, y in [0, 5)  (max remainder < max divisor)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %x, i32 %y) {
+    %x.lo = icmp uge i32 %x, 5
+    call void @llvm.assume(i1 %x.lo)
+    %x.hi = icmp ult i32 %x, 10
+    call void @llvm.assume(i1 %x.hi)
+    %y.lo = icmp uge i32 %y, 3
+    call void @llvm.assume(i1 %y.lo)
+    %y.hi = icmp ult i32 %y, 6
+    call void @llvm.assume(i1 %y.hi)
+    %rem = urem i32 %x, %y
+    ret i32 %rem
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Rem = &findInstructionByName(F, "rem");
+    ConstantRange CR = computeConstantRange(Rem, false, true, &AC, Rem);
+    EXPECT_FALSE(CR.isFullSet());
+    EXPECT_TRUE(CR.contains(APInt(32, 0)));
+    EXPECT_FALSE(CR.contains(APInt(32, 5)));
+  }
+  {
+    // srem with bounded signed operands:
+    //  * x in [5, 10), y in [3, 6)
+    //  * srem x, y in [0, 5)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %x, i32 %y) {
+    %x.lo = icmp sge i32 %x, 5
+    call void @llvm.assume(i1 %x.lo)
+    %x.hi = icmp slt i32 %x, 10
+    call void @llvm.assume(i1 %x.hi)
+    %y.lo = icmp sge i32 %y, 3
+    call void @llvm.assume(i1 %y.lo)
+    %y.hi = icmp slt i32 %y, 6
+    call void @llvm.assume(i1 %y.hi)
+    %rem = srem i32 %x, %y
+    ret i32 %rem
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Rem = &findInstructionByName(F, "rem");
+    ConstantRange CR = computeConstantRange(Rem, true, true, &AC, Rem);
+    EXPECT_FALSE(CR.isFullSet());
+    EXPECT_TRUE(CR.contains(APInt(32, 0)));
+    EXPECT_FALSE(CR.contains(APInt(32, 5)));
+  }
+  {
+    // add nuw with bounded operands:
+    //  * x in [2, 5), y in [10, 20)
+    //  * add nuw x, y in [12, 24)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %x, i32 %y) {
+    %x.lo = icmp uge i32 %x, 2
+    call void @llvm.assume(i1 %x.lo)
+    %x.hi = icmp ult i32 %x, 5
+    call void @llvm.assume(i1 %x.hi)
+    %y.lo = icmp uge i32 %y, 10
+    call void @llvm.assume(i1 %y.lo)
+    %y.hi = icmp ult i32 %y, 20
+    call void @llvm.assume(i1 %y.hi)
+    %add = add nuw i32 %x, %y
+    ret i32 %add
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Add = &findInstructionByName(F, "add");
+    ConstantRange CR = computeConstantRange(Add, false, true, &AC, Add);
+    EXPECT_EQ(12, CR.getLower());
+    EXPECT_EQ(24, CR.getUpper());
+  }
+  {
+    // sub nuw with bounded operands:
+    //  * x in [10, 20), y in [2, 5)
+    //  * sub nuw x, y in [6, 18)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %x, i32 %y) {
+    %x.lo = icmp uge i32 %x, 10
+    call void @llvm.assume(i1 %x.lo)
+    %x.hi = icmp ult i32 %x, 20
+    call void @llvm.assume(i1 %x.hi)
+    %y.lo = icmp uge i32 %y, 2
+    call void @llvm.assume(i1 %y.lo)
+    %y.hi = icmp ult i32 %y, 5
+    call void @llvm.assume(i1 %y.hi)
+    %sub = sub nuw i32 %x, %y
+    ret i32 %sub
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Sub = &findInstructionByName(F, "sub");
+    ConstantRange CR = computeConstantRange(Sub, false, true, &AC, Sub);
+    EXPECT_EQ(6, CR.getLower());
+    EXPECT_EQ(18, CR.getUpper());
+  }
+  {
+    // trunc propagates range from source:
+    //  * x in [0, 256) (i16), trunc to i8 -> [0, 256) but capped at i8 max
+    //  * actually x in [4, 8) -> trunc gives [4, 8) in i8
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i8 @test(i16 %x) {
+    %lo = icmp uge i16 %x, 4
+    call void @llvm.assume(i1 %lo)
+    %hi = icmp ult i16 %x, 8
+    call void @llvm.assume(i1 %hi)
+    %t = trunc i16 %x to i8
+    ret i8 %t
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *T = &findInstructionByName(F, "t");
+    ConstantRange CR = computeConstantRange(T, false, true, &AC, T);
+    EXPECT_EQ(4, CR.getLower());
+    EXPECT_EQ(8, CR.getUpper());
+  }
+  {
+    // assume with signed comparison: ForSigned should be propagated.
+    // x in [-10, -1] (signed), stride = add nsw nuw x, 1
+    // With Cmp->isSigned() the RHS range for the signed icmp is computed
+    // in signed form, giving a tighter result.
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %x) {
+    %lo = icmp sge i32 %x, -10
+    call void @llvm.assume(i1 %lo)
+    %hi = icmp slt i32 %x, 0
+    call void @llvm.assume(i1 %hi)
+    %r = add nsw nuw i32 %x, 1
+    ret i32 %r
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Value *X = &*F->arg_begin();
+    Instruction *I = &findInstructionByName(F, "r");
+    ConstantRange CR = computeConstantRange(X, true, true, &AC, I);
+    EXPECT_EQ(APInt(32, -10, true), CR.getLower());
+    EXPECT_EQ(APInt(32, 0, true), CR.getUpper());
+  }
 }
 
 struct FindAllocaForValueTestParams {

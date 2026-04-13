@@ -122,7 +122,7 @@ define i1 @icmp_ugt_srem5_m5(i32 %x) {
 define i64 @srem_zero_ult_poison(i1 %c) {
 ; CHECK-LABEL: define i64 @srem_zero_ult_poison(
 ; CHECK-SAME: i1 [[C:%.*]]) {
-; CHECK-NEXT:    ret i64 poison
+; CHECK-NEXT:    ret i64 1
 ;
   %sel = select i1 %c, i64 3, i64 0
   %trunc = trunc i64 %sel to i8

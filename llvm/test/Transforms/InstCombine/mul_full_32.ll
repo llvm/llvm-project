@@ -16,15 +16,15 @@ define { i64, i64 } @mul_full_64(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[T3:%.*]] = mul nuw i64 [[YH]], [[XH]]
 ; CHECK-NEXT:    [[T0L:%.*]] = and i64 [[T0]], 4294967295
 ; CHECK-NEXT:    [[T0H:%.*]] = lshr i64 [[T0]], 32
-; CHECK-NEXT:    [[U0:%.*]] = add i64 [[T0H]], [[T1]]
+; CHECK-NEXT:    [[U0:%.*]] = add nuw i64 [[T0H]], [[T1]]
 ; CHECK-NEXT:    [[U0L:%.*]] = and i64 [[U0]], 4294967295
 ; CHECK-NEXT:    [[U0H:%.*]] = lshr i64 [[U0]], 32
-; CHECK-NEXT:    [[U1:%.*]] = add i64 [[U0L]], [[T2]]
+; CHECK-NEXT:    [[U1:%.*]] = add nuw i64 [[U0L]], [[T2]]
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i64 [[U1]], 32
 ; CHECK-NEXT:    [[U1H:%.*]] = lshr i64 [[U1]], 32
-; CHECK-NEXT:    [[U2:%.*]] = add i64 [[U0H]], [[T3]]
+; CHECK-NEXT:    [[U2:%.*]] = add nuw i64 [[U0H]], [[T3]]
 ; CHECK-NEXT:    [[LO:%.*]] = or disjoint i64 [[U1LS]], [[T0L]]
-; CHECK-NEXT:    [[HI:%.*]] = add i64 [[U2]], [[U1H]]
+; CHECK-NEXT:    [[HI:%.*]] = add nuw i64 [[U2]], [[U1H]]
 ; CHECK-NEXT:    [[RES_LO:%.*]] = insertvalue { i64, i64 } undef, i64 [[LO]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i64, i64 } [[RES_LO]], i64 [[HI]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[RES]]
@@ -72,15 +72,15 @@ define { i32, i32 } @mul_full_32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[T3:%.*]] = mul nuw i32 [[YH]], [[XH]]
 ; CHECK-NEXT:    [[T0L:%.*]] = and i32 [[T0]], 65535
 ; CHECK-NEXT:    [[T0H:%.*]] = lshr i32 [[T0]], 16
-; CHECK-NEXT:    [[U0:%.*]] = add i32 [[T0H]], [[T1]]
+; CHECK-NEXT:    [[U0:%.*]] = add nuw i32 [[T0H]], [[T1]]
 ; CHECK-NEXT:    [[U0L:%.*]] = and i32 [[U0]], 65535
 ; CHECK-NEXT:    [[U0H:%.*]] = lshr i32 [[U0]], 16
-; CHECK-NEXT:    [[U1:%.*]] = add i32 [[U0L]], [[T2]]
+; CHECK-NEXT:    [[U1:%.*]] = add nuw i32 [[U0L]], [[T2]]
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i32 [[U1]], 16
 ; CHECK-NEXT:    [[U1H:%.*]] = lshr i32 [[U1]], 16
-; CHECK-NEXT:    [[U2:%.*]] = add i32 [[U0H]], [[T3]]
+; CHECK-NEXT:    [[U2:%.*]] = add nuw i32 [[U0H]], [[T3]]
 ; CHECK-NEXT:    [[LO:%.*]] = or disjoint i32 [[U1LS]], [[T0L]]
-; CHECK-NEXT:    [[HI:%.*]] = add i32 [[U2]], [[U1H]]
+; CHECK-NEXT:    [[HI:%.*]] = add nuw i32 [[U2]], [[U1H]]
 ; CHECK-NEXT:    [[RES_LO:%.*]] = insertvalue { i32, i32 } undef, i32 [[LO]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i32, i32 } [[RES_LO]], i32 [[HI]], 1
 ; CHECK-NEXT:    ret { i32, i32 } [[RES]]

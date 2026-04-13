@@ -572,7 +572,7 @@ define i64 @umulh_notcarry(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[LOW_ACCUM:%.*]] = add nuw nsw i64 [[CROSS_SUM_LO]], [[Y_LO_X_LO_HI]]
 ; CHECK-NEXT:    [[INTERMEDIATE:%.*]] = add nuw i64 [[CROSS_SUM_HI]], [[Y_HI_X_HI]]
 ; CHECK-NEXT:    [[LOW_ACCUM_HI:%.*]] = lshr i64 [[LOW_ACCUM]], 32
-; CHECK-NEXT:    [[INTERMEDIATE_PLUS_CARRY:%.*]] = add i64 [[INTERMEDIATE]], [[CARRY]]
+; CHECK-NEXT:    [[INTERMEDIATE_PLUS_CARRY:%.*]] = add nuw i64 [[INTERMEDIATE]], [[CARRY]]
 ; CHECK-NEXT:    [[HW64:%.*]] = add i64 [[INTERMEDIATE_PLUS_CARRY]], [[LOW_ACCUM_HI]]
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;

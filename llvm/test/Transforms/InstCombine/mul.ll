@@ -323,7 +323,7 @@ define <2 x i8> @shl1_decrement_vec(<2 x i8> %x) {
 
 define i32 @mul_bool(i32 %x, i1 %y) !prof !0 {
 ; CHECK-LABEL: @mul_bool(
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %z = zext i1 %y to i32
@@ -357,7 +357,7 @@ define <2 x i32> @mul_bool_vec_commute(<2 x i32> %px, <2 x i1> %y) {
 
 define i32 @mul_sext_bool(i1 %x) !prof !0 {
 ; CHECK-LABEL: @mul_sext_bool(
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[X:%.*]], i32 -42, i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X:%.*]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %s = sext i1 %x to i32
@@ -369,7 +369,7 @@ define i32 @mul_sext_bool_use(i1 %x) !prof !0 {
 ; CHECK-LABEL: @mul_sext_bool_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[S]])
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[X]], i32 -42, i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %s = sext i1 %x to i32
@@ -436,7 +436,7 @@ define i32 @mul_bools_use3(i1 %x, i1 %y) !prof !0 {
 ; CHECK-NEXT:    call void @use32(i32 [[ZX]])
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
@@ -745,7 +745,7 @@ define i32 @not_lowbit_mul(i32 %a, i32 %b) {
 define i32 @signsplat_mul(i32 %x) !prof !0 {
 ; CHECK-LABEL: @signsplat_mul(
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[ISNEG]], i32 -42, i32 0
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[ISNEG]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %ash = ashr i32 %x, 31
@@ -1499,7 +1499,7 @@ define <2 x i8> @negate_if_true_commute(<2 x i8> %px, i1 %cond) {
 define <2 x i8> @negate_if_false_commute(<2 x i8> %px, <2 x i1> %cond) {
 ; CHECK-LABEL: @negate_if_false_commute(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 5>, [[PX:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <2 x i8> zeroinitializer, [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i8> [[X]], <2 x i8> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
