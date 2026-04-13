@@ -26,11 +26,11 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
 
+#include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "xegpu-layout-recovery"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
@@ -375,33 +375,6 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
   return true;
 }
 
-// // Attach layout attributes to all vector-type operands of operations within
-// // the given operation's region. Reports an error if any vector operand lacks
-// // a layout attribute.
-// bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
-//   auto result = rootOp->walk([&](Operation *op) {
-//     for (OpOperand &operand : op->getOpOperands()) {
-//       // Layouts are needed for vector type only.
-//       if (!isa<VectorType>(operand.get().getType()))
-//         continue;
-//       // Skip block arguments since they don't have defining ops to attach
-//       // layout attributes to.
-//       if (isa<BlockArgument>(operand.get()))
-//         continue;
-//       auto layout = xegpu::getDistributeLayoutAttr(operand.get());
-//       if (!layout) {
-//         op->emitWarning("Could not find layout attribute for operand ")
-//             << operand.getOperandNumber() << " of operation " <<
-//             op->getName();
-//         xegpu::setTemporaryLayout(operand, layout);
-//         continue;
-//       }
-//     }
-//     return WalkResult::advance();
-//   });
-//   return !result.wasInterrupted();
-// }
-
 template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
   Operation *owner = operandOrResult.getOwner();
@@ -675,17 +648,6 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   }
   llvm_unreachable("running into unsupported shape cast scenarios");
   return nullptr;
-}
-
-/// Infers the layout attribute for mask and offset operand for Chunked load
-/// and store, given the anchor layout attribute for the value being load/store.
-xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
-    xegpu::DistributeLayoutAttr payloadLayout, int chunkSize) {
-  auto rank = payloadLayout.getRank();
-  if (chunkSize > 1)
-    return payloadLayout.dropDims(
-        llvm::to_vector(llvm::seq<int64_t>(rank - 1, rank)));
-  return payloadLayout;
 }
 
 /// Sets up layout for reduction operations by creating a SliceAttr for the

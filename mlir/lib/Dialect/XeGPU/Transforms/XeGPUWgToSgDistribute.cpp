@@ -1784,7 +1784,6 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
 
-  // Remove layout attributes from SCF ops
   getOperation()->walk([](Operation *op) {
     SmallVector<StringAttr> attrsToRemove;
     for (auto namedAttr : op->getDiscardableAttrs()) {

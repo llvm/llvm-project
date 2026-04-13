@@ -1610,15 +1610,6 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
       }
     });
   }
-  getOperation()->walk([](Operation *op) {
-    SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : op->getDiscardableAttrs()) {
-      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
-        attrsToRemove.push_back(namedAttr.getName());
-    }
-    for (auto attrName : attrsToRemove)
-      op->removeDiscardableAttr(attrName);
-  });
 }
 
 void xegpu::populateXeGPUSgToWiDistributeTypeConversions(

@@ -112,11 +112,10 @@ inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
                                     ArrayRef<int64_t> resShape,
                                     ArrayRef<int64_t> srcShape);
 
-/// Infers the layout attribute for mask and offset operand for Chunked load
-/// and store, given the anchor layout attribute for the value being load/store.
+/// Infers the source layout attribute for an operand using result layout
+/// attribute
 DistributeLayoutAttr
-inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
-                                  int chunkSize);
+inferSourceLayoutFromResult(OpOperand &operand, DistributeLayoutAttr resLayout);
 
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.
@@ -188,9 +187,6 @@ std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
 setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
                 VectorType cdTy, DistributeLayoutAttr consumerLayout, int numSg,
                 const uArch::uArch *uArch);
-
-DistributeLayoutAttr
-inferSourceLayoutFromResult(OpOperand &operand, DistributeLayoutAttr resLayout);
 
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout

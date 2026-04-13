@@ -825,10 +825,12 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
       }
     }
 
-    auto layoutPayload = storeScatterOp.getLayoutAttr();
+    auto layoutPayload =
+        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(0));
     auto layoutOffsets =
-        xegpu::inferMaskOffsetLayoutForScatterIO(layoutPayload, chunkSize);
-    auto layoutMask = layoutOffsets;
+        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(2));
+    auto layoutMask =
+        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(3));
 
     FailureOr<VectorType> distStoreVecByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutPayload, storeVecTy);
@@ -1130,36 +1132,9 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
       }
     }
 
-    auto layoutPayload = loadGatherOp.getLayoutAttr();
     auto layoutOffsets =
-        xegpu::inferMaskOffsetLayoutForScatterIO(layoutPayload, chunkSize);
-    auto layoutMask = layoutOffsets;
-
-    // print the layouts for debug
-    LLVM_DEBUG({
-      llvm::dbgs() << "In LoadDistribution pattern:\n";
-      llvm::dbgs() << "Payload layout: ";
-      if (layoutPayload)
-        llvm::dbgs() << layoutPayload;
-      else
-        llvm::dbgs() << "none";
-      llvm::dbgs() << "\nOffsets layout: ";
-      if (layoutOffsets)
-        llvm::dbgs() << layoutOffsets;
-      else
-        llvm::dbgs() << "none";
-      llvm::dbgs() << "\nMask layout: ";
-      if (layoutMask)
-        llvm::dbgs() << layoutMask;
-      else
-        llvm::dbgs() << "none";
-      llvm::dbgs() << "\n";
-    });
-
-    // auto layoutOffsets =
-    //     xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(1));
-    // auto layoutMask =
-    // xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(2));
+        xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(1));
+    auto layoutMask = xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(2));
 
     FailureOr<VectorType> distOffsetsByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutOffsets, offsetsTy);
@@ -2306,8 +2281,6 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       op->erase();
     return WalkResult::advance();
   });
-
-  // Remove layout attributes from SCF ops
   getOperation()->walk([](Operation *op) {
     SmallVector<StringAttr> attrsToRemove;
     for (auto namedAttr : op->getDiscardableAttrs()) {
