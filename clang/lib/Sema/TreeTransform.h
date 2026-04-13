@@ -12658,12 +12658,16 @@ void OpenACCClauseTransform<Derived>::VisitCollapseClause(
       OpenACCDirectiveKind::Invalid, ParsedClause.getClauseKind(),
       NewLoopCount.get()->getBeginLoc(), NewLoopCount.get());
 
+  // FIXME: It isn't clear whether this is properly tested here, we should
+  // probably see if we can come up with a test for this.
   if (!NewLoopCount.isUsable())
     return;
 
   NewLoopCount =
       Self.getSema().OpenACC().CheckCollapseLoopCount(NewLoopCount.get());
 
+  // FIXME: It isn't clear whether this is properly tested here, we should
+  // probably see if we can come up with a test for this.
   if (!NewLoopCount.isUsable())
     return;
 
@@ -12690,6 +12694,8 @@ void OpenACCClauseTransform<Derived>::VisitTileClause(
         OpenACCDirectiveKind::Invalid, ParsedClause.getClauseKind(),
         NewSizeExpr.get()->getBeginLoc(), NewSizeExpr.get());
 
+    // FIXME: It isn't clear whether this is properly tested here, we should
+    // probably see if we can come up with a test for this.
     if (!NewSizeExpr.isUsable())
       return;
 
