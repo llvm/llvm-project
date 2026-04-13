@@ -730,8 +730,6 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
 
 void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
                                                    const FunctionDecl *FD) {
-  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-
   const auto *MemberCall = dyn_cast_or_null<CXXMemberCallExpr>(Call);
   if (!MemberCall)
     return;
@@ -739,6 +737,9 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   if (!isa_and_present<CXXThisExpr>(
           MemberCall->getImplicitObjectArgument()->IgnoreImpCasts()))
     return;
+
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  assert(MD && "Expected MD to be a non-null pointer");
 
   const auto *ClassDecl = MD->getParent()->getDefinition();
   if (!ClassDecl)
