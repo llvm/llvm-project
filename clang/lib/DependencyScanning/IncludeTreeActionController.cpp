@@ -257,8 +257,8 @@ public:
   LookupPCHModulesListener(ASTReader &R) : Reader(R) {}
 
 private:
-  void visitModuleFile(ModuleFileName Filename,
-                       serialization::ModuleKind Kind) final {
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) final {
     // Any prebuilt or explicit modules seen during scanning are "full" modules
     // rather than implicitly built scanner modules.
     if (Kind == serialization::MK_PrebuiltModule ||
