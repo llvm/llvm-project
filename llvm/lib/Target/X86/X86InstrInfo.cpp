@@ -7629,6 +7629,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
                    .addDef(NewSrc)
                    .addReg(SrcReg, {}, SrcSub);
       NewMI->getOperand(1).setReg(NewSrc);
+      NewMI->getOperand(1).setSubReg(0);
     }
     return NewMI;
   }
