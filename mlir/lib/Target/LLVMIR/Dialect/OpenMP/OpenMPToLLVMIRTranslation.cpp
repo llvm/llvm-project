@@ -17,6 +17,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
@@ -2962,6 +2963,171 @@ convertOmpTaskloopWrapperOp(omp::TaskloopWrapperOp loopWrapperOp,
   return success();
 }
 
+/// Look up the given value in the mapping, and if it's not there, translate its
+/// defining operation at the current builder insertion point. Only pure,
+/// regionless operations are supported because the same operation will later be
+/// translated again when the taskloop body itself is lowered.
+static llvm::Expected<llvm::Value *>
+lookupOrTranslatePureValue(Value value,
+                           LLVM::ModuleTranslation &moduleTranslation,
+                           llvm::IRBuilderBase &builder) {
+  if (llvm::Value *mapped = moduleTranslation.lookupValue(value))
+    return mapped;
+
+  Operation *defOp = value.getDefiningOp();
+  if (!defOp)
+    return llvm::make_error<llvm::StringError>(
+        "value is a block argument and is not mapped",
+        llvm::inconvertibleErrorCode());
+  if (defOp->getNumRegions() != 0 || !isPure(defOp))
+    return llvm::make_error<llvm::StringError>(
+        "unsupported op defining taskloop loop bound",
+        llvm::inconvertibleErrorCode());
+
+  SmallVector<Value> mappingsToRemove;
+  mappingsToRemove.reserve(defOp->getNumOperands() + defOp->getNumResults());
+  for (Value operand : defOp->getOperands()) {
+    if (moduleTranslation.lookupValue(operand))
+      continue;
+
+    llvm::Expected<llvm::Value *> operandOrError =
+        lookupOrTranslatePureValue(operand, moduleTranslation, builder);
+    if (!operandOrError)
+      return operandOrError.takeError();
+    moduleTranslation.mapValue(operand, *operandOrError);
+    mappingsToRemove.push_back(operand);
+  }
+
+  if (failed(moduleTranslation.convertOperation(*defOp, builder)))
+    return llvm::make_error<llvm::StringError>(
+        "failed to convert op defining taskloop loop bound",
+        llvm::inconvertibleErrorCode());
+
+  llvm::Value *result = moduleTranslation.lookupValue(value);
+  assert(result && "expected conversion of loop bound op to produce a value");
+
+  for (Value resultValue : defOp->getResults()) {
+    if (moduleTranslation.lookupValue(resultValue))
+      mappingsToRemove.push_back(resultValue);
+  }
+  for (Value mappedValue : mappingsToRemove)
+    moduleTranslation.forgetMapping(mappedValue);
+
+  return result;
+}
+
+static llvm::Error
+computeTaskloopBounds(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::Value *&lbVal, llvm::Value *&ubVal,
+                      llvm::Value *&stepVal) {
+  Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
+  Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
+  Operation::operand_range steps = loopOp.getLoopSteps();
+
+  llvm::Expected<llvm::Value *> firstLbOrErr =
+      lookupOrTranslatePureValue(lowerBounds[0], moduleTranslation, builder);
+  if (!firstLbOrErr)
+    return firstLbOrErr.takeError();
+
+  llvm::Type *boundType = (*firstLbOrErr)->getType();
+  ubVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+  if (loopOp.getCollapseNumLoops() > 1) {
+    // In cases where Collapse is used with Taskloop, the upper bound of the
+    // iteration space needs to be recalculated to cater for the collapsed loop.
+    // The Collapsed Loop UpperBound is the product of all collapsed
+    // loop's tripcount.
+    // The LowerBound for collapsed loops is always 1. When the loops are
+    // collapsed, it will reset the bounds and introduce processing to ensure
+    // the index's are presented as expected. As this happens after creating
+    // Taskloop, these bounds need predicting. Example:
+    // !$omp taskloop collapse(2)
+    //   do i = 1, 10
+    //     do j = 1, 5
+    //       ..
+    //     end do
+    //   end do
+    // This loop above has a total of 50 iterations, so the lb will be 1, and
+    // the ub will be 50. collapseLoops in OMPIRBuilder then handles ensuring
+    // that i and j are properly presented when used in the loop.
+    for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
+      llvm::Expected<llvm::Value *> lbOrErr =
+          i == 0 ? std::move(firstLbOrErr)
+                 : lookupOrTranslatePureValue(lowerBounds[i], moduleTranslation,
+                                              builder);
+      if (!lbOrErr)
+        return lbOrErr.takeError();
+      llvm::Expected<llvm::Value *> ubOrErr = lookupOrTranslatePureValue(
+          upperBounds[i], moduleTranslation, builder);
+      if (!ubOrErr)
+        return ubOrErr.takeError();
+      llvm::Expected<llvm::Value *> stepOrErr =
+          lookupOrTranslatePureValue(steps[i], moduleTranslation, builder);
+      if (!stepOrErr)
+        return stepOrErr.takeError();
+
+      llvm::Value *loopLb = *lbOrErr;
+      llvm::Value *loopUb = *ubOrErr;
+      llvm::Value *loopStep = *stepOrErr;
+      // In some cases, such as where the ub is less than the lb so the loop
+      // steps down, the calculation for the loopTripCount is swapped. To ensure
+      // the correct value is found, calculate both UB - LB and LB - UB then
+      // select which value to use depending on how the loop has been
+      // configured.
+      llvm::Value *loopLbMinusOne = builder.CreateSub(
+          loopLb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
+      llvm::Value *loopUbMinusOne = builder.CreateSub(
+          loopUb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
+      llvm::Value *boundsCmp = builder.CreateICmpSLT(loopLb, loopUb);
+      llvm::Value *ubMinusLb = builder.CreateSub(loopUb, loopLbMinusOne);
+      llvm::Value *lbMinusUb = builder.CreateSub(loopLb, loopUbMinusOne);
+      llvm::Value *loopTripCount =
+          builder.CreateSelect(boundsCmp, ubMinusLb, lbMinusUb);
+      loopTripCount = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCount, builder.getFalse());
+      // For loops that have a step value not equal to 1, we need to adjust the
+      // trip count to ensure the correct number of iterations for the loop is
+      // captured.
+      llvm::Value *loopTripCountDivStep =
+          builder.CreateSDiv(loopTripCount, loopStep);
+      loopTripCountDivStep = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCountDivStep, builder.getFalse());
+      llvm::Value *loopTripCountRem =
+          builder.CreateSRem(loopTripCount, loopStep);
+      loopTripCountRem = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCountRem, builder.getFalse());
+      llvm::Value *needsRoundUp = builder.CreateICmpNE(
+          loopTripCountRem,
+          builder.getIntN(loopTripCountRem->getType()->getIntegerBitWidth(),
+                          0));
+      loopTripCount =
+          builder.CreateAdd(loopTripCountDivStep,
+                            builder.CreateZExtOrTrunc(
+                                needsRoundUp, loopTripCountDivStep->getType()));
+      ubVal = builder.CreateMul(ubVal, loopTripCount);
+    }
+    lbVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+    stepVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+  } else {
+    llvm::Expected<llvm::Value *> ubOrErr =
+        lookupOrTranslatePureValue(upperBounds[0], moduleTranslation, builder);
+    if (!ubOrErr)
+      return ubOrErr.takeError();
+    llvm::Expected<llvm::Value *> stepOrErr =
+        lookupOrTranslatePureValue(steps[0], moduleTranslation, builder);
+    if (!stepOrErr)
+      return stepOrErr.takeError();
+    lbVal = *firstLbOrErr;
+    ubVal = *ubOrErr;
+    stepVal = *stepOrErr;
+  }
+
+  assert(lbVal != nullptr && "Expected value for lbVal");
+  assert(ubVal != nullptr && "Expected value for ubVal");
+  assert(stepVal != nullptr && "Expected value for stepVal");
+  return llvm::Error::success();
+}
+
 // Converts an OpenMP taskloop construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
@@ -3050,6 +3216,14 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
 
   // Set up inserttion point for call to createTaskloop()
   builder.SetInsertPoint(taskloopStartBlock);
+
+  auto loopOp = cast<omp::LoopNestOp>(loopWrapperOp.getWrappedLoop());
+  llvm::Value *lbVal = nullptr;
+  llvm::Value *ubVal = nullptr;
+  llvm::Value *stepVal = nullptr;
+  if (llvm::Error err = computeTaskloopBounds(
+          loopOp, builder, moduleTranslation, lbVal, ubVal, stepVal))
+    return handleError(std::move(err), opInst);
 
   auto bodyCB = [&](InsertPointTy allocaIP,
                     InsertPointTy codegenIP) -> llvm::Error {
@@ -3217,90 +3391,10 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     return builder.saveIP();
   };
 
-  auto loopOp = cast<omp::LoopNestOp>(loopWrapperOp.getWrappedLoop());
-
   auto loopInfo = [&]() -> llvm::Expected<llvm::CanonicalLoopInfo *> {
     llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
     return loopInfo;
   };
-
-  Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
-  Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
-  Operation::operand_range steps = loopOp.getLoopSteps();
-  llvm::Type *boundType =
-      moduleTranslation.lookupValue(lowerBounds[0])->getType();
-  llvm::Value *lbVal = nullptr;
-  llvm::Value *ubVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
-  llvm::Value *stepVal = nullptr;
-  if (loopOp.getCollapseNumLoops() > 1) {
-    // In cases where Collapse is used with Taskloop, the upper bound of the
-    // iteration space needs to be recalculated to cater for the collapsed loop.
-    // The Collapsed Loop UpperBound is the product of all collapsed
-    // loop's tripcount.
-    // The LowerBound for collapsed loops is always 1. When the loops are
-    // collapsed, it will reset the bounds and introduce processing to ensure
-    // the index's are presented as expected. As this happens after creating
-    // Taskloop, these bounds need predicting. Example:
-    // !$omp taskloop collapse(2)
-    //   do i = 1, 10
-    //     do j = 1, 5
-    //       ..
-    //     end do
-    //   end do
-    // This loop above has a total of 50 iterations, so the lb will be 1, and
-    // the ub will be 50. collapseLoops in OMPIRBuilder then handles ensuring
-    // that i and j are properly presented when used in the loop.
-    for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
-      llvm::Value *loopLb = moduleTranslation.lookupValue(lowerBounds[i]);
-      llvm::Value *loopUb = moduleTranslation.lookupValue(upperBounds[i]);
-      llvm::Value *loopStep = moduleTranslation.lookupValue(steps[i]);
-      // In some cases, such as where the ub is less than the lb so the loop
-      // steps down, the calculation for the loopTripCount is swapped. To ensure
-      // the correct value is found, calculate both UB - LB and LB - UB then
-      // select which value to use depending on how the loop has been
-      // configured.
-      llvm::Value *loopLbMinusOne = builder.CreateSub(
-          loopLb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
-      llvm::Value *loopUbMinusOne = builder.CreateSub(
-          loopUb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
-      llvm::Value *boundsCmp = builder.CreateICmpSLT(loopLb, loopUb);
-      llvm::Value *ubMinusLb = builder.CreateSub(loopUb, loopLbMinusOne);
-      llvm::Value *lbMinusUb = builder.CreateSub(loopLb, loopUbMinusOne);
-      llvm::Value *loopTripCount =
-          builder.CreateSelect(boundsCmp, ubMinusLb, lbMinusUb);
-      loopTripCount = builder.CreateBinaryIntrinsic(
-          llvm::Intrinsic::abs, loopTripCount, builder.getFalse());
-      // For loops that have a step value not equal to 1, we need to adjust the
-      // trip count to ensure the correct number of iterations for the loop is
-      // captured.
-      llvm::Value *loopTripCountDivStep =
-          builder.CreateSDiv(loopTripCount, loopStep);
-      loopTripCountDivStep = builder.CreateBinaryIntrinsic(
-          llvm::Intrinsic::abs, loopTripCountDivStep, builder.getFalse());
-      llvm::Value *loopTripCountRem =
-          builder.CreateSRem(loopTripCount, loopStep);
-      loopTripCountRem = builder.CreateBinaryIntrinsic(
-          llvm::Intrinsic::abs, loopTripCountRem, builder.getFalse());
-      llvm::Value *needsRoundUp = builder.CreateICmpNE(
-          loopTripCountRem,
-          builder.getIntN(loopTripCountRem->getType()->getIntegerBitWidth(),
-                          0));
-      loopTripCount =
-          builder.CreateAdd(loopTripCountDivStep,
-                            builder.CreateZExtOrTrunc(
-                                needsRoundUp, loopTripCountDivStep->getType()));
-      ubVal = builder.CreateMul(ubVal, loopTripCount);
-    }
-    lbVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
-    stepVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
-  } else {
-    lbVal = moduleTranslation.lookupValue(lowerBounds[0]);
-    ubVal = moduleTranslation.lookupValue(upperBounds[0]);
-    stepVal = moduleTranslation.lookupValue(steps[0]);
-  }
-  assert(lbVal != nullptr && "Expected value for lbVal");
-  assert(ubVal != nullptr && "Expected value for ubVal");
-  assert(stepVal != nullptr && "Expected value for stepVal");
 
   llvm::Value *ifCond = nullptr;
   llvm::Value *grainsize = nullptr;

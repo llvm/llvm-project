@@ -3035,11 +3035,17 @@ func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) 
   return
 }
 
+omp.private {type = private} @taskloop.bound.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
 // -----
-func.func @omp_taskloop_local_loop_bounds() {
-  // expected-error @below {{'omp.taskloop.context' op expects loop bounds and steps to be defined outside of the taskloop.context region}}
-  omp.taskloop.context {
-    %lb = arith.constant 1 : index
+func.func @omp_taskloop_local_loop_bounds_from_block_arg(%arg0: index) {
+  %c1 = arith.constant 1 : index
+  // expected-error @below {{'omp.taskloop.context' op expects loop bounds and steps to be defined outside of the taskloop.context region or by pure, regionless operations that do not depend on block arguments}}
+  omp.taskloop.context private(@taskloop.bound.privatizer %arg0 -> %arg1 : index) {
+    %lb = arith.addi %arg1, %c1 : index
     %ub = arith.constant 10 : index
     %step = arith.constant 1 : index
     omp.taskloop.wrapper {

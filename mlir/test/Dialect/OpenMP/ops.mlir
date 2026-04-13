@@ -2861,6 +2861,25 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
     omp.terminator
   }
 
+  // CHECK: omp.taskloop.context {
+  omp.taskloop.context {
+    // CHECK: %[[LB:.+]] = arith.constant 1 : i32
+    %local_lb = arith.constant 1 : i32
+    // CHECK: %[[UB:.+]] = arith.constant 10 : i32
+    %local_ub = arith.constant 10 : i32
+    // CHECK: %[[STEP:.+]] = arith.constant 1 : i32
+    %local_step = arith.constant 1 : i32
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      // CHECK: omp.loop_nest (%{{.+}}) : i32 = (%[[LB]]) to (%[[UB]]) step (%[[STEP]]) {
+      omp.loop_nest (%i) : i32 = (%local_lb) to (%local_ub) step (%local_step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+
   // CHECK: return
   return
 }
