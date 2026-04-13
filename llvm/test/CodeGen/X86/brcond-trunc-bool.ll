@@ -3,12 +3,12 @@
 
 declare void @notify()
 
-; using nuw lowers to cmp reg, 1
+; using nuw lowers to cmp reg, 0
 define void @br_trunc_nuw(ptr %p) {
 ; CHECK-LABEL: br_trunc_nuw:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpb $1, (%rdi)
-; CHECK-NEXT:    je notify@PLT # TAILCALL
+; CHECK-NEXT:    cmpb $0, (%rdi)
+; CHECK-NEXT:    jne notify@PLT # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %ret
 ; CHECK-NEXT:    retq
   %v = load i8, ptr %p, align 1
@@ -21,12 +21,12 @@ ret:
   ret void
 }
 
-; using range lowers to cmp reg, 1
+; using range lowers to cmp reg, 0
 define void @br_trunc_range(ptr %p) {
 ; CHECK-LABEL: br_trunc_range:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpb $1, (%rdi)
-; CHECK-NEXT:    je notify@PLT # TAILCALL
+; CHECK-NEXT:    cmpb $0, (%rdi)
+; CHECK-NEXT:    jne notify@PLT # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %ret
 ; CHECK-NEXT:    retq
   %v = load i8, ptr %p, align 1, !range !0
@@ -39,12 +39,12 @@ ret:
   ret void
 }
 
-; using nuw and range lowers to cmp reg, 1
+; using nuw and range lowers to cmp reg, 0
 define void @br_trunc_nuw_and_range(ptr %p) {
 ; CHECK-LABEL: br_trunc_nuw_and_range:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpb $1, (%rdi)
-; CHECK-NEXT:    je notify@PLT # TAILCALL
+; CHECK-NEXT:    cmpb $0, (%rdi)
+; CHECK-NEXT:    jne notify@PLT # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %ret
 ; CHECK-NEXT:    retq
   %v = load i8, ptr %p, align 1, !range !0
@@ -57,13 +57,13 @@ ret:
   ret void
 }
 
-; atomic load currently uses cmp reg, 1
+; atomic load currently uses test reg, reg
 define void @br_atomic_trunc_range(ptr %p) {
 ; CHECK-LABEL: br_atomic_trunc_range:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl (%rdi), %eax
-; CHECK-NEXT:    cmpb $1, %al
-; CHECK-NEXT:    je notify@PLT # TAILCALL
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne notify@PLT # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %ret
 ; CHECK-NEXT:    retq
   %v = load atomic i8, ptr %p monotonic, align 1, !range !0

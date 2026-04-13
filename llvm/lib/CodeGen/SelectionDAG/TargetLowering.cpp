@@ -5107,6 +5107,14 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               Cond == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ);
         }
       } else if (N1C->isOne()) {
+        // If N0 is known to be 0 or 1, canonicalize seteq(N0, 1) to
+        // setne(N0, 0). Comparison against zero is the canonical boolean form.
+        unsigned N0Bits = N0.getScalarValueSizeInBits();
+        if (DAG.MaskedValueIsZero(N0, APInt::getBitsSetFrom(N0Bits, 1)))
+          return DAG.getSetCC(dl, VT, N0,
+                              DAG.getConstant(0, dl, N0.getValueType()),
+                              Cond == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ);
+
         SDValue Op0 = N0;
         if (Op0.getOpcode() == ISD::TRUNCATE)
           Op0 = Op0.getOperand(0);
