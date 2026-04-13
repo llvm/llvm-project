@@ -89,7 +89,7 @@ namespace {
 ///
 /// Therefore the final assembly final has 4 different loads. With this pass
 /// enabled, only one load is issued for the constants.
-class AArch64PromoteConstant : public ModulePass {
+class AArch64PromoteConstantImpl {
 public:
   struct PromotedConstant {
     bool ShouldConvert = false;
@@ -106,39 +106,13 @@ public:
         : C(C), User(User), Op(Op) {}
   };
 
-  static char ID;
-
-  AArch64PromoteConstant() : ModulePass(ID) {}
-
-  StringRef getPassName() const override { return "AArch64 Promote Constant"; }
-
-  /// Iterate over the functions and promote the interesting constants into
-  /// global variables with module scope.
-  bool runOnModule(Module &M) override {
-    LLVM_DEBUG(dbgs() << getPassName() << '\n');
-    if (skipModule(M))
-      return false;
-    bool Changed = false;
-    PromotionCacheTy PromotionCache;
-    for (auto &MF : M) {
-      Changed |= runOnFunction(MF, PromotionCache);
-    }
-    return Changed;
-  }
-
-private:
   /// Look for interesting constants used within the given function.
   /// Promote them into global variables, load these global variables within
   /// the related function, so that the number of inserted load is minimal.
-  bool runOnFunction(Function &F, PromotionCacheTy &PromotionCache);
+  bool runOnFunction(Function &F, PromotionCacheTy &PromotionCache,
+                     DominatorTree &DT);
 
-  // This transformation requires dominator info
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-
+private:
   /// Type to store a list of Uses.
   using Uses = SmallVector<std::pair<Instruction *, unsigned>, 4>;
   /// Map an insertion point to all the uses it dominates.
@@ -155,11 +129,12 @@ private:
   /// \param User the user of the constant
   /// \param OpNo the operand number of the use
   /// \param InsertPts existing insertion points
+  /// \param DT the dominator tree
   /// \pre NewPt and all instruction in InsertPts belong to the same function
   /// \return true if one of the insertion point in InsertPts dominates NewPt,
   ///         false otherwise
   bool isDominated(Instruction *NewPt, Instruction *User, unsigned OpNo,
-                   InsertionPoints &InsertPts);
+                   InsertionPoints &InsertPts, DominatorTree &DT);
 
   /// Check if the given insertion point can be merged with an existing
   /// insertion point in a common dominator.
@@ -169,13 +144,14 @@ private:
   /// \param User the user of the constant
   /// \param OpNo the operand number of the use
   /// \param InsertPts existing insertion points
+  /// \param DT the dominator tree
   /// \pre NewPt and all instruction in InsertPts belong to the same function
   /// \pre isDominated returns false for the exact same parameters.
   /// \return true if it exists an insertion point in InsertPts that could
   ///         have been merged with NewPt in a common dominator,
   ///         false otherwise
   bool tryAndMerge(Instruction *NewPt, Instruction *User, unsigned OpNo,
-                   InsertionPoints &InsertPts);
+                   InsertionPoints &InsertPts, DominatorTree &DT);
 
   /// Compute the minimal insertion points to dominates all the interesting
   /// uses of value.
@@ -184,19 +160,20 @@ private:
   /// \param User the user of the constant
   /// \param OpNo the operand number of the constant
   /// \param[out] InsertPts output storage of the analysis
+  /// \param DT the dominator tree
   void computeInsertionPoint(Instruction *User, unsigned OpNo,
-                             InsertionPoints &InsertPts);
+                             InsertionPoints &InsertPts, DominatorTree &DT);
 
   /// Insert a definition of a new global variable at each point contained in
   /// InsPtsPerFunc and update the related uses (also contained in
   /// InsPtsPerFunc).
   void insertDefinitions(Function &F, GlobalVariable &GV,
-                         InsertionPoints &InsertPts);
+                         InsertionPoints &InsertPts, DominatorTree &DT);
 
   /// Do the constant promotion indicated by the Updates records, keeping track
   /// of globals in PromotionCache.
   void promoteConstants(Function &F, SmallVectorImpl<UpdateRecord> &Updates,
-                        PromotionCacheTy &PromotionCache);
+                        PromotionCacheTy &PromotionCache, DominatorTree &DT);
 
   /// Transfer the list of dominated uses of IPI to NewPt in InsertPts.
   /// Append Use to this list and delete the entry of IPI in InsertPts.
@@ -218,18 +195,65 @@ private:
   }
 };
 
+class AArch64PromoteConstantLegacy : public ModulePass {
+public:
+  static char ID;
+  AArch64PromoteConstantLegacy() : ModulePass(ID) {}
+
+  StringRef getPassName() const override { return "AArch64 Promote Constant"; }
+
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+    bool Changed = false;
+    AArch64PromoteConstantImpl Impl;
+    AArch64PromoteConstantImpl::PromotionCacheTy PromotionCache;
+    for (auto &F : M) {
+      if (F.isDeclaration())
+        continue;
+      DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+      Changed |= Impl.runOnFunction(F, PromotionCache, DT);
+    }
+    return Changed;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+  }
+};
+
 } // end anonymous namespace
 
-char AArch64PromoteConstant::ID = 0;
+char AArch64PromoteConstantLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(AArch64PromoteConstant, "aarch64-promote-const",
+INITIALIZE_PASS_BEGIN(AArch64PromoteConstantLegacy, "aarch64-promote-const",
                       "AArch64 Promote Constant Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(AArch64PromoteConstant, "aarch64-promote-const",
+INITIALIZE_PASS_END(AArch64PromoteConstantLegacy, "aarch64-promote-const",
                     "AArch64 Promote Constant Pass", false, false)
 
 ModulePass *llvm::createAArch64PromoteConstantPass() {
-  return new AArch64PromoteConstant();
+  return new AArch64PromoteConstantLegacy();
+}
+
+PreservedAnalyses AArch64PromoteConstantPass::run(Module &M,
+                                                  ModuleAnalysisManager &MAM) {
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  AArch64PromoteConstantImpl Impl;
+  AArch64PromoteConstantImpl::PromotionCacheTy PromotionCache;
+  bool Changed = false;
+  for (auto &F : M) {
+    DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+    Changed |= Impl.runOnFunction(F, PromotionCache, DT);
+  }
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 /// Check if the given type uses a vector type.
@@ -360,16 +384,16 @@ static bool shouldConvertImpl(const Constant *Cst) {
 
 static bool
 shouldConvert(Constant &C,
-              AArch64PromoteConstant::PromotionCacheTy &PromotionCache) {
+              AArch64PromoteConstantImpl::PromotionCacheTy &PromotionCache) {
   auto Converted = PromotionCache.insert(
-      std::make_pair(&C, AArch64PromoteConstant::PromotedConstant()));
+      std::make_pair(&C, AArch64PromoteConstantImpl::PromotedConstant()));
   if (Converted.second)
     Converted.first->second.ShouldConvert = shouldConvertImpl(&C);
   return Converted.first->second.ShouldConvert;
 }
 
-Instruction *AArch64PromoteConstant::findInsertionPoint(Instruction &User,
-                                                        unsigned OpNo) {
+Instruction *AArch64PromoteConstantImpl::findInsertionPoint(Instruction &User,
+                                                            unsigned OpNo) {
   // If this user is a phi, the insertion point is in the related
   // incoming basic block.
   if (PHINode *PhiInst = dyn_cast<PHINode>(&User))
@@ -378,11 +402,10 @@ Instruction *AArch64PromoteConstant::findInsertionPoint(Instruction &User,
   return &User;
 }
 
-bool AArch64PromoteConstant::isDominated(Instruction *NewPt, Instruction *User,
-                                         unsigned OpNo,
-                                         InsertionPoints &InsertPts) {
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(
-      *NewPt->getParent()->getParent()).getDomTree();
+bool AArch64PromoteConstantImpl::isDominated(Instruction *NewPt,
+                                             Instruction *User, unsigned OpNo,
+                                             InsertionPoints &InsertPts,
+                                             DominatorTree &DT) {
 
   // Traverse all the existing insertion points and check if one is dominating
   // NewPt. If it is, remember that.
@@ -404,11 +427,10 @@ bool AArch64PromoteConstant::isDominated(Instruction *NewPt, Instruction *User,
   return false;
 }
 
-bool AArch64PromoteConstant::tryAndMerge(Instruction *NewPt, Instruction *User,
-                                         unsigned OpNo,
-                                         InsertionPoints &InsertPts) {
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(
-      *NewPt->getParent()->getParent()).getDomTree();
+bool AArch64PromoteConstantImpl::tryAndMerge(Instruction *NewPt,
+                                             Instruction *User, unsigned OpNo,
+                                             InsertionPoints &InsertPts,
+                                             DominatorTree &DT) {
   BasicBlock *NewBB = NewPt->getParent();
 
   // Traverse all the existing insertion point and check if one is dominated by
@@ -455,8 +477,9 @@ bool AArch64PromoteConstant::tryAndMerge(Instruction *NewPt, Instruction *User,
   return false;
 }
 
-void AArch64PromoteConstant::computeInsertionPoint(
-    Instruction *User, unsigned OpNo, InsertionPoints &InsertPts) {
+void AArch64PromoteConstantImpl::computeInsertionPoint(
+    Instruction *User, unsigned OpNo, InsertionPoints &InsertPts,
+    DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "Considered use, opidx " << OpNo << ":\n");
   LLVM_DEBUG(User->print(dbgs()));
   LLVM_DEBUG(dbgs() << '\n');
@@ -467,11 +490,11 @@ void AArch64PromoteConstant::computeInsertionPoint(
   LLVM_DEBUG(InsertionPoint->print(dbgs()));
   LLVM_DEBUG(dbgs() << '\n');
 
-  if (isDominated(InsertionPoint, User, OpNo, InsertPts))
+  if (isDominated(InsertionPoint, User, OpNo, InsertPts, DT))
     return;
   // This insertion point is useful, check if we can merge some insertion
   // point in a common dominator or if NewPt dominates an existing one.
-  if (tryAndMerge(InsertionPoint, User, OpNo, InsertPts))
+  if (tryAndMerge(InsertionPoint, User, OpNo, InsertPts, DT))
     return;
 
   LLVM_DEBUG(dbgs() << "Keep considered insertion point\n");
@@ -481,7 +504,7 @@ void AArch64PromoteConstant::computeInsertionPoint(
 }
 
 static void ensurePromotedGV(Function &F, Constant &C,
-                             AArch64PromoteConstant::PromotedConstant &PC) {
+                             AArch64PromoteConstantImpl::PromotedConstant &PC) {
   assert(PC.ShouldConvert &&
          "Expected that we should convert this to a global");
   if (PC.GV)
@@ -496,12 +519,12 @@ static void ensurePromotedGV(Function &F, Constant &C,
   ++NumPromoted;
 }
 
-void AArch64PromoteConstant::insertDefinitions(Function &F,
-                                               GlobalVariable &PromotedGV,
-                                               InsertionPoints &InsertPts) {
+void AArch64PromoteConstantImpl::insertDefinitions(Function &F,
+                                                   GlobalVariable &PromotedGV,
+                                                   InsertionPoints &InsertPts,
+                                                   DominatorTree &DT) {
 #ifndef NDEBUG
   // Do more checking for debug purposes.
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
 #endif
   assert(!InsertPts.empty() && "Empty uses does not need a definition");
 
@@ -533,9 +556,9 @@ void AArch64PromoteConstant::insertDefinitions(Function &F,
   }
 }
 
-void AArch64PromoteConstant::promoteConstants(
+void AArch64PromoteConstantImpl::promoteConstants(
     Function &F, SmallVectorImpl<UpdateRecord> &Updates,
-    PromotionCacheTy &PromotionCache) {
+    PromotionCacheTy &PromotionCache, DominatorTree &DT) {
   // Promote the constants.
   for (auto U = Updates.begin(), E = Updates.end(); U != E;) {
     LLVM_DEBUG(dbgs() << "** Compute insertion points **\n");
@@ -543,17 +566,18 @@ void AArch64PromoteConstant::promoteConstants(
     Constant *C = First->C;
     InsertionPoints InsertPts;
     do {
-      computeInsertionPoint(U->User, U->Op, InsertPts);
+      computeInsertionPoint(U->User, U->Op, InsertPts, DT);
     } while (++U != E && U->C == C);
 
     auto &Promotion = PromotionCache[C];
     ensurePromotedGV(F, *C, Promotion);
-    insertDefinitions(F, *Promotion.GV, InsertPts);
+    insertDefinitions(F, *Promotion.GV, InsertPts, DT);
   }
 }
 
-bool AArch64PromoteConstant::runOnFunction(Function &F,
-                                           PromotionCacheTy &PromotionCache) {
+bool AArch64PromoteConstantImpl::runOnFunction(Function &F,
+                                               PromotionCacheTy &PromotionCache,
+                                               DominatorTree &DT) {
   // Look for instructions using constant vector. Promote that constant to a
   // global variable. Create as few loads of this variable as possible and
   // update the uses accordingly.
@@ -586,6 +610,6 @@ bool AArch64PromoteConstant::runOnFunction(Function &F,
   if (Updates.empty())
     return false;
 
-  promoteConstants(F, Updates, PromotionCache);
+  promoteConstants(F, Updates, PromotionCache, DT);
   return true;
 }
