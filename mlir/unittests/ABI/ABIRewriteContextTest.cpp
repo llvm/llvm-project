@@ -37,36 +37,36 @@ TEST(ABIRewriteContextTest, MockCanBeConstructedAndDestroyed) {
 
 TEST(ABIRewriteContextTest, ArgClassificationDirect) {
   auto c = ArgClassification::getDirect();
-  EXPECT_EQ(c.Kind, ArgKind::Direct);
-  EXPECT_EQ(c.CoercedType, nullptr);
-  EXPECT_TRUE(c.CanFlatten);
+  EXPECT_EQ(c.kind, ArgKind::Direct);
+  EXPECT_EQ(c.coercedType, nullptr);
+  EXPECT_TRUE(c.canFlatten);
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationDirectWithType) {
   MLIRContext mlirCtx;
   auto i32 = IntegerType::get(&mlirCtx, 32);
   auto c = ArgClassification::getDirect(i32);
-  EXPECT_EQ(c.Kind, ArgKind::Direct);
-  EXPECT_EQ(c.CoercedType, i32);
+  EXPECT_EQ(c.kind, ArgKind::Direct);
+  EXPECT_EQ(c.coercedType, i32);
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationIgnore) {
   auto c = ArgClassification::getIgnore();
-  EXPECT_EQ(c.Kind, ArgKind::Ignore);
+  EXPECT_EQ(c.kind, ArgKind::Ignore);
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationIndirect) {
   auto c = ArgClassification::getIndirect(llvm::Align(8), true);
-  EXPECT_EQ(c.Kind, ArgKind::Indirect);
-  EXPECT_EQ(c.IndirectAlign, llvm::Align(8));
-  EXPECT_TRUE(c.ByVal);
+  EXPECT_EQ(c.kind, ArgKind::Indirect);
+  EXPECT_EQ(c.indirectAlign, llvm::Align(8));
+  EXPECT_TRUE(c.byVal);
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationIndirectNoByVal) {
   auto c = ArgClassification::getIndirect(llvm::Align(16), false);
-  EXPECT_EQ(c.Kind, ArgKind::Indirect);
-  EXPECT_EQ(c.IndirectAlign, llvm::Align(16));
-  EXPECT_FALSE(c.ByVal);
+  EXPECT_EQ(c.kind, ArgKind::Indirect);
+  EXPECT_EQ(c.indirectAlign, llvm::Align(16));
+  EXPECT_FALSE(c.byVal);
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationExtend) {
@@ -74,26 +74,26 @@ TEST(ABIRewriteContextTest, ArgClassificationExtend) {
   auto i8 = IntegerType::get(&mlirCtx, 8);
 
   auto signExt = ArgClassification::getExtend(i8, true);
-  EXPECT_EQ(signExt.Kind, ArgKind::Extend);
-  EXPECT_TRUE(signExt.SignExtend);
+  EXPECT_EQ(signExt.kind, ArgKind::Extend);
+  EXPECT_TRUE(signExt.signExtend);
 
   auto zeroExt = ArgClassification::getExtend(i8, false);
-  EXPECT_EQ(zeroExt.Kind, ArgKind::Extend);
-  EXPECT_FALSE(zeroExt.SignExtend);
+  EXPECT_EQ(zeroExt.kind, ArgKind::Extend);
+  EXPECT_FALSE(zeroExt.signExtend);
 }
 
 TEST(ABIRewriteContextTest, FunctionClassificationHoldsReturnAndArgs) {
   FunctionClassification fc;
-  fc.ReturnInfo = ArgClassification::getDirect();
-  fc.ArgInfos.push_back(ArgClassification::getDirect());
-  fc.ArgInfos.push_back(ArgClassification::getIndirect(llvm::Align(8), true));
-  fc.ArgInfos.push_back(ArgClassification::getIgnore());
+  fc.returnInfo = ArgClassification::getDirect();
+  fc.argInfos.push_back(ArgClassification::getDirect());
+  fc.argInfos.push_back(ArgClassification::getIndirect(llvm::Align(8), true));
+  fc.argInfos.push_back(ArgClassification::getIgnore());
 
-  EXPECT_EQ(fc.ReturnInfo.Kind, ArgKind::Direct);
-  EXPECT_EQ(fc.ArgInfos.size(), 3u);
-  EXPECT_EQ(fc.ArgInfos[0].Kind, ArgKind::Direct);
-  EXPECT_EQ(fc.ArgInfos[1].Kind, ArgKind::Indirect);
-  EXPECT_EQ(fc.ArgInfos[2].Kind, ArgKind::Ignore);
+  EXPECT_EQ(fc.returnInfo.kind, ArgKind::Direct);
+  EXPECT_EQ(fc.argInfos.size(), 3u);
+  EXPECT_EQ(fc.argInfos[0].kind, ArgKind::Direct);
+  EXPECT_EQ(fc.argInfos[1].kind, ArgKind::Indirect);
+  EXPECT_EQ(fc.argInfos[2].kind, ArgKind::Ignore);
 }
 
 } // namespace
