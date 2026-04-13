@@ -15,7 +15,6 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
-#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -39,30 +38,6 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
   if (tysan_inited)
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
-}
-
-static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp,
-                          BufferedStackTrace *ST) {
-  uptr top = 0;
-  uptr bottom = 0;
-  if (fullStacktrace)
-    GetThreadStackTopAndBottom(false, &top, &bottom);
-  bool request_fast = StackTrace::WillUseFastUnwind(true);
-  ST->Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
-}
-
-namespace __tysan {
-void OnStackUnwind(const SignalContext &sig, const void *,
-                   BufferedStackTrace *stack) {
-  getStackTrace(true, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, stack);
-}
-} // namespace __tysan
-
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
-  GET_CURRENT_PC_BP;
-  UNINITIALIZED BufferedStackTrace stack;
-  getStackTrace(true, pc, bp, &stack);
-  stack.Print();
 }
 
 static const char *getDisplayName(const char *Name) {
@@ -266,8 +241,14 @@ static void reportError(void *Addr, int Size, tysan_type_descriptor *TD,
     Printf("\n");
 
   if (pc) {
+    uptr top = 0;
+    uptr bottom = 0;
+    if (flags().print_stacktrace)
+      GetThreadStackTopAndBottom(false, &top, &bottom);
+
+    bool request_fast = StackTrace::WillUseFastUnwind(true);
     BufferedStackTrace ST;
-    getStackTrace(flags().print_stacktrace, pc, bp, &ST);
+    ST.Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
     ST.Print();
   } else {
     Printf("\n");
@@ -484,8 +465,6 @@ static void InitializeFlags() {
     ReportUnrecognizedFlags();
   if (common_flags()->help)
     parser.PrintFlagDescriptions();
-
-  __sanitizer_set_report_path(common_flags()->log_path);
 }
 
 static void TySanInitializePlatformEarly() {
@@ -510,13 +489,9 @@ static void TySanInitializePlatformEarly() {
 namespace __tysan {
 bool tysan_inited = false;
 bool tysan_init_is_running;
-void InitializeDeadlySignals();
 } // namespace __tysan
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
-  SanitizerToolName = "TypeSanitizer";
-  CacheBinaryName();
-
   CHECK(!tysan_init_is_running);
   if (tysan_inited)
     return;
@@ -526,7 +501,6 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
   TySanInitializePlatformEarly();
 
   InitializeInterceptors();
-  InitializeDeadlySignals();
 
   if (!MmapFixedNoReserve(ShadowAddr(), AppAddr() - ShadowAddr()))
     Die();
