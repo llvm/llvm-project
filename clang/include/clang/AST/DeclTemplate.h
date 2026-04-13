@@ -3413,8 +3413,9 @@ const Decl &adjustDeclToTemplate(const Decl &D);
 ///   template int ns::bar<int>;              // variable template
 ///   template void ns::S<int>::method(int);  // member function
 /// \endcode
-class ExplicitInstantiationDecl : public Decl,
-                                  public Redeclarable<ExplicitInstantiationDecl> {
+class ExplicitInstantiationDecl
+    : public Decl,
+      public Redeclarable<ExplicitInstantiationDecl> {
   /// The underlying specialization being explicitly instantiated.
   NamedDecl *Specialization = nullptr;
 
@@ -3454,8 +3455,7 @@ class ExplicitInstantiationDecl : public Decl,
   ExplicitInstantiationDecl *getMostRecentDeclImpl() override;
 
   ExplicitInstantiationDecl(ASTContext &C, DeclContext *DC,
-                            NamedDecl *Specialization,
-                            SourceLocation ExternLoc,
+                            NamedDecl *Specialization, SourceLocation ExternLoc,
                             SourceLocation TemplateLoc, SourceLocation TagKWLoc,
                             NestedNameSpecifierLoc QualifierLoc,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten,
@@ -3485,12 +3485,12 @@ public:
   using redecl_range = redeclarable_base::redecl_range;
   using redecl_iterator = redeclarable_base::redecl_iterator;
 
+  using redeclarable_base::getMostRecentDecl;
+  using redeclarable_base::getPreviousDecl;
+  using redeclarable_base::isFirstDecl;
+  using redeclarable_base::redecls;
   using redeclarable_base::redecls_begin;
   using redeclarable_base::redecls_end;
-  using redeclarable_base::redecls;
-  using redeclarable_base::getPreviousDecl;
-  using redeclarable_base::getMostRecentDecl;
-  using redeclarable_base::isFirstDecl;
 
   static ExplicitInstantiationDecl *
   Create(ASTContext &C, DeclContext *DC, NamedDecl *Specialization,

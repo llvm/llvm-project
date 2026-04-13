@@ -2950,9 +2950,10 @@ void ASTDeclMerger::mergeLambda(CXXRecordDecl *D, RedeclarableResult &Redecl,
 }
 
 /// Attempt to merge D with a previous explicit instantiation declaration for
-/// the same specialization, which is found by the canonical specialization decl.
-void ASTDeclMerger::mergeExplicitInstantiationDecl(
-    ExplicitInstantiationDecl *D, RedeclarableResult &Redecl) {
+/// the same specialization, which is found by the canonical specialization
+/// decl.
+void ASTDeclMerger::mergeExplicitInstantiationDecl(ExplicitInstantiationDecl *D,
+                                                   RedeclarableResult &Redecl) {
   if (!Reader.getContext().getLangOpts().Modules)
     return;
 

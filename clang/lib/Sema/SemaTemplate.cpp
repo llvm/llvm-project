@@ -9334,8 +9334,9 @@ static void addExplicitInstantiationDecl(
 
 /// Compute the diagnostic location for an explicit instantiation
 //  declaration or definition.
-static SourceLocation DiagLocForExplicitInstantiation(
-    NamedDecl *D, SourceLocation PointOfInstantiation) {
+static SourceLocation
+DiagLocForExplicitInstantiation(NamedDecl *D,
+                                SourceLocation PointOfInstantiation) {
   if (auto *EID = D->getASTContext().getExplicitInstantiationDecl(D))
     return EID->getTemplateLoc();
 

@@ -1812,8 +1812,7 @@ ExplicitInstantiationDecl *ExplicitInstantiationDecl::getPreviousDeclImpl() {
   return getPreviousDecl();
 }
 
-ExplicitInstantiationDecl *
-ExplicitInstantiationDecl::getMostRecentDeclImpl() {
+ExplicitInstantiationDecl *ExplicitInstantiationDecl::getMostRecentDeclImpl() {
   return getMostRecentDecl();
 }
 
