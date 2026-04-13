@@ -45,6 +45,7 @@ void test_params() {
   (void)b.call(1);
 }
 
+
 template<auto B>
 struct AutoBlock {};
 

@@ -1469,7 +1469,7 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
       //   -- pointer to object or pointer to function,
       T->isPointerType() ||
       //   -- block pointer type,
-      (getLangOpts().CPlusPlus20 && T->isBlockPointerType()) ||
+      T->isBlockPointerType() ||
       //   -- lvalue reference to object or lvalue reference to function,
       T->isLValueReferenceType() ||
       //   -- pointer to member,

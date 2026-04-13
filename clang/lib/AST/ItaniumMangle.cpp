@@ -5008,12 +5008,13 @@ recurse:
     break;
   }
 
-  // FIXME: invent manglings for all these.
   case Expr::BlockExprClass: {
     NotPrimaryExpr();
     mangleUnqualifiedBlock(cast<BlockExpr>(E)->getBlockDecl());
     break;
   }
+
+  // FIXME: invent manglings for all these.
   case Expr::ChooseExprClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
