@@ -54,45 +54,38 @@ exit:
   ret void
 }
 
-; Crashed due to not updating "return -> continue" after cut-paste during refactoring.
-define void @ordered_reduction2(ptr %dst, ptr %src) {
+; Same as above but with an additional load (used to catch an error where "early
+; return" was used instead of "early continue" due to copy-paste error during
+; refactoring).
+define void @ordered_reduction2(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: define void @ordered_reduction2(
-; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_MEMCHECK]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_MEMCHECK]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI]], <2 x float> splat (float 6.000000e+00))
 ; CHECK-NEXT:    [[TMP1]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP0]], <2 x float> splat (float 6.000000e+00))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    store float [[TMP1]], ptr [[DST]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    store float [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 97, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi float [ [[TMP1]], %[[SCALAR_PH]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP5]] = tail call float @llvm.fmuladd.f32(float 2.000000e+00, float 3.000000e+00, float [[TMP3]])
 ; CHECK-NEXT:    store float [[TMP5]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
