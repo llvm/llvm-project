@@ -100,7 +100,7 @@ size_t GDBRemoteCommunication::SendNack() {
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
-  StreamString packet(0, 4, eByteOrderBig);
+  StreamString packet(0, eByteOrderBig);
   packet.PutChar('$');
   packet.Write(payload.data(), payload.size());
   packet.PutChar('#');
@@ -119,7 +119,7 @@ GDBRemoteCommunication::SendNotificationPacketNoLock(
   // If there are no notification in the queue, send the notification
   // packet.
   if (queue.empty()) {
-    StreamString packet(0, 4, eByteOrderBig);
+    StreamString packet(0, eByteOrderBig);
     packet.PutChar('%');
     packet.Write(notify_type.data(), notify_type.size());
     packet.PutChar(':');
@@ -245,11 +245,11 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
     lldb::ConnectionStatus status = eConnectionStatusNoConnection;
     size_t bytes_read = Read(buffer, sizeof(buffer), timeout, status, &error);
 
-    LLDB_LOGV(log,
-              "Read(buffer, sizeof(buffer), timeout = {0}, "
-              "status = {1}, error = {2}) => bytes_read = {3}",
-              timeout, Communication::ConnectionStatusAsString(status), error,
-              bytes_read);
+    LLDB_LOG_VERBOSE(log,
+                     "Read(buffer, sizeof(buffer), timeout = {0}, "
+                     "status = {1}, error = {2}) => bytes_read = {3}",
+                     timeout, Communication::ConnectionStatusAsString(status),
+                     error, bytes_read);
 
     if (bytes_read > 0) {
       if (CheckForPacket(buffer, bytes_read, packet) != PacketType::Invalid)
@@ -612,7 +612,6 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
   if (src && src_len > 0) {
     if (log && log->GetVerbose()) {
-      StreamString s;
       LLDB_LOGF(log, "GDBRemoteCommunication::%s adding %u bytes: %.*s",
                 __FUNCTION__, (uint32_t)src_len, (uint32_t)src_len, src);
     }
@@ -860,7 +859,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     debugserver_args.AppendArgument(llvm::formatv("--fd={0}", *comm_fd).str());
     // Send "comm_fd" down to the inferior so it can use it to communicate back
     // with this process.
-    launch_info.AppendDuplicateFileAction((int64_t)*comm_fd, (int64_t)*comm_fd);
+    launch_info.AppendDuplicateFileAction(*comm_fd, *comm_fd);
   } else {
     llvm::StringRef url = std::get<llvm::StringRef>(comm);
     LLDB_LOG(log, "debugserver listens on: {0}", url);
@@ -886,7 +885,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     pipe_t write = socket_pipe.GetWritePipe();
     debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
     debugserver_args.AppendArgument(llvm::to_string(write));
-    launch_info.AppendDuplicateFileAction((int64_t)write, (int64_t)write);
+    launch_info.AppendDuplicateFileAction(write, write);
 #endif
   }
 

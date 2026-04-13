@@ -2,11 +2,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
 
 
-; The vectorizer should refuse to fold the tail by masking because
-; %conv is used outside of the loop. Test for this by checking that
-; %n.vec, the vector trip count, is rounded down to the next multiple of
-; 4. If folding the tail, it would have been rounded up instead.
-; Test case for #76069(https://github.com/llvm/llvm-project/issues/76069).
+; TODO: Move this test into tail-folding-iv-outside-user.ll
 define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: ptr [[ARR:%.*]], i64 [[N:%.*]]) {
@@ -15,8 +11,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[PREHEADER:%.*]], label [[DONE:%.*]]
 ; CHECK:       preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], -2
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP1]] to i8
@@ -24,34 +19,70 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i8 [[TMP8]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP1]], 255
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 1, [[N_VEC]]
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i8
-; CHECK-NEXT:    [[IND_END1:%.*]] = add i8 1, [[DOTCAST]]
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 3
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; CHECK-NEXT:    [[TMP17:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE8:%.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 2, i64 3, i64 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE8]] ]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP21:%.*]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -1)
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    br i1 [[TMP24]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP21]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP17]]
-; CHECK-NEXT:    store <4 x i32> splat (i32 65), ptr [[TMP18]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    store i32 65, ptr [[TMP18]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP11]], i32 1
+; CHECK-NEXT:    br i1 [[TMP25]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; CHECK:       pred.store.if3:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP21]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP13]]
+; CHECK-NEXT:    store i32 65, ptr [[TMP14]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; CHECK:       pred.store.continue4:
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP11]], i32 2
+; CHECK-NEXT:    br i1 [[TMP15]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
+; CHECK:       pred.store.if5:
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP21]], i32 2
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP16]]
+; CHECK-NEXT:    store i32 65, ptr [[TMP26]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
+; CHECK:       pred.store.continue6:
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[TMP11]], i32 3
+; CHECK-NEXT:    br i1 [[TMP27]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8]]
+; CHECK:       pred.store.if7:
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i64> [[TMP21]], i32 3
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP19]]
+; CHECK-NEXT:    store i32 65, ptr [[TMP28]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
+; CHECK:       pred.store.continue8:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP22:%.*]] = xor <4 x i1> [[TMP11]], splat (i1 true)
+; CHECK-NEXT:    [[IND_END:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP22]], i1 false)
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[IND_END]], 1
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOAD_VAL:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[VEC_IND]], i64 [[IND_ESCAPE]]
+; CHECK-NEXT:    br label [[LOAD_VAL:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CONV:%.*]] = phi i64 [ [[CONV2:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i8 [ [[INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[CONV:%.*]] = phi i64 [ [[CONV2:%.*]], [[LOOP]] ], [ 1, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ [[INC:%.*]], [[LOOP]] ], [ 1, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[CONV]], -1
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[SUB]]
 ; CHECK-NEXT:    store i32 65, ptr [[PTR]], align 4
@@ -60,7 +91,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[CONV2]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[LOAD_VAL]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       load_val:
-; CHECK-NEXT:    [[FINAL:%.*]] = phi i64 [ [[CONV]], [[LOOP]] ], [ [[IND_ESCAPE]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[FINAL:%.*]] = phi i64 [ [[CONV]], [[LOOP]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[FINAL]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR2]], align 4
 ; CHECK-NEXT:    br label [[DONE]]

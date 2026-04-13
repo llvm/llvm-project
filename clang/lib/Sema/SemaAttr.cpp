@@ -136,6 +136,8 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
       "unordered_map",
       "unordered_multiset",
       "unordered_multimap",
+      "flat_map",
+      "flat_set",
   };
 
   static const llvm::StringSet<> Iterators{"iterator", "const_iterator",
@@ -189,6 +191,8 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
       "unordered_multiset",
       "unordered_multimap",
       "variant",
+      "flat_map",
+      "flat_set",
   };
   static const llvm::StringSet<> StdPointers{
       "basic_string_view",
@@ -315,6 +319,8 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
   static const llvm::StringSet<> CapturingMethods{
       "insert", "insert_or_assign", "push", "push_front", "push_back"};
   if (!CapturingMethods.contains(MD->getName()))
+    return;
+  if (MD->getName() == "insert" && MD->getParent()->getName() == "basic_string")
     return;
   Annotate(MD);
 }

@@ -10,8 +10,6 @@ declare float @llvm.trunc.f32(float)
 declare float @llvm.arithmetic.fence.f32(float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
-declare float @llvm.minimumnum.f32(float, float)
-declare float @llvm.maximumnum.f32(float, float)
 
 declare nofpclass(inf norm sub zero) float @nan_only()
 
@@ -51,7 +49,7 @@ define nofpclass(all) float @ret_nofpclass_all_undef() {
 ; Use + callsite implies no values, should fold undef to poison.
 define nofpclass(nan) float @undef_folds_to_poison_arg() {
 ; CHECK-LABEL: define nofpclass(nan) float @undef_folds_to_poison_arg() {
-; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) poison)
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) undef)
 ; CHECK-NEXT:    ret float [[FENCE]]
 ;
   %fence = call float @llvm.arithmetic.fence.f32(float nofpclass(inf sub norm zero) undef)
@@ -1721,8 +1719,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__simple_phi_inf_or_unknown(i1 %co
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[PHI:%.*]] = phi float [ 0x7FF0000000000000, [[ENTRY:%.*]] ], [ [[X]], [[BB0]] ]
-; CHECK-NEXT:    ret float [[PHI]]
+; CHECK-NEXT:    ret float [[X]]
 ;
 entry:
   br i1 %cond, label %bb0, label %ret
@@ -1747,7 +1744,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__phi_0(i1 %cond0, float %unknown)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND0]], label [[LOOP:%.*]], label [[RET:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI_LOOP:%.*]] = phi float [ 0x7FF0000000000000, [[ENTRY:%.*]] ], [ [[LOOP_FUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI_LOOP:%.*]] = phi float [ poison, [[ENTRY:%.*]] ], [ [[LOOP_FUNC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LOOP_FUNC]] = call nofpclass(nan) float @loop.func()
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @loop.cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[RET]], label [[LOOP]]
@@ -1829,11 +1826,10 @@ define nofpclass(inf) float @ret_nofpclass_inf__phi_switch_repeated_predecessor(
 ; CHECK-NEXT:      i32 1, label [[LOOP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI_LOOP:%.*]] = phi float [ 0x7FF0000000000000, [[ENTRY:%.*]] ], [ 0x7FF0000000000000, [[ENTRY]] ], [ [[UNKNOWN]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @loop.cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[RET]], label [[LOOP]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[PHI_RET:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[PHI_LOOP]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI_RET:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[UNKNOWN]], [[LOOP]] ]
 ; CHECK-NEXT:    ret float [[PHI_RET]]
 ;
 entry:
@@ -1867,7 +1863,8 @@ define nofpclass(inf) float @ret_nofpclass_inf__arithmetic_fence_select_pinf_rhs
 define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs(i1 %cond, float %x) {
 ; CHECK-LABEL: define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
-; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[X]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[SELECT]])
 ; CHECK-NEXT:    ret float [[FENCE]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
@@ -1892,7 +1889,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf__minnum_ninf(i1 %cond, float %x
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
-  %min = call float @llvm.minimumnum.f32(float %x, float 0xFFF0000000000000)
+  %min = call float @llvm.minnum.f32(float %x, float 0xFFF0000000000000)
   ret float %min
 }
 
@@ -1913,7 +1910,7 @@ define nofpclass(ninf) float @ret_nofpclass_ninf__maxnum_pinf(i1 %cond, float %x
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
-  %max = call float @llvm.maximumnum.f32(float %x, float 0x7FF0000000000000)
+  %max = call float @llvm.maxnum.f32(float %x, float 0x7FF0000000000000)
   ret float %max
 }
 
@@ -2690,3 +2687,21 @@ define nofpclass(nan zero) float @ret_no_nan_no_zero__copysign__src_known_positi
   store float %copysign, ptr %ptr
   ret float %copysign
 }
+
+define double @eigen_nofpclass_regression(ptr %ptr, double %arg) {
+; CHECK-LABEL: define double @eigen_nofpclass_regression
+; CHECK-SAME: (ptr [[PTR:%.*]], double [[ARG:%.*]]) {
+; CHECK-NEXT:    [[CALL2:%.*]] = call double @func(double 0.000000e+00, double 5.000000e+00, double -7.000000e+00)
+; CHECK-NEXT:    [[CALL4:%.*]] = call double @func(double 0.000000e+00, double 3.000000e+00, double -8.000000e+00)
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[CALL2]], [[CALL4]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[SUB]], [[ARG]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %call2 = call double @func(double 0.000000e+00, double 5.000000e+00, double -7.000000e+00) #6
+  %call4 = call double @func(double 0.000000e+00, double 3.000000e+00, double -8.000000e+00) #6
+  %sub = fsub double %call2, %call4
+  %mul = fmul double %sub, %arg
+  ret double %mul
+}
+
+declare double @func(double nofpclass(nan inf nzero sub norm) %x, double nofpclass(nan inf zero sub nnorm) %v, double nofpclass(nan inf zero sub pnorm) %a)

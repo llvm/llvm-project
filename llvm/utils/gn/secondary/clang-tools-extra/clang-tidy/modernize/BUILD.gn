@@ -56,6 +56,7 @@ static_library("modernize") {
     "UseRangesCheck.cpp",
     "UseScopedLockCheck.cpp",
     "UseStartsEndsWithCheck.cpp",
+    "UseStdBitCheck.cpp",
     "UseStdFormatCheck.cpp",
     "UseStdNumbersCheck.cpp",
     "UseStdPrintCheck.cpp",

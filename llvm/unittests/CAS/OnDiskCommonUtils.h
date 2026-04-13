@@ -109,4 +109,8 @@ inline Error printTree(OnDiskGraphDB &DB, ObjectID ID, raw_ostream &OS,
   return Error::success();
 }
 
+std::unique_ptr<unittest::TempFile> createSmallFile(char initChar);
+std::unique_ptr<unittest::TempFile> createLargeFile(char initChar);
+std::unique_ptr<unittest::TempFile> createLargePageAlignedFile(char initChar);
+
 } // namespace llvm::unittest::cas

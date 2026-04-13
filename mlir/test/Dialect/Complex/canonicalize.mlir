@@ -327,12 +327,54 @@ func.func @div_one_f128() -> complex<f128> {
   return %div : complex<f128>
 }
 
-// CHECK-LABEL: div_op_with_rhs_has_nan
-func.func @div_op_with_rhs_has_nan() -> complex<f32> {
+// CHECK-LABEL: div_op_with_rhs_has_nan_real
+func.func @div_op_with_rhs_has_nan_real() -> complex<f32> {
   %a = complex.constant [0x7fffffff : f32, 1.0 : f32]: complex<f32>
   %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
   %div = complex.div %a, %b : complex<f32>
   // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
   // CHECK: return %[[DIV]] : complex<f32>
   return %div : complex<f32>
+}
+
+// CHECK-LABEL: div_op_with_rhs_has_nan_imag
+func.func @div_op_with_rhs_has_nan_imag() -> complex<f32> {
+  %a = complex.constant [1.0 : f32, 0x7fffffff : f32]: complex<f32>
+  %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
+  %div = complex.div %a, %b : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
+  // CHECK: return %[[DIV]] : complex<f32>
+  return %div : complex<f32>
+}
+
+// CHECK-LABEL: div_op_with_rhs_has_nan_real_imag
+func.func @div_op_with_rhs_has_nan_real_imag() -> complex<f32> {
+  %a = complex.constant [0x7fffffff : f32, 0x7fffffff : f32]: complex<f32>
+  %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
+  %div = complex.div %a, %b : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
+  // CHECK: return %[[DIV]] : complex<f32>
+  return %div : complex<f32>
+}
+
+// CHECK-LABEL: div_op_non_constant_lhs_with_fast_math
+func.func @div_op_non_constant_lhs_with_fast_math(%arg0: f32, %arg1: f32) -> complex<f32> {
+  %a = complex.create %arg0, %arg1 : complex<f32>
+  %b = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %div = complex.div %a, %b fastmath<nnan> : complex<f32>
+  // CHECK: %[[COMPLEX:.*]] = complex.create %arg0, %arg1 : complex<f32>
+  // CHECK: return %[[COMPLEX]] : complex<f32>
+  return %div: complex<f32>
+}
+
+// CHECK-LABEL: div_op_non_constant_lhs_without_fast_math
+func.func @div_op_non_constant_lhs_without_fast_math(%arg0: f32, %arg1: f32) -> complex<f32> {
+  %a = complex.create %arg0, %arg1 : complex<f32>
+  %b = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %div = complex.div %a, %b : complex<f32>
+  // CHECK: %[[B:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
+  // CHECK: %[[A:.*]] = complex.create %arg0, %arg1 : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.div %[[A]], %[[B]] : complex<f32>
+  // CHECK: return %[[DIV]] : complex<f32>
+  return %div: complex<f32>
 }

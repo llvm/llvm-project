@@ -21,6 +21,7 @@
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -46,6 +47,7 @@ class MCDisassembler;
 class MCInstPrinter;
 class MCInstrAnalysis;
 class MCInstrInfo;
+class MCLFIRewriter;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCRelocationInfo;
@@ -237,6 +239,11 @@ public:
       mca::InstrumentManager *(*)(const MCSubtargetInfo &STI,
                                   const MCInstrInfo &MCII);
 
+  using MCLFIRewriterCtorTy =
+      MCLFIRewriter *(*)(MCContext & Ctx,
+                         std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                         std::unique_ptr<MCInstrInfo> &&InstInfo);
+
 private:
   /// Next - The next registered target in the linked list, maintained by the
   /// TargetRegistry.
@@ -351,6 +358,10 @@ private:
   /// InstrumentManager, if registered (default = nullptr).
   InstrumentManagerCtorTy InstrumentManagerCtorFn = nullptr;
 
+  // MCLFIRewriterCtorFn - Construction function for this target's
+  // MCLFIRewriter, if registered (default = nullptr).
+  MCLFIRewriterCtorTy MCLFIRewriterCtorFn = nullptr;
+
 public:
   Target() = default;
 
@@ -400,7 +411,10 @@ public:
                              const MCTargetOptions &Options) const {
     if (!MCAsmInfoCtorFn)
       return nullptr;
-    return MCAsmInfoCtorFn(MRI, TheTriple, Options);
+    auto *MAI = MCAsmInfoCtorFn(MRI, TheTriple, Options);
+    if (MAI)
+      MAI->setTargetOptions(Options);
+    return MAI;
   }
 
   /// Create a MCObjectFileInfo implementation for the specified target
@@ -563,6 +577,14 @@ public:
   MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) const {
     if (NullTargetStreamerCtorFn)
       return NullTargetStreamerCtorFn(S);
+    return nullptr;
+  }
+
+  MCLFIRewriter *
+  createMCLFIRewriter(MCContext &Ctx, std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                      std::unique_ptr<MCInstrInfo> &&InstInfo) const {
+    if (MCLFIRewriterCtorFn)
+      return MCLFIRewriterCtorFn(Ctx, std::move(RegInfo), std::move(InstInfo));
     return nullptr;
   }
 
@@ -1019,6 +1041,10 @@ struct TargetRegistry {
   static void RegisterInstrumentManager(Target &T,
                                         Target::InstrumentManagerCtorTy Fn) {
     T.InstrumentManagerCtorFn = Fn;
+  }
+
+  static void RegisterMCLFIRewriter(Target &T, Target::MCLFIRewriterCtorTy Fn) {
+    T.MCLFIRewriterCtorFn = Fn;
   }
 
   /// @}

@@ -1027,9 +1027,9 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
           Context.getDeducedTemplateSpecializationType(
-              ElaboratedTypeKeyword::None, TemplateName(AliasTemplate),
-              /*DeducedType=*/QualType(),
-              /*IsDependent=*/true),
+              DeducedKind::DeducedAsDependent,
+              /*DeducedAsType=*/QualType(), ElaboratedTypeKeyword::None,
+              TemplateName(AliasTemplate)),
           AliasTemplate->getLocation()), // template specialization type whose
                                          // arguments will be deduced.
       Context.getTrivialTypeSourceInfo(

@@ -145,8 +145,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildAggregate(
     return clang::QualType(); // This is where we bail out.  Sorry!
 
   CompilerType union_type(ast_ctx.CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, name, kind,
-      lldb::eLanguageTypeC));
+      nullptr, OptionalClangModuleID(), name, kind, lldb::eLanguageTypeC));
   if (union_type) {
     TypeSystemClang::StartTagDeclarationDefinition(union_type);
 
@@ -157,9 +156,9 @@ clang::QualType AppleObjCTypeEncodingParser::BuildAggregate(
         elem_name.Printf("__unnamed_%u", count);
         element.name = std::string(elem_name.GetString());
       }
-      TypeSystemClang::AddFieldToRecordType(
-          union_type, element.name.c_str(), ast_ctx.GetType(element.type),
-          lldb::eAccessPublic, element.bitfield);
+      TypeSystemClang::AddFieldToRecordType(union_type, element.name.c_str(),
+                                            ast_ctx.GetType(element.type),
+                                            element.bitfield);
       ++count;
     }
     TypeSystemClang::CompleteTagDeclarationDefinition(union_type);

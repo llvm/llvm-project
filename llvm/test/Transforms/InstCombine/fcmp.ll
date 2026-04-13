@@ -1285,6 +1285,58 @@ define <1 x i1> @bitcast_1vec_eq0(i32 %x) {
   ret <1 x i1> %cmp
 }
 
+; negative test - denormal inputs flushed to zero (positivezero)
+
+define i1 @bitcast_eq0_denorm_positivezero_input(i32 %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: @bitcast_eq0_denorm_positivezero_input(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+; negative test - denormal inputs flushed to zero (positivezero), outputs are not (ieee)
+
+define i1 @bitcast_eq0_denorm_positivezero_input_ieee_output(i32 %x) denormal_fpenv(ieee|positivezero) {
+; CHECK-LABEL: @bitcast_eq0_denorm_positivezero_input_ieee_output(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+; negative test - denormal inputs flushed to zero (preservesign)
+
+define <2 x i1> @bitcast_ne0_denorm_preservesign_input(<2 x i32> %x) denormal_fpenv(preservesign) {
+; CHECK-LABEL: @bitcast_ne0_denorm_preservesign_input(
+; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i32> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %f = bitcast <2 x i32> %x to <2 x float>
+  %r = fcmp une <2 x float> %f, zeroinitializer
+  ret <2 x i1> %r
+}
+
+; negative test - denormal inputs flushed to zero (dynamic)
+
+define <2 x i1> @bitcast_ne0_denorm_dynamic_input(<2 x i32> %x) denormal_fpenv(dynamic) {
+; CHECK-LABEL: @bitcast_ne0_denorm_dynamic_input(
+; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i32> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %f = bitcast <2 x i32> %x to <2 x float>
+  %r = fcmp une <2 x float> %f, zeroinitializer
+  ret <2 x i1> %r
+}
+
 ; Simplify fcmp (x + 0.0), y => fcmp x, y
 
 define i1 @fcmp_fadd_zero_ugt(float %x, float %y) {
@@ -1757,6 +1809,145 @@ define i1 @fcmp_oeq_fsub_const(float %x, float %y) {
 ;
   %fs = fsub float %x, %y
   %cmp = fcmp oeq float %fs, 0.000000e+00
+  ret i1 %cmp
+}
+
+define i1 @pr185561(i32 %arg0) {
+; CHECK-LABEL: @pr185561(
+; CHECK-NEXT:    [[V0:%.*]] = add i32 [[ARG0:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[V0]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v0 = add i32 %arg0, -1
+  %v1 = sitofp i32 %v0 to float
+  %v2 = fsub float 1.000000e+00, %v1
+  %v3 = fcmp olt float %v2, 1.000000e+00
+  ret i1 %v3
+}
+
+define i1 @same_const_sub_sitofp_eq(i32 %x) {
+; CHECK-LABEL: @same_const_sub_sitofp_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to float
+  %s = fsub float 1.000000e+00, %f
+  %cmp = fcmp oeq float %s, 1.000000e+00
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_uitofp_olt(i32 %x) {
+; CHECK-LABEL: @same_const_sub_uitofp_olt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = uitofp i32 %x to float
+  %s = fsub float 2.000000e+00, %f
+  %cmp = fcmp olt float %s, 2.000000e+00
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_no_fold_large_c(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_large_c(
+; CHECK-NOT:    icmp
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[S:%.*]] = fsub float 0x417FFFFFE0000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[S]], 0x417FFFFFE0000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to float
+  %s = fsub float 3.355443e+07, %f
+  %cmp = fcmp oeq float %s, 3.355443e+07
+  ret i1 %cmp
+}
+
+define <2 x i1> @same_const_sub_sitofp_vec_eq(<2 x i32> %x) {
+; CHECK-LABEL: @same_const_sub_sitofp_vec_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %f = sitofp <2 x i32> %x to <2 x float>
+  %s = fsub <2 x float> <float 1.000000e+00, float 1.000000e+00>, %f
+  %cmp = fcmp oeq <2 x float> %s,
+                   <float 1.000000e+00, float 1.000000e+00>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @same_const_sub_uitofp_vec_olt(<2 x i32> %x) {
+; CHECK-LABEL: @same_const_sub_uitofp_vec_olt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %f = uitofp <2 x i32> %x to <2 x float>
+  %s = fsub <2 x float> <float 2.000000e+00, float 2.000000e+00>, %f
+  %cmp = fcmp olt <2 x float> %s,
+                   <float 2.000000e+00, float 2.000000e+00>
+  ret <2 x i1> %cmp
+}
+
+define i1 @same_const_sub_no_fold_subnormal_c(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_subnormal_c(
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[S:%.*]] = fsub float 0x36A0000000000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[S]], 0x36A0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to float
+  %s = fsub float 0x36A0000000000000, %f
+  %cmp = fcmp olt float %s, 0x36A0000000000000
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_no_fold_wrong_mantissa_width(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_wrong_mantissa_width(
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[S:%.*]] = fsub float 0x4180000000000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[S]], 0x4180000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to float
+  %s = fsub float 3.3554432e+07, %f
+  %cmp = fcmp oeq float %s, 3.3554432e+07
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_sitofp_x86_fp80_eq(i32 %x) {
+; CHECK-LABEL: @same_const_sub_sitofp_x86_fp80_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to x86_fp80
+  %s = fsub x86_fp80 0xK3FFF8000000000000000, %f
+  %cmp = fcmp oeq x86_fp80 %s, 0xK3FFF8000000000000000
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_no_fold_x86_fp80_large_c(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_x86_fp80_large_c(
+; CHECK-NOT:    icmp
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to x86_fp80
+; CHECK-NEXT:    [[S:%.*]] = fsub x86_fp80 0xK403F8000000000000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[S]], 0xK403F8000000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to x86_fp80
+  ; 2^64, so ilogb(C) == 64, which should fail `ilogb(C) < MantissaWidth`
+  %s = fsub x86_fp80 0xK403F8000000000000000, %f
+  %cmp = fcmp oeq x86_fp80 %s, 0xK403F8000000000000000
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_no_fold_ppcfp128(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_ppcfp128(
+; CHECK-NOT:    icmp
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to ppc_fp128
+; CHECK-NEXT:    [[S:%.*]] = fsub ppc_fp128 0xM3FF00000000000000000000000000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq ppc_fp128 [[S]], 0xM3FF00000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to ppc_fp128
+  %s = fsub ppc_fp128 0xM3FF00000000000000000000000000000, %f
+  %cmp = fcmp oeq ppc_fp128 %s, 0xM3FF00000000000000000000000000000
   ret i1 %cmp
 }
 

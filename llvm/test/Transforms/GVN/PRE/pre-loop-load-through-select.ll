@@ -389,12 +389,12 @@ define i32 @test_pointer_phi_select_same_object_store_1(ptr %ptr, ptr %end)  {
 ; CHECK-NEXT:    store i32 3, ptr [[MIN_PTR]], align 4
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[PTR_IV]], align 4
 ; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], 3
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_I_I_I]], i32 [[L_1]], i32 3
 ; CHECK-NEXT:    [[MIN_SELECT]] = select i1 [[CMP_I_I_I]], ptr [[PTR_IV]], ptr [[MIN_PTR]]
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i64 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[MIN_SELECT]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:

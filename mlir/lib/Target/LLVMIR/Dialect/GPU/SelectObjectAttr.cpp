@@ -13,7 +13,6 @@
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
@@ -142,16 +141,24 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
   auto *loadBlock = BasicBlock::Create(module.getContext(), "entry", loadFn);
   builder.SetInsertPoint(loadBlock);
   Value *moduleObj = [&] {
+    Constant *binarySize =
+        ConstantInt::get(i64Ty, serializedStr.size() + (addNull ? 1 : 0));
     if (object.getFormat() == gpu::CompilationTarget::Assembly) {
       FunctionCallee moduleLoadFn = module.getOrInsertFunction(
-          "mgpuModuleLoadJIT", FunctionType::get(ptrTy, {ptrTy, i32Ty}, false));
+          "mgpuModuleLoadJIT", FunctionType::get(ptrTy,
+                                                 {
+                                                     ptrTy,
+                                                     i32Ty,
+                                                     i64Ty,
+                                                 },
+                                                 false));
+
       Constant *optValue = ConstantInt::get(i32Ty, optLevel);
-      return builder.CreateCall(moduleLoadFn, {serializedObj, optValue});
+      return builder.CreateCall(moduleLoadFn,
+                                {serializedObj, optValue, binarySize});
     }
     FunctionCallee moduleLoadFn = module.getOrInsertFunction(
         "mgpuModuleLoad", FunctionType::get(ptrTy, {ptrTy, i64Ty}, false));
-    Constant *binarySize =
-        ConstantInt::get(i64Ty, serializedStr.size() + (addNull ? 1 : 0));
     return builder.CreateCall(moduleLoadFn, {serializedObj, binarySize});
   }();
   builder.CreateStore(moduleObj, modulePtr);

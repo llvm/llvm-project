@@ -256,9 +256,11 @@ public:
     Serenity,
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
+    OpenCL,
     ChipStar,
     Firmware,
-    LastOSType = Firmware
+    QURT,
+    LastOSType = QURT
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -318,7 +320,6 @@ public:
     Mesh,
     Amplification,
     RootSignature,
-    OpenCL,
     OpenHOS,
     Mlibc,
 
@@ -388,6 +389,13 @@ public:
 
   bool operator!=(const Triple &Other) const {
     return !(*this == Other);
+  }
+
+  bool operator<(const Triple &Other) const {
+    return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat,
+                    Data) < std::tie(Other.Arch, Other.SubArch, Other.Vendor,
+                                     Other.OS, Other.Environment,
+                                     Other.ObjectFormat, Other.Data);
   }
 
   /// @}
@@ -799,6 +807,9 @@ public:
     return getOS() == Triple::Serenity;
   }
 
+  /// Tests whether the OS is QURT.
+  bool isOSQurt() const { return getOS() == Triple::QURT; }
+
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {
     return getObjectFormat() == Triple::ELF;
@@ -1199,6 +1210,13 @@ public:
     return getArch() == Triple::bpfel || getArch() == Triple::bpfeb;
   }
 
+  /// Tests whether MSVC linker or UEFI targets.
+  /// Used to default to -mincremental-linker-compatible if we are
+  /// targeting the MSVC linker or *-uefi triples.
+  bool isDefaultIncrementalLinkerCompatibleByDefault() const {
+    return isWindowsMSVCEnvironment() || isUEFI();
+  }
+
   /// Tests if the target forces 64-bit time_t on a 32-bit architecture.
   bool isTime64ABI() const {
     EnvironmentType Env = getEnvironment();
@@ -1238,6 +1256,9 @@ public:
   bool hasDefaultDataSections() const {
     return isOSBinFormatXCOFF() || isWasm();
   }
+
+  /// Returns the default wchar_t size (in bytes) for this target triple.
+  unsigned getDefaultWCharSize() const;
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
@@ -1373,6 +1394,10 @@ public:
 
   /// The canonical type for the given LLVM architecture name (e.g., "x86").
   LLVM_ABI static ArchType getArchTypeForLLVMName(StringRef Str);
+
+  /// Parse anything recognized as an architecture for the first field of the
+  /// triple.
+  LLVM_ABI static ArchType parseArch(StringRef Str);
 
   /// @}
 

@@ -841,7 +841,18 @@ convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
   if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName())
     return convertProfileSummaryModuleFlagValue(mlirModule, llvmModule,
                                                 mdTuple);
-  return nullptr;
+  // Handle MDTuples whose operands are all MDStrings (e.g. "riscv-isa").
+  // Convert them to ArrayAttr of StringAttrs for a lossless round-trip.
+  Builder builder(mlirModule->getContext());
+  SmallVector<Attribute> strings;
+  strings.reserve(mdTuple->getNumOperands());
+  for (const llvm::MDOperand &operand : mdTuple->operands()) {
+    auto *mdString = dyn_cast_if_present<llvm::MDString>(operand.get());
+    if (!mdString)
+      return nullptr;
+    strings.push_back(builder.getStringAttr(mdString->getString()));
+  }
+  return builder.getArrayAttr(strings);
 }
 
 LogicalResult ModuleImport::convertModuleFlagsMetadata() {
@@ -1221,6 +1232,9 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
+  if (constScalar->getType()->isVectorTy())
+    return {};
+
   // Convert scalar integers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
@@ -1269,6 +1283,17 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
     return llvm::dyn_cast_if_present<ShapedType>(
         getBuiltinTypeForAttr(convertType(type)));
   };
+
+  // Convert constant vector splat values.
+  if (isa<llvm::ConstantInt, llvm::ConstantFP>(constant)) {
+    assert(constant->getType()->isVectorTy() && "expected a vector splat");
+    auto shape = getConstantShape(constant->getType());
+    if (!shape)
+      return {};
+    Attribute splatAttr =
+        getScalarConstantAsAttr(builder, constant->getSplatValue());
+    return SplatElementsAttr::get(shape, splatAttr);
+  }
 
   // Convert one-dimensional constant arrays or vectors that store 1/2/4/8-byte
   // integer or half/bfloat/float/double values.
@@ -2240,9 +2265,17 @@ ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
 LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   // Convert all instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
-  if (inst->getOpcode() == llvm::Instruction::Br) {
-    auto *brInst = cast<llvm::BranchInst>(inst);
+  if (auto *brInst = dyn_cast<llvm::UncondBrInst>(inst)) {
+    llvm::BasicBlock *succ = brInst->getSuccessor();
+    SmallVector<Value> blockArgs;
+    if (failed(convertBranchArgs(brInst, succ, blockArgs)))
+      return failure();
 
+    auto brOp = LLVM::BrOp::create(builder, loc, blockArgs, lookupBlock(succ));
+    mapNoResultOp(inst, brOp);
+    return success();
+  }
+  if (auto *brInst = dyn_cast<llvm::CondBrInst>(inst)) {
     SmallVector<Block *> succBlocks;
     SmallVector<SmallVector<Value>> succBlockArgs;
     for (auto i : llvm::seq<unsigned>(0, brInst->getNumSuccessors())) {
@@ -2254,12 +2287,6 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       succBlockArgs.push_back(blockArgs);
     }
 
-    if (!brInst->isConditional()) {
-      auto brOp = LLVM::BrOp::create(builder, loc, succBlockArgs.front(),
-                                     succBlocks.front());
-      mapNoResultOp(inst, brOp);
-      return success();
-    }
     FailureOr<Value> condition = convertValue(brInst->getCondition());
     if (failed(condition))
       return failure();
@@ -2690,7 +2717,6 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("memory"),
     StringLiteral("minsize"),
     StringLiteral("no_caller_saved_registers"),
-    StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
     StringLiteral("no-builtins"),
     StringLiteral("nocallback"),
@@ -2865,6 +2891,9 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                  .value()));
   }
 
+  if (func->hasFnAttribute("use-sample-profile"))
+    funcOp.setUseSampleProfile(true);
+
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())
     funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
@@ -2886,10 +2915,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
-
-  if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
-      attr.isStringAttribute())
-    funcOp.setNoNansFpMath(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
       attr.isStringAttribute())
@@ -3037,6 +3062,7 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setOptsize(
       callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
   op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
   op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
   op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
 

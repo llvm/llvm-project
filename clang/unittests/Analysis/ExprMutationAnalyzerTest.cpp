@@ -1801,6 +1801,16 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgument) {
         match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
     EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
   }
+  {
+    const std::string Code =
+        "namespace std { typedef decltype(sizeof(int)) size_t; }"
+        "void* operator new(std::size_t, void*) noexcept;"
+        "void f() { int* x = nullptr; new(x) int{311}; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
 }
 
 TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgumentInConstruct) {

@@ -153,7 +153,8 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
       Value *Ptr = Operands[1];
       return StoreInst::create(Val, Ptr, Align, WhereIt, Ctx);
     }
-    case Instruction::Opcode::Br:
+    case Instruction::Opcode::UncondBr:
+    case Instruction::Opcode::CondBr:
     case Instruction::Opcode::Ret:
     case Instruction::Opcode::PHI:
     case Instruction::Opcode::AddrSpaceCast:
@@ -339,6 +340,38 @@ void BottomUpVec::ActionsVector::print(raw_ostream &OS) const {
 void BottomUpVec::ActionsVector::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
+void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
+                                             Value *Vec) {
+  // Find where we should emit the unpacks.
+  BasicBlock::iterator WhereIt;
+  if (auto *VecI = dyn_cast<Instruction>(Vec)) {
+    WhereIt = std::next(VecI->getIterator());
+  } else {
+    // If Vec is a constant then it should be safe to emit the unpacks at the
+    // top of the block.
+    // Note: Extracts from constants are usually folded to constants.
+    assert(isa<Constant>(Vec) && "Expected constant!");
+    assert(isa<Instruction>(Bndl[0]) &&
+           "A widened Bndl should contain instrs!");
+    BasicBlock *BB = cast<Instruction>(Bndl[0])->getParent();
+    WhereIt =
+        BB->empty()
+            ? BB->begin()
+            : std::next(
+                  VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
+  }
+
+  for (auto [Lane, Elm] : VecUtils::enumerateLanes(Bndl)) {
+    for (User *U : Elm->users()) {
+      // Skip users that we just vectorized.
+      if (IMaps->isVectorized(U))
+        continue;
+      auto *LastUnpackV = VecUtils::unpack(Vec, Elm->getType(), Lane, WhereIt);
+      Elm->replaceAllUsesWith(LastUnpackV);
+    }
+  }
+}
+
 Value *BottomUpVec::emitVectors() {
   Value *NewVec = nullptr;
   for (const auto &ActionPtr : Actions) {
@@ -376,6 +409,9 @@ Value *BottomUpVec::emitVectors() {
       // original scalars and pointer operands of loads/stores.
       if (NewVec != nullptr)
         collectPotentiallyDeadInstrs(Bndl);
+
+      // Emit unpacks for all external uses, if any.
+      emitUnpacksForExternalUses(ActionPtr->Bndl, NewVec);
       break;
     }
     case LegalityResultID::DiamondReuse: {

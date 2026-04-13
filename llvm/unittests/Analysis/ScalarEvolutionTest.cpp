@@ -131,8 +131,8 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
-  BranchInst::Create(LoopBB, EntryBB);
-  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
+  UncondBrInst::Create(LoopBB, EntryBB);
+  CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)), LoopBB, ExitBB,
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
@@ -251,12 +251,12 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
     EXPECT_EQ(SE.getMulExpr(B, C), SE.getMulExpr(C, B));
     EXPECT_EQ(SE.getMulExpr(A, C), SE.getMulExpr(C, A));
 
-    SmallVector<const SCEV *, 3> Ops0 = {A, B, C};
-    SmallVector<const SCEV *, 3> Ops1 = {A, C, B};
-    SmallVector<const SCEV *, 3> Ops2 = {B, A, C};
-    SmallVector<const SCEV *, 3> Ops3 = {B, C, A};
-    SmallVector<const SCEV *, 3> Ops4 = {C, B, A};
-    SmallVector<const SCEV *, 3> Ops5 = {C, A, B};
+    SmallVector<SCEVUse, 3> Ops0 = {A, B, C};
+    SmallVector<SCEVUse, 3> Ops1 = {A, C, B};
+    SmallVector<SCEVUse, 3> Ops2 = {B, A, C};
+    SmallVector<SCEVUse, 3> Ops3 = {B, C, A};
+    SmallVector<SCEVUse, 3> Ops4 = {C, B, A};
+    SmallVector<SCEVUse, 3> Ops5 = {C, A, B};
 
     const SCEV *Mul0 = SE.getMulExpr(Ops0);
     const SCEV *Mul1 = SE.getMulExpr(Ops1);
@@ -287,7 +287,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "bb1", F);
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
 
   auto *Ty = Type::getInt32Ty(Context);
   SmallVector<Instruction*, 8> Muls(8), Acc(8), NextAcc(8);
@@ -330,7 +330,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   }
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "bb2", F);
-  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
+  CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)), LoopBB, ExitBB,
                      LoopBB);
 
   Acc[0] = BinaryOperator::CreateAdd(Acc[0], Acc[1], "", ExitBB);
@@ -542,13 +542,14 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
     auto *L1 = *std::next(LI.begin());
     auto *L0 = *std::next(LI.begin(), 2);
 
-    auto GetAddRec = [&SE](const Loop *L, std::initializer_list<const SCEV *> Ops) {
-      SmallVector<const SCEV *, 4> OpsCopy(Ops);
+    auto GetAddRec = [&SE](const Loop *L,
+                           std::initializer_list<const SCEV *> Ops) {
+      SmallVector<SCEVUse, 4> OpsCopy(Ops.begin(), Ops.end());
       return SE.getAddRecExpr(OpsCopy, L, SCEV::FlagAnyWrap);
     };
 
     auto GetAdd = [&SE](std::initializer_list<const SCEV *> Ops) {
-      SmallVector<const SCEV *, 4> OpsCopy(Ops);
+      SmallVector<SCEVUse, 4> OpsCopy(Ops.begin(), Ops.end());
       return SE.getAddExpr(OpsCopy, SCEV::FlagAnyWrap);
     };
 
@@ -669,7 +670,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *CondBB = BasicBlock::Create(Context, "for.cond", F);
   BasicBlock *EndBB = BasicBlock::Create(Context, "for.end", F);
-  BranchInst::Create(CondBB, EntryBB);
+  UncondBrInst::Create(CondBB, EntryBB);
   BasicBlock *PrevBB = EntryBB;
 
   Type *I64Ty = Type::getInt64Ty(Context);
@@ -689,11 +690,11 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
       NextBB = BasicBlock::Create(Context, "for.cond", F, EndBB);
     else
       NextBB = EndBB;
-    BranchInst::Create(IncBB, NextBB, Cmp, CondBB);
+    CondBrInst::Create(Cmp, IncBB, NextBB, CondBB);
     auto *Dec = BinaryOperator::CreateNSWAdd(
         PN, ConstantInt::get(Context, APInt(64, -1)), "dec", IncBB);
     PN->addIncoming(Dec, IncBB);
-    BranchInst::Create(CondBB, IncBB);
+    UncondBrInst::Create(CondBB, IncBB);
 
     Accum = GetElementPtrInst::Create(I8Ty, Accum, PN, "gep", EndBB);
 
@@ -920,13 +921,13 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
 
   // entry:
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
   // loop:
   auto *MinInt64 =
       ConstantInt::get(Context, APInt(64, 0x8000000000000000U, true));
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
-  auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Br = CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)),
+                                LoopBB, ExitBB, LoopBB);
   auto *Phi =
       PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
@@ -979,12 +980,12 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
 
   // entry:
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
   // loop:
   auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U));
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
-  auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Br = CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)),
+                                LoopBB, ExitBB, LoopBB);
   auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
   auto *AShr =
@@ -1729,7 +1730,7 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
   const SCEV *M0 = SE.getNegativeSCEV(P0);
   const SCEV *M2 = SE.getNegativeSCEV(P2);
 
-  SmallVector<const SCEV *, 6> Ops = {M2, P0, M0, P1, P2};
+  SmallVector<SCEVUse, 6> Ops = {M2, P0, M0, P1, P2};
   // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
   // crash if the comparator has the specific caching bug.
   SE.getAddExpr(Ops);
@@ -1788,8 +1789,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
       EXPECT_EQ(NewLHS, A);
@@ -1798,8 +1799,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
       EXPECT_EQ(NewLHS, A);
@@ -1808,8 +1809,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
       EXPECT_EQ(NewLHS, A);
@@ -1826,8 +1827,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
                   isa<SCEVVScale>(cast<SCEVMulExpr>(CxVS)->getOperand(0)));
 
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = CxVS;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = CxVS;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
       EXPECT_EQ(NewLHS, A);
@@ -1845,15 +1846,15 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
       EXPECT_EQ(NewLHS, A);
@@ -1862,8 +1863,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
       EXPECT_EQ(NewLHS, A);
@@ -1881,22 +1882,22 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
   });

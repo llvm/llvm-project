@@ -97,6 +97,45 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   return getAArch64TargetCPUByTriple(Triple);
 }
 
+/// \return the target tune CPU LLVM name based on the target triple.
+static std::optional<std::string>
+getAArch64TargetTuneCPUByTriple(const llvm::Triple &Triple) {
+  // Apple Silicon macs default to the latest available target for tuning.
+  if (Triple.isTargetMachineMac() && Triple.getArch() == llvm::Triple::aarch64)
+    return "apple-m5";
+
+  return std::nullopt;
+}
+
+/// \return the LLVM name of the AArch64 tune CPU we should target.
+/// Returns std::nullopt if no tune CPU should be specified.
+///
+/// Note: Unlike getAArch64TargetCPU, this function does not resolve CPU
+/// aliases, as it is currently not used for target architecture feature
+/// collection, but defers it to the backend.
+std::optional<std::string>
+aarch64::getAArch64TargetTuneCPU(const llvm::opt::ArgList &Args,
+                                 const llvm::Triple &Triple) {
+  // -mtune has highest priority, then -mcpu
+  if (Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+    StringRef Mtune = A->getValue();
+    std::string TuneCPU = Mtune.lower();
+
+    if (TuneCPU == "native")
+      return std::string(llvm::sys::getHostCPUName());
+
+    return TuneCPU;
+  }
+
+  // If -mcpu is present, let the backend mirror it for tuning
+  if (Args.getLastArg(options::OPT_mcpu_EQ))
+    return std::nullopt;
+
+  // If both -mtune and -mcpu are not present, try infer tune CPU from the
+  // target triple, or let the backend mirror the inferred target CPU for tuning
+  return getAArch64TargetTuneCPUByTriple(Triple);
+}
+
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
 static bool DecodeAArch64Features(const Driver &D, StringRef text,
                                   llvm::AArch64::ExtensionSet &Extensions) {
@@ -244,9 +283,10 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success = getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args);
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args);
-  else if (success && isCPUDeterminedByTriple(Triple))
-    success = getAArch64MicroArchFeaturesFromMcpu(
-        D, getAArch64TargetCPUByTriple(Triple), Args);
+  else if (success) {
+    if (auto TuneCPU = getAArch64TargetTuneCPUByTriple(Triple))
+      success = getAArch64MicroArchFeaturesFromMtune(D, *TuneCPU, Args);
+  }
 
   if (!success) {
     auto Diag = D.Diag(diag::err_drv_unsupported_option_argument);

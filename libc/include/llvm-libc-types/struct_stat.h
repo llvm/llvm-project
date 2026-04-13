@@ -34,6 +34,11 @@ struct stat {
   struct timespec st_ctim;
   blksize_t st_blksize;
   blkcnt_t st_blocks;
+// Backwards compatibility macros for older kernel/standards
+// that recorded timestamps in stat with one-second precision.
+#define st_atime st_atim.tv_sec
+#define st_mtime st_mtim.tv_sec
+#define st_ctime st_ctim.tv_sec
 };
 
 #endif // LLVM_LIBC_TYPES_STRUCT_STAT_H

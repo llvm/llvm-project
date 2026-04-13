@@ -66,15 +66,8 @@ add_flang_library(FortranEvaluate
   ${LIBPGMATH}
   ${QUADMATHLIB}
 
-  LINK_COMPONENTS
-  Support
-
-  DEPENDS
-  acc_gen
-  omp_gen
-)
-
-target_precompile_headers(FortranEvaluate PRIVATE
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
   [["flang/Evaluate/common.h"]]
   [["flang/Evaluate/call.h"]]
   [["flang/Evaluate/traverse.h"]]
@@ -86,4 +79,11 @@ target_precompile_headers(FortranEvaluate PRIVATE
   [["flang/Evaluate/integer.h"]]
   [["flang/Evaluate/expression.h"]]
   [["flang/Evaluate/tools.h"]]
+
+  LINK_COMPONENTS
+  Support
+
+  DEPENDS
+  acc_gen
+  omp_gen
 )

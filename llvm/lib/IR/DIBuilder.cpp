@@ -276,7 +276,6 @@ DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
                                         DINode::DIFlags Flags,
                                         uint32_t NumExtraInhabitants,
                                         uint32_t DataSizeInBits) {
-  assert(!Name.empty() && "Unable to create type without name");
   return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, SizeInBits,
                           0, Encoding, NumExtraInhabitants, DataSizeInBits,
                           Flags);
@@ -1127,7 +1126,7 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     BasicBlock *InsertAtEnd) {
   // If this block already has a terminator then insert this intrinsic before
   // the terminator. Otherwise, put it at the end of the block.
-  Instruction *InsertBefore = InsertAtEnd->getTerminator();
+  Instruction *InsertBefore = InsertAtEnd->getTerminatorOrNull();
   return insertDeclare(Storage, VarInfo, Expr, DL,
                        InsertBefore ? InsertBefore->getIterator()
                                     : InsertAtEnd->end());

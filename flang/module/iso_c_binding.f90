@@ -15,11 +15,13 @@ module iso_c_binding
     c_funloc => __builtin_c_funloc, &
     c_funptr => __builtin_c_funptr, &
     c_f_pointer => __builtin_c_f_pointer, &
+    c_f_strpointer => __builtin_c_f_strpointer, &
     c_loc => __builtin_c_loc, &
     c_null_funptr => __builtin_c_null_funptr, &
     c_null_ptr => __builtin_c_null_ptr, &
     c_ptr => __builtin_c_ptr, &
     c_sizeof => sizeof, &
+    f_c_string => __builtin_f_c_string, &
     operator(==), operator(/=)
 
   implicit none
@@ -28,8 +30,8 @@ module iso_c_binding
   ! to be exported by this MODULE.
   private
 
-  public :: c_associated, c_funloc, c_funptr, c_f_pointer, c_loc, &
-    c_null_funptr, c_null_ptr, c_ptr, c_sizeof, &
+  public :: c_associated, c_funloc, c_funptr, c_f_pointer, c_f_strpointer, &
+    c_loc, c_null_funptr, c_null_ptr, c_ptr, c_sizeof, f_c_string, &
     operator(==), operator(/=)
 
   ! Table 18.2 (in clause 18.3.1)

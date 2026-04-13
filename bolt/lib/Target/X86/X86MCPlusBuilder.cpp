@@ -827,6 +827,12 @@ public:
     Regs.set(X86::R15);
   }
 
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector FP = getAliases(X86::RBP);
+    FP.flip();
+    Regs &= FP;
+  }
+
   void getClassicGPRegs(BitVector &Regs) const override {
     Regs |= getAliases(X86::RAX);
     Regs |= getAliases(X86::RBX);
@@ -3123,7 +3129,7 @@ public:
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
-                                                     int CallSiteID,
+                                                     size_t CallSiteID,
                                                      MCContext *Ctx) override {
     // Check if the target address expression used in the original indirect call
     // uses the stack pointer, which we are going to clobber.

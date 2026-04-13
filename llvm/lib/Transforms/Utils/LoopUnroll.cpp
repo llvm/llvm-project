@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
@@ -65,6 +66,7 @@
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
+#include <cmath>
 #include <numeric>
 #include <vector>
 
@@ -344,6 +346,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    AssumptionCache *AC,
                                    const TargetTransformInfo *TTI,
+                                   ArrayRef<BasicBlock *> Blocks,
                                    AAResults *AA) {
   using namespace llvm::PatternMatch;
 
@@ -373,15 +376,15 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
-  const DataLayout &DL = L->getHeader()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
-  for (BasicBlock *BB : L->getBlocks()) {
+  for (BasicBlock *BB : Blocks) {
     // Remove repeated debug instructions after loop unrolling.
     if (BB->getParent()->getSubprogram())
       RemoveRedundantDbgInstrs(BB);
 
     for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
-      if (Value *V = simplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
+      if (Value *V = simplifyInstruction(
+              &Inst, {BB->getDataLayout(), nullptr, DT, AC}))
         if (LI->replacementPreservesLCSSAForm(&Inst, V))
           Inst.replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(&Inst))
@@ -436,6 +439,224 @@ static bool canHaveUnrollRemainder(const Loop *L) {
     }
   }
   return true;
+}
+
+// If LoopUnroll has proven OriginalLoopProb is incorrect for some iterations
+// of the original loop, adjust latch probabilities in the unrolled loop to
+// maintain the original total frequency of the original loop body.
+//
+// OriginalLoopProb is practical but imprecise
+// -------------------------------------------
+//
+// The latch branch weights that LLVM originally adds to a loop encode one latch
+// probability, OriginalLoopProb, applied uniformly across the loop's infinite
+// set of theoretically possible iterations.  While this uniform latch
+// probability serves as a practical statistic summarizing the trip counts
+// observed during profiling, it is imprecise.  Specifically, unless it is zero,
+// it is impossible for it to be the actual probability observed at every
+// individual iteration.  To see why, consider that the only way to actually
+// observe at run time that the latch probability remains non-zero is to profile
+// at least one loop execution that has an infinite number of iterations.  I do
+// not know how to profile an infinite number of loop iterations, and most loops
+// I work with are always finite.
+//
+// LoopUnroll proves OriginalLoopProb is incorrect
+// ------------------------------------------------
+//
+// LoopUnroll reorganizes the original loop so that loop iterations are no
+// longer all implemented by the same code, and then it analyzes some of those
+// loop iteration implementations independently of others.  In particular, it
+// converts some of their conditional latches to unconditional.  That is, by
+// examining code structure without any profile data, LoopUnroll proves that the
+// actual latch probability at the end of such an iteration is either 1 or 0.
+// When an individual iteration's actual latch probability is 1 or 0, that means
+// it always behaves the same, so it is impossible to observe it as having any
+// other probability.  The original uniform latch probability is rarely 1 or 0
+// because, when applied to all possible iterations, that would yield an
+// estimated trip count of infinity or 1, respectively.
+//
+// Thus, the new probabilities of 1 or 0 are proven corrections to
+// OriginalLoopProb for individual iterations in the original loop.  However,
+// LoopUnroll often is able to perform these corrections for only some
+// iterations, leaving other iterations with OriginalLoopProb, and thus
+// corrupting the aggregate effect on the total frequency of the original loop
+// body.
+//
+// Adjusting latch probabilities
+// -----------------------------
+//
+// This function ensures that the total frequency of the original loop body,
+// summed across all its occurrences in the unrolled loop after the
+// aforementioned latch conversions, is the same as in the original loop.  To do
+// so, it adjusts probabilities on the remaining conditional latches.  However,
+// it cannot derive the new probabilities directly from the original uniform
+// latch probability because the latter has been proven incorrect for some
+// original loop iterations.
+//
+// There are often many sets of latch probabilities that can produce the
+// original total loop body frequency.  For now, this function computes uniform
+// probabilities when the number of remaining conditional latches is <= 2 and
+// does not handle other cases.
+static void fixProbContradiction(UnrollLoopOptions ULO,
+                                 BranchProbability OriginalLoopProb,
+                                 bool CompletelyUnroll,
+                                 std::vector<unsigned> &IterCounts,
+                                 const std::vector<BasicBlock *> &CondLatches,
+                                 std::vector<BasicBlock *> &CondLatchNexts) {
+  // Runtime unrolling is handled later in LoopUnroll not here.
+  //
+  // There are two scenarios in which LoopUnroll sets ProbUpdateRequired to true
+  // because it needs to update probabilities that were originally
+  // OriginalLoopProb, but only in one scenario has LoopUnroll proven
+  // OriginalLoopProb incorrect for iterations within the original loop:
+  // - If ULO.Runtime, LoopUnroll adds new guards that enforce new reaching
+  //   conditions for new loop iteration implementations (e.g., one unrolled
+  //   loop iteration executes only if at least ULO.Count original loop
+  //   iterations remain).  Those reaching conditions dictate how conditional
+  //   latches can be converted to unconditional (e.g., within an unrolled loop
+  //   iteration, there is no need to recheck the number of remaining original
+  //   loop iterations).  None of this reorganization alters the set of possible
+  //   original loop iteration counts or proves OriginalLoopProb incorrect for
+  //   any of the original loop iterations.  Thus, LoopUnroll derives
+  //   probabilities for the new guards and latches directly from
+  //   OriginalLoopProb based on the probabilities that their reaching
+  //   conditions would occur in the original loop.  Doing so maintains the
+  //   total frequency of the original loop body.
+  // - If !ULO.Runtime, LoopUnroll initially adds new loop iteration
+  //   implementations, which have the same latch probabilities as in the
+  //   original loop because there are no new guards that change their reaching
+  //   conditions.  Sometimes, LoopUnroll is then done, and so does not set
+  //   ProbUpdateRequired to true.  Other times, LoopUnroll then proves that
+  //   some latches are unconditional, directly contradicting OriginalLoopProb
+  //   for the corresponding original loop iterations.  That reduces the set of
+  //   possible original loop iteration counts, possibly producing a finite set
+  //   if it manages to eliminate the backedge.  LoopUnroll has to choose a new
+  //   set of latch probabilities that produce the same total loop body
+  //   frequency.
+  //
+  // This function addresses the second scenario only.
+  if (ULO.Runtime)
+    return;
+
+  // If CondLatches.empty(), there are no latch branches with probabilities we
+  // can adjust.  That should mean that the actual trip count is always exactly
+  // the number of remaining unrolled iterations, and so OriginalLoopProb should
+  // have yielded that trip count as the original loop body frequency.  Of
+  // course, OriginalLoopProb could be based on inaccurate profile data, but
+  // there is nothing we can do about that here.
+  if (CondLatches.empty())
+    return;
+
+  // If the original latch probability is 1, the original frequency is infinity.
+  // Leaving all remaining probabilities set to 1 might or might not get us
+  // there (e.g., a completely unrolled loop cannot be infinite), but it is the
+  // closest we can come.
+  assert(!OriginalLoopProb.isUnknown() &&
+         "Expected to have loop probability to fix");
+  if (OriginalLoopProb.isOne())
+    return;
+
+  // FreqDesired is the frequency implied by the original loop probability.
+  double FreqDesired = 1 / (1 - OriginalLoopProb.toDouble());
+
+  // Set the probability at CondLatches[I] to Prob.
+  auto SetProb = [&](unsigned I, double Prob) {
+    CondBrInst *B = cast<CondBrInst>(CondLatches[I]->getTerminator());
+    bool FirstTargetIsNext = B->getSuccessor(0) == CondLatchNexts[I];
+    setBranchProbability(B, BranchProbability::getBranchProbability(Prob),
+                         FirstTargetIsNext);
+  };
+
+  // Set all probabilities in CondLatches to Prob.
+  auto SetAllProbs = [&](double Prob) {
+    for (unsigned I = 0, E = CondLatches.size(); I < E; ++I)
+      SetProb(I, Prob);
+  };
+
+  // If n <= 2, we choose the simplest probability model we can think of: every
+  // remaining conditional branch instruction has the same probability, Prob,
+  // of continuing to the next iteration.  This model has several helpful
+  // properties:
+  // - We have no reason to think one latch branch's probability should be
+  //   higher or lower than another, and so this model makes them all the same.
+  //   In the worst cases, we thus avoid setting just some probabilities to 0 or
+  //   1, which can unrealistically make some code appear unreachable.  There
+  //   are cases where they *all* must become 0 or 1 to achieve the total
+  //   frequency of original loop body, and our model does permit that.
+  // - The frequency, FreqOne, of the original loop body in a single iteration
+  //   of the unrolled loop is computed by a simple polynomial, where p=Prob,
+  //   n=CondLatches.size(), and c_i=IterCounts[i]:
+  //
+  //     FreqOne = Sum(i=0..n)(c_i * p^i)
+  //
+  // - If the backedge has been eliminated, FreqOne is the total frequency of
+  //   the original loop body in the unrolled loop.
+  // - If the backedge remains, Sum(i=0..inf)(FreqOne * p^(n*i)) =
+  //   FreqOne / (1 - p^n) is the total frequency of the original loop body in
+  //   the unrolled loop, regardless of whether the backedge is conditional or
+  //   unconditional.
+  // - For n <= 2, we can use simple formulas to solve the above polynomial
+  //   equations exactly for p without performing a search.
+
+  // Compute the probability that, used at CondLaches[0] where
+  // CondLatches.size() == 1, gets as close as possible to FreqDesired.
+  auto ComputeProbForLinear = [&]() {
+    // The polynomial is linear (0 = A*p + B), so just solve it.
+    double A = IterCounts[1] + (CompletelyUnroll ? 0 : FreqDesired);
+    double B = IterCounts[0] - FreqDesired;
+    assert(A > 0 && "Expected iterations after last conditional latch");
+    double Prob = -B / A;
+    Prob = std::max(Prob, 0.);
+    Prob = std::min(Prob, 1.);
+    return Prob;
+  };
+
+  // Compute the probability that, used throughout CondLatches where
+  // CondLatches.size() == 2, gets as close as possible to FreqDesired.
+  auto ComputeProbForQuadratic = [&]() {
+    // The polynomial is quadratic (0 = A*p^2 + B*p + C), so just solve it.
+    double A = IterCounts[2] + (CompletelyUnroll ? 0 : FreqDesired);
+    double B = IterCounts[1];
+    double C = IterCounts[0] - FreqDesired;
+    assert(A > 0 && "Expected iterations after last conditional latch");
+    double Prob = (-B + sqrt(B * B - 4 * A * C)) / (2 * A);
+    Prob = std::max(Prob, 0.);
+    Prob = std::min(Prob, 1.);
+    return Prob;
+  };
+
+  // Determine and set branch weights.
+  if (CondLatches.size() == 1) {
+    SetAllProbs(ComputeProbForLinear());
+  } else if (CondLatches.size() == 2) {
+    SetAllProbs(ComputeProbForQuadratic());
+  } else {
+    // FIXME: Handle CondLatches.size() > 2.
+  }
+
+  // FIXME: We have not considered non-latch loop exits:
+  // - Their original probabilities are not considered in our calculation of
+  //   FreqDesired.
+  // - Their probabilities are not considered in our probability model used to
+  //   determine new probabilities for remaining conditional branches.
+  // - If they are conditional and LoopUnroll converts them to unconditional,
+  //   LoopUnroll has proven their original probabilities are incorrect for some
+  //   original loop iterations, but that does not cause ProbUpdateRequired to
+  //   be set to true.
+  //
+  // To adjust FreqDesired and our probability model correctly for a non-latch
+  // loop exit, we would need to compute the original probability that the exit
+  // is reached from the loop header (in contrast, we currently assume that
+  // probability is 1 in the case of a latch exit) and the probability that the
+  // exit is taken if it is conditional (use the branch's old or new weights for
+  // FreqDesired or the probability model, respectively).  Does computing the
+  // reaching probability require a CFG traversal, or is there some existing
+  // library that can do it?  Prior discussions suggest some such libraries are
+  // difficult to use within LoopUnroll:
+  // <https://github.com/llvm/llvm-project/pull/164799#issuecomment-3438681519>.
+  // For now, we just let our corrected probabilities be less accurate in that
+  // scenario.  Alternatively, we could refuse to correct probabilities at all
+  // in that scenario, but that seems worse.
 }
 
 /// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
@@ -515,13 +736,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     BasicBlock *FirstExitingBlock = nullptr;
     SmallVector<BasicBlock *> ExitingBlocks;
   };
-  DenseMap<BasicBlock *, ExitInfo> ExitInfos;
+  MapVector<BasicBlock *, ExitInfo> ExitInfos;
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   for (auto *ExitingBlock : ExitingBlocks) {
     // The folding code is not prepared to deal with non-branch instructions
     // right now.
-    auto *BI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBlock->getTerminator());
     if (!BI)
       continue;
 
@@ -572,12 +793,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // (2b) latch is conditional and is an exiting block
   // FIXME: The implementation can be extended to work with more complicated
   // cases, e.g. loops with multiple latches.
-  BranchInst *LatchBI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
+  Instruction *LatchTerm = LatchBlock->getTerminator();
 
   // A conditional branch which exits the loop, which can be optimized to an
   // unconditional branch in the unrolled loop in some cases.
   bool LatchIsExiting = L->isLoopExiting(LatchBlock);
-  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
+  if (!isa<UncondBrInst>(LatchTerm) &&
+      !(isa<CondBrInst>(LatchTerm) && LatchIsExiting)) {
     LLVM_DEBUG(
         dbgs() << "Can't unroll; a conditional latch must exit the loop");
     return LoopUnrollResult::Unmodified;
@@ -952,7 +1174,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   SmallVector<DominatorTree::UpdateType> DTUpdates;
   auto SetDest = [&](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
-    auto *Term = cast<BranchInst>(Src->getTerminator());
+    auto *Term = cast<CondBrInst>(Src->getTerminator());
     const unsigned Idx = ExitOnTrue ^ WillExit;
     BasicBlock *Dest = Term->getSuccessor(Idx);
     BasicBlock *DeadSucc = Term->getSuccessor(1-Idx);
@@ -961,7 +1183,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
     // Replace the conditional branch with an unconditional one.
-    auto *BI = BranchInst::Create(Dest, Term->getIterator());
+    auto *BI = UncondBrInst::Create(Dest, Term->getIterator());
     BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
@@ -1002,7 +1224,9 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   };
 
   // Fold branches for iterations where we know that they will exit or not
-  // exit.
+  // exit.  In the case of an iteration's latch, if we thus find
+  // *OriginalLoopProb is incorrect, set ProbUpdateRequired to true.
+  bool ProbUpdateRequired = false;
   for (auto &Pair : ExitInfos) {
     ExitInfo &Info = Pair.second;
     for (unsigned i = 0, e = Info.ExitingBlocks.size(); i != e; ++i) {
@@ -1025,6 +1249,14 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         if (!Info.FirstExitingBlock)
           Info.FirstExitingBlock = Info.ExitingBlocks[i];
         continue;
+      }
+
+      // For a latch, record any OriginalLoopProb contradiction.
+      if (!OriginalLoopProb.isUnknown() && IsLatch) {
+        BranchProbability ActualProb = *KnownWillExit
+                                           ? BranchProbability::getZero()
+                                           : BranchProbability::getOne();
+        ProbUpdateRequired |= OriginalLoopProb != ActualProb;
       }
 
       SetDest(Info.ExitingBlocks[i], *KnownWillExit, Info.ExitOnTrue);
@@ -1062,15 +1294,36 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     changeToUnreachable(Latches.back()->getTerminator(), PreserveLCSSA);
   }
 
+  // After merging adjacent blocks in Latches below:
+  // - CondLatches will list the blocks from Latches that are still terminated
+  //   with conditional branches.
+  // - For 1 <= I < CondLatches.size(), IterCounts[I] will store the number of
+  //   the original loop iterations through which control flows from
+  //   CondLatches[I-1] to CondLatches[I].
+  // - For I == 0 or I == CondLatches.size(), IterCounts[I] will store the
+  //   number of the original loop iterations through which control can flow
+  //   before CondLatches.front() or after CondLatches.back(), respectively,
+  //   without taking the unrolled loop's backedge, if any.
+  // - CondLatchNexts[I] will store the CondLatches[I] branch target for the
+  //   next of the original loop's iterations (as opposed to the exit target).
+  assert(ULO.Count == Latches.size() &&
+         "Expected one latch block per unrolled iteration");
+  std::vector<unsigned> IterCounts(1, 0);
+  std::vector<BasicBlock *> CondLatches;
+  std::vector<BasicBlock *> CondLatchNexts;
+  IterCounts.reserve(Latches.size() + 1);
+  CondLatches.reserve(Latches.size());
+  CondLatchNexts.reserve(Latches.size());
+
   // Merge adjacent basic blocks, if possible.
-  for (BasicBlock *Latch : Latches) {
-    BranchInst *Term = dyn_cast<BranchInst>(Latch->getTerminator());
-    assert((Term ||
+  for (auto [I, Latch] : enumerate(Latches)) {
+    ++IterCounts.back();
+    assert((isa<UncondBrInst, CondBrInst>(Latch->getTerminator()) ||
             (CompletelyUnroll && !LatchIsExiting && Latch == Latches.back())) &&
            "Need a branch as terminator, except when fully unrolling with "
            "unconditional latch");
-    if (Term && Term->isUnconditional()) {
-      BasicBlock *Dest = Term->getSuccessor(0);
+    if (auto *Term = dyn_cast<UncondBrInst>(Latch->getTerminator())) {
+      BasicBlock *Dest = Term->getSuccessor();
       BasicBlock *Fold = Dest->getUniquePredecessor();
       if (MergeBlockIntoPredecessor(Dest, /*DTU=*/DTUToUse, LI,
                                     /*MSSAU=*/nullptr, /*MemDep=*/nullptr,
@@ -1080,7 +1333,17 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         llvm::replace(Latches, Dest, Fold);
         llvm::erase(UnrolledLoopBlocks, Dest);
       }
+    } else if (isa<CondBrInst>(Latch->getTerminator())) {
+      IterCounts.push_back(0);
+      CondLatches.push_back(Latch);
+      CondLatchNexts.push_back(Headers[(I + 1) % Latches.size()]);
     }
+  }
+
+  // Fix probabilities we contradicted above.
+  if (ProbUpdateRequired) {
+    fixProbContradiction(ULO, OriginalLoopProb, CompletelyUnroll, IterCounts,
+                         CondLatches, CondLatchNexts);
   }
 
   // If there are partial reductions, create code in the exit block to compute
@@ -1122,21 +1385,26 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(!UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
+  Loop *OuterL = L->getParentLoop();
+  std::vector<BasicBlock *> Blocks;
+  // Update LoopInfo if the loop is completely removed.
+  if (CompletelyUnroll) {
+    Blocks = L->getBlocks();
+    LI->erase(L);
+    // We shouldn't try to use `L` anymore.
+    L = nullptr;
+  }
+
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.
-  simplifyLoopAfterUnroll(L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC,
-                          TTI, AA);
+  simplifyLoopAfterUnroll(
+      L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC, TTI,
+      CompletelyUnroll ? ArrayRef<BasicBlock *>(Blocks) : L->getBlocks(), AA);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;
 
-  Loop *OuterL = L->getParentLoop();
-  // Update LoopInfo if the loop is completely removed.
-  if (CompletelyUnroll) {
-    LI->erase(L);
-    // We shouldn't try to use `L` anymore.
-    L = nullptr;
-  } else {
+  if (!CompletelyUnroll) {
     // Update metadata for the loop's branch weights and estimated trip count:
     // - If ULO.Runtime, UnrollRuntimeLoopRemainder sets the guard branch
     //   weights, latch branch weights, and estimated trip count of the
@@ -1144,8 +1412,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     //   unrolled loop guard it creates.  The branch weights for the unrolled
     //   loop latch are adjusted below.  FIXME: Handle prologue loops.
     // - Otherwise, if unrolled loop iteration latches become unconditional,
-    //   branch weights are adjusted above.  FIXME: Actually handle such
-    //   unconditional latches.
+    //   branch weights are adjusted by the fixProbContradiction call above.
     // - Otherwise, the original loop's branch weights are correct for the
     //   unrolled loop, so do not adjust them.
     // - In all cases, the unrolled loop's estimated trip count is set below.
@@ -1166,6 +1433,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     // each unrolled iteration's latch within it, we store the new trip count as
     // separate metadata.
     if (!OriginalLoopProb.isUnknown() && ULO.Runtime && EpilogProfitability) {
+      assert((CondLatches.size() == 1 &&
+              (ProbUpdateRequired || OriginalLoopProb.isOne())) &&
+             "Expected ULO.Runtime to give unrolled loop 1 conditional latch, "
+             "the backedge, requiring a probability update unless infinite");
       // Where p is always the probability of executing at least 1 more
       // iteration, the probability for at least n more iterations is p^n.
       setLoopProbability(L, OriginalLoopProb.pow(ULO.Count));
@@ -1249,6 +1520,15 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
     if (Name == S->getString())
       return MD;
   }
+  return nullptr;
+}
+
+// Returns the loop hint metadata node with the given name (for example,
+// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
+// returned.
+MDNode *llvm::getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+  if (MDNode *LoopID = L->getLoopID())
+    return GetUnrollMetadata(LoopID, Name);
   return nullptr;
 }
 

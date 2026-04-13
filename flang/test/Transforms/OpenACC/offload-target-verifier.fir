@@ -311,3 +311,37 @@ func.func @test_fir_embox() {
   }
   return
 }
+
+// -----
+
+// Test fir.use_stmt inside offload region referencing undeclared global
+fir.global @_QMmod1Evar1 : f32 {
+  %0 = arith.constant 0.0 : f32
+  fir.has_value %0 : f32
+}
+
+func.func @test_use_stmt_no_declare() {
+  // expected-warning @below {{illegal symbol(s): _QMmod1Evar1}}
+  acc.serial {
+    fir.use_stmt "mod1" only_symbols[[@_QMmod1Evar1]]
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Test fir.use_stmt inside offload region referencing declared global
+fir.global @_QMmod2Evar2 {acc.declare = #acc.declare<dataClause = acc_create>} : f32 {
+  %0 = arith.constant 0.0 : f32
+  fir.has_value %0 : f32
+}
+
+func.func @test_use_stmt_with_declare() {
+  // expected-remark @below {{passed validity check}}
+  acc.serial {
+    fir.use_stmt "mod2" only_symbols[[@_QMmod2Evar2]]
+    acc.yield
+  }
+  return
+}

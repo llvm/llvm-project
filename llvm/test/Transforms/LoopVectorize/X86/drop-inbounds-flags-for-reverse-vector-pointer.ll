@@ -23,8 +23,7 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP23]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP4]], i64 -3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP23]], i64 -3
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP6]], <4 x i1> [[REVERSE]], <4 x i32> poison)
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <4 x i32> [[WIDE_MASKED_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -47,7 +46,7 @@ define i1 @fn(ptr %nno) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                       ; preds = %entry, %loop.latch
+loop.header:
   %iv = phi i64 [ 10, %entry ], [ %iv.next, %loop.latch ]
   %sum.01 = phi i32 [ 0, %entry ], [ %sum.1, %loop.latch ]
   %rem4 = and i64 %iv, 1
@@ -56,19 +55,19 @@ loop.header:                                       ; preds = %entry, %loop.latch
   %0 = load i32, ptr %gep, align 4
   br i1 %cmp21, label %if.then, label %loop.latch
 
-if.then:                                        ; preds = %loop.header
+if.then:
   %mul = shl i32 %0, 1
   %rem27 = urem i32 %mul, 10
   br label %loop.latch
 
-loop.latch:                                        ; preds = %loop.header, %if.then
+loop.latch:
   %rem27.pn = phi i32 [ %rem27, %if.then ], [ %0, %loop.header ]
   %sum.1 = or i32 %rem27.pn, %sum.01
   %iv.next = add nsw i64 %iv, -1
   %cmp19.not = icmp eq i64 %iv, 0
   br i1 %cmp19.not, label %exit, label %loop.header
 
-exit:                                        ; preds = %loop.latch
+exit:
   %sum.1.lcssa = phi i32 [ %sum.1, %loop.latch ]
   %cmp41 = icmp eq i32 %sum.1.lcssa, 0
   ret i1 %cmp41
