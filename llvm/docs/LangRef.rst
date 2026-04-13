@@ -7876,12 +7876,13 @@ main loop. The first operand is the string
 ``llvm.loop.vectorize.predicate.enable`` and the second operand is a bit. If
 the bit operand value is 1 predication is enabled. A value of 0 disables
 predication:
-Additionally, enabling predication implicitly enables vectorization.
 
 .. code-block:: llvm
 
    !0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
    !1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+
+Additionally, enabling predication implicitly enables vectorization.
 
 '``llvm.loop.vectorize.scalable.enable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
