@@ -30,7 +30,6 @@ llvm::Error GsymReaderV1::parseHeaderAndGlobalDataEntries() {
   // GlobalDataSections map. V1 sections are laid out sequentially:
   //   [Header] [AddrOffsets] [AddrInfoOffsets] [FileTable] ... [StringTable]
   const StringRef Buf = MemBuffer->getBuffer();
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
   const uint64_t NumAddrs = Hdr->NumAddresses;
   const uint8_t AddrOffSize = Hdr->AddrOffSize;
 
@@ -49,7 +48,7 @@ llvm::Error GsymReaderV1::parseHeaderAndGlobalDataEntries() {
   Offset += AddrInfoOffsetsSize;
 
   // FileTable: read NumFiles to compute the size.
-  DataExtractor Data(Buf, IsLittleEndian, 4);
+  DataExtractor Data(Buf, isLittleEndian(), 4);
   uint64_t FTOffset = Offset;
   uint32_t NumFiles = Data.getU32(&FTOffset);
   uint64_t FileTableSize =

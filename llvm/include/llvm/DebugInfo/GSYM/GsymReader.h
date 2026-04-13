@@ -64,6 +64,8 @@ public:
   LLVM_ABI GsymReader(GsymReader &&RHS) = default;
   virtual ~GsymReader() = default;
 
+  bool isLittleEndian() const { return Endian == llvm::endianness::little; }
+
   /// Get the GSYM version for this reader.
   virtual uint16_t getVersion() const = 0;
 
@@ -342,8 +344,7 @@ protected:
       OutHdr = reinterpret_cast<const HeaderT *>(Buf.data());
     } else {
       // Swap case. Decode with a DataExtractor with the correct endianness.
-      const bool IsLittleEndian = (Endian == llvm::endianness::little);
-      DataExtractor Data(Buf, IsLittleEndian, 8 /* address size, unused */);
+      DataExtractor Data(Buf, isLittleEndian(), 8 /* address size, unused */);
       OutSwappedHdr = std::make_unique<HeaderT>();
       auto ExpectedHdr = HeaderT::decode(Data);
       if (!ExpectedHdr)

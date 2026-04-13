@@ -41,8 +41,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   /// in the exact order it appears in the GSYM data.
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
-  DataExtractor Data(Buf, IsLittleEndian, 8 /* address size, unused */);
+  DataExtractor Data(Buf, isLittleEndian(), 8 /* address size, unused */);
   uint64_t Offset = HeaderV2::getEncodedSize();
   while (Offset + sizeof(GlobalData) <= BufSize) {
     auto GDOrErr = GlobalData::decode(Data, Offset);

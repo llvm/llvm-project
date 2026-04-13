@@ -170,8 +170,7 @@ llvm::Error GsymReader::parseGlobalDataEntries(uint64_t Offset) {
 
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
-  DataExtractor Data(Buf, IsLittleEndian, 8 /* address size, unused */);
+  DataExtractor Data(Buf, isLittleEndian(), 8 /* address size, unused */);
   while (Offset + sizeof(GlobalData) <= BufSize) {
     auto GDOrErr = GlobalData::decode(Data, Offset);
     if (!GDOrErr)
@@ -215,8 +214,7 @@ llvm::Error GsymReader::parseAddrOffsets(StringRef Bytes) {
   }
 
   // Parse the swap case
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
-  DataExtractor Data(Bytes, IsLittleEndian, 8);
+  DataExtractor Data(Bytes, isLittleEndian(), 8);
   uint64_t Offset = 0;
   SwappedAddrOffsets.resize(TotalBytes);
   switch (AddrOffSize) {
@@ -252,9 +250,8 @@ llvm::Error GsymReader::parseAddrOffsets(StringRef Bytes) {
 }
 
 llvm::Error GsymReader::setAddrInfoOffsetsData(StringRef Bytes) {
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
   AddrInfoOffsetsData =
-      DataExtractor(Bytes, IsLittleEndian, getAddressInfoOffsetSize());
+      DataExtractor(Bytes, isLittleEndian(), getAddressInfoOffsetSize());
   return Error::success();
 }
 
@@ -264,9 +261,8 @@ llvm::Error GsymReader::setStringTableData(StringRef Bytes) {
 }
 
 llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
-  const bool IsLittleEndian = (Endian == llvm::endianness::little);
   const uint8_t StrpSize = getStringOffsetSize();
-  DataExtractor Data(Bytes, IsLittleEndian, getAddressInfoOffsetSize());
+  DataExtractor Data(Bytes, isLittleEndian(), getAddressInfoOffsetSize());
   uint64_t Offset = 0;
   uint32_t NumFiles = Data.getU32(&Offset);
   uint64_t EntriesSize =
@@ -276,7 +272,7 @@ llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
                              "FileTable section too small for %u files",
                              NumFiles);
   FileEntryData = DataExtractor(Bytes.substr(Offset, EntriesSize),
-                                IsLittleEndian, Data.getAddressSize());
+                                isLittleEndian(), Data.getAddressSize());
   FileEntryData.setStringOffsetSize(StrpSize);
   return Error::success();
 }
@@ -433,7 +429,7 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
     return createStringError(std::errc::invalid_argument,
                              "failed to extract address[%" PRIu64 "]", AddrIdx);
   FuncStartAddr = *OptFuncStartAddr;
-  auto Data = DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
+  auto Data = DataExtractor(Bytes, isLittleEndian(), 4);
   Data.setStringOffsetSize(getStringOffsetSize());
   return Data;
 }
