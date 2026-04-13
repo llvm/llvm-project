@@ -767,37 +767,27 @@ WithReason<int64_t> GetHeightWithReason(
         "This construct is not a DO-loop or a loop-transformation construct"_because_en_US);
     return {0, reason};
   }
-  switch (spec.DirName().v) {
-  case llvm::omp::Directive::OMPD_flatten:
-    if (auto &&value{GetArgumentValueWithReason(
-            spec, llvm::omp::Clause::OMPC_depth, version, semaCtx)}) {
-      // FLATTEN DEPTH(n) replaces n loops with 1.
-      return {int64_t(1) - *value.value, std::move(value.reason)};
-    } else {
-      Reason reason;
-      reason.Say(spec.DirName().source, MsgClauseAbsentAssume,
-          GetUpperName(llvm::omp::Clause::OMPC_depth, version), "a depth of 2");
-      return {-1, std::move(reason)};
-    }
+
+  switch (spec.DirId()) {
+  // These generate loop sequences.
   case llvm::omp::Directive::OMPD_fuse:
   case llvm::omp::Directive::OMPD_split:
     return {0, Reason()};
+  case llvm::omp::Directive::OMPD_flatten:
   case llvm::omp::Directive::OMPD_interchange:
   case llvm::omp::Directive::OMPD_nothing:
   case llvm::omp::Directive::OMPD_reverse:
-    return {0, Reason()};
   case llvm::omp::Directive::OMPD_stripe:
   case llvm::omp::Directive::OMPD_tile:
-    return GetNumArgumentsWithReason(
-        spec, llvm::omp::Clause::OMPC_sizes, version, semaCtx);
-  case llvm::omp::Directive::OMPD_unroll:
-    if (isFullUnroll) {
-      Reason reason;
-      reason.Say(spec.DirName().source, MsgConstructDoesNotResult,
-          "Fully unrolled loop", "a loop nest");
-      return {-1, std::move(reason)};
+  case llvm::omp::Directive::OMPD_unroll: {
+    auto [cons, _1]{GetAffectedNestDepthWithReason(spec, version, semaCtx)};
+    auto [prod, _2]{GetGeneratedNestDepthWithReason(spec, version, semaCtx)};
+    if (cons && prod) {
+      return WithReason<int64_t>{*prod.value - *cons.value,
+          Reason().Append(cons.reason).Append(prod.reason)};
     }
-    return {0, Reason()};
+    return {};
+  }
   default:
     llvm_unreachable("Expecting loop-transforming construct");
   }
@@ -1000,6 +990,19 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
 
   if (IsLoopTransforming(dir)) {
     switch (dir) {
+    case llvm::omp::Directive::OMPD_flatten:
+      if (auto &&value{GetArgumentValueWithReason(
+              spec, llvm::omp::Clause::OMPC_depth, version, semaCtx)}) {
+        // FLATTEN DEPTH(n) replaces n loops with 1.
+        return {std::move(value), true};
+      } else {
+        Reason reason;
+        reason.Say(spec.DirName().source, MsgClauseAbsentAssume,
+            GetUpperName(llvm::omp::Clause::OMPC_depth, version),
+            "a depth of 2");
+        return {{2, std::move(reason)}, true};
+      }
+      break;
     case llvm::omp::Directive::OMPD_interchange: {
       // Get the length of the argument list to PERMUTATION.
       if (parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_permutation)) {
@@ -1015,6 +1018,8 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
           spec.source, MsgClauseAbsentAssume, name, "a permutation (2, 1)");
       return {{2, std::move(reason)}, true};
     }
+    case llvm::omp::Directive::OMPD_nothing:
+      return {WithReason<int64_t>(0), false};
     case llvm::omp::Directive::OMPD_stripe:
     case llvm::omp::Directive::OMPD_tile: {
       // Get the length of the argument list to SIZES.
@@ -1035,16 +1040,55 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
       return {{1, std::move(reason)}, true};
     }
     case llvm::omp::Directive::OMPD_reverse:
+    case llvm::omp::Directive::OMPD_split:
     case llvm::omp::Directive::OMPD_unroll:
       return {WithReason<int64_t>(1), false};
-    // TODO: case llvm::omp::Directive::OMPD_flatten:
-    // TODO: case llvm::omp::Directive::OMPD_split:
     default:
       break;
     }
   }
 
   return {{}, false};
+}
+
+/// Return the depth of the generated nest(s)
+///   {generated-depth, is-perfect-nest}
+std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx) {
+  llvm::omp::Directive dir{spec.DirId()};
+  if (!IsLoopTransforming(dir)) {
+    return {{}, false};
+  }
+
+  auto [depth, _]{GetAffectedNestDepthWithReason(spec, version, semaCtx)};
+
+  switch (dir) {
+  case llvm::omp::Directive::OMPD_flatten:
+    return {WithReason<int64_t>(1), true};
+  case llvm::omp::Directive::OMPD_fuse:
+  case llvm::omp::Directive::OMPD_split:
+    // These result in loop sequences.
+    return {{}, false};
+  case llvm::omp::Directive::OMPD_interchange:
+  case llvm::omp::Directive::OMPD_nothing:
+  case llvm::omp::Directive::OMPD_reverse:
+    return {depth, true};
+  case llvm::omp::Directive::OMPD_stripe:
+  case llvm::omp::Directive::OMPD_tile:
+    if (depth) {
+      return {
+          WithReason<int64_t>(2 * *depth.value, std::move(depth.reason)), true};
+    }
+    return {{}, true};
+  case llvm::omp::Directive::OMPD_unroll:
+    if (IsFullUnroll(spec)) {
+      return {WithReason<int64_t>(0), false};
+    }
+    return {WithReason<int64_t>(1), true};
+  default:
+    return {{}, false};
+  }
 }
 
 /// Return the range of the affected nests in the sequence:
