@@ -726,14 +726,12 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
 void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
                                                    const FunctionDecl *FD) {
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (!MD || !MD->isInstance())
-    return;
 
   const auto *MemberCall = dyn_cast_or_null<CXXMemberCallExpr>(Call);
   if (!MemberCall)
     return;
 
-  if (!dyn_cast_or_null<CXXThisExpr>(MemberCall->getImplicitObjectArgument()))
+  if (!isa_and_present<CXXThisExpr>(MemberCall->getImplicitObjectArgument()))
     return;
 
   const auto *ClassDecl = MD->getParent()->getDefinition();

@@ -2566,12 +2566,12 @@ struct T {
   }
 };
 
-// FIXME: False-negative: the analysis tracks `p_`, but not that it belongs to s1.
+// FIXME: false-negative
 void foo() {
   S s;
   {
     int num;
-    s.p_ = &num;
+    s.p_ = &num; // does not warn
   }
   s.bar();
   s.p_ = &GLOBAL_INT;
