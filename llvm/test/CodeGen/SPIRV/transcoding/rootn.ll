@@ -1,4 +1,4 @@
-;; Check that backend converts scalar arg to vector for rootn math instructions
+;; Check that backend converts scalar arg to vector for rootn math instructions.
 
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
