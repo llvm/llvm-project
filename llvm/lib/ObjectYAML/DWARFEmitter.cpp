@@ -630,12 +630,12 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
     if (LineTable.Version >= 5) {
       writeV5EntryFormat(BufferOS, LineTable.DirectoryEntryFormatCount,
                          LineTable.DirectoryEntryFormat);
-      // TODO: Support directories and file names in DWARFv5
+      // TODO: Support directories in DWARFv5
       encodeULEB128(/*directories_count=*/0, BufferOS);
 
       writeV5EntryFormat(BufferOS, LineTable.FileNameEntryFormatCount,
                          LineTable.FileNameEntryFormat);
-      // TODO: Support directories and file names in DWARFv5
+      // TODO: Support file names in DWARFv5
       encodeULEB128(/*file_names_count=*/0, BufferOS);
     } else {
       for (StringRef IncludeDir : LineTable.IncludeDirs) {
