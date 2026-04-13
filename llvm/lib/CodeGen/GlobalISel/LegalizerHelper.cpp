@@ -8968,10 +8968,10 @@ LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
     // Note this must be done here, and not as an optimization combine in the
     // absence of a dedicate quiet-snan instruction as we're using an
     // omni-purpose G_FCANONICALIZE.
-    if (!isKnownNeverSNaN(Src0, MRI))
+    if (!VT->isKnownNeverSNaN(Src0))
       Src0 = MIRBuilder.buildFCanonicalize(Ty, Src0, MI.getFlags()).getReg(0);
 
-    if (!isKnownNeverSNaN(Src1, MRI))
+    if (!VT->isKnownNeverSNaN(Src1))
       Src1 = MIRBuilder.buildFCanonicalize(Ty, Src1, MI.getFlags()).getReg(0);
   }
 
@@ -9011,7 +9011,7 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
 
   // Propagate any NaN of both operands
   if (!MI.getFlag(MachineInstr::FmNoNans) &&
-      (!isKnownNeverNaN(Src0, MRI) || !isKnownNeverNaN(Src1, MRI))) {
+      (!VT->isKnownNeverNaN(Src0) || !VT->isKnownNeverNaN(Src1))) {
     auto IsOrdered = MIRBuilder.buildFCmp(CmpInst::FCMP_ORD, CmpTy, Src0, Src1);
 
     LLT ElementTy = Ty.isScalar() ? Ty : Ty.getElementType();
