@@ -412,6 +412,8 @@ void GsymCreator::encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
     case 8:
       O.writeU64(AddrOffset);
       break;
+    default:
+      llvm_unreachable("unsupported address offset size");
     }
   }
 }

@@ -317,14 +317,11 @@ GsymReader::getOptionalGlobalDataBytes(GlobalInfoType Type) const {
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   switch (getAddressOffsetSize()) {
-  case 1:
-    return addressForIndex<uint8_t>(Index);
-  case 2:
-    return addressForIndex<uint16_t>(Index);
-  case 4:
-    return addressForIndex<uint32_t>(Index);
-  case 8:
-    return addressForIndex<uint64_t>(Index);
+  case 1: return addressForIndex<uint8_t>(Index);
+  case 2: return addressForIndex<uint16_t>(Index);
+  case 4: return addressForIndex<uint32_t>(Index);
+  case 8: return addressForIndex<uint64_t>(Index);
+  default: llvm_unreachable("unsupported address offset size");
   }
   return std::nullopt;
 }
@@ -332,9 +329,10 @@ std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
 std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
   if (Index >= getNumAddresses())
     return std::nullopt;
-  uint64_t Offset = Index * getAddressInfoOffsetSize();
+  const uint8_t AddrInfoOffsetSize = getAddressInfoOffsetSize();
+  uint64_t Offset = Index * AddrInfoOffsetSize;
   uint64_t AddrInfoOffset =
-      AddrInfoOffsetsData.getUnsigned(&Offset, getAddressInfoOffsetSize());
+      AddrInfoOffsetsData.getUnsigned(&Offset, AddrInfoOffsetSize);
   // V1 stores absolute file offsets in AddrInfoOffsets, so no base offset is
   // needed. V2+ stores offsets relative to the FunctionInfo section start.
   if (getVersion() != Header::getVersion())
