@@ -683,10 +683,6 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   }
 
   for (Function &F : M) {
-    if (F.hasAvailableExternallyLinkage()) {
-      F.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
-      Changed = true;
-    }
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);
     Changed |= removeAggregateTypesFromCalls(&F);
