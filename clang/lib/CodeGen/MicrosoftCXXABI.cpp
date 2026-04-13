@@ -1197,9 +1197,7 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
 
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    LangAS SRetAS = !isTrivialForABI
-                        ? CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD)
-                        : CGM.getTargetCodeGenInfo().getASTAllocaAddressSpace();
+    LangAS SRetAS = CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
     unsigned AS = CGM.getContext().getTargetAddressSpace(SRetAS);
     FI.getReturnInfo() =
         ABIArgInfo::getIndirect(Align, /*AddrSpace=*/AS, /*ByVal=*/false);

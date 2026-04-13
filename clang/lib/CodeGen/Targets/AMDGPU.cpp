@@ -471,24 +471,11 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
       llvm::ConstantPointerNull::get(NPT), PT);
 }
 
-static bool hasViableCopyOrMoveConstructor(const CXXRecordDecl *RD) {
-  if ((RD->needsImplicitCopyConstructor() &&
-       !RD->defaultedCopyConstructorIsDeleted()) ||
-      (RD->needsImplicitMoveConstructor() &&
-       !RD->defaultedMoveConstructorIsDeleted()))
-    return true;
-
-  return llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *CD) {
-    return CD->isCopyOrMoveConstructor() && !CD->isDeleted() &&
-           !CD->isIneligibleOrNotSelected();
-  });
-}
-
 LangAS
 AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
   // Types with no viable copy/move must be constructed in-place , use the
   // default AS so the sret pointer matches the "this" convention.
-  if (RD && !RD->canPassInRegisters() && !hasViableCopyOrMoveConstructor(RD))
+  if (RD && !RD->canPassInRegisters())
     return LangAS::Default;
   return getASTAllocaAddressSpace();
 }
