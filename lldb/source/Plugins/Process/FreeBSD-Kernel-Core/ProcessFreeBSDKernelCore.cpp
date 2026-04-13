@@ -131,14 +131,16 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
     const FileSpec *crash_file, bool can_connect) {
   ModuleSP executable = target_sp->GetExecutableModule();
   if (crash_file && !can_connect && executable) {
+    char errbuf[_POSIX2_LINE_MAX];
     kvm_t *kvm =
         kvm_open2(executable->GetFileSpec().GetPath().c_str(),
-                  crash_file->GetPath().c_str(), O_RDONLY, nullptr, nullptr);
+                  crash_file->GetPath().c_str(), O_RDONLY, errbuf, nullptr);
     if (kvm) {
       kvm_close(kvm);
       return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
                                                         *crash_file);
     }
+    LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
   }
   return nullptr;
 }
@@ -340,26 +342,32 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // https://cgit.freebsd.org/src/tree/sys/sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
-    // Iterate through a linked list of all processes. New processes are added
-    // to the head of this list. Which means that earlier PIDs are actually at
-    // the end of the list, so we have to walk it backwards. First collect all
-    // the processes in the list order.
-    std::vector<lldb::addr_t> process_addrs;
-    if (lldb::addr_t allproc_addr = FindSymbol("allproc");
-        allproc_addr != LLDB_INVALID_ADDRESS) {
-      for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
-           proc != 0 && proc != LLDB_INVALID_ADDRESS && error.Success();
-           proc = ReadPointerFromMemory(proc + offset_p_list, error))
-        process_addrs.push_back(proc);
-    }
+    // Iterate through a linked list of all processes then order incrementally
+    // by pid. Though new processes are added to the head of this list, process
+    // ids may be reused as well. So we cannot rely on it being in a particular
+    // order.
+    const lldb::addr_t allproc_addr = FindSymbol("allproc");
+    if (allproc_addr == LLDB_INVALID_ADDRESS)
+      return false;
 
-    // Processes are in the linked list in descending PID order, so we must walk
-    // them in reverse to get ascending PID order.
-    for (auto proc_it = process_addrs.rbegin(); proc_it != process_addrs.rend();
-         ++proc_it) {
-      lldb::addr_t proc = *proc_it;
+    std::vector<std::pair<lldb::addr_t, int32_t>> process_addrs;
+    for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
+         error.Success() && proc != 0 && proc != LLDB_INVALID_ADDRESS;
+         proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
       int32_t pid =
           ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
+      if (error.Fail())
+        return false;
+      process_addrs.emplace_back(proc, pid);
+    }
+
+    if (error.Fail())
+      return false;
+
+    std::sort(process_addrs.begin(), process_addrs.end(),
+              [](const auto &a, const auto &b) { return a.second < b.second; });
+
+    for (auto [proc, pid] : process_addrs) {
       // process' command-line string
       char comm[fbsd_maxcomlen + 1];
       ReadCStringFromMemory(proc + offset_p_comm, comm, sizeof(comm), error);
@@ -540,7 +548,7 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
 
     if (field_found != 4) {
       LLDB_LOGF(
-          GetLog(LLDBLog::Object),
+          GetLog(LLDBLog::Process),
           "FreeBSD-Kernel-Core: Could not find all required fields for msgbuf");
       return;
     }
