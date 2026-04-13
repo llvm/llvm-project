@@ -133,7 +133,6 @@ void escape_through_static_local(int *data [[clang::noescape]]) { // expected-wa
   static_local = data;
 }
 
-#if __has_feature(cxx_thread_local)
 thread_local int *thread_local_storage; // expected-note {{escapes to this global storage}}
 
 void escape_through_thread_local(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
@@ -142,7 +141,6 @@ void escape_through_thread_local(int *data [[clang::noescape]]) { // expected-wa
   // undesired behavior in most cases.
   thread_local_storage = data;
 }
-#endif
 
 struct ObjConsumer {
   void escape_through_member(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
