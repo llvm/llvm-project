@@ -1499,9 +1499,7 @@ add_entrypoint_object(
   HDRS
     ../copysign.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.copysign
 )
 
 add_entrypoint_object(
@@ -1511,9 +1509,7 @@ add_entrypoint_object(
   HDRS
     ../copysignf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.copysignf
 )
 
 add_entrypoint_object(
@@ -1523,7 +1519,7 @@ add_entrypoint_object(
   HDRS
     ../copysignl.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.copysignl
 )
 
 add_entrypoint_object(
@@ -1533,10 +1529,7 @@ add_entrypoint_object(
   HDRS
     ../copysignf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.copysignf16
 )
 
 add_entrypoint_object(
@@ -1546,8 +1539,7 @@ add_entrypoint_object(
   HDRS
     ../copysignf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.copysignf128
 )
 
 add_entrypoint_object(
@@ -1557,13 +1549,7 @@ add_entrypoint_object(
   HDRS
     ../copysignbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.manipulation_functions
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.copysignbf16
 )
 
 add_entrypoint_object(
