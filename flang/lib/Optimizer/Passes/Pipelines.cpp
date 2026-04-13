@@ -12,7 +12,9 @@
 #include "flang/Optimizer/Passes/Pipelines.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
@@ -202,6 +204,54 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   config.setRegionSimplificationLevel(
       mlir::GreedySimplifyRegionLevel::Disabled);
   pm.addPass(mlir::createCSEPass());
+
+  // Affine loop optimization pipeline (opt-in via --enable-affine-loop-opt).
+  if (enableAffineLoopOpt) {
+    pm.addPass(mlir::createCanonicalizerPass(config));
+    pm.addPass(mlir::createCSEPass());
+
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, fir::createSimplifyDoLoopPass);
+
+    pm.addPass(mlir::createCanonicalizerPass(config));
+    pm.addPass(mlir::createCSEPass());
+
+    pm.addPass(mlir::createLoopInvariantCodeMotionPass());
+    pm.addPass(fir::createLoopInvariantCodeMotion());
+
+    pm.addPass(mlir::createCanonicalizerPass(config));
+    pm.addPass(mlir::createCSEPass());
+
+    pm.addPass(fir::createPromoteToAffinePass());
+
+    // Use remove-dead-values instead of canonicalize between promotion and
+    // demotion to avoid folding fir.convert chains.  Canonicalize can merge
+    // a linearisation convert (ref<NxM> -> ref<N*M>) with the promotion
+    // convert (ref<N*M> -> memref<N*M>) into a single ref<NxM> -> memref<N*M>,
+    // which would cause a rank mismatch in AffineDemotion.
+    pm.addPass(mlir::createRemoveDeadValuesPass());
+    pm.addPass(mlir::createCSEPass());
+
+    if (affineLoopOptTileSize > 0) {
+      mlir::affine::registerAffineLoopTiling();
+      std::string pipeline = "func.func(affine-loop-tile{tile-size=" +
+                             std::to_string(affineLoopOptTileSize) + "})";
+      (void)mlir::parsePassPipeline(pipeline, pm);
+    } else {
+      pm.addNestedPass<mlir::func::FuncOp>(
+          mlir::affine::createLoopTilingPass());
+    }
+
+    pm.addPass(mlir::createRemoveDeadValuesPass());
+    pm.addPass(mlir::createCSEPass());
+
+    pm.addPass(fir::createAffineDemotionPass());
+    pm.addPass(mlir::createLowerAffinePass());
+
+    pm.addPass(mlir::createCanonicalizerPass(config));
+    pm.addPass(mlir::createCSEPass());
+  }
+
   fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createCharacterConversion);

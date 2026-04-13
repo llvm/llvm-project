@@ -62,6 +62,12 @@ cl::opt<bool> useOldAliasTags(
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
 EnableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
+EnableOption(AffineLoopOpt, "affine-loop-opt",
+             "affine loop optimizations (tiling, fusion, interchange)");
+cl::opt<unsigned> affineLoopOptTileSize(
+    "affine-loop-opt-tile-size",
+    cl::desc("tile size for affine loop tiling (0 = auto from cache model)"),
+    cl::init(0), cl::Hidden);
 
 /// CodeGen Passes
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");

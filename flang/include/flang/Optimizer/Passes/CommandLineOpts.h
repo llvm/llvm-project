@@ -56,6 +56,8 @@ extern llvm::cl::opt<bool> disableFirAliasTags;
 extern llvm::cl::opt<bool> disableFirAvc;
 extern llvm::cl::opt<bool> disableFirMao;
 extern llvm::cl::opt<bool> enableFirLICM;
+extern llvm::cl::opt<bool> enableAffineLoopOpt;
+extern llvm::cl::opt<unsigned> affineLoopOptTileSize;
 extern llvm::cl::opt<bool> useOldAliasTags;
 
 /// CodeGen Passes
