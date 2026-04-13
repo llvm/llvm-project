@@ -59,18 +59,8 @@ define void @fptrunc_concat_bitcast(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 16
-; CHECK-NEXT:    vreplvei.d $vr2, $vr0, 0
-; CHECK-NEXT:    fcvt.s.d $fa2, $fa2
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 1
-; CHECK-NEXT:    fcvt.s.d $fa0, $fa0
-; CHECK-NEXT:    vreplvei.d $vr3, $vr1, 1
-; CHECK-NEXT:    fcvt.s.d $fa3, $fa3
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    fcvt.s.d $fa1, $fa1
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 16
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    vextrins.w $vr2, $vr3, 48
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vfcvt.s.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %x = load <4 x double>, ptr %a0

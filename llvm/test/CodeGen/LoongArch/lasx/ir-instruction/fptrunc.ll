@@ -23,10 +23,8 @@ define void @fptrunc_v8f64_to_v8f32(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 32
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI1_0)
 ; CHECK-NEXT:    xvfcvt.s.d $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr2
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -41,30 +39,9 @@ define void @fptrunc_concat_bitcast(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 32
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 1
-; CHECK-NEXT:    fcvt.s.d $fa2, $fa2
-; CHECK-NEXT:    xvpickve.d $xr3, $xr0, 0
-; CHECK-NEXT:    fcvt.s.d $fa3, $fa3
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 16
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 2
-; CHECK-NEXT:    fcvt.s.d $fa2, $fa2
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 32
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 3
-; CHECK-NEXT:    fcvt.s.d $fa0, $fa0
-; CHECK-NEXT:    vextrins.w $vr3, $vr0, 48
-; CHECK-NEXT:    xvpickve.d $xr0, $xr1, 1
-; CHECK-NEXT:    fcvt.s.d $fa0, $fa0
-; CHECK-NEXT:    xvpickve.d $xr2, $xr1, 0
-; CHECK-NEXT:    fcvt.s.d $fa2, $fa2
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 16
-; CHECK-NEXT:    xvpickve.d $xr0, $xr1, 2
-; CHECK-NEXT:    fcvt.s.d $fa0, $fa0
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 32
-; CHECK-NEXT:    xvpickve.d $xr0, $xr1, 3
-; CHECK-NEXT:    fcvt.s.d $fa0, $fa0
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 48
-; CHECK-NEXT:    xvpermi.q $xr3, $xr2, 2
-; CHECK-NEXT:    xvst $xr3, $a0, 0
+; CHECK-NEXT:    xvfcvt.s.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %x = load <8 x double>, ptr %a0

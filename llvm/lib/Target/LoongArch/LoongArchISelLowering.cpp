@@ -734,9 +734,16 @@ static SDValue combineFP_ROUND(SDValue N, const SDLoc &DL, SelectionDAG &DAG,
       // operates on each 128-bit segament as a lane.
       SDValue Res = DAG.getNode(LoongArchISD::VFCVT, DL, MVT::v8f32,
                                 Op1.getOperand(0), Op0.getOperand(0));
-      SDValue Undef = DAG.getUNDEF(VT);
+      SDValue Undef = DAG.getUNDEF(Res.getValueType());
+      // After VFCVT, the high part of Res comes from the high parts of Op0 and
+      // Op1, and the low part comes from the low parts of Op0 and Op1. However,
+      // the desired order requires Op0 to fully occupy the lower half and Op1
+      // the upper half of Res. The Mask reorders the elements of Res to achieve
+      // this:
+      // - The first four elements (0, 1, 4, 5) come from Op0.
+      // - The next four elements (2, 3, 6, 7) come from Op1.
       SmallVector<int, 8> Mask = {0, 1, 4, 5, 2, 3, 6, 7};
-      Res = DAG.getVectorShuffle(VT, DL, Res, Undef, Mask);
+      Res = DAG.getVectorShuffle(Res.getValueType(), DL, Res, Undef, Mask);
       return DAG.getBitcast(VT, Res);
     }
   }
