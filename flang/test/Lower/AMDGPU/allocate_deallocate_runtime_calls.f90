@@ -1,5 +1,5 @@
-! RUN: %flang -target amdgcn-- -mmlir -use-alloc-runtime -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK
-! RUN: %flang -target amdgcn-- -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-NO-FLAG
+! RUN: %flang --offload-targets=amdgcn-amd-amdhsa -mmlir -use-alloc-runtime -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK
+! RUN: %flang --offload-targets=amdgcn-amd-amdhsa -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-NO-FLAG
 
 ! Test to check if usage of flag -use-alloc-runtime results in runtime calls.
 

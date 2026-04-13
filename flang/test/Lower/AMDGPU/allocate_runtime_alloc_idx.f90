@@ -1,4 +1,4 @@
-! RUN: %flang -target amdgcn-- -ffast-amd-memory-allocator -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK
+! RUN: %flang -ffast-amd-memory-allocator -S -emit-llvm --offload-targets=amdgcn-amd-amdhsa -o - %s | FileCheck %s
 
 subroutine allocate_deallocate()
   real, allocatable :: x
