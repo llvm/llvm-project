@@ -1332,16 +1332,47 @@ public:
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return the full list of loaded shared libraries without needing any input.
+  /// Retrieve a StructuredData dictionary about all of the binaries
+  /// loaded in the process at this time.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, and may also
+  /// include the fully parsed mach header and load commands.
+  ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved.
   virtual lldb_private::StructuredData::ObjectSP
-  GetLoadedDynamicLibrariesInfos() {
+  GetLoadedDynamicLibrariesInfos(lldb::BinaryInformationLevel info_level) {
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return information about binaries given their load addresses.
+  /// Retrieve a StructuredData dictionary about the binaries at
+  /// the provided load addresses.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, fully parsed
+  /// mach header and load commands.
+  ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
+  /// \param [in] load_addresses
+  ///     The virtual address of the start of binaries to fetch
+  ///     information.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved..
   virtual lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) {
     return StructuredData::ObjectSP();
   }

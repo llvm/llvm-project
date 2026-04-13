@@ -4212,15 +4212,38 @@ StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos(
   return GetLoadedDynamicLibrariesInfos_sender(args_dict);
 }
 
-StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos() {
+static std::string
+BinaryInformationLevelToJSONKey(BinaryInformationLevel info_level) {
+  std::string info_level_str;
+  if (info_level == eBinaryInformationLevelAddrOnly)
+    info_level_str = "address-only";
+  else if (info_level == eBinaryInformationLevelAddrName)
+    info_level_str = "address-name";
+  else if (info_level == eBinaryInformationLevelAddrNameUUID)
+    info_level_str = "address-name-uuid";
+  else if (info_level == eBinaryInformationLevelFull)
+    info_level_str = "full";
+
+  return info_level_str;
+}
+
+StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos(
+    BinaryInformationLevel info_level) {
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
 
   args_dict->GetAsDictionary()->AddBooleanItem("fetch_all_solibs", true);
+  if (info_level != eBinaryInformationLevelFull)
+    args_dict->GetAsDictionary()->AddBooleanItem("report_load_commands", false);
+  std::string info_level_str = BinaryInformationLevelToJSONKey(info_level);
+  if (!info_level_str.empty())
+    args_dict->GetAsDictionary()->AddStringItem("information-level",
+                                                info_level_str.c_str());
 
   return GetLoadedDynamicLibrariesInfos_sender(args_dict);
 }
 
 StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos(
+    BinaryInformationLevel info_level,
     const std::vector<lldb::addr_t> &load_addresses) {
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
   StructuredData::ArraySP addresses(new StructuredData::Array);
@@ -4229,6 +4252,11 @@ StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos(
     addresses->AddIntegerItem(addr);
 
   args_dict->GetAsDictionary()->AddItem("solib_addresses", addresses);
+
+  std::string info_level_str = BinaryInformationLevelToJSONKey(info_level);
+  if (!info_level_str.empty())
+    args_dict->GetAsDictionary()->AddStringItem("information-level",
+                                                info_level_str.c_str());
 
   return GetLoadedDynamicLibrariesInfos_sender(args_dict);
 }
