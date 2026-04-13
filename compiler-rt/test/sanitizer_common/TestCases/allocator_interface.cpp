@@ -2,7 +2,7 @@
 // RUN: %clangxx %s -o %t && %run %t 5678910
 
 // No allocator.
-// UNSUPPORTED: ubsan
+// UNSUPPORTED: tysan, ubsan
 
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>

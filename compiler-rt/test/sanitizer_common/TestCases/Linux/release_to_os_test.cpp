@@ -6,7 +6,7 @@
 // UNSUPPORTED: target={{(powerpc64|loongarch64).*}}
 
 // Not needed, no allocator.
-// UNSUPPORTED: ubsan
+// UNSUPPORTED: tysan, ubsan
 
 // FIXME: This mode uses 32bit allocator without purge.
 // UNSUPPORTED: hwasan-aliasing

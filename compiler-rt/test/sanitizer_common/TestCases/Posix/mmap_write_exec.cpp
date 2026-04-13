@@ -4,6 +4,9 @@
 // RUN:   --check-prefix=CHECK-DISABLED
 // ubsan and lsan do not install mmap interceptors UNSUPPORTED: ubsan, lsan
 
+// tysan doesn't use common mmap interceptors (maybe could support this?)
+// UNSUPPORTED: tysan
+
 // TODO: Fix option on Android, it hangs there for unknown reasons.
 // XFAIL: android
 
