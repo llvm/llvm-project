@@ -700,14 +700,15 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp, lldb_private::formatters::swift::URL_SummaryProvider,
-      "URL summary provider", ConstString("Foundation.URL"),
-      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+      "URL summary provider", ConstString("^Foundation(Essentials)?\\.URL$"),
+      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true), true);
 
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp,
       lldb_private::formatters::swift::SwiftURL_SummaryProvider,
-      "URL summary provider", ConstString("Foundation._SwiftURL"),
-      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+      "URL summary provider",
+      ConstString("^Foundation(Essentials)?\\._SwiftURL$"),
+      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true), true);
 
   lldb_private::formatters::AddStringSummary(
       swift_category_sp, "${var._url}", ConstString("Foundation._BridgedURL"),
