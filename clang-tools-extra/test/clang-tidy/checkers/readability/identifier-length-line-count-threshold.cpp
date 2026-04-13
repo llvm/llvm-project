@@ -41,6 +41,18 @@ void shouldWarn(int z)
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable name 'a' is too short, expected at least 3 characters [readability-identifier-length]
   ++a;
   MY_MACRO(a);
+
+  int b = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable name 'b' is too short, expected at least 3 characters [readability-identifier-length]
+  [&](){
+    doIt(b);
+  }();
+
+  int c = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable name 'c' is too short, expected at least 3 characters [readability-identifier-length]
+  [=](){
+    doIt(c);
+  }();
 }
 
 void shouldNotWarn(int m)
@@ -64,4 +76,10 @@ void shouldNotWarn(int m)
 
   int a = 0;
   MY_MACRO(a);
+
+  int b = 0;
+  [&](){ doIt(b); }();
+
+  int c = 0;
+  [=](){ doIt(c); }();
 }
