@@ -36,6 +36,7 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
