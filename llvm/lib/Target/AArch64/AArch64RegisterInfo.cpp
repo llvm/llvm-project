@@ -1148,8 +1148,13 @@ static bool HandleMatchCmpPredicateHint(
   // callee-saved registers that have already been allocated for other uses in
   // the function.
   DenseSet<unsigned> CSRs;
-  for (unsigned I = 0; MRI.getCalleeSavedRegs()[I]; ++I)
-    CSRs.insert(MRI.getCalleeSavedRegs()[I]);
+  for (unsigned I = 0;; ++I) {
+    Register R = MRI.getCalleeSavedRegs()[I];
+    if (!R.isValid())
+      break;
+    if (AArch64::PPRRegClass.contains(R))
+      CSRs.insert(R);
+  }
 
   Hints.append(Order.begin(), Order.end());
   llvm::stable_sort(Hints, [&](Register A, Register B) {

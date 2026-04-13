@@ -2023,7 +2023,8 @@ class sve_int_pred_log<bits<4> opc, string asm>
 
   let Defs = !if(!eq (opc{2}, 1), [NZCV], []);
   let hasSideEffects = 0;
-  let DestructiveInstType = !if(!ne(opc, 0b0011), DestructivePredicate, NotDestructive);
+  let DestructiveInstType = !if(!eq(opc, 0b0011), // <=> SEL
+                                NotDestructive, DestructivePredicate);
 }
 
 multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op,
