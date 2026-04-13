@@ -1,6 +1,7 @@
 #include "ClangTidyOptions.h"
 #include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
+#include "utils/CheckUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -356,6 +357,123 @@ TEST(CheckOptionsValidation, MissingOptions) {
   EXPECT_FALSE(TestCheck.getLocal("Opt"));
   EXPECT_EQ(TestCheck.getLocal("Opt", "Unknown"), "Unknown");
   // Missing options aren't errors.
+  EXPECT_TRUE(DiagConsumer.take().empty());
+}
+
+TEST(CheckOptionsValidation, DeprecatedAliasUtils) {
+  ClangTidyOptions Options;
+  Options.Checks = "performance-faster-string-find";
+
+  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
+      ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
+
+  TestCheck TestCheck(&Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_THAT(
+      DiagConsumer.take(),
+      ElementsAre(
+          AllOf(ToolDiagMessage(
+                    "'performance-faster-string-find' check is deprecated and "
+                    "will be removed in a future release; consider using "
+                    "'performance-prefer-single-char-overloads' instead"),
+                ToolDiagLevel(Warning))));
+}
+
+TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByCanonicalCheck) {
+  ClangTidyOptions Options;
+  Options.Checks =
+      "performance-faster-string-find,performance-prefer-single-char-overloads";
+
+  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
+      ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
+
+  TestCheck TestCheck(&Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_TRUE(DiagConsumer.take().empty());
+}
+
+TEST(CheckOptionsValidation, DeprecatedAliasUtilsEnabledByWildcardAlias) {
+  ClangTidyOptions Options;
+  Options.Checks = "performance-faster*";
+
+  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
+      ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
+
+  TestCheck TestCheck(&Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_THAT(
+      DiagConsumer.take(),
+      ElementsAre(
+          AllOf(ToolDiagMessage(
+                    "'performance-faster-string-find' check is deprecated and "
+                    "will be removed in a future release; consider using "
+                    "'performance-prefer-single-char-overloads' instead"),
+                ToolDiagLevel(Warning))));
+}
+
+TEST(CheckOptionsValidation,
+     DeprecatedAliasUtilsDisabledByWildcardAliasAndCanonicalCheck) {
+  ClangTidyOptions Options;
+  Options.Checks =
+      "performance-faster*,performance-prefer-single-char-overloads";
+
+  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
+      ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
+
+  TestCheck TestCheck(&Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
+  EXPECT_TRUE(DiagConsumer.take().empty());
+}
+
+TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByWildcard) {
+  ClangTidyOptions Options;
+  Options.Checks = "performance-*";
+
+  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
+      ClangTidyGlobalOptions(), Options));
+  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
+
+  TestCheck TestCheck(&Context);
+  utils::diagDeprecatedCheckAlias(TestCheck, Context,
+                                  "performance-faster-string-find",
+                                  "performance-prefer-single-char-overloads");
+
   EXPECT_TRUE(DiagConsumer.take().empty());
 }
 
