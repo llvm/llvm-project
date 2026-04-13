@@ -1,20 +1,21 @@
 ; REQUIRES: asserts
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize --disable-output \
-; RUN: -tail-folding-policy=predicated-epilogue 2>&1 | FileCheck %s
+; RUN: -tail-folding-policy=fold-epilogue-tail 2>&1 | FileCheck %s
 
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -enable-epilogue-vectorization=false \
-; RUN: --disable-output -tail-folding-policy=predicated-epilogue 2>&1 \
+; RUN: --disable-output -tail-folding-policy=fold-epilogue-tail 2>&1 \
 ; RUN: | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
 
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -enable-interleaved-mem-accesses=true \
-; RUN: --disable-output -tail-folding-policy=predicated-epilogue 2>&1 \
+; RUN: --disable-output -tail-folding-policy=fold-epilogue-tail 2>&1 \
 ; RUN: | FileCheck %s --check-prefix=CHECK-INTERLEAVE
 
 target datalayout = "E-m:e-p:32:32-i64:32-f64:32:64-a:0:32-n32-S128"
 
 define void @test_epilogue_tf(ptr %a, i64 %n) {
 ; CHECK: LV: Checking a loop in 'test_epilogue_tf'
-; CHECK: LV: Epilogue tail folding is enabled
+; CHECK: LV: epilogue tail-folding is not supported yet
+; CHECK: LV: FoldEpilogueTail flag is not supported yet, we are falling back on vectorizing with scalar tail.
 entry:
   %cmp1 = icmp sgt i64 %n, 0
   br i1 %cmp1, label %for.body, label %for.end
@@ -32,8 +33,8 @@ for.end:
 
 define void @epilogue_is_disabled(ptr %a, i64 %n) {
 ; CHECK-DISABLED-EPILOG: LV: Checking a loop in 'epilogue_is_disabled'
-; CHECK-DISABLED-EPILOG: LV: Options conflict, epilogue vectorization is disallowed while epilogue predication allowed!
-; CHECK-DISABLED-EPILOG-NEXT: LV: Disallow epilogue predication
+; CHECK-DISABLED-EPILOG: LV: Options conflict, epilogue vectorization is disallowed while epilogue tail-folding allowed!
+; CHECK-DISABLED-EPILOG-NEXT: LV: Disallow epilogue tail-folding
 entry:
   %cmp1 = icmp sgt i64 %n, 0
   br i1 %cmp1, label %for.body, label %for.end
@@ -53,7 +54,7 @@ for.end:
 @CD = common global [1024 x i32] zeroinitializer, align 4
 define void @interleave_requires_scalar_epilog(i32 %C, i32 %D) {
 ; CHECK-INTERLEAVE: LV: Checking a loop in 'interleave_requires_scalar_epilog'
-; CHECK-INTERLEAVE: LV: Epilogue tail folding can't be applied because scalar epilogue is required
+; CHECK-INTERLEAVE: LV: Epilogue tail-folding can't be applied because scalar epilogue is required
 entry:
   br label %for.body
 
@@ -80,7 +81,7 @@ for.end:                                          ; preds = %for.body
 
 define i16 @early_exit_requires_scalar_epilog(ptr %dst, i64 %x) {
 ; CHECK: LV: Checking a loop in 'early_exit_requires_scalar_epilog'
-; CHECK: LV: Epilogue tail folding can't be applied because scalar epilogue is required
+; CHECK: LV: Epilogue tail-folding can't be applied because scalar epilogue is required
 entry:
   br label %loop.header
 loop.header:
@@ -121,7 +122,7 @@ for.end:
 
 define i32 @max_reduction_epilog(ptr %src, i64 %N) {
 ; CHECK: LV: Checking a loop in 'max_reduction_epilog'
-; CHECK: LV: Epilogue tail folding is not supported for select-cmp Reductions
+; CHECK: LV: Epilogue tail-folding is not supported for reductions
 entry:
   br label %loop
 

@@ -207,7 +207,7 @@ enum class TailFoldingPolicyTy {
   None = 0,
   PreferFoldTail,
   MustFoldTail,
-  PredicatedEpilogue
+  FoldEpilogueTail
 };
 
 static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
@@ -222,10 +222,9 @@ static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
         clEnumValN(TailFoldingPolicyTy::MustFoldTail, "must-fold-tail",
                    "always tail-fold, don't attempt vectorization if "
                    "tail-folding fails."),
-        clEnumValN(TailFoldingPolicyTy::PredicatedEpilogue,
-                   "predicated-epilogue",
-                   "prefers predicated vector epilogue, falling back on "
-                   "scalar epilogue if it fails.")));
+        clEnumValN(TailFoldingPolicyTy::FoldEpilogueTail, "fold-epilogue-tail",
+                   "prefers tail-folded vector epilogue, falling back on "
+                   "an epilogue if it fails.")));
 
 static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
     "force-tail-folding-style", cl::desc("Force the tail folding style"),
@@ -813,10 +812,10 @@ enum EpilogueLowering {
   // Loop hint indicating an epilogue is undesired, apply tail folding.
   CM_EpilogueNotNeededFoldTail,
 
-  // Predicated vector epilogue requested; the scalar epilogue of the
-  // vectorized epilogue loop will be tail-folded if possible, otherwise
-  // a scalar epilogue is kept.
-  CM_ScalarEpilogueNotNeededUsePredicatedEpilogue,
+  // Tail-folded vector epilogue requested; the scalar tail will be folded into
+  // the vectorized epilogue loop if possible, otherwise fall back on a scalar
+  // epilogue.
+  CM_EpilogueNotNeededFoldEpilogueTail,
 
   // Directive indicating we must either fold the epilogue/tail or not vectorize
   CM_EpilogueNotAllowedFoldTail
@@ -2961,7 +2960,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
     break;
   default:
-    // TODO: handle the case for CM_ScalarEpilogueNotNeededUsePredicatedEpilogue
+    // TODO: handle the case for CM_EpilogueNotNeededFoldEpilogueTail
     break;
   }
 
@@ -7349,7 +7348,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
 // hints forcing tail-folding, and 4) a TTI hook that analyses whether the loop
 // is suitable for tail-folding.
 // This function determines scalar epilogue lowering for the main vector loop
-// while scalar epilogue lowering for the predicated epilogue path is handled
+// while scalar epilogue lowering for the tail-folded epilogue path is handled
 // separately in isEpilogueTailFoldingAllowed().
 static EpilogueLowering
 getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
@@ -7392,26 +7391,26 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
   return CM_EpilogueAllowed;
 }
 
-/// Check if we can apply tail-folding on the scalar loop of the vectorized
-/// epilogue loop, so that we can have vectorized unpredicated main loop along
-/// with vectorized predicated epilogue loop.
+/// Check if we can apply tail folding to the vectorized epilogue loop,
+/// enabling an unpredicated main vector loop with a tail-folded epilogue
+/// vector loop.
 static bool isEpilogueTailFoldingAllowed(const LoopVectorizationCostModel &CM,
                                          const LoopVectorizationLegality &LVL) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!TailFoldingPolicy.getNumOccurrences() ||
-      TailFoldingPolicy != TailFoldingPolicyTy::PredicatedEpilogue)
+      TailFoldingPolicy != TailFoldingPolicyTy::FoldEpilogueTail)
     return false;
 
   if (!EnableEpilogueVectorization) {
     LLVM_DEBUG(dbgs() << "LV: Options conflict, epilogue vectorization is "
-                         "disallowed while epilogue predication allowed!\n");
-    LLVM_DEBUG(dbgs() << "LV: Disallow epilogue predication\n");
+                         "disallowed while epilogue tail-folding allowed!\n");
+    LLVM_DEBUG(dbgs() << "LV: Disallow epilogue tail-folding\n");
     return false;
   }
 
   // If scalar epilogue is explicitly required, we can't apply TF.
   if (CM.requiresScalarEpilogue(/*IsVectorizing*/ true)) {
-    LLVM_DEBUG(dbgs() << "LV: Epilogue tail folding can't be applied because "
+    LLVM_DEBUG(dbgs() << "LV: Epilogue tail-folding can't be applied because "
                          "scalar epilogue is required\n");
     return false;
   }
@@ -7422,21 +7421,10 @@ static bool isEpilogueTailFoldingAllowed(const LoopVectorizationCostModel &CM,
     return false;
   }
 
-  // TF is not supported for some kinds of reductions that result in more
-  // overhead.
-  bool HasReductions = !LVL.getReductionVars().empty();
-  bool HasSelectCmpReductions =
-      HasReductions &&
-      any_of(LVL.getReductionVars(), [](auto &Reduction) -> bool {
-        const RecurrenceDescriptor &RdxDesc = Reduction.second;
-        RecurKind RK = RdxDesc.getRecurrenceKind();
-        return RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-               RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
-               RecurrenceDescriptor::isMinMaxRecurrenceKind(RK);
-      });
-  if (HasSelectCmpReductions) {
-    LLVM_DEBUG(dbgs() << "LV: Epilogue tail folding is not supported for "
-                         "select-cmp Reductions\n");
+  // TF is not supported for reductions right now.
+  if (!LVL.getReductionVars().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Epilogue tail-folding is not supported for "
+                         "reductions\n");
     return false;
   }
 
@@ -8250,7 +8238,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   if (isEpilogueTailFoldingAllowed(CM, LVL)) {
     // TODO: Apply tail folding on the vectorized epilogue loop.
-    LLVM_DEBUG(dbgs() << "LV: Epilogue tail folding is enabled\n");
+    LLVM_DEBUG(dbgs() << "LV: epilogue tail-folding is not supported yet\n");
+    reportVectorizationInfo("FoldEpilogueTail flag is not supported yet, we "
+                            "are falling back on vectorizing with scalar tail",
+                            "EpilogueTailFoldingNotSupported", ORE, L);
   }
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
