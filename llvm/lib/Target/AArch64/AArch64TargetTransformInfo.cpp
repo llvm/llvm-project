@@ -6469,7 +6469,7 @@ unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
   return ST->getEpilogueVectorizationMinVF();
 }
 
-bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+bool AArch64TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (!ST->hasSVE())
     return false;
 
@@ -6486,8 +6486,8 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
     Required |= TailFoldingOpts::Recurrences;
 
   // We call this to discover whether any load/store pointers in the loop have
-  // negative strides. This will require extra work to reverse the loop
-  // predicate, which may be expensive.
+  // negative strides. This will require extra work to reverse the tail-folded
+  // loop, which may be expensive.
   if (containsDecreasingPointers(TFI->LVL->getLoop(),
                                  TFI->LVL->getPredicatedScalarEvolution(),
                                  *TFI->LVL->getDominatorTree()))
