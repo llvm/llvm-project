@@ -1530,12 +1530,11 @@ private:
       }
     }
 #endif
-    {
-      // This is technically UB, since the object was constructed as `const`.
-      // Clang doesn't optimize on this currently though.
-      const_cast<__key_type&>(__lhs.first) = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
-      __lhs.second                         = std::forward<_From>(__rhs).second;
-    }
+
+    // This is technically UB, since the object was constructed as `const`.
+    // Clang doesn't optimize on this currently though.
+    const_cast<__key_type&>(__lhs.first) = const_cast<__copy_cvref_t<_From, __key_type>&&>(__rhs.first);
+    __lhs.second                         = std::forward<_From>(__rhs).second;
   }
 
   template <class _To, class _From, class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
