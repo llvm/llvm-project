@@ -76,7 +76,7 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
   return UsageOfThis.Used;
 }
 
-static bool hasSameParameterTypes(const CXXMethodDecl &MD1,
+bool hasSameParameterTypes(const CXXMethodDecl &MD1,
                                   const CXXMethodDecl &MD2) {
   if (MD1.getNumParams() != MD2.getNumParams())
     return false;
