@@ -2552,4 +2552,3 @@ struct Y : X {
   }
 };
 } // namespace base_class_fields
-
