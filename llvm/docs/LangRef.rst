@@ -25208,9 +25208,9 @@ Examples:
       %addrA = ptrtoaddr ptr %ptrA to i64
       %addrB = ptrtoaddr ptr %ptrB to i64
       %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
-      %vecA = call <4 x i32> @llvm.masked.load.v4i32.v4i32.p0(ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
       [...]
-      call @llvm.masked.store.v4i32.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
+      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
 
       ; For the above example, consider the following cases:
       ;
@@ -25303,9 +25303,9 @@ Examples:
       %addrA = ptrtoaddr ptr %ptrA to i64
       %addrB = ptrtoaddr ptr %ptrB to i64
       %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
-      call @llvm.masked.store.v4i32.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
+      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
       [...]
-      %vecB = call <4 x i32> @llvm.masked.load.v4i32.v4i32.p0(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
 
       ; For the above example, consider the following cases:
       ;

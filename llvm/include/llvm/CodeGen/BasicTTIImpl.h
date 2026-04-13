@@ -2196,13 +2196,13 @@ public:
       // The possible expansions are...
       //
       // loop_dependence_war_mask:
-      //   diff = (ptrB - ptrA) / eltSize
+      //   diff = (addrB - addrA) / eltSize
       //   cmp = icmp sle diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
       // loop_dependence_raw_mask:
-      //   diff = (abs(ptrB - ptrA)) / eltSize
+      //   diff = (abs(addrB - addrA)) / eltSize
       //   cmp = icmp eq diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
