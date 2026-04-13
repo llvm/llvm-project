@@ -588,15 +588,19 @@ func.func @omp_ordered(%arg0 : index) -> () {
 func.func @omp_taskloop(%arg0: index, %arg1 : memref<i32>) {
   // CHECK: omp.parallel {
   omp.parallel {
-    // CHECK: omp.taskloop allocate(%{{.*}} : !llvm.struct<(ptr, ptr, i64)> -> %{{.*}} : !llvm.struct<(ptr, ptr, i64)>) {
-    omp.taskloop allocate(%arg1 : memref<i32> -> %arg1 : memref<i32>) {
-      // CHECK: omp.loop_nest (%[[IV:.*]]) : i64 = (%[[ARG0]]) to (%[[ARG0]]) step (%[[ARG0]]) {
-      omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
-        // CHECK-DAG: %[[CAST_IV:.*]] = builtin.unrealized_conversion_cast %[[IV]] : i64 to index
-        // CHECK: "test.payload"(%[[CAST_IV]]) : (index) -> ()
-        "test.payload"(%iv) : (index) -> ()
-        omp.yield
+    // CHECK: omp.taskloop.context {
+    omp.taskloop.context {
+      // CHECK: omp.taskloop allocate(%{{.*}} : !llvm.struct<(ptr, ptr, i64)> -> %{{.*}} : !llvm.struct<(ptr, ptr, i64)>) {
+      omp.taskloop allocate(%arg1 : memref<i32> -> %arg1 : memref<i32>) {
+        // CHECK: omp.loop_nest (%[[IV:.*]]) : i64 = (%[[ARG0]]) to (%[[ARG0]]) step (%[[ARG0]]) {
+        omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
+          // CHECK-DAG: %[[CAST_IV:.*]] = builtin.unrealized_conversion_cast %[[IV]] : i64 to index
+          // CHECK: "test.payload"(%[[CAST_IV]]) : (index) -> ()
+          "test.payload"(%iv) : (index) -> ()
+          omp.yield
+        }
       }
+    omp.terminator
     }
     omp.terminator
   }
