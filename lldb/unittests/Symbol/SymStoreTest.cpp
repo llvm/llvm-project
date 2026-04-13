@@ -74,7 +74,8 @@ TEST(SymStoreTest, ParseEnvSymbolPaths_Cache) {
             returns());
   EXPECT_EQ(check("SRV*http://localhost"), returns());
 
-  // No cache without a server
+  // No cache without a server.
+  EXPECT_EQ(check("cache*"), returns());
   EXPECT_EQ(check("cache*C:\\symcache"), returns());
   EXPECT_EQ(check("cache*C:\\symcache;D:\\sym"), returns());
 
@@ -82,7 +83,6 @@ TEST(SymStoreTest, ParseEnvSymbolPaths_Cache) {
   EXPECT_EQ(check("SRV*C:\\symcache*\\\\corp\\symbols"),
             returns("C:\\symcache"));
   EXPECT_EQ(check("D:\\sym;srv*C:\\symcache*D:\\sym"), returns("C:\\symcache"));
-  EXPECT_EQ(check("srv**https://symbols.mozilla.org"), returns(""));
 
   // Implicit caches for following symbol servers
   EXPECT_EQ(check("cache*D:\\s;srv*\\\\corp"), returns("D:\\s"));
@@ -95,7 +95,12 @@ TEST(SymStoreTest, ParseEnvSymbolPaths_Cache) {
   EXPECT_EQ(check("srv*\\\\corp;SRV*C:\\X*http://localhost;cache*D:\\s"),
             returns("C:\\X"));
 
-  // Symbol server with custom implementation (unsupported)
+  // Fall back to default cache.
+  auto default_cache = SymbolLocatorSymStore::GetDefaultCachePath();
+  EXPECT_EQ(check("cache*;srv*\\\\corp"), returns(default_cache));
+  EXPECT_EQ(check("srv**https://symbols.mozilla.org"), returns(default_cache));
+
+  // Symbol server with custom implementation (unsupported).
   EXPECT_EQ(check("symsrv*symsrv.dll*https://symbols.mozilla.org"), returns());
   EXPECT_EQ(check("symsrv*symsrv.dll*C:\\symbols*https://symbols.mozilla.org"),
             returns());

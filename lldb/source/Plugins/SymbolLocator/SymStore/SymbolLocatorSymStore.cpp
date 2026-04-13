@@ -65,17 +65,7 @@ public:
             ePropertyCachePath);
     if (s && !s->GetCurrentValueAsRef().empty())
       return s->GetCurrentValue();
-    // Fall back to the platform cache directory.
-    llvm::SmallString<128> cache_dir;
-    if (llvm::sys::path::cache_directory(cache_dir)) {
-      llvm::sys::path::append(cache_dir, "lldb", "symstore");
-      return cache_dir.str().str();
-    }
-    // Last resort: use a subdirectory of the system temp directory.
-    constexpr bool erase_on_reboot = false;
-    llvm::sys::path::system_temp_directory(erase_on_reboot, cache_dir);
-    llvm::sys::path::append(cache_dir, "lldb", "symstore");
-    return cache_dir.str().str();
+    return SymbolLocatorSymStore::GetDefaultCachePath();
   }
 };
 
@@ -158,11 +148,18 @@ std::optional<SymbolLocatorSymStore::LookupEntry>
 ParseSrvEntry(llvm::StringRef entry) {
   llvm::SmallVector<llvm::StringRef, 4> parts;
   entry.trim().split(parts, '*');
+
+  // Format is: srv*[LocalCache*]SymbolStore
   switch (parts.size()) {
   case 2:
     return MakeLookupEntry(parts[1]);
-  case 3:
-    return MakeLookupEntry(parts[2], parts[1]);
+  case 3: {
+    if (llvm::sys::path::is_absolute(parts[1]))
+      return MakeLookupEntry(parts[2], parts[1]);
+    // Fall back to LLDB's default cache for empty and invalid cache values.
+    return MakeLookupEntry(parts[2],
+                           SymbolLocatorSymStore::GetDefaultCachePath());
+  }
   default:
     return {}; // Ignore entries with invalid number of parts.
   }
@@ -171,10 +168,21 @@ ParseSrvEntry(llvm::StringRef entry) {
 std::optional<std::string> ParseCacheEntry(llvm::StringRef entry) {
   llvm::SmallVector<llvm::StringRef, 2> parts;
   entry.trim().split(parts, '*');
+
   // Ignore entries with invalid number of parts.
-  if (parts.size() != 2)
+  if (parts.size() > 2)
     return {};
-  return parts.back().str();
+
+  // Empty cache* deliberatly specifies the default cache path.
+  llvm::StringRef value;
+  if (parts.size() == 2)
+    value = parts.back();
+
+  // Fall back to LLDB's default cache for empty and invalid values.
+  if (!llvm::sys::path::is_absolute(value))
+    return SymbolLocatorSymStore::GetDefaultCachePath();
+
+  return value.str();
 }
 
 // RSDS entries store identity as a 20-byte UUID composed of 16-byte GUID and
@@ -457,3 +465,18 @@ SymbolLocatorSymStore::ParseEnvSymbolPaths(llvm::StringRef val) {
 
   return result;
 }
+
+std::string SymbolLocatorSymStore::GetDefaultCachePath() {
+  // Fall back to the platform cache directory.
+  llvm::SmallString<128> cache_dir;
+  if (llvm::sys::path::cache_directory(cache_dir)) {
+    llvm::sys::path::append(cache_dir, "lldb", "symstore");
+    return cache_dir.str().str();
+  }
+  // Last resort: use a subdirectory of the system temp directory.
+  constexpr bool erase_on_reboot = false;
+  llvm::sys::path::system_temp_directory(erase_on_reboot, cache_dir);
+  llvm::sys::path::append(cache_dir, "lldb", "symstore");
+  return cache_dir.str().str();
+}
+
