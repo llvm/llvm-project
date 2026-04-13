@@ -2577,4 +2577,16 @@ void foo() {
   s.p_ = &GLOBAL_INT;
 }
 
+// FIXME: false-negative, should warn once inheritance is supported
+struct S2 : S {
+  void foo2() {
+    {
+      int num;
+      this->p_ = &num; // does not warn
+    }
+    bar();
+    this->p_ = &GLOBAL_INT;
+  }
+};
+
 } // namespace method_call_uses_field_origins
