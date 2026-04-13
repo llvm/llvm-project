@@ -196,8 +196,7 @@ MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeInt32(
     SPIRV::ModuleAnalysisInfo &MAI) {
   for (const MachineInstr *MI : MAI.getMSInstrs(SPIRV::MB_TypeConstVars)) {
     if (MI->getOpcode() == SPIRV::OpTypeInt &&
-        MI->getOperand(1).getImm() == 32 &&
-        MI->getOperand(2).getImm() == 0)
+        MI->getOperand(1).getImm() == 32 && MI->getOperand(2).getImm() == 0)
       return MAI.getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
   }
   MCRegister Reg = MAI.getNextIDRegister();
@@ -222,19 +221,17 @@ void SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
 
   // For SPIR-V targets, Clang sets DwarfAddressSpace to the LLVM IR address
   // space, which addressSpaceToStorageClass expects.
-  const auto &ST =
-      static_cast<const SPIRVSubtarget &>(Asm->getSubtargetInfo());
+  const auto &ST = static_cast<const SPIRVSubtarget &>(Asm->getSubtargetInfo());
   MCRegister StorageClassReg = emitOpConstantI32(
       addressSpaceToStorageClass(PT->getDWARFAddressSpace().value(), ST),
       I32TypeReg, MAI);
 
-  if (const auto *BaseType =
-          dyn_cast_or_null<DIBasicType>(PT->getBaseType())) {
+  if (const auto *BaseType = dyn_cast_or_null<DIBasicType>(PT->getBaseType())) {
     auto BTIt = BasicTypeRegs.find(BaseType);
     if (BTIt != BasicTypeRegs.end())
       emitExtInst(SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg,
-                  ExtInstSetReg,
-                  {BTIt->second, StorageClassReg, I32ZeroReg}, MAI);
+                  ExtInstSetReg, {BTIt->second, StorageClassReg, I32ZeroReg},
+                  MAI);
   } else {
     // Void pointer: use DebugInfoNone for the base type. Note that
     // spirv-val currently rejects DebugInfoNone as the base type of
@@ -295,8 +292,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   // Pre-emit source language constants for all compile units before entering
   // the DebugSource loop.
-  SmallVector<MCRegister> SrcLangRegs = map_to_vector(
-      CompileUnits, [&](const CompileUnitInfo &Info) {
+  SmallVector<MCRegister> SrcLangRegs =
+      map_to_vector(CompileUnits, [&](const CompileUnitInfo &Info) {
         return emitOpConstantI32(Info.SpirvSourceLanguage, I32TypeReg, MAI);
       });
 
@@ -371,6 +368,6 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   // Emit DebugTypePointer for each referenced pointer type.
   for (const DIDerivedType *PT : PointerTypes)
-    emitDebugTypePointer(PT, VoidTypeReg, I32TypeReg, ExtInstSetReg,
-                         I32ZeroReg, BasicTypeRegs, MAI);
+    emitDebugTypePointer(PT, VoidTypeReg, I32TypeReg, ExtInstSetReg, I32ZeroReg,
+                         BasicTypeRegs, MAI);
 }
