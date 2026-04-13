@@ -1511,6 +1511,28 @@ public:
         : DepKind(DepKind), DepValueType(DepValueType), DepVal(DepVal) {}
   };
 
+  /// A struct to pack static and dynamic dependency information for a task.
+  ///
+  /// For fixed-count (non-iterator) dependencies, callers populate \p Deps
+  /// and the builder allocates and fills the kmp_depend_info array internally.
+  /// For iterator-based dependencies, the caller pre-builds the array and
+  /// sets \p NumDeps and \p DepArray directly.
+  struct DependenciesInfo {
+    SmallVector<DependData> Deps; // vector of dependencies
+    Value *NumDeps; // number of kmp_depend_info entries (used by iterator path)
+    Value *DepArray; // kmp_depend_info array (used by iterator path)
+
+    DependenciesInfo() : Deps(), NumDeps(nullptr), DepArray(nullptr) {}
+    DependenciesInfo(SmallVector<DependData> D)
+        : Deps(std::move(D)), NumDeps(nullptr), DepArray(nullptr) {}
+
+    bool empty() const { return Deps.empty() && DepArray == nullptr; }
+  };
+
+  /// Store one kmp_depend_info entry at the given \p Entry pointer.
+  LLVM_ABI void emitTaskDependency(IRBuilderBase &Builder, Value *Entry,
+                                   const DependData &Dep);
+
   /// Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
   LLVM_ABI llvm::StructType *getKmpTaskAffinityInfoTy();
@@ -1579,8 +1601,8 @@ public:
   ///                    cannot be resumed until execution of the structured
   ///                    block that is associated with the generated task is
   ///                    completed.
-  /// \param Dependencies Vector of DependData objects holding information of
-  ///        dependencies as specified by the 'depend' clause.
+  /// \param Dependencies Dependencies info holding either a vector of
+  ///        DependData objects or a pre-built dependency array.
   /// \param Affinities AffinityData object holding information of accumulated
   ///        affinities as specified by the 'affinity' clause.
   /// \param EventHandle If present, signifies the event handle as part of
@@ -1591,7 +1613,7 @@ public:
   LLVM_ABI InsertPointOrErrorTy createTask(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       BodyGenCallbackTy BodyGenCB, bool Tied = true, Value *Final = nullptr,
-      Value *IfCondition = nullptr, SmallVector<DependData> Dependencies = {},
+      Value *IfCondition = nullptr, const DependenciesInfo &Dependencies = {},
       AffinityData Affinities = {}, bool Mergeable = false,
       Value *EventHandle = nullptr, Value *Priority = nullptr);
 
@@ -2888,15 +2910,14 @@ public:
   /// \param DeviceID Identifier for the device via the 'device' clause.
   /// \param RTLoc Source location identifier
   /// \param AllocaIP The insertion point to be used for alloca instructions.
-  /// \param Dependencies Vector of DependData objects holding information of
-  ///        dependencies as specified by the 'depend' clause.
+  /// \param Dependencies Dependencies info as specified by the 'depend' clause.
   /// \param HasNoWait True if the target construct had 'nowait' on it, false
   ///        otherwise
-  LLVM_ABI InsertPointOrErrorTy emitTargetTask(
-      TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID, Value *RTLoc,
-      OpenMPIRBuilder::InsertPointTy AllocaIP,
-      const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
-      const TargetDataRTArgs &RTArgs, bool HasNoWait);
+  LLVM_ABI InsertPointOrErrorTy
+  emitTargetTask(TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID,
+                 Value *RTLoc, OpenMPIRBuilder::InsertPointTy AllocaIP,
+                 const DependenciesInfo &Dependencies,
+                 const TargetDataRTArgs &RTArgs, bool HasNoWait);
 
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
@@ -3537,7 +3558,7 @@ public:
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
       CustomMapperCallbackTy CustomMapperCB,
-      const SmallVector<DependData> &Dependencies, bool HasNowait = false,
+      const DependenciesInfo &Dependencies = {}, bool HasNowait = false,
       Value *DynCGroupMem = nullptr,
       omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
           omp::OMPDynGroupprivateFallbackType::Abort);
