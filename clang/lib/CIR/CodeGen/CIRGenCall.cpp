@@ -576,6 +576,16 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
   return false;
 }
 
+/// Compute the nofpclass mask for FP types based on language options.
+static unsigned getNoFPClassTestMask(const LangOptions &langOpts) {
+  unsigned mask = 0;
+  if (langOpts.NoHonorInfs)
+    mask |= llvm::fcInf;
+  if (langOpts.NoHonorNaNs)
+    mask |= llvm::fcNan;
+  return mask;
+}
+
 void CIRGenModule::constructFunctionReturnAttributes(
     const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
     mlir::NamedAttrList &retAttrs) {
@@ -590,13 +600,8 @@ void CIRGenModule::constructFunctionReturnAttributes(
     retAttrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                  mlir::UnitAttr::get(&getMLIRContext()));
 
-  // nofpclass(nan inf) when -menable-no-infs / -menable-no-nans.
   if (retTy->hasFloatingRepresentation()) {
-    unsigned mask = 0;
-    if (getLangOpts().NoHonorInfs)
-      mask |= llvm::fcInf;
-    if (getLangOpts().NoHonorNaNs)
-      mask |= llvm::fcNan;
+    unsigned mask = getNoFPClassTestMask(getLangOpts());
     if (mask)
       retAttrs.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
                    builder.getI64IntegerAttr(mask));
@@ -711,11 +716,7 @@ void CIRGenModule::constructFunctionArgumentAttributes(
     }
 
     if (argType->hasFloatingRepresentation()) {
-      unsigned mask = 0;
-      if (getLangOpts().NoHonorInfs)
-        mask |= llvm::fcInf;
-      if (getLangOpts().NoHonorNaNs)
-        mask |= llvm::fcNan;
+      unsigned mask = getNoFPClassTestMask(getLangOpts());
       if (mask)
         argAttrList.set(mlir::LLVM::LLVMDialect::getNoFPClassAttrName(),
                         builder.getI64IntegerAttr(mask));
