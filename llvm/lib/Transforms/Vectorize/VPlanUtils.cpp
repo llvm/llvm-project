@@ -691,11 +691,20 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     if (!UF.isMaterialized())
       return Step == &UF;
     unsigned ConcreteUF = Plan.getConcreteUF();
-    return (ConcreteUF == 1 &&
-            match(Step, m_VPInstruction<VPInstruction::VScale>())) ||
-           match(Step, m_Mul(m_SpecificInt(ConcreteUF),
-                             m_VPInstruction<VPInstruction::VScale>())) ||
-           match(Step, m_SpecificInt(ConcreteUF));
+    if (ConcreteUF == 1 &&
+        match(Step, m_VPInstruction<VPInstruction::VScale>()))
+      return true;
+    if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF),
+                            m_VPInstruction<VPInstruction::VScale>())))
+      return true;
+    // Also match shl(VScale, log2(ConcreteUF)) which is the result of
+    // simplifying mul(VScale, ConcreteUF) when ConcreteUF is a power of 2.
+    if (isPowerOf2_32(ConcreteUF) &&
+        match(Step, m_Binary<Instruction::Shl>(
+                        m_VPInstruction<VPInstruction::VScale>(),
+                        m_SpecificInt(Log2_32(ConcreteUF)))))
+      return true;
+    return match(Step, m_SpecificInt(ConcreteUF));
   };
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
