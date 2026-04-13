@@ -642,7 +642,7 @@ define <2 x i32> @test_plui_w_negative() {
 define <8 x i8> @test_allones_v8i8() {
 ; CHECK-LABEL: test_allones_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.b a0, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    ret
   ret <8 x i8> splat (i8 -1)
 }
@@ -650,7 +650,7 @@ define <8 x i8> @test_allones_v8i8() {
 define <4 x i16> @test_allones_v4i16() {
 ; CHECK-LABEL: test_allones_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.b a0, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    ret
   ret <4 x i16> splat (i16 -1)
 }
@@ -658,7 +658,7 @@ define <4 x i16> @test_allones_v4i16() {
 define <2 x i32> @test_allones_v2i32() {
 ; CHECK-LABEL: test_allones_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.b a0, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 -1)
 }
