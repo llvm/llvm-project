@@ -668,6 +668,38 @@ void check__prefetch2(void *arg1) {
 // CHECK-LINUX: error: call to undeclared function '__prefetch2'
 
 
+unsigned char check__ldar8(unsigned char volatile *p) {
+  return __ldar8(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__ldar8(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = load atomic volatile i8, ptr %{{.*}} seq_cst, align 1
+// CHECK-MSCOMPAT:       ret i8 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__ldar8'
+
+unsigned short check__ldar16(unsigned short volatile *p) {
+  return __ldar16(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i16 @check__ldar16(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = load atomic volatile i16, ptr %{{.*}} seq_cst, align 2
+// CHECK-MSCOMPAT:       ret i16 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__ldar16'
+
+unsigned int check__ldar32(unsigned int volatile *p) {
+  return __ldar32(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i32 @check__ldar32(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = load atomic volatile i32, ptr %{{.*}} seq_cst, align 4
+// CHECK-MSCOMPAT:       ret i32 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__ldar32'
+
+unsigned long long int  check__ldar64(unsigned long long int volatile *p) {
+  return __ldar64(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i64 @check__ldar64(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[RET:[0-9]+]] = load atomic volatile i64, ptr %{{.*}} seq_cst, align 8
+// CHECK-MSCOMPAT:       ret i64 %[[RET]]
+// CHECK-LINUX: error: call to undeclared function '__ldar64'
+
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}
 // CHECK-MSCOMPAT: ![[MD4]] = !{!"d5"}
