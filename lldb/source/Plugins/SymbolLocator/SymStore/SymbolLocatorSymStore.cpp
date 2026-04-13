@@ -140,9 +140,6 @@ SymbolLocatorSymStore::LookupEntry MakeLookupEntry(llvm::StringRef source,
 std::vector<SymbolLocatorSymStore::LookupEntry> GetGlobalLookupOrder() {
   std::vector<SymbolLocatorSymStore::LookupEntry> result;
 
-  for (const auto &url : GetGlobalPluginProperties().GetURLs())
-    result.push_back(MakeLookupEntry(url.ref()));
-
   const char *sym_path = std::getenv("_NT_SYMBOL_PATH");
   for (auto entry : SymbolLocatorSymStore::ParseEnvSymbolPaths(sym_path))
     result.push_back(std::move(entry));
@@ -150,6 +147,9 @@ std::vector<SymbolLocatorSymStore::LookupEntry> GetGlobalLookupOrder() {
   const char *alt_path = std::getenv("_NT_ALT_SYMBOL_PATH");
   for (auto entry : SymbolLocatorSymStore::ParseEnvSymbolPaths(alt_path))
     result.push_back(std::move(entry));
+
+  for (const auto &url : GetGlobalPluginProperties().GetURLs())
+    result.push_back(MakeLookupEntry(url.ref()));
 
   return result;
 }
