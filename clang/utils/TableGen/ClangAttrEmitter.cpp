@@ -1477,6 +1477,15 @@ namespace {
           AttrType(Arg.getValueAsString("AttrType")) {}
 
     void writeAccessors(raw_ostream &OS) const override {
+      // The field is always stored as Attr * regardless of AttrType. This is
+      // required because the generated isEquivalent method calls
+      // equalAttrArgs(getInferredAttr(), Other.getInferredAttr(), Context).
+      // If the field were AttrType * (e.g. AvailabilityAttr *), that call
+      // would instantiate equalAttrArgs<AvailabilityAttr *>, which has no
+      // specialization and returns false. Storing Attr * routes the call
+      // through equalAttrArgs<Attr *>, which handles null and calls
+      // isEquivalent. Typed get<Name>As() / set<Name>As() accessors are
+      // provided for callers that need the specific type.
       OS << "  Attr *get" << getUpperName() << "() const {\n";
       OS << "    return " << getLowerName() << ";\n";
       OS << "  }\n";
@@ -1486,7 +1495,8 @@ namespace {
       if (!AttrType.empty()) {
         OS << "\n";
         OS << "  " << AttrType << " *get" << getUpperName() << "As() const {\n";
-        OS << "    return llvm::cast_or_null<" << AttrType << ">(" << getLowerName() << ");\n";
+        OS << "    return llvm::cast_or_null<" << AttrType << ">("
+           << getLowerName() << ");\n";
         OS << "  }\n";
         OS << "  void set" << getUpperName() << "As(" << AttrType << " *V) {\n";
         OS << "    " << getLowerName() << " = V;\n";
