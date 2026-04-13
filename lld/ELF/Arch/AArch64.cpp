@@ -10,6 +10,7 @@
 #include "OutputSections.h"
 #include "RelocScan.h"
 #include "Symbols.h"
+#include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "TargetImpl.h"
