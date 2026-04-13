@@ -20,20 +20,6 @@ else()
   get_clang_resource_dir(CLANG_RESOURCE_DIR PREFIX ${LLVM_BINARY_DIR})
 endif()
 
-if(COMGR_USE_INCBIN)
-  set(resource_directory_object_archive ${LIB_DIR}/resource_directory.a)
-  set(tool_depends ${CMAKE_AR})
-else()
-  # FIXME: Dependency hack. This is an output file which is never
-  # produced. This creates a file dependency between the
-  # add_custom_command and the embed-resource-dir target. When using
-  # #embed or bc2h, we are generating a c++ source added to a library
-  # target. For some reason we need an additional dependency not added
-  # to a build target in order to ensure embed-resource-dir is rebuilt
-  # on resource directory content changes.
-  set(non_source_dependency artificial_non_source_dependency)
-endif()
-
 # Detect the files that will be embedded from the built resource
 # directory, so that there is a content dependency.
 #
@@ -48,6 +34,44 @@ file(GLOB_RECURSE embedded_files
      "${CLANG_RESOURCE_DIR}/lib/amd*/*.bc"
      "${CLANG_RESOURCE_DIR}/lib/amd*/*.a")
 
+# Clear values from the same scope before branching. include() shares the
+# caller's variable scope; without resetting, a prior set of
+# resource_directory_object_archive could survive when COMGR_USE_INCBIN is on
+# but embedded_files is empty, and we would still link a stale archive path.
+# The other two are initialized for symmetry so unset branches start empty.
+set(resource_directory_object_archive "")
+set(non_source_dependency "")
+set(tool_depends "")
+
+if(COMGR_USE_INCBIN)
+  # Only produce and link a static archive when there are objects to
+  # pack. Otherwise EmbedResourceDir.cmake skips ar and link would
+  # fail looking for a missing library (e.g. empty resource dir at
+  # configure time or before runtimes populate lib/clang).
+  if(embedded_files)
+    set(resource_directory_object_archive
+        "${LIB_DIR}/resource_directory${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  endif()
+  set(tool_depends ${CMAKE_AR})
+else()
+  # FIXME: Dependency hack. This is an output file which is never
+  # produced. This creates a file dependency between the
+  # add_custom_command and the embed-resource-dir target. When using
+  # #embed or bc2h, we are generating a c++ source added to a library
+  # target. For some reason we need an additional dependency not added
+  # to a build target in order to ensure embed-resource-dir is rebuilt
+  # on resource directory content changes.
+  set(non_source_dependency artificial_non_source_dependency)
+endif()
+
+set(embed_resource_outputs ${GEN_RESOURCE_DIR_FILE})
+if(resource_directory_object_archive)
+  list(APPEND embed_resource_outputs ${resource_directory_object_archive})
+endif()
+if(non_source_dependency)
+  list(APPEND embed_resource_outputs ${non_source_dependency})
+endif()
+
 # TODO: Stop using bc2h. Really we ought to be able to rely on #embed,
 # but it's not supported by the oldest supported versions of host
 # compilers. Until then, this should switch to rc on windows to embed
@@ -55,13 +79,14 @@ file(GLOB_RECURSE embedded_files
 #
 # TODO: Also compress this
 add_custom_command(
-  OUTPUT ${GEN_RESOURCE_DIR_FILE} ${resource_directory_object_archive} ${non_source_dependency}
+  OUTPUT ${embed_resource_outputs}
   COMMAND ${CMAKE_COMMAND}
     -DBC2H_BINARY=$<TARGET_FILE:bc2h>
     -DGEN_RESOURCE_DIR_FILE=${GEN_RESOURCE_DIR_FILE}
     -DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}
     -DCOMGR_USE_EMBED=${COMGR_USE_EMBED}
     -DCOMGR_USE_INCBIN=${COMGR_USE_INCBIN}
+    -DRESOURCE_DIRECTORY_ARCHIVE=${resource_directory_object_archive}
     -DOBJCOPY_OUTPUT_FORMAT=${OBJCOPY_OUTPUT_FORMAT}
     -DCMAKE_AR=${CMAKE_AR}
     -DCMAKE_OBJCOPY=${CMAKE_OBJCOPY}
@@ -79,10 +104,7 @@ add_custom_command(
   USES_TERMINAL
   VERBATIM)
 
-add_custom_target(embed-resource-dir DEPENDS
-     ${GEN_RESOURCE_DIR_FILE}
-     ${resource_directory_object_archive}
-     ${non_source_dependency})
+add_custom_target(embed-resource-dir DEPENDS ${embed_resource_outputs})
 
 # This must not directly add GEN_RESOURCE_DIR_FILE as a source file of
 # the library here. This must create the library, add the dependency

@@ -72,8 +72,8 @@ list(JOIN INCLUDE_FILE_CONTENT "\n" INCLUDE_FILE_CONTENT)
 file(WRITE ${GEN_RESOURCE_DIR_FILE}
      "${INCLUDE_FILE_CONTENT}\n${RESOURCE_DIR_INC_FILE_CONTENT}\n")
 
-if(EMBED_OBJECT_FILES)
+if(resource_directory_object_files AND RESOURCE_DIRECTORY_ARCHIVE)
   execute_process(COMMAND ${CMAKE_AR} rcs
-    resource_directory.a ${EMBED_OBJECT_FILES}
+    ${RESOURCE_DIRECTORY_ARCHIVE} ${resource_directory_object_files}
     COMMAND_ERROR_IS_FATAL ANY)
 endif()
