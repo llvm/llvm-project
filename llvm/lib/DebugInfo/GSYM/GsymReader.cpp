@@ -491,7 +491,6 @@ GsymReader::lookupAll(uint64_t Addr) const {
 
     // Process each merged function data.
     for (DataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
-      MergedData.setStringOffsetSize(getStringOffsetSize());
       if (auto FI = FunctionInfo::lookup(MergedData, *this,
                                          MainResult->FuncRange.start(), Addr)) {
         Results.push_back(std::move(*FI));

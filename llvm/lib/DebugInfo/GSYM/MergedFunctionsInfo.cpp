@@ -41,7 +41,6 @@ MergedFunctionsInfo::decode(DataExtractor &Data, uint64_t BaseAddr) {
     return FuncExtractorsOrError.takeError();
 
   for (DataExtractor &FuncData : *FuncExtractorsOrError) {
-    FuncData.setStringOffsetSize(Data.getStringOffsetSize());
     llvm::Expected<FunctionInfo> FI = FunctionInfo::decode(FuncData, BaseAddr);
     if (!FI)
       return FI.takeError();
@@ -85,6 +84,7 @@ MergedFunctionsInfo::getFuncsDataExtractors(DataExtractor &Data) {
     // Extract the function data.
     Results.emplace_back(Data.getData().substr(Offset, FnSize),
                          Data.isLittleEndian(), Data.getAddressSize());
+    Results.back().setStringOffsetSize(Data.getStringOffsetSize());
 
     Offset += FnSize;
   }
