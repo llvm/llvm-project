@@ -2270,7 +2270,7 @@ let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
         defvar inst = !cast<NVPTXInst>("CVT_bf16x2_" # src_type # "_scale");
         defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
 
-        def : Pat<(intrin B16:$a, B16:$b),
+        def : Pat<(intrin i16:$a, i16:$b),
                   (inst $a, $b, mode)>;
       }
     }
@@ -2339,7 +2339,7 @@ let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
         defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
         defvar inst = !cast<NVPTXInst>("CVT_bf16x2_" # src_type # "_scale");
         defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
-        def : Pat<(intrin B16:$a, B16:$b),
+        def : Pat<(intrin i16:$a, i16:$b),
                   (inst $a, $b, mode)>;
       }
     }
@@ -2375,7 +2375,7 @@ let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_e2m1x2_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
       defvar inst = !cast<NVPTXInst>("CVT_bf16x2_e2m1x2_scale");
       defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
-      def : Pat<(intrin B16:$a, B16:$b),
+      def : Pat<(intrin i16:$a, i16:$b),
                 (inst $a, $b, mode)>;
     }
   }
