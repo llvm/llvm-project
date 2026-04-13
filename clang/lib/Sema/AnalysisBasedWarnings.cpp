@@ -2927,8 +2927,6 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AC.getCFGBuildOptions().AddParameterLifetimes = true;
     AC.getCFGBuildOptions().AddInitializers = true;
     AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
-    AC.getCFGBuildOptions().AddImplicitDtors = true;
-    AC.getCFGBuildOptions().AddTemporaryDtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
       runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);
