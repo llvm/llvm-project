@@ -50,7 +50,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
       DepCollector.maybeAddDependency(
           llvm::sys::path::remove_leading_dotslash(*Filename),
           /*FromModule*/ false, isSystem(FileType), /*IsModuleFile*/ false,
-          /*IsMissing*/ false);
+          /*IsDirectModuleImport*/ false, /*IsMissing*/ false);
   }
 
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
@@ -60,6 +60,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
     DepCollector.maybeAddDependency(Filename, /*FromModule=*/false,
                                     /*IsSystem=*/isSystem(FileType),
                                     /*IsModuleFile=*/false,
+                                    /*IsDirectModuleImport=*/false,
                                     /*IsMissing=*/false);
   }
 
@@ -73,6 +74,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                     /*FromModule*/ false,
                                     /*IsSystem*/ false,
                                     /*IsModuleFile*/ false,
+                                    /*IsDirectModuleImport*/ false,
                                     /*IsMissing*/ false);
   }
 
@@ -82,6 +84,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
         /*FromModule=*/false,
         /*IsSystem=*/false,
         /*IsModuleFile=*/false,
+        /*IsDirectModuleImport=*/false,
         /*IsMissing=*/true);
     // Return true to silence the file not found diagnostic.
     return true;
@@ -98,6 +101,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
       DepCollector.maybeAddDependency(FileName, /*FromModule*/ false,
                                       /*IsSystem*/ false,
                                       /*IsModuleFile*/ false,
+                                      /*IsDirectModuleImport*/ false,
                                       /*IsMissing*/ true);
     // Files that actually exist are handled by FileChanged.
   }
@@ -111,6 +115,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
     DepCollector.maybeAddDependency(Filename,
                                     /*FromModule=*/false, false,
                                     /*IsModuleFile=*/false,
+                                    /*IsDirectModuleImport=*/false,
                                     /*IsMissing=*/false);
   }
 
@@ -124,6 +129,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
     DepCollector.maybeAddDependency(Filename, /*FromModule=*/false,
                                     /*IsSystem=*/isSystem(FileType),
                                     /*IsModuleFile=*/false,
+                                    /*IsDirectModuleImport=*/false,
                                     /*IsMissing=*/false);
   }
 
@@ -142,6 +148,7 @@ struct DepCollectorMMCallbacks : public ModuleMapCallbacks {
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ false,
                                     /*IsSystem*/ IsSystem,
                                     /*IsModuleFile*/ false,
+                                    /*IsDirectModuleImport*/ false,
                                     /*IsMissing*/ false);
   }
 };
@@ -162,6 +169,7 @@ struct DFGMMCallback : public ModuleMapCallbacks {
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ false,
                                     /*IsSystem*/ IsSystem,
                                     /*IsModuleFile*/ false,
+                                    /*IsDirectModuleImport*/ false,
                                     /*IsMissing*/ false);
   }
 
@@ -172,6 +180,7 @@ struct DFGMMCallback : public ModuleMapCallbacks {
     DepCollector.maybeAddDependency(Entry.getName(), /*FromModule*/ false,
                                     /*IsSystem*/ IsSystem,
                                     /*IsModuleFile*/ false,
+                                    /*IsDirectModuleImport*/ false,
                                     /*IsMissing*/ false);
   }
 };
@@ -185,10 +194,11 @@ struct DepCollectorASTListener : public ASTReaderListener {
   bool needsSystemInputFileVisitation() override {
     return DepCollector.needSystemDependencies();
   }
-  void visitModuleFile(ModuleFileName Filename,
-                       serialization::ModuleKind Kind) override {
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override {
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ true,
                                     /*IsSystem*/ false, /*IsModuleFile*/ true,
+                                    /*IsDirectModuleImport*/ DirectlyImported,
                                     /*IsMissing*/ false);
   }
   bool visitInputFile(StringRef Filename, bool IsSystem,
@@ -203,6 +213,7 @@ struct DepCollectorASTListener : public ASTReaderListener {
 
     DepCollector.maybeAddDependency(Filename, /*FromModule*/ true, IsSystem,
                                     /*IsModuleFile*/ false,
+                                    /*IsDirectModuleImport*/ false,
                                     /*IsMissing*/ false);
     return true;
   }
@@ -212,8 +223,10 @@ struct DepCollectorASTListener : public ASTReaderListener {
 void DependencyCollector::maybeAddDependency(StringRef Filename,
                                              bool FromModule, bool IsSystem,
                                              bool IsModuleFile,
+                                             bool IsDirectModuleImport,
                                              bool IsMissing) {
-  if (sawDependency(Filename, FromModule, IsSystem, IsModuleFile, IsMissing))
+  if (sawDependency(Filename, FromModule, IsSystem, IsModuleFile,
+                    IsDirectModuleImport, IsMissing))
     addDependency(Filename);
 }
 
@@ -242,6 +255,7 @@ static bool isSpecialFilename(StringRef Filename) {
 
 bool DependencyCollector::sawDependency(StringRef Filename, bool FromModule,
                                         bool IsSystem, bool IsModuleFile,
+                                        bool IsDirectModuleImport,
                                         bool IsMissing) {
   return !isSpecialFilename(Filename) &&
          (needSystemDependencies() || !IsSystem);
@@ -265,7 +279,8 @@ DependencyFileGenerator::DependencyFileGenerator(
       Targets(Opts.Targets), IncludeSystemHeaders(Opts.IncludeSystemHeaders),
       PhonyTarget(Opts.UsePhonyTargets),
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps), SeenMissingHeader(false),
-      IncludeModuleFiles(Opts.IncludeModuleFiles),
+      IncludeModuleFiles(
+          static_cast<ModuleFileDepsKind>(Opts.IncludeModuleFiles)),
       SkipUnusedModuleMaps(Opts.SkipUnusedModuleMaps),
       OutputFormat(Opts.OutputFormat), InputFileIndex(0) {
   if (!OutputBackend)
@@ -290,6 +305,7 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
 
 bool DependencyFileGenerator::sawDependency(StringRef Filename, bool FromModule,
                                             bool IsSystem, bool IsModuleFile,
+                                            bool IsDirectModuleImport,
                                             bool IsMissing) {
   if (IsMissing) {
     // Handle the case of missing file from an inclusion directive.
@@ -298,8 +314,12 @@ bool DependencyFileGenerator::sawDependency(StringRef Filename, bool FromModule,
     SeenMissingHeader = true;
     return false;
   }
-  if (IsModuleFile && !IncludeModuleFiles)
-    return false;
+  if (IsModuleFile) {
+    if (IncludeModuleFiles == MFDK_None)
+      return false;
+    if (IncludeModuleFiles == MFDK_Direct && !IsDirectModuleImport)
+      return false;
+  }
 
   if (isSpecialFilename(Filename))
     return false;
