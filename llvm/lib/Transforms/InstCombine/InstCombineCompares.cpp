@@ -5802,7 +5802,7 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
 
 /// Match and fold patterns like:
 ///   icmp eq/ne X, min(max(X, Lo), Hi)
-/// which represents a range check and can be repsented as a ConstantRange.
+/// which represents a range check and can be represented as a ConstantRange.
 ///
 /// For icmp eq, build ConstantRange [Lo, Hi + 1) and convert to:
 ///   (X - Lo) u< (Hi + 1 - Lo)
@@ -7698,34 +7698,6 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
     }
   }
 
-  // icmp (shl nsw/nuw X, L), (add nsw/nuw (shl nsw/nuw Y, L), K)
-  //   -> icmp X, (add nsw/nuw Y, K >> L)
-  // We use AShr for nsw and LShr for nuw to safely peel off the shift.
-  Value *X;
-  uint64_t ShAmt;
-  if (match(Op0, m_NUWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
-      !CxtI.isSigned()) {
-    if (ShAmt >= X->getType()->getScalarSizeInBits())
-      return nullptr;
-    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
-                           ShiftSemantics::Unsigned, &CxtI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
-                                      ShiftSemantics::Unsigned);
-      return new ICmpInst(Pred, X, NewOp1);
-    }
-  }
-
-  if (match(Op0, m_NSWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
-      !CxtI.isUnsigned()) {
-    if (ShAmt >= X->getType()->getScalarSizeInBits())
-      return nullptr;
-    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
-                           ShiftSemantics::Signed, &CxtI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
-                                      ShiftSemantics::Signed);
-      return new ICmpInst(Pred, X, NewOp1);
-    }
-  }
   return nullptr;
 }
 
@@ -7813,13 +7785,34 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpWithZero(I))
     return Res;
 
+  Value *X;
+  const APInt *C;
+  if (I.getPredicate() == ICmpInst::ICMP_UGT &&
+      match(Op0, m_UMax(m_Value(X), m_APInt(C))) &&
+      match(Op1, m_Not(m_Specific(X)))) {
+    if (C->isNonNegative())
+      return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                          Constant::getNullValue(X->getType()));
+    return new ICmpInst(ICmpInst::ICMP_UGT, X,
+                        ConstantInt::get(X->getType(), ~*C));
+  }
+
+  if (I.getPredicate() == ICmpInst::ICMP_ULT &&
+      match(Op0, m_UMax(m_Value(X), m_APInt(C))) &&
+      match(Op1, m_Not(m_Specific(X)))) {
+    if (C->isNonNegative())
+      return new ICmpInst(ICmpInst::ICMP_SGT, X,
+                          Constant::getAllOnesValue(X->getType()));
+    return new ICmpInst(ICmpInst::ICMP_ULT, X,
+                        ConstantInt::get(X->getType(), ~*C));
+  }
+
   // FIXME: We only do this after checking for min/max to prevent infinite
   // looping caused by a reverse canonicalization of these patterns for min/max.
   // FIXME: The organization of folds is a mess. These would naturally go into
   // canonicalizeCmpWithConstant(), but we can't move all of the above folds
   // down here after the min/max restriction.
   ICmpInst::Predicate Pred = I.getPredicate();
-  const APInt *C;
   if (match(Op1, m_APInt(C))) {
     // For i32: x >u 2147483647 -> x <s 0  -> true if sign bit set
     if (Pred == ICmpInst::ICMP_UGT && C->isMaxSignedValue()) {
@@ -8808,6 +8801,14 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
       std::swap(LHS, RHS);
       Pred = I.getSwappedPredicate();
     }
+  }
+
+  if ((FloorX || CeilX) && FCmpInst::isCommutative(Pred) && LHS->hasOneUse()) {
+    // fcmp pred floor(x), x => fcmp pred trunc(x), x
+    // fcmp pred  ceil(x), x => fcmp pred trunc(x), x
+    // where pred is oeq, one, ord, ueq, une, uno.
+    Value *TruncX = IC.Builder.CreateUnaryIntrinsic(Intrinsic::trunc, RHS);
+    return new FCmpInst(Pred, TruncX, RHS, "", &I);
   }
 
   switch (Pred) {

@@ -2004,7 +2004,8 @@ bool AArch64ExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
+    if (MBBI->isPseudo())
+      Modified |= expandMI(MBB, MBBI, NMBBI);
     MBBI = NMBBI;
   }
 

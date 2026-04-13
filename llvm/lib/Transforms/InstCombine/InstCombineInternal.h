@@ -58,15 +58,6 @@ class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class User;
 
-/// Enum to specify how shift operations should be evaluated in
-/// canEvaluateShifted.
-/// Lossy: Allows lossy transformations
-/// Signed: Requires lossless transformation, using ashr to restore for shl,
-///         or represents ashr handling for right shifts
-/// Unsigned: Requires lossless transformation, using lshr to restore for shl,
-///           or represents lshr handling for right shifts
-enum class ShiftSemantics { Lossy, Signed, Unsigned };
-
 class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
     : public InstCombiner,
       public InstVisitor<InstCombinerImpl, Instruction *> {
@@ -157,7 +148,7 @@ public:
   Instruction *visitIntToPtr(IntToPtrInst &CI);
   Instruction *visitBitCast(BitCastInst &CI);
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
-  Instruction *foldItoFPtoI(CastInst &FI);
+  template <typename FPToIntTy> Instruction *foldItoFPtoI(FPToIntTy &FI);
   Instruction *visitSelectInst(SelectInst &SI);
   Instruction *foldShuffledIntrinsicOperands(IntrinsicInst *II);
   Value *foldReversedIntrinsicOperands(IntrinsicInst *II);
@@ -440,11 +431,6 @@ private:
   Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D,
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
-
-  bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
-                          ShiftSemantics Semantics, Instruction *CxtI);
-  Value *getShiftedValue(Value *V, unsigned NumBits, bool IsLeftShift,
-                         ShiftSemantics Semantics);
 
   Instruction *foldLShrOverflowBit(BinaryOperator &I);
   Instruction *foldExtractOfOverflowIntrinsic(ExtractValueInst &EV);

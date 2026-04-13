@@ -624,9 +624,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     if (Op->getOpcode() == Instruction::BitCast ||
         Op->getOpcode() == Instruction::AddrSpaceCast) {
       Value *NewV = Op->getOperand(0);
-      // Don't look through casts between address spaces with differing index
-      // widths.
-      if (DL.getIndexTypeSizeInBits(NewV->getType()) != IndexSize) {
+      auto *NewVTy = NewV->getType();
+      // Don't look through casts to non-scalar-pointer types or address spaces
+      // with differing index widths.
+      if (!isa<PointerType>(NewVTy) ||
+          DL.getIndexTypeSizeInBits(NewVTy) != IndexSize) {
         Decomposed.Base = V;
         return Decomposed;
       }

@@ -26,7 +26,7 @@ define void @foo_trip_count_8(ptr nocapture %A) {
 entry:
   br label %for.body
 
-for.body:                                       ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %1 = load i32, ptr %0, align 4
@@ -37,7 +37,7 @@ for.body:                                       ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 8
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                       ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -68,7 +68,7 @@ define void @foo_trip_count_16(ptr nocapture %A) {
 entry:
   br label %for.body
 
-for.body:                                       ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %1 = load i32, ptr %0, align 4
@@ -79,7 +79,7 @@ for.body:                                       ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 16
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                       ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -110,7 +110,7 @@ define void @foo_trip_count_17(ptr nocapture %A) {
 entry:
   br label %for.body
 
-for.body:                                       ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %1 = load i32, ptr %0, align 4
@@ -121,7 +121,7 @@ for.body:                                       ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 17
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                       ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -148,7 +148,7 @@ define void @foo_trip_count_24(ptr nocapture %A) {
 entry:
   br label %for.body
 
-for.body:                                       ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %1 = load i32, ptr %0, align 4
@@ -159,7 +159,7 @@ for.body:                                       ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 24
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                       ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -186,7 +186,7 @@ define void @foo_trip_count_25(ptr nocapture %A) {
 entry:
   br label %for.body
 
-for.body:                                       ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %1 = load i32, ptr %0, align 4
@@ -197,7 +197,7 @@ for.body:                                       ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 25
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                       ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -228,7 +228,7 @@ define void @foo_trip_count_33(ptr nocapture %A) {
 entry:
   br label %for.body
 
-for.body:                                       ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %1 = load i32, ptr %0, align 4
@@ -239,7 +239,7 @@ for.body:                                       ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 33
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                       ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -271,7 +271,7 @@ define void @foo_trip_count_101(ptr nocapture %A) {
 entry:
   br label %for.body
 
-for.body:                                       ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %1 = load i32, ptr %0, align 4
@@ -282,7 +282,7 @@ for.body:                                       ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 101
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                       ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -304,7 +304,7 @@ define void @bar(ptr nocapture %A, i32 %n) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %3 = load i32, ptr %2, align 4
@@ -315,7 +315,7 @@ define void @bar(ptr nocapture %A, i32 %n) {
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }
 

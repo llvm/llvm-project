@@ -3,12 +3,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#ifdef KERNEL_USE
+#if defined(KERNEL_USE)
 extern "C" void ubsan_message(const char *msg);
 static void message(const char *msg) { ubsan_message(msg); }
+#elif defined(SANITIZER_AMDGPU) || defined(SANITIZER_NVPTX)
+#include <stdio.h>
+static void message(const char *msg) { fprintf(stderr, "%s", msg); }
 #else
+#include <unistd.h>
 static void message(const char *msg) { (void)write(2, msg, strlen(msg)); }
 #endif
 
