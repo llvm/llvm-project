@@ -2050,12 +2050,15 @@ combiner {
 
 func.func @scan_test_2(%lb: i32, %ub: i32, %step: i32) {
   %test1f32 = "test.f32"() : () -> (!llvm.ptr)
-  omp.taskloop reduction(mod:inscan, @add_f32 %test1f32 -> %arg1 : !llvm.ptr) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+  omp.taskloop.context {
+    omp.taskloop reduction(mod:inscan, @add_f32 %test1f32 -> %arg1 : !llvm.ptr) {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
   // expected-error @below {{SCAN directive needs to be enclosed within a parent worksharing loop construct or SIMD construct with INSCAN reduction modifier}}
-       omp.scan inclusive(%test1f32 : !llvm.ptr)
-        omp.yield
+         omp.scan inclusive(%test1f32 : !llvm.ptr)
+          omp.yield
+      }
     }
+    omp.terminator
   }
   return
 }
@@ -2064,12 +2067,15 @@ func.func @scan_test_2(%lb: i32, %ub: i32, %step: i32) {
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testmemref = "test.memref"() : () -> (memref<i32>)
-  // expected-error @below {{expected equal sizes for allocate and allocator variables}}
-  "omp.taskloop"(%testmemref) ({
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+  omp.taskloop.context {
+    // expected-error @below {{expected equal sizes for allocate and allocator variables}}
+    "omp.taskloop"(%testmemref) ({
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    omp.terminator
+  }
   return
 }
 
@@ -2078,13 +2084,16 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
-  // expected-error @below {{expected as many reduction symbol references as reduction variables}}
-  "omp.taskloop"(%testf32, %testf32_2) ({
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>, reduction_syms = [@add_f32]} : (!llvm.ptr, !llvm.ptr) -> ()
+  omp.taskloop.context {
+    // expected-error @below {{expected as many reduction symbol references as reduction variables}}
+    "omp.taskloop"(%testf32, %testf32_2) ({
+    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>, reduction_syms = [@add_f32]} : (!llvm.ptr, !llvm.ptr) -> ()
+    omp.terminator
+  }
   return
 }
 
@@ -2092,13 +2101,16 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
-  // expected-error @below {{expected as many reduction symbol references as reduction variables}}
-  "omp.taskloop"(%testf32) ({
-  ^bb0(%arg0: !llvm.ptr):
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>, reduction_syms = [@add_f32, @add_f32]} : (!llvm.ptr) -> ()
+  omp.taskloop.context {
+    // expected-error @below {{expected as many reduction symbol references as reduction variables}}
+    "omp.taskloop"(%testf32) ({
+    ^bb0(%arg0: !llvm.ptr):
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>, reduction_syms = [@add_f32, @add_f32]} : (!llvm.ptr) -> ()
+    omp.terminator
+  }
   return
 }
 
@@ -2107,13 +2119,16 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
-  // expected-error @below {{expected as many reduction symbol references as reduction variables}}
-  "omp.taskloop"(%testf32, %testf32_2) ({
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }) {in_reduction_syms = [@add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>} : (!llvm.ptr, !llvm.ptr) -> ()
+  omp.taskloop.context {
+    // expected-error @below {{expected as many reduction symbol references as reduction variables}}
+    "omp.taskloop"(%testf32, %testf32_2) ({
+    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }) {in_reduction_syms = [@add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>} : (!llvm.ptr, !llvm.ptr) -> ()
+    omp.terminator
+  }
   return
 }
 
@@ -2121,13 +2136,16 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
-  // expected-error @below {{expected as many reduction symbol references as reduction variables}}
-  "omp.taskloop"(%testf32) ({
-  ^bb0(%arg0: !llvm.ptr):
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }) {in_reduction_syms = [@add_f32, @add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>} : (!llvm.ptr) -> ()
+  omp.taskloop.context {
+    // expected-error @below {{expected as many reduction symbol references as reduction variables}}
+    "omp.taskloop"(%testf32) ({
+    ^bb0(%arg0: !llvm.ptr):
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }) {in_reduction_syms = [@add_f32, @add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>} : (!llvm.ptr) -> ()
+    omp.terminator
+  }
   return
 }
 
@@ -2148,98 +2166,119 @@ combiner {
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
-  // expected-error @below {{if a reduction clause is present on the taskloop directive, the nogroup clause must not be specified}}
-  omp.taskloop nogroup reduction(@add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }
-  return
-}
-
-// -----
-
-omp.declare_reduction @add_f32 : f32
-init {
-^bb0(%arg: f32):
-  %0 = arith.constant 0.0 : f32
-  omp.yield (%0 : f32)
-}
-combiner {
-^bb1(%arg0: f32, %arg1: f32):
-  %1 = arith.addf %arg0, %arg1 : f32
-  omp.yield (%1 : f32)
-}
-
-func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testf32 = "test.f32"() : () -> (!llvm.ptr)
-  // expected-error @below {{the same list item cannot appear in both a reduction and an in_reduction clause}}
-  omp.taskloop in_reduction(@add_f32 %testf32 -> %arg0 : !llvm.ptr) reduction(@add_f32 %testf32 -> %arg1 : !llvm.ptr) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }
-  return
-}
-
-// -----
-
-func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testi64 = "test.i64"() : () -> (i64)
-  // expected-error @below {{the grainsize clause and num_tasks clause are mutually exclusive and may not appear on the same taskloop directive}}
-  omp.taskloop grainsize(%testi64: i64) num_tasks(%testi64: i64) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }
-  return
-}
-
-// -----
-
-func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testi64 = "test.i64"() : () -> (i64)
-  // expected-error @below {{invalid grainsize modifier : 'strict1'}}
-  omp.taskloop grainsize(strict1, %testi64: i64) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }
-  return
-}
-// -----
-
-func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  %testi64 = "test.i64"() : () -> (i64)
-  // expected-error @below {{invalid num_tasks modifier : 'default'}}
-  omp.taskloop num_tasks(default, %testi64: i64) {
-    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-      omp.yield
-    }
-  }
-  return
-}
-// -----
-
-func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  // expected-error @below {{op nested in loop wrapper is not another loop wrapper or `omp.loop_nest`}}
-  omp.taskloop {
-    %0 = arith.constant 0 : i32
-  }
-  return
-}
-
-// -----
-
-func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
-  // expected-error @below {{only supported nested wrapper is 'omp.simd'}}
-  omp.taskloop {
-    omp.distribute {
-      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+  omp.taskloop.context {
+    // expected-error @below {{if a reduction clause is present on the taskloop directive, the nogroup clause must not be specified}}
+    omp.taskloop nogroup reduction(@add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
         omp.yield
       }
     }
-  } {omp.composite}
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  %testf32 = "test.f32"() : () -> (!llvm.ptr)
+  omp.taskloop.context {
+    // expected-error @below {{the same list item cannot appear in both a reduction and an in_reduction clause}}
+    omp.taskloop in_reduction(@add_f32 %testf32 -> %arg0 : !llvm.ptr) reduction(@add_f32 %testf32 -> %arg1 : !llvm.ptr) {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  %testi64 = "test.i64"() : () -> (i64)
+  omp.taskloop.context {
+    // expected-error @below {{the grainsize clause and num_tasks clause are mutually exclusive and may not appear on the same taskloop directive}}
+    omp.taskloop grainsize(%testi64: i64) num_tasks(%testi64: i64) {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  %testi64 = "test.i64"() : () -> (i64)
+  omp.taskloop.context {
+    // expected-error @below {{invalid grainsize modifier : 'strict1'}}
+    omp.taskloop grainsize(strict1, %testi64: i64) {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  %testi64 = "test.i64"() : () -> (i64)
+  omp.taskloop.context {
+    // expected-error @below {{invalid num_tasks modifier : 'default'}}
+    omp.taskloop num_tasks(default, %testi64: i64) {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  omp.taskloop.context {
+    // expected-error @below {{op nested in loop wrapper is not another loop wrapper or `omp.loop_nest`}}
+    omp.taskloop {
+      %0 = arith.constant 0 : i32
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  omp.taskloop.context {
+    // expected-error @below {{only supported nested wrapper is 'omp.simd'}}
+    omp.taskloop {
+      omp.distribute {
+        omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+      }
+    } {omp.composite}
+    omp.terminator
+  }
   return
 }
 
@@ -2539,11 +2578,11 @@ func.func @omp_distribute_nested_wrapper(%lb: index, %ub: index, %step: index) -
 func.func @omp_distribute_nested_wrapper2(%lb: index, %ub: index, %step: index) -> () {
   // expected-error @below {{only supported nested wrappers are 'omp.simd' and 'omp.wsloop'}}
   omp.distribute {
-    "omp.taskloop"() ({
+    omp.distribute {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         "omp.yield"() : () -> ()
       }
-    }) : () -> ()
+    }
   } {omp.composite}
 }
 
@@ -2930,26 +2969,69 @@ func.func @omp_distribute_invalid_composite(%lb: index, %ub: index, %step: index
 }
 
 // -----
-func.func @omp_taskloop_missing_composite(%lb: index, %ub: index, %step: index) -> () {
-  // expected-error @below {{'omp.composite' attribute missing from composite wrapper}}
+func.func @omp_taskloop_missing_loop() -> () {
+  // expected-error @below {{'omp.taskloop.context' op expected exactly 1 TaskloopOp directly nested in the region, but 0 were found}}
+  omp.taskloop.context {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @omp_taskloop_missing_context(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.taskloop' op expected to be nested in a taskloop context op}}
   omp.taskloop {
-    omp.simd {
+    omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
+      omp.yield
+    }
+  }
+  return
+}
+
+// -----
+func.func @omp_taskloop_shared_context(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{'omp.taskloop.context' op expected exactly 1 TaskloopOp directly nested in the region, but 2 were found}}
+  omp.taskloop.context {
+    omp.taskloop {
       omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
         omp.yield
       }
-    } {omp.composite}
+    }
+    omp.taskloop {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @omp_taskloop_missing_composite(%lb: index, %ub: index, %step: index) -> () {
+  omp.taskloop.context {
+    // expected-error @below {{'omp.composite' attribute missing from composite wrapper}}
+    omp.taskloop {
+      omp.simd {
+        omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
+          omp.yield
+        }
+      } {omp.composite}
+    }
   }
   return
 }
 
 // -----
 func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) -> () {
-  // expected-error @below {{'omp.composite' attribute present in non-composite wrapper}}
-  omp.taskloop {
-    omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
-      omp.yield
-    }
-  } {omp.composite}
+  omp.taskloop.context {
+    // expected-error @below {{'omp.composite' attribute present in non-composite wrapper}}
+    omp.taskloop {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
+        omp.yield
+      }
+    } {omp.composite}
+  }
   return
 }
 
