@@ -279,7 +279,7 @@ struct constant_wrapper : __cw_operators {
 private:
   template <class... _Args>
     requires(__constexpr_param<remove_cvref_t<_Args>> && ...)
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __call(_Args&&... __args) noexcept
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __call(_Args&&...) noexcept
       -> constant_wrapper<std::invoke(value, remove_cvref_t<_Args>::value...)> {
     return {};
   }
@@ -293,7 +293,7 @@ private:
 
   template <class... _Args>
     requires(__constexpr_param<remove_cvref_t<_Args>> && ...)
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __subscript(_Args&&... __args) noexcept
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __subscript(_Args&&...) noexcept
       -> constant_wrapper<value[remove_cvref_t<_Args>::value...]> {
     return {};
   }
