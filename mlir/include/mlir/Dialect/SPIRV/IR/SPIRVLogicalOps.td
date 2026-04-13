@@ -27,7 +27,7 @@ class SPIRV_LogicalBinaryOp<string mnemonic, Type operandsType,
                      TypesMatchWith<"type of result to correspond to the `i1` "
                                     "equivalent of the operand",
                                     "operand1", "result",
-                                    "getUnaryOpResultType($_self)"
+                                    "getMatchingBoolType($_self)"
                      >])> {
   let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
 }
@@ -41,7 +41,7 @@ class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
                      TypesMatchWith<"type of result to correspond to the `i1` "
                                     "equivalent of the operand",
                                     "operand", "result",
-                                    "getUnaryOpResultType($_self)"
+                                    "getMatchingBoolType($_self)"
                      >])> {
   let assemblyFormat = "$operand `:` type($operand) attr-dict";
 }
