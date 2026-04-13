@@ -485,6 +485,8 @@ private:
   }
   const ThreadsafeFS &TFS;
 
+  void adjustParseInputs(ParseInputs &Inputs, PathRef File) const;
+
   Path ResourceDir;
   // The index used to look up symbols. This could be:
   //   - null (all index functionality is optional)

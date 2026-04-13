@@ -301,7 +301,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   std::string ActualVersion = DraftMgr.addDraft(File, Version, Contents);
   ParseOptions Opts;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
-  Opts.SkipPreambleBuild = SkipPreambleBuild;
   Opts.ImportInsertions = ImportInsertions;
 
   // Compile command is set asynchronously during update, as it can be slow.
@@ -315,6 +314,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.FeatureModules = FeatureModules;
   Inputs.ModulesManager = ModulesManager;
+  adjustParseInputs(Inputs, File);
   bool NewFile = WorkScheduler->update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
@@ -461,7 +461,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
         Config::current().Completion.HeaderInsertion;
     CodeCompleteOpts.CodePatterns = Config::current().Completion.CodePatterns;
     CodeCompleteOpts.MacroFilter = Config::current().Completion.MacroFilter;
-    ParseInput.Opts.SkipPreambleBuild = SkipPreambleBuild;
+    adjustParseInputs(ParseInput, File);
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(
@@ -1192,5 +1192,16 @@ void ClangdServer::profile(MemoryTree &MT) const {
     BackgroundIdx->profile(MT.child("background_index"));
   WorkScheduler->profile(MT.child("tuscheduler"));
 }
+
+void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
+  // FIXME: Don't perform optimization when the TU requires C++20
+  // named modules. Mixing PCH and modules may cause different issues (incorrect
+  // diagnostics, crashes) due to instability of such scenario support in the
+  // clang.
+  Inputs.Opts.SkipPreambleBuild =
+      SkipPreambleBuild ||
+      (ModulesManager && ModulesManager->hasRequiredModules(File));
+}
+
 } // namespace clangd
 } // namespace clang
