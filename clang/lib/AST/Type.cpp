@@ -101,6 +101,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
          (A == LangAS::Default && B == LangAS::hlsl_device) ||
          (A == LangAS::Default && B == LangAS::hlsl_input) ||
+         (A == LangAS::Default && B == LangAS::hlsl_output) ||
          (A == LangAS::Default && B == LangAS::hlsl_push_constant) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
@@ -2584,6 +2585,8 @@ bool Type::isSizelessBuiltinType() const {
       // HLSL intangible types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+      // AMDGPU feature predicate type
+    case BuiltinType::AMDGPUFeaturePredicate:
       return true;
     default:
       return false;

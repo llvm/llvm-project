@@ -722,7 +722,7 @@ private:
       const auto N = MergedLines + LinesToBeMerged;
       // Check if there is even a line after the inner result.
       if (auto Distance = std::distance(I, E);
-          static_cast<decltype(N)>(Distance) <= N) {
+          static_cast<std::remove_const_t<decltype(N)>>(Distance) <= N) {
         return 0;
       }
       // Check that the line after the inner result starts with a closing brace
@@ -988,8 +988,10 @@ private:
         if (I[1]->Last->is(TT_LineComment))
           return 0;
         do {
-          if (Tok->is(tok::l_brace) && Tok->isNot(BK_BracedInit))
+          if (Tok->isOneOf(tok::l_brace, tok::r_brace) &&
+              Tok->isNot(BK_BracedInit)) {
             return 0;
+          }
           Tok = Tok->Next;
         } while (Tok);
 
@@ -1242,7 +1244,7 @@ protected:
     if (!DryRun) {
       Whitespaces->replaceWhitespace(
           *Child->First, /*Newlines=*/0, /*Spaces=*/1,
-          /*StartOfTokenColumn=*/State.Column, /*IsAligned=*/false,
+          /*StartOfTokenColumn=*/State.Column, /*AlignedTo=*/nullptr,
           State.Line->InPPDirective);
     }
     Penalty +=
@@ -1769,7 +1771,7 @@ void UnwrappedLineFormatter::formatFirstToken(
   }
 
   Whitespaces->replaceWhitespace(RootToken, RootToken.Newlines, Indent, Indent,
-                                 /*IsAligned=*/false,
+                                 /*AlignedTo=*/nullptr,
                                  Line.InPPDirective &&
                                      !RootToken.HasUnescapedNewline);
 }

@@ -1639,18 +1639,29 @@ the Clang Static Analyzer makes sure that allocating functions annotated with
 ``malloc`` are treated like they used the standard ``malloc()``, and can be
 safely deallocated with the standard ``free()``.
 
-* Use ``ownership_returns`` to mark a function as an allocating function. Takes
-  1 parameter to denote the allocation type.
+* Use ``ownership_returns`` to mark a function as an allocating function.
+  It takes 1 or 2 arguments.
+  The first argument is a user-provided identifier representing the "kind" of the allocation.
+  This is basically what is enforced when checking the deallocation. This is mandatory.
+  The second argument is optional.
+  It represents the index of the parameter that represents the allocation size in bytes (counting from 1).
+  The referenced parameter must have some integral type.
+  This attribute may appear at most once per declaration.
+  If this argument is not set, then tooling, such as the Clang Static Analyzer,
+  won't be able to reason about the size of the allocation, thus check potential out-of-bounds accesses.
+  However, such tooling could still warn if the wrong deallocation function
+  was used for the ``ownership_returns`` attributed resource.
+  If forward declarations have this attribute, those must have the same arguments.
 * Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
-  parameters: the allocation type, and the index of the parameter that is being
+  arguments: the allocation type, and the index of the parameter that is being
   deallocated (counting from 1).
 * Use ``ownership_holds`` to mark that a function takes over the ownership of a
   piece of memory and will free it at some unspecified point in the future. Like
-  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  ``ownership_takes``, this takes 2 arguments: the allocation type, and the
   index of the parameter whose ownership will be taken over (counting from 1).
 
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
-leak reports (concerning the specified argument); the difference between them
+leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
 is assumed to be legitimate.
 
@@ -1660,12 +1671,15 @@ Example:
 
   // Denotes that my_malloc will return with a dynamically allocated piece of
   // memory using malloc().
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
 
-  // Denotes that my_free will deallocate its parameter using free().
+  // 'sz' (parameter 1) is the allocation size.
+  void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
+
+  // Denotes that my_free will deallocate its argument using free().
   void __attribute((ownership_takes(malloc, 1))) my_free(void *);
 
-  // Denotes that my_hold will take over the ownership of its parameter that was
+  // Denotes that my_hold will take over the ownership of its argument that was
   // allocated via malloc().
   void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
 
@@ -8579,6 +8593,18 @@ pointing to precise locations of the call site in the source.
       dontcall(); // No Warning
     sizeof(dontcall()); // No Warning
   }
+
+When the call occurs through inlined functions, the
+``-fdiagnostics-show-inlining-chain`` option can be used to show the
+inlining chain that led to the call. This helps identify which call site
+triggered the diagnostic when the attributed function is called from
+multiple locations through inline functions.
+
+When enabled, this option automatically uses debug info for accurate source
+locations if available (``-gline-directives-only`` (implicitly enabled at
+``-g1``) or higher), or falls back to a heuristic based on metadata tracking.
+When falling back, a note is emitted suggesting ``-gline-directives-only`` for
+more accurate locations.
   }];
 }
 
@@ -8972,6 +8998,29 @@ like follows:
 
 This variable will be lowered into a module-level variable, with the `Input`
 storage class, and the `BuiltIn 26` decoration.
+
+The full documentation for this inline SPIR-V attribute can be found here:
+https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
+  }];
+}
+
+def HLSLVkExtBuiltinOutputDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `Output` builtins. Those variables are externally
+visible to the driver/pipeline, but each copy is private to the current
+lane.
+
+Those builtins can be declared using the `[[vk::ext_builtin_output]]`
+attribute like follows:
+
+.. code-block:: c++
+
+  [[vk::ext_builtin_output(/* Position */ 0)]]
+  static float4 position;
+
+This variable will be lowered into a module-level variable, with the `Output`
+storage class, and the `BuiltIn 0` decoration.
 
 The full documentation for this inline SPIR-V attribute can be found here:
 https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md

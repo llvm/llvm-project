@@ -2380,6 +2380,47 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
                               newMap.getNumDims(), newMap.getNumSymbols());
     }
   }
+
+  // Internal constraint variables (dimOp, dimOpBound, resultDimStart, etc.)
+  // have no associated SSA values (null Value()). Replace their corresponding
+  // dim/symbol positions in newMap with constant 0 and compact newOperands.
+  // These positions should be unreferenced in newMap (the bound was computed
+  // in terms of the original operands only), so replacing with 0 is safe.
+  // This prevents canonicalizeMapAndOperands from using null Values as
+  // DenseMap keys, which would cause undefined behavior.
+  {
+    unsigned numDims = newMap.getNumDims();
+    unsigned numSyms = newMap.getNumSymbols();
+    SmallVector<AffineExpr> dimReplacements(numDims), symReplacements(numSyms);
+    SmallVector<Value> filteredOperands;
+    filteredOperands.reserve(newOperands.size());
+    unsigned newDim = 0;
+    for (unsigned i = 0; i < numDims; ++i) {
+      if (newOperands[i]) {
+        dimReplacements[i] = getAffineDimExpr(newDim++, ctx);
+        filteredOperands.push_back(newOperands[i]);
+      } else {
+        assert(!newMap.isFunctionOfDim(i) &&
+               "null-valued dim operand referenced in bound map");
+        dimReplacements[i] = getAffineConstantExpr(0, ctx);
+      }
+    }
+    unsigned newSym = 0;
+    for (unsigned i = 0; i < numSyms; ++i) {
+      if (newOperands[numDims + i]) {
+        symReplacements[i] = getAffineSymbolExpr(newSym++, ctx);
+        filteredOperands.push_back(newOperands[numDims + i]);
+      } else {
+        assert(!newMap.isFunctionOfSymbol(i) &&
+               "null-valued symbol operand referenced in bound map");
+        symReplacements[i] = getAffineConstantExpr(0, ctx);
+      }
+    }
+    newMap = newMap.replaceDimsAndSymbols(dimReplacements, symReplacements,
+                                          newDim, newSym);
+    newOperands = std::move(filteredOperands);
+  }
+
   affine::canonicalizeMapAndOperands(&newMap, &newOperands);
   return AffineValueMap(newMap, newOperands);
 }

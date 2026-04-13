@@ -863,6 +863,73 @@ define <2 x i32> @test_non_const_splat_i32(i32 %elt) {
   ret <2 x i32> %splat
 }
 
+; Test add(vec, splat(scalar)) pattern
+define <8 x i8> @test_padd_bs_splat_lhs(<8 x i8> %a, i8 %b) {
+; CHECK-LABEL: test_padd_bs_splat_lhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.bs a0, a0, a1
+; CHECK-NEXT:    ret
+  %insert = insertelement <8 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <8 x i8> %insert, <8 x i8> poison, <8 x i32> zeroinitializer
+  %res = add <8 x i8> %splat, %a
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_padd_bs_splat_rhs(<8 x i8> %a, i8 %b) {
+; CHECK-LABEL: test_padd_bs_splat_rhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.bs a0, a0, a1
+; CHECK-NEXT:    ret
+  %insert = insertelement <8 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <8 x i8> %insert, <8 x i8> poison, <8 x i32> zeroinitializer
+  %res = add <8 x i8> %a, %splat
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_padd_hs_splat_lhs(<4 x i16> %a, i16 %b) {
+; CHECK-LABEL: test_padd_hs_splat_lhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %insert = insertelement <4 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
+  %res = add <4 x i16> %splat, %a
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_padd_hs_splat_rhs(<4 x i16> %a, i16 %b) {
+; CHECK-LABEL: test_padd_hs_splat_rhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %insert = insertelement <4 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
+  %res = add <4 x i16> %a, %splat
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_padd_ws_splat_lhs(<2 x i32> %a, i32 %b) {
+; CHECK-LABEL: test_padd_ws_splat_lhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.ws a0, a0, a1
+; CHECK-NEXT:    ret
+  %insert = insertelement <2 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
+  %res = add <2 x i32> %splat, %a
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_padd_ws_splat_rhs(<2 x i32> %a, i32 %b) {
+; CHECK-LABEL: test_padd_ws_splat_rhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.ws a0, a0, a1
+; CHECK-NEXT:    ret
+  %insert = insertelement <2 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
+  %res = add <2 x i32> %a, %splat
+  ret <2 x i32> %res
+}
+
 define <8 x i8> @test_build_vector_i8(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %h) {
 ; CHECK-LABEL: test_build_vector_i8:
 ; CHECK:       # %bb.0:
@@ -2440,10 +2507,10 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB196_2
+; CHECK-NEXT:    bnez a3, .LBB202_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB196_2:
+; CHECK-NEXT:  .LBB202_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i16> %a, <4 x i16> %b
   ret <4 x i16> %res
@@ -2454,10 +2521,10 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB197_2
+; CHECK-NEXT:    bnez a3, .LBB203_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB197_2:
+; CHECK-NEXT:  .LBB203_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <8 x i8> %a, <8 x i8> %b
   ret <8 x i8> %res
@@ -2468,10 +2535,10 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB198_2
+; CHECK-NEXT:    bnez a3, .LBB204_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB198_2:
+; CHECK-NEXT:  .LBB204_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i32> %a, <2 x i32> %b
   ret <2 x i32> %res

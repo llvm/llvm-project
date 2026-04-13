@@ -190,6 +190,36 @@ llvm.func @target_in_reduction(%x : !llvm.ptr) {
 
 // -----
 
+llvm.func @task_depend_iterator_modifier(%lb : i64, %ub : i64, %step : i64,
+                                 %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause depend with iterator modifier in omp.task operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_depend_iterator_modifier(%lb : i64, %ub : i64, %step : i64,
+                                   %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause depend with iterator modifier in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @target_enter_data_depend(%x: !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause depend in omp.target_enter_data operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_enter_data}}
@@ -301,12 +331,15 @@ llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
 // -----
 
 llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskloop.context operation}}
+  omp.taskloop.context allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -323,12 +356,15 @@ llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) 
   }
 
 llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop in_reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.taskloop.context operation}}
+  omp.taskloop.context in_reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -345,12 +381,15 @@ llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.pt
   }
 
 llvm.func @taskloop_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop.context operation}}
+  omp.taskloop.context reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }

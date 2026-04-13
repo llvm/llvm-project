@@ -9,15 +9,16 @@ target triple = "aarch64-apple-ios"
 define void @multiply_can_hoist_cast(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_can_hoist_cast(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 32
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -65,6 +66,7 @@ define void @multiply_can_hoist_cast(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[C]], i64 24
 ; CHECK-NEXT:    store <1 x double> [[TMP25]], ptr [[TMP26]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -78,16 +80,17 @@ entry:
 define void @multiply_can_hoist_multiple_insts(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_can_hoist_multiple_insts(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 64
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr i8, ptr [[C]], i64 96
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[GEP]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -135,6 +138,7 @@ define void @multiply_can_hoist_multiple_insts(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[C]], i64 88
 ; CHECK-NEXT:    store <1 x double> [[TMP25]], ptr [[TMP26]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -150,16 +154,17 @@ entry:
 define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_can_hoist_multiple_insts2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 1344
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr i8, ptr [[C]], i64 1376
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[GEP_1]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(32) [[B]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -207,6 +212,7 @@ define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) 
 ; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[C]], i64 1368
 ; CHECK-NEXT:    store <1 x double> [[TMP25]], ptr [[TMP26]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

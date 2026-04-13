@@ -1689,6 +1689,19 @@ SDValue X86TargetLowering::LowerFormalArguments(
   bool Is64Bit = Subtarget.is64Bit();
   bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
 
+  // On x86_64 with x87 disabled, x86_fp80 cannot be handled: the type would
+  // need to be returned/passed in x87 registers (FP0/FP1) which are
+  // unavailable. Emit a clear diagnostic instead of crashing later with
+  // "Cannot select: build_pair".
+  if (Is64Bit && !Subtarget.hasX87()) {
+    if (F.getReturnType()->isX86_FP80Ty() ||
+        any_of(F.args(), [](const Argument &Arg) {
+          return Arg.getType()->isX86_FP80Ty();
+        }))
+      reportFatalUsageError(
+          "cannot use x86_fp80 type with x87 disabled on x86_64 target");
+  }
+
   assert(
       !(IsVarArg && canGuaranteeTCO(CallConv)) &&
       "Var args not supported with calling conv' regcall, fastcc, ghc or hipe");
@@ -2224,6 +2237,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         SDValue CopyChain =
             CreateCopyOfByValArgument(Src, Temp, Chain, Flags, DAG, dl);
         ByValCopyChains.push_back(CopyChain);
+        ByValTemporaries[ArgIdx] = Temp;
       }
     }
     if (!ByValCopyChains.empty())

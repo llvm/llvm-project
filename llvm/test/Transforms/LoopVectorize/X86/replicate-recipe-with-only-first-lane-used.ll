@@ -43,7 +43,7 @@ entry:
   %c = icmp eq i32 %x, 10
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 true, label %loop.latch, label %else
 
@@ -160,7 +160,7 @@ entry:
   %c = icmp eq i32 %x, 10
   br label %loop.header
 
-loop.header:                                         ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   br i1 %c, label %loop.latch, label %else
 
@@ -266,4 +266,3 @@ exit:
   ret float %pow
 }
 
-declare float @llvm.pow.f32(float, float)

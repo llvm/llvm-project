@@ -159,22 +159,31 @@ LIBC_INLINE double atan_eval_no_table(double num, double den,
   return fputil::multiply_add(q3, d, q);
 }
 
-// > Q = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20|],
+// > Q = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24|],
 //                 [|1, D...|], [0, 0.5]);
-LIBC_INLINE_VAR constexpr double ASIN_COEFFS[10] = {
-    0x1.5555555540fa1p-3, 0x1.333333512edc2p-4, 0x1.6db6cc1541b31p-5,
-    0x1.f1caff324770ep-6, 0x1.6e43899f5f4f4p-6, 0x1.1f847cf652577p-6,
-    0x1.9b60f47f87146p-7, 0x1.259e2634c494fp-6, -0x1.df946fa875ddp-8,
-    0x1.02311ecf99c28p-5};
+// > dirtyinfnorm((asin(x) - x*Q)/asin(x), [0, 0.5]);
+// 0x1.1ff...p-56
+LIBC_INLINE_VAR constexpr double ASIN_COEFFS[12] = {
+    0x1.555555555538p-3,  0x1.333333336fd5bp-4,  0x1.6db6db41ce4bcp-5,
+    0x1.f1c72c66896dep-6, 0x1.6e89f0a0ac64bp-6,  0x1.1c6c111de4074p-6,
+    0x1.c6fa84b5699acp-7, 0x1.8ed60a3e6dd19p-7,  0x1.ab3a090750049p-8,
+    0x1.405213cd1ef46p-6, -0x1.0a5a381f73f65p-6, 0x1.05985a32a9045p-5,
+};
 
 // Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x
-LIBC_INLINE double asin_eval(double xsq) {
+LIBC_INLINE LIBC_CONSTEXPR double asin_eval(double xsq) {
   double x4 = xsq * xsq;
-  double r1 = fputil::polyeval(x4, ASIN_COEFFS[0], ASIN_COEFFS[2],
-                               ASIN_COEFFS[4], ASIN_COEFFS[6], ASIN_COEFFS[8]);
-  double r2 = fputil::polyeval(x4, ASIN_COEFFS[1], ASIN_COEFFS[3],
-                               ASIN_COEFFS[5], ASIN_COEFFS[7], ASIN_COEFFS[9]);
-  return fputil::multiply_add(xsq, r2, r1);
+  double c0 = fputil::multiply_add(xsq, ASIN_COEFFS[1], ASIN_COEFFS[0]);
+  double c1 = fputil::multiply_add(xsq, ASIN_COEFFS[3], ASIN_COEFFS[2]);
+  double c2 = fputil::multiply_add(xsq, ASIN_COEFFS[5], ASIN_COEFFS[4]);
+  double c3 = fputil::multiply_add(xsq, ASIN_COEFFS[7], ASIN_COEFFS[6]);
+  double c4 = fputil::multiply_add(xsq, ASIN_COEFFS[9], ASIN_COEFFS[8]);
+  double c5 = fputil::multiply_add(xsq, ASIN_COEFFS[11], ASIN_COEFFS[10]);
+  double x8 = x4 * x4;
+  double d0 = fputil::multiply_add(x4, c1, c0);
+  double d1 = fputil::multiply_add(x4, c3, c2);
+  double d2 = fputil::multiply_add(x4, c5, c4);
+  return fputil::polyeval(x8, d0, d1, d2);
 }
 
 // the coefficients for the polynomial approximation of asin(x)/(pi*x) in the

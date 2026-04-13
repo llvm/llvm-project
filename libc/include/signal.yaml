@@ -1,6 +1,25 @@
 header: signal.h
-header_template: signal.h.def
-macros: []
+standards:
+  - stdc
+macros:
+  - macro_name: SIGABRT
+    macro_header: signal-macros.h
+  - macro_name: SIGFPE
+    macro_header: signal-macros.h
+  - macro_name: SIGILL
+    macro_header: signal-macros.h
+  - macro_name: SIGINT
+    macro_header: signal-macros.h    
+  - macro_name: SIGSEGV
+    macro_header: signal-macros.h
+  - macro_name: SIGTERM
+    macro_header: signal-macros.h
+  - macro_name: SIG_ERR
+    macro_header: signal-macros.h
+  - macro_name: SIG_DFL
+    macro_header: signal-macros.h
+  - macro_name: SIG_IGN
+    macro_header: signal-macros.h
 types:
   - type_name: pid_t
   - type_name: sig_atomic_t

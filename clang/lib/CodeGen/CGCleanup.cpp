@@ -367,7 +367,6 @@ static llvm::SwitchInst *TransitionToCleanupSwitch(CodeGenFunction &CGF,
   // If it's a branch, turn it into a switch whose default
   // destination is its original target.
   llvm::Instruction *Term = Block->getTerminator();
-  assert(Term && "can't transition block without terminator");
 
   if (llvm::UncondBrInst *Br = dyn_cast<llvm::UncondBrInst>(Term)) {
     auto Load = createLoadInstBefore(CGF.getNormalCleanupDestSlot(),
@@ -697,7 +696,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
   // rest of IR gen doesn't need to worry about this; it only happens
   // during the execution of PopCleanupBlocks().
   bool HasPrebranchedFallthrough =
-    (FallthroughSource && FallthroughSource->getTerminator());
+      (FallthroughSource && FallthroughSource->hasTerminator());
 
   // If this is a normal cleanup, then having a prebranched
   // fallthrough implies that the fallthrough source unconditionally

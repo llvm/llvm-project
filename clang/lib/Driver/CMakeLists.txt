@@ -18,6 +18,10 @@ if(CLANG_USE_XCSELECT)
   set(system_libs xcselect)
 endif()
 
+if(LLVM_PTHREAD_LIB)
+  list(APPEND system_libs ${LLVM_PTHREAD_LIB})
+endif()
+
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
@@ -35,6 +39,7 @@ add_clang_library(clangDriver
   Tool.cpp
   ToolChain.cpp
   ToolChains/Arch/AArch64.cpp
+  ToolChains/Arch/AMDGPU.cpp
   ToolChains/Arch/ARM.cpp
   ToolChains/Arch/CSKY.cpp
   ToolChains/Arch/LoongArch.cpp
@@ -106,6 +111,7 @@ add_clang_library(clangDriver
   clangBasic
   clangDependencyScanning
   clangFrontend
+  clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkFrontend
   clangSerialization

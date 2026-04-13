@@ -1294,19 +1294,6 @@ def AArch64gld1q_index_merge_zero
   : SDNode<"AArch64ISD::GLD1Q_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>,
            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
-// Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
-// have no common bits.
-def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
-                         [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
-   if (Op.getOpcode() == ISD::ADD)
-     return true;
-   return CurDAG->isADDLike(Op);
-}]> {
-  let GISelPredicateCode = [{
-     return mi_match(MI, MRI, m_GAddLike(m_Reg(), m_Reg()));
-  }];
-}
-
 // Match mul with enough sign-bits. Can be reduced to a smaller mul operand.
 def smullwithsignbits : PatFrag<(ops node:$l, node:$r), (mul node:$l, node:$r), [{
   return CurDAG->ComputeNumSignBits(N->getOperand(0)) > 32 &&
@@ -2567,12 +2554,12 @@ def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
                Sched<[WriteSys]>;
 
 // Generic system instructions
-def SYSxt  : SystemXtI<0, "sys">;
+def SYSxt  : SystemXtI<"sys">;
 def SYSLxt : SystemLXtI<1, "sysl">;
 
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
-                (SYSxt imm0_7:$op1, sys_cr_op:$Cn,
-                 sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+                (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
+                 sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
 
 
 //===----------------------------------------------------------------------===//
@@ -3337,6 +3324,10 @@ def : InstAlias<"tst $src1, $src2$sh",
                 (ANDSXrs XZR, GPR64:$src1,
                          (logical_shifted_reg64 GPR64:$src2, logical_shift64:$sh)), 2>;
 
+def : Pat<(or (not GPR32:$Wm), (i32 imm:$x)),
+          (ORNWrr (MOVi32imm imm:$x), GPR32:$Wm)>;
+def : Pat<(or (not GPR64:$Xm), (i64 imm:$x)),
+          (ORNXrr (MOVi64imm imm:$x), GPR64:$Xm)>;
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
@@ -3523,7 +3514,7 @@ defm CCMP : CondComparison<1, "ccmp", AArch64ccmp>;
 //===----------------------------------------------------------------------===//
 defm CSEL  : CondSelect<0, 0b00, "csel">;
 
-def inc : PatFrag<(ops node:$in), (add_and_or_is_add node:$in, 1)>;
+def inc : PatFrag<(ops node:$in), (add_like node:$in, 1)>;
 defm CSINC : CondSelectOp<0, 0b01, "csinc", inc>;
 defm CSINV : CondSelectOp<1, 0b00, "csinv", not>;
 defm CSNEG : CondSelectOp<1, 0b01, "csneg", ineg>;
@@ -3566,9 +3557,9 @@ def : Pat<(AArch64csel (i32 -1), GPR32:$fval, (i32 imm:$cc), NZCV),
 def : Pat<(AArch64csel (i64 -1), GPR64:$fval, (i32 imm:$cc), NZCV),
           (CSINVXr GPR64:$fval, XZR, (i32 (inv_cond_XFORM imm:$cc)))>;
 
-def : Pat<(add_and_or_is_add GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
+def : Pat<(add_like GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
           (CSINCWr GPR32:$val, GPR32:$val, (i32 imm:$cc))>;
-def : Pat<(add_and_or_is_add GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
+def : Pat<(add_like GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
           (CSINCXr GPR64:$val, GPR64:$val, (i32 imm:$cc))>;
 
 def : Pat<(or (topbitsallzero32:$val), (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
@@ -6634,12 +6625,24 @@ defm SQDMULL  : SIMDThreeScalarMixedHS<0, 0b11010, "sqdmull",
 defm SQDMLAL  : SIMDThreeScalarMixedTiedHS<0, 0b10010, "sqdmlal">;
 defm SQDMLSL  : SIMDThreeScalarMixedTiedHS<0, 0b10110, "sqdmlsl">;
 
+def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
+                                          (i32 FPR32:$Rm)),
+          (SQDMULLi32 FPR32:$Rn, FPR32:$Rm)>;
+
 def : Pat<(f64 (AArch64sqadd FPR64:$Rd,
                 (AArch64sqdmull FPR32:$Rn, FPR32:$Rm))),
           (SQDMLALi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 
+def : Pat<(i64 (int_aarch64_neon_sqadd (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn, FPR32:$Rm))),
+          (SQDMLALi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+
 def : Pat<(f64 (AArch64sqsub FPR64:$Rd,
                (AArch64sqdmull FPR32:$Rn, FPR32:$Rm))),
+          (SQDMLSLi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn, FPR32:$Rm))),
           (SQDMLSLi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 
 //===----------------------------------------------------------------------===//
@@ -9055,6 +9058,18 @@ def : Pat<(f64 (AArch64sqdmull FPR32:$Rn,
                                                            VectorIndexS:$idx)))))),
           (SQDMULLv1i64_indexed FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
 
+def : Pat<(i64 (int_aarch64_neon_sqadd (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn,
+                                          (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))),
+          (SQDMLALv1i64_indexed FPR64:$Rd, FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn,
+                                          (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))),
+          (SQDMLSLv1i64_indexed FPR64:$Rd, FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
+
 //----------------------------------------------------------------------------
 // AdvSIMD scalar shift instructions
 //----------------------------------------------------------------------------
@@ -9160,7 +9175,7 @@ defm SRSRA    : SIMDScalarRShiftDTied<   0, 0b00110, "srsra",
                    (AArch64srshri node:$MHS, node:$RHS))>>;
 defm SSHR     : SIMDScalarRShiftD<   0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA     : SIMDScalarRShiftDTied<   0, 0b00010, "ssra",
-    TriOpFrag<(add_and_or_is_add node:$LHS,
+    TriOpFrag<(add_like node:$LHS,
                    (AArch64vashr node:$MHS, node:$RHS))>>;
 defm UQRSHRN  : SIMDScalarRShiftBHS< 1, 0b10011, "uqrshrn",
                                      AArch64uqrshrn, int_aarch64_neon_uqrshrn>;
@@ -9173,7 +9188,7 @@ defm URSRA    : SIMDScalarRShiftDTied<   1, 0b00110, "ursra",
                    (AArch64urshri node:$MHS, node:$RHS))>>;
 defm USHR     : SIMDScalarRShiftD<   1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA     : SIMDScalarRShiftDTied<   1, 0b00010, "usra",
-    TriOpFrag<(add_and_or_is_add node:$LHS,
+    TriOpFrag<(add_like node:$LHS,
                    (AArch64vlshr node:$MHS, node:$RHS))>>;
 
 //----------------------------------------------------------------------------
@@ -9314,7 +9329,7 @@ defm SSHLL   : SIMDVectorLShiftLongBHSD<0, 0b10100, "sshll",
 
 defm SSHR    : SIMDVectorRShiftBHSD<0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
-                TriOpFrag<(add_and_or_is_add node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
+                TriOpFrag<(add_like node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
@@ -9330,7 +9345,7 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
                 BinOpFrag<(AArch64vshl (zext node:$LHS), node:$RHS)>>;
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
-                TriOpFrag<(add_and_or_is_add node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+                TriOpFrag<(add_like node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
 
 def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
 def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
@@ -11643,97 +11658,6 @@ let Predicates = [HasCPA] in {
   def : Pat<(ptradd GPR64:$Ra, (mul GPR64:$Rn, (ineg GPR64:$Rm))),
             (MSUBPT GPR64:$Rn, GPR64:$Rm, GPR64:$Ra)>;
 }
-
-def round_v4fp32_to_v4bf16 :
-  OutPatFrag<(ops node:$Rn),
-             // NaN? Round : Quiet(NaN)
-             (BSPv16i8 (FCMEQv4f32 $Rn, $Rn),
-                       (ADDv4i32
-                         (ADDv4i32 $Rn,
-                           // Extract the LSB of the fp32 *truncated* to bf16.
-                           (ANDv16i8 (USHRv4i32_shift V128:$Rn, (i32 16)),
-                                     (MOVIv4i32 (i32 1), (i32 0)))),
-                         // Bias which will help us break ties correctly.
-                         (MOVIv4s_msl (i32 127), (i32 264))),
-                       // Set the quiet bit in the NaN.
-                       (ORRv4i32 $Rn, (i32 64), (i32 16)))>;
-
-multiclass PromoteUnaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst> {
-  let Predicates = [HasNoFullFP16] in
-  def : Pat<(InOp (v8f16 V128:$Rn)),
-            (v8f16 (FCVTNv8i16
-              (INSERT_SUBREG (IMPLICIT_DEF),
-                             (v4f16 (FCVTNv4i16
-                               (v4f32 (OutInst
-                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))))))),
-               dsub),
-              (v4f32 (OutInst (v4f32 (FCVTLv8i16 V128:$Rn))))))>;
-
-  let Predicates = [HasBF16] in
-  def : Pat<(InOp (v8bf16 V128:$Rn)),
-            (v8bf16 (BFCVTN2
-              (INSERT_SUBREG (IMPLICIT_DEF),
-                (v4bf16 (BFCVTN
-                  (v4f32 (OutInst
-                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))))))),
-                dsub),
-              (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn))))))>;
-
-  let Predicates = [HasNoBF16] in
-  def : Pat<(InOp (v8bf16 V128:$Rn)),
-            (UZP2v8i16
-              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub))))))),
-              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv8i16 V128:$Rn))))))>;
-}
-defm : PromoteUnaryv8f16Tov4f32<any_fceil,  	FRINTPv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_ffloor, 	FRINTMv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_fnearbyint, FRINTIv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_fround, 	FRINTAv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_froundeven, FRINTNv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_frint,  	FRINTXv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_ftrunc, 	FRINTZv4f32>;
-
-multiclass PromoteBinaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst> {
-  let Predicates = [HasNoFullFP16] in
-  def : Pat<(InOp (v8f16 V128:$Rn), (v8f16 V128:$Rm)),
-            (v8f16 (FCVTNv8i16
-              (INSERT_SUBREG (IMPLICIT_DEF),
-                             (v4f16 (FCVTNv4i16
-                               (v4f32 (OutInst
-                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
-               dsub),
-              (v4f32 (OutInst (v4f32 (FCVTLv8i16 V128:$Rn)),
-                              (v4f32 (FCVTLv8i16 V128:$Rm))))))>;
-
-  let Predicates = [HasBF16] in
-  def : Pat<(InOp (v8bf16 V128:$Rn), (v8bf16 V128:$Rm)),
-            (v8bf16 (BFCVTN2
-              (INSERT_SUBREG (IMPLICIT_DEF),
-                (v4bf16 (BFCVTN
-                  (v4f32 (OutInst
-                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
-                dsub),
-              (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn)),
-                              (v4f32 (SHLLv8i16 V128:$Rm))))))>;
-
-  let Predicates = [HasNoBF16] in
-  def : Pat<(InOp (v8bf16 V128:$Rn), (v8bf16 V128:$Rm)),
-            (UZP2v8i16
-              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub))))))),
-              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv8i16 V128:$Rn)),
-                  (v4f32 (SHLLv8i16 V128:$Rm))))))>;
-}
-defm : PromoteBinaryv8f16Tov4f32<any_fadd, FADDv4f32>;
-defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
-defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
-defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
 
 //===----------------------------------------------------------------------===//
 // Compare and Branch (FEAT_CMPBR)

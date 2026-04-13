@@ -108,7 +108,7 @@ loop.1.latch:
   %ec.1 = icmp eq i64 %iv.1.next, %n
   br i1 %ec.1, label %exit, label %loop.1.header, !llvm.loop !0
 
-exit:                                             ; preds = %loop.1.latch
+exit:
   ret void
 
 ; uselistorder directives

@@ -56,7 +56,7 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeNoexceptSpecifierStyle> {
 
 template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
   static void enumInput(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::AlignConsecutiveStyle({}));
+    IO.enumCase(Value, "None", FormatStyle::AlignConsecutiveStyle{});
     IO.enumCase(Value, "Consecutive",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
@@ -89,7 +89,7 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
                      /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
-    IO.enumCase(Value, "false", FormatStyle::AlignConsecutiveStyle({}));
+    IO.enumCase(Value, "false", FormatStyle::AlignConsecutiveStyle{});
   }
 
   static void mapping(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
@@ -791,22 +791,22 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortRecordStyle> {
 
 template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
   static void enumInput(IO &IO, FormatStyle::SortIncludesOptions &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::SortIncludesOptions({}));
+    IO.enumCase(Value, "Never", FormatStyle::SortIncludesOptions{});
     IO.enumCase(Value, "CaseInsensitive",
-                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
-                                                  /*IgnoreCase=*/true,
-                                                  /*IgnoreExtension=*/false}));
+                FormatStyle::SortIncludesOptions{/*Enabled=*/true,
+                                                 /*IgnoreCase=*/true,
+                                                 /*IgnoreExtension=*/false});
     IO.enumCase(Value, "CaseSensitive",
-                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
-                                                  /*IgnoreCase=*/false,
-                                                  /*IgnoreExtension=*/false}));
+                FormatStyle::SortIncludesOptions{/*Enabled=*/true,
+                                                 /*IgnoreCase=*/false,
+                                                 /*IgnoreExtension=*/false});
 
     // For backward compatibility.
-    IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions({}));
+    IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions{});
     IO.enumCase(Value, "true",
-                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
-                                                  /*IgnoreCase=*/false,
-                                                  /*IgnoreExtension=*/false}));
+                FormatStyle::SortIncludesOptions{/*Enabled=*/true,
+                                                 /*IgnoreCase=*/false,
+                                                 /*IgnoreExtension=*/false});
   }
 
   static void mapping(IO &IO, FormatStyle::SortIncludesOptions &Value) {
@@ -1398,6 +1398,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeCpp11BracedList);
     IO.mapOptional("SpaceBeforeCtorInitializerColon",
                    Style.SpaceBeforeCtorInitializerColon);
+    IO.mapOptional("SpaceBeforeEnumUnderlyingTypeColon",
+                   Style.SpaceBeforeEnumUnderlyingTypeColon);
     IO.mapOptional("SpaceBeforeInheritanceColon",
                    Style.SpaceBeforeInheritanceColon);
     IO.mapOptional("SpaceBeforeJsonColon", Style.SpaceBeforeJsonColon);
@@ -1918,6 +1920,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeCaseColon = false;
   LLVMStyle.SpaceBeforeCpp11BracedList = false;
   LLVMStyle.SpaceBeforeCtorInitializerColon = true;
+  LLVMStyle.SpaceBeforeEnumUnderlyingTypeColon = true;
   LLVMStyle.SpaceBeforeInheritanceColon = true;
   LLVMStyle.SpaceBeforeJsonColon = false;
   LLVMStyle.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
@@ -4115,10 +4118,14 @@ reformat(const FormatStyle &Style, StringRef Code,
   expandPresetsBraceWrapping(Expanded);
   expandPresetsSpaceBeforeParens(Expanded);
   expandPresetsSpacesInParens(Expanded);
+
+  // These are handled by separate passes.
   Expanded.InsertBraces = false;
   Expanded.RemoveBracesLLVM = false;
   Expanded.RemoveParentheses = FormatStyle::RPS_Leave;
   Expanded.RemoveSemicolon = false;
+
+  // Make some sanity adjustments.
   switch (Expanded.RequiresClausePosition) {
   case FormatStyle::RCPS_SingleLine:
   case FormatStyle::RCPS_WithPreceding:
@@ -4127,6 +4134,8 @@ reformat(const FormatStyle &Style, StringRef Code,
   default:
     break;
   }
+  if (Expanded.BraceWrapping.AfterEnum)
+    Expanded.AllowShortEnumsOnASingleLine = false;
 
   if (Expanded.DisableFormat)
     return {tooling::Replacements(), 0};

@@ -78,6 +78,8 @@ CODEGENOPT(CallGraphSection, 1, 0, Benign) ///< Emit a call graph section into t
                                            ///< object file.
 CODEGENOPT(EmitCallSiteInfo, 1, 0, Benign) ///< Emit call site info only in the case of
                                            ///< '-g' + 'O>0' level.
+/// Show inlining chain notes for [[gnu::warning/error]] diagnostics.
+CODEGENOPT(ShowInliningChain, 1, 0, Benign)
 CODEGENOPT(IndirectTlsSegRefs, 1, 0, Benign) ///< Set when -mno-tls-direct-seg-refs
                                              ///< is specified.
 CODEGENOPT(DisableTailCalls  , 1, 0, Benign) ///< Do not emit tail calls.

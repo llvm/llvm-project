@@ -436,6 +436,23 @@ struct MemberArrayReturn {
   int* getData() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
     return arr;    // expected-note {{param returned here}}
   }
+  int* getLast() {   // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return arr + 10; // expected-note {{param returned here}}
+  }
 };
 
 } // namespace array
+
+namespace track_origins_for_lifetimebound_record_type {
+
+struct S {
+  View view;
+};
+
+S getS(const MyObj &obj [[clang::lifetimebound]]);
+
+S forward(const MyObj &obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return getS(obj);           // expected-note {{param returned here}}
+}
+
+} // namespace track_origins_for_lifetimebound_record_type

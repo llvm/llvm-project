@@ -316,6 +316,48 @@ func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basi
   return %1 : index
 }
 
+// CHECK-LABEL: @delinearize_vector
+func.func @delinearize_vector(%vec: vector<16xindex>) -> (vector<16xindex>, vector<16xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (4, 8) : vector<16xindex>, vector<16xindex>
+  %0:2 = affine.delinearize_index %vec into (4, 8) : vector<16xindex>, vector<16xindex>
+  return %0#0, %0#1 : vector<16xindex>, vector<16xindex>
+}
+
+// CHECK-LABEL: @delinearize_vector_3d
+func.func @delinearize_vector_3d(%vec: vector<8xindex>) -> (vector<8xindex>, vector<8xindex>, vector<8xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (2, 3, 4) : vector<8xindex>, vector<8xindex>, vector<8xindex>
+  %0:3 = affine.delinearize_index %vec into (2, 3, 4) : vector<8xindex>, vector<8xindex>, vector<8xindex>
+  return %0#0, %0#1, %0#2 : vector<8xindex>, vector<8xindex>, vector<8xindex>
+}
+
+// CHECK-LABEL: @delinearize_vector_dynamic_basis
+func.func @delinearize_vector_dynamic_basis(%vec: vector<4xindex>, %b0: index, %b1: index) -> (vector<4xindex>, vector<4xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (%{{.+}}, %{{.+}}) : vector<4xindex>, vector<4xindex>
+  %0:2 = affine.delinearize_index %vec into (%b0, %b1) : vector<4xindex>, vector<4xindex>
+  return %0#0, %0#1 : vector<4xindex>, vector<4xindex>
+}
+
+// CHECK-LABEL: @linearize_vector
+func.func @linearize_vector(%v0: vector<16xindex>, %v1: vector<16xindex>) -> vector<16xindex> {
+  // CHECK: affine.linearize_index [%{{.+}}, %{{.+}}] by (4, 8) : vector<16xindex>
+  %0 = affine.linearize_index [%v0, %v1] by (4, 8) : vector<16xindex>
+  return %0 : vector<16xindex>
+}
+
+// CHECK-LABEL: @linearize_vector_disjoint
+func.func @linearize_vector_disjoint(%v0: vector<16xindex>, %v1: vector<16xindex>) -> vector<16xindex> {
+  // CHECK: affine.linearize_index disjoint [%{{.+}}, %{{.+}}] by (4, 8) : vector<16xindex>
+  %0 = affine.linearize_index disjoint [%v0, %v1] by (4, 8) : vector<16xindex>
+  return %0 : vector<16xindex>
+}
+
+// CHECK-LABEL: @linearize_vector_3d
+func.func @linearize_vector_3d(%v0: vector<8xindex>, %v1: vector<8xindex>, %v2: vector<8xindex>) -> vector<8xindex> {
+  // CHECK: affine.linearize_index [%{{.+}}, %{{.+}}, %{{.+}}] by (2, 3, 4) : vector<8xindex>
+  %0 = affine.linearize_index [%v0, %v1, %v2] by (2, 3, 4) : vector<8xindex>
+  return %0 : vector<8xindex>
+}
+
 // -----
 
 // CHECK-LABEL: @gpu_launch_affine
@@ -426,3 +468,43 @@ func.func @arith_add_vaild_symbol_lower_bound(%arg : index) {
 // CHECK:   affine.for %[[VAL_3:.*]] = #[[$ATTR_0]](%[[VAL_2]]){{\[}}%[[VAL_0]]] to 7 {
 // CHECK:   }
 // CHECK: }
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_xori_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("xori") -> (i32) {
+func.func @parallel_xori_reduce() {
+  %0 = memref.alloc() : memref<100xi32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("xori") -> (i32) {
+    %2 = affine.load %0[%i] : memref<100xi32>
+    affine.yield %2 : i32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_maxnumf_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("maxnumf") -> (f32) {
+func.func @parallel_maxnumf_reduce() {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("maxnumf") -> (f32) {
+    %2 = affine.load %0[%i] : memref<100xf32>
+    affine.yield %2 : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_minnumf_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("minnumf") -> (f32) {
+func.func @parallel_minnumf_reduce() {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("minnumf") -> (f32) {
+    %2 = affine.load %0[%i] : memref<100xf32>
+    affine.yield %2 : f32
+  }
+  return
+}
+
