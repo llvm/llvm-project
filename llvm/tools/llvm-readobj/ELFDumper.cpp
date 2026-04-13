@@ -6068,7 +6068,8 @@ struct CoreNote {
   std::vector<CoreFileMapping> Mappings;
 };
 
-static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
+static Expected<CoreNote> readCoreNote(DataExtractor Desc,
+                                       unsigned AddressSize) {
   // Expected format of the NT_FILE note description:
   // 1. # of file mappings (call it N)
   // 2. Page size
@@ -6077,28 +6078,28 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
   // Each field is an Elf_Addr, except for filenames which are char* strings.
 
   CoreNote Ret;
-  const int Bytes = Desc.getAddressSize();
 
-  if (!Desc.isValidOffsetForAddress(2))
+  if (!Desc.isValidOffsetForDataOfSize(2, AddressSize))
     return createError("the note of size 0x" + Twine::utohexstr(Desc.size()) +
                        " is too short, expected at least 0x" +
-                       Twine::utohexstr(Bytes * 2));
+                       Twine::utohexstr(AddressSize * 2));
   if (Desc.getData().back() != 0)
     return createError("the note is not NUL terminated");
 
   uint64_t DescOffset = 0;
-  uint64_t FileCount = Desc.getAddress(&DescOffset);
-  Ret.PageSize = Desc.getAddress(&DescOffset);
+  uint64_t FileCount = Desc.getUnsigned(&DescOffset, AddressSize);
+  Ret.PageSize = Desc.getUnsigned(&DescOffset, AddressSize);
 
-  if (!Desc.isValidOffsetForAddress(3 * FileCount * Bytes))
+  if (!Desc.isValidOffsetForDataOfSize(3 * FileCount * AddressSize,
+                                       AddressSize))
     return createError("unable to read file mappings (found " +
                        Twine(FileCount) + "): the note of size 0x" +
                        Twine::utohexstr(Desc.size()) + " is too short");
 
   uint64_t FilenamesOffset = 0;
   DataExtractor Filenames(
-      Desc.getData().drop_front(DescOffset + 3 * FileCount * Bytes),
-      Desc.isLittleEndian(), Desc.getAddressSize());
+      Desc.getData().drop_front(DescOffset + 3 * FileCount * AddressSize),
+      Desc.isLittleEndian());
 
   Ret.Mappings.resize(FileCount);
   size_t I = 0;
@@ -6109,9 +6110,9 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
           "unable to read the file name for the mapping with index " +
           Twine(I) + ": the note of size 0x" + Twine::utohexstr(Desc.size()) +
           " is truncated");
-    Mapping.Start = Desc.getAddress(&DescOffset);
-    Mapping.End = Desc.getAddress(&DescOffset);
-    Mapping.Offset = Desc.getAddress(&DescOffset);
+    Mapping.Start = Desc.getUnsigned(&DescOffset, AddressSize);
+    Mapping.End = Desc.getUnsigned(&DescOffset, AddressSize);
+    Mapping.Offset = Desc.getUnsigned(&DescOffset, AddressSize);
     Mapping.Filename = Filenames.getCStrRef(&FilenamesOffset);
   }
 
@@ -6483,10 +6484,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
-        DataExtractor DescExtractor(
-            Descriptor, ELFT::Endianness == llvm::endianness::little,
-            sizeof(Elf_Addr));
-        if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
+        DataExtractor DescExtractor(Descriptor, ELFT::Endianness ==
+                                                    llvm::endianness::little);
+        if (Expected<CoreNote> NoteOrErr =
+                readCoreNote(DescExtractor, sizeof(Elf_Addr))) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
           return Error::success();
         } else {
@@ -7169,7 +7170,8 @@ void ELFDumper<ELFT>::printStackSize(const Relocation<ELFT> &R,
   }
 
   uint64_t SymValue = Resolver(R.Type, Offset, RelocSymValue,
-                               Data.getAddress(&Offset), R.Addend.value_or(0));
+                               Data.getUnsigned(&Offset, sizeof(Elf_Addr)),
+                               R.Addend.value_or(0));
   this->printFunctionStackSize(SymValue, FunctionSec, StackSizeSec, Data,
                                &Offset);
 }
@@ -7185,7 +7187,7 @@ void ELFDumper<ELFT>::printNonRelocatableStackSizes(
     PrintHeader();
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, Obj.getSectionContents(Sec));
-    DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
+    DataExtractor Data(Contents, Obj.isLE());
     uint64_t Offset = 0;
     while (Offset < Contents.size()) {
       // The function address is followed by a ULEB representing the stack
@@ -7196,7 +7198,7 @@ void ELFDumper<ELFT>::printNonRelocatableStackSizes(
             " ended while trying to extract a stack size entry");
         break;
       }
-      uint64_t SymValue = Data.getAddress(&Offset);
+      uint64_t SymValue = Data.getUnsigned(&Offset, sizeof(Elf_Addr));
       if (!printFunctionStackSize(SymValue, /*FunctionSec=*/std::nullopt, Sec,
                                   Data, &Offset))
         break;
@@ -7262,7 +7264,7 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
     std::tie(IsSupportedFn, Resolver) = getRelocationResolver(this->ObjF);
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, Obj.getSectionContents(*StackSizesELFSec));
-    DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
+    DataExtractor Data(Contents, Obj.isLE());
 
     forEachRelocationDo(
         *RelocSec, [&](const Relocation<ELFT> &R, unsigned Ndx,
@@ -8660,10 +8662,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
-        DataExtractor DescExtractor(
-            Descriptor, ELFT::Endianness == llvm::endianness::little,
-            sizeof(Elf_Addr));
-        if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
+        DataExtractor DescExtractor(Descriptor, ELFT::Endianness ==
+                                                    llvm::endianness::little);
+        if (Expected<CoreNote> N =
+                readCoreNote(DescExtractor, sizeof(Elf_Addr))) {
           printCoreNoteLLVMStyle(*N, W);
           return Error::success();
         } else {
