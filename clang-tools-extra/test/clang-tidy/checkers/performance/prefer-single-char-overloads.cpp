@@ -26,6 +26,18 @@ void StringFind() {
   // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more efficient overload accepting a character [performance-prefer-single-char-overloads]
   // CHECK-FIXES: Str.find('a');
 
+  Str.find("x"
+
+  "");
+  // CHECK-MESSAGES: [[@LINE-3]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find('x');
+
+  Str.find(""
+
+  "k");
+  // CHECK-MESSAGES: [[@LINE-3]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find('k');
+
   // Works with the pos argument.
   Str.find("a", 1);
   // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
@@ -45,6 +57,22 @@ void StringFind() {
   Str.find("\'");
   // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
   // CHECK-FIXES: Str.find('\'');
+
+  // Works with arbitrarily complex ternary operators.
+  Str.find(true ? "a" : "b");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find(true ? 'a' : 'b');
+
+  Str.find(true ? (false ? "a" : "b") : "c");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find(true ? (false ? 'a' : 'b') : 'c');
+
+  Str.find(true ? "a" : true ? "b" : true ? "c" : "d");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find(true ? 'a' : true ? 'b' : true ? 'c' : 'd');
+
+  Str.find(true ? "a" : true ? "b" : true ? "c" : "not one character");
+  Str.find("x" ?: "y");
 
   // Other methods that can also be replaced
   Str.rfind("a");
@@ -139,8 +167,16 @@ int FindStr() {
 
 #define STR_MACRO(str) str.find("A")
 #define POS_MACRO(pos) std::string().find("A",pos)
+#define ONE_CHAR_STRING "m"
 
 int Macros() {
+  std::string s;
+
+  // FIXME: this is a false positive.
+  s.find(ONE_CHAR_STRING);
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'find' called with a string literal
+  // CHECK-FIXES: s.find('m');
+
   return STR_MACRO(std::string()) + POS_MACRO(1);
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'find' called with a string literal
   // CHECK-MESSAGES: [[@LINE-2]]:37: warning: 'find' called with a string literal

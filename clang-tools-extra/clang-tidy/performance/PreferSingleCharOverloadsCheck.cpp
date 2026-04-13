@@ -7,31 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferSingleCharOverloadsCheck.h"
+#include "../utils/ASTUtils.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-static std::optional<std::string>
-makeCharacterLiteral(const StringLiteral *Literal) {
+static std::string makeCharacterLiteral(const StringLiteral *Literal) {
   std::string Result;
   {
     llvm::raw_string_ostream OS(Result);
     Literal->outputString(OS);
   }
   // Now replace the " with '.
-  auto OpenPos = Result.find_first_of('"');
-  if (OpenPos == std::string::npos)
-    return std::nullopt;
+  const size_t OpenPos = Result.find_first_of('"');
+  assert(OpenPos != std::string::npos);
   Result[OpenPos] = '\'';
 
-  auto ClosePos = Result.find_last_of('"');
-  if (ClosePos == std::string::npos)
-    return std::nullopt;
+  const size_t ClosePos = Result.find_last_of('"');
+  assert(ClosePos != std::string::npos);
   Result[ClosePos] = '\'';
 
   // "'" is OK, but ''' is not, so add a backslash
@@ -55,8 +52,7 @@ void PreferSingleCharOverloadsCheck::storeOptions(
 }
 
 void PreferSingleCharOverloadsCheck::registerMatchers(MatchFinder *Finder) {
-  const auto SingleChar =
-      ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal"));
+  const auto SingleChar = expr().bind("literal");
 
   const auto StringExpr = expr(hasType(hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(recordDecl(hasAnyName(StringLikeClasses)))))));
@@ -80,18 +76,26 @@ void PreferSingleCharOverloadsCheck::registerMatchers(MatchFinder *Finder) {
 
 void PreferSingleCharOverloadsCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("literal");
   const auto *FindFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
+  const auto *Literal = Result.Nodes.getNodeAs<Expr>("literal");
 
-  auto Replacement = makeCharacterLiteral(Literal);
-  if (!Replacement)
+  if (!utils::forAllLeavesOfTernaryTree(Literal, [](const Expr *E) {
+        const auto *Literal = dyn_cast<StringLiteral>(E);
+        return Literal && Literal->getLength() == 1;
+      }))
     return;
 
-  diag(Literal->getBeginLoc(), "%0 called with a string literal consisting of "
-                               "a single character; consider using the more "
-                               "efficient overload accepting a character")
-      << FindFunc
-      << FixItHint::CreateReplacement(Literal->getSourceRange(), *Replacement);
+  const auto Diag = diag(Literal->getBeginLoc(),
+                         "%0 called with a string literal consisting of "
+                         "a single character; consider using the more "
+                         "efficient overload accepting a character")
+                    << FindFunc;
+
+  utils::forAllLeavesOfTernaryTree(Literal, [&](const Expr *E) {
+    Diag << FixItHint::CreateReplacement(
+        E->getSourceRange(), makeCharacterLiteral(cast<StringLiteral>(E)));
+    return true;
+  });
 }
 
 } // namespace clang::tidy::performance

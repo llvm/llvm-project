@@ -13,11 +13,13 @@ Examples:
 
   str.find("A");
   str += "B";
+  str.contains(foo ? "0" : "1");
 
   // becomes
 
   str.find('A');
   str += 'B';
+  str.contains(foo ? '0' : '1');
 
 This check flags passing strings of size 1 to miscellaneous member functions
 as well as ``operator+=``.

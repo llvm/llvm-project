@@ -438,6 +438,9 @@ Changes in existing checks
   - Now analyzes calls to the ``starts_with``, ``ends_with``, ``contains``,
     and ``operator+=`` string member functions.
 
+  - Now analyzes cases where the argument to a string function is a ternary
+    operator, all the branches of which are single-character strings.
+
   - Fixes false negatives when using ``std::set`` from ``libstdc++``.
 
 - Improved :doc:`performance-trivially-destructible
