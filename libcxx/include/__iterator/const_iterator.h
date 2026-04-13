@@ -85,7 +85,7 @@ struct __basic_const_iterator_category<_Iter> {
 };
 
 template <input_iterator _Iter>
-class _LIBCPP_TEMPLATE_VIS basic_const_iterator : public __basic_const_iterator_category<_Iter> {
+class basic_const_iterator : public __basic_const_iterator_category<_Iter> {
   _Iter __current_ = _Iter();
 
   using __reference _LIBCPP_NODEBUG        = iter_const_reference_t<_Iter>;

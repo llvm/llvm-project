@@ -93,12 +93,12 @@ constexpr bool testReturnTypes() {
   } c;
 
   ASSERT_SAME_TYPE(decltype(std::ranges::begin(a)), int**);
-  ASSERT_SAME_TYPE(decltype(std::ranges::begin(b)), int(*)[2]);
+  ASSERT_SAME_TYPE(decltype(std::ranges::begin(b)), int (*)[2]);
   ASSERT_SAME_TYPE(decltype(std::ranges::begin(c)), char*);
 
 #if TEST_STD_VER < 23
   ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(a)), int* const*);
-  ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(b)), const int(*)[2]);
+  ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(b)), const int (*)[2]);
   ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(c)), short*);
 #endif // TEST_STD_VER < 23
 

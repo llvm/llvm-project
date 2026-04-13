@@ -412,7 +412,7 @@ public:
     return iterator(data() + size());
 #    endif
   }
-  #    if _LIBCPP_STD_VER >= 23
+#    if _LIBCPP_STD_VER >= 23
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator cbegin() const noexcept
     requires(!is_volatile_v<_Tp>)
   {

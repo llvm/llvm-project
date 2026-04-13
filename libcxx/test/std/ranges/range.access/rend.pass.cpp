@@ -73,12 +73,12 @@ constexpr bool testReturnTypes() {
   } c;
 
   ASSERT_SAME_TYPE(decltype(std::ranges::rend(a)), std::reverse_iterator<int**>);
-  ASSERT_SAME_TYPE(decltype(std::ranges::rend(b)), std::reverse_iterator<int(*)[2]>);
+  ASSERT_SAME_TYPE(decltype(std::ranges::rend(b)), std::reverse_iterator<int (*)[2]>);
   ASSERT_SAME_TYPE(decltype(std::ranges::rend(c)), sentinel_wrapper<char*>);
 
 #if TEST_STD_VER < 23
   ASSERT_SAME_TYPE(decltype(std::ranges::crend(a)), std::reverse_iterator<int* const*>);
-  ASSERT_SAME_TYPE(decltype(std::ranges::crend(b)), std::reverse_iterator<const int(*)[2]>);
+  ASSERT_SAME_TYPE(decltype(std::ranges::crend(b)), std::reverse_iterator<const int (*)[2]>);
   ASSERT_SAME_TYPE(decltype(std::ranges::crend(c)), sentinel_wrapper<short*>);
 #endif // TEST_STD_VER < 23
 
