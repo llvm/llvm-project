@@ -739,7 +739,7 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
   if (UseReg.isVirtual() && !UseSubRegIdx)
     return DefReg;
 
-  if (!TRI->subRegsInterfere(DefReg, DefSubRegIdx, UseReg, UseSubRegIdx))
+  if (!TRI->checkSubRegInterference(DefReg, DefSubRegIdx, UseReg, UseSubRegIdx))
     return Register(); // No real dependency
 
   // UseReg might be smaller or larger than DefReg, depending on the subreg and
