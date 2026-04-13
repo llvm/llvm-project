@@ -202,11 +202,10 @@ body:             |
     ; CHECK: liveins: $edi
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
-    ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY2]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gr16 = COPY [[MOVZX32rr8_]].sub_16bit
-    ; CHECK-NEXT: $ax = COPY [[COPY3]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr16 = COPY [[MOVZX32rr8_]].sub_16bit
+    ; CHECK-NEXT: $ax = COPY [[COPY2]]
     ; CHECK-NEXT: RET 0, implicit $ax
     %1:gpr(s32) = COPY $edi
     %3:gpr(s16) = G_CONSTANT i16 255

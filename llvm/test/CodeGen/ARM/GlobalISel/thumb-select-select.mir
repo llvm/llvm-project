@@ -19,12 +19,14 @@ body:             |
     liveins: $r0, $r1
 
     ; CHECK-LABEL: name: test_select_s32
-    ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
-    ; CHECK: t2TSTri [[COPY1]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-    ; CHECK: [[t2MOVCCr:%[0-9]+]]:rgpr = t2MOVCCr [[COPY]], [[COPY1]], 0 /* CC::eq */, $cpsr
-    ; CHECK: $r0 = COPY [[t2MOVCCr]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK: liveins: $r0, $r1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: t2TSTri [[COPY1]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: [[t2MOVCCr:%[0-9]+]]:rgpr = t2MOVCCr [[COPY]], [[COPY1]], 0 /* CC::eq */, $cpsr
+    ; CHECK-NEXT: $r0 = COPY [[t2MOVCCr]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -53,14 +55,15 @@ body:             |
     liveins: $r0, $r1, $r2
 
     ; CHECK-LABEL: name: test_select_ptr
-    ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr = COPY $r2
-    ; CHECK: [[COPY3:%[0-9]+]]:rgpr = COPY [[COPY2]]
-    ; CHECK: t2TSTri [[COPY3]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-    ; CHECK: [[t2MOVCCr:%[0-9]+]]:rgpr = t2MOVCCr [[COPY]], [[COPY1]], 0 /* CC::eq */, $cpsr
-    ; CHECK: $r0 = COPY [[t2MOVCCr]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK: liveins: $r0, $r1, $r2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:rgpr = COPY $r2
+    ; CHECK-NEXT: t2TSTri [[COPY2]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: [[t2MOVCCr:%[0-9]+]]:rgpr = t2MOVCCr [[COPY]], [[COPY1]], 0 /* CC::eq */, $cpsr
+    ; CHECK-NEXT: $r0 = COPY [[t2MOVCCr]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(p0) = COPY $r0
 
     %1(p0) = COPY $r1

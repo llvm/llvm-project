@@ -107,18 +107,15 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]], [[COPY]], implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[CSINCWr]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY2]], [[COPY2]], implicit-def $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY1]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32all = COPY [[CSINCWr1]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY3]]
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK-NEXT: [[SUBSXrr1:%[0-9]+]]:gpr64 = SUBSXrr [[COPY4]], [[COPY4]], implicit-def $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[SUBSXrr1:%[0-9]+]]:gpr64 = SUBSXrr [[COPY2]], [[COPY2]], implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gpr32all = COPY [[CSINCWr2]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY5]]
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr2]]
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_ICMP intpred(eq), %0, %0
     %6:gpr(s8) = G_TRUNC %1(s32)
@@ -154,23 +151,19 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     ; CHECK-NEXT: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[ORRWrr]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK-NEXT: nofpexcept FCMPDrr [[COPY2]], [[COPY2]], implicit-def $nzcv, implicit $fpcr
+    ; CHECK-NEXT: $w0 = COPY [[ORRWrr]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: nofpexcept FCMPDrr [[COPY1]], [[COPY1]], implicit-def $nzcv, implicit $fpcr
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 4, implicit $nzcv
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32all = COPY [[CSINCWr2]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY3]]
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: nofpexcept FCMPSrr [[COPY4]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr2]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK-NEXT: nofpexcept FCMPSrr [[COPY2]], [[COPY2]], implicit-def $nzcv, implicit $fpcr
     ; CHECK-NEXT: [[CSINCWr3:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 15, implicit $nzcv
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gpr32all = COPY [[CSINCWr3]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY5]]
-    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK-NEXT: nofpexcept FCMPDrr [[COPY6]], [[COPY6]], implicit-def $nzcv, implicit $fpcr
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr3]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: nofpexcept FCMPDrr [[COPY3]], [[COPY3]], implicit-def $nzcv, implicit $fpcr
     ; CHECK-NEXT: [[CSINCWr4:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 14, implicit $nzcv
-    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:gpr32all = COPY [[CSINCWr4]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY7]]
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr4]]
     %0:fpr(s32) = COPY $s0
     %1:gpr(s32) = G_FCMP floatpred(one), %0, %0
     %2:gpr(s8) = G_TRUNC %1(s32)

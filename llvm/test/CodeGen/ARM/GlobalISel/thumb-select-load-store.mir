@@ -22,10 +22,12 @@ body:             |
     liveins: $r0
 
     ; CHECK-LABEL: name: test_s8
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[t2LDRBi12_:%[0-9]+]]:rgpr = t2LDRBi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s8))
-    ; CHECK: t2STRBi12 [[t2LDRBi12_]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK: liveins: $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[t2LDRBi12_:%[0-9]+]]:rgpr = t2LDRBi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s8))
+    ; CHECK-NEXT: t2STRBi12 [[t2LDRBi12_]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s8) = G_LOAD %0(p0) :: (load (s8))
@@ -47,10 +49,12 @@ body:             |
     liveins: $r0
 
     ; CHECK-LABEL: name: test_s16
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[t2LDRHi12_:%[0-9]+]]:rgpr = t2LDRHi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s16))
-    ; CHECK: t2STRHi12 [[t2LDRHi12_]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK: liveins: $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[t2LDRHi12_:%[0-9]+]]:rgpr = t2LDRHi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s16))
+    ; CHECK-NEXT: t2STRHi12 [[t2LDRHi12_]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s16) = G_LOAD %0(p0) :: (load (s16))
@@ -72,10 +76,12 @@ body:             |
     liveins: $r0
 
     ; CHECK-LABEL: name: test_s32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[t2LDRi12_:%[0-9]+]]:gpr = t2LDRi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK: t2STRi12 [[t2LDRi12_]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s32))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK: liveins: $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[t2LDRi12_:%[0-9]+]]:gpr = t2LDRi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: t2STRi12 [[t2LDRi12_]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s32))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = G_LOAD %0(p0) :: (load (s32))
@@ -98,11 +104,13 @@ body:             |
     liveins: $r0, $r1
 
     ; CHECK-LABEL: name: test_gep
-    ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
-    ; CHECK: [[t2ADDrr:%[0-9]+]]:gprnopc = t2ADDrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2ADDrr]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK: liveins: $r0, $r1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: [[t2ADDrr:%[0-9]+]]:gprnopc = t2ADDrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: $r0 = COPY [[t2ADDrr]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -133,14 +141,15 @@ body:             |
     liveins: $r0, $r1, $r2, $r3
 
     ; CHECK-LABEL: name: test_load_from_stack
-    ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri %fixed-stack.0, 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[t2LDRi12_:%[0-9]+]]:gpr = t2LDRi12 [[t2ADDri]], 0, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK: $r0 = COPY [[t2LDRi12_]]
-    ; CHECK: [[t2ADDri1:%[0-9]+]]:rgpr = t2ADDri %fixed-stack.2, 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[t2LDRBi12_:%[0-9]+]]:gprnopc = t2LDRBi12 [[t2ADDri1]], 0, 14 /* CC::al */, $noreg :: (load (s8))
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY [[t2LDRBi12_]]
-    ; CHECK: $r0 = COPY [[COPY]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK: liveins: $r0, $r1, $r2, $r3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri %fixed-stack.0, 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[t2LDRi12_:%[0-9]+]]:gpr = t2LDRi12 [[t2ADDri]], 0, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: $r0 = COPY [[t2LDRi12_]]
+    ; CHECK-NEXT: [[t2ADDri1:%[0-9]+]]:rgpr = t2ADDri %fixed-stack.2, 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[t2LDRBi12_:%[0-9]+]]:gprnopc = t2LDRBi12 [[t2ADDri1]], 0, 14 /* CC::al */, $noreg :: (load (s8))
+    ; CHECK-NEXT: $r0 = COPY [[t2LDRBi12_]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
 
     %1(s32) = G_LOAD %0(p0) :: (load (s32))

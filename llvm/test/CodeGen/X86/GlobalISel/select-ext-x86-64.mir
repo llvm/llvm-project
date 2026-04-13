@@ -37,12 +37,14 @@ body:             |
     liveins: $edi
 
     ; ALL-LABEL: name: test_zext_i1
-    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY $dil
-    ; ALL: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
-    ; ALL: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_8bit
-    ; ALL: [[AND64ri32_:%[0-9]+]]:gr64 = AND64ri32 [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; ALL: $rax = COPY [[AND64ri32_]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL: liveins: $edi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY $dil
+    ; ALL-NEXT: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; ALL-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_8bit
+    ; ALL-NEXT: [[AND64ri32_:%[0-9]+]]:gr64 = AND64ri32 [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; ALL-NEXT: $rax = COPY [[AND64ri32_]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s8) = COPY $dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s64) = G_ZEXT %1(s1)
@@ -63,10 +65,12 @@ body:             |
     liveins: $edi
 
     ; ALL-LABEL: name: test_sext_i8
-    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY $dil
-    ; ALL: [[MOVSX64rr8_:%[0-9]+]]:gr64 = MOVSX64rr8 [[COPY]]
-    ; ALL: $rax = COPY [[MOVSX64rr8_]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL: liveins: $edi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY $dil
+    ; ALL-NEXT: [[MOVSX64rr8_:%[0-9]+]]:gr64 = MOVSX64rr8 [[COPY]]
+    ; ALL-NEXT: $rax = COPY [[MOVSX64rr8_]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s8) = COPY $dil
     %1(s64) = G_SEXT %0(s8)
     $rax = COPY %1(s64)
@@ -86,10 +90,12 @@ body:             |
     liveins: $edi
 
     ; ALL-LABEL: name: test_sext_i16
-    ; ALL: [[COPY:%[0-9]+]]:gr16 = COPY $di
-    ; ALL: [[MOVSX64rr16_:%[0-9]+]]:gr64 = MOVSX64rr16 [[COPY]]
-    ; ALL: $rax = COPY [[MOVSX64rr16_]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL: liveins: $edi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr16 = COPY $di
+    ; ALL-NEXT: [[MOVSX64rr16_:%[0-9]+]]:gr64 = MOVSX64rr16 [[COPY]]
+    ; ALL-NEXT: $rax = COPY [[MOVSX64rr16_]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s16) = COPY $di
     %1(s64) = G_SEXT %0(s16)
     $rax = COPY %1(s64)
@@ -110,11 +116,13 @@ body:             |
     liveins: $edi
 
     ; ALL-LABEL: name: anyext_s64_from_s1
-    ; ALL: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY $rdi
-    ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
-    ; ALL: $rax = COPY [[SUBREG_TO_REG]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL: liveins: $edi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY $rdi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; ALL-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
+    ; ALL-NEXT: $rax = COPY [[SUBREG_TO_REG]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s1) = G_TRUNC %0(s64)
     %2(s64) = G_ANYEXT %1(s1)
@@ -135,12 +143,14 @@ body:             |
     liveins: $edi
 
     ; ALL-LABEL: name: anyext_s64_from_s8
-    ; ALL: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY $rdi
-    ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; ALL: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOVZX32rr8_]], %subreg.sub_32bit
-    ; ALL: $rax = COPY [[SUBREG_TO_REG]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL: liveins: $edi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY $rdi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; ALL-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
+    ; ALL-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOVZX32rr8_]], %subreg.sub_32bit
+    ; ALL-NEXT: $rax = COPY [[SUBREG_TO_REG]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s8) = G_TRUNC %0(s64)
     %2(s64) = G_ANYEXT %1(s8)
@@ -161,12 +171,14 @@ body:             |
     liveins: $edi
 
     ; ALL-LABEL: name: anyext_s64_from_s16
-    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; ALL: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; ALL: [[MOVZX32rr16_:%[0-9]+]]:gr32 = MOVZX32rr16 [[COPY1]]
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOVZX32rr16_]], %subreg.sub_32bit
-    ; ALL: $rax = COPY [[SUBREG_TO_REG]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL: liveins: $edi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
+    ; ALL-NEXT: [[MOVZX32rr16_:%[0-9]+]]:gr32 = MOVZX32rr16 [[COPY1]]
+    ; ALL-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOVZX32rr16_]], %subreg.sub_32bit
+    ; ALL-NEXT: $rax = COPY [[SUBREG_TO_REG]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s16) = G_TRUNC %0(s64)
     %2(s64) = G_ANYEXT %1(s16)
@@ -187,12 +199,14 @@ body:             |
     liveins: $edi
 
     ; ALL-LABEL: name: anyext_s64_from_s32
-    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; ALL: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
-    ; ALL: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
-    ; ALL: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_32bit
-    ; ALL: $rax = COPY [[INSERT_SUBREG]]
-    ; ALL: RET 0, implicit $rax
+    ; ALL: liveins: $edi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; ALL-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
+    ; ALL-NEXT: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; ALL-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_32bit
+    ; ALL-NEXT: $rax = COPY [[INSERT_SUBREG]]
+    ; ALL-NEXT: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s32) = G_TRUNC %0(s64)
     %2(s64) = G_ANYEXT %1(s32)

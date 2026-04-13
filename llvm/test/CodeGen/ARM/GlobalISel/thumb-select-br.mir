@@ -14,17 +14,21 @@ registers:
 body:             |
   ; CHECK-LABEL: name: test_br
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $r0
-  ; CHECK:   [[COPY1:%[0-9]+]]:rgpr = COPY [[COPY]]
-  ; CHECK:   t2TSTri [[COPY1]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.1, 1 /* CC::ne */, $cpsr
-  ; CHECK:   t2B %bb.2, 14 /* CC::al */, $noreg
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   t2B %bb.2, 14 /* CC::al */, $noreg
-  ; CHECK: bb.2:
-  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:rgpr = COPY $r0
+  ; CHECK-NEXT:   t2TSTri [[COPY]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2Bcc %bb.1, 1 /* CC::ne */, $cpsr
+  ; CHECK-NEXT:   t2B %bb.2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   t2B %bb.2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0

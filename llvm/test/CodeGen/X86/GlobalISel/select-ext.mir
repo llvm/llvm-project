@@ -61,13 +61,18 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_zext_i1toi8
-    ; X86: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X86-NEXT: [[AND8ri:%[0-9]+]]:gr8 = AND8ri [[COPY1]], 1, implicit-def $eflags
     ; X86-NEXT: $al = COPY [[AND8ri]]
     ; X86-NEXT: RET 0, implicit $al
+    ;
     ; X64-LABEL: name: test_zext_i1toi8
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[AND8ri:%[0-9]+]]:gr8 = AND8ri [[COPY1]], 1, implicit-def $eflags
     ; X64-NEXT: $al = COPY [[AND8ri]]
@@ -94,20 +99,25 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_zext_i1toi16
-    ; X86: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X86-NEXT: [[DEF:%[0-9]+]]:gr16 = IMPLICIT_DEF
     ; X86-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr16 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
-    ; X86-NEXT: [[AND16ri_:%[0-9]+]]:gr16 = AND16ri [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; X86-NEXT: $ax = COPY [[AND16ri_]]
+    ; X86-NEXT: [[AND16ri:%[0-9]+]]:gr16 = AND16ri [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; X86-NEXT: $ax = COPY [[AND16ri]]
     ; X86-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_zext_i1toi16
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[DEF:%[0-9]+]]:gr16 = IMPLICIT_DEF
     ; X64-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr16 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
-    ; X64-NEXT: [[AND16ri_:%[0-9]+]]:gr16 = AND16ri [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; X64-NEXT: $ax = COPY [[AND16ri_]]
+    ; X64-NEXT: [[AND16ri:%[0-9]+]]:gr16 = AND16ri [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; X64-NEXT: $ax = COPY [[AND16ri]]
     ; X64-NEXT: RET 0, implicit $ax
     %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
@@ -131,20 +141,25 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_zext_i1
-    ; X86: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X86-NEXT: [[DEF:%[0-9]+]]:gr32 = IMPLICIT_DEF
     ; X86-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr32 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
-    ; X86-NEXT: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; X86-NEXT: $eax = COPY [[AND32ri_]]
+    ; X86-NEXT: [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; X86-NEXT: $eax = COPY [[AND32ri]]
     ; X86-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_zext_i1
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[DEF:%[0-9]+]]:gr32 = IMPLICIT_DEF
     ; X64-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gr32 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
-    ; X64-NEXT: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[INSERT_SUBREG]], 1, implicit-def $eflags
-    ; X64-NEXT: $eax = COPY [[AND32ri_]]
+    ; X64-NEXT: [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[INSERT_SUBREG]], 1, implicit-def $eflags
+    ; X64-NEXT: $eax = COPY [[AND32ri]]
     ; X64-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
@@ -167,12 +182,17 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_zext_i8
-    ; X86: [[COPY:%[0-9]+]]:gr8 = COPY $dil
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY $dil
     ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY]]
     ; X86-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; X86-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_zext_i8
-    ; X64: [[COPY:%[0-9]+]]:gr8 = COPY $dil
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY $dil
     ; X64-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY]]
     ; X64-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; X64-NEXT: RET 0, implicit $eax
@@ -196,12 +216,17 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_zext_i16
-    ; X86: [[COPY:%[0-9]+]]:gr16 = COPY $di
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr16 = COPY $di
     ; X86-NEXT: [[MOVZX32rr16_:%[0-9]+]]:gr32 = MOVZX32rr16 [[COPY]]
     ; X86-NEXT: $eax = COPY [[MOVZX32rr16_]]
     ; X86-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_zext_i16
-    ; X64: [[COPY:%[0-9]+]]:gr16 = COPY $di
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr16 = COPY $di
     ; X64-NEXT: [[MOVZX32rr16_:%[0-9]+]]:gr32 = MOVZX32rr16 [[COPY]]
     ; X64-NEXT: $eax = COPY [[MOVZX32rr16_]]
     ; X64-NEXT: RET 0, implicit $eax
@@ -225,12 +250,17 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_sext_i8
-    ; X86: [[COPY:%[0-9]+]]:gr8 = COPY $dil
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY $dil
     ; X86-NEXT: [[MOVSX32rr8_:%[0-9]+]]:gr32 = MOVSX32rr8 [[COPY]]
     ; X86-NEXT: $eax = COPY [[MOVSX32rr8_]]
     ; X86-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_sext_i8
-    ; X64: [[COPY:%[0-9]+]]:gr8 = COPY $dil
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY $dil
     ; X64-NEXT: [[MOVSX32rr8_:%[0-9]+]]:gr32 = MOVSX32rr8 [[COPY]]
     ; X64-NEXT: $eax = COPY [[MOVSX32rr8_]]
     ; X64-NEXT: RET 0, implicit $eax
@@ -254,12 +284,17 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_sext_i16
-    ; X86: [[COPY:%[0-9]+]]:gr16 = COPY $di
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr16 = COPY $di
     ; X86-NEXT: [[MOVSX32rr16_:%[0-9]+]]:gr32 = MOVSX32rr16 [[COPY]]
     ; X86-NEXT: $eax = COPY [[MOVSX32rr16_]]
     ; X86-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_sext_i16
-    ; X64: [[COPY:%[0-9]+]]:gr16 = COPY $di
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr16 = COPY $di
     ; X64-NEXT: [[MOVSX32rr16_:%[0-9]+]]:gr32 = MOVSX32rr16 [[COPY]]
     ; X64-NEXT: $eax = COPY [[MOVSX32rr16_]]
     ; X64-NEXT: RET 0, implicit $eax
@@ -284,12 +319,17 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_anyext_i1toi8
-    ; X86: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X86-NEXT: $al = COPY [[COPY1]]
     ; X86-NEXT: RET 0, implicit $al
+    ;
     ; X64-LABEL: name: test_anyext_i1toi8
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: $al = COPY [[COPY1]]
     ; X64-NEXT: RET 0, implicit $al
@@ -314,13 +354,18 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_anyext_i1toi16
-    ; X86: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X86-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr16 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; X86-NEXT: $ax = COPY [[SUBREG_TO_REG]]
     ; X86-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_anyext_i1toi16
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr16 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; X64-NEXT: $ax = COPY [[SUBREG_TO_REG]]
@@ -346,13 +391,18 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_anyext_i1toi32
-    ; X86: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X86-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr32 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; X86-NEXT: $eax = COPY [[SUBREG_TO_REG]]
     ; X86-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_anyext_i1toi32
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr32 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; X64-NEXT: $eax = COPY [[SUBREG_TO_REG]]
@@ -378,15 +428,19 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_anyext_i8toi16
-    ; X86: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; X86-NEXT: [[COPY1:%[0-9]+]]:gr32_abcd = COPY [[COPY]]
-    ; X86-NEXT: [[COPY2:%[0-9]+]]:gr8_abcd_l = COPY [[COPY1]].sub_8bit
-    ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY2]]
-    ; X86-NEXT: [[COPY3:%[0-9]+]]:gr16 = COPY [[MOVZX32rr8_]].sub_16bit
-    ; X86-NEXT: $ax = COPY [[COPY3]]
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
+    ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8_abcd_l = COPY [[COPY]].sub_8bit
+    ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
+    ; X86-NEXT: [[COPY2:%[0-9]+]]:gr16 = COPY [[MOVZX32rr8_]].sub_16bit
+    ; X86-NEXT: $ax = COPY [[COPY2]]
     ; X86-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_anyext_i8toi16
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
     ; X64-NEXT: [[COPY2:%[0-9]+]]:gr16 = COPY [[MOVZX32rr8_]].sub_16bit
@@ -413,14 +467,18 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_anyext_i8toi32
-    ; X86: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; X86-NEXT: [[COPY1:%[0-9]+]]:gr32_abcd = COPY [[COPY]]
-    ; X86-NEXT: [[COPY2:%[0-9]+]]:gr8_abcd_l = COPY [[COPY1]].sub_8bit
-    ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY2]]
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
+    ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8_abcd_l = COPY [[COPY]].sub_8bit
+    ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
     ; X86-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; X86-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_anyext_i8toi32
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; X64-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
     ; X64-NEXT: $eax = COPY [[MOVZX32rr8_]]
@@ -446,14 +504,19 @@ body:             |
     liveins: $edi
 
     ; X86-LABEL: name: test_anyext_i16toi32
-    ; X86: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X86: liveins: $edi
+    ; X86-NEXT: {{  $}}
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
     ; X86-NEXT: [[DEF:%[0-9]+]]:low32_addr_access_rbp = IMPLICIT_DEF
     ; X86-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access_rbp = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit
     ; X86-NEXT: $eax = COPY [[INSERT_SUBREG]]
     ; X86-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_anyext_i16toi32
-    ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
     ; X64-NEXT: [[DEF:%[0-9]+]]:low32_addr_access_rbp = IMPLICIT_DEF
     ; X64-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access_rbp = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit

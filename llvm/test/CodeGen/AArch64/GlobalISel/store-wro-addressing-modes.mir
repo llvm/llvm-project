@@ -67,9 +67,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %base:gpr64sp = COPY $x0
     ; CHECK-NEXT: %foo:gpr32 = COPY $w1
-    ; CHECK-NEXT: %dst:gpr64all = COPY $x2
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY %dst
-    ; CHECK-NEXT: STRXroW [[COPY]], %base, %foo, 1, 1 :: (store (p0))
+    ; CHECK-NEXT: %dst:gpr64 = COPY $x2
+    ; CHECK-NEXT: STRXroW %dst, %base, %foo, 1, 1 :: (store (p0))
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
