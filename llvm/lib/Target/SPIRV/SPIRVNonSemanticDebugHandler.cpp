@@ -11,6 +11,7 @@
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -177,6 +178,75 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
   return Reg;
 }
 
+MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeVoid(
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  for (const MachineInstr *MI : MAI.getMSInstrs(SPIRV::MB_TypeConstVars)) {
+    if (MI->getOpcode() == SPIRV::OpTypeVoid)
+      return MAI.getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
+  }
+  MCRegister Reg = MAI.getNextIDRegister();
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpTypeVoid);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  emitMCInst(Inst);
+  return Reg;
+}
+
+MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeInt32(
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  for (const MachineInstr *MI : MAI.getMSInstrs(SPIRV::MB_TypeConstVars)) {
+    if (MI->getOpcode() == SPIRV::OpTypeInt &&
+        MI->getOperand(1).getImm() == 32 &&
+        MI->getOperand(2).getImm() == 0)
+      return MAI.getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
+  }
+  MCRegister Reg = MAI.getNextIDRegister();
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpTypeInt);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  Inst.addOperand(MCOperand::createImm(32)); // width
+  Inst.addOperand(MCOperand::createImm(0));  // signedness (unsigned)
+  emitMCInst(Inst);
+  return Reg;
+}
+
+void SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
+    const DIDerivedType *PT, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, MCRegister I32ZeroReg,
+    const DenseMap<const DIBasicType *, MCRegister> &BasicTypeRegs,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  // A DWARF address space is required to determine the SPIR-V storage class.
+  // Skip pointer types that do not carry one.
+  if (!PT->getDWARFAddressSpace().has_value())
+    return;
+
+  // For SPIR-V targets, Clang sets DwarfAddressSpace to the LLVM IR address
+  // space, which addressSpaceToStorageClass expects.
+  const auto &ST =
+      static_cast<const SPIRVSubtarget &>(Asm->getSubtargetInfo());
+  MCRegister StorageClassReg = emitOpConstantI32(
+      addressSpaceToStorageClass(PT->getDWARFAddressSpace().value(), ST),
+      I32TypeReg, MAI);
+
+  if (const auto *BaseType =
+          dyn_cast_or_null<DIBasicType>(PT->getBaseType())) {
+    auto BTIt = BasicTypeRegs.find(BaseType);
+    if (BTIt != BasicTypeRegs.end())
+      emitExtInst(SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg,
+                  ExtInstSetReg,
+                  {BTIt->second, StorageClassReg, I32ZeroReg}, MAI);
+  } else {
+    // Void pointer: use DebugInfoNone for the base type. Note that
+    // spirv-val currently rejects DebugInfoNone as the base type of
+    // DebugTypePointer; see issue #109287 and the DISABLED spirv-val run
+    // in debug-type-pointer.ll.
+    MCRegister NoneReg = emitExtInst(SPIRV::NonSemanticExtInst::DebugInfoNone,
+                                     VoidTypeReg, ExtInstSetReg, {}, MAI);
+    emitExtInst(SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg,
+                ExtInstSetReg, {NoneReg, StorageClassReg, I32ZeroReg}, MAI);
+  }
+}
+
 void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     SPIRV::ModuleAnalysisInfo &MAI) {
   if (CompileUnits.empty())
@@ -209,42 +279,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   if (!ExtInstSetReg.isValid())
     return; // Extension not available.
 
-  // Find OpTypeVoid and OpTypeInt 32 0 from the already-emitted TypeConstVars
-  // section. These are the result-type operand for OpExtInst and the type for
-  // OpConstant integers, respectively.
-  MCRegister VoidTypeReg, I32TypeReg;
-  for (const MachineInstr *MI : MAI.getMSInstrs(SPIRV::MB_TypeConstVars)) {
-    if (MI->getOpcode() == SPIRV::OpTypeVoid)
-      VoidTypeReg =
-          MAI.getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
-    else if (MI->getOpcode() == SPIRV::OpTypeInt &&
-             MI->getOperand(1).getImm() == 32 &&
-             MI->getOperand(2).getImm() == 0)
-      I32TypeReg =
-          MAI.getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
-  }
-
-  // Emit OpTypeVoid if the module did not already define one. A module with
-  // debug info but no void-returning functions would not have it in
-  // MB_TypeConstVars.
-  if (!VoidTypeReg.isValid()) {
-    VoidTypeReg = MAI.getNextIDRegister();
-    MCInst Inst;
-    Inst.setOpcode(SPIRV::OpTypeVoid);
-    Inst.addOperand(MCOperand::createReg(VoidTypeReg));
-    emitMCInst(Inst);
-  }
-
-  // Emit OpTypeInt 32 0 if the module did not already define one.
-  if (!I32TypeReg.isValid()) {
-    I32TypeReg = MAI.getNextIDRegister();
-    MCInst Inst;
-    Inst.setOpcode(SPIRV::OpTypeInt);
-    Inst.addOperand(MCOperand::createReg(I32TypeReg));
-    Inst.addOperand(MCOperand::createImm(32)); // width
-    Inst.addOperand(MCOperand::createImm(0));  // signedness (unsigned)
-    emitMCInst(Inst);
-  }
+  MCRegister VoidTypeReg = findOrEmitOpTypeVoid(MAI);
+  MCRegister I32TypeReg = findOrEmitOpTypeInt32(MAI);
 
   // Emit integer constants shared across all NSDI instructions. The constant
   // cache ensures each value is emitted at most once even when referenced from
@@ -259,11 +295,10 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   // Pre-emit source language constants for all compile units before entering
   // the DebugSource loop.
-  SmallVector<MCRegister> SrcLangRegs;
-  SrcLangRegs.reserve(CompileUnits.size());
-  for (const CompileUnitInfo &Info : CompileUnits)
-    SrcLangRegs.push_back(
-        emitOpConstantI32(Info.SpirvSourceLanguage, I32TypeReg, MAI));
+  SmallVector<MCRegister> SrcLangRegs = map_to_vector(
+      CompileUnits, [&](const CompileUnitInfo &Info) {
+        return emitOpConstantI32(Info.SpirvSourceLanguage, I32TypeReg, MAI);
+      });
 
   // Emit DebugSource and DebugCompilationUnit for each compile unit.
   // FileStringRegs was populated by emitNonSemanticDebugStrings() in section 7.
@@ -287,7 +322,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   // Maps each DIBasicType to its DebugTypeBasic result register for use as
   // operands in DebugTypePointer instructions.
-  SmallVector<std::pair<const DIBasicType *, MCRegister>> BasicTypeRegs;
+  DenseMap<const DIBasicType *, MCRegister> BasicTypeRegs;
 
   // BasicTypeNameRegs was populated by emitNonSemanticDebugStrings() in
   // section 7.
@@ -331,40 +366,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
     MCRegister BTReg = emitExtInst(
         SPIRV::NonSemanticExtInst::DebugTypeBasic, VoidTypeReg, ExtInstSetReg,
         {NameReg, SizeReg, EncodingReg, I32ZeroReg}, MAI);
-    BasicTypeRegs.emplace_back(BT, BTReg);
+    BasicTypeRegs[BT] = BTReg;
   }
 
   // Emit DebugTypePointer for each referenced pointer type.
-  for (const DIDerivedType *PT : PointerTypes) {
-    // A DWARF address space is required to determine the SPIR-V storage class.
-    // Skip pointer types that do not carry one.
-    if (!PT->getDWARFAddressSpace().has_value())
-      continue;
-
-    const auto &ST =
-        static_cast<const SPIRVSubtarget &>(Asm->getSubtargetInfo());
-    MCRegister StorageClassReg = emitOpConstantI32(
-        addressSpaceToStorageClass(PT->getDWARFAddressSpace().value(), ST),
-        I32TypeReg, MAI);
-
-    const auto *BaseType = dyn_cast_or_null<DIBasicType>(PT->getBaseType());
-    if (BaseType) {
-      for (const auto &[BT, BTReg] : BasicTypeRegs) {
-        if (BT == BaseType) {
-          emitExtInst(SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg,
-                      ExtInstSetReg, {BTReg, StorageClassReg, I32ZeroReg}, MAI);
-          break;
-        }
-      }
-    } else {
-      // Void pointer: use DebugInfoNone for the base type. Note that
-      // spirv-val currently rejects DebugInfoNone as the base type of
-      // DebugTypePointer; see issue #109287 and the DISABLED spirv-val run
-      // in debug-type-pointer.ll.
-      MCRegister NoneReg = emitExtInst(SPIRV::NonSemanticExtInst::DebugInfoNone,
-                                       VoidTypeReg, ExtInstSetReg, {}, MAI);
-      emitExtInst(SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg,
-                  ExtInstSetReg, {NoneReg, StorageClassReg, I32ZeroReg}, MAI);
-    }
-  }
+  for (const DIDerivedType *PT : PointerTypes)
+    emitDebugTypePointer(PT, VoidTypeReg, I32TypeReg, ExtInstSetReg,
+                         I32ZeroReg, BasicTypeRegs, MAI);
 }

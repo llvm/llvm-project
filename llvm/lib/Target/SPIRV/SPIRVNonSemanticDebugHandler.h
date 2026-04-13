@@ -141,6 +141,25 @@ private:
                          ArrayRef<MCRegister> Operands,
                          SPIRV::ModuleAnalysisInfo &MAI);
 
+  /// Find OpTypeVoid in the already-emitted TypeConstVars section, or emit one
+  /// if the module does not contain it (e.g. no void-returning functions).
+  MCRegister findOrEmitOpTypeVoid(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Find OpTypeInt 32 0 in the already-emitted TypeConstVars section, or emit
+  /// one if the module does not contain it.
+  MCRegister findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit a DebugTypePointer instruction for PT. Skips pointer types that do
+  /// not carry a DWARF address space. For pointers whose base type is a
+  /// DIBasicType, looks up the base type's DebugTypeBasic register in
+  /// BasicTypeRegs. All other pointers (void pointers and pointers whose base
+  /// type is not a DIBasicType) use DebugInfoNone as the base type operand.
+  void emitDebugTypePointer(
+      const DIDerivedType *PT, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+      MCRegister ExtInstSetReg, MCRegister I32ZeroReg,
+      const DenseMap<const DIBasicType *, MCRegister> &BasicTypeRegs,
+      SPIRV::ModuleAnalysisInfo &MAI);
+
   /// Map a DWARF source language code to a NonSemantic.Shader.DebugInfo.100
   /// source language code.
   static unsigned toNSDISrcLang(unsigned DwarfSrcLang);

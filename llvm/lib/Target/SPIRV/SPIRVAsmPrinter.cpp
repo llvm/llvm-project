@@ -107,7 +107,8 @@ public:
   SPIRV::ModuleAnalysisInfo *MAI;
 
   // Non-owning pointer to the NSDI handler registered via addAsmPrinterHandler.
-  // Set in doInitialization() when the module has debug info.
+  // The handler's lifetime is managed by AsmPrinter (the base class of this
+  // object), so this pointer cannot dangle.
   SPIRVNonSemanticDebugHandler *NSDebugHandler = nullptr;
 
 protected:

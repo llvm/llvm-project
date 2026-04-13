@@ -4,18 +4,6 @@
 ; TODO(#109287): When type is void * the spirv-val raises an error when DebugInfoNone is set as <id> Base Type argument of DebugTypePointer.
 ; DISABLED: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; The old SPIRVEmitNonSemanticDI MachineFunctionPass emitted DebugTypeBasic and
-; DebugTypePointer instructions as MachineInstructions, which were tested via
-; --print-after=spirv-nonsemantic-debug-info (CHECK-MIR prefix).
-; SPIRVNonSemanticDebugHandler replaces that pass. It emits NSDI instructions
-; directly as MCInsts at print time, with no MIR representation. CHECK-SPIRV
-; tests the same instructions at the SPIR-V text output level.
-
-; The Flags operand of DebugTypeBasic and DebugTypePointer is an integer bitmask.
-; SPIRVNonSemanticDebugHandler emits it as OpConstant (not OpConstantNull) because
-; OpConstant with an explicit value is the canonical form for integer constants in
-; NSDI, consistent with other NSDI producers such as DXC and glslang.
-
 ; Anchor on OpTypeVoid rather than OpTypeInt 32 0. The module may already contain
 ; OpConstant i32 N instructions (e.g. for array dimensions) before the NSDI section,
 ; which have the same pattern as the NSDI-emitted constants. Anchoring after
