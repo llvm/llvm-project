@@ -1048,7 +1048,7 @@ void BreakableLineCommentSection::reflow(unsigned LineIndex,
       // tokens by the empty string.
       Whitespaces.replaceWhitespace(
           *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
-          /*StartOfTokenColumn=*/StartColumn, /*IsAligned=*/true,
+          /*StartOfTokenColumn=*/StartColumn, /*AlignedTo=*/nullptr,
           /*InPPDirective=*/false);
     } else {
       // In case we're reflowing after the '\' in:
@@ -1114,12 +1114,13 @@ void BreakableLineCommentSection::adaptStartOfLine(
     // token, even if LineColumn is the same as the original column of the
     // token. This is because WhitespaceManager doesn't align trailing
     // comments if they are untouchable.
-    Whitespaces.replaceWhitespace(*Tokens[LineIndex],
-                                  /*Newlines=*/1,
-                                  /*Spaces=*/LineColumn,
-                                  /*StartOfTokenColumn=*/LineColumn,
-                                  /*IsAligned=*/tokenAt(0).NewlinesBefore == 0,
-                                  /*InPPDirective=*/false);
+    Whitespaces.replaceWhitespace(
+        *Tokens[LineIndex],
+        /*Newlines=*/1,
+        /*Spaces=*/LineColumn,
+        /*StartOfTokenColumn=*/LineColumn,
+        /*AlignedTo=*/tokenAt(0).NewlinesBefore == 0 ? &tokenAt(0) : nullptr,
+        /*InPPDirective=*/false);
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {
     // Adjust the prefix if necessary.
