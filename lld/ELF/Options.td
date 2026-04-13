@@ -62,6 +62,9 @@ def : F<"build-id">, Alias<build_id>, AliasArgs<["sha1"]>, HelpText<"Alias for -
 defm branch_to_branch: BB<"branch-to-branch",
     "Enable branch-to-branch optimization (default at -O2)",
     "Disable branch-to-branch optimization (default at -O0 and -O1)">;
+defm aarch64_bti_relax: BB<"aarch64-bti-relax",
+    "Enable AArch64 BTI relaxation",
+    "Disable AArch64 BTI relaxation (default)">;
 
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
