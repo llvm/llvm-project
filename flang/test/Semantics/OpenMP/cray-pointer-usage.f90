@@ -70,4 +70,11 @@ subroutine test_nested_cray_pointer
       B = B + 1.0
     !$omp end parallel
   !$omp end parallel
+
+  !$omp parallel default(none)
+    ! ERROR: The DEFAULT(NONE) clause requires that the Cray Pointer 'p' must be listed in a data-sharing attribute clause
+    !$omp parallel default(none) shared(P)
+      B = B + 1.0
+    !$omp end parallel
+  !$omp end parallel
 end subroutine test_nested_cray_pointer

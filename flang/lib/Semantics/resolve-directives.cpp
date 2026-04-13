@@ -2780,10 +2780,11 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     const Symbol *crayPtr = nullptr;
     Symbol::Flags crayPtrDSA;
     if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
-      std::string crayPtrName{
-          semantics::GetCrayPointer(*symbol).name().ToString()};
-      crayPtr = currScope().FindSymbol(crayPtrName);
-      initSymbolDSA(crayPtr, crayPtrDSA);
+      crayPtr =
+          currScope().FindSymbol(semantics::GetCrayPointer(*symbol).name());
+      if (crayPtr) {
+        initSymbolDSA(crayPtr, crayPtrDSA);
+      }
     }
     if (dsa.none() && crayPtrDSA.none() &&
         dirContext.defaultDSA == Symbol::Flag::OmpNone) {
