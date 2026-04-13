@@ -59,7 +59,7 @@ class RegionWithScore final : public Region {
   ScoreBoard Scoreboard;
 
   void add(Instruction *I) override {
-    Region::add(I);
+    addRaw(I);
     // Keep track of the instruction cost.
     Scoreboard.add(I);
   }

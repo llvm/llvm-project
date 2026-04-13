@@ -17,7 +17,7 @@ Region::Region(Context &Ctx, RegionClassID ID) : Ctx(Ctx), ID(ID) {
   RegionMDN = MDNode::getDistinct(LLVMCtx, {RegionStrMD});
 
   CreateInstCB = Ctx.registerCreateInstrCallback(
-      [this](Instruction *NewInst) { Region::add(NewInst); });
+      [this](Instruction *NewInst) { addRaw(NewInst); });
   EraseInstCB = Ctx.registerEraseInstrCallback([this](Instruction *ErasedInst) {
     remove(ErasedInst);
     removeFromAux(ErasedInst);
@@ -40,7 +40,7 @@ void Region::setAux(ArrayRef<Instruction *> Aux) {
     cast<llvm::Instruction>(I->Val)->setMetadata(
         AuxMDKind, MDNode::get(LLVMCtx, ConstantAsMetadata::get(IdxC)));
     // Aux instrs should always be in a region.
-    Region::add(I);
+    addRaw(I);
   }
 }
 
@@ -57,7 +57,7 @@ void Region::setAux(unsigned Idx, Instruction *I) {
   }
   Aux[Idx] = I;
   // Aux instrs should always be in a region.
-  Region::add(I);
+  addRaw(I);
 }
 
 void Region::dropAuxMetadata(Instruction *I) {
@@ -130,7 +130,7 @@ SmallVector<std::unique_ptr<Region>> Region::createRegionsFromMD(Function &F) {
         } else {
           R = It->second;
         }
-        R->Region::add(&Inst);
+        R->addRaw(&Inst);
       }
       if (auto *AuxMDN = LLVMI->getMetadata(AuxMDKind)) {
         llvm::Constant *IdxC =

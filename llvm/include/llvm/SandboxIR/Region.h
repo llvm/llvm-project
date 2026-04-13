@@ -84,13 +84,22 @@ protected:
   /// ID (for later deregistration) of the "erase instruction" callback.
   Context::CallbackID EraseInstCB;
 
-  /// Adds I to the set. This is the main API for adding an instruction to the
-  /// region.
-  virtual void add(Instruction *I) {
+  /// Adds \p I to the set. Only to be used when we want to avoid the additional
+  /// functionality provided by the subclass, e.g., to avoid score counting when
+  /// adding instrs to the aux vector.
+  /// NOTE: When an instruction is added to the region we track it cost in the
+  /// scoreboard, which currently resides in the region class. However, when we
+  /// add an instruction to the auxiliary vector it does get tagged as being a
+  /// member of the region (for ownership reasons), but its cost does not get
+  /// counted because the instruction hasn't been added in the "normal" way.
+  void addRaw(Instruction *I) {
     Insts.insert(I);
     // TODO: Consider tagging instructions lazily.
     cast<llvm::Instruction>(I->Val)->setMetadata(MDKind, RegionMDN);
   }
+  /// Adds I to the set. This is the main API for adding an instruction to the
+  /// region.
+  virtual void add(Instruction *I) { addRaw(I); }
   /// Removes I from the set.
   LLVM_ABI virtual void remove(Instruction *I);
   friend class Context; // The callbacks need to call add() and remove().
