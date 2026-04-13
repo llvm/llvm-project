@@ -3367,6 +3367,21 @@ bool isMergeableStackTaggingInstruction(MachineInstr &MI, int64_t &Offset,
   return true;
 }
 
+static size_t countAvailableScavengerSlots(LivePhysRegs &LiveRegs,
+                                           MachineRegisterInfo &MRI,
+                                           RegScavenger *RS) {
+  auto FreeGPRs =
+      llvm::count_if(AArch64::GPR64RegClass, [&LiveRegs, &MRI](auto Reg) {
+        return LiveRegs.available(MRI, Reg);
+      });
+
+  size_t NumEmergencySlots = 0;
+  if (RS)
+    NumEmergencySlots = RS->getNumScavengingFrameIndices();
+
+  return FreeGPRs + NumEmergencySlots;
+}
+
 // Detect a run of memory tagging instructions for adjacent stack frame slots,
 // and replace them with a shorter instruction sequence:
 // * replace STG + STG with ST2G
@@ -3445,6 +3460,19 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   InsertI++;
   if (LiveRegs.contains(AArch64::NZCV))
     return InsertI;
+
+  // Emitting an MTE loop requires two physical registers (BaseReg and
+  // SizeReg).  If the function is under register pressure, the register
+  // scavenger will crash trying to allocate them. If we don't have at least
+  // two free slots (free registers + emergency slots), bail out and fall back
+  // to the unrolled sequence.
+  if (countAvailableScavengerSlots(LiveRegs, MBB->getParent()->getRegInfo(),
+                                   RS) < 2) {
+    LLVM_DEBUG(
+        dbgs() << "Failed to merge MTE stack tagging instructions into loop "
+               << "due to high register pressure.\n");
+    return InsertI;
+  }
 
   llvm::stable_sort(Instrs,
                     [](const TagStoreInstr &Left, const TagStoreInstr &Right) {

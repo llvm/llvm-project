@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;    }
 ;}
 
-define void @loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
+define void @loop(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -39,7 +39,7 @@ define void @loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -56,14 +56,14 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 512
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
 ; The same loop with parallel loop metadata added to the loop branch
 ; and the memory instructions.
 
-define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
+define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @parallel_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -115,7 +115,7 @@ define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4, !llvm.access.group !13
@@ -134,7 +134,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 512
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !3
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -142,7 +142,7 @@ for.end:                                          ; preds = %for.body
 ; accesses refer to a different loop's identifier.
 
 
-define void @mixed_metadata(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
+define void @mixed_metadata(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @mixed_metadata(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -168,7 +168,7 @@ define void @mixed_metadata(ptr nocapture %a, ptr nocapture %b) nounwind uwtable
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4, !llvm.access.group !16
@@ -187,7 +187,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %lftr.wideiv, 512
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !6
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

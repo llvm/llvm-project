@@ -1,6 +1,9 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx810 | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx900 | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc < %s -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx810 | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal -mcpu=gfx810 | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx900 | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc < %s -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal -mcpu=gfx900 | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; Testing for failures in divergence calculations when divergent intrinsic is lowered during instruction selection
 

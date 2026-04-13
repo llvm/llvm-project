@@ -31,6 +31,14 @@ enable_cir="${6}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct"
 
+runtime_cmake_args=()
+if [[ " ${runtime_targets} " == *" check-libclc-amdgcn-amd-amdhsa-llvm "* ]]; then
+  runtime_cmake_args+=(
+    -D RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc
+    -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm"
+  )
+fi
+
 start-group "CMake"
 
 # Set the system llvm-symbolizer as preferred.
@@ -62,7 +70,8 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="-no-pie" \
       -D LLVM_ENABLE_WERROR=ON \
-      -D LLVM_BINUTILS_INCDIR=/usr
+      -D LLVM_BINUTILS_INCDIR=/usr \
+      "${runtime_cmake_args[@]}"
 
 start-group "ninja"
 

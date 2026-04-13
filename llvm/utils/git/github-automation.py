@@ -54,10 +54,22 @@ def escape_description(str):
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
     str = html.escape(str, False)
     # '@' followed by alphanum is a user name
-    str = re.sub("@(?=\w)", "@<!-- -->", str)
+    str = re.sub(r"@(?=\w)", "@<!-- -->", str)
     # '#' followed by digits is considered an issue number
-    str = re.sub("#(?=\d)", "#<!-- -->", str)
+    str = re.sub(r"#(?=\d)", "#<!-- -->", str)
     return str
+
+
+def format_author(user) -> str:
+    # user.login is the account name, which everyone has. In theory it can be None,
+    # perhaps for closed accounts. user.name is a longer display name for example
+    # "First Last", which not everyone has set.
+    author = "Author: "
+    if user.name is not None:
+        author += f"{user.name} ({user.login})"
+    else:
+        author += f"{user.login}"
+    return author
 
 
 class IssueSubscriber:
@@ -88,7 +100,7 @@ class IssueSubscriber:
         comment = f"""
 @llvm/{team.slug}
 
-Author: {self.issue.user.name} ({self.issue.user.login})
+{format_author(self.issue.user)}
 
 <details>
 {body}
@@ -183,7 +195,7 @@ class PRSubscriber:
 {self.COMMENT_TAG}
 {team_mention}
 
-Author: {self.pr.user.name} ({self.pr.user.login})
+{format_author(self.pr.user)}
 
 <details>
 <summary>Changes</summary>
@@ -650,7 +662,7 @@ class ReleaseWorkflow:
     def get_main_commit(self, cherry_pick_sha: str) -> github.Commit.Commit:
         commit = self.repo.get_commit(cherry_pick_sha)
         message = commit.commit.message
-        m = re.search("\(cherry picked from commit ([0-9a-f]+)\)", message)
+        m = re.search(r"\(cherry picked from commit ([0-9a-f]+)\)", message)
         if not m:
             return None
         return self.repo.get_commit(m.group(1))
@@ -673,7 +685,10 @@ class ReleaseWorkflow:
                 for review in pull.get_reviews():
                     if review.state != "APPROVED":
                         continue
-                    reviewers.append(review.user.login)
+                    # Ensure the reviewer list contains only unique entries, as
+                    # reviewers may have submitted more than one round of review.
+                    if review.user.login not in reviewers:
+                        reviewers.append(review.user.login)
         if len(reviewers):
             message = "{} What do you think about merging this PR to the release branch?".format(
                 " ".join(["@" + r for r in reviewers])

@@ -578,7 +578,7 @@ define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[N]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP3:%.*]] = mul nsw <vscale x 4 x i64> [[TMP4]], splat (i64 -1)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = sub nsw <vscale x 4 x i64> zeroinitializer, [[TMP4]]
 ; IF-EVL-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[TMP3]]
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -587,7 +587,7 @@ define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP1]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
-; IF-EVL-NEXT:    [[TMP8:%.*]] = mul nsw i64 -1, [[TMP7]]
+; IF-EVL-NEXT:    [[TMP8:%.*]] = sub nsw i64 0, [[TMP7]]
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i32], ptr [[A:%.*]], <vscale x 4 x i64> [[VEC_IND]], i32 0
@@ -630,9 +630,9 @@ define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[N]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; NO-VP-NEXT:    [[TMP8:%.*]] = mul nsw <vscale x 4 x i64> [[TMP7]], splat (i64 -1)
+; NO-VP-NEXT:    [[TMP8:%.*]] = sub nsw <vscale x 4 x i64> zeroinitializer, [[TMP7]]
 ; NO-VP-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[TMP8]]
-; NO-VP-NEXT:    [[TMP9:%.*]] = mul nsw i64 -1, [[TMP5]]
+; NO-VP-NEXT:    [[TMP9:%.*]] = sub nsw i64 0, [[TMP5]]
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP9]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]

@@ -280,7 +280,8 @@ MlirAttribute PyArrayAttribute::getItem(intptr_t i) const {
 void PyArrayAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
-      [](const nb::list &attributes, DefaultingPyMlirContext context) {
+      [](nb::typed<nb::sequence, PyAttribute> attributes,
+         DefaultingPyMlirContext context) {
         std::vector<MlirAttribute> mlirAttributes;
         mlirAttributes.reserve(nb::len(attributes));
         for (auto attribute : attributes) {
@@ -306,7 +307,8 @@ void PyArrayAttribute::bindDerived(ClassTy &c) {
       .def("__iter__", [](const PyArrayAttribute &arr) {
         return PyArrayAttributeIterator(arr);
       });
-  c.def("__add__", [](PyArrayAttribute arr, const nb::list &extras) {
+  c.def("__add__", [](PyArrayAttribute arr,
+                      nb::typed<nb::sequence, PyAttribute> extras) {
     std::vector<MlirAttribute> attributes;
     intptr_t numOldElements = mlirArrayAttrGetNumElements(arr);
     attributes.reserve(numOldElements + nb::len(extras));
@@ -426,7 +428,7 @@ void PyIntegerAttribute::bindDerived(ClassTy &c) {
   });
 }
 
-nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
+nb::int_ PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
   MlirType type = mlirAttributeGetType(self);
   unsigned bitWidth = mlirIntegerAttrGetValueBitWidth(self);
 
@@ -463,7 +465,7 @@ nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
     }
   }
 
-  return result;
+  return nb::cast<nb::int_>(result);
 }
 
 void PyBoolAttribute::bindDerived(ClassTy &c) {
@@ -511,14 +513,13 @@ void PySymbolRefAttribute::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "value",
       [](PySymbolRefAttribute &self) {
-        MlirStringRef rootRef = mlirSymbolRefAttrGetRootReference(self);
-        std::vector<std::string> symbols = {
-            std::string(rootRef.data, rootRef.length)};
-        for (int i = 0; i < mlirSymbolRefAttrGetNumNestedReferences(self);
-             ++i) {
-          MlirStringRef nestedRef = mlirSymbolRefAttrGetRootReference(
-              mlirSymbolRefAttrGetNestedReference(self, i));
-          symbols.push_back(std::string(nestedRef.data, nestedRef.length));
+        intptr_t numNested = mlirSymbolRefAttrGetNumNestedReferences(self);
+        std::vector<MlirStringRef> symbols;
+        symbols.reserve(numNested + 1);
+        symbols.push_back(mlirSymbolRefAttrGetRootReference(self));
+        for (intptr_t i = 0; i < numNested; ++i) {
+          symbols.push_back(mlirSymbolRefAttrGetRootReference(
+              mlirSymbolRefAttrGetNestedReference(self, i)));
         }
         return symbols;
       },
@@ -578,10 +579,10 @@ void PyOpaqueAttribute::bindDerived(ClassTy &c) {
       "Returns the data for the Opaqued attributes as `bytes`");
 }
 
-PyDenseElementsAttribute
-PyDenseElementsAttribute::getFromList(const nb::list &attributes,
-                                      std::optional<PyType> explicitType,
-                                      DefaultingPyMlirContext contextWrapper) {
+PyDenseElementsAttribute PyDenseElementsAttribute::getFromList(
+    const nb::typed<nb::sequence, PyAttribute> &attributes,
+    std::optional<PyType> explicitType,
+    DefaultingPyMlirContext contextWrapper) {
   const size_t numAttributes = nb::len(attributes);
   if (numAttributes == 0)
     throw nb::value_error("Attributes list must be non-empty.");
@@ -1174,7 +1175,8 @@ void PyDictAttribute::bindDerived(ClassTy &c) {
   c.def("__len__", &PyDictAttribute::dunderLen);
   c.def_static(
       "get",
-      [](const nb::dict &attributes, DefaultingPyMlirContext context) {
+      [](const nb::typed<nb::dict, nb::str, PyAttribute> &attributes,
+         DefaultingPyMlirContext context) {
         std::vector<MlirNamedAttribute> mlirNamedAttributes;
         mlirNamedAttributes.reserve(attributes.size());
         for (std::pair<nb::handle, nb::handle> it : attributes) {
@@ -1329,14 +1331,13 @@ nb::object denseArrayAttributeCaster(PyAttribute &pyAttribute) {
   throw nb::type_error(msg.c_str());
 }
 
-nb::object denseIntOrFPElementsAttributeCaster(PyAttribute &pyAttribute) {
+nb::object denseTypedElementsAttributeCaster(PyAttribute &pyAttribute) {
   if (PyDenseFPElementsAttribute::isaFunction(pyAttribute))
     return nb::cast(PyDenseFPElementsAttribute(pyAttribute));
   if (PyDenseIntElementsAttribute::isaFunction(pyAttribute))
     return nb::cast(PyDenseIntElementsAttribute(pyAttribute));
   std::string msg =
-      std::string(
-          "Can't cast unknown element type DenseIntOrFPElementsAttr (") +
+      std::string("Can't cast unknown element type DenseTypedElementsAttr (") +
       nb::cast<std::string>(nb::repr(nb::cast(pyAttribute))) + ")";
   throw nb::type_error(msg.c_str());
 }
@@ -1512,10 +1513,9 @@ void populateIRAttributes(nb::module_ &m) {
   PyDenseElementsAttribute::bind(m, PyDenseElementsAttribute::slots);
   PyDenseFPElementsAttribute::bind(m);
   PyDenseIntElementsAttribute::bind(m);
-  PyGlobals::get().registerTypeCaster(
-      mlirDenseIntOrFPElementsAttrGetTypeID(),
-      nb::cast<nb::callable>(
-          nb::cpp_function(denseIntOrFPElementsAttributeCaster)));
+  PyGlobals::get().registerTypeCaster(mlirDenseTypedElementsAttrGetTypeID(),
+                                      nb::cast<nb::callable>(nb::cpp_function(
+                                          denseTypedElementsAttributeCaster)));
   PyDenseResourceElementsAttribute::bind(m);
 
   PyDictAttribute::bind(m);

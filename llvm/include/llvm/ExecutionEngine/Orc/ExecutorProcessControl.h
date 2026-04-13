@@ -134,23 +134,18 @@ public:
   /// Get the JIT dispatch function and context address for the executor.
   const JITDispatchInfo &getJITDispatchInfo() const { return JDI; }
 
-  /// Return a MemoryAccess object for the target process.
-  MemoryAccess &getMemoryAccess() const {
-    assert(MemAccess && "No MemAccess object set.");
-    return *MemAccess;
-  }
-
   /// Return a JITLinkMemoryManager for the target process.
   jitlink::JITLinkMemoryManager &getMemMgr() const {
     assert(MemMgr && "No MemMgr object set");
     return *MemMgr;
   }
 
-  /// Return the DylibManager for the target process.
-  DylibManager &getDylibMgr() const {
-    assert(DylibMgr && "No DylibMgr object set");
-    return *DylibMgr;
-  }
+  /// Create a default DylibManager for the target process.
+  virtual Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() = 0;
+
+  /// Create a default MemoryAccess for the target process.
+  virtual Expected<std::unique_ptr<MemoryAccess>>
+  createDefaultMemoryAccess() = 0;
 
   /// Returns the bootstrap map.
   const StringMap<std::vector<char>> &getBootstrapMap() const {
@@ -315,9 +310,7 @@ protected:
   Triple TargetTriple;
   unsigned PageSize = 0;
   JITDispatchInfo JDI;
-  MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
-  DylibManager *DylibMgr = nullptr;
   StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };

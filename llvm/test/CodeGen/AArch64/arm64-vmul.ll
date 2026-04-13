@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:	 warning: Instruction selection used fallback path for sqdmulh_1s
+; CHECK-GI:      warning: Instruction selection used fallback path for sqdmulh_1s
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_2s
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_4s
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_2d
@@ -19,8 +19,6 @@
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_4s_strict
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_2d_strict
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmulh_lane_1s
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlal_lane_1d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlsl_lane_1d
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v4f32
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f32
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f64
@@ -29,8 +27,6 @@
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32_1
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f64
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlal_d
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlsl_d
 
 define <8 x i16> @smull8h(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: smull8h:
@@ -1792,32 +1788,73 @@ define i32 @sqsub_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
   ret i32 %res
 }
 
-define i64 @sqdmlal_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
-; CHECK-LABEL: sqdmlal_lane_1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov d2, x0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmlal d2, s1, v0.s[1]
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+define i64 @test_vqdmulls_lane_s32(i32 noundef %a, <2 x i32> noundef %b) {
+; CHECK-SD-LABEL: test_vqdmulls_lane_s32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    sqdmull d0, s1, v0.s[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_vqdmulls_lane_s32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    sqdmull d0, s1, s0
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vget_lane = extractelement <2 x i32> %b, i64 1
+  %vqdmulls_s32.i = tail call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %a, i32 %vget_lane)
+  ret i64 %vqdmulls_s32.i
+}
+
+define i64 @sqdmlal_lane_1d_v2i32(i64 %A, i32 %B, <2 x i32> %C) nounwind {
+; CHECK-SD-LABEL: sqdmlal_lane_1d_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s1, w1
+; CHECK-SD-NEXT:    fmov d2, x0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    sqdmlal d2, s1, v0.s[1]
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqdmlal_lane_1d_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    fmov d2, x0
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    sqdmlal d2, s1, s0
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
   %rhs = extractelement <2 x i32> %C, i32 1
   %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
   %res = call i64 @llvm.aarch64.neon.sqadd.i64(i64 %A, i64 %prod)
   ret i64 %res
 }
-declare i64 @llvm.aarch64.neon.sqdmulls.scalar(i32, i32)
-declare i64 @llvm.aarch64.neon.sqadd.i64(i64, i64)
 
-define i64 @sqdmlsl_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
-; CHECK-LABEL: sqdmlsl_lane_1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov d2, x0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmlsl d2, s1, v0.s[1]
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+define i64 @sqdmlsl_lane_1d_v2i32(i64 %A, i32 %B, <2 x i32> %C) nounwind {
+; CHECK-SD-LABEL: sqdmlsl_lane_1d_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s1, w1
+; CHECK-SD-NEXT:    fmov d2, x0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    sqdmlsl d2, s1, v0.s[1]
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqdmlsl_lane_1d_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    fmov d2, x0
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    sqdmlsl d2, s1, s0
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
   %rhs = extractelement <2 x i32> %C, i32 1
   %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
   %res = call i64 @llvm.aarch64.neon.sqsub.i64(i64 %A, i64 %prod)
@@ -1825,6 +1862,33 @@ define i64 @sqdmlsl_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
 }
 declare i64 @llvm.aarch64.neon.sqsub.i64(i64, i64)
 
+define i64 @sqdmlal_lane_1d_v4i32(i64 %A, i32 %B, <4 x i32> %C) nounwind {
+; CHECK-LABEL: sqdmlal_lane_1d_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w1
+; CHECK-NEXT:    fmov d2, x0
+; CHECK-NEXT:    sqdmlal d2, s1, v0.s[1]
+; CHECK-NEXT:    fmov x0, d2
+; CHECK-NEXT:    ret
+  %rhs = extractelement <4 x i32> %C, i32 1
+  %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
+  %res = call i64 @llvm.aarch64.neon.sqadd.i64(i64 %A, i64 %prod)
+  ret i64 %res
+}
+
+define i64 @sqdmlsl_lane_1d_v4i32(i64 %A, i32 %B, <4 x i32> %C) nounwind {
+; CHECK-LABEL: sqdmlsl_lane_1d_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w1
+; CHECK-NEXT:    fmov d2, x0
+; CHECK-NEXT:    sqdmlsl d2, s1, v0.s[1]
+; CHECK-NEXT:    fmov x0, d2
+; CHECK-NEXT:    ret
+  %rhs = extractelement <4 x i32> %C, i32 1
+  %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %B, i32 %rhs)
+  %res = call i64 @llvm.aarch64.neon.sqsub.i64(i64 %A, i64 %prod)
+  ret i64 %res
+}
 
 define <4 x i32> @umlal_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: umlal_lane_4s:
@@ -3201,14 +3265,23 @@ define i32 @sqdmlal_s(i16 %A, i16 %B, i32 %C) nounwind {
 }
 
 define i64 @sqdmlal_d(i32 %A, i32 %B, i64 %C) nounwind {
-; CHECK-LABEL: sqdmlal_d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    fmov d2, x2
-; CHECK-NEXT:    sqdmlal d2, s1, s0
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqdmlal_d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w1
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    fmov d2, x2
+; CHECK-SD-NEXT:    sqdmlal d2, s1, s0
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqdmlal_d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    fmov d2, x2
+; CHECK-GI-NEXT:    sqdmlal d2, s0, s1
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
   %tmp4 = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %A, i32 %B)
   %tmp5 = call i64 @llvm.aarch64.neon.sqadd.i64(i64 %C, i64 %tmp4)
   ret i64 %tmp5
@@ -3241,14 +3314,23 @@ define i32 @sqdmlsl_s(i16 %A, i16 %B, i32 %C) nounwind {
 }
 
 define i64 @sqdmlsl_d(i32 %A, i32 %B, i64 %C) nounwind {
-; CHECK-LABEL: sqdmlsl_d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    fmov d2, x2
-; CHECK-NEXT:    sqdmlsl d2, s1, s0
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqdmlsl_d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w1
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    fmov d2, x2
+; CHECK-SD-NEXT:    sqdmlsl d2, s1, s0
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqdmlsl_d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    fmov d2, x2
+; CHECK-GI-NEXT:    sqdmlsl d2, s0, s1
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
   %tmp4 = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %A, i32 %B)
   %tmp5 = call i64 @llvm.aarch64.neon.sqsub.i64(i64 %C, i64 %tmp4)
   ret i64 %tmp5

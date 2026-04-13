@@ -77,7 +77,6 @@ bool SystemZPreRASchedStrategy::definesCmp0Src(const MachineInstr *MI,
   if (Cmp0SrcReg != SystemZ::NoRegister && MI->getNumOperands() &&
       (MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC) || !CCDef)) {
     const MachineOperand &MO0 = MI->getOperand(0);
-    assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
     if (isRegDef(MO0) && MO0.getReg() == Cmp0SrcReg)
       return true;
   }

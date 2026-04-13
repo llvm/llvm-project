@@ -286,13 +286,23 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::bits<GadgetScannerKind> GadgetScannersToRun(
-    "scanners", cl::desc("which gadget scanners to run"),
+static cl::list<GadgetKindBitmask> GadgetScannersToRun(
+    "scanners", cl::desc("Which gadget scanners to run"),
     cl::values(
-        clEnumValN(GS_PACRET, "pacret",
-                   "pac-ret: return address protection (subset of \"pauth\")"),
-        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
-        clEnumValN(GS_ALL, "all", "All implemented scanners")),
+        clEnumValN(GS_PTRAUTH_RETURN_TARGETS, "ptrauth-pac-ret",
+                   "Unprotected returns (pac-ret)"),
+        clEnumValN(GS_PTRAUTH_TAIL_CALLS, "ptrauth-tail-calls",
+                   "Tail calls performed with unprotected link register"),
+        clEnumValN(GS_PTRAUTH_BRANCH_AND_CALL_TARGETS, "ptrauth-forward-cf",
+                   "Unprotected calls and branches (forward control-flow)"),
+        clEnumValN(GS_PTRAUTH_SIGN_ORACLES, "ptrauth-sign-oracles",
+                   "Signing of untrusted pointers (signing oracles)"),
+        clEnumValN(GS_PTRAUTH_AUTH_ORACLES, "ptrauth-auth-oracles",
+                   "Authentication oracles"),
+
+        clEnumValN(GS_PTRAUTH_ALL_MASK, "ptrauth-all",
+                   "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL_MASK, "all", "All implemented scanners")),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 // Primary targets for hooking runtime library initialization hooking
@@ -364,8 +374,6 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 } // namespace bolt
 } // namespace llvm
 
-using ELF64LEPhdrTy = ELF64LEFile::Elf_Phdr;
-
 namespace {
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
@@ -395,16 +403,16 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     : InputFile(File), Argc(Argc), Argv(Argv), ToolPath(ToolPath),
       SHStrTab(StringTableBuilder::ELF) {
   ErrorAsOutParameter EAO(&Err);
-  auto ELF64LEFile = dyn_cast<ELF64LEObjectFile>(InputFile);
-  if (!ELF64LEFile) {
+  if (!isa<ELF64LEObjectFile>(InputFile) &&
+      !isa<ELF32LEObjectFile>(InputFile)) {
     Err = createStringError(errc::not_supported,
-                            "Only 64-bit LE ELF binaries are supported");
+                            "Only 32-bit and 64-bit LE ELF binaries "
+                            "are supported");
     return;
   }
 
   bool IsPIC = false;
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
-  if (Obj.getHeader().e_type != ELF::ET_EXEC) {
+  if (File->getEType() != ELF::ET_EXEC) {
     Stdout << "BOLT-INFO: shared object or position-independent executable "
               "detected\n";
     IsPIC = true;
@@ -539,13 +547,12 @@ static bool checkVMA(const typename ELFT::Phdr &Phdr,
   return false;
 }
 
-void RewriteInstance::markGnuRelroSections() {
-  using ELFT = ELF64LE;
+template <typename ELFT>
+void RewriteInstance::markGnuRelroSections(ELFObjectFile<ELFT> *ELFObjFile) {
   using ELFShdrTy = typename ELFObjectFile<ELFT>::Elf_Shdr;
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELFT> &Obj = ELF64LEFile->getELFFile();
+  const ELFFile<ELFT> &Obj = ELFObjFile->getELFFile();
 
-  auto handleSection = [&](const ELFT::Phdr &Phdr, SectionRef SecRef) {
+  auto handleSection = [&](const typename ELFT::Phdr &Phdr, SectionRef SecRef) {
     BinarySection *BinarySection = BC->getSectionForSectionRef(SecRef);
     // If the section is non-allocatable, ignore it for GNU_RELRO purposes:
     // it can't be made read-only after runtime relocations processing.
@@ -576,37 +583,39 @@ void RewriteInstance::markGnuRelroSections() {
                  << " as GNU_RELRO\n";
   };
 
-  for (const ELFT::Phdr &Phdr : cantFail(Obj.program_headers()))
+  for (const typename ELFT::Phdr &Phdr : cantFail(Obj.program_headers()))
     if (Phdr.p_type == ELF::PT_GNU_RELRO)
       for (SectionRef SecRef : InputFile->sections())
         handleSection(Phdr, SecRef);
 }
 
-Error RewriteInstance::discoverStorage() {
+template <typename ELFT>
+Error RewriteInstance::discoverStorage(ELFObjectFile<ELFT> *ELFObjFile) {
   NamedRegionTimer T("discoverStorage", "discover storage", TimerGroupName,
                      TimerGroupDesc, opts::TimeRewrite);
 
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+  const ELFFile<ELFT> &Obj = ELFObjFile->getELFFile();
 
   BC->StartFunctionAddress = Obj.getHeader().e_entry;
 
   NextAvailableAddress = 0;
   uint64_t NextAvailableOffset = 0;
-  Expected<ELF64LE::PhdrRange> PHsOrErr = Obj.program_headers();
+  auto PHsOrErr = Obj.program_headers();
   if (Error E = PHsOrErr.takeError())
     return E;
 
-  ELF64LE::PhdrRange PHs = PHsOrErr.get();
-  for (const ELF64LE::Phdr &Phdr : PHs) {
+  auto PHs = PHsOrErr.get();
+  for (const typename ELFT::Phdr &Phdr : PHs) {
     switch (Phdr.p_type) {
     case ELF::PT_LOAD:
       BC->FirstAllocAddress = std::min(BC->FirstAllocAddress,
                                        static_cast<uint64_t>(Phdr.p_vaddr));
-      NextAvailableAddress = std::max(NextAvailableAddress,
-                                      Phdr.p_vaddr + Phdr.p_memsz);
-      NextAvailableOffset = std::max(NextAvailableOffset,
-                                     Phdr.p_offset + Phdr.p_filesz);
+      NextAvailableAddress =
+          std::max(NextAvailableAddress,
+                   static_cast<uint64_t>(Phdr.p_vaddr) + Phdr.p_memsz);
+      NextAvailableOffset =
+          std::max(NextAvailableOffset,
+                   static_cast<uint64_t>(Phdr.p_offset) + Phdr.p_filesz);
 
       BC->SegmentMapInfo[Phdr.p_vaddr] =
           SegmentInfo{Phdr.p_vaddr,
@@ -670,7 +679,7 @@ Error RewriteInstance::discoverStorage() {
     NextAvailableAddress = opts::CustomAllocationVMA;
     // Sanity check the user-supplied address and emit warnings if something
     // seems off.
-    for (const ELF64LE::Phdr &Phdr : PHs) {
+    for (const typename ELFT::Phdr &Phdr : PHs) {
       switch (Phdr.p_type) {
       case ELF::PT_LOAD:
         if (NextAvailableAddress >= Phdr.p_vaddr &&
@@ -733,8 +742,10 @@ Error RewriteInstance::discoverStorage() {
     if (opts::Instrument)
       Phnum += 2;
 
-    NextAvailableAddress += Phnum * sizeof(ELF64LEPhdrTy);
-    NextAvailableOffset += Phnum * sizeof(ELF64LEPhdrTy);
+    NextAvailableAddress +=
+        Phnum * sizeof(typename ELFObjectFile<ELFT>::Elf_Phdr);
+    NextAvailableOffset +=
+        Phnum * sizeof(typename ELFObjectFile<ELFT>::Elf_Phdr);
 
     // Align at cache line.
     NextAvailableAddress = alignTo(NextAvailableAddress, 64);
@@ -1727,15 +1738,18 @@ void RewriteInstance::registerFragments() {
 
   // The first global symbol is identified by the symbol table sh_info value.
   // Used as local symbol search stopping point.
-  auto *ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
-  auto *SymTab = llvm::find_if(cantFail(Obj.sections()), [](const auto &Sec) {
-    return Sec.sh_type == ELF::SHT_SYMTAB;
-  });
-  assert(SymTab);
-  // Symtab sh_info contains the value one greater than the symbol table index
-  // of the last local symbol.
-  ELFSymbolRef LocalSymEnd = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
+  auto getLocalSymEnd = [](auto *ELFFile) -> ELFSymbolRef {
+    const auto &Obj = ELFFile->getELFFile();
+    auto *SymTab = llvm::find_if(cantFail(Obj.sections()), [](const auto &Sec) {
+      return Sec.sh_type == ELF::SHT_SYMTAB;
+    });
+    assert(SymTab);
+    return ELFFile->toSymbolRef(SymTab, SymTab->sh_info);
+  };
+  ELFSymbolRef LocalSymEnd =
+      isa<ELF32LEObjectFile>(InputFile)
+          ? getLocalSymEnd(cast<ELF32LEObjectFile>(InputFile))
+          : getLocalSymEnd(cast<ELF64LEObjectFile>(InputFile));
 
   for (auto &Fragment : AmbiguousFragments) {
     const StringRef &ParentName = Fragment.first;
@@ -2459,6 +2473,8 @@ int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
 
 int64_t getRelocationAddend(const ELFObjectFileBase *Obj,
                             const RelocationRef &Rel) {
+  if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
+    return getRelocationAddend(ELF32LE, Rel);
   return getRelocationAddend(cast<ELF64LEObjectFile>(Obj), Rel);
 }
 
@@ -2486,6 +2502,8 @@ uint32_t getRelocationSymbol(const ELFObjectFile<ELFT> *Obj,
 
 uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
                              const RelocationRef &Rel) {
+  if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
+    return getRelocationSymbol(ELF32LE, Rel);
   return getRelocationSymbol(cast<ELF64LEObjectFile>(Obj), Rel);
 }
 } // anonymous namespace
@@ -3868,20 +3886,21 @@ void RewriteInstance::runBinaryAnalyses() {
   BinaryFunctionPassManager Manager(*BC);
   // FIXME: add a pass that warns about which functions do not have CFG,
   // and therefore, analysis is most likely to be less accurate.
-  using GSK = opts::GadgetScannerKind;
-  using PAuthScanner = PAuthGadgetScanner::Analysis;
+  using PtrAuthScanner = PAuthGadgetScanner::Analysis;
+
+  // Accumulate all enabled analyses.
+  decltype(~opts::GS_ALL_MASK) EnabledAnalyses = 0;
+  for (auto NamedOptionSubmask : opts::GadgetScannersToRun)
+    EnabledAnalyses |= NamedOptionSubmask;
 
   // If no command line option was given, act as if "all" was specified.
-  bool RunAll = !opts::GadgetScannersToRun.getBits() ||
-                opts::GadgetScannersToRun.isSet(GSK::GS_ALL);
+  if (opts::GadgetScannersToRun.empty())
+    EnabledAnalyses = opts::GS_ALL_MASK;
 
-  if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PAUTH)) {
-    Manager.registerPass(
-        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/false));
-  } else if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PACRET)) {
-    Manager.registerPass(
-        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/true));
-  }
+  const auto PtrAuthAnalyses = static_cast<opts::GadgetKindBitmask>(
+      EnabledAnalyses & opts::GS_PTRAUTH_ALL_MASK);
+  if (PtrAuthAnalyses)
+    Manager.registerPass(std::make_unique<PtrAuthScanner>(PtrAuthAnalyses));
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
 }
@@ -4083,6 +4102,9 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
       CodeSections.emplace_back(&Section);
 
   auto compareSections = [&](const BinarySection *A, const BinarySection *B) {
+    if (A == B)
+      return false;
+
     // If both A and B have names starting with ".text.cold", then
     // - if opts::HotFunctionsAtEnd is true, we want order
     //   ".text.cold.T", ".text.cold.T-1", ... ".text.cold.1", ".text.cold"
@@ -4548,9 +4570,11 @@ void RewriteInstance::updateSegmentInfo() {
   }
 }
 
-void RewriteInstance::patchELFPHDRTable() {
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+template <typename ELFT>
+void RewriteInstance::patchELFPHDRTable(ELFObjectFile<ELFT> *File) {
+  using PhdrTy = typename ELFT::Phdr;
+
+  const ELFFile<ELFT> &Obj = File->getELFFile();
   raw_fd_ostream &OS = Out->os();
 
   Phnum = Obj.getHeader().e_phnum;
@@ -4577,7 +4601,7 @@ void RewriteInstance::patchELFPHDRTable() {
   OS.seek(PHDRTableOffset);
 
   auto createPhdr = [](const SegmentInfo &SI) {
-    ELF64LEPhdrTy Phdr;
+    PhdrTy Phdr;
     Phdr.p_type = ELF::PT_LOAD;
     Phdr.p_offset = SI.FileOffset;
     Phdr.p_vaddr = SI.Address;
@@ -4597,11 +4621,11 @@ void RewriteInstance::patchELFPHDRTable() {
   // Collect modified program headers, then insert new PT_LOAD segments
   // right after existing PT_LOAD segments to maintain ascending p_vaddr
   // order required by the ELF specification.
-  SmallVector<ELF64LEPhdrTy, 16> Phdrs;
+  SmallVector<PhdrTy, 16> Phdrs;
 
   bool SkippedGnuStack = false;
-  for (const ELF64LE::Phdr &Phdr : cantFail(Obj.program_headers())) {
-    ELF64LE::Phdr NewPhdr = Phdr;
+  for (const PhdrTy &Phdr : cantFail(Obj.program_headers())) {
+    PhdrTy NewPhdr = Phdr;
     switch (Phdr.p_type) {
     case ELF::PT_LOAD: {
       // Mark segment as executable if it contains BOLTReserved space.
@@ -4615,8 +4639,8 @@ void RewriteInstance::patchELFPHDRTable() {
         NewPhdr.p_offset = PHDRTableOffset;
         NewPhdr.p_vaddr = PHDRTableAddress;
         NewPhdr.p_paddr = PHDRTableAddress;
-        NewPhdr.p_filesz = sizeof(NewPhdr) * Phnum;
-        NewPhdr.p_memsz = sizeof(NewPhdr) * Phnum;
+        NewPhdr.p_filesz = sizeof(PhdrTy) * Phnum;
+        NewPhdr.p_memsz = sizeof(PhdrTy) * Phnum;
       }
       break;
     case ELF::PT_GNU_EH_FRAME: {
@@ -4652,16 +4676,15 @@ void RewriteInstance::patchELFPHDRTable() {
 
   // Insert new PT_LOAD segments right after the last existing PT_LOAD to
   // maintain ascending p_vaddr order.
-  auto LastPTLoad = llvm::find_if(reverse(Phdrs), [](const ELF64LE::Phdr &P) {
-    return P.p_type == ELF::PT_LOAD;
-  });
+  auto LastPTLoad = llvm::find_if(
+      reverse(Phdrs), [](const PhdrTy &P) { return P.p_type == ELF::PT_LOAD; });
   assert(LastPTLoad != Phdrs.rend() && "No existing PT_LOAD found");
   auto InsertPos = LastPTLoad.base();
   for (const SegmentInfo &SI : BC->NewSegments)
     InsertPos = std::next(Phdrs.insert(InsertPos, createPhdr(SI)));
 
   OS.write(reinterpret_cast<const char *>(Phdrs.data()),
-           sizeof(ELF64LE::Phdr) * Phdrs.size());
+           sizeof(PhdrTy) * Phdrs.size());
 
   OS.seek(SavedPos);
 }
@@ -4684,9 +4707,11 @@ uint64_t appendPadding(raw_pwrite_stream &OS, uint64_t Offset,
 
 }
 
-void RewriteInstance::rewriteNoteSections() {
-  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
-  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+template <typename ELFT>
+void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
+  using ShdrTy = typename ELFT::Shdr;
+
+  const ELFFile<ELFT> &Obj = File->getELFFile();
   raw_fd_ostream &OS = Out->os();
 
   uint64_t NextAvailableOffset = std::max(
@@ -4694,13 +4719,13 @@ void RewriteInstance::rewriteNoteSections() {
   OS.seek(NextAvailableOffset);
 
   // Copy over non-allocatable section contents and update file offsets.
-  for (const ELF64LE::Shdr &Section : cantFail(Obj.sections())) {
+  for (const ShdrTy &Section : cantFail(Obj.sections())) {
     if (Section.sh_type == ELF::SHT_NULL)
       continue;
     if (Section.sh_flags & ELF::SHF_ALLOC)
       continue;
 
-    SectionRef SecRef = ELF64LEFile->toSectionRef(&Section);
+    SectionRef SecRef = File->toSectionRef(&Section);
     BinarySection *BSec = BC->getSectionForSectionRef(SecRef);
     assert(BSec && !BSec->isAllocatable() &&
            "Matching non-allocatable BinarySection should exist.");
@@ -5385,9 +5410,6 @@ void RewriteInstance::updateELFSymbolTable(
              "Local label inside ICF-folded function");
 
       if (Function && Function->isEmitted()) {
-        assert(Function->getLayout().isHotColdSplit() &&
-               "Adding symbols based on cold fragment when there are more than "
-               "2 fragments");
         const uint64_t OutputAddress =
             Function->translateInputToOutputAddress(Symbol.st_value);
 
@@ -6335,6 +6357,13 @@ void RewriteInstance::rewriteFile() {
   if (opts::PrintSections) {
     BC->outs() << "BOLT-INFO: Sections after processing:\n";
     BC->printSections(BC->outs());
+  }
+
+  if (OS.has_error()) {
+    BC->errs() << "BOLT-ERROR: failed to write output file '"
+               << opts::OutputFilename << "': " << OS.error().message() << "\n";
+    OS.clear_error();
+    exit(1);
   }
 
   Out->keep();

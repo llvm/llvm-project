@@ -31,7 +31,7 @@ namespace llvm {
 class AAResults;
 class BasicBlock;
 class BinaryOperator;
-class BranchInst;
+class CondBrInst;
 class CmpInst;
 class Constant;
 class Function;
@@ -173,7 +173,7 @@ public:
 
   LLVM_ABI bool processGuards(BasicBlock *BB);
   LLVM_ABI bool threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
-                            BranchInst *BI);
+                            CondBrInst *BI);
 
 private:
   BasicBlock *splitBlockPreds(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,

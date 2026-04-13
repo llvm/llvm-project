@@ -20,6 +20,14 @@ targets="${2}"
 runtimes="${3}"
 runtimes_targets="${4}"
 
+runtime_cmake_args=()
+if [[ " ${runtimes_targets} " == *" check-libclc-amdgcn-amd-amdhsa-llvm "* ]]; then
+  runtime_cmake_args+=(
+    -D RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc
+    -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm"
+  )
+fi
+
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
@@ -49,7 +57,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LLVM_PARALLEL_LINK_JOBS=16
+      "${runtime_cmake_args[@]}"
 
 start-group "ninja"
 

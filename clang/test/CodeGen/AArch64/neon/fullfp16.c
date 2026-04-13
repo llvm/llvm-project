@@ -34,9 +34,61 @@
 #include <arm_fp16.h>
 
 //===------------------------------------------------------===//
+// 2.5.1.1.  Addition
+//===------------------------------------------------------===//
+// ALL-LABEL: @test_vaddh_f16(
+float16_t test_vaddh_f16(float16_t a, float16_t b) {
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]], half{{.*}} [[B:%.*]]) {{.*}} {
+// LLVM:  [[ADD:%.*]] = fadd half [[A]], [[B]]
+// LLVM:  ret half [[ADD]]
+  return vaddh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.10.1.  Subtraction
+//===------------------------------------------------------===//
+// ALL-LABEL: @test_vsubh_f16(
+float16_t test_vsubh_f16(float16_t a, float16_t b) {
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[SUB:%.*]] = fsub half [[A]], [[B]]
+// LLVM:  ret half [[SUB]]
+  return vsubh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.9.1.  Multiplication
+//===------------------------------------------------------===//
+// ALL-LABEL: @test_vmulh_f16(
+float16_t test_vmulh_f16(float16_t a, float16_t b) {
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MUL:%.*]] = fmul half [[A]], [[B]]
+// LLVM:  ret half [[MUL]]
+  return vmulh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.6.  Division
+//===------------------------------------------------------===//
+// ALL-LABEL: @test_vdivh_f16(
+float16_t test_vdivh_f16(float16_t a, float16_t b) {
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[DIV:%.*]] = fdiv half [[A]], [[B]]
+// LLVM:  ret half [[DIV]]
+  return vdivh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
 // 2.5.2.1.  Bitwise equal to zero
 //===------------------------------------------------------===//
-// LLVM-LABEL: test_vceqzh_f16
+// ALL-LABEL: test_vceqzh_f16
 uint16_t test_vceqzh_f16(float16_t a) {
 // CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
 // CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.f16
@@ -62,7 +114,7 @@ float16_t test_vabsh_f16(float16_t a) {
 
 // ALL-LABEL: @test_vnegh_f16
 float16_t test_vnegh_f16(float16_t a) {
-// CIR: cir.unary(minus, {{.*}}) : !cir.f16
+// CIR: cir.minus {{.*}} : !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]])
 // LLVM: [[NEG:%.*]] = fneg half [[A:%.*]]
@@ -82,7 +134,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 
 // ALL-LABEL: test_vfmsh_f16
 float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
-// CIR: [[SUB:%.*]] = cir.unary(minus, %{{.*}}) : !cir.f16, !cir.f16
+// CIR: [[SUB:%.*]] = cir.minus %{{.*}} : !cir.f16
 // CIR: cir.call_llvm_intrinsic "fma" [[SUB]], {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])

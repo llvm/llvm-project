@@ -2919,65 +2919,65 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      6     8.00                         6     Andes45VMAC[8]                             VFMADD_VV                  vfmadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VPERMUT                             VFMV_F_S                   vfmv.f.s	fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VPERMUT                             VFMV_S_F                   vfmv.s.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  1      2     1.00                         2     Andes45VFMIS                               VFMV_V_F                   vfmv.v.f	v8, fs0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu

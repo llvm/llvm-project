@@ -25,6 +25,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
@@ -42,6 +43,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 
@@ -49,6 +51,7 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
+#include <stdlib.h>
 #include <string>
 
 using namespace lldb;
@@ -132,16 +135,17 @@ public:
 
     m_was_already_initialized = true;
     m_gil_state = gil_state;
-    LLDB_LOGV(GetLog(LLDBLog::Script),
-              "Ensured PyGILState. Previous state = {0}",
-              m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
+    LLDB_LOG_VERBOSE(
+        GetLog(LLDBLog::Script), "Ensured PyGILState. Previous state = {0}",
+        m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
   }
 
   ~InitializePythonRAII() {
     if (m_was_already_initialized) {
-      LLDB_LOGV(GetLog(LLDBLog::Script),
-                "Releasing PyGILState. Returning to state = {0}",
-                m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
+      LLDB_LOG_VERBOSE(GetLog(LLDBLog::Script),
+                       "Releasing PyGILState. Returning to state = {0}",
+                       m_gil_state == PyGILState_UNLOCKED ? "unlocked"
+                                                          : "locked");
       PyGILState_Release(m_gil_state);
     } else {
       // We initialized the threads in this function, just unlock the GIL.
@@ -289,6 +293,13 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 }
 
 void ScriptInterpreterPython::Initialize() {
+#if LLDB_ENABLE_MTE
+  // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
+  // (MTE) and crashes.
+  // https://bugs.python.org/issue43593
+  setenv("PYTHONMALLOC", "malloc", /*overwrite=*/true);
+#endif
+
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
   PluginManager::RegisterPlugin(
@@ -321,8 +332,9 @@ ScriptInterpreterPythonImpl::Locker::Locker(
 
 bool ScriptInterpreterPythonImpl::Locker::DoAcquireLock() {
   m_GILState = PyGILState_Ensure();
-  LLDB_LOGV(GetLog(LLDBLog::Script), "Ensured PyGILState. Previous state = {0}",
-            m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
+  LLDB_LOG_VERBOSE(GetLog(LLDBLog::Script),
+                   "Ensured PyGILState. Previous state = {0}",
+                   m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
 
   // we need to save the thread state when we first start the command because
   // we might decide to interrupt it while some action is taking place outside
@@ -343,9 +355,9 @@ bool ScriptInterpreterPythonImpl::Locker::DoInitSession(uint16_t on_entry_flags,
 }
 
 bool ScriptInterpreterPythonImpl::Locker::DoFreeLock() {
-  LLDB_LOGV(GetLog(LLDBLog::Script),
-            "Releasing PyGILState. Returning to state = {0}",
-            m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
+  LLDB_LOG_VERBOSE(GetLog(LLDBLog::Script),
+                   "Releasing PyGILState. Returning to state = {0}",
+                   m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
   PyGILState_Release(m_GILState);
   m_python_interpreter->DecrementLockCount();
   return true;
@@ -1946,14 +1958,17 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
 llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
 
   StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
   if (!generic)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
   auto *implementor = static_cast<PyObject *>(generic->GetValue());
   if (!implementor)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
 
   uint32_t ret_val = UINT32_MAX;
 
@@ -1965,7 +1980,8 @@ llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   }
 
   if (ret_val == UINT32_MAX)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
   return ret_val;
 }
 

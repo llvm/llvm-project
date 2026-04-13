@@ -227,16 +227,19 @@ linalg::isaTransposeOpInterface(GenericOp op) {
 //===----------------------------------------------------------------------===//
 // Elementwise Single Unary/Binary-OpInterface implementation
 //===----------------------------------------------------------------------===//
-static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
-                                                      unsigned arity) {
+static bool
+isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op, unsigned arity,
+                                          bool allowNonIdentityMaps) {
   // Check all loops are parallel.
   if (!op.isAllParallelLoops() || op.getNumLoops() < 1)
     return false;
 
-  // Check there are arity-inputs, 1-output and all are identity-maps.
+  // Check there are arity-inputs, 1-output and all are identity-maps (unless
+  // requested otherwise).
   if (op.getNumDpsInputs() != arity || op.getNumDpsInits() != 1 ||
-      !llvm::all_of(op.getIndexingMapsArray(),
-                    [](AffineMap map) { return map.isIdentity(); }))
+      (!allowNonIdentityMaps &&
+       !llvm::all_of(op.getIndexingMapsArray(),
+                     [](AffineMap map) { return map.isIdentity(); })))
     return false;
 
   // Init should not be referenced for elementwise operations.
@@ -251,8 +254,12 @@ static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
   if (body->getOperations().size() != 2)
     return false;
 
+  // The payload op must have one result and at least arity-many operands
+  // (otherwise not all inputs can be used). It can have additional operands
+  // from outside of the generic op (e.g. div(1, x) for linalg.reciprocal) or
+  // use an input more than once (e.g. mul(x, x) for linalg.square).
   Operation *oper = &body->front();
-  if (oper->getNumOperands() != arity || oper->getNumResults() != 1)
+  if (oper->getNumOperands() < arity || oper->getNumResults() != 1)
     return false;
 
   auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
@@ -260,19 +267,21 @@ static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
            yieldOp->getOperand(0).getDefiningOp() != oper);
 }
 
-bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op) {
+bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op,
+                                               bool allowNonIdentityMaps) {
   // All basic elemwise checks.
-  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 1))
+  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 1, allowNonIdentityMaps))
     return false;
 
-  // Check input is actully used.
+  // Check input is actually used.
   if (!op.payloadUsesValueFromOperand(op.getDpsInputOperand(0)))
     return false;
   return true;
 }
 
 bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
-  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 2))
+  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(
+          op, 2, /*allowNonIdentityMaps=*/false))
     return false;
 
   // Check both inputs are used (elementwise).

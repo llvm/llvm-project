@@ -87,8 +87,7 @@ using namespace llvm::orc;
 
 static cl::OptionCategory JITLinkCategory("JITLink Options");
 
-static cl::list<std::string> InputFiles(cl::Positional, cl::ZeroOrMore,
-                                        cl::desc("input files"),
+static cl::list<std::string> InputFiles(cl::Positional, cl::desc("input files"),
                                         cl::cat(JITLinkCategory));
 
 static cl::list<bool> LazyLink("lazy",
@@ -892,7 +891,7 @@ static Error loadProcessSymbols(Session &S) {
       };
   S.ProcessSymsJD->addGenerator(
       ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          S.ES, std::move(FilterMainEntryPoint))));
+          S.ES, *S.DylibMgr, std::move(FilterMainEntryPoint))));
 
   return Error::success();
 }
@@ -1087,7 +1086,12 @@ public:
 
 Expected<std::unique_ptr<Session::LazyLinkingSupport>>
 createLazyLinkingSupport(Session &S) {
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(S.ObjLayer);
+  auto MemAccess = S.ES.getExecutorProcessControl().createDefaultMemoryAccess();
+  if (!MemAccess)
+    return MemAccess.takeError();
+
+  auto RSMgr =
+      JITLinkRedirectableSymbolManager::Create(S.ObjLayer, **MemAccess);
   if (!RSMgr)
     return RSMgr.takeError();
 
@@ -1114,7 +1118,8 @@ createLazyLinkingSupport(Session &S) {
     return LRMgr.takeError();
 
   return std::make_unique<Session::LazyLinkingSupport>(
-      std::move(*RSMgr), std::move(Speculator), std::move(*LRMgr), S.ObjLayer);
+      std::move(*MemAccess), std::move(*RSMgr), std::move(Speculator),
+      std::move(*LRMgr), S.ObjLayer);
 }
 
 static Error writeLazyExecOrder(Session &S) {
@@ -1222,6 +1227,13 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   };
 
   ErrorAsOutParameter _(&Err);
+
+  if (auto DM = ES.getExecutorProcessControl().createDefaultDylibMgr())
+    DylibMgr = std::move(*DM);
+  else {
+    Err = DM.takeError();
+    return;
+  }
 
   ES.setErrorReporter(reportLLVMJITLinkError);
 
@@ -1484,7 +1496,8 @@ Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
   if (It != DynLibJDs.end()) {
     return It->second;
   }
-  auto G = EPCDynamicLibrarySearchGenerator::Load(ES, LibPath.data());
+  auto G =
+      EPCDynamicLibrarySearchGenerator::Load(ES, *DylibMgr, LibPath.data());
   if (!G)
     return G.takeError();
   auto JD = &ES.createBareJITDylib(LibPath.str());
@@ -2246,7 +2259,8 @@ LoadLibraryWeak(Session &S, StringRef Path) {
     return Symbols.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      S.ES, [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
+      S.ES, *S.DylibMgr,
+      [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
         return Symbols.count(Sym);
       });
 }
@@ -2779,12 +2793,12 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    auto InternedSymbol = S.ES.intern(Symbol);
     return S.isSymbolRegistered(InternedSymbol);
   };
 
   auto GetSymbolInfo = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    auto InternedSymbol = S.ES.intern(Symbol);
     return S.findSymbolInfo(InternedSymbol, "Can not get symbol info");
   };
 

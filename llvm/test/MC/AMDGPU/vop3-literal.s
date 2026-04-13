@@ -2,12 +2,12 @@
 
 // RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx900 | FileCheck %s -check-prefix=GFX9
 // RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck %s -check-prefix=GFX10
-// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64 | FileCheck %s -check-prefix=GFX1250
-// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64 | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize64 -disassemble -show-encoding | FileCheck --check-prefixes=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64,-real-true16 | FileCheck %s -check-prefixes=GFX1250
+// RUN: not llvm-mc -triple=amdgcn %s -show-encoding -mcpu=gfx1250 -mattr=+wavefrontsize64,-real-true16 | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize64,-real-true16 -disassemble -show-encoding | FileCheck --check-prefixes=GFX1250 %s
 
 // RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx900 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX9-ERR
 // RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX10-ERR
-// RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx1250 -mattr=+wavefrontsize64 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX1250-ERR
+// RUN: not llvm-mc -triple=amdgcn %s -filetype=null -no-warn 2>&1 -mcpu=gfx1250 -mattr=+wavefrontsize64,-real-true16 | FileCheck %s -implicit-check-not=error: -check-prefix=GFX1250-ERR
 
 v_bfe_u32 v0, 0x3039, v1, s1
 // GFX10: v_bfe_u32 v0, 0x3039, v1, s1            ; encoding: [0x00,0x00,0x48,0xd5,0xff,0x02,0x06,0x00,0x39,0x30,0x00,0x00]
@@ -252,17 +252,17 @@ v_min3_i16 v5, 0x5678, 0x5678, 0x5679
 v_add_nc_u16 v5, 0xfe0b, v2
 // GFX10: v_add_nc_u16 v5, 0xfe0b, v2             ; encoding: [0x05,0x00,0x03,0xd7,0xff,0x04,0x02,0x02,0x0b,0xfe,0x00,0x00]
 // GFX1250: v_add_nc_u16 v5, 0xfe0b, v2             ; encoding: [0x05,0x00,0x03,0xd7,0xff,0x04,0x02,0x02,0x0b,0xfe,0x00,0x00]
-// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx900): v_add_nc_u16
 
 v_add_nc_u16 v5, v1, 0x1234
 // GFX10: v_add_nc_u16 v5, v1, 0x1234             ; encoding: [0x05,0x00,0x03,0xd7,0x01,0xff,0x01,0x02,0x34,0x12,0x00,0x00]
 // GFX1250: v_add_nc_u16 v5, v1, 0x1234             ; encoding: [0x05,0x00,0x03,0xd7,0x01,0xff,0x01,0x02,0x34,0x12,0x00,0x00]
-// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx900): v_add_nc_u16
 
 v_add_nc_u16 v5, 0x1234, 0x1234
 // GFX10: v_add_nc_u16 v5, 0x1234, 0x1234         ; encoding: [0x05,0x00,0x03,0xd7,0xff,0xfe,0x01,0x02,0x34,0x12,0x00,0x00]
 // GFX1250: v_add_nc_u16 v5, 0x1234, 0x1234         ; encoding: [0x05,0x00,0x03,0xd7,0xff,0xfe,0x01,0x02,0x34,0x12,0x00,0x00]
-// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx900): v_add_nc_u16
 
 v_ashrrev_i16_e64 v5, 0x3456, v2
 // GFX10: v_ashrrev_i16 v5, 0x3456, v2            ; encoding: [0x05,0x00,0x08,0xd7,0xff,0x04,0x02,0x02,0x56,0x34,0x00,0x00]
@@ -291,22 +291,22 @@ v_mad_u16 v5, 0x5678, 0x5678, 0x5678
 
 v_mad_legacy_f32 v5, 0xaf123456, v2, v3
 // GFX10: v_mad_legacy_f32 v5, 0xaf123456, v2, v3 ; encoding: [0x05,0x00,0x40,0xd5,0xff,0x04,0x0e,0x04,0x56,0x34,0x12,0xaf]
-// GFX1250-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// GFX1250-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1250): v_mad_legacy_f32
 // GFX9-ERR: :[[@LINE-3]]:22: error: literal operands are not supported
 
 v_mad_legacy_f32 v5, v1, 0xaf123456, v3
 // GFX10: v_mad_legacy_f32 v5, v1, 0xaf123456, v3 ; encoding: [0x05,0x00,0x40,0xd5,0x01,0xff,0x0d,0x04,0x56,0x34,0x12,0xaf]
-// GFX1250-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// GFX1250-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1250): v_mad_legacy_f32
 // GFX9-ERR: :[[@LINE-3]]:26: error: literal operands are not supported
 
 v_mad_legacy_f32 v5, v1, v2, 0xaf123456
 // GFX10: v_mad_legacy_f32 v5, v1, v2, 0xaf123456 ; encoding: [0x05,0x00,0x40,0xd5,0x01,0x05,0xfe,0x03,0x56,0x34,0x12,0xaf]
-// GFX1250-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// GFX1250-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1250): v_mad_legacy_f32
 // GFX9-ERR: :[[@LINE-3]]:30: error: literal operands are not supported
 
 v_mad_legacy_f32 v5, 0xaf123456, 0xaf123456, 0xaf123456
 // GFX10: v_mad_legacy_f32 v5, 0xaf123456, 0xaf123456, 0xaf123456 ; encoding: [0x05,0x00,0x40,0xd5,0xff,0xfe,0xfd,0x03,0x56,0x34,0x12,0xaf]
-// GFX1250-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// GFX1250-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1250): v_mad_legacy_f32
 // GFX9-ERR: :[[@LINE-3]]:22: error: literal operands are not supported
 
 v_cmp_eq_i32_e64 s[10:11], 0xaf123456, v2
@@ -407,27 +407,27 @@ v_lshlrev_b64 v[6:7], v1, 0xbf717273
 v_fma_mix_f32 v5, 0x123, v2, v3
 // GFX10: v_fma_mix_f32 v5, 0x123, v2, v3         ; encoding: [0x05,0x00,0x20,0xcc,0xff,0x04,0x0e,0x04,0x23,0x01,0x00,0x00]
 // GFX1250: v_fma_mix_f32 v5, 0x123, v2, v3         ; encoding: [0x05,0x00,0x20,0xcc,0xff,0x04,0x0e,0x04,0x23,0x01,0x00,0x00]
-// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx900): v_fma_mix_f32
 
 v_fma_mix_f32 v5, v1, 0x7b, v3
 // GFX10: v_fma_mix_f32 v5, v1, 0x7b, v3          ; encoding: [0x05,0x00,0x20,0xcc,0x01,0xff,0x0d,0x04,0x7b,0x00,0x00,0x00]
 // GFX1250: v_fma_mix_f32 v5, v1, 0x7b, v3          ; encoding: [0x05,0x00,0x20,0xcc,0x01,0xff,0x0d,0x04,0x7b,0x00,0x00,0x00]
-// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx900): v_fma_mix_f32
 
 v_fma_mix_f32 v5, v1, v2, 0x1c8
 // GFX10: v_fma_mix_f32 v5, v1, v2, 0x1c8         ; encoding: [0x05,0x00,0x20,0xcc,0x01,0x05,0xfe,0x03,0xc8,0x01,0x00,0x00]
 // GFX1250: v_fma_mix_f32 v5, v1, v2, 0x1c8         ; encoding: [0x05,0x00,0x20,0xcc,0x01,0x05,0xfe,0x03,0xc8,0x01,0x00,0x00]
-// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx900): v_fma_mix_f32
 
 v_fma_mix_f32 v5, 0x1c8a, v2, 0x1c8a
 // GFX10: v_fma_mix_f32 v5, 0x1c8a, v2, 0x1c8a    ; encoding: [0x05,0x00,0x20,0xcc,0xff,0x04,0xfe,0x03,0x8a,0x1c,0x00,0x00]
 // GFX1250: v_fma_mix_f32 v5, 0x1c8a, v2, 0x1c8a    ; encoding: [0x05,0x00,0x20,0xcc,0xff,0x04,0xfe,0x03,0x8a,0x1c,0x00,0x00]
-// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx900): v_fma_mix_f32
 
 v_fma_mix_f32 v5, 0x1c8a, 0x1c8a, 0x1c8a
 // GFX10: v_fma_mix_f32 v5, 0x1c8a, 0x1c8a, 0x1c8a ; encoding: [0x05,0x00,0x20,0xcc,0xff,0xfe,0xfd,0x03,0x8a,0x1c,0x00,0x00]
 // GFX1250: v_fma_mix_f32 v5, 0x1c8a, 0x1c8a, 0x1c8a ; encoding: [0x05,0x00,0x20,0xcc,0xff,0xfe,0xfd,0x03,0x8a,0x1c,0x00,0x00]
-// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU
+// GFX9-ERR: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx900): v_fma_mix_f32
 
 v_pk_add_f16 v5, 0xaf123456, v2
 // GFX10: v_pk_add_f16 v5, 0xaf123456, v2         ; encoding: [0x05,0x40,0x0f,0xcc,0xff,0x04,0x02,0x1a,0x56,0x34,0x12,0xaf]

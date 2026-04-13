@@ -179,7 +179,7 @@ void KernelInfo::updateForBB(const BasicBlock &BB,
   const Function &F = *BB.getParent();
   const Module &M = *F.getParent();
   const DataLayout &DL = M.getDataLayout();
-  for (const Instruction &I : BB.instructionsWithoutDebug()) {
+  for (const Instruction &I : BB) {
     if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(&I)) {
       ++Allocas;
       TypeSize::ScalarTy StaticSize = 0;
@@ -193,6 +193,8 @@ void KernelInfo::updateForBB(const BasicBlock &BB,
       }
       remarkAlloca(ORE, F, *Alloca, StaticSize);
     } else if (const CallBase *Call = dyn_cast<CallBase>(&I)) {
+      if (isa<PseudoProbeInst>(Call))
+        continue;
       SmallString<40> CallKind;
       SmallString<40> RemarkKind;
       if (Call->isIndirectCall()) {

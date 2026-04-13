@@ -360,8 +360,8 @@ protected:
       result.AppendErrorWithFormat("%s takes a start address expression with "
                                    "an optional end address expression.\n",
                                    m_cmd_name.c_str());
-      result.AppendWarning("Expressions should be quoted if they contain "
-                           "spaces or other special characters.");
+      result.AppendWarning("expressions should be quoted if they contain "
+                           "spaces or other special characters");
       return;
     }
 
@@ -655,7 +655,7 @@ protected:
         return;
       }
 
-      Address address(addr, nullptr);
+      Address address(addr);
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
@@ -670,10 +670,9 @@ protected:
       }
 
       if (bytes_read < total_byte_size)
-        result.AppendWarningWithFormat(
-            "Not all bytes (%" PRIu64 "/%" PRIu64
-            ") were able to be read from 0x%" PRIx64 ".\n",
-            (uint64_t)bytes_read, (uint64_t)total_byte_size, addr);
+        result.AppendWarningWithFormatv("not all bytes ({0} / {1}) "
+                                        "were able to be read from {2:x}",
+                                        bytes_read, total_byte_size, addr);
     } else {
       // we treat c-strings as a special case because they do not have a fixed
       // size
@@ -703,8 +702,8 @@ protected:
         std::string buffer;
         buffer.resize(item_byte_size + 1, 0);
         Status error;
-        size_t read = target->ReadCStringFromMemory(data_addr, &buffer[0],
-                                                    item_byte_size + 1, error);
+        size_t read = target->ReadCStringFromMemory(
+            Address(data_addr), &buffer[0], item_byte_size + 1, error);
         if (error.Fail()) {
           result.AppendErrorWithFormat(
               "failed to read memory from 0x%" PRIx64 ".\n", addr);
@@ -712,9 +711,9 @@ protected:
         }
 
         if (item_byte_size == read) {
-          result.AppendWarningWithFormat(
-              "unable to find a NULL terminated string at 0x%" PRIx64
-              ". Consider increasing the maximum read length.\n",
+          result.AppendWarningWithFormatv(
+              "unable to find a NULL terminated string at {0:x}"
+              ". Consider increasing the maximum read length",
               data_addr);
           --read;
           break_on_no_NULL = true;
@@ -1279,10 +1278,7 @@ protected:
       return;
     }
 
-    StreamString buffer(
-        Stream::eBinary,
-        process->GetTarget().GetArchitecture().GetAddressByteSize(),
-        process->GetTarget().GetArchitecture().GetByteOrder());
+    StreamString buffer(Stream::eBinary, process->GetByteOrder());
 
     OptionValueUInt64 &byte_size_value = m_format_options.GetByteSizeValue();
     size_t item_byte_size = byte_size_value.GetCurrentValue();
@@ -1336,7 +1332,7 @@ protected:
       return;
     } else if (item_byte_size == 0) {
       if (m_format_options.GetFormat() == eFormatPointer)
-        item_byte_size = buffer.GetAddressByteSize();
+        item_byte_size = process->GetAddressByteSize();
       else
         item_byte_size = 1;
     }
@@ -1567,7 +1563,7 @@ protected:
     }
 
     Status error;
-    lldb::addr_t addr = OptionArgParser::ToAddress(
+    lldb::addr_t addr = OptionArgParser::ToRawAddress(
         &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
@@ -1688,11 +1684,11 @@ protected:
         range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
         range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
         name, section_name ? " " : "", section_name);
-    MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
-    if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool memory_tagged = range_info.GetMemoryTagged();
+    if (memory_tagged == eLazyBoolYes)
       result.AppendMessage("memory tagging: enabled");
-    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
-    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
@@ -1704,15 +1700,16 @@ protected:
           page_count);
       if (page_count > 0) {
         bool print_comma = false;
-        result.AppendMessageWithFormat("Dirty pages: ");
+        Stream &strm = result.GetOutputStream();
+        strm << "Dirty pages: ";
         for (size_t i = 0; i < page_count; i++) {
           if (print_comma)
-            result.AppendMessageWithFormat(", ");
+            strm << ", ";
           else
             print_comma = true;
-          result.AppendMessageWithFormat("0x%" PRIx64, (*dirty_page_list)[i]);
+          strm << llvm::formatv("{0:x}", (*dirty_page_list)[i]);
         }
-        result.AppendMessage(".");
+        strm << ".\n";
       }
     }
   }

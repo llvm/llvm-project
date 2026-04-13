@@ -169,7 +169,7 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
   let summary = "A dense array of integer or floating point elements.";
   let description = [{
     A dense array attribute is an attribute that represents a dense array of
-    primitive element types. Contrary to DenseIntOrFPElementsAttr this is a
+    primitive element types. Contrary to DenseTypedElementsAttr this is a
     flat unidimensional array which does not have a storage optimization for
     splat. This allows to expose the raw array through a C++ API as
     `ArrayRef<T>` for compatible types. The element type must be bool or an
@@ -231,11 +231,11 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
 }
 
 //===----------------------------------------------------------------------===//
-// DenseIntOrFPElementsAttr
+// DenseTypedElementsAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
-    "DenseIntOrFPElements", "dense_int_or_fp_elements", [ElementsAttrInterface],
+def Builtin_DenseTypedElementsAttr : Builtin_Attr<
+    "DenseTypedElements", "dense_typed_elements", [ElementsAttrInterface],
     "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
@@ -257,9 +257,6 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     Storage format: Given an element bitwidth "w", element "i" starts at byte
     offset "i * ceildiv(w, 8)". In other words, each element starts at a full
     byte offset.
-
-    TODO: The name `DenseIntOrFPElements` is no longer accurate. The attribute
-    will be renamed in the future.
 
     Examples:
 
@@ -723,6 +720,14 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
                                         "const APInt &":$value), [{
       if (type.isSignlessInteger(1))
         return BoolAttr::get(type.getContext(), value.getBoolValue());
+      // Validate that the APInt has the correct bit width for the given type.
+      if (auto intTy = ::llvm::dyn_cast<IntegerType>(type)) {
+        assert(value.getBitWidth() == intTy.getWidth() &&
+               "IntegerAttr::get: APInt bit width must match integer type width");
+      } else if (::llvm::isa<IndexType>(type)) {
+        assert(value.getBitWidth() == IndexType::kInternalStorageBitWidth &&
+               "IntegerAttr::get: APInt bit width must match IndexType internal storage bit width");
+      }
       return $_get(type.getContext(), type, value);
     }]>,
     AttrBuilder<(ins "const APSInt &":$value), [{

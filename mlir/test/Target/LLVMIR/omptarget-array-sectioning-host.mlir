@@ -39,18 +39,18 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   }
 }
 
-// CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 36, i64 108]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 35, i64 35]
-// CHECK: @.offload_mapnames = private constant [2 x ptr] [ptr @0, ptr @1]
+// CHECK: @.offload_sizes = private unnamed_addr constant [3 x i64] [i64 36, i64 108, i64 0]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [3 x i64] [i64 35, i64 35, i64 288]
+// CHECK: @.offload_mapnames = private constant [3 x ptr] [ptr @0, ptr @1, ptr null]
 
 // CHECK: define void @_3d_target_array_section()
 
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr @_QFEinarray, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 // CHECK: store ptr getelementptr inbounds nuw (i8, ptr @_QFEinarray, i64 36), ptr %[[OFFLOADPTRS]], align 8
 
-// CHECK: %[[OFFLOADBASEPTRS2:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+// CHECK: %[[OFFLOADBASEPTRS2:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK: store ptr @_QFEoutarray, ptr %[[OFFLOADBASEPTRS2]], align 8
-// CHECK: %[[OFFLOADPTRS2:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+// CHECK: %[[OFFLOADPTRS2:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1
 // CHECK: store ptr @_QFEoutarray, ptr %[[OFFLOADPTRS2]], align 8

@@ -81,6 +81,18 @@ void lambda_value_capture_copy(T&& t) {
   [&,t]() { T other = std::forward<T>(t); };
 }
 
+template <class T>
+void lambda_capture_list_brace_init_no_forward(T&& t) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: forwarding reference parameter 't' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+  [t2{t}] { t2(); };
+}
+
+template <class T>
+void lambda_capture_list_paren_init_no_forward(T&& t) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: forwarding reference parameter 't' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+  [t2(t)] { t2(); };
+}
+
 template <typename X>
 void use(const X &x) {}
 
@@ -166,6 +178,16 @@ void lambda_value_reference_capture_list(T&& t) {
 template <class T>
 void lambda_value_reference_auxiliary_var(T&& t) {
   [&x = t]() { T other = std::forward<T>(x); };
+}
+
+template <typename T>
+void lambda_value_reference_capture_list_brace_init(T&& t) {
+  [t2{std::forward<T>(t)}] { t2(); };
+}
+
+template <typename T>
+void lambda_value_reference_capture_list_paren_init(T&& t) {
+  [t2(std::forward<T>(t))] { t2(); };
 }
 
 } // namespace negative_cases

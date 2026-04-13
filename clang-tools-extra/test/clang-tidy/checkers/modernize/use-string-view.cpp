@@ -1,13 +1,7 @@
 // RUN: %check_clang_tidy \
 // RUN: -std=c++17-or-later %s modernize-use-string-view %t
 #include <string>
-
-namespace std {
-template <class T, class U> struct is_same { static constexpr bool value = false; };
-template <class T> struct is_same<T, T> { static constexpr bool value = true; };
-template <class T, class U> constexpr bool is_same_v = is_same<T, U>::value;
-} // namespace std
-
+#include <utility>
 
 // ==========================================================
 // Positive tests
@@ -209,6 +203,44 @@ MyString<wchar_t> aliasedWChar() {
   return L"aliasedWChar";
 }
 
+namespace overload_funcs_redeclared {
+std::basic_string<char> overload(int);
+std::string overload(int);
+std::string overload(int) { return "int"; }
+// CHECK-MESSAGES:[[@LINE-1]]:1: warning: consider using 'std::string_view' to avoid unnecessary copying and allocations [modernize-use-string-view]
+// CHECK-FIXES: std::string_view overload(int) { return "int"; }
+}
+
+namespace overload_non_func {
+struct overload {};
+std::string overload(int) { return "int"; }
+// CHECK-MESSAGES:[[@LINE-1]]:1: warning: consider using 'std::string_view' to avoid unnecessary copying and allocations [modernize-use-string-view]
+// CHECK-FIXES: std::string_view overload(int) { return "int"; }
+}
+
+namespace overload_with_inline {
+  inline namespace inline_namespace {
+    std::string overload(int) { return "int"; }
+// CHECK-MESSAGES:[[@LINE-1]]:5: warning: consider using 'std::string_view' to avoid unnecessary copying and allocations [modernize-use-string-view]
+// CHECK-FIXES: std::string_view overload(int) { return "int"; }
+  }
+  inline namespace regular_namespace {
+    std::string overload(int) { return "int"; }
+// CHECK-MESSAGES:[[@LINE-1]]:5: warning: consider using 'std::string_view' to avoid unnecessary copying and allocations [modernize-use-string-view]
+// CHECK-FIXES: std::string_view overload(int) { return "int"; }
+  }
+}
+
+namespace overload_with_outer {
+namespace overload_with_templates {
+    template <typename T>
+    std::string overload(T) { return "T"; }
+    std::string overload(std::string) { return "string"; }
+}
+using overload_with_templates::overload;
+std::string overload(char*) { return "char*"; }
+}
+
 // ==========================================================
 // Negative tests
 // ==========================================================
@@ -361,6 +393,59 @@ std::string lambda() {
   return []() {
     return "lambda";
   }();
+}
+
+namespace overload_funcs {
+std::string dbl2str(double f);
+// Skip overloaded functions
+std::string overload(int) { return "int"; }
+// Because of this overload (non-literal return) the fix should not be applied
+std::string overload(double f) { return "f=" + dbl2str(f); }
+std::string overload(std::string) { return "string"; }
+}
+
+namespace overload_methods {
+struct Foo {
+  // Skip overloaded methods
+  std::string overload(int) { return "int"; }
+  std::string overload(double f) { return "double"; }
+  std::string overload(std::string) { return "string"; }
+};
+}
+
+namespace overload_methods_nested_classes {
+struct Bar {
+  std::string overload(int) { return "int"; }
+  std::string overload(std::string) { return "string"; }
+
+  struct FooBar {
+    std::string overload(char*) { return "char*"; }
+    std::string overload(double f) { return "double"; }
+  };
+};
+}
+
+namespace overload_methods_nested_namespaces {
+namespace foo {
+  std::string overload(int) { return "int"; }
+  std::string overload(std::string) { return "string"; }
+}
+using foo::overload;
+std::string overload(char*) { return "char*"; }
+}
+
+namespace overload_methods_templated {
+    template <typename T>
+    std::string overload(T value) { return "T";}
+    std::string overload(int value) { return "int"; }
+}
+
+namespace two_overloads_with_inline {
+  inline namespace inline_namespace {
+    std::string overload(int) { return "int"; }
+    std::string overload(double) { return "double"; }
+  }
+  std::string overload(int) { return "int"; }
 }
 
 struct TemplateString {

@@ -70,7 +70,12 @@ private:
         for (const parser::DoConstruct *loop{&outer}; loop && tileArgNb > 0;
              --tileArgNb) {
           const auto &block{std::get<parser::Block>(loop->t)};
-          const auto it{block.begin()};
+          auto it{block.begin()};
+          // Skip directives when checking tight nesting.
+          while (it != block.end() &&
+              parser::Unwrap<parser::CompilerDirective>(*it)) {
+            ++it;
+          }
           loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
                                    : nullptr;
         }

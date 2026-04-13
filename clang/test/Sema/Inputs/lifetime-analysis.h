@@ -152,8 +152,15 @@ struct basic_string_view {
   basic_string_view(const T *);
   const T *begin() const;
   const T *data() const;
+  int size() const;
 };
 using string_view = basic_string_view<char>;
+
+template<typename T>
+struct span {
+  span();
+  span(const vector<T>&);
+};
 
 template<class _Mystr> struct iter {
     iter& operator-=(int);
@@ -174,6 +181,11 @@ struct basic_string {
   basic_string& operator=(const basic_string&);
   basic_string& operator+=(const basic_string&);
   basic_string& operator+=(const T*);
+  void push_back(T);
+
+  template<class StringViewLike> basic_string& insert(size_t index, const StringViewLike&);
+
+  void clear();
   const T *c_str() const;
   operator basic_string_view<T> () const;
   using const_iterator = iter<T>;
@@ -185,6 +197,7 @@ template<typename T>
 struct unique_ptr {
   unique_ptr();
   unique_ptr(unique_ptr<T>&&);
+  unique_ptr& operator=(unique_ptr<T>&&);
   ~unique_ptr();
   T* release();
   T &operator*();

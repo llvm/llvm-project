@@ -39,8 +39,4 @@
 /* If set, enables features that depend on the NVIDIA's PTX compiler. */
 #cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER
 
-/* If set, enables ROCm-related features in ROCM-related transforms, pipelines,
-   and targets. */
-#cmakedefine01 MLIR_ENABLE_ROCM_CONVERSIONS
-
 #endif

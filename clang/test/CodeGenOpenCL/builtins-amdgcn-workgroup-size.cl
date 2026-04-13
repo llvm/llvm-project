@@ -33,7 +33,7 @@
 // NONUNIFORM-V4-LABEL: define dso_local range(i32 0, 1025) i32 @test_get_workgroup_size_x(
 // NONUNIFORM-V4-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // NONUNIFORM-V4-NEXT:  [[ENTRY:.*:]]
-// NONUNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 4
 // NONUNIFORM-V4-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG7:![0-9]+]], !invariant.load [[META8:![0-9]+]], !noundef [[META8]]
 // NONUNIFORM-V4-NEXT:    [[TMP3:%.*]] = zext nneg i16 [[TMP2]] to i32
@@ -48,7 +48,7 @@
 // UNIFORM-V4-LABEL: define dso_local range(i32 1, 1025) i32 @test_get_workgroup_size_x(
 // UNIFORM-V4-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // UNIFORM-V4-NEXT:  [[ENTRY:.*:]]
-// UNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 4
 // UNIFORM-V4-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG7:![0-9]+]], !invariant.load [[META8:![0-9]+]], !noundef [[META8]]
 // UNIFORM-V4-NEXT:    [[TMP3:%.*]] = zext nneg i16 [[TMP2]] to i32
@@ -67,7 +67,7 @@
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP2]], i64 [[TMP6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP8:%.*]] = load i16, ptr addrspace(4) [[TMP7]], align 2, !range [[RNG7:![0-9]+]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP9:%.*]] = zext nneg i16 [[TMP8]] to i32
-// NONUNIFORM-UNKNOWN-NEXT:    [[TMP10:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-UNKNOWN-NEXT:    [[TMP10:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP10]], i64 4
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP12:%.*]] = load i16, ptr addrspace(4) [[TMP11]], align 4, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP13:%.*]] = zext nneg i16 [[TMP12]] to i32
@@ -87,7 +87,7 @@
 // UNIFORM-UNKNOWN-NEXT:    [[TMP2:%.*]] = tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP2]], i64 12
 // UNIFORM-UNKNOWN-NEXT:    [[TMP4:%.*]] = load i16, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG6:![0-9]+]], !invariant.load [[META7:![0-9]+]], !noundef [[META7]]
-// UNIFORM-UNKNOWN-NEXT:    [[TMP5:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-UNKNOWN-NEXT:    [[TMP5:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP5]], i64 4
 // UNIFORM-UNKNOWN-NEXT:    [[TMP7:%.*]] = load i16, ptr addrspace(4) [[TMP6]], align 4, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
 // UNIFORM-UNKNOWN-NEXT:    [[DOTV:%.*]] = select i1 [[TMP1]], i16 [[TMP4]], i16 [[TMP7]]
@@ -125,7 +125,7 @@ unsigned int test_get_workgroup_size_x()
 // NONUNIFORM-V4-LABEL: define dso_local range(i32 0, 1025) i32 @test_get_workgroup_size_y(
 // NONUNIFORM-V4-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // NONUNIFORM-V4-NEXT:  [[ENTRY:.*:]]
-// NONUNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 6
 // NONUNIFORM-V4-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 2, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // NONUNIFORM-V4-NEXT:    [[TMP3:%.*]] = zext nneg i16 [[TMP2]] to i32
@@ -140,7 +140,7 @@ unsigned int test_get_workgroup_size_x()
 // UNIFORM-V4-LABEL: define dso_local range(i32 1, 1025) i32 @test_get_workgroup_size_y(
 // UNIFORM-V4-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // UNIFORM-V4-NEXT:  [[ENTRY:.*:]]
-// UNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 6
 // UNIFORM-V4-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 2, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // UNIFORM-V4-NEXT:    [[TMP3:%.*]] = zext nneg i16 [[TMP2]] to i32
@@ -160,7 +160,7 @@ unsigned int test_get_workgroup_size_x()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP2]], i64 [[TMP7]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP9:%.*]] = load i16, ptr addrspace(4) [[TMP8]], align 2, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP10:%.*]] = zext nneg i16 [[TMP9]] to i32
-// NONUNIFORM-UNKNOWN-NEXT:    [[TMP11:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-UNKNOWN-NEXT:    [[TMP11:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP11]], i64 6
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP13:%.*]] = load i16, ptr addrspace(4) [[TMP12]], align 2, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP14:%.*]] = zext nneg i16 [[TMP13]] to i32
@@ -180,7 +180,7 @@ unsigned int test_get_workgroup_size_x()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP2:%.*]] = tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP2]], i64 14
 // UNIFORM-UNKNOWN-NEXT:    [[TMP4:%.*]] = load i16, ptr addrspace(4) [[TMP3]], align 2, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
-// UNIFORM-UNKNOWN-NEXT:    [[TMP5:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-UNKNOWN-NEXT:    [[TMP5:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP5]], i64 6
 // UNIFORM-UNKNOWN-NEXT:    [[TMP7:%.*]] = load i16, ptr addrspace(4) [[TMP6]], align 2, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
 // UNIFORM-UNKNOWN-NEXT:    [[DOTV:%.*]] = select i1 [[TMP1]], i16 [[TMP4]], i16 [[TMP7]]
@@ -218,7 +218,7 @@ unsigned int test_get_workgroup_size_y()
 // NONUNIFORM-V4-LABEL: define dso_local range(i32 0, 1025) i32 @test_get_workgroup_size_z(
 // NONUNIFORM-V4-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // NONUNIFORM-V4-NEXT:  [[ENTRY:.*:]]
-// NONUNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 8
 // NONUNIFORM-V4-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // NONUNIFORM-V4-NEXT:    [[TMP3:%.*]] = zext nneg i16 [[TMP2]] to i32
@@ -233,7 +233,7 @@ unsigned int test_get_workgroup_size_y()
 // UNIFORM-V4-LABEL: define dso_local range(i32 1, 1025) i32 @test_get_workgroup_size_z(
 // UNIFORM-V4-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // UNIFORM-V4-NEXT:  [[ENTRY:.*:]]
-// UNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 8
 // UNIFORM-V4-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // UNIFORM-V4-NEXT:    [[TMP3:%.*]] = zext nneg i16 [[TMP2]] to i32
@@ -253,7 +253,7 @@ unsigned int test_get_workgroup_size_y()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP2]], i64 [[TMP7]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP9:%.*]] = load i16, ptr addrspace(4) [[TMP8]], align 2, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP10:%.*]] = zext nneg i16 [[TMP9]] to i32
-// NONUNIFORM-UNKNOWN-NEXT:    [[TMP11:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-UNKNOWN-NEXT:    [[TMP11:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP11]], i64 8
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP13:%.*]] = load i16, ptr addrspace(4) [[TMP12]], align 4, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP14:%.*]] = zext nneg i16 [[TMP13]] to i32
@@ -273,7 +273,7 @@ unsigned int test_get_workgroup_size_y()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP2:%.*]] = tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP2]], i64 16
 // UNIFORM-UNKNOWN-NEXT:    [[TMP4:%.*]] = load i16, ptr addrspace(4) [[TMP3]], align 8, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
-// UNIFORM-UNKNOWN-NEXT:    [[TMP5:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-UNKNOWN-NEXT:    [[TMP5:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP5]], i64 8
 // UNIFORM-UNKNOWN-NEXT:    [[TMP7:%.*]] = load i16, ptr addrspace(4) [[TMP6]], align 4, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
 // UNIFORM-UNKNOWN-NEXT:    [[DOTV:%.*]] = select i1 [[TMP1]], i16 [[TMP4]], i16 [[TMP7]]
@@ -368,7 +368,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-V4-NEXT:      i32 2, label %[[SW_BB2:.*]]
 // NONUNIFORM-V4-NEXT:    ]
 // NONUNIFORM-V4:       [[SW_BB]]:
-// NONUNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 4
 // NONUNIFORM-V4-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // NONUNIFORM-V4-NEXT:    [[TMP3:%.*]] = zext nneg i16 [[TMP2]] to i32
@@ -381,7 +381,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-V4-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP9]], 1
 // NONUNIFORM-V4-NEXT:    br label %[[SW_EPILOG]]
 // NONUNIFORM-V4:       [[SW_BB1]]:
-// NONUNIFORM-V4-NEXT:    [[TMP10:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-V4-NEXT:    [[TMP10:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-V4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP10]], i64 6
 // NONUNIFORM-V4-NEXT:    [[TMP12:%.*]] = load i16, ptr addrspace(4) [[TMP11]], align 2, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // NONUNIFORM-V4-NEXT:    [[TMP13:%.*]] = zext nneg i16 [[TMP12]] to i32
@@ -393,7 +393,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-V4-NEXT:    [[TMP19:%.*]] = tail call i32 @llvm.umin.i32(i32 [[TMP18]], i32 [[TMP13]])
 // NONUNIFORM-V4-NEXT:    br label %[[SW_EPILOG]]
 // NONUNIFORM-V4:       [[SW_BB2]]:
-// NONUNIFORM-V4-NEXT:    [[TMP20:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-V4-NEXT:    [[TMP20:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-V4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP20]], i64 8
 // NONUNIFORM-V4-NEXT:    [[TMP22:%.*]] = load i16, ptr addrspace(4) [[TMP21]], align 4, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // NONUNIFORM-V4-NEXT:    [[TMP23:%.*]] = zext nneg i16 [[TMP22]] to i32
@@ -418,18 +418,18 @@ unsigned int test_get_workgroup_size_z()
 // UNIFORM-V4-NEXT:      i32 2, label %[[SW_BB2:.*]]
 // UNIFORM-V4-NEXT:    ]
 // UNIFORM-V4:       [[SW_BB]]:
-// UNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-V4-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 4
 // UNIFORM-V4-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // UNIFORM-V4-NEXT:    [[NARROW:%.*]] = add nuw nsw i16 [[TMP2]], 1
 // UNIFORM-V4-NEXT:    br label %[[SW_EPILOG]]
 // UNIFORM-V4:       [[SW_BB1]]:
-// UNIFORM-V4-NEXT:    [[TMP3:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-V4-NEXT:    [[TMP3:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-V4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP3]], i64 6
 // UNIFORM-V4-NEXT:    [[TMP5:%.*]] = load i16, ptr addrspace(4) [[TMP4]], align 2, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // UNIFORM-V4-NEXT:    br label %[[SW_EPILOG]]
 // UNIFORM-V4:       [[SW_BB2]]:
-// UNIFORM-V4-NEXT:    [[TMP6:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-V4-NEXT:    [[TMP6:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-V4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP6]], i64 8
 // UNIFORM-V4-NEXT:    [[TMP8:%.*]] = load i16, ptr addrspace(4) [[TMP7]], align 4, !range [[RNG7]], !invariant.load [[META8]], !noundef [[META8]]
 // UNIFORM-V4-NEXT:    br label %[[SW_EPILOG]]
@@ -458,7 +458,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP2]], i64 [[TMP6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP8:%.*]] = load i16, ptr addrspace(4) [[TMP7]], align 2, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP9:%.*]] = zext nneg i16 [[TMP8]] to i32
-// NONUNIFORM-UNKNOWN-NEXT:    [[TMP10:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-UNKNOWN-NEXT:    [[TMP10:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP10]], i64 4
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP12:%.*]] = load i16, ptr addrspace(4) [[TMP11]], align 4, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP13:%.*]] = zext nneg i16 [[TMP12]] to i32
@@ -482,7 +482,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP22]], i64 [[TMP27]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP29:%.*]] = load i16, ptr addrspace(4) [[TMP28]], align 2, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP30:%.*]] = zext nneg i16 [[TMP29]] to i32
-// NONUNIFORM-UNKNOWN-NEXT:    [[TMP31:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-UNKNOWN-NEXT:    [[TMP31:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP31]], i64 6
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP33:%.*]] = load i16, ptr addrspace(4) [[TMP32]], align 2, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP34:%.*]] = zext nneg i16 [[TMP33]] to i32
@@ -505,7 +505,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP43]], i64 [[TMP48]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP50:%.*]] = load i16, ptr addrspace(4) [[TMP49]], align 2, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP51:%.*]] = zext nneg i16 [[TMP50]] to i32
-// NONUNIFORM-UNKNOWN-NEXT:    [[TMP52:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// NONUNIFORM-UNKNOWN-NEXT:    [[TMP52:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP53:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP52]], i64 8
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP54:%.*]] = load i16, ptr addrspace(4) [[TMP53]], align 4, !range [[RNG7]], !invariant.load [[META6]], !noundef [[META6]]
 // NONUNIFORM-UNKNOWN-NEXT:    [[TMP55:%.*]] = zext nneg i16 [[TMP54]] to i32
@@ -535,7 +535,7 @@ unsigned int test_get_workgroup_size_z()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP2:%.*]] = tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP2]], i64 12
 // UNIFORM-UNKNOWN-NEXT:    [[TMP4:%.*]] = load i16, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
-// UNIFORM-UNKNOWN-NEXT:    [[TMP5:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-UNKNOWN-NEXT:    [[TMP5:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP5]], i64 4
 // UNIFORM-UNKNOWN-NEXT:    [[TMP7:%.*]] = load i16, ptr addrspace(4) [[TMP6]], align 4, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
 // UNIFORM-UNKNOWN-NEXT:    [[DOTV7:%.*]] = select i1 [[TMP1]], i16 [[TMP4]], i16 [[TMP7]]
@@ -547,7 +547,7 @@ unsigned int test_get_workgroup_size_z()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP10:%.*]] = tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP10]], i64 14
 // UNIFORM-UNKNOWN-NEXT:    [[TMP12:%.*]] = load i16, ptr addrspace(4) [[TMP11]], align 2, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
-// UNIFORM-UNKNOWN-NEXT:    [[TMP13:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-UNKNOWN-NEXT:    [[TMP13:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP13]], i64 6
 // UNIFORM-UNKNOWN-NEXT:    [[TMP15:%.*]] = load i16, ptr addrspace(4) [[TMP14]], align 2, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
 // UNIFORM-UNKNOWN-NEXT:    [[DOTV6:%.*]] = select i1 [[TMP9]], i16 [[TMP12]], i16 [[TMP15]]
@@ -558,7 +558,7 @@ unsigned int test_get_workgroup_size_z()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP18:%.*]] = tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP18]], i64 16
 // UNIFORM-UNKNOWN-NEXT:    [[TMP20:%.*]] = load i16, ptr addrspace(4) [[TMP19]], align 8, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
-// UNIFORM-UNKNOWN-NEXT:    [[TMP21:%.*]] = tail call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// UNIFORM-UNKNOWN-NEXT:    [[TMP21:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // UNIFORM-UNKNOWN-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP21]], i64 8
 // UNIFORM-UNKNOWN-NEXT:    [[TMP23:%.*]] = load i16, ptr addrspace(4) [[TMP22]], align 4, !range [[RNG6]], !invariant.load [[META7]], !noundef [[META7]]
 // UNIFORM-UNKNOWN-NEXT:    [[DOTV:%.*]] = select i1 [[TMP17]], i16 [[TMP20]], i16 [[TMP23]]

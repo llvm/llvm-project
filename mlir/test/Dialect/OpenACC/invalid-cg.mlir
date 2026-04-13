@@ -22,9 +22,8 @@ scf.parallel (%iv) = (%c0_2) to (%c4_2) step (%c1_2) {
 
 // -----
 
-// expected-note@+1 {{prior use here}}
 %c32 = arith.constant 32 : index
-// expected-error@+1 {{use of value '%c32' expects different type than prior uses: '!acc.par_width' vs 'index'}}
+// expected-error@+1 {{'acc.compute_region' op launch arguments must be results of acc.par_width operations}}
 acc.compute_region launch(%arg0 = %c32) {
   acc.yield
 } {origin = "acc.parallel"}
@@ -38,4 +37,4 @@ acc.compute_region launch(%arg0 = %c32) {
 "acc.compute_region"(%w) <{operandSegmentSizes = array<i32: 1, 0, 0>}> ({
 ^bb0(%arg0: index, %extra: index):
   "acc.yield"() : () -> ()
-}) {origin = "acc.parallel"} : (!acc.par_width) -> ()
+}) {origin = "acc.parallel"} : (index) -> ()

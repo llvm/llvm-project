@@ -109,4 +109,17 @@ program openacc_clause_validity
   end do
   !$acc end parallel
 
+  ! TILE with compiler directives between the ACC loop and the nested DO loops
+  ! (directives should be ignored when checking tightly-nested loops).
+  !$acc parallel
+  !$acc loop gang vector tile(128, 2)
+  !dir$ ivdep
+  do j = 1, N
+    !dir$ ivdep
+    do i = 1, N
+      aa(i, j) = aa(i, j) + 3.14
+    end do
+  end do
+  !$acc end parallel
+
 end program openacc_clause_validity

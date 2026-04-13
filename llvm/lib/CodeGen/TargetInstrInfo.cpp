@@ -447,7 +447,8 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
                                     Register DestReg, unsigned SubIdx,
-                                    const MachineInstr &Orig) const {
+                                    const MachineInstr &Orig,
+                                    LaneBitmask UsedLanes) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
   MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
   MBB.insert(I, MI);
@@ -517,7 +518,8 @@ MCInst TargetInstrInfo::getNop() const { llvm_unreachable("Not implemented"); }
 MachineInstr *TargetInstrInfo::optimizeLoadInstr(MachineInstr &MI,
                                                  const MachineRegisterInfo *MRI,
                                                  Register &FoldAsLoadDefReg,
-                                                 MachineInstr *&DefMI) const {
+                                                 MachineInstr *&DefMI,
+                                                 MachineInstr *&CopyMI) const {
   // Check whether we can move DefMI here.
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
@@ -543,7 +545,8 @@ MachineInstr *TargetInstrInfo::optimizeLoadInstr(MachineInstr &MI,
     return nullptr;
 
   // Check whether we can fold the def into SrcOperandId.
-  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
+  if (MachineInstr *FoldMI =
+          foldMemoryOperand(MI, SrcOperandIds, *DefMI, CopyMI)) {
     FoldAsLoadDefReg = 0;
     return FoldMI;
   }
@@ -702,6 +705,7 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
 
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                                  ArrayRef<unsigned> Ops, int FI,
+                                                 MachineInstr *&CopyMI,
                                                  LiveIntervals *LIS,
                                                  VirtRegMap *VRM) const {
   auto Flags = MachineMemOperand::MONone;
@@ -750,7 +754,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     return foldInlineAsmMemOperand(MI, Ops, FI, *this);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, LIS, VRM);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, CopyMI, LIS, VRM);
   }
 
   if (NewMI) {
@@ -803,6 +807,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                                  ArrayRef<unsigned> Ops,
                                                  MachineInstr &LoadMI,
+                                                 MachineInstr *&CopyMI,
                                                  LiveIntervals *LIS) const {
   assert(LoadMI.canFoldAsLoad() && "LoadMI isn't foldable!");
 #ifndef NDEBUG
@@ -829,7 +834,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, CopyMI, LIS);
   }
 
   if (!NewMI)

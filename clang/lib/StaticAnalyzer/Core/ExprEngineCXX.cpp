@@ -93,7 +93,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     // In that case, copying the empty base class subobject would overwrite the
     // object that it overlaps with - so let's not do that.
     // See issue-157467.cpp for an example.
-    Dst.Add(Pred);
+    Dst.insert(Pred);
   }
 
   PostStmt PS(CallExpr, LCtx);
@@ -127,9 +127,8 @@ SVal ExprEngine::makeElementRegion(ProgramStateRef State, SVal LValue,
 // In case when the prvalue is returned from the function (kind is one of
 // SimpleReturnedValueKind, CXX17ElidedCopyReturnedValueKind), then
 // it's materialization happens in context of the caller.
-// We pass BldrCtx explicitly, as currBldrCtx always refers to callee's context.
 SVal ExprEngine::computeObjectUnderConstruction(
-    const Expr *E, ProgramStateRef State, const NodeBuilderContext *BldrCtx,
+    const Expr *E, ProgramStateRef State, unsigned NumVisitedCaller,
     const LocationContext *LCtx, const ConstructionContext *CC,
     EvalCallOptions &CallOpts, unsigned Idx) {
 
@@ -230,10 +229,9 @@ SVal ExprEngine::computeObjectUnderConstruction(
           assert(!isa<BlockInvocationContext>(CallerLCtx));
         }
 
-        NodeBuilderContext CallerBldrCtx(getCoreEngine(),
-                                         SFC->getCallSiteBlock(), CallerLCtx);
+        unsigned NVCaller = getNumVisited(CallerLCtx, SFC->getCallSiteBlock());
         return computeObjectUnderConstruction(
-            cast<Expr>(SFC->getCallSite()), State, &CallerBldrCtx, CallerLCtx,
+            SFC->getCallSite(), State, NVCaller, CallerLCtx,
             RTC->getConstructionContext(), CallOpts);
       } else {
         // We are on the top frame of the analysis. We do not know where is the
@@ -254,7 +252,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
         QualType ReturnTy = RetE->getType();
         QualType RegionTy = ACtx.getPointerType(ReturnTy);
         return SVB.conjureSymbolVal(&TopLevelSymRegionTag, getCFGElementRef(),
-                                    SFC, RegionTy, currBldrCtx->blockCount());
+                                    SFC, RegionTy, getNumVisitedCurrent());
       }
       llvm_unreachable("Unhandled return value construction context!");
     }
@@ -273,7 +271,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
       EvalCallOptions PreElideCallOpts = CallOpts;
 
       SVal V = computeObjectUnderConstruction(
-          TCC->getConstructorAfterElision(), State, BldrCtx, LCtx,
+          TCC->getConstructorAfterElision(), State, NumVisitedCaller, LCtx,
           TCC->getConstructionContextAfterElision(), CallOpts);
 
       // FIXME: This definition of "copy elision has not failed" is unreliable.
@@ -346,7 +344,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
       CallEventManager &CEMgr = getStateManager().getCallEventManager();
       auto getArgLoc = [&](CallEventRef<> Caller) -> std::optional<SVal> {
         const LocationContext *FutureSFC =
-            Caller->getCalleeStackFrame(BldrCtx->blockCount());
+            Caller->getCalleeStackFrame(NumVisitedCaller);
         // Return early if we are unable to reliably foresee
         // the future stack frame.
         if (!FutureSFC)
@@ -365,7 +363,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
         // because this-argument is implemented as a normal argument in
         // operator call expressions but not in operator declarations.
         const TypedValueRegion *TVR = Caller->getParameterLocation(
-            *Caller->getAdjustedParameterIndex(Idx), BldrCtx->blockCount());
+            *Caller->getAdjustedParameterIndex(Idx), NumVisitedCaller);
         if (!TVR)
           return std::nullopt;
 
@@ -456,8 +454,8 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
         assert(!isa<BlockInvocationContext>(CallerLCtx));
       }
 
-      return updateObjectsUnderConstruction(V,
-          cast<Expr>(SFC->getCallSite()), State, CallerLCtx,
+      return updateObjectsUnderConstruction(
+          V, SFC->getCallSite(), State, CallerLCtx,
           RTC->getConstructionContext(), CallOpts);
     }
     case ConstructionContext::ElidedTemporaryObjectKind: {
@@ -975,7 +973,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // really part of the CXXNewExpr because they happen BEFORE the
   // CXXConstructExpr subexpression. See PR12014 for some discussion.
 
-  unsigned blockCount = currBldrCtx->blockCount();
+  unsigned blockCount = getNumVisitedCurrent();
   const LocationContext *LCtx = Pred->getLocationContext();
   SVal symVal = UnknownVal();
   FunctionDecl *FD = CNE->getOperatorNew();
@@ -1132,13 +1130,13 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
   const VarDecl *VD = CS->getExceptionDecl();
   if (!VD) {
-    Dst.Add(Pred);
+    Dst.insert(Pred);
     return;
   }
 
   const LocationContext *LCtx = Pred->getLocationContext();
   SVal V = svalBuilder.conjureSymbolVal(getCFGElementRef(), LCtx, VD->getType(),
-                                        currBldrCtx->blockCount());
+                                        getNumVisitedCurrent());
   ProgramStateRef state = Pred->getState();
   state = state->bindLoc(state->getLValue(VD, LCtx), V, LCtx);
 

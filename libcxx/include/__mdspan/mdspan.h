@@ -78,14 +78,14 @@ public:
   using extents_type     = _Extents;
   using layout_type      = _LayoutPolicy;
   using accessor_type    = _AccessorPolicy;
-  using mapping_type     = typename layout_type::template mapping<extents_type>;
+  using mapping_type     = layout_type::template mapping<extents_type>;
   using element_type     = _ElementType;
   using value_type       = remove_cv_t<element_type>;
-  using index_type       = typename extents_type::index_type;
-  using size_type        = typename extents_type::size_type;
-  using rank_type        = typename extents_type::rank_type;
-  using data_handle_type = typename accessor_type::data_handle_type;
-  using reference        = typename accessor_type::reference;
+  using index_type       = extents_type::index_type;
+  using size_type        = extents_type::size_type;
+  using rank_type        = extents_type::rank_type;
+  using data_handle_type = accessor_type::data_handle_type;
+  using reference        = accessor_type::reference;
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return extents_type::rank(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept {

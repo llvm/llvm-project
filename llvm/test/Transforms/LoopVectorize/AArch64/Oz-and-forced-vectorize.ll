@@ -14,12 +14,12 @@ define void @foo(ptr noalias nocapture %ptrA, ptr noalias nocapture readonly %pt
 entry:
   br label %for.cond
 
-for.cond:                                         ; preds = %for.body, %entry
+for.cond:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %exitcond = icmp eq i64 %indvars.iv, %size
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.body:                                         ; preds = %for.cond
+for.body:
   %arrayidx = getelementptr inbounds float, ptr %ptrB, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %arrayidx2 = getelementptr inbounds float, ptr %ptrA, i64 %indvars.iv
@@ -29,7 +29,7 @@ for.body:                                         ; preds = %for.cond
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   br label %for.cond, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %for.cond
+for.cond.cleanup:
   ret void
 }
 
