@@ -9534,7 +9534,7 @@ void ResolveNamesVisitor::HandleProcedureName(
     } else if (symbol->test(Symbol::Flag::Implicit)) {
       Say(name,
           "Use of '%s' as a procedure conflicts with its implicit definition"_err_en_US);
-    } else if (!HadUseError(context(), name.source, symbol)) {
+    } else {
       SayWithDecl(name, *symbol,
           "Use of '%s' as a procedure conflicts with its declaration"_err_en_US);
     }

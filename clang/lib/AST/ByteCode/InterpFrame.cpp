@@ -8,6 +8,7 @@
 
 #include "InterpFrame.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -97,6 +98,7 @@ void InterpFrame::initScope(unsigned Idx) {
     return;
 
   for (auto &Local : Func->getScope(Idx).locals()) {
+    assert(!localBlock(Local.Offset)->isInitialized());
     localBlock(Local.Offset)->invokeCtor();
   }
 }

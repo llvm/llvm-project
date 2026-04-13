@@ -2,7 +2,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tahiti -o - < %s | FileCheck %s --check-prefixes=GFX,GFX6
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -o - < %s | FileCheck %s --check-prefixes=GFX,GFX8
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX10
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX1250
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX1250,GFX1250-FAKE16
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX1250,GFX1250-REAL16
 
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
@@ -170,14 +171,23 @@ define i16 @abs_vgpr_i16(i16 %arg) {
 ; GFX10-NEXT:    v_max_i16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-LABEL: abs_vgpr_i16:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_sub_nc_u16 v1, 0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_max_i16 v0, v0, v1
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-FAKE16-LABEL: abs_vgpr_i16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_sub_nc_u16 v1, 0, v0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_max_i16 v0, v0, v1
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: abs_vgpr_i16:
+; GFX1250-REAL16:       ; %bb.0:
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v0.h, 0, v0.l
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-REAL16-NEXT:    v_max_i16 v0.l, v0.l, v0.h
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %res = call i16 @llvm.abs.i16(i16 %arg, i1 false)
   ret i16 %res
 }
@@ -390,19 +400,33 @@ define <2 x i8> @abs_vgpr_v2i8(<2 x i8> %arg) {
 ; GFX10-NEXT:    v_max_i16 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-LABEL: abs_vgpr_v2i8:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v1, v1, 0, 8
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_sub_nc_u16 v2, 0, v0
-; GFX1250-NEXT:    v_sub_nc_u16 v3, 0, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_max_i16 v0, v0, v2
-; GFX1250-NEXT:    v_max_i16 v1, v1, v3
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-FAKE16-LABEL: abs_vgpr_v2i8:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GFX1250-FAKE16-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-FAKE16-NEXT:    v_sub_nc_u16 v2, 0, v0
+; GFX1250-FAKE16-NEXT:    v_sub_nc_u16 v3, 0, v1
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-FAKE16-NEXT:    v_max_i16 v0, v0, v2
+; GFX1250-FAKE16-NEXT:    v_max_i16 v1, v1, v3
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: abs_vgpr_v2i8:
+; GFX1250-REAL16:       ; %bb.0:
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_bfe_i32 v2, v0, 0, 8
+; GFX1250-REAL16-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v0.l, 0, v2.l
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v0.h, 0, v1.l
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    v_max_i16 v0.l, v2.l, v0.l
+; GFX1250-REAL16-NEXT:    v_max_i16 v1.l, v1.l, v0.h
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %arg, i1 false)
   ret <2 x i8> %res
 }
@@ -493,23 +517,41 @@ define <3 x i8> @abs_vgpr_v3i8(<3 x i8>  %arg) {
 ; GFX10-NEXT:    v_max_i16 v2, v2, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-LABEL: abs_vgpr_v3i8:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v1, v1, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v2, v2, 0, 8
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_sub_nc_u16 v3, 0, v0
-; GFX1250-NEXT:    v_sub_nc_u16 v4, 0, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_sub_nc_u16 v5, 0, v2
-; GFX1250-NEXT:    v_max_i16 v0, v0, v3
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_max_i16 v1, v1, v4
-; GFX1250-NEXT:    v_max_i16 v2, v2, v5
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-FAKE16-LABEL: abs_vgpr_v3i8:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GFX1250-FAKE16-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX1250-FAKE16-NEXT:    v_bfe_i32 v2, v2, 0, 8
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-FAKE16-NEXT:    v_sub_nc_u16 v3, 0, v0
+; GFX1250-FAKE16-NEXT:    v_sub_nc_u16 v4, 0, v1
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-FAKE16-NEXT:    v_sub_nc_u16 v5, 0, v2
+; GFX1250-FAKE16-NEXT:    v_max_i16 v0, v0, v3
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-FAKE16-NEXT:    v_max_i16 v1, v1, v4
+; GFX1250-FAKE16-NEXT:    v_max_i16 v2, v2, v5
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: abs_vgpr_v3i8:
+; GFX1250-REAL16:       ; %bb.0:
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_bfe_i32 v3, v0, 0, 8
+; GFX1250-REAL16-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX1250-REAL16-NEXT:    v_bfe_i32 v2, v2, 0, 8
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v0.l, 0, v3.l
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v0.h, 0, v1.l
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v1.h, 0, v2.l
+; GFX1250-REAL16-NEXT:    v_max_i16 v0.l, v3.l, v0.l
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-REAL16-NEXT:    v_max_i16 v1.l, v1.l, v0.h
+; GFX1250-REAL16-NEXT:    v_max_i16 v2.l, v2.l, v1.h
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <3 x i8> @llvm.abs.v3i8(<3 x i8> %arg, i1 false)
   ret <3 x i8> %res
 }
@@ -694,16 +736,27 @@ define <3 x i16> @abs_vgpr_v3i16(<3 x i16> %arg) {
 ; GFX10-NEXT:    v_max_i16 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-LABEL: abs_vgpr_v3i16:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_sub_i16 v2, 0, v0
-; GFX1250-NEXT:    v_sub_nc_u16 v3, 0, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_pk_max_i16 v0, v0, v2
-; GFX1250-NEXT:    v_max_i16 v1, v1, v3
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-FAKE16-LABEL: abs_vgpr_v3i16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_pk_sub_i16 v2, 0, v0
+; GFX1250-FAKE16-NEXT:    v_sub_nc_u16 v3, 0, v1
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-FAKE16-NEXT:    v_pk_max_i16 v0, v0, v2
+; GFX1250-FAKE16-NEXT:    v_max_i16 v1, v1, v3
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: abs_vgpr_v3i16:
+; GFX1250-REAL16:       ; %bb.0:
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_pk_sub_i16 v2, 0, v0
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v1.h, 0, v1.l
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    v_pk_max_i16 v0, v0, v2
+; GFX1250-REAL16-NEXT:    v_max_i16 v1.l, v1.l, v1.h
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <3 x i16> @llvm.abs.v3i16(<3 x i16> %arg, i1 false)
   ret <3 x i16> %res
 }

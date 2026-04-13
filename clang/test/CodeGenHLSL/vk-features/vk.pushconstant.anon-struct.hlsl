@@ -8,7 +8,7 @@ struct {
 }
 PushConstants;
 
-// CHECK: %struct.anon = type <{ i32, float, <3 x float> }>
+// CHECK: %struct.anon = type { i32, float, <3 x float> }
 // CHECK: @PushConstants = external hidden addrspace(13) externally_initialized global %struct.anon, align 1
 
 [numthreads(1, 1, 1)]

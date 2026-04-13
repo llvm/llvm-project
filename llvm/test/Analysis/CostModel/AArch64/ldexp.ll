@@ -72,11 +72,11 @@ define void @ldexp_fp16() {
 
 define void @ldexp_bf16() {
 ; CHECK-BASE-LABEL: 'ldexp_bf16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %1 = call bfloat @llvm.ldexp.bf16.i32(bfloat poison, i32 poison)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:3 Lat:22 SizeLat:22 for: %2 = call <2 x bfloat> @llvm.ldexp.v2bf16.v2i32(<2 x bfloat> poison, <2 x i32> poison)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:7 Lat:46 SizeLat:46 for: %3 = call <4 x bfloat> @llvm.ldexp.v4bf16.v4i32(<4 x bfloat> poison, <4 x i32> poison)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:94 CodeSize:15 Lat:94 SizeLat:94 for: %4 = call <8 x bfloat> @llvm.ldexp.v8bf16.v8i32(<8 x bfloat> poison, <8 x i32> poison)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:188 CodeSize:30 Lat:188 SizeLat:188 for: %5 = call <16 x bfloat> @llvm.ldexp.v16bf16.v16i32(<16 x bfloat> poison, <16 x i32> poison)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %1 = call bfloat @llvm.ldexp.bf16.i32(bfloat poison, i32 poison)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %2 = call <2 x bfloat> @llvm.ldexp.v2bf16.v2i32(<2 x bfloat> poison, <2 x i32> poison)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %3 = call <4 x bfloat> @llvm.ldexp.v4bf16.v4i32(<4 x bfloat> poison, <4 x i32> poison)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %4 = call <8 x bfloat> @llvm.ldexp.v8bf16.v8i32(<8 x bfloat> poison, <8 x i32> poison)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %5 = call <16 x bfloat> @llvm.ldexp.v16bf16.v16i32(<16 x bfloat> poison, <16 x i32> poison)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-LABEL: 'ldexp_bf16'

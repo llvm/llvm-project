@@ -1541,7 +1541,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
 
   unwind_plan.SetPlanValidAddressRanges({func_range});
   if (unwind_plan_updated) {
-    std::string unwind_plan_source(unwind_plan.GetSourceName().AsCString());
+    std::string unwind_plan_source = unwind_plan.GetSourceName().GetString();
     unwind_plan_source += " plus augmentation from assembly parsing";
     unwind_plan.SetSourceName(unwind_plan_source.c_str());
     unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);

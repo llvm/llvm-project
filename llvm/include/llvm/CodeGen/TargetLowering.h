@@ -443,7 +443,7 @@ public:
   /// G_INSERT_VECTOR_ELT, G_EXTRACT_VECTOR_ELT,
   /// G_INSERT_SUBVECTOR, and G_EXTRACT_SUBVECTOR
   LLT getVectorIdxLLT(const DataLayout &DL) const {
-    return LLT::scalar(getVectorIdxWidth(DL));
+    return LLT::integer(getVectorIdxWidth(DL));
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
@@ -5631,6 +5631,11 @@ public:
   SDValue expandIS_FPCLASS(EVT ResultVT, SDValue Op, FPClassTest Test,
                            SDNodeFlags Flags, const SDLoc &DL,
                            SelectionDAG &DAG) const;
+
+  /// Expand FCANONICALIZE to FMUL with 1.
+  /// \param NodeNode to expand
+  /// \returns The expansion result
+  SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
