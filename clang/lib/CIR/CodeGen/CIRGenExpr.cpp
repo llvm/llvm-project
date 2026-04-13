@@ -1498,9 +1498,11 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   }
 
   // These are never l-values; just use the aggregate emission code.
+  case CK_ToUnion:
+    return emitAggExprToLValue(e);
+
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
-  case CK_ToUnion:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -1514,6 +1516,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
 
     return {};
   }
+
   case CK_AddressSpaceConversion: {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
