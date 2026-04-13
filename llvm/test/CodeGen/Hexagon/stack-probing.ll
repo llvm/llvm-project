@@ -17,10 +17,14 @@ entry:
 ; CHECK: allocframe(r29,#0):raw
 ; CHECK: r28 = add(r29,#-8192)
 ; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; CHECK: r29 = add(r29,#-4096)
-; CHECK: p0 = cmp.gtu(r29,r28)
-; CHECK: if (p0.new) jump:t .LBB
-; CHECK: memw(r29+#0) = #0
+; CHECK:      {
+; CHECK-NEXT:   r29 = add(r29,#-4096)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   p0 = cmp.gtu(r29,r28)
+; CHECK-NEXT:   if (p0.new) jump:t .LBB
+; CHECK-NEXT:   memw(r29+#0) = #0
+; CHECK-NEXT: }
 ; CHECK: r29 = r28
 define void @large_frame() #0 {
 entry:
@@ -34,10 +38,14 @@ entry:
 ; CHECK: allocframe(r29,#0):raw
 ; CHECK: r28 = add(r29,#-12288)
 ; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; CHECK: r29 = add(r29,#-4096)
-; CHECK: p0 = cmp.gtu(r29,r28)
-; CHECK: if (p0.new) jump:t .LBB
-; CHECK: memw(r29+#0) = #0
+; CHECK:      {
+; CHECK-NEXT:   r29 = add(r29,#-4096)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   p0 = cmp.gtu(r29,r28)
+; CHECK-NEXT:   if (p0.new) jump:t .LBB
+; CHECK-NEXT:   memw(r29+#0) = #0
+; CHECK-NEXT: }
 ; CHECK: r29 = r28
 define void @exact_multiple() #0 {
 entry:
@@ -51,10 +59,14 @@ entry:
 ; CHECK-NOT: allocframe
 ; CHECK: r28 = add(r29,#-8192)
 ; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; CHECK: r29 = add(r29,#-4096)
-; CHECK: p0 = cmp.gtu(r29,r28)
-; CHECK: if (p0.new) jump:t .LBB
-; CHECK: memw(r29+#0) = #0
+; CHECK:      {
+; CHECK-NEXT:   r29 = add(r29,#-4096)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   p0 = cmp.gtu(r29,r28)
+; CHECK-NEXT:   if (p0.new) jump:t .LBB
+; CHECK-NEXT:   memw(r29+#0) = #0
+; CHECK-NEXT: }
 ; CHECK: r29 = r28
 define void @no_fp_large() #1 {
 entry:
@@ -68,10 +80,14 @@ entry:
 ; CHECK: allocframe(r29,#0):raw
 ; CHECK: r28 = add(r29,#-8192)
 ; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; CHECK: r29 = add(r29,#-512)
-; CHECK: p0 = cmp.gtu(r29,r28)
-; CHECK: if (p0.new) jump:t .LBB
-; CHECK: memw(r29+#0) = #0
+; CHECK:      {
+; CHECK-NEXT:   r29 = add(r29,#-512)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   p0 = cmp.gtu(r29,r28)
+; CHECK-NEXT:   if (p0.new) jump:t .LBB
+; CHECK-NEXT:   memw(r29+#0) = #0
+; CHECK-NEXT: }
 ; CHECK: r29 = r28
 define void @custom_probe_size() #2 {
 entry:
@@ -97,10 +113,14 @@ entry:
 ; CHECK: allocframe(r29,#0):raw
 ; CHECK: r28 = add(r29,#-20480)
 ; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; CHECK: r29 = add(r29,#-4096)
-; CHECK: p0 = cmp.gtu(r29,r28)
-; CHECK: if (p0.new) jump:t .LBB
-; CHECK: memw(r29+#0) = #0
+; CHECK:      {
+; CHECK-NEXT:   r29 = add(r29,#-4096)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   p0 = cmp.gtu(r29,r28)
+; CHECK-NEXT:   if (p0.new) jump:t .LBB
+; CHECK-NEXT:   memw(r29+#0) = #0
+; CHECK-NEXT: }
 ; CHECK: r29 = r28
 define void @very_large_frame() #0 {
 entry:
@@ -126,10 +146,14 @@ entry:
 ; CHECK: allocframe(r29,#0):raw
 ; CHECK: r28 = add(r29,##-65536)
 ; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; CHECK: r29 = add(r29,#-4096)
-; CHECK: p0 = cmp.gtu(r29,r28)
-; CHECK: if (p0.new) jump:t .LBB
-; CHECK: memw(r29+#0) = #0
+; CHECK:      {
+; CHECK-NEXT:   r29 = add(r29,#-4096)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   p0 = cmp.gtu(r29,r28)
+; CHECK-NEXT:   if (p0.new) jump:t .LBB
+; CHECK-NEXT:   memw(r29+#0) = #0
+; CHECK-NEXT: }
 ; CHECK: r29 = r28
 define void @const_extd_frame() #0 {
 entry:
@@ -143,10 +167,14 @@ entry:
 ; CHECK: allocframe(r29,#0):raw
 ; CHECK: r28 = add(r29,#-8216)
 ; CHECK: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; CHECK: r29 = add(r29,#-4096)
-; CHECK: p0 = cmp.gtu(r29,r28)
-; CHECK: if (p0.new) jump:t .LBB
-; CHECK: memw(r29+#0) = #0
+; CHECK:      {
+; CHECK-NEXT:   r29 = add(r29,#-4096)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   p0 = cmp.gtu(r29,r28)
+; CHECK-NEXT:   if (p0.new) jump:t .LBB
+; CHECK-NEXT:   memw(r29+#0) = #0
+; CHECK-NEXT: }
 ; CHECK: r29 = r28
 ; CHECK: memd(r29+##{{[0-9]+}}) = r{{[0-9]+}}:{{[0-9]+}}
 ; CHECK: dealloc_return
