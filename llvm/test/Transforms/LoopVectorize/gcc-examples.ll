@@ -41,7 +41,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @example1() {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv
   %3 = load i32, ptr %2, align 4
@@ -55,7 +55,7 @@ define void @example1() {
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -72,16 +72,16 @@ define void @example2(i32 %n, i32 %x) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph5, label %.preheader
 
-..preheader_crit_edge:                            ; preds = %.lr.ph5
+..preheader_crit_edge:
   %phitmp = sext i32 %n to i64
   br label %.preheader
 
-.preheader:                                       ; preds = %..preheader_crit_edge, %0
+.preheader:
   %i.0.lcssa = phi i64 [ %phitmp, %..preheader_crit_edge ], [ 0, %0 ]
   %2 = icmp eq i32 %n, 0
   br i1 %2, label %._crit_edge, label %.lr.ph
 
-.lr.ph5:                                          ; preds = %0, %.lr.ph5
+.lr.ph5:
   %indvars.iv6 = phi i64 [ %indvars.iv.next7, %.lr.ph5 ], [ 0, %0 ]
   %3 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv6
   store i32 %x, ptr %3, align 4
@@ -90,7 +90,7 @@ define void @example2(i32 %n, i32 %x) {
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %..preheader_crit_edge, label %.lr.ph5
 
-.lr.ph:                                           ; preds = %.preheader, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ %i.0.lcssa, %.preheader ]
   %.02 = phi i32 [ %4, %.lr.ph ], [ %n, %.preheader ]
   %4 = add nsw i32 %.02, -1
@@ -105,7 +105,7 @@ define void @example2(i32 %n, i32 %x) {
   %11 = icmp eq i32 %4, 0
   br i1 %11, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %.preheader
+._crit_edge:
   ret void
 }
 
@@ -122,7 +122,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %1 = icmp eq i32 %n, 0
   br i1 %1, label %._crit_edge, label %.lr.ph
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %.05 = phi i32 [ %2, %.lr.ph ], [ %n, %0 ]
   %.014 = phi ptr [ %5, %.lr.ph ], [ %p, %0 ]
   %.023 = phi ptr [ %3, %.lr.ph ], [ %q, %0 ]
@@ -134,7 +134,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %6 = icmp eq i32 %2, 0
   br i1 %6, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }
 
@@ -152,11 +152,11 @@ define void @example4(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %2 = icmp eq i32 %n, 0
   br i1 %2, label %.preheader4, label %.lr.ph10
 
-.preheader4:                                      ; preds = %0
+.preheader4:
   %3 = icmp sgt i32 %1, 0
   br i1 %3, label %.lr.ph6, label %._crit_edge
 
-.lr.ph10:                                         ; preds = %0, %.lr.ph10
+.lr.ph10:
   %4 = phi i32 [ %9, %.lr.ph10 ], [ %1, %0 ]
   %.018 = phi ptr [ %8, %.lr.ph10 ], [ %p, %0 ]
   %.027 = phi ptr [ %5, %.lr.ph10 ], [ %q, %0 ]
@@ -169,10 +169,10 @@ define void @example4(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %10 = icmp eq i32 %4, 0
   br i1 %10, label %._crit_edge, label %.lr.ph10
 
-.preheader:                                       ; preds = %.lr.ph6
+.preheader:
   br i1 %3, label %.lr.ph, label %._crit_edge
 
-.lr.ph6:                                          ; preds = %.preheader4, %.lr.ph6
+.lr.ph6:
   %indvars.iv11 = phi i64 [ %indvars.iv.next12, %.lr.ph6 ], [ 0, %.preheader4 ]
   %indvars.iv.next12 = add i64 %indvars.iv11, 1
   %11 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv.next12
@@ -187,7 +187,7 @@ define void @example4(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %exitcond14 = icmp eq i32 %lftr.wideiv13, %1
   br i1 %exitcond14, label %.preheader, label %.lr.ph6
 
-.lr.ph:                                           ; preds = %.preheader, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %.preheader ]
   %18 = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 %indvars.iv
   %19 = load i32, ptr %18, align 4
@@ -200,7 +200,7 @@ define void @example4(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %exitcond = icmp eq i32 %lftr.wideiv, %1
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph10, %.preheader4, %.lr.ph, %.preheader
+._crit_edge:
   ret void
 }
 
@@ -216,11 +216,11 @@ define void @example4(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 define void @example8(i32 %x) {
   br label %.preheader
 
-.preheader:                                       ; preds = %3, %0
+.preheader:
   %indvars.iv3 = phi i64 [ 0, %0 ], [ %indvars.iv.next4, %3 ]
   br label %1
 
-; <label>:1                                       ; preds = %1, %.preheader
+; <label>:
   %indvars.iv = phi i64 [ 0, %.preheader ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [32 x [1024 x i32]], ptr @G, i64 0, i64 %indvars.iv3, i64 %indvars.iv
   store i32 %x, ptr %2, align 4
@@ -229,13 +229,13 @@ define void @example8(i32 %x) {
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %3, label %1
 
-; <label>:3                                       ; preds = %1
+; <label>:
   %indvars.iv.next4 = add i64 %indvars.iv3, 1
   %lftr.wideiv5 = trunc i64 %indvars.iv.next4 to i32
   %exitcond6 = icmp eq i32 %lftr.wideiv5, 32
   br i1 %exitcond6, label %4, label %.preheader
 
-; <label>:4                                       ; preds = %3
+; <label>:
   ret void
 }
 
@@ -245,7 +245,7 @@ define void @example8(i32 %x) {
 define i32 @example9() readonly {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %diff.01 = phi i32 [ 0, %0 ], [ %7, %1 ]
   %2 = getelementptr inbounds [1024 x i32], ptr @ub, i64 0, i64 %indvars.iv
@@ -259,7 +259,7 @@ define i32 @example9() readonly {
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret i32 %7
 }
 
@@ -273,7 +273,7 @@ define i32 @example9() readonly {
 define void @example10a(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds i32, ptr %ib, i64 %indvars.iv
   %3 = load i32, ptr %2, align 4
@@ -294,7 +294,7 @@ define void @example10a(ptr noalias nocapture %sa, ptr noalias nocapture %sb, pt
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %14, label %1
 
-; <label>:14                                      ; preds = %1
+; <label>:
   ret void
 }
 
@@ -306,7 +306,7 @@ define void @example10a(ptr noalias nocapture %sa, ptr noalias nocapture %sb, pt
 define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds i16, ptr %sb, i64 %indvars.iv
   %3 = load i16, ptr %2, align 2
@@ -318,7 +318,7 @@ define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, pt
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %6, label %1
 
-; <label>:6                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -335,7 +335,7 @@ define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, pt
 define void @example11() {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = shl nsw i64 %indvars.iv, 1
   %3 = or i64 %2, 1
@@ -362,7 +362,7 @@ define void @example11() {
   %exitcond = icmp eq i32 %lftr.wideiv, 512
   br i1 %exitcond, label %20, label %1
 
-; <label>:20                                      ; preds = %1
+; <label>:
   ret void
 }
 
@@ -374,7 +374,7 @@ define void @example11() {
 define void @example12() {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 %indvars.iv
   %3 = trunc i64 %indvars.iv to i32
@@ -384,7 +384,7 @@ define void @example12() {
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %4, label %1
 
-; <label>:4                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -394,7 +394,7 @@ define void @example12() {
 define void @example13(ptr nocapture %A, ptr nocapture %B, ptr nocapture %out) {
   br label %.preheader
 
-.preheader:                                       ; preds = %14, %0
+.preheader:
   %indvars.iv4 = phi i64 [ 0, %0 ], [ %indvars.iv.next5, %14 ]
   %1 = getelementptr inbounds ptr, ptr %A, i64 %indvars.iv4
   %2 = load ptr, ptr %1, align 8
@@ -402,7 +402,7 @@ define void @example13(ptr nocapture %A, ptr nocapture %B, ptr nocapture %out) {
   %4 = load ptr, ptr %3, align 8
   br label %5
 
-; <label>:5                                       ; preds = %.preheader, %5
+; <label>:
   %indvars.iv = phi i64 [ 0, %.preheader ], [ %indvars.iv.next, %5 ]
   %diff.02 = phi i32 [ 0, %.preheader ], [ %11, %5 ]
   %6 = getelementptr inbounds i32, ptr %2, i64 %indvars.iv
@@ -416,7 +416,7 @@ define void @example13(ptr nocapture %A, ptr nocapture %B, ptr nocapture %out) {
   %13 = icmp slt i32 %12, 1024
   br i1 %13, label %5, label %14
 
-; <label>:14                                      ; preds = %5
+; <label>:
   %15 = getelementptr inbounds i32, ptr %out, i64 %indvars.iv4
   store i32 %11, ptr %15, align 4
   %indvars.iv.next5 = add i64 %indvars.iv4, 1
@@ -424,7 +424,7 @@ define void @example13(ptr nocapture %A, ptr nocapture %B, ptr nocapture %out) {
   %exitcond = icmp eq i32 %lftr.wideiv, 32
   br i1 %exitcond, label %16, label %.preheader
 
-; <label>:16                                      ; preds = %14
+; <label>:
   ret void
 }
 
@@ -436,12 +436,12 @@ define void @example14(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %o
 .preheader3:
   br label %.preheader
 
-.preheader:                                       ; preds = %11, %.preheader3
+.preheader:
   %indvars.iv7 = phi i64 [ 0, %.preheader3 ], [ %indvars.iv.next8, %11 ]
   %sum.05 = phi i32 [ 0, %.preheader3 ], [ %10, %11 ]
   br label %0
 
-; <label>:0                                       ; preds = %0, %.preheader
+; <label>:
   %indvars.iv = phi i64 [ 0, %.preheader ], [ %indvars.iv.next, %0 ]
   %sum.12 = phi i32 [ %sum.05, %.preheader ], [ %10, %0 ]
   %1 = getelementptr inbounds ptr, ptr %in, i64 %indvars.iv
@@ -459,22 +459,22 @@ define void @example14(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %o
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %11, label %0
 
-; <label>:11                                      ; preds = %0
+; <label>:
   %indvars.iv.next8 = add i64 %indvars.iv7, 1
   %lftr.wideiv9 = trunc i64 %indvars.iv.next8 to i32
   %exitcond10 = icmp eq i32 %lftr.wideiv9, 32
   br i1 %exitcond10, label %.preheader3.1, label %.preheader
 
-.preheader3.1:                                    ; preds = %11
+.preheader3.1:
   store i32 %10, ptr %out, align 4
   br label %.preheader.1
 
-.preheader.1:                                     ; preds = %24, %.preheader3.1
+.preheader.1:
   %indvars.iv7.1 = phi i64 [ 0, %.preheader3.1 ], [ %indvars.iv.next8.1, %24 ]
   %sum.05.1 = phi i32 [ 0, %.preheader3.1 ], [ %23, %24 ]
   br label %12
 
-; <label>:12                                      ; preds = %12, %.preheader.1
+; <label>:
   %indvars.iv.1 = phi i64 [ 0, %.preheader.1 ], [ %13, %12 ]
   %sum.12.1 = phi i32 [ %sum.05.1, %.preheader.1 ], [ %23, %12 ]
   %13 = add nsw i64 %indvars.iv.1, 1
@@ -492,23 +492,23 @@ define void @example14(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %o
   %exitcond.1 = icmp eq i32 %lftr.wideiv.1, 1024
   br i1 %exitcond.1, label %24, label %12
 
-; <label>:24                                      ; preds = %12
+; <label>:
   %indvars.iv.next8.1 = add i64 %indvars.iv7.1, 1
   %lftr.wideiv9.1 = trunc i64 %indvars.iv.next8.1 to i32
   %exitcond10.1 = icmp eq i32 %lftr.wideiv9.1, 32
   br i1 %exitcond10.1, label %.preheader3.2, label %.preheader.1
 
-.preheader3.2:                                    ; preds = %24
+.preheader3.2:
   %25 = getelementptr inbounds i32, ptr %out, i64 1
   store i32 %23, ptr %25, align 4
   br label %.preheader.2
 
-.preheader.2:                                     ; preds = %38, %.preheader3.2
+.preheader.2:
   %indvars.iv7.2 = phi i64 [ 0, %.preheader3.2 ], [ %indvars.iv.next8.2, %38 ]
   %sum.05.2 = phi i32 [ 0, %.preheader3.2 ], [ %37, %38 ]
   br label %26
 
-; <label>:26                                      ; preds = %26, %.preheader.2
+; <label>:
   %indvars.iv.2 = phi i64 [ 0, %.preheader.2 ], [ %indvars.iv.next.2, %26 ]
   %sum.12.2 = phi i32 [ %sum.05.2, %.preheader.2 ], [ %37, %26 ]
   %27 = add nsw i64 %indvars.iv.2, 2
@@ -527,23 +527,23 @@ define void @example14(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %o
   %exitcond.2 = icmp eq i32 %lftr.wideiv.2, 1024
   br i1 %exitcond.2, label %38, label %26
 
-; <label>:38                                      ; preds = %26
+; <label>:
   %indvars.iv.next8.2 = add i64 %indvars.iv7.2, 1
   %lftr.wideiv9.2 = trunc i64 %indvars.iv.next8.2 to i32
   %exitcond10.2 = icmp eq i32 %lftr.wideiv9.2, 32
   br i1 %exitcond10.2, label %.preheader3.3, label %.preheader.2
 
-.preheader3.3:                                    ; preds = %38
+.preheader3.3:
   %39 = getelementptr inbounds i32, ptr %out, i64 2
   store i32 %37, ptr %39, align 4
   br label %.preheader.3
 
-.preheader.3:                                     ; preds = %52, %.preheader3.3
+.preheader.3:
   %indvars.iv7.3 = phi i64 [ 0, %.preheader3.3 ], [ %indvars.iv.next8.3, %52 ]
   %sum.05.3 = phi i32 [ 0, %.preheader3.3 ], [ %51, %52 ]
   br label %40
 
-; <label>:40                                      ; preds = %40, %.preheader.3
+; <label>:
   %indvars.iv.3 = phi i64 [ 0, %.preheader.3 ], [ %indvars.iv.next.3, %40 ]
   %sum.12.3 = phi i32 [ %sum.05.3, %.preheader.3 ], [ %51, %40 ]
   %41 = add nsw i64 %indvars.iv.3, 3
@@ -562,13 +562,13 @@ define void @example14(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %o
   %exitcond.3 = icmp eq i32 %lftr.wideiv.3, 1024
   br i1 %exitcond.3, label %52, label %40
 
-; <label>:52                                      ; preds = %40
+; <label>:
   %indvars.iv.next8.3 = add i64 %indvars.iv7.3, 1
   %lftr.wideiv9.3 = trunc i64 %indvars.iv.next8.3 to i32
   %exitcond10.3 = icmp eq i32 %lftr.wideiv9.3, 32
   br i1 %exitcond10.3, label %53, label %.preheader.3
 
-; <label>:53                                      ; preds = %52
+; <label>:
   %54 = getelementptr inbounds i32, ptr %out, i64 3
   store i32 %51, ptr %54, align 4
   ret void
@@ -582,11 +582,11 @@ define i32 @example21(ptr nocapture %b, i32 %n) readonly {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0
+.lr.ph:
   %2 = sext i32 %n to i64
   br label %3
 
-; <label>:3                                       ; preds = %.lr.ph, %3
+; <label>:
   %indvars.iv = phi i64 [ %2, %.lr.ph ], [ %indvars.iv.next, %3 ]
   %a.02 = phi i32 [ 0, %.lr.ph ], [ %6, %3 ]
   %indvars.iv.next = add i64 %indvars.iv, -1
@@ -597,7 +597,7 @@ define i32 @example21(ptr nocapture %b, i32 %n) readonly {
   %8 = icmp sgt i32 %7, 0
   br i1 %8, label %3, label %._crit_edge
 
-._crit_edge:                                      ; preds = %3, %0
+._crit_edge:
   %a.0.lcssa = phi i32 [ 0, %0 ], [ %6, %3 ]
   ret i32 %a.0.lcssa
 }
@@ -608,7 +608,7 @@ define i32 @example21(ptr nocapture %b, i32 %n) readonly {
 define void @example23(ptr nocapture %src, ptr nocapture %dst) {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i32 [ 0, %0 ], [ %7, %1 ]
@@ -622,7 +622,7 @@ define void @example23(ptr nocapture %src, ptr nocapture %dst) {
   %exitcond = icmp eq i32 %7, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -632,7 +632,7 @@ define void @example23(ptr nocapture %src, ptr nocapture %dst) {
 define void @example24(i16 signext %x, i16 signext %y) {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [1024 x float], ptr @fa, i64 0, i64 %indvars.iv
   %3 = load float, ptr %2, align 4
@@ -648,7 +648,7 @@ define void @example24(i16 signext %x, i16 signext %y) {
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %9, label %1
 
-; <label>:9                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -659,7 +659,7 @@ define void @example24(i16 signext %x, i16 signext %y) {
 define void @example25() {
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [1024 x float], ptr @da, i64 0, i64 %indvars.iv
   %3 = load float, ptr %2, align 4
@@ -680,7 +680,7 @@ define void @example25() {
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %15, label %1
 
-; <label>:15                                      ; preds = %1
+; <label>:
   ret void
 }
 

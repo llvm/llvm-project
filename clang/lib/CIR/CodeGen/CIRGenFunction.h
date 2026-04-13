@@ -1093,10 +1093,6 @@ public:
   /// handles any automatic cleanup, along with the return value.
   struct LexicalScope : public RunCleanupsScope {
   private:
-    // Block containing cleanup code for things initialized in this
-    // lexical context (scope).
-    mlir::Block *cleanupBlock = nullptr;
-
     // Points to the scope entry block. This is useful, for instance, for
     // helping to insert allocas before finalizing any recursive CodeGen from
     // switches.
@@ -1183,30 +1179,9 @@ public:
       tryOp = op;
     }
 
-    // Lazy create cleanup block or return what's available.
-    mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
-      if (cleanupBlock)
-        return cleanupBlock;
-      cleanupBlock = createCleanupBlock(builder);
-      return cleanupBlock;
-    }
-
     cir::TryOp getTry() {
       assert(isTry());
       return tryOp;
-    }
-
-    mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
-      return cleanupBlock;
-    }
-
-    mlir::Block *createCleanupBlock(mlir::OpBuilder &builder) {
-      // Create the cleanup block but dont hook it up around just yet.
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      mlir::Region *r = builder.getBlock() ? builder.getBlock()->getParent()
-                                           : &cgf.curFn->getRegion(0);
-      cleanupBlock = builder.createBlock(r);
-      return cleanupBlock;
     }
 
     // ---
@@ -1655,6 +1630,13 @@ public:
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
+  struct cxxTryBodyEmitter {
+    virtual mlir::LogicalResult operator()(CIRGenFunction &cgf) = 0;
+    virtual ~cxxTryBodyEmitter() = default;
+  };
+
+  mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
+                                     cxxTryBodyEmitter &bodyCallback);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
@@ -2267,6 +2249,7 @@ public:
   mlir::LogicalResult
   emitOMPGenericLoopDirective(const OMPGenericLoopDirective &s);
   mlir::LogicalResult emitOMPReverseDirective(const OMPReverseDirective &s);
+  mlir::LogicalResult emitOMPSplitDirective(const OMPSplitDirective &s);
   mlir::LogicalResult
   emitOMPInterchangeDirective(const OMPInterchangeDirective &s);
   mlir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);

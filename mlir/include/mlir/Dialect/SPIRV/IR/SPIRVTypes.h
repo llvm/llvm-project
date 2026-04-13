@@ -228,6 +228,16 @@ public:
   Type getImageType() const;
 };
 
+// SPIR-V sampler type
+class SamplerType : public Type::TypeBase<SamplerType, SPIRVType, TypeStorage> {
+public:
+  using Base::Base;
+
+  static constexpr StringLiteral name = "spirv.sampler";
+
+  static SamplerType get(MLIRContext *context);
+};
+
 /// SPIR-V struct type. Two kinds of struct types are supported:
 /// - Literal: a literal struct type is uniqued by its fields (types + offset
 /// info + decoration info).

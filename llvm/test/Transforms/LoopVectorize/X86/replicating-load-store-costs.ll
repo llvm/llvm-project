@@ -328,7 +328,7 @@ loop:
   %ec = icmp eq i32 %iv, %n
   br i1 %ec, label %exit, label %loop
 
-exit:                    ; preds = %loop
+exit:
   ret void
 }
 
@@ -1303,7 +1303,7 @@ loop:
   %ec = icmp eq i64 %iv.0, 128
   br i1 %ec, label %exit, label %loop
 
-exit:                                     ; preds = %loop
+exit:
   ret void
 }
 

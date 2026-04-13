@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -ffreestanding %s -fexperimental-new-constant-interpreter
 // expected-no-diagnostics
 
 typedef __UINTPTR_TYPE__ uintptr_t;
