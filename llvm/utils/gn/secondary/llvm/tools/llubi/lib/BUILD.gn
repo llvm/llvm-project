@@ -9,6 +9,7 @@ static_library("lib") {
     "Context.cpp",
     "ExecutorBase.cpp",
     "Interpreter.cpp",
+    "Library.cpp",
     "Value.cpp",
   ]
 }

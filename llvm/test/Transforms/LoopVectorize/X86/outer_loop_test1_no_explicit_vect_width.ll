@@ -53,8 +53,9 @@ define void @foo(i32 %n) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, [[FOR_END10:label %.*]], label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 ; AVX-LABEL: define void @foo(
 ; AVX-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -79,8 +80,9 @@ define void @foo(i32 %n) {
 ; AVX:       [[VECTOR_LATCH]]:
 ; AVX-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; AVX:       [[MIDDLE_BLOCK]]:
-; AVX-NEXT:    br i1 true, [[FOR_END10:label %.*]], label %[[SCALAR_PH:.*]]
+; AVX-NEXT:    br label %[[SCALAR_PH:.*]]
 ; AVX:       [[SCALAR_PH]]:
+; AVX-NEXT:    ret void
 ;
 entry:
   br label %for.body
