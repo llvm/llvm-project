@@ -284,10 +284,10 @@ static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
                                       cl::desc("Use page aliasing in HWASan"),
                                       cl::Hidden, cl::init(false));
 
-static cl::opt<uint64_t> ClTagBits(
-    "hwasan-tag-bits",
-    cl::desc("Restrict tag to at most N bits. Needs to be > 4."),
-    cl::Hidden, cl::init(0));
+static cl::opt<uint64_t>
+    ClTagBits("hwasan-tag-bits",
+              cl::desc("Restrict tag to at most N bits. Needs to be > 4."),
+              cl::Hidden, cl::init(0));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -685,7 +685,8 @@ void HWAddressSanitizer::initializeModule() {
   TagMaskByte = IsX86_64 ? 0x3F : 0xFF;
   if (ClTagBits) {
     if (TagMaskByte < 4)
-      reportFatalUsageError("need more than 4 bits of tag to have non-short-granule tags");
+      reportFatalUsageError(
+          "need more than 4 bits of tag to have non-short-granule tags");
     TagMaskByte &= (1 << ClTagBits) - 1;
   }
 
