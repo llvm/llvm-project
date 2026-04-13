@@ -277,7 +277,36 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD) {
          MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
 }
 
+static bool hasInvalidatesAttr(const TypeSourceInfo &TSI) {
+  // Walk through the type layers looking for an annotate attribute.
+  TypeLoc TL = TSI.getTypeLoc();
+  while (true) {
+    auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
+    if (!ATL)
+      break;
+    if (auto *AnnAttr = ATL.getAttrAs<AnnotateTypeAttr>()) {
+      if (AnnAttr->getAnnotation() == "experimental_invalidates")
+        return true;
+    }
+    TL = ATL.getModifiedLoc();
+  }
+  return false;
+}
+
 bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
+  auto CheckRedecls = [](const FunctionDecl *F) {
+    return llvm::any_of(F->redecls(), [](const FunctionDecl *Redecl) {
+      const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo();
+      return TSI && hasInvalidatesAttr(*TSI);
+    });
+  };
+
+  if (CheckRedecls(&MD))
+    return true;
+  if (const FunctionDecl *Pattern = MD.getTemplateInstantiationPattern();
+      Pattern && CheckRedecls(Pattern))
+    return true;
+
   const CXXRecordDecl *RD = MD.getParent();
   if (!isInStlNamespace(RD))
     return false;

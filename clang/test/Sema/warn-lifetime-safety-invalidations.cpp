@@ -512,3 +512,24 @@ void ref_capture_reassigned_to_safe() {
   lambda();  // should not warn
 }
 } // namespace lambda_capture_invalidation
+
+namespace invalidation_annotation {
+struct FlatContainer {
+  void push_back(int x) [[clang::annotate_type("experimental_invalidates")]] {
+    data.push_back(x);
+  }
+
+  int& getFirst() [[clang::lifetimebound]] { return data[0]; }
+
+ private:
+  std::vector<int> data;
+};
+
+void foo() {
+  FlatContainer C;
+  C.push_back(1);
+  int& first = C.getFirst();  // expected-warning {{object whose reference is captured is later invalidated}}
+  C.push_back(2);             // expected-note {{invalidated here}}
+  (void)first;                // expected-note {{later used here}}
+}
+} // namespace invalidation_annotation
