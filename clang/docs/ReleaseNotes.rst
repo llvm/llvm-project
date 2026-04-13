@@ -374,7 +374,7 @@ Bug Fixes in This Version
 -------------------------
 
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
-
+- Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with -target spirv (#GH#189964) 
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
 - Fixed a preprocessor crash in ``__has_cpp_attribute`` on incomplete scoped attributes. (#GH178098)
