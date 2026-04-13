@@ -2590,10 +2590,10 @@ struct S2 : S {
   void baz2() {
     {
       int num;
-      this->p_ = &num;
-    }
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar2();            // expected-note {{later used here}}
     this->p_ = nullptr;
-    bar2();
   }
 };
 
