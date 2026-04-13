@@ -58,7 +58,6 @@ END_COMPILERRT_FUNCTION(do_abort)
 #if !defined(TARGET_BAREMETAL_AARCH64)
 // __arm_sme_state fills the result registers based on a local
 // that is set as part of the compiler-rt startup code.
-//   __aarch64_has_sme_and_tpidr2_el0
 DEFINE_COMPILERRT_FUNCTION(__arm_sme_state)
   .variant_pcs __arm_sme_state
   BTI_C
