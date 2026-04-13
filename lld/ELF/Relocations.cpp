@@ -1432,7 +1432,7 @@ void elf::postScanRelocations(Ctx &ctx) {
   if (ctx.arg.branchToBranch)
     ctx.target->applyBranchToBranchOpt();
 
-  if (ctx.arg.emachine == EM_AARCH64)
+  if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.aarch64BtiRelax)
     relaxAArch64BTI(ctx);
 }
 

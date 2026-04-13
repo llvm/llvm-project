@@ -9,6 +9,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "RelocScan.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -1185,6 +1186,11 @@ static bool isAArch64DirectBranchReloc(RelType type) {
 //                        or is referenced by a non-direct-branch relocation
 //                        (address stored in data or computed in code for use
 //                        as a function pointer).
+//   hasDirectBranchReloc(sym): at least one direct branch relocation was seen
+//                        to this symbol. This keeps the transform
+//                        conservative if branch instructions are emitted
+//                        without relocations or if relocations are expressed
+//                        through aliases/section symbols.
 void elf::relaxAArch64BTI(Ctx &ctx) {
   if (!ctx.arg.relax)
     return;
@@ -1192,11 +1198,14 @@ void elf::relaxAArch64BTI(Ctx &ctx) {
     return;
 
   // Step 1: Scan all processed relocations across all input sections and
-  // collect the set of function symbols whose address is taken via a
-  // non-direct-branch relocation.  Such symbols cannot have their "bti c"
-  // removed because their address may be loaded and used to perform an
-  // indirect call (BLR) at runtime.
+  // collect:
+  // - function symbols whose address is taken via a non-direct-branch
+  //   relocation;
+  // - function symbols that are the destination of a direct branch
+  //   relocation.
+  // Symbols without direct branch relocations are not relaxed.
   DenseSet<const Symbol *> addrTaken;
+  DenseSet<const Defined *> hasDirectBranchReloc;
   for (InputSectionBase *sec : ctx.inputSections) {
     if (!(sec->flags & SHF_ALLOC) || sec == &InputSection::discarded)
       continue;
@@ -1205,10 +1214,15 @@ void elf::relaxAArch64BTI(Ctx &ctx) {
         continue;
       if (rel.sym->type != STT_FUNC && rel.sym->type != STT_GNU_IFUNC)
         continue;
-      // A direct branch relocation does not expose the function's address;
-      // any other relocation type potentially does.
-      if (!isAArch64DirectBranchReloc(rel.type))
+      // A direct branch relocation does not expose the function's address.
+      // Record it as evidence that the function is reached by direct control
+      // transfer. Any other relocation potentially exposes the address.
+      if (isAArch64DirectBranchReloc(rel.type)) {
+        if (auto *d = dyn_cast<Defined>(rel.sym))
+          hasDirectBranchReloc.insert(d);
+      } else {
         addrTaken.insert(rel.sym);
+      }
     }
   }
 
@@ -1234,6 +1248,8 @@ void elf::relaxAArch64BTI(Ctx &ctx) {
       return;
     if (addrTaken.count(d))
       return;
+    if (!hasDirectBranchReloc.count(d))
+      return;
 
     auto *isec = dyn_cast_or_null<InputSection>(d->section);
     if (!isec || !(isec->flags & SHF_EXECINSTR))
@@ -1253,10 +1269,9 @@ void elf::relaxAArch64BTI(Ctx &ctx) {
   for (Symbol *sym : ctx.symtab->getSymbols())
     tryRelax(*sym);
 
-  // Local symbols may also carry a "bti c" when their address was taken in
-  // the source.  The addrTaken set (built above) already accounts for this:
-  // if a local symbol's address is referenced by a non-branch relocation it
-  // will be in addrTaken and will not be relaxed.
+  // Local symbols may also carry a "bti c". They are relaxed only when
+  // their address is not taken and at least one direct branch relocation
+  // targets the symbol.
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       tryRelax(*sym);
