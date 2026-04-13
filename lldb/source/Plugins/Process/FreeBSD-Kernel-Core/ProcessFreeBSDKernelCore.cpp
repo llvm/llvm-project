@@ -193,15 +193,18 @@ Status ProcessFreeBSDKernelCore::DoLoadCore() {
     return Status::FromErrorString(
         "ProcessFreeBSDKernelCore: no executable module set on target");
 
+  char errbuf[_POSIX2_LINE_MAX];
   m_kvm = kvm_open2(executable->GetFileSpec().GetPath().c_str(),
-                    GetCoreFile().GetPath().c_str(), O_RDWR, nullptr, nullptr);
+                    GetCoreFile().GetPath().c_str(), O_RDWR, errbuf, nullptr);
 
-  if (!m_kvm)
+  if (!m_kvm) {
+    LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
     return Status::FromErrorStringWithFormat(
         "ProcessFreeBSDKernelCore: kvm_open2 failed for core '%s' "
         "with kernel '%s'",
         GetCoreFile().GetPath().c_str(),
         executable->GetFileSpec().GetPath().c_str());
+  }
 
   SetKernelDisplacement();
 
@@ -275,25 +278,52 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
 
     // struct field offsets are written as symbols so that we don't have
     // to figure them out ourselves
+    // Process-related offsets:
     int32_t offset_p_list = ReadSignedIntegerFromMemory(
         FindSymbol("proc_off_p_list"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_p_pid =
         ReadSignedIntegerFromMemory(FindSymbol("proc_off_p_pid"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_p_threads = ReadSignedIntegerFromMemory(
         FindSymbol("proc_off_p_threads"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_p_comm = ReadSignedIntegerFromMemory(
         FindSymbol("proc_off_p_comm"), 4, -1, error);
+    if (error.Fail())
+      return false;
 
+    // Thread-related offsets:
     int32_t offset_td_tid = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_tid"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_td_plist = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_plist"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_td_pcb = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_pcb"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_td_oncpu = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_oncpu"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_td_name = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_name"), 4, -1, error);
+    if (error.Fail())
+      return false;
 
     // Fail if we were not able to read any of the offsets.
     if (offset_p_list == -1 || offset_p_pid == -1 || offset_p_threads == -1 ||
@@ -305,12 +335,18 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // dumppcb contains its PCB
     int32_t dumptid =
         ReadSignedIntegerFromMemory(FindSymbol("dumptid"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     lldb::addr_t dumppcb = FindSymbol("dumppcb");
 
     // stoppcbs is an array of PCBs on all CPUs.
     // Each element is of size pcb_size.
     int32_t pcbsize =
         ReadSignedIntegerFromMemory(FindSymbol("pcb_size"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
 
     // Read stopped_cpus bitmask and mp_maxid for CPU validation.
@@ -371,24 +407,39 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
       // process' command-line string
       char comm[fbsd_maxcomlen + 1];
       ReadCStringFromMemory(proc + offset_p_comm, comm, sizeof(comm), error);
+      if (error.Fail())
+        continue;
 
       // Iterate through a linked list of all process' threads
       // the initial thread is found in process' p_threads, subsequent
-      // elements are linked via td_plist field
+      // elements are linked via td_plist field.
+      // If reading memory fails, skip to the next thread.
       for (lldb::addr_t td =
                ReadPointerFromMemory(proc + offset_p_threads, error);
-           td != 0; td = ReadPointerFromMemory(td + offset_td_plist, error)) {
+           error.Success() && td != 0;
+           td = ReadPointerFromMemory(td + offset_td_plist, error)) {
         int32_t tid =
             ReadSignedIntegerFromMemory(td + offset_td_tid, 4, -1, error);
+        if (error.Fail())
+          continue;
+
         lldb::addr_t pcb_addr =
             ReadPointerFromMemory(td + offset_td_pcb, error);
+        if (error.Fail())
+          continue;
+
         // whether process was on CPU (-1 if not, otherwise CPU number)
         int32_t oncpu =
             ReadSignedIntegerFromMemory(td + offset_td_oncpu, 4, -2, error);
+        if (error.Fail())
+          continue;
+
         // thread name
         char thread_name[fbsd_maxcomlen + 1];
         ReadCStringFromMemory(td + offset_td_name, thread_name,
                               sizeof(thread_name), error);
+        if (error.Fail())
+          continue;
 
         // If we failed to read TID, ignore this thread.
         if (tid == -1)
@@ -441,6 +492,10 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
 
         new_thread_list.AddThread(static_cast<ThreadSP>(thread));
       }
+
+      // If reading thread list has failed, return with false.
+      if (error.Fail())
+        return false;
     }
   } else {
     const uint32_t num_threads = old_thread_list.GetSize(false);
@@ -504,7 +559,7 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
 
   // Read the pointer value
   lldb::addr_t msgbufp = ReadPointerFromMemory(msgbufp_addr, error);
-  if (!error.Success() || msgbufp == LLDB_INVALID_ADDRESS)
+  if (error.Fail() || msgbufp == LLDB_INVALID_ADDRESS)
     return;
 
   // Get the type information for struct msgbuf from DWARF
@@ -569,22 +624,22 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
 
   // Read struct msgbuf fields
   lldb::addr_t bufp = ReadPointerFromMemory(msgbufp + offset_msg_ptr, error);
-  if (!error.Success() || bufp == LLDB_INVALID_ADDRESS)
+  if (error.Fail() || bufp == LLDB_INVALID_ADDRESS)
     return;
 
   uint32_t size =
       ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_size, 4, 0, error);
-  if (!error.Success() || size == 0)
+  if (error.Fail() || size == 0)
     return;
 
   uint32_t wseq =
       ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_wseq, 4, 0, error);
-  if (!error.Success())
+  if (error.Fail())
     return;
 
   uint32_t rseq =
       ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_rseq, 4, 0, error);
-  if (!error.Success())
+  if (error.Fail())
     return;
 
   // Convert sequences to positions
