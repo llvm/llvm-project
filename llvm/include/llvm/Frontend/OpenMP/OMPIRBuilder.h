@@ -1614,7 +1614,7 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       BodyGenCallbackTy BodyGenCB, bool Tied = true, Value *Final = nullptr,
       Value *IfCondition = nullptr, const DependenciesInfo &Dependencies = {},
-      AffinityData Affinities = {}, bool Mergeable = false,
+      const AffinityData &Affinities = {}, bool Mergeable = false,
       Value *EventHandle = nullptr, Value *Priority = nullptr);
 
   /// Generator for the taskgroup construct
