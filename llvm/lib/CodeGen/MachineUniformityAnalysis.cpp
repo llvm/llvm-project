@@ -66,18 +66,18 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
 
   for (const MachineBasicBlock &block : F) {
     for (const MachineInstr &instr : block) {
-      auto uniformity = InstrInfo.getInstructionUniformity(instr);
+      auto uniformity = InstrInfo.getValueUniformity(instr);
 
       switch (uniformity) {
-      case InstructionUniformity::AlwaysUniform:
+      case ValueUniformity::AlwaysUniform:
         addUniformOverride(instr);
         break;
-      case InstructionUniformity::NeverUniform:
+      case ValueUniformity::NeverUniform:
         markDivergent(instr);
         break;
-      case InstructionUniformity::Custom:
+      case ValueUniformity::Custom:
         break;
-      case InstructionUniformity::Default:
+      case ValueUniformity::Default:
         break;
       }
     }

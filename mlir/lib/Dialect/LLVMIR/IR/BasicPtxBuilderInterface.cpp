@@ -423,6 +423,31 @@ static std::string rewriteAsmPlaceholders(llvm::StringRef ptxCode) {
   return out;
 }
 
+/// Return the constraint index of the predicate operand.  The predicate
+/// constraint ("b") is always the last non-tied token in the canonicalized
+/// constraint string.  Tied constraints (digit-only tokens from read-write
+/// canonicalization) are appended at the end, so we walk backwards to skip
+/// them.
+static unsigned getPredicateConstraintIndex(StringRef constraints) {
+  SmallVector<StringRef> tokens;
+  constraints.split(tokens, ',');
+  assert(!tokens.empty() && "expected at least a predicate constraint");
+
+  auto isTiedConstraint = [](StringRef tok) {
+    unsigned idx;
+    return !tok.trim().getAsInteger(10, idx);
+  };
+
+  size_t numTied = 0;
+  for (StringRef tok : llvm::reverse(tokens)) {
+    if (!isTiedConstraint(tok))
+      break;
+    ++numTied;
+  }
+  assert(numTied < tokens.size() && "all constraints are tied");
+  return tokens.size() - numTied - 1;
+}
+
 LLVM::InlineAsmOp PtxBuilder::build() {
   auto asmDialectAttr = LLVM::AsmDialectAttr::get(interfaceOp->getContext(),
                                                   LLVM::AsmDialect::AD_ATT);
@@ -443,8 +468,9 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   // Add the predicate to the asm string.
   if (interfaceOp.getPredicate().has_value() &&
       interfaceOp.getPredicate().value()) {
+    unsigned predIdx = getPredicateConstraintIndex(registerConstraints);
     std::string predicateStr = "@%";
-    predicateStr += std::to_string((ptxOperands.size() - 1));
+    predicateStr += std::to_string(predIdx);
     ptxInstruction = predicateStr + " " + ptxInstruction;
   }
 

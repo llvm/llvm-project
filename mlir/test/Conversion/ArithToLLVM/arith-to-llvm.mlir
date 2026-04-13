@@ -160,6 +160,30 @@ func.func @index_castui_nneg_not_set(%arg0: i1) {
 
 // -----
 
+// Memref index_cast is a no-op at the LLVM level since LLVM uses opaque
+// pointers and all memrefs with integer or index element types convert to the
+// same struct type. Verify that no sext/zext/trunc is generated.
+
+// CHECK-LABEL: @memref_index_cast
+// CHECK-NOT: llvm.sext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_cast(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_cast %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @memref_index_castui
+// CHECK-NOT: llvm.zext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_castui(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_castui %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
+}
+
+// -----
+
 // Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
 func.func @sitofp(%arg0 : i32, %arg1 : i64) {

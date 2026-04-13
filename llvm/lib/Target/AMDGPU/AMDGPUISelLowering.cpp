@@ -5806,6 +5806,34 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  case ISD::INTRINSIC_WO_CHAIN: {
+    switch (Op.getConstantOperandVal(0)) {
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_wwm: {
+      if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
+                               OriginalDemandedElts, Known, TLO, Depth + 1))
+        return true;
+      break;
+    }
+    default:
+      break;
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -6021,43 +6049,24 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   case AMDGPUISD::MUL_I24: {
     KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
-    unsigned TrailZ = LHSKnown.countMinTrailingZeros() +
-                      RHSKnown.countMinTrailingZeros();
-    Known.Zero.setLowBits(std::min(TrailZ, 32u));
-    // Skip extra check if all bits are known zeros.
-    if (TrailZ >= 32)
-      break;
+    unsigned BitWidth = Op.getScalarValueSizeInBits();
 
-    // Truncate to 24 bits.
-    LHSKnown = LHSKnown.trunc(24);
-    RHSKnown = RHSKnown.trunc(24);
-
+    // Sign/Zero extend from 24 bits.
     if (Opc == AMDGPUISD::MUL_I24) {
-      unsigned LHSValBits = LHSKnown.countMaxSignificantBits();
-      unsigned RHSValBits = RHSKnown.countMaxSignificantBits();
-      unsigned MaxValBits = LHSValBits + RHSValBits;
-      if (MaxValBits > 32)
-        break;
-      unsigned SignBits = 32 - MaxValBits + 1;
-      bool LHSNegative = LHSKnown.isNegative();
-      bool LHSNonNegative = LHSKnown.isNonNegative();
-      bool LHSPositive = LHSKnown.isStrictlyPositive();
-      bool RHSNegative = RHSKnown.isNegative();
-      bool RHSNonNegative = RHSKnown.isNonNegative();
-      bool RHSPositive = RHSKnown.isStrictlyPositive();
-
-      if ((LHSNonNegative && RHSNonNegative) || (LHSNegative && RHSNegative))
-        Known.Zero.setHighBits(SignBits);
-      else if ((LHSNegative && RHSPositive) || (LHSPositive && RHSNegative))
-        Known.One.setHighBits(SignBits);
+      LHSKnown = LHSKnown.trunc(24).sext(BitWidth);
+      RHSKnown = RHSKnown.trunc(24).sext(BitWidth);
     } else {
-      unsigned LHSValBits = LHSKnown.countMaxActiveBits();
-      unsigned RHSValBits = RHSKnown.countMaxActiveBits();
-      unsigned MaxValBits = LHSValBits + RHSValBits;
-      if (MaxValBits >= 32)
-        break;
-      Known.Zero.setBitsFrom(MaxValBits);
+      LHSKnown = LHSKnown.trunc(24).zext(BitWidth);
+      RHSKnown = RHSKnown.trunc(24).zext(BitWidth);
     }
+
+    // TODO: SelfMultiply can be poison, but not undef.
+    bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
+    if (SelfMultiply)
+      SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
+          Op.getOperand(0), DemandedElts, false, Depth + 1);
+
+    Known = KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
     break;
   }
   case AMDGPUISD::PERM: {

@@ -1289,29 +1289,35 @@ GenericUniformityInfo<ContextT>::getFunction() const {
 }
 
 /// Whether \p V is divergent at its definition.
+/// A default-constructed instance (no analysis computed) reports everything
+/// as uniform, which is conservatively correct for non-divergent targets.
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
-  return DA->isDivergent(V);
+  return DA && DA->isDivergent(V);
 }
 
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergent(const InstructionT *I) const {
-  return DA->isDivergent(*I);
+  return DA && DA->isDivergent(*I);
 }
 
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergentUse(const UseT &U) const {
-  return DA->isDivergentUse(U);
+  return DA && DA->isDivergentUse(U);
 }
 
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::hasDivergentTerminator(const BlockT &B) {
-  return DA->hasDivergentTerminator(B);
+  return DA && DA->hasDivergentTerminator(B);
 }
 
 /// \brief T helper function for printing.
 template <typename ContextT>
 void GenericUniformityInfo<ContextT>::print(raw_ostream &out) const {
+  if (!DA) {
+    out << "  Uniformity analysis not computed (no branch divergence).\n";
+    return;
+  }
   DA->print(out);
 }
 

@@ -74,7 +74,7 @@ define void @wide_phi_2_predecessors(ptr noalias %A, ptr noalias %B, i32 %c, i1 
 entry:
   br label %outer.header
 
-outer.header:                                         ; preds = %outer.latch, %outer.header.lr.ph
+outer.header:
   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
   %gep.A = getelementptr inbounds i64, ptr %A, i64 %outer.iv
   store i32 %c, ptr %gep.A, align 4
@@ -181,7 +181,7 @@ define void @wide_phi_2_predecessors_phi_ops_swapped(ptr noalias %A, ptr noalias
 entry:
   br label %outer.header
 
-outer.header:                                         ; preds = %outer.latch, %outer.header.lr.ph
+outer.header:
   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
   %gep.A = getelementptr inbounds i64, ptr %A, i64 %outer.iv
   store i32 %c, ptr %gep.A, align 4

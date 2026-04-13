@@ -8854,18 +8854,22 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
 
   ExprResult Diff;
 
-  // For triangular loops, use already computed Upper and Lower bounds to
-  // calculate the number of iterations: Upper - Lower + 1.
+  // For nested triangular loops (depth >= 2), use already computed Upper and
+  // Lower bounds to calculate the number of iterations: Upper - Lower + 1.
+  // Don't apply to first-level triangular loops as the standard formula handles
+  // those correctly.
   if (TestIsStrictOp && InitDependOnLC.has_value() &&
-      !CondDependOnLC.has_value()) {
+      InitDependOnLC.value() >= 2 && !CondDependOnLC.has_value()) {
     Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Lower);
     if (!Diff.isUsable())
       return nullptr;
+
     Diff =
         SemaRef.BuildBinOp(S, DefaultLoc, BO_Add, Diff.get(),
                            SemaRef.ActOnIntegerConstant(DefaultLoc, 1).get());
     if (!Diff.isUsable())
       return nullptr;
+
     return Diff.get();
   }
 
@@ -23295,6 +23299,21 @@ static void checkMappableExpressionList(
           << getOpenMPClauseNameForDiag(CKind);
       reportOriginalDsa(SemaRef, DSAS, VD, DVar);
       continue;
+    }
+
+    // OpenMP 6.0 [7.9.6, map Clause, Restrictions, p. 386]
+    // A device-local variable must not appear as a list item in a map clause.
+    if (VD && CKind == OMPC_map) {
+      if (std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+              OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
+        if (*Res == OMPDeclareTargetDeclAttr::MT_Local) {
+          if (NoDiagnose)
+            continue;
+          SemaRef.Diag(ELoc, diag::err_omp_device_local_in_clause)
+              << VD << getOpenMPClauseNameForDiag(CKind);
+          continue;
+        }
+      }
     }
 
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.9]

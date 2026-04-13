@@ -65,12 +65,12 @@ entry:
   call void @llvm.dbg.value(metadata i64 0, metadata !11, metadata !DIExpression()), !dbg !20
   br label %for.cond1.preheader, !dbg !21
 
-for.cond1.preheader:                              ; preds = %entry, %for.cond.cleanup3
+for.cond1.preheader:
   %i.023 = phi i64 [ 0, %entry ], [ %inc13, %for.cond.cleanup3 ]
   call void @llvm.dbg.value(metadata i64 %i.023, metadata !11, metadata !DIExpression()), !dbg !20
   br label %for.cond5.preheader, !dbg !22
 
-for.cond5.preheader:                              ; preds = %for.cond1.preheader, %for.cond5.preheader
+for.cond5.preheader:
   %l.022 = phi i64 [ 0, %for.cond1.preheader ], [ %inc10, %for.cond5.preheader ], !dbg !34
   %0 = getelementptr i32, ptr %h, i64 %l.022
   store i32 0, ptr %0, align 4, !dbg !24
@@ -84,17 +84,16 @@ for.cond5.preheader:                              ; preds = %for.cond1.preheader
   %exitcond.not = icmp eq i64 %inc10, 5, !dbg !28
   br i1 %exitcond.not, label %for.cond.cleanup3, label %for.cond5.preheader, !dbg !22
 
-for.cond.cleanup3:                                ; preds = %for.cond5.preheader
+for.cond.cleanup3:
   %inc13 = add nuw nsw i64 %i.023, 1, !dbg !29
   call void @llvm.dbg.value(metadata i64 %inc13, metadata !11, metadata !DIExpression()), !dbg !20
   %exitcond24.not = icmp eq i64 %inc13, 23, !dbg !30
   br i1 %exitcond24.not, label %exit, label %for.cond1.preheader, !dbg !21, !llvm.loop !31
 
-exit:                                 ; preds = %for.cond.cleanup3
+exit:
   ret void, !dbg !23
 }
 
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

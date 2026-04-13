@@ -99,7 +99,7 @@ LIBC_INLINE LIBC_CONSTEXPR double log_eval(double x) {
   uint64_t x_m = (x_u & FPBits::FRACTION_MASK) | FPBits::one().uintval();
   double m = FPBits(x_m).get_val();
 
-  double dx;
+  double dx = 0.0;
 
   // Perform exact range reduction
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE

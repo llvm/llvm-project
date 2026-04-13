@@ -391,7 +391,6 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   using RIK = MCResourceInfo::ResourceInfoKind;
   const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
   MCSymbol *FnSym = TM.getSymbol(&F);
-  bool IsLocal = F.hasLocalLinkage();
 
   auto TryGetMCExprValue = [](const MCExpr *Value, uint64_t &Res) -> bool {
     int64_t Val;
@@ -404,8 +403,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
 
   const uint64_t MaxScratchPerWorkitem =
       STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
-  MCSymbol *ScratchSizeSymbol = RI.getSymbol(
-      FnSym->getName(), RIK::RIK_PrivateSegSize, OutContext, IsLocal);
+  MCSymbol *ScratchSizeSymbol =
+      RI.getSymbol(FnSym->getName(), RIK::RIK_PrivateSegSize, OutContext);
   uint64_t ScratchSize;
   if (ScratchSizeSymbol->isVariable() &&
       TryGetMCExprValue(ScratchSizeSymbol->getVariableValue(), ScratchSize) &&
@@ -418,7 +417,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   // Validate addressable scalar registers (i.e., prior to added implicit
   // SGPRs).
   MCSymbol *NumSGPRSymbol =
-      RI.getSymbol(FnSym->getName(), RIK::RIK_NumSGPR, OutContext, IsLocal);
+      RI.getSymbol(FnSym->getName(), RIK::RIK_NumSGPR, OutContext);
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       !STM.hasSGPRInitBug()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
@@ -426,18 +425,17 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     if (NumSGPRSymbol->isVariable() &&
         TryGetMCExprValue(NumSGPRSymbol->getVariableValue(), NumSgpr) &&
         NumSgpr > MaxAddressableNumSGPRs) {
-      DiagnosticInfoResourceLimit Diag(F, "addressable scalar registers",
-                                       NumSgpr, MaxAddressableNumSGPRs,
-                                       DS_Error, DK_ResourceLimit);
-      F.getContext().diagnose(Diag);
+      F.getContext().diagnose(DiagnosticInfoResourceLimit(
+          F, "addressable scalar registers", NumSgpr, MaxAddressableNumSGPRs,
+          DS_Error, DK_ResourceLimit));
       return;
     }
   }
 
   MCSymbol *VCCUsedSymbol =
-      RI.getSymbol(FnSym->getName(), RIK::RIK_UsesVCC, OutContext, IsLocal);
-  MCSymbol *FlatUsedSymbol = RI.getSymbol(
-      FnSym->getName(), RIK::RIK_UsesFlatScratch, OutContext, IsLocal);
+      RI.getSymbol(FnSym->getName(), RIK::RIK_UsesVCC, OutContext);
+  MCSymbol *FlatUsedSymbol =
+      RI.getSymbol(FnSym->getName(), RIK::RIK_UsesFlatScratch, OutContext);
   uint64_t VCCUsed, FlatUsed, NumSgpr;
 
   if (NumSGPRSymbol->isVariable() && VCCUsedSymbol->isVariable() &&
@@ -455,18 +453,17 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
         STM.hasSGPRInitBug()) {
       unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
       if (NumSgpr > MaxAddressableNumSGPRs) {
-        DiagnosticInfoResourceLimit Diag(F, "scalar registers", NumSgpr,
-                                         MaxAddressableNumSGPRs, DS_Error,
-                                         DK_ResourceLimit);
-        F.getContext().diagnose(Diag);
+        F.getContext().diagnose(DiagnosticInfoResourceLimit(
+            F, "scalar registers", NumSgpr, MaxAddressableNumSGPRs, DS_Error,
+            DK_ResourceLimit));
         return;
       }
     }
 
     MCSymbol *NumVgprSymbol =
-        RI.getSymbol(FnSym->getName(), RIK::RIK_NumVGPR, OutContext, IsLocal);
+        RI.getSymbol(FnSym->getName(), RIK::RIK_NumVGPR, OutContext);
     MCSymbol *NumAgprSymbol =
-        RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext, IsLocal);
+        RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext);
     uint64_t NumVgpr, NumAgpr;
 
     MachineModuleInfo &MMI =
@@ -693,7 +690,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   MCContext &Context = getObjFileLowering().getContext();
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   // FIXME: This should be an explicit check for Mesa.
   if (!STM.isAmdHsaOS() && !STM.isAmdPalOS()) {
     MCSectionELF *ConfigSection =
@@ -737,26 +733,22 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   {
     using RIK = MCResourceInfo::ResourceInfoKind;
     getTargetStreamer()->EmitMCResourceInfo(
-        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext,
-                     IsLocal),
-        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumAGPR, OutContext,
-                     IsLocal),
-        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext,
-                     IsLocal),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumAGPR, OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumNamedBarrier,
-                     OutContext, IsLocal),
+                     OutContext),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
-                     OutContext, IsLocal),
-        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext,
-                     IsLocal),
+                     OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesFlatScratch,
-                     OutContext, IsLocal),
+                     OutContext),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasDynSizedStack,
-                     OutContext, IsLocal),
-        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasRecursion, OutContext,
-                     IsLocal),
+                     OutContext),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasRecursion,
+                     OutContext),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasIndirectCall,
-                     OutContext, IsLocal));
+                     OutContext));
   }
 
   // Emit _dvgpr$ symbol when appropriate.
@@ -772,21 +764,19 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       OutStreamer->emitRawComment(" Function info:", false);
 
       emitCommonFunctionComments(
-          RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext,
-                       IsLocal)
+          RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext)
               ->getVariableValue(),
-          STM.hasMAIInsts()
-              ? RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumAGPR,
-                             OutContext, IsLocal)
-                    ->getVariableValue()
-              : nullptr,
+          STM.hasMAIInsts() ? RI.getSymbol(CurrentFnSym->getName(),
+                                           RIK::RIK_NumAGPR, OutContext)
+                                  ->getVariableValue()
+                            : nullptr,
           RI.createTotalNumVGPRs(MF, Ctx),
           RI.createTotalNumSGPRs(
               MF,
               MF.getSubtarget<GCNSubtarget>().getTargetID().isXnackOnOrAny(),
               Ctx),
           RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
-                       OutContext, IsLocal)
+                       OutContext)
               ->getVariableValue(),
           CurrentProgramInfo.getFunctionCodeSize(MF), MFI);
       return false;
@@ -1003,7 +993,6 @@ static const MCExpr *computeAccumOffset(const MCExpr *NumVGPR, MCContext &Ctx) {
 void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                         const MachineFunction &MF) {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
-  bool IsLocal = MF.getFunction().hasLocalLinkage();
   MCContext &Ctx = MF.getContext();
 
   auto CreateExpr = [&Ctx](int64_t Value) {
@@ -1021,8 +1010,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   auto GetSymRefExpr =
       [&](MCResourceInfo::ResourceInfoKind RIK) -> const MCExpr * {
-    MCSymbol *Sym =
-        RI.getSymbol(CurrentFnSym->getName(), RIK, OutContext, IsLocal);
+    MCSymbol *Sym = RI.getSymbol(CurrentFnSym->getName(), RIK, OutContext);
     return MCSymbolRefExpr::create(Sym, Ctx);
   };
 
@@ -1065,10 +1053,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         NumSgpr > MaxAddressableNumSGPRs) {
       // This can happen due to a compiler bug or when using inline asm.
       LLVMContext &Ctx = MF.getFunction().getContext();
-      DiagnosticInfoResourceLimit Diag(
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
           MF.getFunction(), "addressable scalar registers", NumSgpr,
-          MaxAddressableNumSGPRs, DS_Error, DK_ResourceLimit);
-      Ctx.diagnose(Diag);
+          MaxAddressableNumSGPRs, DS_Error, DK_ResourceLimit));
       ProgInfo.NumSGPR = CreateExpr(MaxAddressableNumSGPRs - 1);
     }
   }
@@ -1121,10 +1108,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       // This can happen due to a compiler bug or when using inline asm to use
       // the registers which are usually reserved for vcc etc.
       LLVMContext &Ctx = MF.getFunction().getContext();
-      DiagnosticInfoResourceLimit Diag(MF.getFunction(), "scalar registers",
-                                       NumSgpr, MaxAddressableNumSGPRs,
-                                       DS_Error, DK_ResourceLimit);
-      Ctx.diagnose(Diag);
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
+          MF.getFunction(), "scalar registers", NumSgpr, MaxAddressableNumSGPRs,
+          DS_Error, DK_ResourceLimit));
       ProgInfo.NumSGPR = CreateExpr(MaxAddressableNumSGPRs);
       ProgInfo.NumSGPRsForWavesPerEU = CreateExpr(MaxAddressableNumSGPRs);
     }
@@ -1139,18 +1125,16 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   if (MFI->getNumUserSGPRs() > STM.getMaxNumUserSGPRs()) {
     LLVMContext &Ctx = MF.getFunction().getContext();
-    DiagnosticInfoResourceLimit Diag(MF.getFunction(), "user SGPRs",
-                                     MFI->getNumUserSGPRs(),
-                                     STM.getMaxNumUserSGPRs(), DS_Error);
-    Ctx.diagnose(Diag);
+    Ctx.diagnose(DiagnosticInfoResourceLimit(
+        MF.getFunction(), "user SGPRs", MFI->getNumUserSGPRs(),
+        STM.getMaxNumUserSGPRs(), DS_Error));
   }
 
   if (MFI->getLDSSize() > STM.getAddressableLocalMemorySize()) {
     LLVMContext &Ctx = MF.getFunction().getContext();
-    DiagnosticInfoResourceLimit Diag(
+    Ctx.diagnose(DiagnosticInfoResourceLimit(
         MF.getFunction(), "local memory", MFI->getLDSSize(),
-        STM.getAddressableLocalMemorySize(), DS_Error);
-    Ctx.diagnose(Diag);
+        STM.getAddressableLocalMemorySize(), DS_Error));
   }
   // The MCExpr equivalent of getNumSGPRBlocks/getNumVGPRBlocks:
   // (alignTo(max(1u, NumGPR), GPREncodingGranule) / GPREncodingGranule) - 1

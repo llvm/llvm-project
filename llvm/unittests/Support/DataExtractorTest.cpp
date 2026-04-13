@@ -72,6 +72,43 @@ TEST(DataExtractorTest, UnsignedNumbers) {
   EXPECT_EQ(8U, offset);
 }
 
+static void TestGetUnsignedHelper(bool IsLittleEndian) {
+  // Use data with distinct byte values so each size produces a unique result.
+  const char data[] = "\x01\x02\x03\x04\x05\x06\x07\x08";
+  DataExtractor DE(StringRef(data, sizeof(data) - 1), IsLittleEndian, 8);
+
+  // Expected values for big-endian: bytes are read high-to-low.
+  // Expected values for little-endian: bytes are read low-to-high.
+  const uint64_t Expected[] = {
+      0,
+      IsLittleEndian ? 0x01U : 0x01U,
+      IsLittleEndian ? 0x0201U : 0x0102U,
+      IsLittleEndian ? 0x030201U : 0x010203U,
+      IsLittleEndian ? 0x04030201U : 0x01020304U,
+      IsLittleEndian ? 0x0504030201U : 0x0102030405U,
+      IsLittleEndian ? 0x060504030201U : 0x010203040506U,
+      IsLittleEndian ? 0x07060504030201U : 0x01020304050607U,
+      IsLittleEndian ? 0x0807060504030201U : 0x0102030405060708U,
+  };
+
+  for (uint32_t Size = 1; Size <= 8; ++Size) {
+    uint64_t Offset = 0;
+    EXPECT_EQ(Expected[Size], DE.getUnsigned(&Offset, Size));
+    EXPECT_EQ(uint64_t(Size), Offset);
+  }
+
+  // Non-zero starting offset.
+  uint64_t Offset = 3;
+  uint64_t ExpectedAt3 = IsLittleEndian ? 0x060504U : 0x040506U;
+  EXPECT_EQ(ExpectedAt3, DE.getUnsigned(&Offset, 3));
+  EXPECT_EQ(6U, Offset);
+}
+
+TEST(DataExtractorTest, GetUnsigned) {
+  TestGetUnsignedHelper(false);
+  TestGetUnsignedHelper(true);
+}
+
 TEST(DataExtractorTest, SignedNumbers) {
   DataExtractor DE(StringRef(numberData, sizeof(numberData)-1), false, 8);
   uint64_t offset = 0;

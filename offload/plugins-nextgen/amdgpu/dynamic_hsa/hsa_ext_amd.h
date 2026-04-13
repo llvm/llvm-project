@@ -169,6 +169,18 @@ hsa_status_t hsa_amd_pointer_info(const void* ptr,
                                           uint32_t* num_agents_accessible,
                                           hsa_agent_t** accessible);
 
+typedef struct hsa_amd_profiling_dispatch_time_s {
+  uint64_t start;
+  uint64_t end;
+} hsa_amd_profiling_dispatch_time_t;
+
+hsa_status_t
+hsa_amd_profiling_get_dispatch_time(hsa_agent_t agent, hsa_signal_t signal,
+                                    hsa_amd_profiling_dispatch_time_t *time);
+
+hsa_status_t hsa_amd_profiling_set_profiler_enabled(hsa_queue_t *queue,
+                                                    int enable);
+
 #ifdef __cplusplus
 }
 #endif

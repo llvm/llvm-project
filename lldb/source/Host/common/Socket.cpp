@@ -181,7 +181,7 @@ llvm::Error Socket::Initialize() {
   if (err == 0) {
     if (wsaData.wVersion < wVersion) {
       WSACleanup();
-      return llvm::createStringError("WSASock version is not expected.");
+      return llvm::createStringError("WSASock version is not expected");
     }
   } else {
     return llvm::errorCodeToError(llvm::mapWindowsError(::WSAGetLastError()));
@@ -247,7 +247,7 @@ Socket::CreatePair(std::optional<SocketProtocol> protocol) {
     return DomainSocket::CreatePair();
 #endif
   default:
-    return llvm::createStringError("Unsupported protocol");
+    return llvm::createStringError("unsupported protocol");
   }
 }
 

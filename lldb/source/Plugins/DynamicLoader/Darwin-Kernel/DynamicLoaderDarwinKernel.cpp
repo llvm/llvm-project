@@ -1058,7 +1058,7 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
       kernel_name =
           m_kernel.GetModule()->GetObjectFile()->GetFileSpec().GetFilename();
     }
-    m_kernel.SetName(kernel_name.AsCString());
+    m_kernel.SetName(kernel_name.AsCString(nullptr));
 
     if (m_kernel.GetLoadAddress() == LLDB_INVALID_ADDRESS) {
       m_kernel.SetLoadAddress(m_kernel_load_address);

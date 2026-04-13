@@ -221,6 +221,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("NV_CUDAFOR_CHECK_ERROR")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      cudaCheckError = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NV_CUDAFOR_CHECK_ERROR=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
   if (auto *x{std::getenv("FORT_NO_EMPTY_ALLOCATION")}) {
     char *end;
     auto n{std::strtol(x, &end, 10)};

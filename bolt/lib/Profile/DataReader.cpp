@@ -315,11 +315,17 @@ std::error_code DataReader::parseInput() {
   }
   FileBuf = std::move(MB.get());
   ParsingBuf = FileBuf->getBuffer();
+
+  if (ParsingBuf.empty()) {
+    Diag << "WARNING: empty profile data file: " << Filename << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+
   if (std::error_code EC = parse())
     return EC;
-  if (!ParsingBuf.empty())
-    Diag << "WARNING: invalid profile data detected at line " << Line
-         << ". Possibly corrupted profile.\n";
+
+  Diag << "WARNING: invalid profile data detected at line " << Line
+       << ". Possibly corrupted profile.\n";
 
   buildLTONameMaps();
 
@@ -828,8 +834,7 @@ ErrorOr<StringRef> DataReader::parseString(char EndChar, bool EndNl) {
   size_t StringEnd = 0;
   do {
     StringEnd = ParsingBuf.find_first_of(EndChars, StringEnd);
-    if (StringEnd == StringRef::npos ||
-        (StringEnd == 0 && ParsingBuf[StringEnd] != '\\')) {
+    if (StringEnd == StringRef::npos) {
       reportError("malformed field");
       return make_error_code(llvm::errc::io_error);
     }

@@ -8,6 +8,8 @@
 
 #include <utility>
 
+#include "llvm/ADT/TypeSwitch.h"
+
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
@@ -356,6 +358,16 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
         if (castKind == CastKind::None)
           break;
       }
+      // For operations that explicitly treat the values as signed, we should
+      // only do signed casts, if those are deemed possible as such based on the
+      // value range.
+      auto castKindForOp =
+          llvm::TypeSwitch<Operation *, CastKind>(op)
+              .Case<arith::DivSIOp, arith::CeilDivSIOp, arith::FloorDivSIOp,
+                    arith::RemSIOp, arith::MaxSIOp, arith::MinSIOp,
+                    arith::ShRSIOp>([](auto) { return CastKind::Signed; })
+              .Default(CastKind::Both);
+      castKind = mergeCastKinds(castKind, castKindForOp);
       if (castKind == CastKind::None)
         continue;
       Type targetType = getTargetType(srcType, targetBitwidth);
@@ -414,12 +426,26 @@ struct NarrowCmpI final : OpRewritePattern<arith::CmpIOp> {
     const ConstantIntRanges &lhsRange = ranges[0];
     const ConstantIntRanges &rhsRange = ranges[1];
 
+    auto isSignedCmpPredicate = [](arith::CmpIPredicate pred) -> bool {
+      return pred == arith::CmpIPredicate::sge ||
+             pred == arith::CmpIPredicate::sgt ||
+             pred == arith::CmpIPredicate::sle ||
+             pred == arith::CmpIPredicate::slt;
+    };
+    // If we're to narrow the input values via a cast, we should preserve the
+    // sign.
+    CastKind predicateBasedCastRestriction =
+        isSignedCmpPredicate(op.getPredicate()) ? CastKind::Signed
+                                                : CastKind::Both;
+
     Type srcType = lhs.getType();
     for (unsigned targetBitwidth : targetBitwidths) {
       CastKind lhsCastKind = checkTruncatability(lhsRange, targetBitwidth);
       CastKind rhsCastKind = checkTruncatability(rhsRange, targetBitwidth);
       CastKind castKind = mergeCastKinds(lhsCastKind, rhsCastKind);
-      // Note: this includes target width > src width.
+      castKind = mergeCastKinds(castKind, predicateBasedCastRestriction);
+      // Note: this includes target width > src width, as well as the unsigned
+      // truncatability & signed predicate scenario.
       if (castKind == CastKind::None)
         continue;
 

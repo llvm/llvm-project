@@ -508,6 +508,14 @@ static const MemoryMapParams Linux_LoongArch64_MemoryMapParams = {
     0x100000000000, // OriginBase
 };
 
+// hexagon Linux
+static const MemoryMapParams Linux_Hexagon_MemoryMapParams = {
+    0,          // AndMask (not used)
+    0x20000000, // XorMask
+    0,          // ShadowBase (not used)
+    0x50000000, // OriginBase
+};
+
 // riscv32 Linux
 // FIXME: Remove -msan-origin-base -msan-and-mask added by PR #109284 to tests
 // after picking good constants
@@ -572,6 +580,11 @@ static const PlatformMemoryMapParams Linux_ARM_MemoryMapParams = {
 static const PlatformMemoryMapParams Linux_LoongArch_MemoryMapParams = {
     nullptr,
     &Linux_LoongArch64_MemoryMapParams,
+};
+
+static const PlatformMemoryMapParams Linux_Hexagon_MemoryMapParams_P = {
+    &Linux_Hexagon_MemoryMapParams,
+    nullptr,
 };
 
 static const PlatformMemoryMapParams FreeBSD_ARM_MemoryMapParams = {
@@ -1100,6 +1113,9 @@ void MemorySanitizer::initializeModule(Module &M) {
         break;
       case Triple::loongarch64:
         MapParams = Linux_LoongArch_MemoryMapParams.bits64;
+        break;
+      case Triple::hexagon:
+        MapParams = Linux_Hexagon_MemoryMapParams_P.bits32;
         break;
       default:
         report_fatal_error("unsupported architecture");
@@ -5054,7 +5070,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                     ConstantInt::get(IRB.getInt32Ty(), 0));
   }
 
-  // Handle llvm.x86.avx512.mask.pmov{,s,us}.*.512
+  // Handle llvm.x86.avx512.mask.pmov{,s,us}.*.{128,256,512}
   //
   // e.g., call <16 x i8> @llvm.x86.avx512.mask.pmov.qb.512
   //         (<8 x i64>, <16 x i8>, i8)
@@ -5088,10 +5104,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(WriteThrough->getType())->getNumElements();
     assert(ANumElements == OutputNumElements ||
            ANumElements * 2 == OutputNumElements);
+    // N.B. some PMOV{,S,US} instructions have a 4x or even 8x ratio in the
+    //      number of elements e.g.,
+    //      <16 x i8> @llvm.x86.avx512.mask.pmovs.qb.256
+    //                    (<4 x i64>, <16 x i8>, i8)
+    //      <16 x i8> @llvm.x86.avx512.mask.pmovs.qb.128
+    //                    (<2 x i64>, <16 x i8>, i8)
+    // However, we currently handle those elsewhere.
 
     assert(Mask->getType()->isIntegerTy());
-    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
     insertCheckShadowOf(Mask, &I);
+
+    // The mask has 1 bit per element of A, but a minimum of 8 bits.
+    if (Mask->getType()->getScalarSizeInBits() == 8 && OutputNumElements < 8)
+      Mask = IRB.CreateTrunc(Mask, Type::getIntNTy(*MS.C, OutputNumElements));
+    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
 
     assert(I.getType() == WriteThrough->getType());
 
@@ -5540,62 +5567,33 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Integer matrix multiplication:
-  // - <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8
-  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
-  // - <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
-  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
-  // - <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
-  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
-  //
-  // Note:
-  // - <4 x i32> is a 2x2 matrix
-  // - <16 x i8> %X and %Y are 2x8 and 8x2 matrices respectively
-  //
-  //   2x8 %X                                8x2 %Y
-  //   [ X01 X02 X03 X04 X05 X06 X07 X08 ]   [ Y01 Y09 ]
-  //   [ X09 X10 X11 X12 X13 X14 X15 X16 ] x [ Y02 Y10 ]
-  //                                         [ Y03 Y11 ]
-  //                                         [ Y04 Y12 ]
-  //                                         [ Y05 Y13 ]
-  //                                         [ Y06 Y14 ]
-  //                                         [ Y07 Y15 ]
-  //                                         [ Y08 Y16 ]
-  //
-  // The general shadow propagation approach is:
-  // 1) get the shadows of the input matrices %X and %Y
-  // 2) change the shadow values to 0x1 if the corresponding value is fully
-  //    initialized, and 0x0 otherwise
-  // 3) perform a matrix multiplication on the shadows of %X and %Y. The output
-  //    will be a 2x2 matrix; for each element, a value of 0x8 means all the
-  //    corresponding inputs were clean.
-  // 4) blend in the shadow of %R
-  //
-  // TODO: consider allowing multiplication of zero with an uninitialized value
-  //       to result in an initialized value.
+  // - <4 x i32> @llvm.aarch64.neon.{s,u,us}mmla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %A, <16 x i8> %B)
+  //   - <4 x i32> is a 2x2 matrix
+  //   - <16 x i8> %A and %B are 2x8 and 8x2 matrices respectively
   //
   // Floating-point matrix multiplication:
   // - <4 x float> @llvm.aarch64.neon.bfmmla
-  //                   (<4 x float> %R, <8 x bfloat> %X, <8 x bfloat> %Y)
-  //   %X and %Y are 2x4 and 4x2 matrices respectively
+  //                   (<4 x float> %R, <8 x bfloat> %A, <8 x bfloat> %B)
+  //   - <4 x float> is a 2x2 matrix
+  //   - <8 x bfloat> %A and %B are 2x4 and 4x2 matrices respectively
   //
-  // Although there are half as many elements of %X and %Y compared to the
-  // integer case, each element is twice the bit-width. Thus, we can reuse the
-  // shadow propagation logic if we cast the shadows to the same type as the
-  // integer case, and apply ummla to the shadows:
+  // The general shadow propagation approach is:
+  // 1) get the shadows of the input matrices %A and %B
+  // 2) map each shadow value to 0x1 if the corresponding value is fully
+  //    initialized, and 0x0 otherwise
+  // 3) perform a matrix multiplication on the shadows of %A and %B [*].
+  //    The output will be a 2x2 matrix. For each element, a value of 0x8
+  //    (for {s,u,us}mmla) or 0x4 (for bfmmla) means all the corresponding
+  //    inputs were clean; if so, set the shadow to zero, otherwise set to -1.
+  // 4) blend in the shadow of %R
   //
-  //   2x4 %X                                4x2 %Y
-  //   [ A01:A02 A03:A04 A05:A06 A07:A08 ]   [ B01:B02 B09:B10 ]
-  //   [ A09:A10 A11:A12 A13:A14 A15:A16 ] x [ B03:B04 B11:B12 ]
-  //                                         [ B05:B06 B13:B14 ]
-  //                                         [ B07:B08 B15:B16 ]
+  // [*] Since shadows are integral, the obvious approach is to always apply
+  //     ummla to the shadows. Unfortunately, Armv8.2+bf16 supports bfmmla,
+  //     but not ummla. Thus, for bfmmla, our instrumentation reuses bfmmla.
   //
-  // For example, consider multiplying the first row of %X with the first
-  // column of Y. We want to know if
-  // A01:A02*B01:B02 + A03:A04*B03:B04 + A05:A06*B06:B06 + A07:A08*B07:B08 is
-  // fully initialized, which will be true if and only if (A01, A02, ..., A08)
-  // and (B01, B02, ..., B08) are each fully initialized. This latter condition
-  // is equivalent to what is tested by the instrumentation for the integer
-  // form.
+  // TODO: consider allowing multiplication of zero with an uninitialized value
+  //       to result in an initialized value.
   void handleNEONMatrixMultiply(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
@@ -5610,75 +5608,90 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(isa<FixedVectorType>(A->getType()));
     assert(isa<FixedVectorType>(B->getType()));
 
-    [[maybe_unused]] FixedVectorType *RTy = cast<FixedVectorType>(R->getType());
-    [[maybe_unused]] FixedVectorType *ATy = cast<FixedVectorType>(A->getType());
-    [[maybe_unused]] FixedVectorType *BTy = cast<FixedVectorType>(B->getType());
+    FixedVectorType *RTy = cast<FixedVectorType>(R->getType());
+    FixedVectorType *ATy = cast<FixedVectorType>(A->getType());
+    FixedVectorType *BTy = cast<FixedVectorType>(B->getType());
+    assert(ATy->getElementType() == BTy->getElementType());
+
+    if (RTy->getElementType()->isIntegerTy()) {
+      // <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
+      //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+      assert(RTy == FixedVectorType::get(IntegerType::get(*MS.C, 32), 4));
+      assert(ATy == FixedVectorType::get(IntegerType::get(*MS.C, 8), 16));
+      assert(BTy == FixedVectorType::get(IntegerType::get(*MS.C, 8), 16));
+    } else {
+      // <4 x float> @llvm.aarch64.neon.bfmmla
+      //                 (<4 x float> %R, <8 x bfloat> %X, <8 x bfloat> %Y)
+      assert(RTy == FixedVectorType::get(Type::getFloatTy(*MS.C), 4));
+      assert(ATy == FixedVectorType::get(Type::getBFloatTy(*MS.C), 8));
+      assert(BTy == FixedVectorType::get(Type::getBFloatTy(*MS.C), 8));
+    }
 
     Value *ShadowR = getShadow(&I, 0);
     Value *ShadowA = getShadow(&I, 1);
     Value *ShadowB = getShadow(&I, 2);
 
-    // We will use ummla to compute the shadow. These are the types it expects.
-    // These are also the types of the corresponding shadows.
-    FixedVectorType *ExpectedRTy =
-        FixedVectorType::get(IntegerType::get(*MS.C, 32), 4);
-    FixedVectorType *ExpectedATy =
-        FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
-    FixedVectorType *ExpectedBTy =
-        FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+    Value *ShadowAB;
+    Value *FullyInit;
 
     if (RTy->getElementType()->isIntegerTy()) {
-      // Types of R and A/B are not identical e.g., <4 x i32> %R, <16 x i8> %A
-      assert(ATy->getElementType()->isIntegerTy());
+      // If the value is fully initialized, the shadow will be 000...001.
+      // Otherwise, the shadow will be all zero.
+      // (This is the opposite of how we typically handle shadows.)
+      ShadowA = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ATy)),
+                               getShadowTy(ATy));
+      ShadowB = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(BTy)),
+                               getShadowTy(BTy));
+      // TODO: the CreateSelect approach used below for floating-point is more
+      //       generic than CreateZExt. Investigate whether it is worthwhile
+      //       unifying the two approaches.
 
-      assert(RTy == ExpectedRTy);
-      assert(ATy == ExpectedATy);
-      assert(BTy == ExpectedBTy);
+      ShadowAB = IRB.CreateIntrinsic(RTy, Intrinsic::aarch64_neon_ummla,
+                                     {getCleanShadow(RTy), ShadowA, ShadowB});
+
+      // ummla multiplies a 2x8 matrix with an 8x2 matrix. If all entries of the
+      // input matrices are equal to 0x1, all entries of the output matrix will
+      // be 0x8.
+      FullyInit = ConstantVector::getSplat(
+          RTy->getElementCount(), ConstantInt::get(RTy->getElementType(), 0x8));
+
+      ShadowAB = IRB.CreateICmpNE(ShadowAB, FullyInit);
     } else {
-      assert(ATy->getElementType()->isFloatingPointTy());
-      assert(BTy->getElementType()->isFloatingPointTy());
+      Constant *ABZeros = ConstantVector::getSplat(
+          ATy->getElementCount(), ConstantFP::get(ATy->getElementType(), 0));
+      Constant *ABOnes = ConstantVector::getSplat(
+          ATy->getElementCount(), ConstantFP::get(ATy->getElementType(), 1));
 
-      // Technically, what we care about is that:
-      //   getShadowTy(RTy)->canLosslesslyBitCastTo(ExpectedRTy)) etc.
-      // but that is equivalent.
-      assert(RTy->canLosslesslyBitCastTo(ExpectedRTy));
-      assert(ATy->canLosslesslyBitCastTo(ExpectedATy));
-      assert(BTy->canLosslesslyBitCastTo(ExpectedBTy));
+      // As per the integer case, if the shadow is clean, we store 0x1,
+      // otherwise we store 0x0 (the opposite of usual shadow arithmetic).
+      ShadowA = IRB.CreateSelect(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ATy)),
+                                 ABOnes, ABZeros);
+      ShadowB = IRB.CreateSelect(IRB.CreateICmpEQ(ShadowB, getCleanShadow(BTy)),
+                                 ABOnes, ABZeros);
 
-      ShadowA = IRB.CreateBitCast(ShadowA, getShadowTy(ExpectedATy));
-      ShadowB = IRB.CreateBitCast(ShadowB, getShadowTy(ExpectedBTy));
+      Constant *RZeros = ConstantVector::getSplat(
+          RTy->getElementCount(), ConstantFP::get(RTy->getElementType(), 0));
+
+      ShadowAB = IRB.CreateIntrinsic(RTy, Intrinsic::aarch64_neon_bfmmla,
+                                     {RZeros, ShadowA, ShadowB});
+
+      // bfmmla multiplies a 2x4 matrix with an 4x2 matrix. If all entries of
+      // the input matrices are equal to 0x1, all entries of the output matrix
+      // will be 4.0. (To avoid floating-point error, we check if each entry
+      // < 3.5.)
+      FullyInit = ConstantVector::getSplat(
+          RTy->getElementCount(), ConstantFP::get(RTy->getElementType(), 3.5));
+
+      // FCmpULT: "yields true if either operand is a QNAN or op1 is less than"
+      //           op2"
+      ShadowAB = IRB.CreateFCmpULT(ShadowAB, FullyInit);
     }
-    assert(ATy->getElementType() == BTy->getElementType());
 
-    // From this point on, use Expected{R,A,B}Type.
-
-    // If the value is fully initialized, the shadow will be 000...001.
-    // Otherwise, the shadow will be all zero.
-    // (This is the opposite of how we typically handle shadows.)
-    ShadowA =
-        IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ExpectedATy)),
-                       getShadowTy(ExpectedATy));
-    ShadowB =
-        IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(ExpectedBTy)),
-                       getShadowTy(ExpectedBTy));
-
-    Value *ShadowAB =
-        IRB.CreateIntrinsic(ExpectedRTy, Intrinsic::aarch64_neon_ummla,
-                            {getCleanShadow(ExpectedRTy), ShadowA, ShadowB});
-
-    // ummla multiplies a 2x8 matrix with an 8x2 matrix. If all entries of the
-    // input matrices are equal to 0x1, all entries of the output matrix will
-    // be 0x8.
-    Value *FullyInit = ConstantVector::getSplat(
-        ExpectedRTy->getElementCount(),
-        ConstantInt::get(ExpectedRTy->getElementType(), 0x8));
-
-    ShadowAB = IRB.CreateICmpNE(ShadowAB, FullyInit);
-
-    ShadowR = IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy));
+    ShadowR = IRB.CreateICmpNE(ShadowR, getCleanShadow(RTy));
     ShadowR = IRB.CreateOr(ShadowAB, ShadowR);
 
-    setShadow(&I, IRB.CreateSExt(ShadowR, ExpectedRTy));
+    setShadow(&I, IRB.CreateSExt(ShadowR, getShadowTy(RTy)));
+
     setOriginForNaryOp(I);
   }
 
@@ -6677,58 +6690,142 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // AVX512 PMOV: Packed MOV, with truncation
     // Precisely handled by applying the same intrinsic to the shadow
+    case Intrinsic::x86_avx512_mask_pmov_dw_128:
+    case Intrinsic::x86_avx512_mask_pmov_db_128:
+    case Intrinsic::x86_avx512_mask_pmov_qb_128:
+    case Intrinsic::x86_avx512_mask_pmov_qw_128:
+    case Intrinsic::x86_avx512_mask_pmov_qd_128:
+    case Intrinsic::x86_avx512_mask_pmov_wb_128:
+    case Intrinsic::x86_avx512_mask_pmov_dw_256:
+    case Intrinsic::x86_avx512_mask_pmov_db_256:
+    case Intrinsic::x86_avx512_mask_pmov_qb_256:
+    case Intrinsic::x86_avx512_mask_pmov_qw_256:
     case Intrinsic::x86_avx512_mask_pmov_dw_512:
     case Intrinsic::x86_avx512_mask_pmov_db_512:
     case Intrinsic::x86_avx512_mask_pmov_qb_512:
     case Intrinsic::x86_avx512_mask_pmov_qw_512: {
-      // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_512 were removed in
+      // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} were removed in
       // f608dc1f5775ee880e8ea30e2d06ab5a4a935c22
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
                                         /*trailingVerbatimArgs=*/1);
       break;
     }
 
-    // AVX512 PMVOV{S,US}: Packed MOV, with signed/unsigned saturation
+    // AVX512 PMOV{S,US}: Packed MOV, with signed/unsigned saturation
     // Approximately handled using the corresponding truncation intrinsic
     // TODO: improve handleAVX512VectorDownConvert to precisely model saturation
     case Intrinsic::x86_avx512_mask_pmovs_dw_512:
     case Intrinsic::x86_avx512_mask_pmovus_dw_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_dw_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_dw_256:
+    case Intrinsic::x86_avx512_mask_pmovus_dw_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_dw_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_dw_128:
+    case Intrinsic::x86_avx512_mask_pmovus_dw_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_dw_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_db_512:
     case Intrinsic::x86_avx512_mask_pmovus_db_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_db_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_db_256:
+    case Intrinsic::x86_avx512_mask_pmovus_db_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_db_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_db_128:
+    case Intrinsic::x86_avx512_mask_pmovus_db_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_db_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qb_512:
     case Intrinsic::x86_avx512_mask_pmovus_qb_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_qb_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_qb_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qb_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qb_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qb_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qb_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qb_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qw_512:
     case Intrinsic::x86_avx512_mask_pmovus_qw_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_qw_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
 
+    case Intrinsic::x86_avx512_mask_pmovs_qw_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qw_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qw_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qw_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qw_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qw_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qd_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qd_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qd_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_wb_128:
+    case Intrinsic::x86_avx512_mask_pmovus_wb_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_wb_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qd_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qd_256:
+    case Intrinsic::x86_avx512_mask_pmovs_wb_256:
+    case Intrinsic::x86_avx512_mask_pmovus_wb_256:
     case Intrinsic::x86_avx512_mask_pmovs_qd_512:
     case Intrinsic::x86_avx512_mask_pmovus_qd_512:
     case Intrinsic::x86_avx512_mask_pmovs_wb_512:
     case Intrinsic::x86_avx512_mask_pmovus_wb_512: {
-      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_512 do not exist, we
-      // cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
+      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} do not exist,
+      // we cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
       // slow-path handler.
       handleAVX512VectorDownConvert(I);
       break;
@@ -9277,6 +9374,7 @@ using VarArgARM32Helper = VarArgGenericHelper;
 using VarArgRISCVHelper = VarArgGenericHelper;
 using VarArgMIPSHelper = VarArgGenericHelper;
 using VarArgLoongArch64Helper = VarArgGenericHelper;
+using VarArgHexagonHelper = VarArgGenericHelper;
 
 /// A no-op implementation of VarArgHelper.
 struct VarArgNoOpHelper : public VarArgHelper {
@@ -9338,6 +9436,9 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
   if (TargetTriple.isLoongArch64())
     return new VarArgLoongArch64Helper(Func, Msan, Visitor,
                                        /*VAListTagSize=*/8);
+
+  if (TargetTriple.getArch() == Triple::hexagon)
+    return new VarArgHexagonHelper(Func, Msan, Visitor, /*VAListTagSize=*/12);
 
   return new VarArgNoOpHelper(Func, Msan, Visitor);
 }

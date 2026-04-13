@@ -413,6 +413,8 @@ int main(int argc, char **argv) {
   MCOptions.MCNoExecStack = NoExecStack;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MCOptions.InstPrinterOptions = InstPrinterOptions;
+  if (OutputAsmVariant.getNumOccurrences())
+    MCOptions.OutputAsmVariant = OutputAsmVariant;
 
   setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
@@ -586,9 +588,7 @@ int main(int argc, char **argv) {
     TheTarget->createNullTargetStreamer(*FFS);
     Str = std::move(FFS);
   } else if (FileType == OFT_AssemblyFile) {
-    unsigned AsmVariant = OutputAsmVariant.getNumOccurrences()
-                              ? OutputAsmVariant
-                              : MAI->getAssemblerDialect();
+    unsigned AsmVariant = MAI->getOutputAssemblerDialect();
     IP.reset(TheTarget->createMCInstPrinter(Triple(TripleName), AsmVariant,
                                             *MAI, *MCII, *MRI));
 

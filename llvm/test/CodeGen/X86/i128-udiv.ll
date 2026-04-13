@@ -2907,11 +2907,38 @@ define i128 @div_by_67(i128 %x) nounwind {
 ;
 ; X64-LABEL: div_by_67:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movl $67, %edx
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    callq __udivti3@PLT
-; X64-NEXT:    popq %rcx
+; X64-NEXT:    movabsq $8589934591, %rax # imm = 0x1FFFFFFFF
+; X64-NEXT:    movq %rdi, %rcx
+; X64-NEXT:    andq %rax, %rcx
+; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    shrdq $33, %rsi, %rdx
+; X64-NEXT:    andq %rax, %rdx
+; X64-NEXT:    subq %rdx, %rcx
+; X64-NEXT:    movq %rsi, %rdx
+; X64-NEXT:    shrq $2, %rdx
+; X64-NEXT:    andq %rax, %rdx
+; X64-NEXT:    addq %rcx, %rdx
+; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    shrq $35, %rax
+; X64-NEXT:    subq %rax, %rdx
+; X64-NEXT:    movabsq $17179869186, %rcx # imm = 0x400000002
+; X64-NEXT:    addq %rdx, %rcx
+; X64-NEXT:    movabsq $-825973615240726191, %rdx # imm = 0xF4898D5F85BB3951
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    mulq %rdx
+; X64-NEXT:    shrq $6, %rdx
+; X64-NEXT:    imulq $67, %rdx, %rax
+; X64-NEXT:    subq %rax, %rcx
+; X64-NEXT:    subq %rcx, %rdi
+; X64-NEXT:    sbbq $0, %rsi
+; X64-NEXT:    movabsq $-4405192614617206357, %rcx # imm = 0xC2DD9CA81E9131AB
+; X64-NEXT:    imulq %rdi, %rcx
+; X64-NEXT:    movabsq $-1101298153654301589, %r8 # imm = 0xF0B7672A07A44C6B
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    mulq %r8
+; X64-NEXT:    addq %rcx, %rdx
+; X64-NEXT:    imulq %rsi, %r8
+; X64-NEXT:    addq %r8, %rdx
 ; X64-NEXT:    retq
 entry:
   %div = udiv i128 %x, 67

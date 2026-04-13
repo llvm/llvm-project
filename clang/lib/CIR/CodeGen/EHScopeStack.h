@@ -206,6 +206,21 @@ public:
     return new (buffer) T(n, a...);
   }
 
+  /// Push a cleanup by copying a serialized cleanup object from the
+  /// LifetimeExtendedCleanupStack onto the EH scope stack. This is used when
+  /// a full-expression's RunCleanupsScope exits: cleanups that were deferred
+  /// for lifetime extension (e.g. destroying a temporary bound to a local
+  /// reference) are promoted from the byte buffer to the enclosing scope's
+  /// EH stack so they run when that scope ends.
+  ///
+  /// The memcpy is safe because Cleanup subclasses are required to be POD-like
+  /// (see the Cleanup class comment), and the vtable pointer is part of the
+  /// copied bytes, so the clone dispatches to the correct emit() override.
+  void pushCopyOfCleanup(CleanupKind kind, const void *cleanup, size_t size) {
+    void *buffer = pushCleanup(kind, size);
+    std::memcpy(buffer, cleanup, size);
+  }
+
   void setCGF(CIRGenFunction *inCGF) { cgf = inCGF; }
 
   /// Pops a cleanup scope off the stack.  This is private to CIRGenCleanup.cpp.

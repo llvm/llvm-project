@@ -257,7 +257,7 @@ void CommandInterpreter::ResolveCommand(const char *command_line,
                                         CommandReturnObject &result) {
   std::string command = command_line;
   if (ResolveCommandImpl(command, result) != nullptr) {
-    result.AppendMessageWithFormat("%s", command.c_str());
+    result.GetOutputStream() << command;
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 }
@@ -423,6 +423,15 @@ void CommandInterpreter::Initialize() {
   cmd_obj_sp = GetCommandSPExact("_regexp-bt");
   if (cmd_obj_sp)
     AddAlias("bt", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
+
+  cmd_obj_sp = GetCommandSPExact("thread backtrace");
+  if (cmd_obj_sp) {
+    if (auto *sys_bt = AddAlias("sys_bt", cmd_obj_sp, "--provider 0")) {
+      sys_bt->SetHelp("Show the base unwinder backtrace (without frame "
+                      "providers). Equivalent to 'thread backtrace "
+                      "--provider 0'.");
+    }
+  }
 
   cmd_obj_sp = GetCommandSPExact("target create");
   if (cmd_obj_sp)
@@ -1641,9 +1650,9 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
 
   if (!m_alias_dict.empty() &&
       ((cmd_types & eCommandTypesAliases) == eCommandTypesAliases)) {
-    result.AppendMessageWithFormat(
+    result.AppendMessageWithFormatv(
         "Current command abbreviations "
-        "(type '%shelp command alias' for more info):\n",
+        "(type '{0}help command alias' for more info):",
         GetCommandPrefix());
     result.AppendMessage("");
     max_len = FindLongestCommandWord(m_alias_dict);
@@ -1680,8 +1689,8 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
     result.AppendMessage("");
   }
 
-  result.AppendMessageWithFormat(
-      "For more information on any command, type '%shelp <command-name>'.\n",
+  result.AppendMessageWithFormatv(
+      "For more information on any command, type '{0}help <command-name>'.",
       GetCommandPrefix());
 }
 
@@ -2830,8 +2839,8 @@ void CommandInterpreter::HandleCommands(
 
     if (options.GetEchoCommands()) {
       // TODO: Add Stream support.
-      result.AppendMessageWithFormat("%s %s\n",
-                                     m_debugger.GetPrompt().str().c_str(), cmd);
+      result.AppendMessageWithFormatv(
+          "{0} {1}", m_debugger.GetPrompt().str().c_str(), cmd);
     }
 
     CommandReturnObject tmp_result(m_debugger.GetUseColor());
@@ -2892,9 +2901,9 @@ void CommandInterpreter::HandleCommands(
               ": '%s' continued the target.\n",
               (uint64_t)idx + 1, cmd);
         else
-          result.AppendMessageWithFormat("Command #%" PRIu64
-                                         " '%s' continued the target.\n",
-                                         (uint64_t)idx + 1, cmd);
+          result.AppendMessageWithFormatv(
+              "Command #{0} '{1}' continued the target.", (uint64_t)idx + 1,
+              cmd);
 
         result.SetStatus(tmp_result.GetStatus());
         m_debugger.SetAsyncExecution(old_async_execution);
@@ -2912,8 +2921,8 @@ void CommandInterpreter::HandleCommands(
             ": '%s' stopped with a signal or exception.\n",
             (uint64_t)idx + 1, cmd);
       else
-        result.AppendMessageWithFormat(
-            "Command #%" PRIu64 " '%s' stopped with a signal or exception.\n",
+        result.AppendMessageWithFormatv(
+            "Command #{0} '{1}' stopped with a signal or exception.",
             (uint64_t)idx + 1, cmd);
 
       result.SetStatus(tmp_result.GetStatus());
@@ -3552,8 +3561,8 @@ bool CommandInterpreter::SaveTranscript(
                      "Bytes written do not match transcript size.");
 
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
-  result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
-                                 output_file->c_str());
+  result.AppendMessageWithFormatv("Session's transcripts saved to {0}",
+                                  output_file->c_str());
   if (!GetSaveTranscript())
     result.AppendError(
         "Note: the setting interpreter.save-transcript is set to false, so the "

@@ -23,7 +23,6 @@
 @arrX = external global [8 x i64], align 16
 @arrY = external global [8 x [8 x i64]], align 16
 
-; Function Attrs: norecurse nounwind uwtable
 define void @foo_i32(i32 %n) {
 ; CHECK-LABEL: define void @foo_i32(
 ; CHECK-SAME: i32 [[N:%.*]]) {
@@ -61,7 +60,7 @@ define void @foo_i32(i32 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc8, %entry
+for.body:
   %indvars.iv21 = phi i64 [ 0, %entry ], [ %indvars.iv.next22, %for.inc8 ]
   %arrayidx = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, i64 %indvars.iv21
   %0 = trunc i64 %indvars.iv21 to i32
@@ -70,7 +69,7 @@ for.body:                                         ; preds = %for.inc8, %entry
   %add = add nsw i32 %1, %n
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.body
+for.body3:
   %indvars.iv = phi i64 [ 0, %for.body ], [ %indvars.iv.next, %for.body3 ]
   %arrayidx7 = getelementptr inbounds [8 x [8 x i32]], ptr @arr, i64 0, i64 %indvars.iv, i64 %indvars.iv21
   store i32 %add, ptr %arrayidx7, align 4
@@ -78,12 +77,12 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %exitcond = icmp eq i64 %indvars.iv.next, 8
   br i1 %exitcond, label %for.inc8, label %for.body3
 
-for.inc8:                                         ; preds = %for.body3
+for.inc8:
   %indvars.iv.next22 = add nuw nsw i64 %indvars.iv21, 1
   %exitcond23 = icmp eq i64 %indvars.iv.next22, 8
   br i1 %exitcond23, label %for.end10, label %for.body, !llvm.loop !1
 
-for.end10:                                        ; preds = %for.inc8
+for.end10:
   ret void
 }
 
@@ -123,14 +122,14 @@ define void @foo_i64(i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.inc8, %entry
+for.body:
   %indvars.iv21 = phi i64 [ 0, %entry ], [ %indvars.iv.next22, %for.inc8 ]
   %arrayidx = getelementptr inbounds [8 x i64], ptr @arrX, i64 0, i64 %indvars.iv21
   store i64 %indvars.iv21, ptr %arrayidx, align 4
   %add = add nsw i64 %indvars.iv21, %n
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.body
+for.body3:
   %indvars.iv = phi i64 [ 0, %for.body ], [ %indvars.iv.next, %for.body3 ]
   %arrayidx7 = getelementptr inbounds [8 x [8 x i64]], ptr @arrY, i64 0, i64 %indvars.iv, i64 %indvars.iv21
   store i64 %add, ptr %arrayidx7, align 4
@@ -138,12 +137,12 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %exitcond = icmp eq i64 %indvars.iv.next, 8
   br i1 %exitcond, label %for.inc8, label %for.body3
 
-for.inc8:                                         ; preds = %for.body3
+for.inc8:
   %indvars.iv.next22 = add nuw nsw i64 %indvars.iv21, 1
   %exitcond23 = icmp eq i64 %indvars.iv.next22, 8
   br i1 %exitcond23, label %for.end10, label %for.body, !llvm.loop !1
 
-for.end10:                                        ; preds = %for.inc8
+for.end10:
   ret void
 }
 
