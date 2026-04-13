@@ -95,8 +95,8 @@ public:
   /// invariant store of the reduction. Returns `true` if replacement took
   /// place. The order of stores must be preserved, hence \p
   /// FinalRedStoresBuidler.
-  bool replaceWithFinalIfReductionStore(VPBuilder &FinalRedStoresBuilder,
-                                        VPInstruction *VPI);
+  bool replaceWithFinalIfReductionStore(VPInstruction *VPI,
+                                        VPBuilder &FinalRedStoresBuilder);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {

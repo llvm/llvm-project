@@ -7527,7 +7527,7 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
 }
 
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
-    VPBuilder &FinalRedStoresBuilder, VPInstruction *VPI) {
+    VPInstruction *VPI, VPBuilder &FinalRedStoresBuilder) {
   StoreInst *SI;
   if ((SI = dyn_cast<StoreInst>(VPI->getUnderlyingInstr())) &&
       Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {

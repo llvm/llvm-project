@@ -6520,8 +6520,8 @@ void VPlanTransforms::makeMemOpWideningDecisions(
     };
 
     // Note: we must do that for scalar VPlan as well.
-    if (RecipeBuilder.replaceWithFinalIfReductionStore(FinalRedStoresBuilder,
-                                                       VPI))
+    if (RecipeBuilder.replaceWithFinalIfReductionStore(VPI,
+                                                       FinalRedStoresBuilder))
       continue;
 
     // Filter out scalar VPlan for the remaining memory operations.
