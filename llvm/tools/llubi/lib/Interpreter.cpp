@@ -12,6 +12,7 @@
 
 #include "Context.h"
 #include "ExecutorBase.h"
+#include "Library.h"
 #include "Value.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -68,6 +69,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
+  Library Lib;
 
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
@@ -76,8 +78,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   void setResult(Instruction &I, AnyValue V) {
-    if (Status)
-      Status &= Handler.onInstructionExecuted(I, V);
+    if (!hasProgramExited() && !Handler.onInstructionExecuted(I, V))
+      setFailed();
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
   }
 
@@ -142,7 +144,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
   void jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
     if (!Handler.onBBJump(Terminator, *DestBB)) {
-      Status = false;
+      setFailed();
       return;
     }
     BasicBlock *From = CurrentFrame->BB;
@@ -257,7 +259,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
-      : ExecutorBase(C, H), DL(Ctx.getDataLayout()) {
+      : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
+        Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this)) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
                            RetVal, Ctx.getTLIImpl());
   }
@@ -266,7 +269,8 @@ public:
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
-    Status &= Handler.onInstructionExecuted(RI, None);
+    if (!Handler.onInstructionExecuted(RI, None))
+      setFailed();
   }
 
   void visitUncondBrInst(UncondBrInst &BI) { jumpTo(BI, BI.getSuccessor()); }
@@ -311,7 +315,7 @@ public:
     }
 
     Handler.onUnrecognizedInstruction(CI);
-    Status = false;
+    setFailed();
   }
 
   void visitIndirectBrInst(IndirectBrInst &IBI) {
@@ -379,23 +383,31 @@ public:
     }
     default:
       Handler.onUnrecognizedInstruction(CB);
-      Status = false;
+      setFailed();
       return AnyValue();
     }
   }
 
-  AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee) {
+  AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee,
+                       ArrayRef<AnyValue> CalleeArgs) {
     LibFunc LF;
     // Respect nobuiltin attributes on call site.
     if (CB.isNoBuiltin() ||
         !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
       Handler.onUnrecognizedInstruction(CB);
-      Status = false;
+      setFailed();
       return AnyValue();
     }
 
+    if (auto LibCallRes =
+            Lib.executeLibcall(LF, CB.getName(), CB.getType(), CalleeArgs))
+      return *LibCallRes;
+
+    if (ExitInfo)
+      return AnyValue();
+
     Handler.onUnrecognizedInstruction(CB);
-    Status = false;
+    setFailed();
     return AnyValue();
   }
 
@@ -420,7 +432,7 @@ public:
 
       if (isa<InlineAsm>(CalledOperand)) {
         Handler.onUnrecognizedInstruction(CB);
-        Status = false;
+        setFailed();
         return;
       }
 
@@ -451,7 +463,7 @@ public:
       returnFromCallee();
       return;
     } else if (Callee->isDeclaration()) {
-      CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee);
+      CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee, CalleeArgs);
       returnFromCallee();
       return;
     } else {
@@ -766,7 +778,8 @@ public:
     auto Obj = Ctx.allocate(AllocSize, AI.getPointerAlignment(DL).value(),
                             AI.getName(), AI.getAddressSpace(),
                             IsInitiallyDead ? MemInitKind::Poisoned
-                                            : MemInitKind::Uninitialized);
+                                            : MemInitKind::Uninitialized,
+                            MemAllocKind::Stack);
     if (!Obj) {
       reportError("Insufficient stack space.");
       return;
@@ -873,13 +886,13 @@ public:
     // TODO: track volatile stores
     // TODO: handle metadata
     store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
-    if (Status)
-      Status &= Handler.onInstructionExecuted(SI, AnyValue());
+    if (!hasProgramExited() && !Handler.onInstructionExecuted(SI, AnyValue()))
+      setFailed();
   }
 
   void visitInstruction(Instruction &I) {
     Handler.onUnrecognizedInstruction(I);
-    Status = false;
+    setFailed();
   }
 
   void visitExtractValueInst(ExtractValueInst &EVI) {
@@ -966,10 +979,10 @@ public:
   /// This function implements the main interpreter loop.
   /// It handles function calls in a non-recursive manner to avoid stack
   /// overflows.
-  bool runMainLoop() {
+  ProgramExitInfo runMainLoop() {
     uint32_t MaxSteps = Ctx.getMaxSteps();
     uint32_t Steps = 0;
-    while (Status && !CallStack.empty()) {
+    while (!hasProgramExited() && !CallStack.empty()) {
       Frame &Top = CallStack.back();
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
@@ -982,7 +995,7 @@ public:
 
       Top.State = FrameState::Running;
       // Interpreter loop inside a function
-      while (Status) {
+      while (!hasProgramExited()) {
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
@@ -993,7 +1006,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
-        if (!Status)
+        if (hasProgramExited())
           break;
 
         // A function call or return has occurred.
@@ -1007,7 +1020,7 @@ public:
           ++Top.PC;
       }
 
-      if (!Status)
+      if (hasProgramExited())
         break;
 
       if (Top.State == FrameState::Exit) {
@@ -1016,19 +1029,21 @@ public:
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.
         for (auto &Obj : Top.Allocas)
-          Ctx.free(Obj->getAddress());
+          Ctx.free(*Obj);
         CallStack.pop_back();
       } else {
         assert(Top.State == FrameState::Pending &&
                "Expected to enter a callee.");
       }
     }
-    return Status;
+    if (!hasProgramExited())
+      requestProgramExit(ProgramExitInfo::ProgramExitKind::Returned);
+    return *getExitInfo();
   }
 };
 
-bool Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
-                          AnyValue &RetVal, EventHandler &Handler) {
+ProgramExitInfo Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
+                                     AnyValue &RetVal, EventHandler &Handler) {
   InstExecutor Executor(*this, Handler, F, Args, RetVal);
   return Executor.runMainLoop();
 }

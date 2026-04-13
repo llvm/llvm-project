@@ -25,7 +25,7 @@ TEST(DataExtractorTest, OffsetOverflow) {
 }
 
 TEST(DataExtractorTest, UnsignedNumbers) {
-  DataExtractor DE(StringRef(numberData, sizeof(numberData)-1), false, 8);
+  DataExtractor DE(StringRef(numberData, sizeof(numberData) - 1), false);
   uint64_t offset = 0;
 
   EXPECT_EQ(0x80U, DE.getU8(&offset));
@@ -40,7 +40,7 @@ TEST(DataExtractorTest, UnsignedNumbers) {
   EXPECT_EQ(0x8090FFFF80000000ULL, DE.getU64(&offset));
   EXPECT_EQ(8U, offset);
   offset = 0;
-  EXPECT_EQ(0x8090FFFF80000000ULL, DE.getAddress(&offset));
+  EXPECT_EQ(0x8090FFFF80000000ULL, DE.getUnsigned(&offset, 8));
   EXPECT_EQ(8U, offset);
   offset = 0;
 
@@ -52,7 +52,7 @@ TEST(DataExtractorTest, UnsignedNumbers) {
   offset = 0;
 
   // Now for little endian.
-  DE = DataExtractor(StringRef(numberData, sizeof(numberData)-1), true, 4);
+  DE = DataExtractor(StringRef(numberData, sizeof(numberData) - 1), true);
   EXPECT_EQ(0x9080U, DE.getU16(&offset));
   EXPECT_EQ(2U, offset);
   offset = 0;
@@ -62,7 +62,7 @@ TEST(DataExtractorTest, UnsignedNumbers) {
   EXPECT_EQ(0x80FFFF9080ULL, DE.getU64(&offset));
   EXPECT_EQ(8U, offset);
   offset = 0;
-  EXPECT_EQ(0xFFFF9080U, DE.getAddress(&offset));
+  EXPECT_EQ(0xFFFF9080U, DE.getUnsigned(&offset, 4));
   EXPECT_EQ(4U, offset);
   offset = 0;
 
