@@ -563,9 +563,12 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::BitInt: {
     const auto *bitIntTy = cast<BitIntType>(type);
-    resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
-                                   bitIntTy->isSigned(),
-                                   /*isBitInt=*/true);
+    unsigned numBits = bitIntTy->getNumBits();
+    assert(numBits <= cir::IntType::maxBitwidth() &&
+           "_BitInt width exceeds CIR IntType maximum");
+    resultType =
+        cir::IntType::get(&getMLIRContext(), numBits, bitIntTy->isSigned(),
+                          /*isBitInt=*/true);
     break;
   }
 
