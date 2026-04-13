@@ -282,5 +282,5 @@ exit:
 !8 = !{!"llvm.loop.mustprogress"}
 !9 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !10 = !{!"llvm.loop.vectorize.enable", i1 true}
-attributes #0 = { vscale_range(1,16) "target-features"="+sve2" }
+attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 attributes #1 = { "target-cpu"="apple-m1" }

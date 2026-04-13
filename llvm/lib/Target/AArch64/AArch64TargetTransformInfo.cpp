@@ -6109,23 +6109,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   InstructionCost ExpandCost = BaseT::getPartialReductionCost(
       Opcode, InputTypeA, InputTypeB, AccumType, VF, OpAExtend, OpBExtend,
       BinOp, CostKind, FMF);
-  if (!ExpandCost.isValid())
-    return Invalid;
 
   // Slightly lower the cost of a sub reduction so that it can be considered
   // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
   // because we don't yet model these operations directly.
-  // FIXME: Only do this once confirmed that these are part of an add/sub chain
-  // that can be used to form a CDOT.
-  if (IsSub && (ST->hasSVE2() || ST->hasSME()))
-    return (8 * ExpandCost) / 10;
-
-  // Add extra penalty when there are no special instructions available to
-  // implement the partial reduction, because the added register dependence
-  // makes it more expensive than doing a regular reduction, even when the
-  // instructions to do so are no different from doing a regular outer-loop
-  // reduction.
-  return (15 * ExpandCost) / 10;
+  return ExpandCost.isValid() && IsSub ? ((8 * ExpandCost) / 10) : ExpandCost;
 }
 
 InstructionCost
