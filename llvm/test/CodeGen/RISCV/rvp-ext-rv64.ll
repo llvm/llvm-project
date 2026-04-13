@@ -639,6 +639,30 @@ define <2 x i32> @test_plui_w_negative() {
   ret <2 x i32> splat (i32 u0xc9800000)
 }
 
+define <8 x i8> @test_allones_v8i8() {
+; CHECK-LABEL: test_allones_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+  ret <8 x i8> splat (i8 -1)
+}
+
+define <4 x i16> @test_allones_v4i16() {
+; CHECK-LABEL: test_allones_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+  ret <4 x i16> splat (i16 -1)
+}
+
+define <2 x i32> @test_allones_v2i32() {
+; CHECK-LABEL: test_allones_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+  ret <2 x i32> splat (i32 -1)
+}
+
 define i16 @test_extract_vector_16(<4 x i16> %a) {
 ; CHECK-LABEL: test_extract_vector_16:
 ; CHECK:       # %bb.0:
@@ -2507,10 +2531,10 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB202_2
+; CHECK-NEXT:    bnez a3, .LBB205_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB202_2:
+; CHECK-NEXT:  .LBB205_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i16> %a, <4 x i16> %b
   ret <4 x i16> %res
@@ -2521,10 +2545,10 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB203_2
+; CHECK-NEXT:    bnez a3, .LBB206_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB203_2:
+; CHECK-NEXT:  .LBB206_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <8 x i8> %a, <8 x i8> %b
   ret <8 x i8> %res
@@ -2535,10 +2559,10 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB204_2
+; CHECK-NEXT:    bnez a3, .LBB207_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB204_2:
+; CHECK-NEXT:  .LBB207_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i32> %a, <2 x i32> %b
   ret <2 x i32> %res

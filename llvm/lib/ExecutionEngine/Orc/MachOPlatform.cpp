@@ -1765,6 +1765,9 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   else
     B.template addLoadCommand<MachO::LC_ID_DYLIB>(JD.getName(), 0, 0, 0);
 
+  if (Opts.UUID)
+    B.template addLoadCommand<MachO::LC_UUID>(*Opts.UUID);
+
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
