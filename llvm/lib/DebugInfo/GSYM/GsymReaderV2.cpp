@@ -33,19 +33,28 @@ llvm::Error GsymReaderV2::parseHeaderAndGlobalDataEntries() {
 void GsymReaderV2::dump(raw_ostream &OS) {
   OS << *Hdr << "\n";
 
-  // Print GlobalData entries sorted by file offset.
-  std::vector<GlobalData> Sections;
-  for (const auto &[Type, GD] : GlobalDataSections)
-    Sections.push_back(GD);
-  llvm::sort(Sections, [](const GlobalData &A, const GlobalData &B) {
-    return A.FileOffset < B.FileOffset;
-  });
+  // Print GlobalData entries sorted by the entries appearance in the GlobalData section.
   OS << "Global Data Sections:\n";
   OS << "TYPE            FILE OFFSET 64      FILE SIZE 64\n";
   OS << "=============== ==================  ==================\n";
-  for (const auto &GD : Sections) {
+  /// Re-parse the GlobalData items to ensure we show the GlobalData
+  /// in the exact order it appears in the GSYM data.
+  const StringRef Buf = MemBuffer->getBuffer();
+  const uint64_t BufSize = Buf.size();
+  const bool IsLittleEndian = (Endian == llvm::endianness::little);
+  DataExtractor Data(Buf, IsLittleEndian, 8 /* address size, unused */);
+  uint64_t Offset = HeaderV2::getEncodedSize();
+  while (Offset + sizeof(GlobalData) <= BufSize) {
+    auto GDOrErr = GlobalData::decode(Data, Offset);
+    assert(GDOrErr && "GlobalData::decode() should not fail");
+    const GlobalData &GD = *GDOrErr;
+
+    if (GD.Type == GlobalInfoType::EndOfList)
+      break;
+
+    GlobalDataSections[GD.Type] = GD;
     OS << format("%-15s ", getNameForGlobalInfoType(GD.Type).data())
-       << HEX64(GD.FileOffset) << "  " << HEX64(GD.FileSize) << "\n";
+       << HEX64(GlobalDataSections[GD.Type].FileOffset) << "  " << HEX64(GlobalDataSections[GD.Type].FileSize) << "\n";
   }
   OS << "\n";
 
