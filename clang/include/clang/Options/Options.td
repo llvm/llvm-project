@@ -6693,8 +6693,10 @@ def y : Joined<["-"], "y">;
 
 defm integrated_as : BoolFOption<"integrated-as",
   CodeGenOpts<"DisableIntegratedAS">, DefaultFalse,
-  NegFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption], "Disable">,
-  PosFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption], "Enable">,
+  NegFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
+          "Disable">,
+  PosFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption, FC1Option],
+          "Enable">,
   BothFlags<[], [ClangOption], " the integrated assembler">>;
 
 def fintegrated_cc1 : Flag<["-"], "fintegrated-cc1">,
@@ -6717,7 +6719,7 @@ def fno_integrated_objemitter : Flag<["-"], "fno-integrated-objemitter">,
 
 def : Flag<["-"], "integrated-as">, Alias<fintegrated_as>;
 def : Flag<["-"], "no-integrated-as">, Alias<fno_integrated_as>,
-      Visibility<[ClangOption, CC1Option, FlangOption]>;
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 
 def working_directory : Separate<["-"], "working-directory">,
   Visibility<[ClangOption, CC1Option]>,
