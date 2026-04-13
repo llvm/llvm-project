@@ -2635,6 +2635,25 @@ std::function<void()> copy_function() {
   return f2; // expected-note {{returned here}}
 }
 
+std::function<void()> copy_assign() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // expected-warning {{address of stack memory is returned later}}
+  std::function<void()> f2 = []() {};
+  f2 = f;
+  return f2; // expected-note {{returned here}}
+}
+
+// FIXME: False negative. std::move's lifetimebound handling in
+// `handleFunctionCall` only flows the outermost origin, missing inner origins
+// that carry the lambda's loans.
+std::function<void()> move_assign() {
+  int x;
+  std::function<void()> f = [&x]() { (void)x; }; // Should warn.
+  std::function<void()> f2 = []() {};
+  f2 = std::move(f);
+  return f2;
+}
+
 std::function<void()> reassign_safe_then_unsafe() {
   static int safe = 1;
   int local = 2;

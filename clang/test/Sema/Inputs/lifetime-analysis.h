@@ -274,7 +274,11 @@ template<class R, class... Args>
 class function<R(Args...)> {
 public:
   template<class F> function(F) {}
+  function(const function&) {}
+  function(function&&) {}
   template<class F> function& operator=(F) { return *this; }
+  function& operator=(const function&) { return *this; }
+  function& operator=(function&&) { return *this; }
   ~function();
 };
 
