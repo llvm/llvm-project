@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
@@ -19,6 +20,18 @@
 #define DEBUG_TYPE "orc"
 
 namespace llvm::orc {
+
+class SelfExecutorProcessControl::InProcessDylibManager : public DylibManager {
+public:
+  InProcessDylibManager(char GlobalManglingPrefix);
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
+  void
+  lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                     DylibManager::SymbolLookupCompleteFn Complete) override;
+
+private:
+  char GlobalManglingPrefix;
+};
 
 SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
