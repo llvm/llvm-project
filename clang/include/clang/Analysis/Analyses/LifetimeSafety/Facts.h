@@ -55,6 +55,8 @@ public:
     OriginEscapes,
     /// An origin is invalidated (e.g. vector resized).
     InvalidateOrigin,
+    // An origin is manually destroyed (e.g. `delete`, manual destructor call).
+    DestroyOrigin,
   };
 
 private:
@@ -295,6 +297,24 @@ public:
   OriginID getMovedOrigin() const { return MovedOrigin; }
   const Expr *getMoveExpr() const { return MoveExpr; }
 
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+class DestroyOriginFact : public Fact {
+  OriginID OID;
+  const Expr *DestroyExpr;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::DestroyOrigin;
+  }
+
+  DestroyOriginFact(OriginID OID, const Expr *DestroyExpr)
+      : Fact(Kind::DestroyOrigin), OID(OID), DestroyExpr(DestroyExpr) {}
+
+  OriginID getDestroyedOrigin() const { return OID; }
+  const Expr *getDestroyExpr() const { return DestroyExpr; }
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
