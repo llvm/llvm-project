@@ -43,6 +43,7 @@ void EmbeddedResourceNameBuilder::pushArrayIndex(uint64_t Index) {
 
 void EmbeddedResourceNameBuilder::pushBaseNameHierarchy(
     CXXRecordDecl *DerivedRD, CXXRecordDecl *BaseRD) {
+  assert(BaseRD != DerivedRD && DerivedRD->isDerivedFrom(BaseRD));
   Offsets.push_back(Name.size());
   Name.append(FieldDelim);
   while (BaseRD != DerivedRD) {

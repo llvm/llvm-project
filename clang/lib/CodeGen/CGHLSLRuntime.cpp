@@ -96,7 +96,7 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
-// Gived a MemberExpr of a resource or resource array type, find the parent
+// Given a MemberExpr of a resource or resource array type, find the parent
 // VarDecl of the struct or class instance that contains this resource and
 // build the full resource name based on the member access path.
 //
@@ -121,8 +121,8 @@ static const VarDecl *findStructResourceParentDeclAndBuildName(
     }
 
     WorkList.push_back(E);
-    if (const auto *ME = dyn_cast<MemberExpr>(E))
-      E = ME->getBase();
+    if (const auto *MExp = dyn_cast<MemberExpr>(E))
+      E = MExp->getBase();
     else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
       E = ICE->getSubExpr();
     else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
@@ -133,6 +133,8 @@ static const VarDecl *findStructResourceParentDeclAndBuildName(
       return nullptr;
     else
       llvm_unreachable("unexpected expr type in resource member access");
+
+    assert(E && "expected valid expression");
   }
 
   while (!WorkList.empty()) {
@@ -178,12 +180,11 @@ findAssociatedResourceDeclForStruct(ASTContext &AST, const MemberExpr *ME) {
 
   IdentifierInfo *II = NameBuilder.getNameAsIdentifier(AST);
   for (const Attr *A : ParentVD->getAttrs()) {
-    const auto *ADA = dyn_cast<HLSLAssociatedResourceDeclAttr>(A);
-    if (!ADA)
-      continue;
-    VarDecl *AssocResVD = dyn_cast<VarDecl>(ADA->getResDecl());
-    if (AssocResVD->getIdentifier() == II)
-      return AssocResVD;
+    if (const auto *ADA = dyn_cast<HLSLAssociatedResourceDeclAttr>(A)) {
+      VarDecl *AssocResVD = ADA->getResDecl();
+      if (AssocResVD->getIdentifier() == II)
+        return AssocResVD;
+    }
   }
   return nullptr;
 }
