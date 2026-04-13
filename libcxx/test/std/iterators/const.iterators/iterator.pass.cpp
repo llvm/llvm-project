@@ -10,6 +10,7 @@
 
 // std::basic_const_iterator
 
+#include <cassert>
 #include <iterator>
 #include <list>
 #include <memory>
