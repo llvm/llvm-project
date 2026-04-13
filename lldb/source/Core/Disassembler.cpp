@@ -1355,6 +1355,37 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   start = ResolveAddress(target, start);
 
+  // WebAssembly functions begin with local variable declarations that are part
+  // of the binary format but are not executable instructions. Skip past them
+  // so the disassembler doesn't try to decode non-instruction bytes.
+  if (m_arch.GetTriple().getArch() == llvm::Triple::wasm32 ||
+      m_arch.GetTriple().getArch() == llvm::Triple::wasm64) {
+    if (ModuleSP module_sp = start.GetModule()) {
+      SymbolContext sc;
+      module_sp->ResolveSymbolContextForAddress(start, eSymbolContextSymbol,
+                                                sc);
+      if (sc.symbol) {
+        if (uint32_t prologue_size = sc.symbol->GetPrologueByteSize()) {
+          const Address symbol_addr = sc.symbol->GetAddress();
+          const AddressRange prologue_range(symbol_addr, prologue_size);
+          if (prologue_range.Contains(start)) {
+            const addr_t prologue_offset = start.GetLoadAddress(&target) -
+                                           symbol_addr.GetLoadAddress(&target);
+            const addr_t skip = prologue_size - prologue_offset;
+
+            // Skip disassembling the prologue.
+            start.Slide(skip);
+
+            // If there is a limit in bytes, we need to update it so we don't
+            // disassemble past what would have been the end.
+            if (limit.kind == Limit::Bytes && limit.value > skip)
+              limit.value -= skip;
+          }
+        }
+      }
+    }
+  }
+
   addr_t byte_size = limit.value;
   if (limit.kind == Limit::Instructions)
     byte_size *= m_arch.GetMaximumOpcodeByteSize();
