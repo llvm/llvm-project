@@ -2204,7 +2204,7 @@ void ASTDeclWriter::VisitExplicitInstantiationDecl(
   Record.AddDeclRef(D->getSpecialization());
   Record.AddSourceLocation(D->getExternLoc());
   Record.AddSourceLocation(D->getNameLoc());
-  Record.AddTypeSourceInfo(D->getTypeAsWritten());
+  Record.AddTypeSourceInfo(D->getRawTypeSourceInfo());
   Record.push_back(D->getTemplateSpecializationKind());
   // Trailing objects.
   if (D->hasTrailingQualifier())

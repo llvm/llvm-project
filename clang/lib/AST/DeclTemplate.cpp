@@ -1834,7 +1834,7 @@ ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
 }
 
 SourceLocation ExplicitInstantiationDecl::getTagKWLoc() const {
-  if (auto *TSI = getTypeAsWritten()) {
+  if (auto *TSI = getRawTypeSourceInfo()) {
     if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       return TL.getElaboratedKeywordLoc();
     if (auto TL = TSI->getTypeLoc().getAs<TagTypeLoc>())
@@ -1844,11 +1844,9 @@ SourceLocation ExplicitInstantiationDecl::getTagKWLoc() const {
 }
 
 NestedNameSpecifierLoc ExplicitInstantiationDecl::getQualifierLoc() const {
-  // For function / variable templates, qualifier is a trailing object.
   if (hasTrailingQualifier())
     return *getTrailingObjects<NestedNameSpecifierLoc>();
-  // For tag types, qualifier is embedded in TypeSourceInfo.
-  if (auto *TSI = getTypeAsWritten()) {
+  if (auto *TSI = getRawTypeSourceInfo()) {
     if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       return TL.getQualifierLoc();
     if (auto TL = TSI->getTypeLoc().getAs<TagTypeLoc>())
@@ -1857,29 +1855,61 @@ NestedNameSpecifierLoc ExplicitInstantiationDecl::getQualifierLoc() const {
   return NestedNameSpecifierLoc();
 }
 
-const ASTTemplateArgumentListInfo *
-ExplicitInstantiationDecl::getTemplateArgsAsWritten() const {
-  // For function / variable templates, args are a trailing object.
+TypeSourceInfo *ExplicitInstantiationDecl::getTypeAsWritten() const {
+  auto *TSI = getRawTypeSourceInfo();
+  if (!TSI)
+    return nullptr;
+  TypeLoc TL = TSI->getTypeLoc();
+  // For class templates and nested classes, the "type" is fully described by
+  // the unified accessors (getQualifierLoc, getTemplateArg, getTagKWLoc).
+  if (TL.getAs<TemplateSpecializationTypeLoc>() || TL.getAs<TagTypeLoc>())
+    return nullptr;
+  return TSI;
+}
+
+unsigned ExplicitInstantiationDecl::getNumTemplateArgs() const {
   if (hasTrailingArgsAsWritten())
-    return *getTrailingObjects<const ASTTemplateArgumentListInfo *>();
-  // For class templates, args are encoded in the TemplateSpecializationTypeLoc
-  // and not returned here.
-  return nullptr;
+    return (*getTrailingObjects<const ASTTemplateArgumentListInfo *>())
+        ->NumTemplateArgs;
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getNumArgs();
+  return 0;
+}
+
+TemplateArgumentLoc
+ExplicitInstantiationDecl::getTemplateArg(unsigned I) const {
+  if (hasTrailingArgsAsWritten())
+    return (**getTrailingObjects<const ASTTemplateArgumentListInfo *>())[I];
+  auto *TSI = getRawTypeSourceInfo();
+  return TSI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().getArgLoc(I);
+}
+
+SourceLocation ExplicitInstantiationDecl::getTemplateArgsLAngleLoc() const {
+  if (hasTrailingArgsAsWritten())
+    return (*getTrailingObjects<const ASTTemplateArgumentListInfo *>())
+        ->getLAngleLoc();
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getLAngleLoc();
+  return SourceLocation();
+}
+
+SourceLocation ExplicitInstantiationDecl::getTemplateArgsRAngleLoc() const {
+  if (hasTrailingArgsAsWritten())
+    return (*getTrailingObjects<const ASTTemplateArgumentListInfo *>())
+        ->getRAngleLoc();
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getRAngleLoc();
+  return SourceLocation();
 }
 
 SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
-  // Pick the rightmost location among the name, template args, and type.
-  // For postfix types (arrays, function pointers) and function templates,
-  // the TypeLoc extends past the name. Cf. DeclaratorDecl::getSourceRange().
   SourceLocation End = NameLoc;
-  // Trailing template args (function / variable templates).
-  if (hasTrailingArgsAsWritten()) {
-    auto *Args = *getTrailingObjects<const ASTTemplateArgumentListInfo *>();
-    if (Args->RAngleLoc > End)
-      End = Args->RAngleLoc;
-  }
-  // TypeSourceInfo covers class template args and function/variable type
-  // extent.
+  SourceLocation RAngle = getTemplateArgsRAngleLoc();
+  if (RAngle.isValid() && RAngle > End)
+    End = RAngle;
   if (auto *TSI = getTypeAsWritten()) {
     SourceLocation TypeEnd = TSI->getTypeLoc().getEndLoc();
     if (TypeEnd.isValid() && TypeEnd > End)

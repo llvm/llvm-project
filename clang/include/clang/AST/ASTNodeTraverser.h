@@ -684,12 +684,10 @@ public:
   }
 
   void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D) {
-    // The specialization is already elsewhere in the AST; don't re-traverse it.
-    // Traverse source-location sub-nodes: template arguments and
-    // type-as-written.
-    if (const auto *ArgsAsWritten = D->getTemplateArgsAsWritten())
-      for (const TemplateArgumentLoc &Loc : ArgsAsWritten->arguments())
-        Visit(Loc.getArgument(), Loc.getSourceRange());
+    for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I) {
+      TemplateArgumentLoc Loc = D->getTemplateArg(I);
+      Visit(Loc.getArgument(), Loc.getSourceRange());
+    }
     if (TypeSourceInfo *TSI = D->getTypeAsWritten())
       Visit(TSI->getTypeLoc());
   }

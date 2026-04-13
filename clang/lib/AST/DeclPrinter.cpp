@@ -1349,8 +1349,12 @@ void DeclPrinter::VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D) {
   if (D->getQualifierLoc())
     D->getQualifierLoc().getNestedNameSpecifier().print(NameOS, Policy);
   Spec->printName(NameOS, Policy);
-  if (auto *ArgsAsWritten = D->getTemplateArgsAsWritten())
-    printTemplateArgumentList(NameOS, ArgsAsWritten->arguments(), Policy);
+  if (unsigned NumArgs = D->getNumTemplateArgs()) {
+    SmallVector<TemplateArgumentLoc, 4> Args;
+    for (unsigned I = 0; I < NumArgs; ++I)
+      Args.push_back(D->getTemplateArg(I));
+    printTemplateArgumentList(NameOS, Args, Policy);
+  }
 
   if (auto *RD = dyn_cast<RecordDecl>(Spec)) {
     Out << RD->getKindName() << " " << Name;

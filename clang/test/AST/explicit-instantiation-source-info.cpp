@@ -47,13 +47,10 @@ template int ns::bar<int>;
 // (c) class template
 template struct ns::S<int>;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:26> col:1 explicit_instantiation_definition template 'S'
+// CHECK-NEXT: NestedNameSpecifier Namespace {{.*}} 'ns'
 // CHECK-NEXT: ClassTemplateSpecialization {{.*}} 'S'
-// CHECK-NEXT: TemplateSpecializationTypeLoc <col:10, col:26> 'struct ns::S<int>' struct
-// CHECK-NEXT:   name: 'ns::S' qualified
-// CHECK-NEXT:     NestedNameSpecifier Namespace {{.*}} 'ns'
-// CHECK-NEXT:     ClassTemplateDecl {{.*}} S
-// CHECK-NEXT:   TemplateArgument {{.*}} type 'int'
-// CHECK-NEXT:     BuiltinType {{.*}} 'int'
+// CHECK-NEXT: TemplateArgument <col:23> type 'int'
+// CHECK-NEXT:   BuiltinType {{.*}} 'int'
 
 // (d) member function
 template void ns::S<long>::method(long);
@@ -92,13 +89,11 @@ template void ns::S<long>::tmpl<double>(double);
 // CHECK-NEXT:     BuiltinTypeLoc <col:41> 'double'
 // CHECK-NEXT:   BuiltinTypeLoc <col:10> 'void'
 
-// (g) nested class (no template args or type)
+// (g) nested class
 template struct ns::S<long>::Inner;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:30> col:1 explicit_instantiation_definition template 'Inner'
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
 // CHECK-NEXT: CXXRecord {{.*}} 'Inner'
-// CHECK-NEXT: RecordTypeLoc <col:10, col:30> 'struct ns::S<long>::Inner' struct
-// CHECK-NEXT:   NestedNameSpecifier TypeSpec 'ns::S<long>'
-// CHECK-NEXT:   CXXRecord {{.*}} 'Inner'
 
 // extern template variants
 extern template void ns::foo<float>(float);
@@ -114,13 +109,10 @@ extern template void ns::foo<float>(float);
 
 extern template struct ns::S<float>;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:35> col:8 explicit_instantiation_declaration extern template 'S'
+// CHECK-NEXT: NestedNameSpecifier Namespace {{.*}} 'ns'
 // CHECK-NEXT: ClassTemplateSpecialization {{.*}} 'S'
-// CHECK-NEXT: TemplateSpecializationTypeLoc <col:17, col:35> 'struct ns::S<float>' struct
-// CHECK-NEXT:   name: 'ns::S' qualified
-// CHECK-NEXT:     NestedNameSpecifier Namespace {{.*}} 'ns'
-// CHECK-NEXT:     ClassTemplateDecl {{.*}} S
-// CHECK-NEXT:   TemplateArgument {{.*}} type 'float'
-// CHECK-NEXT:     BuiltinType {{.*}} 'float'
+// CHECK-NEXT: TemplateArgument <col:30> type 'float'
+// CHECK-NEXT:   BuiltinType {{.*}} 'float'
 
 // extern template: variable template
 extern template double ns::bar<double>;
@@ -160,13 +152,11 @@ extern template void ns::S<double>::tmpl<float>(float);
 // CHECK-NEXT:     BuiltinTypeLoc <col:49> 'float'
 // CHECK-NEXT:   BuiltinTypeLoc <col:17> 'void'
 
-// extern template: nested class (no template args or type)
+// extern template: nested class
 extern template struct ns::S<double>::Inner;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:39> col:8 explicit_instantiation_declaration extern template 'Inner'
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<double>'
 // CHECK-NEXT: CXXRecord {{.*}} 'Inner'
-// CHECK-NEXT: RecordTypeLoc <col:17, col:39> 'struct ns::S<double>::Inner' struct
-// CHECK-NEXT:   NestedNameSpecifier TypeSpec 'ns::S<double>'
-// CHECK-NEXT:   CXXRecord {{.*}} 'Inner'
 
 // member variable template
 template double ns::S<long>::mvar<double>;
@@ -180,13 +170,10 @@ template double ns::S<long>::mvar<double>;
 // member class template
 template struct ns::S<long>::Nested<double>;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:43> col:1 explicit_instantiation_definition template 'Nested'
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
 // CHECK-NEXT: ClassTemplateSpecialization {{.*}} 'Nested'
-// CHECK-NEXT: TemplateSpecializationTypeLoc <col:10, col:43> 'struct ns::S<long>::Nested<double>' struct
-// CHECK-NEXT:   name: 'ns::S<long>::Nested' qualified
-// CHECK-NEXT:     NestedNameSpecifier TypeSpec 'ns::S<long>'
-// CHECK-NEXT:     ClassTemplateDecl {{.*}} Nested
-// CHECK-NEXT:   TemplateArgument {{.*}} type 'double'
-// CHECK-NEXT:     BuiltinType {{.*}} 'double'
+// CHECK-NEXT: TemplateArgument <col:37> type 'double'
+// CHECK-NEXT:   BuiltinType {{.*}} 'double'
 
 // deeply nested: A<int>::B<double>::deep<float>
 template void ns::A<int>::B<double>::deep<float>(float);
@@ -222,9 +209,6 @@ namespace ns {
   template struct S<short>;
   // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:3, col:26> col:3 explicit_instantiation_definition template 'S'
   // CHECK-NEXT: ClassTemplateSpecialization {{.*}} 'S'
-  // CHECK-NEXT: TemplateSpecializationTypeLoc <col:12, col:26> 'struct S<short>' struct
-  // CHECK-NEXT:   name: 'S':'ns::S' qualified
-  // CHECK-NEXT:     ClassTemplateDecl {{.*}} S
-  // CHECK-NEXT:   TemplateArgument {{.*}} type 'short'
-  // CHECK-NEXT:     BuiltinType {{.*}} 'short'
+  // CHECK-NEXT: TemplateArgument <col:21> type 'short'
+  // CHECK-NEXT:   BuiltinType {{.*}} 'short'
 }
