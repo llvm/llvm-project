@@ -137,7 +137,7 @@ SymbolLocatorSymStore::LookupEntry MakeLookupEntry(llvm::StringRef source,
   return entry;
 }
 
-std::vector<SymbolLocatorSymStore::LookupEntry> getGlobalLookupOrder() {
+std::vector<SymbolLocatorSymStore::LookupEntry> GetGlobalLookupOrder() {
   std::vector<SymbolLocatorSymStore::LookupEntry> result;
 
   for (const auto &url : GetGlobalPluginProperties().GetURLs())
@@ -401,7 +401,7 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
   }
 
   std::string key = FormatSymStoreKey(uuid);
-  for (const LookupEntry &entry : getGlobalLookupOrder()) {
+  for (const LookupEntry &entry : GetGlobalLookupOrder()) {
     if (auto spec = LocateSymStoreEntry(entry, key, pdb_name))
       return *spec;
   }
