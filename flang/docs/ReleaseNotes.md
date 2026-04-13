@@ -35,7 +35,7 @@ page](https://llvm.org/releases/).
 
 ## New Compiler Flags
 
-- The warning flags with suffixes `-Wopen-mp` and `-Wopen-acc` have been deprecated in favor of corrected spellings with the respective suffixes `-Wopenmp` and `-Wopenacc`.
+- The warning flags with prefixes `-Wopen-mp` and `-Wopen-acc` have been deprecated in favor of corrected spellings with the respective prefixes `-Wopenmp` and `-Wopenacc`.
 
 ## Windows Support
 
