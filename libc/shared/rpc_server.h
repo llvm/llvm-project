@@ -20,6 +20,10 @@
 #define flockfile _lock_file
 #define funlockfile _unlock_file
 #define fwrite_unlocked _fwrite_nolock
+#elif defined(__APPLE__)
+// MacOS doesn't have an equivalent of fwrite_unlocked so we just use
+// fwrite.
+#define fwrite_unlocked fwrite
 #endif
 
 namespace rpc {

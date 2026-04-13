@@ -75,12 +75,12 @@ AST_MATCHER(Decl, isInImportableModuleUnit) {
   return false;
 }
 
-AST_MATCHER_P(Decl, isAllRedeclsInMainFile, FileExtensionsSet,
+AST_MATCHER_P(Decl, isAllRedeclsInMainFile, const FileExtensionsSet *,
               HeaderFileExtensions) {
   return llvm::all_of(Node.redecls(), [&](const Decl *D) {
     return isInMainFile(D->getLocation(),
                         Finder->getASTContext().getSourceManager(),
-                        HeaderFileExtensions);
+                        *HeaderFileExtensions);
   });
 }
 
@@ -124,7 +124,6 @@ AST_MATCHER(CXXRecordDecl, isExplicitTemplateInstantiation) {
 UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()),
       FixMode(Options.get("FixMode", FixModeKind::UseStatic)),
       AnalyzeFunctions(Options.get("AnalyzeFunctions", true)),
       AnalyzeVariables(Options.get("AnalyzeVariables", true)),
@@ -144,8 +143,8 @@ void UseInternalLinkageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
-  auto Common =
-      allOf(isFirstDecl(), isAllRedeclsInMainFile(HeaderFileExtensions),
+  const auto Common =
+      allOf(isFirstDecl(), isAllRedeclsInMainFile(&getHeaderFileExtensions()),
             unless(anyOf(isInAnonymousNamespace(), isInImportableModuleUnit(),
                          hasAncestor(decl(friendDecl())))));
 

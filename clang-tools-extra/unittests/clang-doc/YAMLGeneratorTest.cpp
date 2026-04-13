@@ -28,20 +28,25 @@ TEST_F(YAMLGeneratorTest, emitNamespaceYAML) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Path = "path/to/A";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
                          "path::to::A::Namespace::ChildNamespace",
                          "path/to/A/Namespace");
   I.Children.Namespaces.push_back(NewNamespace);
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "path::to::A::Namespace::ChildStruct",
-                                  "path/to/A/Namespace");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Name = "OneFunction";
-  I.Children.Functions.back().Access = AccessSpecifier::AS_none;
-  I.Children.Enums.emplace_back();
-  I.Children.Enums.back().Name = "OneEnum";
+  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
+                        "path::to::A::Namespace::ChildStruct",
+                        "path/to/A/Namespace");
+  I.Children.Records.push_back(ChildStruct);
+  FunctionInfo F;
+  F.Name = "OneFunction";
+  F.Access = AccessSpecifier::AS_none;
+  I.Children.Functions.push_back(F);
+
+  EnumInfo E;
+  E.Name = "OneEnum";
+  I.Children.Enums.push_back(E);
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -85,43 +90,55 @@ TEST_F(YAMLGeneratorTest, emitRecordYAML) {
   I.Name = "r";
   I.Path = "path/to/A";
   I.IsTypeDef = true;
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  I.Loc.push_back(Loc1);
 
-  I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
+  MemberTypeInfo M(TypeInfo("int"), "X", AccessSpecifier::AS_private);
 
   // Member documentation.
-  CommentInfo TopComment;
-  TopComment.Kind = CommentKind::CK_FullComment;
-  TopComment.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Brief = TopComment.Children.back().get();
-  Brief->Kind = CommentKind::CK_ParagraphComment;
-  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
-  Brief->Children.back()->Kind = CommentKind::CK_TextComment;
-  Brief->Children.back()->Name = "ParagraphComment";
-  Brief->Children.back()->Text = "Value of the thing.";
-  I.Members.back().Description.push_back(std::move(TopComment));
+  CommentInfo BriefChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                             "Value of the thing.",
+                                             "ParagraphComment")};
+  CommentInfo TopCommentChildren[] = {
+      CommentInfo(CommentKind::CK_ParagraphComment, BriefChildren)};
+  CommentInfo TopComment(CommentKind::CK_FullComment, TopCommentChildren);
+  M.Description.push_back(TopComment);
+  MemberTypeInfo MemArr[] = {std::move(M)};
+  I.Members = llvm::ArrayRef(MemArr);
 
   I.TagType = TagTypeKind::Class;
-  I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
-                       AccessSpecifier::AS_public, true);
-  I.Bases.back().Children.Functions.emplace_back();
-  I.Bases.back().Children.Functions.back().Name = "InheritedFunctionOne";
-  I.Bases.back().Members.emplace_back(TypeInfo("int"), "N",
-                                      AccessSpecifier::AS_private);
-  // F is in the global namespace
-  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "");
-  I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record,
-                                "path::to::G::G", "path/to/G");
+  BaseRecordInfo B(EmptySID, "F", "path/to/F", true, AccessSpecifier::AS_public,
+                   true);
+  FunctionInfo F;
+  F.Name = "InheritedFunctionOne";
+  B.Children.Functions.push_back(F);
+  MemberTypeInfo BMem[] = {
+      MemberTypeInfo(TypeInfo("int"), "N", AccessSpecifier::AS_private)};
+  B.Members = llvm::ArrayRef(BMem);
+  BaseRecordInfo Bases[] = {std::move(B)};
+  I.Bases = llvm::ArrayRef(Bases);
 
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "path::to::A::r::ChildStruct", "path/to/A/r");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Name = "OneFunction";
-  I.Children.Enums.emplace_back();
-  I.Children.Enums.back().Name = "OneEnum";
+  // F is in the global namespace
+  Reference Parents[] = {Reference(EmptySID, "F", InfoType::IT_record, "")};
+  I.Parents = llvm::ArrayRef(Parents);
+  Reference VParents[] = {Reference(EmptySID, "G", InfoType::IT_record,
+                                    "path::to::G::G", "path/to/G")};
+  I.VirtualParents = llvm::ArrayRef(VParents);
+
+  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
+                        "path::to::A::r::ChildStruct", "path/to/A/r");
+  I.Children.Records.push_back(ChildStruct);
+  FunctionInfo F2;
+  F2.Name = "OneFunction";
+  I.Children.Functions.push_back(F2);
+
+  EnumInfo E;
+  E.Name = "OneEnum";
+  I.Children.Enums.push_back(E);
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -208,17 +225,22 @@ ChildEnums:
 TEST_F(YAMLGeneratorTest, emitFunctionYAML) {
   FunctionInfo I;
   I.Name = "f";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  I.Loc.push_back(Loc1);
 
   I.Access = AccessSpecifier::AS_none;
 
   I.ReturnType = TypeInfo(Reference(EmptySID, "void", InfoType::IT_default));
-  I.Params.emplace_back(TypeInfo("int"), "P");
-  I.Params.emplace_back(TypeInfo("double"), "D");
-  I.Params.back().DefaultValue = "2.0 * M_PI";
+
+  FieldTypeInfo P1(TypeInfo("int"), "P");
+  FieldTypeInfo D(TypeInfo("double"), "D");
+  D.DefaultValue = "2.0 * M_PI";
+  FieldTypeInfo Params[] = {std::move(P1), std::move(D)};
+  I.Params = llvm::ArrayRef(Params);
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -273,12 +295,15 @@ ReturnType:
 TEST_F(YAMLGeneratorTest, emitSimpleEnumYAML) {
   EnumInfo I;
   I.Name = "e";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  I.Loc.push_back(Loc1);
 
-  I.Members.emplace_back("X");
+  EnumValueInfo EV[] = {EnumValueInfo("X")};
+  I.Members = llvm::ArrayRef(EV);
   I.Scoped = false;
 
   auto G = getYAMLGenerator();
@@ -315,7 +340,8 @@ TEST_F(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
   EnumInfo I;
   I.Name = "e";
 
-  I.Members.emplace_back("X", "-9876", "FOO_BAR + 2");
+  EnumValueInfo EV[] = {EnumValueInfo("X", "-9876", "FOO_BAR + 2")};
+  I.Members = llvm::ArrayRef(EV);
   I.Scoped = true;
   I.BaseType = TypeInfo("short");
 
@@ -373,115 +399,82 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   I.Name = "f";
   I.DefLoc = Location(10, 10, "test.cpp");
   I.ReturnType = TypeInfo("void");
-  I.Params.emplace_back(TypeInfo("int"), "I");
-  I.Params.emplace_back(TypeInfo("int"), "J");
+  FieldTypeInfo Params[] = {FieldTypeInfo(TypeInfo("int"), "I"),
+                            FieldTypeInfo(TypeInfo("int"), "J")};
+  I.Params = llvm::ArrayRef(Params);
   I.Access = AccessSpecifier::AS_none;
 
-  CommentInfo Top;
-  Top.Kind = CommentKind::CK_FullComment;
+  // BlankLine
+  CommentInfo BlankChildren[] = {CommentInfo(CommentKind::CK_TextComment)};
+  CommentInfo BlankLine(CommentKind::CK_ParagraphComment, BlankChildren);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *BlankLine = Top.Children.back().get();
-  BlankLine->Kind = CommentKind::CK_ParagraphComment;
-  BlankLine->Children.emplace_back(allocatePtr<CommentInfo>());
-  BlankLine->Children.back()->Kind = CommentKind::CK_TextComment;
+  // Brief
+  CommentInfo BriefChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                             " Brief description.",
+                                             "ParagraphComment")};
+  CommentInfo Brief(CommentKind::CK_ParagraphComment, BriefChildren);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Brief = Top.Children.back().get();
-  Brief->Kind = CommentKind::CK_ParagraphComment;
-  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
-  Brief->Children.back()->Kind = CommentKind::CK_TextComment;
-  Brief->Children.back()->Name = "ParagraphComment";
-  Brief->Children.back()->Text = " Brief description.";
+  // Extended
+  CommentInfo ExtChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                           " Extended description that"),
+                               CommentInfo(CommentKind::CK_TextComment, {},
+                                           " continues onto the next line.")};
+  CommentInfo Extended(CommentKind::CK_ParagraphComment, ExtChildren);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Extended = Top.Children.back().get();
-  Extended->Kind = CommentKind::CK_ParagraphComment;
-  Extended->Children.emplace_back(allocatePtr<CommentInfo>());
-  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
-  Extended->Children.back()->Text = " Extended description that";
-  Extended->Children.emplace_back(allocatePtr<CommentInfo>());
-  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
-  Extended->Children.back()->Text = " continues onto the next line.";
+  // HTML
+  StringRef HtmlKeys[] = {"class"};
+  StringRef HtmlValues[] = {"test"};
+  CommentInfo HtmlStart(CommentKind::CK_HTMLStartTagComment, {}, "", "ul", "",
+                        "", "", false, false, HtmlKeys, HtmlValues);
+  CommentInfo HtmlStartLi(CommentKind::CK_HTMLStartTagComment, {}, "", "li");
+  CommentInfo HtmlEnd(CommentKind::CK_HTMLEndTagComment, {}, "", "ul", "", "",
+                      "", false, true);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *HTML = Top.Children.back().get();
-  HTML->Kind = CommentKind::CK_ParagraphComment;
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_TextComment;
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
-  HTML->Children.back()->Name = "ul";
-  {
-    llvm::SmallVector<StringRef, 1> Keys = {"class"};
-    HTML->Children.back()->AttrKeys =
-        allocateArray<StringRef>(Keys, TransientArena);
+  CommentInfo HtmlChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment), HtmlStart, HtmlStartLi,
+      CommentInfo(CommentKind::CK_TextComment, {}, " Testing."), HtmlEnd};
+  CommentInfo HTML(CommentKind::CK_ParagraphComment, HtmlChildren);
 
-    llvm::SmallVector<StringRef, 1> Values = {"test"};
-    HTML->Children.back()->AttrValues =
-        allocateArray<StringRef>(Values, TransientArena);
-  }
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
-  HTML->Children.back()->Name = "li";
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_TextComment;
-  HTML->Children.back()->Text = " Testing.";
-  HTML->Children.emplace_back(allocatePtr<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLEndTagComment;
-  HTML->Children.back()->Name = "ul";
-  HTML->Children.back()->SelfClosing = true;
+  // Verbatim
+  CommentInfo VerbLine(CommentKind::CK_VerbatimBlockLineComment, {},
+                       " The description continues.");
+  CommentInfo VerbChildren[] = {VerbLine};
+  CommentInfo Verbatim(CommentKind::CK_VerbatimBlockComment, VerbChildren, "",
+                       "verbatim", "endverbatim");
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Verbatim = Top.Children.back().get();
-  Verbatim->Kind = CommentKind::CK_VerbatimBlockComment;
-  Verbatim->Name = "verbatim";
-  Verbatim->CloseName = "endverbatim";
-  Verbatim->Children.emplace_back(allocatePtr<CommentInfo>());
-  Verbatim->Children.back()->Kind = CommentKind::CK_VerbatimBlockLineComment;
-  Verbatim->Children.back()->Text = " The description continues.";
+  // ParamOut
+  CommentInfo ParamOutParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment),
+      CommentInfo(CommentKind::CK_TextComment, {}, " is a parameter.")};
+  CommentInfo ParamOutPara(CommentKind::CK_ParagraphComment,
+                           ParamOutParaChildren);
+  CommentInfo ParamOutChildren[] = {ParamOutPara};
+  CommentInfo ParamOut(CommentKind::CK_ParamCommandComment, ParamOutChildren,
+                       "", "", "", "[out]", "I", true);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *ParamOut = Top.Children.back().get();
-  ParamOut->Kind = CommentKind::CK_ParamCommandComment;
-  ParamOut->Direction = "[out]";
-  ParamOut->ParamName = "I";
-  ParamOut->Explicit = true;
-  ParamOut->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamOut->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamOut->Children.back()->Children.back()->Kind =
-      CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamOut->Children.back()->Children.back()->Kind =
-      CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.back()->Text = " is a parameter.";
+  // ParamIn
+  CommentInfo ParamInParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, " is a parameter."),
+      CommentInfo(CommentKind::CK_TextComment)};
+  CommentInfo ParamInPara(CommentKind::CK_ParagraphComment,
+                          ParamInParaChildren);
+  CommentInfo ParamInChildren[] = {ParamInPara};
+  CommentInfo ParamIn(CommentKind::CK_ParamCommandComment, ParamInChildren, "",
+                      "", "", "[in]", "J");
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *ParamIn = Top.Children.back().get();
-  ParamIn->Kind = CommentKind::CK_ParamCommandComment;
-  ParamIn->Direction = "[in]";
-  ParamIn->ParamName = "J";
-  ParamIn->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamIn->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
-  ParamIn->Children.back()->Children.back()->Text = " is a parameter.";
-  ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
+  // Return
+  CommentInfo ReturnParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, "void")};
+  CommentInfo ReturnPara(CommentKind::CK_ParagraphComment, ReturnParaChildren);
+  CommentInfo ReturnChildren[] = {ReturnPara};
+  CommentInfo Return(CommentKind::CK_BlockCommandComment, ReturnChildren, "",
+                     "return", "", "", "", true);
 
-  Top.Children.emplace_back(allocatePtr<CommentInfo>());
-  CommentInfo *Return = Top.Children.back().get();
-  Return->Kind = CommentKind::CK_BlockCommandComment;
-  Return->Name = "return";
-  Return->Explicit = true;
-  Return->Children.emplace_back(allocatePtr<CommentInfo>());
-  Return->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  Return->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
-  Return->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
-  Return->Children.back()->Children.back()->Text = "void";
+  CommentInfo TopChildren[] = {BlankLine, Brief,    Extended, HTML,
+                               Verbatim,  ParamOut, ParamIn,  Return};
+  CommentInfo Top(CommentKind::CK_FullComment, TopChildren);
 
-  I.Description.emplace_back(std::move(Top));
+  I.Description.push_back(Top);
 
   auto G = getYAMLGenerator();
   assert(G);

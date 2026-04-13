@@ -1298,6 +1298,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$cleanupBuilder)>
   ];
 
+  let hasCanonicalizeMethod = 1;
   let hasLLVMLowering = false;
 }
 
@@ -4574,49 +4575,112 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
 // ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//
 
-def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
+def CIR_ArrayCtor : CIR_Op<"array.ctor", [
+  SingleBlockImplicitTerminator<"cir::YieldOp">
+]> {
   let summary = "Initialize array elements with C++ constructors";
   let description = [{
     Initialize each array element using the same C++ constructor. This
-    operation has one region, with one single block. The block has an
-    incoming argument for the current array element to initialize.
+    operation has a `body` region and an optional `partial_dtor` region.
+    Both regions have a single block whose argument is a pointer to the
+    current array element.
 
-    Example:
+    The `body` region contains the constructor call for one element.
+
+    The `partial_dtor` region, when non-empty, contains the destructor call
+    for one element. During lowering, it is used to build a cleanup that
+    destroys already-constructed elements if a constructor throws. When the
+    element type has a trivial destructor or exceptions are disabled, the
+    `partial_dtor` region is left empty.
+
+    When `num_elements` is absent, `addr` must be a pointer to a fixed-size
+    CIR array type and the element count is derived from that array type.
+
+    When `num_elements` is present, `addr` is a pointer to the first element
+    and `num_elements` provides the runtime element count (for example `new
+    T[n]`).
+
+    Examples:
 
     ```mlir
+    // Fixed size without partial destructor:
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
+    }
+
+    // Variable size without partial destructor:
+    cir.array.ctor(%ptr, %n : !cir.ptr<!rec_S>, !u64i) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+    }
+
+    // Fixed size with partial destructor:
+    cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+    } partial_dtor {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_dtor(%arg0) : (!cir.ptr<!rec_S>) -> ()
     }
     ```
   }];
 
   let arguments = (ins
-    Arg<CIR_PtrToArray, "array address", [MemWrite, MemRead]>:$addr
+    Arg<CIR_AnyPtrType, "array or element address", [MemWrite, MemRead]>:$addr,
+    Optional<CIR_AnyIntType>:$num_elements
   );
 
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region SizedRegion<1>:$body, AnyRegion:$partial_dtor);
   let assemblyFormat = [{
-    $addr `:` qualified(type($addr)) $body attr-dict
+    $addr (`,` $num_elements^)? `:` qualified(type($addr))
+    (`,` type($num_elements)^)? $body
+    (`partial_dtor` $partial_dtor^)?
+    attr-dict
   }];
 
   let builders = [
+    // Static form: addr is ptr<array<T x N>>, no num_elements.
     OpBuilder<(ins "mlir::Value":$addr,
-      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
-        assert(regionBuilder && "builder callback expected");
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$partialDtorBuilder), [{
+        assert(bodyBuilder && "builder callback expected");
         mlir::OpBuilder::InsertionGuard guard($_builder);
-        mlir::Region *r = $_state.addRegion();
         $_state.addOperands(ValueRange{addr});
-        $_builder.createBlock(r);
-        regionBuilder($_builder, $_state.location);
+        mlir::Region *body = $_state.addRegion();
+        $_builder.createBlock(body);
+        bodyBuilder($_builder, $_state.location);
+        mlir::Region *partialDtor = $_state.addRegion();
+        if (partialDtorBuilder) {
+          $_builder.createBlock(partialDtor);
+          partialDtorBuilder($_builder, $_state.location);
+        }
+    }]>,
+    // Dynamic form: addr is ptr<T>, num_elements is the runtime count.
+    OpBuilder<(ins "mlir::Value":$addr, "mlir::Value":$num_elements,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$partialDtorBuilder), [{
+        assert(bodyBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        $_state.addOperands({addr, num_elements});
+        mlir::Region *body = $_state.addRegion();
+        $_builder.createBlock(body);
+        bodyBuilder($_builder, $_state.location);
+        mlir::Region *partialDtor = $_state.addRegion();
+        if (partialDtorBuilder) {
+          $_builder.createBlock(partialDtor);
+          partialDtorBuilder($_builder, $_state.location);
+        }
     }]>
   ];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
-def CIR_ArrayDtor : CIR_Op<"array.dtor"> {
+def CIR_ArrayDtor : CIR_Op<"array.dtor", [
+  SingleBlockImplicitTerminator<"cir::YieldOp">
+]> {
   let summary = "Destroy array elements with C++ destructors";
   let description = [{
     Destroy each array element using the same C++ destructor. This operation
@@ -4639,14 +4703,12 @@ def CIR_ArrayDtor : CIR_Op<"array.dtor"> {
     cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
     }
 
     // Dynamic count (delete[] with destructor):
     cir.array.dtor %ptr, %n : !cir.ptr<!rec_S>, !u64i {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
     }
     ```
   }];
@@ -4686,6 +4748,7 @@ def CIR_ArrayDtor : CIR_Op<"array.dtor"> {
     }]>
   ];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 

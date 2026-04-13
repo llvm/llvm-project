@@ -1005,10 +1005,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                 })
                 .template Case<omp::DistributeOp, omp::ParallelOp,
                                omp::SectionsOp, omp::SimdOp, omp::SingleOp,
-                               omp::TaskloopOp, omp::TaskOp, omp::WsloopOp>(
-                    [&](auto privateOp) {
-                      isPrivateItem = isPrivateArg(argIface, privateOp, op);
-                    });
+                               omp::TaskloopContextOp, omp::TaskOp,
+                               omp::WsloopOp>([&](auto privateOp) {
+                  isPrivateItem = isPrivateArg(argIface, privateOp, op);
+                });
             if (ompValArg) {
               v = ompValArg;
               defOp = ompValArg.getDefiningOp();

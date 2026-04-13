@@ -1005,6 +1005,13 @@ def warn_mmap_path_outside_directory : Warning<
   "path refers outside of the module directory; such paths in implicitly "
   "discovered module maps are deprecated">,
   InGroup<DiagGroup<"module-map-path-outside-directory">>, DefaultIgnore;
+def warn_mmap_deprecated_symlink_to_modular_header : Warning<
+  "header '%0' may be a symlink to '%1' owned by module '%2'; "
+  "symlinks to modular headers are deprecated, replace with a textual "
+  "forwarding header">,
+  InGroup<DiagGroup<"mmap-deprecated-symlink-to-modular-header">>,
+  DefaultIgnore;
+def note_mmap_module_defined_here : Note<"module defined here">;
 
 // C++20 modules
 def err_pp_module_name_is_macro : Error<

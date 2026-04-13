@@ -389,7 +389,7 @@ define void @instruction_with_2_FOR_operands(ptr noalias %A, ptr noalias %B, ptr
 bb:
   br label %bb13
 
-bb13:                                             ; preds = %bb13, %bb
+bb13:
   %tmp37 = phi float [ %tmp60, %bb13 ], [ 0.0, %bb ]
   %tmp27 = phi float [ %tmp49, %bb13 ], [ 1.0, %bb ]
   %iv = phi i64 [ %iv.next, %bb13 ], [ 0, %bb ]
@@ -402,7 +402,7 @@ bb13:                                             ; preds = %bb13, %bb
   %tmp12 = icmp slt i64 %iv, 1000
   br i1 %tmp12, label %bb13, label %bb74
 
-bb74:                                             ; preds = %bb13
+bb74:
   ret void
 }
 

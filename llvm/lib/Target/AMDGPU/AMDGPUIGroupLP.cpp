@@ -27,6 +27,7 @@
 #include <type_traits>
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "igrouplp"
 
@@ -693,11 +694,14 @@ template <typename T>
 void PipelineSolver::greedyFind(
     std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-  int BestNodeCost = -1;
-  int TempCost;
-  SchedGroup *BestGroup = nullptr;
-  int BestGroupID = -1;
-  std::list<std::pair<SUnit *, SUnit *>> BestEdges;
+
+  struct GroupInfo {
+    SchedGroup *SG;
+    std::list<std::pair<SUnit *, SUnit *>> Edges;
+    int Cost = 0;
+  };
+  std::optional<GroupInfo> Best;
+
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
   LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
                     << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
@@ -726,41 +730,38 @@ void PipelineSolver::greedyFind(
     }
 
     std::list<std::pair<SUnit *, SUnit *>> TempEdges;
-    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
+    int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
 
-    if (TempCost < BestNodeCost || BestNodeCost == -1) {
-      BestEdges = TempEdges;
-      BestGroup = Match;
-      BestNodeCost = TempCost;
-      BestGroupID = CandSGID;
-
-      if (BestNodeCost == 0)
+    if (!Best || TempCost < Best->Cost) {
+      Best = {Match, TempEdges, TempCost};
+      if (Best->Cost == 0)
         break;
     }
 
     removeEdges(TempEdges);
   }
 
-  if (BestGroupID != -1) {
-    BestGroup->add(*CurrSU.first);
-    if (AddedEdges.empty())
-      AddedEdges = BestEdges;
-    else
-      AddedEdges.splice(std::prev(AddedEdges.cend()), BestEdges);
+  if (Best) {
+    SchedGroup *SG = Best->SG;
+    std::list<std::pair<SUnit *, SUnit *>> &Edges = Best->Edges;
 
-    for (const std::pair<SUnit *, SUnit *> &E : BestEdges) {
-      if (!BestGroup->tryAddEdge(E.first, E.second))
+    SG->add(*CurrSU.first);
+    if (AddedEdges.empty())
+      AddedEdges = Edges;
+    else
+      AddedEdges.splice(std::prev(AddedEdges.cend()), Edges);
+
+    for (const std::pair<SUnit *, SUnit *> &E : Edges) {
+      if (!SG->tryAddEdge(E.first, E.second))
         llvm_unreachable("Edges known to be insertable.");
     }
 
-    LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
-                      << (int)BestGroup->getMask() << "\n");
-    BestCost += TempCost;
+    LLVM_DEBUG(dbgs() << "Best Group has ID: " << SG->getSGID() << " and Mask"
+                      << (int)SG->getMask() << "\n");
+    BestCost += Best->Cost;
   } else
     BestCost += MissPenalty;
-
-  CurrPipeline[CurrSyncGroupIdx] = SyncPipeline;
 }
 
 bool PipelineSolver::solveGreedy() {
@@ -812,19 +813,13 @@ void PipelineSolver::solve() {
   } else { // Use the Greedy Algorithm by default
     LLVM_DEBUG(dbgs() << "Starting GREEDY pipeline solver\n");
     solveGreedy();
+    LLVM_DEBUG(dbgs() << "Greedy produced best cost of " << BestCost << "\n");
   }
 
   makePipeline();
   LLVM_DEBUG(dbgs() << "After applying mutation\n");
   LLVM_DEBUG(DAG->dump());
 }
-
-enum IGLPStrategyID : int {
-  MFMASmallGemmOptID = 0,
-  MFMASmallGemmSingleWaveOptID = 1,
-  MFMAExpInterleaveID = 2,
-  MFMAExpSimpleInterleaveID = 3
-};
 
 // Implement a IGLP scheduling strategy.
 class IGLPStrategy {
