@@ -19,11 +19,9 @@ define zeroext i1 @eq_zero_or_eq_neg1(i32 %x) nounwind {
 ; CHECK-LABEL: eq_zero_or_eq_neg1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    add r1, r0, #1
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    lsr r0, r0, #5
-; CHECK-NEXT:    lsr r1, r1, #5
-; CHECK-NEXT:    orr r0, r0, r1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    cmp r1, #2
+; CHECK-NEXT:    movwlo r0, #1
 ; CHECK-NEXT:    bx lr
   %cmp1 = icmp eq i32 %x, 0
   %cmp2 = icmp eq i32 %x, -1
