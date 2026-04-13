@@ -63,6 +63,14 @@ functions:
     return_type: int
     arguments:
       - type: cnd_t *
+  - name: cnd_timedwait
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: cnd_t *
+      - type: mtx_t *
+      - type: const struct timespec *
   - name: cnd_wait
     standards:
       - stdc

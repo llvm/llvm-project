@@ -11,6 +11,7 @@
 #include "src/threads/cnd_destroy.h"
 #include "src/threads/cnd_init.h"
 #include "src/threads/cnd_signal.h"
+#include "src/threads/cnd_timedwait.h"
 #include "src/threads/cnd_wait.h"
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
@@ -18,8 +19,11 @@
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
+#include "src/time/clock_gettime.h"
 
 #include "test/IntegrationTest/test.h"
+
+#include "hdr/time_macros.h"
 
 #include <threads.h>
 
@@ -146,8 +150,37 @@ void single_waiter_test() {
 
 } // namespace single_waiter_test
 
+namespace timedwait_test {
+
+void timedwait_test() {
+  cnd_t cnd;
+  mtx_t mtx;
+
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_init(&cnd), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&mtx, mtx_plain), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&mtx), int(thrd_success));
+
+  timespec timeout;
+  ASSERT_EQ(LIBC_NAMESPACE::clock_gettime(CLOCK_REALTIME, &timeout), 0);
+  timeout.tv_nsec -= 1;
+  if (timeout.tv_nsec < 0) {
+    timeout.tv_nsec = 999999999;
+    timeout.tv_sec -= 1;
+  }
+
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_timedwait(&cnd, &mtx, &timeout),
+            int(thrd_timedout));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mtx), int(thrd_success));
+
+  LIBC_NAMESPACE::mtx_destroy(&mtx);
+  LIBC_NAMESPACE::cnd_destroy(&cnd);
+}
+
+} // namespace timedwait_test
+
 TEST_MAIN() {
   wait_notify_broadcast_test::wait_notify_broadcast_test();
   single_waiter_test::single_waiter_test();
+  timedwait_test::timedwait_test();
   return 0;
 }

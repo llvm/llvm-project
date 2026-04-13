@@ -194,6 +194,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cnd_timedwait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_timedwait
+)
+
+add_entrypoint_object(
   cnd_signal
   ALIAS
   DEPENDS

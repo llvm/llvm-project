@@ -52,16 +52,21 @@ CndVar::Result CndVar::wait(Mutex *m,
   if (timeout.has_value())
     internal::ensure_monotonicity(*timeout);
 #endif
+  Result res = Result::Success;
   if (waiter.futex_word.wait(WS_Waiting, timeout, true) == -ETIMEDOUT) {
     cpp::lock_guard ml(qmtx);
     remove(&waiter);
-    return Result::Timeout;
+    // POSIX.1-2024 says the following:
+    // "When such timeouts occur, pthread_cond_clockwait() shall nonetheless
+    // release and re-acquire the mutex referenced by mutex, and may consume a
+    // condition signal directed concurrently at the condition variable."
+    res = Result::Timeout;
   }
 
   // At this point, if locking |m| fails, we can simply return as the
   // queued up waiter would have been removed from the queue.
   auto err = m->lock();
-  return err == MutexError::NONE ? Result::Success : Result::MutexError;
+  return err == MutexError::NONE ? res : Result::MutexError;
 }
 
 void CndVar::notify_one() {
@@ -82,7 +87,9 @@ void CndVar::notify_one() {
 }
 
 void CndVar::broadcast() {
-  // needs to hold until broadcast is done to avoid timeout race condition
+  // TODO: currently, we need to hold lock until broadcast is done to avoid
+  // timeout race condition. We could mimic musl to alternate the list state
+  // first and then wake or requeue after releasing the lock.
   cpp::lock_guard ml(qmtx);
   CndWaiter *waiter = take_all();
   uint32_t dummy_futex_word;

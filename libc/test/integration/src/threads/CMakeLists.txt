@@ -108,6 +108,7 @@ add_integration_test(
     libc.src.threads.cnd_broadcast
     libc.src.threads.cnd_signal
     libc.src.threads.cnd_destroy
+    libc.src.threads.cnd_timedwait
     libc.src.threads.cnd_wait
     libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
@@ -116,4 +117,5 @@ add_integration_test(
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
     libc.src.threads.linux.threads_utils
+    libc.src.time.clock_gettime
 )
