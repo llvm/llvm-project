@@ -16,9 +16,7 @@
 #include <limits>
 
 #ifdef _WIN32
-#ifdef _MSC_VER
-extern char **_environ;
-#endif
+#include <stdlib.h>
 #elif defined(__FreeBSD__) || RT_GPU_TARGET
 // FreeBSD has environ in crt rather than libc. Using "extern char** environ"
 // in the code of a shared library makes it fail to link with -Wl,--no-undefined
@@ -63,7 +61,7 @@ static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
     const char *name = envDefaults->item[itemIndex].name;
     const char *value = envDefaults->item[itemIndex].value;
 #ifdef _WIN32
-    if (auto *x{std::getenv(name)}) {
+    if (std::getenv(name)) {
       continue;
     }
     if (_putenv_s(name, value) != 0) {
@@ -199,7 +197,8 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
     char *end;
     auto n{std::strtoul(x, &end, 10)};
-    if (n > 0 && n < std::numeric_limits<std::size_t>::max() && *end == '\0') {
+    if (n > 0 && n != std::numeric_limits<unsigned long>::max() &&
+        *end == '\0') {
       cudaStackLimit = n;
     } else {
       std::fprintf(stderr,

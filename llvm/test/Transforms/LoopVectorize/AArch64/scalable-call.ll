@@ -234,13 +234,11 @@ attributes #3 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(sin_
 
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7}
-!llvm.ident = !{!8}
 
 !4 = distinct !DICompileUnit(language: DW_LANG_C99, file: !5, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !6, splitDebugInlining: false, nameTableKind: None)
 !5 = !DIFile(filename: "t.c", directory: "somedir")
 !6 = !{}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
-!8 = !{!"clang"}
 !9 = distinct !DISubprogram(name: "foo", scope: !5, file: !5, line: 2, type: !10, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !4, retainedNodes: !6)
 !10 = !DISubroutineType(types: !6)
 !11 = !DILocation(line: 3, column: 10, scope: !9)
