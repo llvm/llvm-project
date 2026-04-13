@@ -2011,7 +2011,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // prevents it from being removed. In some cases however the side effect is
   // actually absent. To detect this case, call SimplifyConstrainedFPCall. If it
   // returns a replacement, the call may be removed.
-  if (CI.use_empty() && Intrinsic::isConstrainedFPIntrinsic(CI.getIntrinsicID())) {
+  if (CI.use_empty() &&
+      Intrinsic::isConstrainedFPIntrinsic(CI.getIntrinsicID())) {
     if (simplifyConstrainedFPCall(&CI, SQ.getWithInstruction(&CI)))
       return eraseInstFromFunction(CI);
   }

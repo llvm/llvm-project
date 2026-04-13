@@ -565,7 +565,6 @@ TEST(InstructionsTest, FPMathOperator) {
   I->deleteValue();
 }
 
-
 TEST(InstructionsTest, isEliminableCastPair) {
   LLVMContext C;
   DataLayout DL1("p1:32:32-p2:64:64:64:32");

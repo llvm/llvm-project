@@ -100,8 +100,8 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
       return success();
     }
     // intrinsicID == llvm::Intrinsic::fma
-    auto op =
-        LLVM::FMAOp::create(odsBuilder, loc, resultTypes, mlirOperands, mlirAttrs);
+    auto op = LLVM::FMAOp::create(odsBuilder, loc, resultTypes, mlirOperands,
+                                  mlirAttrs);
     moduleImport.setFastmathFlagsAttr(inst, op);
     moduleImport.mapValue(inst) = op;
     return success();

@@ -3686,10 +3686,8 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
 static bool hasNonDefaultFPBundles(const CallBase &CB) {
   // If no fp.control or fp.except bundles are present at all, the call uses
   // the default FP environment — do not treat it as non-default.
-  bool HasControl =
-      CB.getOperandBundle(LLVMContext::OB_fp_control).has_value();
-  bool HasExcept =
-      CB.getOperandBundle(LLVMContext::OB_fp_except).has_value();
+  bool HasControl = CB.getOperandBundle(LLVMContext::OB_fp_control).has_value();
+  bool HasExcept = CB.getOperandBundle(LLVMContext::OB_fp_except).has_value();
   if (!HasControl && !HasExcept)
     return false;
   // Bundles are present; check whether they request non-default behavior.
@@ -6668,11 +6666,20 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   // Route new-form FP intrinsics with non-default bundles to STRICT_* SDNodes.
   if (hasNonDefaultFPBundles(I)) {
     switch (Intrinsic) {
-    case Intrinsic::fadd: case Intrinsic::fsub:  case Intrinsic::fmul:
-    case Intrinsic::fdiv: case Intrinsic::frem:  case Intrinsic::fma:
-    case Intrinsic::sqrt: case Intrinsic::fptoui: case Intrinsic::fptosi:
-    case Intrinsic::uitofp: case Intrinsic::sitofp:
-    case Intrinsic::fptrunc: case Intrinsic::fpext: case Intrinsic::fcmp:
+    case Intrinsic::fadd:
+    case Intrinsic::fsub:
+    case Intrinsic::fmul:
+    case Intrinsic::fdiv:
+    case Intrinsic::frem:
+    case Intrinsic::fma:
+    case Intrinsic::sqrt:
+    case Intrinsic::fptoui:
+    case Intrinsic::fptosi:
+    case Intrinsic::uitofp:
+    case Intrinsic::sitofp:
+    case Intrinsic::fptrunc:
+    case Intrinsic::fpext:
+    case Intrinsic::fcmp:
       visitBundledFPIntrinsicAsStrict(cast<IntrinsicInst>(I));
       return;
     default:
@@ -7214,8 +7221,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::fcmp: {
-    Metadata *MD =
-        cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
     FCmpInst::Predicate Pred =
         StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
             .Case("oeq", FCmpInst::FCMP_OEQ)
@@ -7237,10 +7243,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
            "invalid predicate in llvm.fcmp");
     ISD::CondCode Condition = getFCmpCondCode(Pred);
     EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    setValue(&I, DAG.getSetCC(sdl, DestVT,
-                              getValue(I.getArgOperand(0)),
-                              getValue(I.getArgOperand(1)),
-                              Condition));
+    setValue(&I, DAG.getSetCC(sdl, DestVT, getValue(I.getArgOperand(0)),
+                              getValue(I.getArgOperand(1)), Condition));
     return;
   }
   case Intrinsic::fma:
@@ -7264,10 +7268,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDNodeFlags TruncFlags;
     TruncFlags.copyFMF(*cast<FPMathOperator>(&I));
     SelectionDAG::FlagInserter FlagsInserter(DAG, TruncFlags);
-    setValue(&I, DAG.getNode(ISD::FPTRUNC_ROUND, sdl, VT,
-                             getValue(I.getArgOperand(0)),
-                             DAG.getTargetConstant((int)*RoundMode, sdl,
-                                                   MVT::i32)));
+    setValue(&I, DAG.getNode(
+                     ISD::FPTRUNC_ROUND, sdl, VT, getValue(I.getArgOperand(0)),
+                     DAG.getTargetConstant((int)*RoundMode, sdl, MVT::i32)));
 
     return;
   }
@@ -8714,23 +8717,54 @@ void SelectionDAGBuilder::visitBundledFPIntrinsicAsStrict(
 
   unsigned Opcode;
   switch (IID) {
-  case Intrinsic::fadd:    Opcode = ISD::STRICT_FADD;       break;
-  case Intrinsic::fsub:    Opcode = ISD::STRICT_FSUB;       break;
-  case Intrinsic::fmul:    Opcode = ISD::STRICT_FMUL;       break;
-  case Intrinsic::fdiv:    Opcode = ISD::STRICT_FDIV;       break;
-  case Intrinsic::frem:    Opcode = ISD::STRICT_FREM;       break;
-  case Intrinsic::fma:     Opcode = ISD::STRICT_FMA;        break;
-  case Intrinsic::sqrt:    Opcode = ISD::STRICT_FSQRT;      break;
-  case Intrinsic::fptoui:  Opcode = ISD::STRICT_FP_TO_UINT; break;
-  case Intrinsic::fptosi:  Opcode = ISD::STRICT_FP_TO_SINT; break;
-  case Intrinsic::uitofp:  Opcode = ISD::STRICT_UINT_TO_FP; break;
-  case Intrinsic::sitofp:  Opcode = ISD::STRICT_SINT_TO_FP; break;
-  case Intrinsic::fptrunc: Opcode = ISD::STRICT_FP_ROUND;   break;
-  case Intrinsic::fpext:   Opcode = ISD::STRICT_FP_EXTEND;  break;
-  case Intrinsic::fcmp:    Opcode = ISD::STRICT_FSETCC;     break;
-  case Intrinsic::fcmps:   Opcode = ISD::STRICT_FSETCCS;    break;
+  case Intrinsic::fadd:
+    Opcode = ISD::STRICT_FADD;
+    break;
+  case Intrinsic::fsub:
+    Opcode = ISD::STRICT_FSUB;
+    break;
+  case Intrinsic::fmul:
+    Opcode = ISD::STRICT_FMUL;
+    break;
+  case Intrinsic::fdiv:
+    Opcode = ISD::STRICT_FDIV;
+    break;
+  case Intrinsic::frem:
+    Opcode = ISD::STRICT_FREM;
+    break;
+  case Intrinsic::fma:
+    Opcode = ISD::STRICT_FMA;
+    break;
+  case Intrinsic::sqrt:
+    Opcode = ISD::STRICT_FSQRT;
+    break;
+  case Intrinsic::fptoui:
+    Opcode = ISD::STRICT_FP_TO_UINT;
+    break;
+  case Intrinsic::fptosi:
+    Opcode = ISD::STRICT_FP_TO_SINT;
+    break;
+  case Intrinsic::uitofp:
+    Opcode = ISD::STRICT_UINT_TO_FP;
+    break;
+  case Intrinsic::sitofp:
+    Opcode = ISD::STRICT_SINT_TO_FP;
+    break;
+  case Intrinsic::fptrunc:
+    Opcode = ISD::STRICT_FP_ROUND;
+    break;
+  case Intrinsic::fpext:
+    Opcode = ISD::STRICT_FP_EXTEND;
+    break;
+  case Intrinsic::fcmp:
+    Opcode = ISD::STRICT_FSETCC;
+    break;
+  case Intrinsic::fcmps:
+    Opcode = ISD::STRICT_FSETCCS;
+    break;
   default:
-    llvm_unreachable("Unhandled FP intrinsic in visitBundledFPIntrinsicAsStrict");
+    llvm_unreachable(
+        "Unhandled FP intrinsic in visitBundledFPIntrinsicAsStrict");
   }
 
   // Additional operands for specific opcodes.
@@ -8775,7 +8809,6 @@ void SelectionDAGBuilder::visitBundledFPIntrinsicAsStrict(
   pushFPOpOutChain(Result, EB);
   setValue(&I, Result.getValue(0));
 }
-
 
 static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
   std::optional<unsigned> ResOPC;

@@ -2312,8 +2312,7 @@ static bool getConstIntOrUndef(Value *Op, const APInt *&C) {
 ///
 /// \param CI Constrained intrinsic call.
 /// \param St Exception flags raised during constant evaluation.
-static bool mayFoldConstrained(const CallBase *CI,
-                               APFloat::opStatus St) {
+static bool mayFoldConstrained(const CallBase *CI, APFloat::opStatus St) {
   RoundingMode ORM = CI->getRoundingMode();
   fp::ExceptionBehavior EB = CI->getExceptionBehavior();
 
@@ -2346,8 +2345,8 @@ static bool mayFoldNewFPIntrinsic(const CallBase *CI, APFloat::opStatus St) {
     return true;
 
   // If evaluation raised an FP exception, the result can depend on the rounding
-  // mode.  If the rounding mode is dynamic (unknown at compile time), folding is
-  // not safe.
+  // mode.  If the rounding mode is dynamic (unknown at compile time), folding
+  // is not safe.
   if (CI->getRoundingMode() == RoundingMode::Dynamic)
     return false;
 
@@ -2372,8 +2371,7 @@ static RoundingMode getEvaluationRoundingModeForNewFP(const CallBase *CI) {
 }
 
 /// Returns the rounding mode that should be used for constant evaluation.
-static RoundingMode
-getEvaluationRoundingMode(const CallBase *CI) {
+static RoundingMode getEvaluationRoundingMode(const CallBase *CI) {
   RoundingMode ORM = CI->getRoundingMode();
   if (ORM == RoundingMode::Dynamic)
     // Even if the rounding mode is unknown, try evaluating the operation.
@@ -2621,8 +2619,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (RM) {
       if (U.isFinite()) {
         APFloat::opStatus St = U.roundToIntegral(*RM);
-        if (IntrinsicID == Intrinsic::rint &&
-            St == APFloat::opInexact) {
+        if (IntrinsicID == Intrinsic::rint && St == APFloat::opInexact) {
           fp::ExceptionBehavior EB = Call->getExceptionBehavior();
           if (EB == fp::ebStrict)
             return nullptr;
@@ -3189,8 +3186,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 static Constant *evaluateCompare(const APFloat &Op1, const APFloat &Op2,
                                  const IntrinsicInst *Call) {
   APFloat::opStatus St = APFloat::opOK;
-  Metadata *MD =
-      cast<MetadataAsValue>(Call->getArgOperand(2))->getMetadata();
+  Metadata *MD = cast<MetadataAsValue>(Call->getArgOperand(2))->getMetadata();
   FCmpInst::Predicate Cond =
       StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
           .Case("oeq", FCmpInst::FCMP_OEQ)
@@ -3427,11 +3423,21 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         switch (IntrinsicID) {
         default:
           llvm_unreachable("unexpected intrinsic");
-        case Intrinsic::fadd: St = Res.add(Op2V, RM); break;
-        case Intrinsic::fsub: St = Res.subtract(Op2V, RM); break;
-        case Intrinsic::fmul: St = Res.multiply(Op2V, RM); break;
-        case Intrinsic::fdiv: St = Res.divide(Op2V, RM); break;
-        case Intrinsic::frem: St = Res.mod(Op2V); break;
+        case Intrinsic::fadd:
+          St = Res.add(Op2V, RM);
+          break;
+        case Intrinsic::fsub:
+          St = Res.subtract(Op2V, RM);
+          break;
+        case Intrinsic::fmul:
+          St = Res.multiply(Op2V, RM);
+          break;
+        case Intrinsic::fdiv:
+          St = Res.divide(Op2V, RM);
+          break;
+        case Intrinsic::frem:
+          St = Res.mod(Op2V);
+          break;
         }
         if (mayFoldNewFPIntrinsic(Call, St)) {
           DenormalMode::DenormalModeKind Mode = *Call->getOutputDenormMode();

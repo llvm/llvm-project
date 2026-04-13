@@ -285,7 +285,6 @@ void InstrProfCallsite::setCallee(Value *Callee) {
   setArgOperand(4, Callee);
 }
 
-
 static FCmpInst::Predicate getFPPredicateFromMD(const Value *Op) {
   Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
   if (!MD || !isa<MDString>(MD))
@@ -307,7 +306,6 @@ static FCmpInst::Predicate getFPPredicateFromMD(const Value *Op) {
       .Case("une", FCmpInst::FCMP_UNE)
       .Default(FCmpInst::BAD_FCMP_PREDICATE);
 }
-
 
 ElementCount VPIntrinsic::getStaticVectorLength() const {
   auto GetVectorLengthOfType = [](const Type *T) -> ElementCount {
@@ -499,7 +497,6 @@ constexpr static bool doesVPHaveNoFunctionalEquivalent(Intrinsic::ID ID) {
                 getFunctionalOpcodeForVP(Intrinsic::VPID) ||                   \
                 getFunctionalIntrinsicIDForVP(Intrinsic::VPID));
 #include "llvm/IR/VPIntrinsics.def"
-
 
 Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
   switch (IROPC) {

@@ -649,9 +649,8 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   {
     Function *Fn = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::abs,
                                                      {Type::getInt64Ty(Ctx)});
-    GlobalVariable *GVInt = new GlobalVariable(*M, Type::getInt64Ty(Ctx), true,
-                                               GlobalValue::ExternalLinkage,
-                                               nullptr);
+    GlobalVariable *GVInt = new GlobalVariable(
+        *M, Type::getInt64Ty(Ctx), true, GlobalValue::ExternalLinkage, nullptr);
     Value *IntArg = Builder.CreateLoad(Type::getInt64Ty(Ctx), GVInt);
     Value *V = Builder.CreateCall(Fn, {IntArg, Builder.getInt1(false)});
     auto *I = cast<IntrinsicInst>(V);

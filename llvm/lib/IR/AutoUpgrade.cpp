@@ -4967,53 +4967,53 @@ static Value *upgradeVectorSplice(CallBase *CI, IRBuilder<> &Builder) {
 /// new FP intrinsic ID (llvm.fadd, llvm.sqrt, etc.).
 static Intrinsic::ID getNewFPIntrinsicForConstrainedName(StringRef OpName) {
   return StringSwitch<Intrinsic::ID>(OpName)
-      .Case("fadd",    Intrinsic::fadd)
-      .Case("fsub",    Intrinsic::fsub)
-      .Case("fmul",    Intrinsic::fmul)
-      .Case("fdiv",    Intrinsic::fdiv)
-      .Case("frem",    Intrinsic::frem)
-      .Case("fma",     Intrinsic::fma)
+      .Case("fadd", Intrinsic::fadd)
+      .Case("fsub", Intrinsic::fsub)
+      .Case("fmul", Intrinsic::fmul)
+      .Case("fdiv", Intrinsic::fdiv)
+      .Case("frem", Intrinsic::frem)
+      .Case("fma", Intrinsic::fma)
       .Case("fmuladd", Intrinsic::fmuladd)
-      .Case("fcmp",    Intrinsic::fcmp)
-      .Case("fcmps",   Intrinsic::fcmps)
-      .Case("fptoui",  Intrinsic::fptoui)
-      .Case("fptosi",  Intrinsic::fptosi)
-      .Case("uitofp",  Intrinsic::uitofp)
-      .Case("sitofp",  Intrinsic::sitofp)
+      .Case("fcmp", Intrinsic::fcmp)
+      .Case("fcmps", Intrinsic::fcmps)
+      .Case("fptoui", Intrinsic::fptoui)
+      .Case("fptosi", Intrinsic::fptosi)
+      .Case("uitofp", Intrinsic::uitofp)
+      .Case("sitofp", Intrinsic::sitofp)
       .Case("fptrunc", Intrinsic::fptrunc)
-      .Case("fpext",   Intrinsic::fpext)
-      .Case("sqrt",    Intrinsic::sqrt)
-      .Case("powi",    Intrinsic::powi)
-      .Case("ldexp",   Intrinsic::ldexp)
-      .Case("sin",     Intrinsic::sin)
-      .Case("asin",    Intrinsic::asin)
-      .Case("cos",     Intrinsic::cos)
-      .Case("acos",    Intrinsic::acos)
-      .Case("tan",     Intrinsic::tan)
-      .Case("atan",    Intrinsic::atan)
-      .Case("atan2",   Intrinsic::atan2)
-      .Case("sinh",    Intrinsic::sinh)
-      .Case("cosh",    Intrinsic::cosh)
-      .Case("tanh",    Intrinsic::tanh)
-      .Case("pow",     Intrinsic::pow)
-      .Case("log",     Intrinsic::log)
-      .Case("log10",   Intrinsic::log10)
-      .Case("log2",    Intrinsic::log2)
-      .Case("exp",     Intrinsic::exp)
-      .Case("exp2",    Intrinsic::exp2)
-      .Case("rint",    Intrinsic::rint)
+      .Case("fpext", Intrinsic::fpext)
+      .Case("sqrt", Intrinsic::sqrt)
+      .Case("powi", Intrinsic::powi)
+      .Case("ldexp", Intrinsic::ldexp)
+      .Case("sin", Intrinsic::sin)
+      .Case("asin", Intrinsic::asin)
+      .Case("cos", Intrinsic::cos)
+      .Case("acos", Intrinsic::acos)
+      .Case("tan", Intrinsic::tan)
+      .Case("atan", Intrinsic::atan)
+      .Case("atan2", Intrinsic::atan2)
+      .Case("sinh", Intrinsic::sinh)
+      .Case("cosh", Intrinsic::cosh)
+      .Case("tanh", Intrinsic::tanh)
+      .Case("pow", Intrinsic::pow)
+      .Case("log", Intrinsic::log)
+      .Case("log10", Intrinsic::log10)
+      .Case("log2", Intrinsic::log2)
+      .Case("exp", Intrinsic::exp)
+      .Case("exp2", Intrinsic::exp2)
+      .Case("rint", Intrinsic::rint)
       .Case("nearbyint", Intrinsic::nearbyint)
-      .Case("lrint",   Intrinsic::lrint)
-      .Case("llrint",  Intrinsic::llrint)
-      .Case("ceil",    Intrinsic::ceil)
-      .Case("floor",   Intrinsic::floor)
-      .Case("round",   Intrinsic::round)
+      .Case("lrint", Intrinsic::lrint)
+      .Case("llrint", Intrinsic::llrint)
+      .Case("ceil", Intrinsic::ceil)
+      .Case("floor", Intrinsic::floor)
+      .Case("round", Intrinsic::round)
       .Case("roundeven", Intrinsic::roundeven)
-      .Case("trunc",   Intrinsic::trunc)
-      .Case("lround",  Intrinsic::lround)
+      .Case("trunc", Intrinsic::trunc)
+      .Case("lround", Intrinsic::lround)
       .Case("llround", Intrinsic::llround)
-      .Case("minnum",  Intrinsic::minnum)
-      .Case("maxnum",  Intrinsic::maxnum)
+      .Case("minnum", Intrinsic::minnum)
+      .Case("maxnum", Intrinsic::maxnum)
       .Case("minimum", Intrinsic::minimum)
       .Case("maximum", Intrinsic::maximum)
       .Default(Intrinsic::not_intrinsic);
@@ -5068,18 +5068,19 @@ static Value *upgradeConstrainedFPIntrinsicCall(CallBase *CI, StringRef Name,
   // fpext, fptosi, fptoui, fcmp, fcmps, ceil, floor, trunc, round, roundeven,
   // lround, llround, maxnum, minnum, maximum, minimum
   bool HasRM = !StringSwitch<bool>(OpName)
-      .Cases({"fpext", "fptosi", "fptoui"}, true)
-      .Cases({"fcmp", "fcmps"}, true)
-      .Cases({"ceil", "floor", "trunc"}, true)
-      .Cases({"round", "roundeven"}, true)
-      .Cases({"lround", "llround"}, true)
-      .Cases({"maxnum", "minnum", "maximum", "minimum"}, true)
-      .Default(false);
+                    .Cases({"fpext", "fptosi", "fptoui"}, true)
+                    .Cases({"fcmp", "fcmps"}, true)
+                    .Cases({"ceil", "floor", "trunc"}, true)
+                    .Cases({"round", "roundeven"}, true)
+                    .Cases({"lround", "llround"}, true)
+                    .Cases({"maxnum", "minnum", "maximum", "minimum"}, true)
+                    .Default(false);
 
   // Parse rounding mode (second-to-last arg when present).
   std::optional<RoundingMode> RM;
   if (HasRM) {
-    StringRef RMS = getConstrainedFPMetaStr(CI->getArgOperand(CI->arg_size() - 2));
+    StringRef RMS =
+        getConstrainedFPMetaStr(CI->getArgOperand(CI->arg_size() - 2));
     if (RMS.empty())
       return nullptr; // malformed
     RM = convertStrToRoundingMode(RMS);
@@ -5088,7 +5089,8 @@ static Value *upgradeConstrainedFPIntrinsicCall(CallBase *CI, StringRef Name,
   }
 
   // Parse exception behavior (always the last metadata arg).
-  StringRef EBS = getConstrainedFPMetaStr(CI->getArgOperand(CI->arg_size() - 1));
+  StringRef EBS =
+      getConstrainedFPMetaStr(CI->getArgOperand(CI->arg_size() - 1));
   if (EBS.empty())
     return nullptr; // malformed
   std::optional<fp::ExceptionBehavior> EB = convertStrToExceptionBehavior(EBS);
@@ -5100,7 +5102,7 @@ static Value *upgradeConstrainedFPIntrinsicCall(CallBase *CI, StringRef Name,
 
   // Collect the non-metadata value args.
   // Layout: [value args...] [predicate?] [rounding mode?] [exception behavior]
-  bool IsFCmp  = (OpName == "fcmp");
+  bool IsFCmp = (OpName == "fcmp");
   bool IsFCmps = (OpName == "fcmps");
   bool IsCompare = IsFCmp || IsFCmps;
   unsigned NArgs = CI->arg_size() - 1; // always has EB

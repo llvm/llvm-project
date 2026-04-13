@@ -315,7 +315,8 @@ static bool containsBF16Type(const User &U) {
   // prevent any instructions using them. FIXME: This can be removed once LLT
   // supports bfloat.
   if (LLT::getUseExtended())
-    return false; // extended LLT can represent bfloat16 — don't block translation
+    return false; // extended LLT can represent bfloat16 — don't block
+                  // translation
   return U.getType()->getScalarType()->isBFloatTy() ||
          any_of(U.operands(), [](Value *V) {
            return V->getType()->getScalarType()->isBFloatTy();
@@ -386,8 +387,8 @@ bool IRTranslator::translateCompare(const User &U,
   else if (MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
     // In a strictfp function, plain fcmp instructions still need strict
     // semantics (e.g. when auto-upgraded from experimental_constrained_fcmp).
-    MIRBuilder.buildInstr(TargetOpcode::G_STRICT_FCMP, {Res},
-                          {Pred, Op0, Op1}, Flags);
+    MIRBuilder.buildInstr(TargetOpcode::G_STRICT_FCMP, {Res}, {Pred, Op0, Op1},
+                          Flags);
   } else
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
 
@@ -2098,15 +2099,24 @@ bool IRTranslator::translateSimpleIntrinsic(const CallInst &CI,
 /// opcode, or return 0 if no strict form is available.
 static unsigned getBundledFPStrictGOpcode(Intrinsic::ID ID) {
   switch (ID) {
-  case Intrinsic::fadd: return TargetOpcode::G_STRICT_FADD;
-  case Intrinsic::fsub: return TargetOpcode::G_STRICT_FSUB;
-  case Intrinsic::fmul: return TargetOpcode::G_STRICT_FMUL;
-  case Intrinsic::fdiv: return TargetOpcode::G_STRICT_FDIV;
-  case Intrinsic::frem: return TargetOpcode::G_STRICT_FREM;
-  case Intrinsic::fma:  return TargetOpcode::G_STRICT_FMA;
-  case Intrinsic::sqrt: return TargetOpcode::G_STRICT_FSQRT;
-  case Intrinsic::ldexp: return TargetOpcode::G_STRICT_FLDEXP;
-  default: return 0;
+  case Intrinsic::fadd:
+    return TargetOpcode::G_STRICT_FADD;
+  case Intrinsic::fsub:
+    return TargetOpcode::G_STRICT_FSUB;
+  case Intrinsic::fmul:
+    return TargetOpcode::G_STRICT_FMUL;
+  case Intrinsic::fdiv:
+    return TargetOpcode::G_STRICT_FDIV;
+  case Intrinsic::frem:
+    return TargetOpcode::G_STRICT_FREM;
+  case Intrinsic::fma:
+    return TargetOpcode::G_STRICT_FMA;
+  case Intrinsic::sqrt:
+    return TargetOpcode::G_STRICT_FSQRT;
+  case Intrinsic::ldexp:
+    return TargetOpcode::G_STRICT_FLDEXP;
+  default:
+    return 0;
   }
 }
 

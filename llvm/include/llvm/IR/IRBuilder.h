@@ -1645,8 +1645,8 @@ public:
   Value *CreateFAddFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::fadd, {L->getType()}, {L, R},
-                             FMFSource, Name);
+      return CreateIntrinsic(Intrinsic::fadd, {L->getType()}, {L, R}, FMFSource,
+                             Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FAdd, L, R, FMFSource.get(FMF)))
@@ -1664,8 +1664,8 @@ public:
   Value *CreateFSubFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::fsub, {L->getType()}, {L, R},
-                             FMFSource, Name);
+      return CreateIntrinsic(Intrinsic::fsub, {L->getType()}, {L, R}, FMFSource,
+                             Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FSub, L, R, FMFSource.get(FMF)))
@@ -1683,8 +1683,8 @@ public:
   Value *CreateFMulFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::fmul, {L->getType()}, {L, R},
-                             FMFSource, Name);
+      return CreateIntrinsic(Intrinsic::fmul, {L->getType()}, {L, R}, FMFSource,
+                             Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FMul, L, R, FMFSource.get(FMF)))
@@ -1702,8 +1702,8 @@ public:
   Value *CreateFDivFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::fdiv, {L->getType()}, {L, R},
-                             FMFSource, Name);
+      return CreateIntrinsic(Intrinsic::fdiv, {L->getType()}, {L, R}, FMFSource,
+                             Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMFSource.get(FMF)))
@@ -1721,8 +1721,8 @@ public:
   Value *CreateFRemFMF(Value *L, Value *R, FMFSource FMFSource,
                        const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::frem, {L->getType()}, {L, R},
-                             FMFSource, Name);
+      return CreateIntrinsic(Intrinsic::frem, {L->getType()}, {L, R}, FMFSource,
+                             Name);
 
     if (Value *V =
             Folder.FoldBinOpFMF(Instruction::FRem, L, R, FMFSource.get(FMF)))
@@ -2101,23 +2101,23 @@ public:
 
   Value *CreateFPToUI(Value *V, Type *DestTy, const Twine &Name = "") {
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::fptoui, {DestTy, V->getType()}, {V},
-                             {}, Name);
+      return CreateIntrinsic(Intrinsic::fptoui, {DestTy, V->getType()}, {V}, {},
+                             Name);
     return CreateCast(Instruction::FPToUI, V, DestTy, Name);
   }
 
   Value *CreateFPToSI(Value *V, Type *DestTy, const Twine &Name = "") {
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::fptosi, {DestTy, V->getType()}, {V},
-                             {}, Name);
+      return CreateIntrinsic(Intrinsic::fptosi, {DestTy, V->getType()}, {V}, {},
+                             Name);
     return CreateCast(Instruction::FPToSI, V, DestTy, Name);
   }
 
   Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = "",
                       bool IsNonNeg = false) {
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::uitofp, {DestTy, V->getType()}, {V},
-                             {}, Name);
+      return CreateIntrinsic(Intrinsic::uitofp, {DestTy, V->getType()}, {V}, {},
+                             Name);
     if (Value *Folded = Folder.FoldCast(Instruction::UIToFP, V, DestTy))
       return Folded;
     Instruction *I = Insert(new UIToFPInst(V, DestTy), Name);
@@ -2128,8 +2128,8 @@ public:
 
   Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
     if (IsFPConstrained && hasNonDefaultFPConstraints())
-      return CreateIntrinsic(Intrinsic::sitofp, {DestTy, V->getType()}, {V},
-                             {}, Name);
+      return CreateIntrinsic(Intrinsic::sitofp, {DestTy, V->getType()}, {V}, {},
+                             Name);
     return CreateCast(Instruction::SIToFP, V, DestTy, Name);
   }
 

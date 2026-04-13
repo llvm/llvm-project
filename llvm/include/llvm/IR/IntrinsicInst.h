@@ -655,7 +655,6 @@ public:
   // Equivalent non-predicated intrinsic ID
   LLVM_ABI static std::optional<Intrinsic::ID>
   getFunctionalIntrinsicIDForVP(Intrinsic::ID ID);
-
 };
 
 /// This represents vector predication reduction intrinsics.
@@ -726,8 +725,6 @@ public:
   }
   /// @}
 };
-
-
 
 /// This class represents min/max intrinsics.
 class MinMaxIntrinsic : public IntrinsicInst {

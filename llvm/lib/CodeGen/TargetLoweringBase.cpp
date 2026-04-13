@@ -1207,31 +1207,24 @@ void TargetLoweringBase::initActions() {
                          VT, Expand);
 
     // Constrained floating-point operations default to expand.
-    setOperationAction({ISD::STRICT_FADD,        ISD::STRICT_FSUB,
-                        ISD::STRICT_FMUL,        ISD::STRICT_FDIV,
-                        ISD::STRICT_FREM,        ISD::STRICT_FP_EXTEND,
-                        ISD::STRICT_SINT_TO_FP,  ISD::STRICT_UINT_TO_FP,
-                        ISD::STRICT_FP_TO_SINT,  ISD::STRICT_FP_TO_UINT,
-                        ISD::STRICT_FP_ROUND,    ISD::STRICT_FSETCC,
-                        ISD::STRICT_FSETCCS,     ISD::STRICT_FACOS,
-                        ISD::STRICT_FASIN,       ISD::STRICT_FATAN,
-                        ISD::STRICT_FATAN2,      ISD::STRICT_FCEIL,
-                        ISD::STRICT_FCOS,        ISD::STRICT_FCOSH,
-                        ISD::STRICT_FEXP,        ISD::STRICT_FEXP2,
-                        ISD::STRICT_FFLOOR,      ISD::STRICT_FMA,
-                        ISD::STRICT_FLOG,        ISD::STRICT_FLOG10,
-                        ISD::STRICT_FLOG2,       ISD::STRICT_LRINT,
-                        ISD::STRICT_LLRINT,      ISD::STRICT_LROUND,
-                        ISD::STRICT_LLROUND,     ISD::STRICT_FMAXNUM,
-                        ISD::STRICT_FMINNUM,     ISD::STRICT_FMAXIMUM,
-                        ISD::STRICT_FMINIMUM,    ISD::STRICT_FNEARBYINT,
-                        ISD::STRICT_FPOW,        ISD::STRICT_FPOWI,
-                        ISD::STRICT_FLDEXP,      ISD::STRICT_FRINT,
-                        ISD::STRICT_FROUND,      ISD::STRICT_FROUNDEVEN,
-                        ISD::STRICT_FSIN,        ISD::STRICT_FSINH,
-                        ISD::STRICT_FSQRT,       ISD::STRICT_FTAN,
-                        ISD::STRICT_FTANH,       ISD::STRICT_FTRUNC},
-                       VT, Expand);
+    setOperationAction(
+        {ISD::STRICT_FADD,       ISD::STRICT_FSUB,       ISD::STRICT_FMUL,
+         ISD::STRICT_FDIV,       ISD::STRICT_FREM,       ISD::STRICT_FP_EXTEND,
+         ISD::STRICT_SINT_TO_FP, ISD::STRICT_UINT_TO_FP, ISD::STRICT_FP_TO_SINT,
+         ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_ROUND,   ISD::STRICT_FSETCC,
+         ISD::STRICT_FSETCCS,    ISD::STRICT_FACOS,      ISD::STRICT_FASIN,
+         ISD::STRICT_FATAN,      ISD::STRICT_FATAN2,     ISD::STRICT_FCEIL,
+         ISD::STRICT_FCOS,       ISD::STRICT_FCOSH,      ISD::STRICT_FEXP,
+         ISD::STRICT_FEXP2,      ISD::STRICT_FFLOOR,     ISD::STRICT_FMA,
+         ISD::STRICT_FLOG,       ISD::STRICT_FLOG10,     ISD::STRICT_FLOG2,
+         ISD::STRICT_LRINT,      ISD::STRICT_LLRINT,     ISD::STRICT_LROUND,
+         ISD::STRICT_LLROUND,    ISD::STRICT_FMAXNUM,    ISD::STRICT_FMINNUM,
+         ISD::STRICT_FMAXIMUM,   ISD::STRICT_FMINIMUM,   ISD::STRICT_FNEARBYINT,
+         ISD::STRICT_FPOW,       ISD::STRICT_FPOWI,      ISD::STRICT_FLDEXP,
+         ISD::STRICT_FRINT,      ISD::STRICT_FROUND,     ISD::STRICT_FROUNDEVEN,
+         ISD::STRICT_FSIN,       ISD::STRICT_FSINH,      ISD::STRICT_FSQRT,
+         ISD::STRICT_FTAN,       ISD::STRICT_FTANH,      ISD::STRICT_FTRUNC},
+        VT, Expand);
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);

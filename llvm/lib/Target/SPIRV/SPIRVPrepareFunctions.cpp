@@ -453,9 +453,8 @@ lowerNewFPBinopForSPIRV(CallInst *CI, Instruction::BinaryOps PlainOpc,
 // bundle carries a non-dynamic rounding mode (checked by the caller). We expand
 // to fmul + fadd and attach FPRoundingMode decorations to both instructions so
 // the rounding mode is preserved in the SPIRV output.
-static void
-lowerNewFmuladd(CallInst *CI,
-                SmallVector<Instruction *> &EraseFromParent) {
+static void lowerNewFmuladd(CallInst *CI,
+                            SmallVector<Instruction *> &EraseFromParent) {
   IRBuilder<> Builder(CI->getParent());
   Builder.SetInsertPoint(CI);
   Value *A = CI->getArgOperand(0);
@@ -471,7 +470,6 @@ lowerNewFmuladd(CallInst *CI,
   CI->replaceAllUsesWith(Result);
   EraseFromParent.push_back(CI);
 }
-
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.

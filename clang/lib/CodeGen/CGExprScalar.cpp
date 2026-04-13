@@ -4690,8 +4690,7 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
     }
   }
   if (auto *RHSBinOp = dyn_cast<llvm::CallBase>(RHS)) {
-    if (RHSBinOp->getIntrinsicID() ==
-            llvm::Intrinsic::fmul &&
+    if (RHSBinOp->getIntrinsicID() == llvm::Intrinsic::fmul &&
         (RHSBinOp->use_empty() || NegRHS)) {
       // If we looked through fneg, erase it.
       if (NegRHS)

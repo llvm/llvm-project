@@ -613,12 +613,11 @@ bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
   // ptrauth) forces a callsite to be at least readonly.
-  return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
-                                     LLVMContext::OB_kcfi,
-                                     LLVMContext::OB_fp_control,
-                                     LLVMContext::OB_fp_except,
-                                     LLVMContext::OB_convergencectrl,
-                                     LLVMContext::OB_deactivation_symbol}) &&
+  return hasOperandBundlesOtherThan(
+             {LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
+              LLVMContext::OB_fp_control, LLVMContext::OB_fp_except,
+              LLVMContext::OB_convergencectrl,
+              LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -895,7 +894,7 @@ bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
 }
 
 std::optional<StringRef> llvm::getBundleOperandByPrefix(OperandBundleUse Bundle,
-                                                      StringRef Prefix) {
+                                                        StringRef Prefix) {
   for (const auto &Item : Bundle.Inputs) {
     Metadata *MD = cast<MetadataAsValue>(Item.get())->getMetadata();
     if (const auto *MDS = dyn_cast<MDString>(MD)) {
@@ -908,9 +907,9 @@ std::optional<StringRef> llvm::getBundleOperandByPrefix(OperandBundleUse Bundle,
 }
 
 void llvm::addOperandToBundleTag(LLVMContext &Ctx,
-                               SmallVectorImpl<OperandBundleDef> &Bundles,
-                               StringRef Tag, size_t PrefixSize,
-                               StringRef Val) {
+                                 SmallVectorImpl<OperandBundleDef> &Bundles,
+                                 StringRef Tag, size_t PrefixSize,
+                                 StringRef Val) {
   assert(PrefixSize > 0 && "Unexpected prefix size");
   assert(PrefixSize < Val.size() && "Invalid prefix size");
   StringRef Prefix = Val.take_front(PrefixSize);

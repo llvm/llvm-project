@@ -197,18 +197,32 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     case 0:  // IEEE-inexact exception allowed
       switch (M5.getZExtValue()) {
       default: break;
-      case 0: ID = Intrinsic::rint; break;
+      case 0:
+        ID = Intrinsic::rint;
+        break;
       }
       break;
     case 4:  // IEEE-inexact exception suppressed
       switch (M5.getZExtValue()) {
       default: break;
-      case 0: ID = Intrinsic::nearbyint; break;
-      case 1: ID = Intrinsic::round; break;
-      case 4: ID = Intrinsic::roundeven; break;
-      case 5: ID = Intrinsic::trunc; break;
-      case 6: ID = Intrinsic::ceil; break;
-      case 7: ID = Intrinsic::floor; break;
+      case 0:
+        ID = Intrinsic::nearbyint;
+        break;
+      case 1:
+        ID = Intrinsic::round;
+        break;
+      case 4:
+        ID = Intrinsic::roundeven;
+        break;
+      case 5:
+        ID = Intrinsic::trunc;
+        break;
+      case 6:
+        ID = Intrinsic::ceil;
+        break;
+      case 7:
+        ID = Intrinsic::floor;
+        break;
       }
       break;
     }
@@ -238,7 +252,9 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID ID = Intrinsic::not_intrinsic;
     switch (M4.getZExtValue()) {
     default: break;
-    case 4: ID = Intrinsic::maxnum; break;
+    case 4:
+      ID = Intrinsic::maxnum;
+      break;
     }
     if (ID != Intrinsic::not_intrinsic) {
       Function *F = CGM.getIntrinsic(ID, ResultType);
@@ -265,7 +281,9 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID ID = Intrinsic::not_intrinsic;
     switch (M4.getZExtValue()) {
     default: break;
-    case 4: ID = Intrinsic::minnum; break;
+    case 4:
+      ID = Intrinsic::minnum;
+      break;
     }
     if (ID != Intrinsic::not_intrinsic) {
       Function *F = CGM.getIntrinsic(ID, ResultType);

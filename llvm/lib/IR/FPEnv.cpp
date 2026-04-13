@@ -32,7 +32,8 @@ llvm::convertStrToRoundingMode(StringRef RoundingArg) {
       .Default(std::nullopt);
 }
 
-std::optional<RoundingMode> llvm::convertBundleToRoundingMode(StringRef RoundingArg) {
+std::optional<RoundingMode>
+llvm::convertBundleToRoundingMode(StringRef RoundingArg) {
   return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
       .Case("dyn", RoundingMode::Dynamic)
       .Case("rte", RoundingMode::NearestTiesToEven)
@@ -71,7 +72,8 @@ llvm::convertRoundingModeToStr(RoundingMode UseRounding) {
   return RoundingStr;
 }
 
-std::optional<StringRef> llvm::convertRoundingModeToBundle(RoundingMode UseRounding) {
+std::optional<StringRef>
+llvm::convertRoundingModeToBundle(RoundingMode UseRounding) {
   std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
   case RoundingMode::Dynamic:
@@ -149,4 +151,3 @@ llvm::convertExceptionBehaviorToBundle(fp::ExceptionBehavior UseExcept) {
   }
   return ExceptStr;
 }
-

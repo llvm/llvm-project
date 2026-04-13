@@ -1646,8 +1646,7 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
 }
 
 // Use a tip about rounding mode to create a decoration.
-void SPIRVEmitIntrinsics::useRoundingMode(IntrinsicInst *FPI,
-                                          IRBuilder<> &B) {
+void SPIRVEmitIntrinsics::useRoundingMode(IntrinsicInst *FPI, IRBuilder<> &B) {
   RoundingMode RM = FPI->getRoundingMode();
   unsigned RoundingModeDeco = std::numeric_limits<unsigned>::max();
   switch (RM) {

@@ -135,7 +135,8 @@ struct SimpleValue {
           // ebStrict means exceptions matter; don't CSE.
           if (CI->getExceptionBehavior() == fp::ebStrict)
             return false;
-          // Dynamic rounding mode means result depends on runtime mode; don't CSE.
+          // Dynamic rounding mode means result depends on runtime mode; don't
+          // CSE.
           if (CI->getRoundingMode() == RoundingMode::Dynamic)
             return false;
           return true;

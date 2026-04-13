@@ -7492,7 +7492,9 @@ Value *llvm::simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
 }
 
 Value *llvm::simplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q) {
-  assert(isa<IntrinsicInst>(Call) && Intrinsic::isConstrainedFPIntrinsic(cast<IntrinsicInst>(Call)->getIntrinsicID()));
+  assert(isa<IntrinsicInst>(Call) &&
+         Intrinsic::isConstrainedFPIntrinsic(
+             cast<IntrinsicInst>(Call)->getIntrinsicID()));
   SmallVector<Value *, 4> Args(Call->args());
   if (Value *V = tryConstantFoldCall(Call, Call->getCalledOperand(), Args, Q))
     return V;
