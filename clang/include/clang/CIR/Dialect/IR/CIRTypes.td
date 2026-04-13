@@ -79,7 +79,7 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     /// unsigned integer types whose bit width is 8, 16, 32, or 64).
     /// _BitInt types are never fundamental even if their width matches.
     bool isFundamental() const {
-      return !isBitInt() && isFundamentalIntType(*this);
+      return isFundamentalIntType(*this);
     }
     bool isSignedFundamental() const {
       return isFundamentalSIntType(*this);
