@@ -1027,7 +1027,6 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   const uArch *uArch = getUArch(getChipStr(load).value_or(""));
   if (!uArch)
     return;
-  auto subgroupSize = uArch->getSubgroupSize();
   VectorType resVecTy = load.getValueType();
   int chunkSize = load.getChunkSize().value_or(1);
 
@@ -1049,21 +1048,9 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     load.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  auto maskLayoutAttr = requiredAnchorLayoutAttr;
-  // Special handling mask layout for chunked ops: Enforce the default xegpu 1D
-  // layout for mask.
-  if (chunkSize > 1) {
-    if (layoutKind == xegpu::LayoutKind::InstData)
-      maskLayoutAttr =
-          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize});
-    else if (layoutKind == xegpu::LayoutKind::Lane)
-      maskLayoutAttr =
-          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize}, {1});
-    else
-      assert(false &&
-             "chunked StoreScatterOp should not be used at workgroup level");
-  }
-
+  assert((chunkSize <= 1) || (layoutKind != xegpu::LayoutKind::Subgroup));
+  auto maskLayoutAttr = xegpu::inferMaskOffsetLayoutForScatterIO(
+      requiredAnchorLayoutAttr, chunkSize);
   LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
   auto loadLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
 
@@ -1105,7 +1092,6 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   const uArch *uArch = getUArch(getChipStr(storeScatter).value_or(""));
   if (!uArch)
     return;
-  auto subgroupSize = uArch->getSubgroupSize();
   VectorType srcVecTy = storeScatter.getValueType();
   int chunkSize = storeScatter.getChunkSize().value_or(1);
 
@@ -1122,21 +1108,9 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   }
 
   LayoutInfo srcLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
-  auto maskLayoutAttr = requiredAnchorLayoutAttr;
-  // Special handling mask layout for chunked ops: Enforce the default xegpu 1D
-  // layout for mask.
-  if (chunkSize > 1) {
-    if (layoutKind == xegpu::LayoutKind::InstData)
-      maskLayoutAttr =
-          xegpu::LayoutAttr::get(storeScatter->getContext(), {subgroupSize});
-    else if (layoutKind == xegpu::LayoutKind::Lane)
-      maskLayoutAttr = xegpu::LayoutAttr::get(storeScatter->getContext(),
-                                              {subgroupSize}, {1});
-    else
-      assert(false &&
-             "chunked StoreScatterOp should not be used at workgroup level");
-  }
-
+  assert((chunkSize <= 1) || (layoutKind != xegpu::LayoutKind::Subgroup));
+  auto maskLayoutAttr = xegpu::inferMaskOffsetLayoutForScatterIO(
+      requiredAnchorLayoutAttr, chunkSize);
   LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
 
   // Propagate the payload operand layout
