@@ -3288,6 +3288,17 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   if (!HeaderMask)
     return;
 
+  // Ensure that any reduction that uses a select to mask off tail lanes does so
+  // in the vector loop, not the middle block, since EVL tail folding can have
+  // tail elements in the penultimate iteration.
+  assert(all_of(*Plan.getMiddleBlock(), [&Plan, HeaderMask](VPRecipeBase &R) {
+    if (match(&R, m_ComputeReductionResult(m_Select(m_Specific(HeaderMask),
+                                                    m_VPValue(), m_VPValue()))))
+      return R.getOperand(0)->getDefiningRecipe()->getRegion() ==
+             Plan.getVectorLoopRegion();
+    return true;
+  }));
+
   // Replace header masks with a mask equivalent to predicating by EVL:
   //
   // icmp ule widen-canonical-iv backedge-taken-count
@@ -5882,21 +5893,26 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         BackedgeVal,
         match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
 
-    // If IV is an expression to sink, create a new select that tracks the
-    // underlying IV directly and update the backedge value.
-    if (IVOfExpressionToSink) {
-      auto *OrigFindLastSelectR = FindLastSelect->getDefiningRecipe();
-      VPBuilder LoopBuilder(OrigFindLastSelectR);
-      DebugLoc DL = OrigFindLastSelectR->getDebugLoc();
-      VPValue *SelectCond = OrigFindLastSelectR->getOperand(0);
-      if (OrigFindLastSelectR->getOperand(1) == PhiR) {
-        FindLastSelect = LoopBuilder.createSelect(SelectCond, PhiR,
-                                                  IVOfExpressionToSink, DL);
-      } else {
-        assert(OrigFindLastSelectR->getOperand(2) == PhiR &&
-               "PhiR expected as operand 1 or 2");
-        FindLastSelect = LoopBuilder.createSelect(
-            SelectCond, IVOfExpressionToSink, PhiR, DL);
+    VPValue *NewFindLastSelect = BackedgeVal;
+    VPValue *SelectCond = Cond;
+    if (!SentinelVal || IVOfExpressionToSink) {
+      // When we need to create a new select, normalize the condition so that
+      // PhiR is the last operand and include the header mask if needed.
+      DebugLoc DL = FindLastSelect->getDefiningRecipe()->getDebugLoc();
+      VPBuilder LoopBuilder(FindLastSelect->getDefiningRecipe());
+      if (FindLastSelect->getDefiningRecipe()->getOperand(1) == PhiR)
+        SelectCond = LoopBuilder.createNot(SelectCond);
+
+      // When tail folding, mask the condition with the header mask to prevent
+      // propagating poison from inactive lanes in the last vector iteration.
+      if (HeaderMask)
+        SelectCond = LoopBuilder.createLogicalAnd(HeaderMask, SelectCond);
+
+      if (SelectCond != Cond || IVOfExpressionToSink) {
+        NewFindLastSelect = LoopBuilder.createSelect(
+            SelectCond,
+            IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression,
+            PhiR, DL);
       }
     }
 
@@ -5908,8 +5924,9 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                     FastMathFlags());
     DebugLoc ExitDL = RdxResult->getDebugLoc();
     VPBuilder MiddleBuilder(RdxResult);
-    VPValue *ReducedIV = MiddleBuilder.createNaryOp(
-        VPInstruction::ComputeReductionResult, FindLastSelect, Flags, ExitDL);
+    VPValue *ReducedIV =
+        MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
+                                   NewFindLastSelect, Flags, ExitDL);
 
     // If IVOfExpressionToSink is an expression to sink, sink it now.
     VPValue *VectorRegionExitingVal = ReducedIV;
@@ -5939,10 +5956,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       AnyOfPhi->insertAfter(PhiR);
 
       VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
-      VPValue *AnyOfCond = Cond;
-      if (FindLastSelect->getOperand(1) == PhiR)
-        AnyOfCond = LoopBuilder.createNot(Cond);
-      VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
+      VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, SelectCond);
       AnyOfPhi->setOperand(1, OrVal);
 
       VPIRFlags OrFlags(RecurKind::Or, /*IsOrdered=*/false,
@@ -5963,7 +5977,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     auto *NewPhiR = new VPReductionPHIRecipe(
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
-        *FindLastSelect, RdxUnordered{1}, {},
+        *NewFindLastSelect, RdxUnordered{1}, {},
         PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
