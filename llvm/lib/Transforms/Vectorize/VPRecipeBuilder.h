@@ -90,10 +90,10 @@ public:
   /// scalar loop.
   VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
 
-  /// The stores with invariant address inside the loop will be deleted, and in
-  /// the exit block, a uniform store recipe will be created for the final
-  /// invariant store of the reduction. Returns `true` if replacement took
-  /// place. The order of stores must be preserved, hence \p
+  /// If \p VPI is a store of a reduction into an invariant address, delete it.
+  /// If it is the final store of a reduction result, a uniform store recipe
+  /// will be created for it in the middle block. Returns `true` if replacement
+  /// took place. The order of stores must be preserved, hence \p
   /// FinalRedStoresBuidler.
   bool replaceWithFinalIfReductionStore(VPInstruction *VPI,
                                         VPBuilder &FinalRedStoresBuilder);
