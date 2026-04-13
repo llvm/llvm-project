@@ -4704,9 +4704,10 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         I.second->claim();
     }
   }
-
-  if (C.getDefaultToolChain().getTriple().isDXIL() ||
-      C.getDefaultToolChain().getTriple().isSPIRV()) {
+  
+  llvm::Triple TargetTriple(C.getDriver().getTargetTriple());
+  if (TargetTriple.getOS() == llvm::Triple::Vulkan ||
+      TargetTriple.getOS() == llvm::Triple::ShaderModel) {
     const auto &TC =
         static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
 
