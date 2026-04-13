@@ -763,6 +763,13 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   }
 }
 
+static mlir::Value emitAArch64GetLaneBuiltinExpr(CIRGenBuilderTy &builder,
+                                                 mlir::Location loc,
+                                                 mlir::Value vec,
+                                                 mlir::Value lane) {
+  return cir::VecExtractOp::create(builder, loc, vec, lane);
+}
+
 // Emit an intrinsic where all operands are of the same type as the result.
 // Depending on mode, this may be a constrained floating-point intrinsic.
 static mlir::Value
