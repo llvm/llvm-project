@@ -723,14 +723,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::ComputeAnyOfResult: {
     Value *Start = State.get(getOperand(0), VPLane(0));
     Value *NewVal = State.get(getOperand(1), VPLane(0));
-    Value *ReducedResult = State.get(getOperand(2));
-    for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
-      ReducedResult =
-          Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
-                              ReducedResult, "bin.rdx");
-    // If any predicate is true it means that we want to select the new value.
-    if (ReducedResult->getType()->isVectorTy())
-      ReducedResult = Builder.CreateOrReduce(ReducedResult);
+    Value *ReducedResult = State.get(getOperand(2), VPLane(0));
     // The compares in the loop may yield poison, which propagates through the
     // bitwise ORs. Freeze it here before the condition is used.
     ReducedResult = Builder.CreateFreeze(ReducedResult);

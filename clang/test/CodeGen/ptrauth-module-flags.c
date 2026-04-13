@@ -4,10 +4,10 @@
 
 // ELFGOT:      !llvm.module.flags = !{
 // ELFGOT-SAME: !0
-// ELFGOT:      !0 = !{i32 8, !"ptrauth-elf-got", i32 1}
+// ELFGOT:      !0 = !{i32 1, !"ptrauth-elf-got", i32 1}
 
 // PERSONALITY:      !llvm.module.flags = !{
 // PERSONALITY-SAME: !0
-// PERSONALITY:      !0 = !{i32 8, !"ptrauth-sign-personality", i32 1}
+// PERSONALITY:      !0 = !{i32 1, !"ptrauth-sign-personality", i32 1}
 
 // OFF-NOT: "ptrauth-

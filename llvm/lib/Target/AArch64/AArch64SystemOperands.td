@@ -2636,6 +2636,7 @@ foreach n=0-1 in {
 def : RWSysReg<"ICH_PPI_ACTIVER"#n#"_EL2",   0b11, 0b100, 0b1100, 0b1010, {0b11,nb}>;
 def : RWSysReg<"ICH_PPI_DVIR"#n#"_EL2",      0b11, 0b100, 0b1100, 0b1010, {0b00,nb}>;
 def : RWSysReg<"ICH_PPI_ENABLER"#n#"_EL2",   0b11, 0b100, 0b1100, 0b1010, {0b01,nb}>;
+def : RWSysReg<"ICH_PPI_HVIR"#n#"_EL2",      0b11, 0b100, 0b1100, 0b0111, {0b00,nb}>;
 def : RWSysReg<"ICH_PPI_PENDR"#n#"_EL2",     0b11, 0b100, 0b1100, 0b1010, {0b10,nb}>;
 }
 

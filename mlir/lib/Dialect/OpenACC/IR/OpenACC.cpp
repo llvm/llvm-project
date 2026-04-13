@@ -1598,10 +1598,12 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
 
 /// Create and populate a copy region for firstprivate recipes.
 /// Returns success if the region is populated, failure otherwise.
-/// TODO: Handle MappableType - it does not yet have a copy API.
+/// `varInfo` must be the attribute produced by `createInitRegion` for
+/// `MappableType` (it is unused for `PointerLikeType` copy paths).
 static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
                                       Region &copyRegion, Type varType,
-                                      ValueRange bounds) {
+                                      ValueRange bounds,
+                                      acc::VariableInfoAttr varInfo) {
   // Create copy block with arguments: original value + privatized value +
   // bounds
   SmallVector<Type> copyArgTypes{varType, varType};
@@ -1615,20 +1617,20 @@ static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
   copyBlock->addArguments(copyArgTypes, copyArgLocs);
   builder.setInsertionPointToStart(copyBlock);
 
-  bool isMappable = isa<MappableType>(varType);
-  bool isPointerLike = isa<PointerLikeType>(varType);
-  // TODO: Handle MappableType - it does not yet have a copy API.
-  // Otherwise, for now just fallback to pointer-like behavior.
-  if (isMappable && !isPointerLike)
-    return failure();
+  Value originalArg = copyBlock->getArgument(0);
+  Value privatizedArg = copyBlock->getArgument(1);
 
-  // Generate copy region body based on variable type
-  if (isPointerLike) {
+  if (isa<MappableType>(varType)) {
+    auto mappableTy = cast<MappableType>(varType);
+    // generateCopy(src, dest): copy from original (arg0) into privatized
+    // (arg1).
+    if (!mappableTy.generateCopy(
+            builder, loc, cast<TypedValue<MappableType>>(originalArg),
+            cast<TypedValue<MappableType>>(privatizedArg), bounds, varInfo))
+      return failure();
+  } else {
+    assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
     auto pointerLikeTy = cast<PointerLikeType>(varType);
-    Value originalArg = copyBlock->getArgument(0);
-    Value privatizedArg = copyBlock->getArgument(1);
-
-    // Generate copy operation using PointerLikeType interface
     if (!pointerLikeTy.genCopy(
             builder, loc, cast<TypedValue<PointerLikeType>>(privatizedArg),
             cast<TypedValue<PointerLikeType>>(originalArg), varType))
@@ -1845,6 +1847,9 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
 
   // Populate the init region
   bool needsFree = false;
+  // Filled by createInitRegion for mappable variables (genPrivateVariableInfo);
+  // then passed through to copy/destroy so generateCopy /
+  // generatePrivateDestroy receive the same metadata as generatePrivateInit.
   acc::VariableInfoAttr varInfo;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), hostVar,
                               varName, bounds, needsFree, varInfo))) {
@@ -1852,9 +1857,9 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     return std::nullopt;
   }
 
-  // Populate the copy region
+  // Populate the copy region (uses varInfo for MappableType::generateCopy).
   if (failed(createCopyRegion(builder, loc, recipe.getCopyRegion(), varType,
-                              bounds))) {
+                              bounds, varInfo))) {
     recipe.erase();
     return std::nullopt;
   }

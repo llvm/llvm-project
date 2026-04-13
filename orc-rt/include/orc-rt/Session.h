@@ -28,7 +28,7 @@
 #include "orc-rt-c/WrapperFunction.h"
 
 #include <cassert>
-#include <future>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -218,6 +218,10 @@ public:
   Session(Session &&) = delete;
   Session &operator=(Session &&) = delete;
 
+  /// Destroy the session object.
+  ///
+  /// This will trigger shutdown if it has not happened already. Destruction
+  /// will block until the Session lifecycle completes.
   ~Session();
 
   /// Provides information about the host process that the Session is running
@@ -270,6 +274,18 @@ public:
   /// take ownership of CA or call its connect method.
   void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
 
+  /// Construct a ControllerAccessT with the given args, then immediately
+  /// attach using the given BootstrapInfo.
+  ///
+  /// This enables one-line attach operations in the common case where the
+  /// ControllerAccess implementation does not require any further
+  /// configuration after construction.
+  template <typename ControllerAccessT, typename... ArgTs>
+  void attach(BootstrapInfo BI, ArgTs &&...Args) {
+    attach(std::make_shared<ControllerAccessT>(std::forward<ArgTs>(Args)...),
+           std::move(BI));
+  }
+
   /// Initiate detach from the controller.
   ///
   /// Signals that controller access is permanently unavailable and notifies
@@ -297,9 +313,6 @@ public:
   /// The optional OnShutdown callback is called after step (3), before
   /// the TaskDispatcher is shut down.
   void shutdown(OnShutdownFn OnShutdown = {});
-
-  /// Initiate session shutdown and block until complete.
-  void waitForShutdown();
 
   /// Register a callback to be called when the Session detaches from the
   /// controller. If the Session has already detached, the callback will be
@@ -426,7 +439,6 @@ private:
   };
 
   class NotificationService;
-  NotificationService &addNotificationService();
 
   void appendService(std::unique_ptr<Service> Srv);
 
@@ -472,6 +484,7 @@ private:
   ErrorReporterFn ReportError;
 
   mutable std::mutex M;
+  std::condition_variable CV;
   State CurrentState = State::Start;
   State TargetState = State::None;
   std::vector<std::unique_ptr<Service>> Services;

@@ -79,7 +79,7 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     /// unsigned integer types whose bit width is 8, 16, 32, or 64).
     /// _BitInt types are never fundamental even if their width matches.
     bool isFundamental() const {
-      return !isBitInt() && isFundamentalIntType(*this);
+      return isFundamentalIntType(*this);
     }
     bool isSignedFundamental() const {
       return isFundamentalSIntType(*this);
@@ -362,6 +362,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member", [
 //===----------------------------------------------------------------------===//
 
 def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface>
 ]> {
   let summary = "CIR type that is used for the vptr member of C++ objects";

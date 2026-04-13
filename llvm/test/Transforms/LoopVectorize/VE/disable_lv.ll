@@ -13,11 +13,11 @@ entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %omp.inner.for.body.preheader, label %simd.if.end
 
-omp.inner.for.body.preheader:                     ; preds = %entry
+omp.inner.for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %omp.inner.for.body
 
-omp.inner.for.body:                               ; preds = %omp.inner.for.body.preheader, %omp.inner.for.body
+omp.inner.for.body:
   %indvars.iv = phi i64 [ 0, %omp.inner.for.body.preheader ], [ %indvars.iv.next, %omp.inner.for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4, !llvm.access.group !6
@@ -28,7 +28,7 @@ omp.inner.for.body:                               ; preds = %omp.inner.for.body.
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %simd.if.end, label %omp.inner.for.body, !llvm.loop !7
 
-simd.if.end:                                      ; preds = %omp.inner.for.body, %entry
+simd.if.end:
   ret void
 }
 

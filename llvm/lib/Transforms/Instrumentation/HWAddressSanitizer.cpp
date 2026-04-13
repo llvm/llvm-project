@@ -284,10 +284,12 @@ static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
                                       cl::desc("Use page aliasing in HWASan"),
                                       cl::Hidden, cl::init(false));
 
-static cl::opt<uint64_t>
-    ClTagMask("hwasan-tag-mask",
-              cl::desc("Don't use the top bit of the pointer for alloca tags"),
-              cl::Hidden, cl::init(0));
+static cl::opt<uint64_t> ClTagMask(
+    "hwasan-tag-mask",
+    cl::desc("Additional masking for tags. This gets applied after "
+             "the architecture specific mask for the ignored pointer bits. "
+             "Must be > 16 and one less than a power of two."),
+    cl::Hidden, cl::init(0));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
