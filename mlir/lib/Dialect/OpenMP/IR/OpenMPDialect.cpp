@@ -3451,7 +3451,7 @@ LogicalResult TaskloopContextOp::verifyRegions() {
 
     return llvm::all_of(defOp->getOperands(), isValidBoundValue);
   };
-  auto hasUnsupportedTaskloopLocalBound = [&](OperandRange range) {
+  auto hasUnsupportedTaskloopLocalBound = [&](OperandRange range) -> bool {
     return llvm::any_of(range,
                         [&](Value value) { return !isValidBoundValue(value); });
   };
