@@ -56,6 +56,12 @@ ABI Changes in This Version
   on MSVC targets. Internal bitfield tracking fields were changed from
   ``unsigned char`` to ``uint64_t`` to prevent overflow. This might be an ABI
   break for such structs compared to earlier Clang versions.
+- Fixed a number of issues with the ``__regcall`` calling convention for passing
+  structs on non-Windows x86-64 targets, including a crash when handling empty
+  struct arguments. This changes how structs that contain arrays, floating point
+  types, or ``_Complex float`` types are passed, and may introduce
+  incompatibilities with code compiled by earlier versions of Clang that uses
+  the ``__regcall`` calling convention on these targets. (#GH62999) (#GH98635)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
