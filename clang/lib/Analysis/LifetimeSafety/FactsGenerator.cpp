@@ -207,6 +207,11 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
                      /*IsGslConstruction=*/false);
 }
 
+void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
+  if (const Expr *Init = DIE->getExpr())
+    killAndFlowOrigin(*DIE, *Init);
+}
+
 void FactsGenerator::handleCXXCtorInitializer(const CXXCtorInitializer *CII) {
   // Flows origins from the initializer expression to the field.
   // Example: `MyObj(std::string s) : view(s) {}`
