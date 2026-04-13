@@ -93,6 +93,11 @@ if (PIC) {
   }
 
 #define ADD_ANALYSIS_PASS(NAME, CREATE_PASS)                                   \
+  if (Name == "invalidate<" NAME ">") {                                        \
+    PM.addPass(InvalidateAnalysisPass<                                         \
+               std::remove_reference_t<decltype(CREATE_PASS)>>());             \
+    return true;                                                               \
+  }                                                                            \
   if (Name == "require<" NAME ">") {                                           \
     PM.addPass(                                                                \
         RequireAnalysisPass<std::remove_reference_t<decltype(CREATE_PASS)>,    \

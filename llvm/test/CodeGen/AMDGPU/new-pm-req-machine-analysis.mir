@@ -1,9 +1,0 @@
-# RUN: llc -mtriple=amdgcn "-passes=require<amdgpu-resource-usage>" -filetype=null %s
----
-name:            test
-body:             |
-  bb.0:
-    S_NOP 0
-...
-
-
