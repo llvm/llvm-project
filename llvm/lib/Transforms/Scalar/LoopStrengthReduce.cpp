@@ -5181,7 +5181,7 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
 
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
     LSRUse &LU = Uses[LUIdx];
-    if (!LU.AllFixupsOutsideLoop)
+    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty())
       continue;
 
     LLVM_DEBUG(dbgs() << "  Trying to eliminate use "; LU.print(dbgs());
@@ -5196,6 +5196,9 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
       // Can't merge with ICmpZero uses as they're handled specially when
       // expanding
       if (OtherLU.Kind == LSRUse::ICmpZero)
+        continue;
+      // Can't merge with uses without any formulae
+      if (OtherLU.Formulae.empty())
         continue;
       // We can merge with uses that have the same initial formula. We allow
       // merging of uses with different Kind and AccessTy which means that the
