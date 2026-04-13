@@ -382,12 +382,12 @@ public:
   bool isSubregFoldable() const override { return true; }
 
   using TargetInstrInfo::foldMemoryOperandImpl;
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineBasicBlock::iterator InsertPt,
+                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   /// \returns true if a branch from an instruction with opcode \p BranchOpc
   ///  bytes is capable of jumping to a position \p BrOffset bytes away.
@@ -579,6 +579,12 @@ public:
 
   static int
   findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr);
+
+  /// Insert a `PAUTH_EPILOGUE` pseudo before the first terminator in \p MBB to
+  /// authenticate the return address. Adds an implicit def of X16 when the
+  /// branch protection uses PAuthLR but the subtarget lacks PAuthLR
+  /// instructions.
+  void createPauthEpilogueInstr(MachineBasicBlock &MBB, DebugLoc DL) const;
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"

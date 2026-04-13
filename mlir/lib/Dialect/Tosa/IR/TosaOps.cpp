@@ -1998,24 +1998,14 @@ LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
 }
 
 LogicalResult MatMulOp::verify() {
-  auto aType = llvm::dyn_cast<ShapedType>(getA().getType());
-  auto bType = llvm::dyn_cast<ShapedType>(getB().getType());
+  const ShapeAdaptor aShape(getA().getType());
+  const ShapeAdaptor bShape(getB().getType());
+  const Type aElementType = aShape.getElementType();
+  const Type bElementType = bShape.getElementType();
 
-  // Must be shaped tensor types
-  if (!aType)
-    return emitOpError("expect a shaped tensor for input a, got ")
-           << getA().getType();
-
-  if (!bType)
-    return emitOpError("expect a shaped tensor for input b, got ")
-           << getB().getType();
-
-  auto aElementType = aType.getElementType();
-  auto bElementType = bType.getElementType();
-
-  auto aQuantizedEType =
+  const auto aQuantizedEType =
       llvm::dyn_cast<quant::UniformQuantizedType>(aElementType);
-  auto bQuantizedEType =
+  const auto bQuantizedEType =
       llvm::dyn_cast<quant::UniformQuantizedType>(bElementType);
 
   if (aQuantizedEType || bQuantizedEType) {
@@ -2034,21 +2024,19 @@ LogicalResult MatMulOp::verify() {
   }
 
   // check a_zp and b_zp
-  auto aEType = getStorageElementTypeOrSelf(aType);
+  auto aEType = getStorageElementTypeOrSelf(aElementType);
   auto aZpEType = getStorageElementTypeOrSelf(getAZp().getType());
-  if (aEType != aZpEType) {
+  if (aEType != aZpEType)
     return emitOpError("expect input a and a_zp have the same "
                        "element type, got ")
            << aEType << " and " << aZpEType;
-  }
 
-  auto bEType = getStorageElementTypeOrSelf(bType);
-  auto bZpEType = getStorageElementTypeOrSelf(getBZp().getType());
-  if (bEType != bZpEType) {
+  const Type bEType = getStorageElementTypeOrSelf(bElementType);
+  const Type bZpEType = getStorageElementTypeOrSelf(getBZp().getType());
+  if (bEType != bZpEType)
     return emitOpError("expect input b and b_zp have the same "
                        "element type, got ")
            << bEType << " and " << bZpEType;
-  }
 
   FailureOr<int64_t> maybeAZp = getAZeroPoint();
   if (succeeded(maybeAZp) && verifyAZeroPoint(*maybeAZp).failed())
@@ -2057,6 +2045,45 @@ LogicalResult MatMulOp::verify() {
   FailureOr<int64_t> maybeBZp = getBZeroPoint();
   if (succeeded(maybeBZp) && verifyBZeroPoint(*maybeBZp).failed())
     return failure();
+
+  // Verify input/output shapes
+  int64_t N = ShapedType::kDynamic;
+  int64_t H = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+
+  if (aShape.hasRank()) {
+    N = aShape.getDimSize(0);
+    H = aShape.getDimSize(1);
+    C = aShape.getDimSize(2);
+  }
+
+  if (bShape.hasRank()) {
+    if (failed(tryUpdateDimOrFailure(*this, N, bShape.getDimSize(0), "b",
+                                     "batch")) ||
+        failed(tryUpdateDimOrFailure(*this, C, bShape.getDimSize(1), "b",
+                                     "channels")))
+      return failure();
+    W = bShape.getDimSize(2);
+  }
+
+  const SmallVector<int64_t, 3> expectedOutputShape = {N, H, W};
+  const auto outputType = cast<ShapedType>(getResult().getType());
+  if (outputType.hasRank() &&
+      failed(
+          verifyCompatibleShape(outputType.getShape(), expectedOutputShape))) {
+    InFlightDiagnostic opError = emitOpError("expected output shape ");
+    auto stringifyDim = [&](int64_t d) {
+      if (ShapedType::isDynamic(d))
+        opError << "?";
+      else
+        opError << d;
+    };
+    llvm::interleaveComma(outputType.getShape(), opError, stringifyDim);
+    opError << " to be compatible with expected output shape ";
+    llvm::interleaveComma(expectedOutputShape, opError, stringifyDim);
+    return opError;
+  }
 
   return success();
 }
