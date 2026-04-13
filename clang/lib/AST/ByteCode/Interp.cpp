@@ -1991,6 +1991,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
   auto directBaseIsUnion = [](const Pointer &Ptr) -> bool {
+    if (Ptr.isArrayElement())
+      return false;
     const Record *R = Ptr.getBase().getRecord();
     return R && R->isUnion();
   };
