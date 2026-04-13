@@ -2693,16 +2693,24 @@ std::function<void()> reassign_lambda_to_functor() {
   return f;
 }
 
+} // namespace callable_wrappers
+
+namespace GH126600 {
+// https://github.com/llvm/llvm-project/issues/126600
 struct [[gsl::Pointer]] function_ref {
   template <typename Callable>
   function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {}
   void (*ref)();
 };
 
+// FIXME: The lifetimebound annotation tracks the outer callable object's
+// storage rather than what the callable captures. A mechanism like
+// lifetimebound(2) could enable tracking inner lifetimes, which would
+// avoid this warning for non-capturing lambdas.
 void assign_non_capturing_to_function_ref(function_ref &r) {
   r = []() {}; // expected-warning {{object whose reference is captured does not live long enough}} \
                // expected-note {{destroyed here}}
   (void)r; // expected-note {{later used here}}
 }
 
-} // namespace callable_wrappers
+} // namespace GH126600
