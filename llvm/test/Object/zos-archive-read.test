@@ -3,6 +3,10 @@
 # RUN: llvm-ar t %p/Inputs/zos-archive-test.a | FileCheck %s --check-prefix=LIST
 # RUN: llvm-nm --print-armap %p/Inputs/zos-archive-test.a | FileCheck %s --check-prefix=SYMS
 
+## Test extracting a member and verifying its content.
+# RUN: llvm-ar p %p/Inputs/zos-archive-test.a foo.o > %t.foo.o
+# RUN: cmp %t.foo.o %p/Inputs/zos-expected-foo.o
+
 # LIST: foo.o
 
 # SYMS: Archive map
