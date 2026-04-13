@@ -39,11 +39,11 @@ entry:
   %cmp6 = icmp eq i32 %n, 0, !dbg !21
   br i1 %cmp6, label %for.end, label %for.body.preheader, !dbg !25
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64, !dbg !21
   br label %for.body, !dbg !27
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %r.08 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv, !dbg !27
@@ -55,10 +55,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count, !dbg !21
   br i1 %exitcond, label %for.end.loopexit, label %for.body, !dbg !25, !llvm.loop !35
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end, !dbg !38
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.end.loopexit ]
   ret i32 %r.0.lcssa, !dbg !38
 }
@@ -75,11 +75,11 @@ entry:
   %cmp6 = icmp eq i32 %n, 0
   br i1 %cmp6, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %r.08 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
@@ -89,10 +89,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.end.loopexit ]
   ret i32 %r.0.lcssa
 }

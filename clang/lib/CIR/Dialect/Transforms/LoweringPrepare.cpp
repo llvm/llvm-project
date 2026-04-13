@@ -1547,7 +1547,6 @@ void LoweringPreparePass::lowerArrayDtor(cir::ArrayDtor op) {
     return;
   }
 
-  assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
@@ -1568,7 +1567,6 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
     return;
   }
 
-  assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),

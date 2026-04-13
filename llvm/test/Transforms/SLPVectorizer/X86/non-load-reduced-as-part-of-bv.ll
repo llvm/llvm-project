@@ -5,16 +5,16 @@ define i1 @foo() {
 ; CHECK-LABEL: define i1 @foo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_2329_I_I:%.*]] = icmp ne i32 0, 0
-; CHECK-NEXT:    [[STOREMERGE_2333_I_I:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[STOREMERGE_2333_I_I]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> zeroinitializer, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> <i1 false, i1 false, i1 undef, i1 undef>, <4 x i32> <i32 0, i32 4, i32 5, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef>, <8 x i1> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP4]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP5]], i1 false, i1 false
+; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_1_1_I_I:%.*]] = icmp ne i32 0, 0
+; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_2329_I_I1:%.*]] = icmp ne i32 0, 0
+; CHECK-NEXT:    [[STOREMERGE_2333_I_I:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I1]], i32 0, i32 0
+; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_1_2_I_I:%.*]] = icmp ne i32 [[STOREMERGE_2333_I_I]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> zeroinitializer)
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = select i1 [[TMP0]], i1 [[TOBOOL_NOT_NOT509_I_1_2_I_I]], i1 false
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I1]], i1 [[TOBOOL_NOT_NOT509_I_1_1_I_I]], i1 false
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I]], i1 false, i1 false
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX4]], i1 [[OP_RDX1]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[OP_RDX3]], i1 [[OP_RDX2]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX]]
 ;
 entry:

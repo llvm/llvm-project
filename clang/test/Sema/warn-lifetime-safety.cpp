@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=expected,function %s
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -fcxx-exceptions -verify=expected,function %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -750,6 +751,18 @@ void no_error_if_dangle_then_rescue_gsl() {
   }
   v = safe;    // 'v' is "rescued" before use by reassigning to a valid object.
   v.use();     // This is safe.
+}
+
+void no_error_if_dangle_then_rescue_via_ref() {
+  MyObj safe;
+  MyObj* p;
+  MyObj*& ref = p;
+  {
+    MyObj temp;
+    ref = &temp;  // p temporarily points to temp via ref.
+  }
+  ref = &safe;    // p is "rescued" via ref before use.
+  (void)*ref;     // This is safe.
 }
 
 void no_error_loan_from_current_iteration(bool cond) {
@@ -2418,3 +2431,103 @@ void owner_outlives_lifetimebound_source() {
 }
 
 } // namespace track_origins_for_lifetimebound_record_type
+
+namespace gslpointer_construction_from_lifetimebound {
+// https://github.com/llvm/llvm-project/issues/175898
+struct Bar {};
+template <typename T> struct [[gsl::Pointer]] Pointer {
+  Pointer();
+  Pointer(const T &bar [[clang::lifetimebound]]);
+  Pointer(const Pointer<T> &p);
+  const T &operator*() const [[clang::lifetimebound]];
+};
+
+template <typename T> void use(T);
+
+void local_pointer() {
+  Pointer<int> p;
+  {
+    int v;
+    p = Pointer(v); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                 // expected-note {{destroyed here}}
+  use(*p);          // expected-note {{later used here}}
+}
+
+void nested_local_pointer() {
+  Pointer<Pointer<Pointer<Bar>>> ppp;
+  Pointer<Pointer<Bar>> pp;
+  Pointer<Bar> p;
+  {
+    Bar v;
+    p = Pointer(v);     // expected-warning {{object whose reference is captured does not live long enough}}
+    pp = Pointer(p);
+    ppp = Pointer(pp);
+  }                     // expected-note {{destroyed here}}
+  use(***ppp);          // expected-note {{later used here}}
+}
+
+struct PFieldFromParam {
+  Pointer<Bar> value;                      // function-note {{this field dangles}}
+  PFieldFromParam(Bar bar) : value(bar) {} // function-warning {{address of stack memory escapes to a field}}
+};
+
+struct PFieldFromTemp {
+  Pointer<Bar> value;                // function-note {{this field dangles}}
+  PFieldFromTemp() : value(Bar{}) {} // function-warning {{address of stack memory escapes to a field}}
+};
+
+} // namespace gslpointer_construction_from_lifetimebound
+namespace conditional_operator_control_flow {
+// https://github.com/llvm/llvm-project/issues/183895
+
+#ifdef __cpp_exceptions
+
+void throw_branches(bool cond, int *value) {
+  (void)(cond ? throw 1 : value);
+  (void)(cond ? throw 1 : throw 2);
+}
+
+void nested_throw_branches(bool cond, bool cond2, int *value) {
+  (void)(cond ? (cond2 ? throw 1 : value) : throw 2);
+  (void)(cond ? throw 1 : (cond2 ? value : throw 2));
+}
+
+#endif
+
+int *f(int *p [[clang::lifetimebound]]);
+[[noreturn]] int *noret_f(int *p [[clang::lifetimebound]]);
+
+
+constexpr bool kTrue = true;
+constexpr bool kFalse = false;
+
+int *constexpr_dead_false(int *num) {
+  int local = 0;
+  return kTrue ? num : f(&local);
+}
+
+int *constexpr_dead_nested(int *num) {
+  int local = 0;
+  return kTrue ? (kTrue ? num : f(&local)) : num; 
+}
+
+int *constexpr_live_false(int *num) {
+  int local = 0;
+  return kFalse ? num : f(&local); // expected-warning {{address of stack memory is returned later}} // expected-note {{returned here}}
+}
+
+int *constexpr_live_nested(int *num) {
+  int local = 0;
+  return kTrue ? (kFalse ? num : f(&local)) : num; // expected-warning {{address of stack memory is returned later}} // expected-note {{returned here}}
+}
+int *noreturn_dead_false(bool cond, int *num) {
+  int local = 0;
+  return cond ? num : noret_f(&local);
+}
+
+int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
+  int local = 0;
+  return cond ? (cond2 ? num : noret_f(&local)) : num;
+}
+
+} // namespace conditional_operator_control_flow

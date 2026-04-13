@@ -95,7 +95,7 @@ entry:
   %cmp.not16 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not16, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %if.end
+while.body:
   %pA.addr.020 = phi ptr [ %incdec.ptr, %if.end ], [ %pA, %entry ]
   %pB.addr.019 = phi ptr [ %incdec.ptr1, %if.end ], [ %pB, %entry ]
   %blockSize.addr.018 = phi i32 [ %dec, %if.end ], [ %blockSize, %entry ]
@@ -109,7 +109,7 @@ while.body:                                       ; preds = %entry, %if.end
   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
   br i1 %or.cond, label %if.then, label %if.end
 
-if.then:                                          ; preds = %while.body
+if.then:
   %2 = tail call fast float @llvm.fabs.f32(float %0)
   %3 = tail call fast float @llvm.fabs.f32(float %1)
   %add = fadd fast float %3, %2
@@ -119,13 +119,13 @@ if.then:                                          ; preds = %while.body
   %add4 = fadd fast float %div, %accum.017
   br label %if.end
 
-if.end:                                           ; preds = %while.body, %if.then
+if.end:
   %accum.1 = phi float [ %add4, %if.then ], [ %accum.017, %while.body ]
   %dec = add i32 %blockSize.addr.018, -1
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end, label %while.body
 
-while.end:                                        ; preds = %if.end, %entry
+while.end:
   %accum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %accum.1, %if.end ]
   ret float %accum.0.lcssa
 }
