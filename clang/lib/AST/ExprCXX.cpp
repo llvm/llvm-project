@@ -1948,7 +1948,7 @@ CXXReflectExpr::CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
 
 CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation CaretCaretLoc,
-                                       TypeSourceInfo *TSI) {
+                                       const TypeSourceInfo *TSI) {
   return new (C) CXXReflectExpr(C, CaretCaretLoc, TSI);
 }
 

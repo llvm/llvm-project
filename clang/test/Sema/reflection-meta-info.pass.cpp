@@ -2,10 +2,20 @@
 
 using info = decltype(^^int);
 
+template <auto R>
+consteval auto f1() {
+  return R;
+}
+
+template <decltype(^^int) R>
+consteval auto f2() {
+  return R;
+}
+
 consteval void test()
 {
     constexpr auto r = ^^int;
-    constexpr auto q = ^^int;
+    constexpr auto q = ^^float;
 
     static_assert(__is_same(decltype(^^int), info));
     static_assert(__is_same(decltype(^^float), info));
@@ -27,16 +37,24 @@ consteval void test()
     static_assert(__is_same(decltype(^^double), decltype(^^float)));
 
     static_assert(!__is_same(decltype(^^int), int));
+    static_assert(__is_scalar(info));
+
+    static_assert(f1< ^^int >() == ^^int);
+    static_assert(f1< ^^float>() != ^^int);
+
+    static_assert(f2<r>() == ^^int);
+    static_assert(f2<^^float>() != ^^int);
 
     static_assert(sizeof(^^int) == sizeof(^^float));
     static_assert(sizeof(^^int) == 8);
+    static_assert(alignof(^^int) == 1);
 
 
     static_assert(^^int == ^^int);
     static_assert(^^int != ^^float);
     static_assert(^^float != ^^int);
     static_assert(!(^^float == ^^int));
-    static_assert(r == q);
+    static_assert(r != q);
 
     int a;
     static_assert(^^int == ^^decltype(a));
