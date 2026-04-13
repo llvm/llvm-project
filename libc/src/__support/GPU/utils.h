@@ -92,6 +92,18 @@ LIBC_INLINE uint32_t shuffle(uint64_t lane_mask, uint32_t idx, uint32_t x,
   return __gpu_shuffle_idx_u32(lane_mask, idx, x, width);
 }
 
+LIBC_INLINE uint64_t shuffle(uint64_t lane_mask, uint32_t idx, uint64_t x,
+                             uint32_t width = __gpu_num_lanes()) {
+  return __gpu_shuffle_idx_u64(lane_mask, idx, x, width);
+}
+
+template <typename T>
+LIBC_INLINE T *shuffle(uint64_t lane_mask, uint32_t idx, T *x,
+                       uint32_t width = __gpu_num_lanes()) {
+  return reinterpret_cast<T *>(__gpu_shuffle_idx_u64(
+      lane_mask, idx, reinterpret_cast<uintptr_t>(x), width));
+}
+
 LIBC_INLINE uint64_t match_any(uint64_t lane_mask, uint32_t x) {
   return __gpu_match_any_u32(lane_mask, x);
 }
@@ -107,11 +119,11 @@ LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
 }
 
 LIBC_INLINE uint32_t reduce(uint64_t lane_mask, uint32_t x) {
-  return __gpu_lane_sum_u32(lane_mask, x);
+  return __gpu_lane_add_u32(lane_mask, x);
 }
 
 LIBC_INLINE uint32_t scan(uint64_t lane_mask, uint32_t x) {
-  return __gpu_lane_scan_u32(lane_mask, x);
+  return __gpu_prefix_scan_add_u32(lane_mask, x);
 }
 
 LIBC_INLINE uint64_t fixed_frequency_clock() {

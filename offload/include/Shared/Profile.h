@@ -41,8 +41,8 @@ class Profiler {
       return;
 
     if (auto Err = llvm::timeTraceProfilerWrite(ProfileTraceFile.get(), "-"))
-      REPORT("Error writing out the time trace: %s\n",
-             llvm::toString(std::move(Err)).c_str());
+      REPORT() << "Error writing out the time trace: "
+               << llvm::toString(std::move(Err)).c_str() << "\n";
 
     llvm::timeTraceProfilerCleanup();
   }

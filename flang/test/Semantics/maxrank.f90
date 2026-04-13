@@ -17,6 +17,8 @@ module m
   real :: c
   dimension :: c(1,1,1,1,1,1,1,1,1,1,1,1,1,1)
   codimension :: c[1,*]
+  !ERROR: 'p' has rank 16, which is greater than the maximum supported rank 15
+  integer, parameter :: p(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1) = 1
   interface
     !ERROR: 'foo' has rank 16, which is greater than the maximum supported rank 15
     real function foo()

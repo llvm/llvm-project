@@ -2,15 +2,15 @@
 ! Test conflicting CUDA subprogram attributes
 module m1
  contains
-  !WARNING: ATTRIBUTES(Host) appears more than once
+  !WARNING: ATTRIBUTES(Host) appears more than once [-Wredundant-attribute]
   attributes(host,host) subroutine ok1; end
-  !WARNING: ATTRIBUTES(Host) appears more than once
+  !WARNING: ATTRIBUTES(Host) appears more than once [-Wredundant-attribute]
   attributes(host) attributes(host) subroutine ok2; end
   attributes(host,device) subroutine ok3; end
   attributes(device,host) subroutine ok4; end
-  !WARNING: ATTRIBUTES(Host) appears more than once
+  !WARNING: ATTRIBUTES(Host) appears more than once [-Wredundant-attribute]
   attributes(host,device,host) subroutine ok5; end
-  !WARNING: ATTRIBUTES(Device) appears more than once
+  !WARNING: ATTRIBUTES(Device) appears more than once [-Wredundant-attribute]
   attributes(device,host,device) subroutine ok6; end
   !ERROR: ATTRIBUTES(Global) conflicts with earlier ATTRIBUTES(Host)
   attributes(host,global) subroutine conflict1; end

@@ -16,6 +16,7 @@
 
 #include "Shared/Utils.h"
 
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Error.h"
 
@@ -26,13 +27,21 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 using namespace plugin;
+using namespace error;
+using namespace llvm::offload::debug;
 
 Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
   assert(utils::elf::isELF(Image.getMemoryBuffer().getBuffer()) &&
          "Input is not an ELF file");
 
-  return ELFObjectFileBase::createELFObjectFile(Image.getMemoryBuffer());
+  auto Expected =
+      ELFObjectFileBase::createELFObjectFile(Image.getMemoryBuffer());
+  if (!Expected) {
+    return Plugin::error(ErrorCode::INVALID_BINARY, Expected.takeError(),
+                         "error parsing binary");
+  }
+  return Expected;
 }
 
 Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
@@ -68,12 +77,13 @@ Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
       return Err;
   }
 
-  DP("Successfully %s %u bytes associated with global symbol '%s' %s the "
-     "device "
-     "(%p -> %p).\n",
-     Device2Host ? "read" : "write", HostGlobal.getSize(),
-     HostGlobal.getName().data(), Device2Host ? "from" : "to",
-     DeviceGlobal.getPtr(), HostGlobal.getPtr());
+  ODBG(OLDT_DataTransfer) << "Successfully " << (Device2Host ? "read" : "write")
+                          << " " << HostGlobal.getSize()
+                          << " bytes associated with global symbol '"
+                          << HostGlobal.getName() << "' "
+                          << (Device2Host ? "from" : "to") << " the device ("
+                          << DeviceGlobal.getPtr() << " -> "
+                          << HostGlobal.getPtr() << ").";
 
   return Plugin::success();
 }
@@ -112,20 +122,21 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
   // Search the ELF symbol using the symbol name.
   auto SymOrErr = utils::elf::getSymbol(**ELFObj, ImageGlobal.getName());
   if (!SymOrErr)
-    return Plugin::error("Failed ELF lookup of global '%s': %s",
-                         ImageGlobal.getName().data(),
-                         toString(SymOrErr.takeError()).data());
+    return Plugin::error(
+        ErrorCode::NOT_FOUND, "failed ELF lookup of global '%s': %s",
+        ImageGlobal.getName().data(), toString(SymOrErr.takeError()).data());
 
   if (!SymOrErr->has_value())
-    return Plugin::error("Failed to find global symbol '%s' in the ELF image",
+    return Plugin::error(ErrorCode::NOT_FOUND,
+                         "failed to find global symbol '%s' in the ELF image",
                          ImageGlobal.getName().data());
 
   auto AddrOrErr = utils::elf::getSymbolAddress(**SymOrErr);
   // Get the section to which the symbol belongs.
   if (!AddrOrErr)
-    return Plugin::error("Failed to get ELF symbol from global '%s': %s",
-                         ImageGlobal.getName().data(),
-                         toString(AddrOrErr.takeError()).data());
+    return Plugin::error(
+        ErrorCode::NOT_FOUND, "failed to get ELF symbol from global '%s': %s",
+        ImageGlobal.getName().data(), toString(AddrOrErr.takeError()).data());
 
   // Setup the global symbol's address and size.
   ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
@@ -143,15 +154,17 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
     return Err;
 
   if (ImageGlobal.getSize() != HostGlobal.getSize())
-    return Plugin::error("Transfer failed because global symbol '%s' has "
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "transfer failed because global symbol '%s' has "
                          "%u bytes in the ELF image but %u bytes on the host",
                          HostGlobal.getName().data(), ImageGlobal.getSize(),
                          HostGlobal.getSize());
 
-  DP("Global symbol '%s' was found in the ELF image and %u bytes will copied "
-     "from %p to %p.\n",
-     HostGlobal.getName().data(), HostGlobal.getSize(), ImageGlobal.getPtr(),
-     HostGlobal.getPtr());
+  ODBG(OLDT_DataTransfer) << "Global symbol '" << HostGlobal.getName()
+                          << "' was found in the ELF image and "
+                          << HostGlobal.getSize() << " bytes will copied from "
+                          << ImageGlobal.getPtr() << " to "
+                          << HostGlobal.getPtr() << ".";
 
   assert(Image.getStart() <= ImageGlobal.getPtr() &&
          utils::advancePtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
@@ -164,75 +177,70 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
   return Plugin::success();
 }
 
-bool GenericGlobalHandlerTy::hasProfilingGlobals(GenericDeviceTy &Device,
-                                                 DeviceImageTy &Image) {
-  GlobalTy global(getInstrProfNamesVarName().str(), 0);
-  if (auto Err = getGlobalMetadataFromImage(Device, Image, global)) {
-    consumeError(std::move(Err));
-    return false;
-  }
-  return true;
-}
-
 Expected<GPUProfGlobals>
 GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
                                              DeviceImageTy &Image) {
-  GPUProfGlobals DeviceProfileData;
+  const char *TableName = INSTR_PROF_QUOTE(INSTR_PROF_SECT_BOUNDS_TABLE);
+  if (!isSymbolInImage(Device, Image, TableName))
+    return GPUProfGlobals{};
+
+  GPUProfGlobals ProfData;
   auto ObjFile = getELFObjectFile(Image);
   if (!ObjFile)
     return ObjFile.takeError();
 
   std::unique_ptr<ELFObjectFileBase> ELFObj(
       static_cast<ELFObjectFileBase *>(ObjFile->release()));
-  DeviceProfileData.TargetTriple = ELFObj->makeTriple();
+  ProfData.TargetTriple = ELFObj->makeTriple();
 
-  // Iterate through elf symbols
-  for (auto &Sym : ELFObj->symbols()) {
-    auto NameOrErr = Sym.getName();
-    if (!NameOrErr)
-      return NameOrErr.takeError();
+  __llvm_profile_gpu_sections Table = {};
+  GlobalTy TableGlobal(TableName, sizeof(Table), &Table);
+  if (auto Err = readGlobalFromDevice(Device, Image, TableGlobal))
+    return Err;
 
-    // Check if given current global is a profiling global based
-    // on name
-    if (*NameOrErr == getInstrProfNamesVarName()) {
-      // Read in profiled function names
-      DeviceProfileData.NamesData = SmallVector<uint8_t>(Sym.getSize(), 0);
-      GlobalTy NamesGlobal(NameOrErr->str(), Sym.getSize(),
-                           DeviceProfileData.NamesData.data());
-      if (auto Err = readGlobalFromDevice(Device, Image, NamesGlobal))
-        return Err;
-    } else if (NameOrErr->starts_with(getInstrProfCountersVarPrefix())) {
-      // Read global variable profiling counts
-      SmallVector<int64_t> Counts(Sym.getSize() / sizeof(int64_t), 0);
-      GlobalTy CountGlobal(NameOrErr->str(), Sym.getSize(), Counts.data());
-      if (auto Err = readGlobalFromDevice(Device, Image, CountGlobal))
-        return Err;
-      DeviceProfileData.Counts.append(std::move(Counts));
-    } else if (NameOrErr->starts_with(getInstrProfDataVarPrefix())) {
-      // Read profiling data for this global variable
-      __llvm_profile_data Data{};
-      GlobalTy DataGlobal(NameOrErr->str(), Sym.getSize(), &Data);
-      if (auto Err = readGlobalFromDevice(Device, Image, DataGlobal))
-        return Err;
-      DeviceProfileData.Data.push_back(std::move(Data));
-    } else if (*NameOrErr == INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR)) {
-      uint64_t RawVersionData;
-      GlobalTy RawVersionGlobal(NameOrErr->str(), Sym.getSize(),
-                                &RawVersionData);
-      if (auto Err = readGlobalFromDevice(Device, Image, RawVersionGlobal))
-        return Err;
-      DeviceProfileData.Version = RawVersionData;
-    }
-  }
-  return DeviceProfileData;
+  // Read the contiguous data from one of the profiling sections on the device.
+  auto ReadSection = [&](const void *Start, const void *Stop,
+                         SmallVector<char> &Out) -> Error {
+    uintptr_t Begin = reinterpret_cast<uintptr_t>(Start);
+    uintptr_t End = reinterpret_cast<uintptr_t>(Stop);
+    size_t Size = End - Begin;
+    Out.resize_for_overwrite(Size);
+    return Size ? Device.dataRetrieve(Out.data(), Start, Size,
+                                      /*AsyncInfo=*/nullptr)
+                : Error::success();
+  };
+
+  if (auto Err =
+          ReadSection(Table.NamesStart, Table.NamesStop, ProfData.NamesSection))
+    return Err;
+  if (auto Err = ReadSection(Table.CountersStart, Table.CountersStop,
+                             ProfData.CountersSection))
+    return Err;
+  if (auto Err =
+          ReadSection(Table.DataStart, Table.DataStop, ProfData.DataSection))
+    return Err;
+
+  ProfData.DeviceCountersDelta =
+      reinterpret_cast<intptr_t>(Table.CountersStart) -
+      reinterpret_cast<intptr_t>(Table.DataStart);
+
+  // Get the profiling version from the device.
+  if (auto Err = Device.dataRetrieve(&ProfData.Version, Table.VersionVar,
+                                     sizeof(uint64_t),
+                                     /*AsyncInfo=*/nullptr))
+    return Err;
+
+  return ProfData;
 }
 
 void GPUProfGlobals::dump() const {
   outs() << "======= GPU Profile =======\nTarget: " << TargetTriple.str()
          << "\n";
 
-  outs() << "======== Counters =========\n";
-  for (size_t i = 0; i < Counts.size(); i++) {
+  size_t NumCounters = CountersSection.size() / sizeof(int64_t);
+  outs() << "======== Counters (" << NumCounters << ") =========\n";
+  auto *Counts = reinterpret_cast<const int64_t *>(CountersSection.data());
+  for (size_t i = 0; i < NumCounters; i++) {
     if (i > 0 && i % 10 == 0)
       outs() << "\n";
     else if (i != 0)
@@ -241,73 +249,61 @@ void GPUProfGlobals::dump() const {
   }
   outs() << "\n";
 
-  outs() << "========== Data ===========\n";
-  for (const auto &ProfData : Data) {
-    outs() << "{ ";
-// The ProfData.Name maybe array, eg: NumValueSites[IPVK_Last+1] .
-// If we print out it directly, we are accessing out of bound data.
-// Skip dumping the array for now.
-#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
-  if (sizeof(#Name) > 2 && #Name[sizeof(#Name) - 2] == ']') {                  \
-    outs() << "[...] ";                                                        \
-  } else {                                                                     \
-    outs() << ProfData.Name << " ";                                            \
-  }
-#include "llvm/ProfileData/InstrProfData.inc"
-    outs() << "}\n";
-  }
+  size_t NumDataEntries = DataSection.size() / sizeof(__llvm_profile_data);
+  outs() << "========== Data (" << NumDataEntries << ") ===========\n";
 
   outs() << "======== Functions ========\n";
-  std::string s;
-  s.reserve(NamesData.size());
-  for (uint8_t Name : NamesData) {
-    s.push_back((char)Name);
-  }
-
   InstrProfSymtab Symtab;
-  if (Error Err = Symtab.create(StringRef(s))) {
+  if (Error Err =
+          Symtab.create(StringRef(NamesSection.data(), NamesSection.size())))
     consumeError(std::move(Err));
-  }
   Symtab.dumpNames(outs());
   outs() << "===========================\n";
 }
 
 Error GPUProfGlobals::write() const {
   if (!__llvm_write_custom_profile)
-    return Plugin::error("Could not find symbol __llvm_write_custom_profile. "
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
 
-  size_t DataSize = Data.size() * sizeof(__llvm_profile_data),
-         CountsSize = Counts.size() * sizeof(int64_t);
-  __llvm_profile_data *DataBegin, *DataEnd;
-  char *CountersBegin, *CountersEnd, *NamesBegin, *NamesEnd;
+  // Lay out as [Data][Counters][Names] to match the raw profile format order.
+  // TODO: Move this interface to compiler-rt.
+  SmallVector<char> Buffer(DataSection.size() + CountersSection.size() +
+                           NamesSection.size());
+  char *DataBegin = Buffer.data();
+  char *CountersBegin = DataBegin + DataSection.size();
+  char *NamesBegin = CountersBegin + CountersSection.size();
 
-  // Initialize array of contiguous data. We need to make sure each section is
-  // contiguous so that the PGO library can compute deltas properly
-  SmallVector<uint8_t> ContiguousData(NamesData.size() + DataSize + CountsSize);
+  memcpy(DataBegin, DataSection.data(), DataSection.size());
+  memcpy(CountersBegin, CountersSection.data(), CountersSection.size());
+  memcpy(NamesBegin, NamesSection.data(), NamesSection.size());
 
-  // Compute region pointers
-  DataBegin = (__llvm_profile_data *)(ContiguousData.data() + CountsSize);
-  DataEnd =
-      (__llvm_profile_data *)(ContiguousData.data() + CountsSize + DataSize);
-  CountersBegin = (char *)ContiguousData.data();
-  CountersEnd = (char *)(ContiguousData.data() + CountsSize);
-  NamesBegin = (char *)(ContiguousData.data() + CountsSize + DataSize);
-  NamesEnd = (char *)(ContiguousData.data() + CountsSize + DataSize +
-                      NamesData.size());
+  // Adjust CounterPtr values so they are consistent with the host layout rather
+  // than the device layout.
+  intptr_t HostDelta = CountersBegin - DataBegin;
+  intptr_t Adjustment = HostDelta - DeviceCountersDelta;
+  auto *Records = reinterpret_cast<__llvm_profile_data *>(DataBegin);
+  size_t NumRecords = DataSection.size() / sizeof(__llvm_profile_data);
+  for (size_t I = 0; I < NumRecords; I++)
+    Records[I].CounterPtr = reinterpret_cast<void *>(
+        reinterpret_cast<intptr_t>(Records[I].CounterPtr) + Adjustment);
 
-  // Copy data to contiguous buffer
-  memcpy(DataBegin, Data.data(), DataSize);
-  memcpy(CountersBegin, Counts.data(), CountsSize);
-  memcpy(NamesBegin, NamesData.data(), NamesData.size());
-
-  // Invoke compiler-rt entrypoint
-  int result = __llvm_write_custom_profile(
-      TargetTriple.str().c_str(), DataBegin, DataEnd, CountersBegin,
-      CountersEnd, NamesBegin, NamesEnd, &Version);
-  if (result != 0)
-    return Plugin::error("Error writing GPU PGO data to file");
+  int Result = __llvm_write_custom_profile(
+      TargetTriple.str().c_str(),
+      reinterpret_cast<const __llvm_profile_data *>(DataBegin),
+      reinterpret_cast<const __llvm_profile_data *>(DataBegin +
+                                                    DataSection.size()),
+      CountersBegin, CountersBegin + CountersSection.size(), NamesBegin,
+      NamesBegin + NamesSection.size(), &Version);
+  if (Result != 0)
+    return Plugin::error(ErrorCode::HOST_IO,
+                         "error writing GPU PGO data to file");
 
   return Plugin::success();
+}
+
+bool GPUProfGlobals::empty() const {
+  return CountersSection.empty() && DataSection.empty() && NamesSection.empty();
 }

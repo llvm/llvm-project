@@ -6,26 +6,26 @@ Introduction - Got bugs?
 ========================
 
 
-If you're working with LLVM and run into a bug, we definitely want to know
+If you're working with LLVM and encounter a bug, we definitely want to know
 about it.  This document describes what you can do to increase the odds of
 getting it fixed quickly.
 
 🔒 If you believe that the bug is security related, please follow :ref:`report-security-issue`. 🔒
 
-Basically you have to do two things at a minimum. First, decide whether the
+Basically, you have to do two things at a minimum. First, decide whether the
 bug `crashes the compiler`_ or if the compiler is `miscompiling`_ the program
 (i.e., the compiler successfully produces an executable, but it doesn't run
 right). Based on what type of bug it is, follow the instructions in the
 linked section to narrow down the bug so that the person who fixes it will be
 able to find the problem more easily.
 
-Once you have a reduced test-case, go to `the LLVM Bug Tracking System
+Once you have a reduced test case, go to `the LLVM Bug Tracking System
 <https://github.com/llvm/llvm-project/issues>`_ and fill out the form with the
 necessary details (note that you don't need to pick a label, just use if you're
 not sure).  The bug description should contain the following information:
 
 * All information necessary to reproduce the problem.
-* The reduced test-case that triggers the bug.
+* The reduced test case that triggers the bug.
 * The location where you obtained LLVM (if not from our Git
   repository).
 
@@ -39,10 +39,10 @@ Crashing Bugs
 More often than not, bugs in the compiler cause it to crash---often due to
 an assertion failure of some sort. The most important piece of the puzzle
 is to figure out if it is crashing in the Clang front-end or if it is one of
-the LLVM libraries (e.g. the optimizer or code generator) that has
+the LLVM libraries (e.g., the optimizer or code generator) that has
 problems.
 
-To figure out which component is crashing (the front-end, middle-end
+To identify the crashing component (the front-end, middle-end
 optimizer, or backend code generator), run the ``clang`` command line as you
 were when the crash occurred, but with the following extra command line
 options:
@@ -53,7 +53,7 @@ options:
   <frontend-crash>`.
 
 * ``-emit-llvm``: If ``clang`` crashes with this option (which disables
-  the code generator), you found a middle-end optimizer bug. Jump ahead to
+  the code generator), you've found a middle-end optimizer bug. Jump ahead to
   :ref:`middle-end bugs <middleend-crash>`.
 
 * Otherwise, you have a backend code generator crash. Jump ahead to :ref:`code
@@ -102,29 +102,38 @@ functions. Then run:
 If this doesn't crash, please follow the instructions for a :ref:`front-end
 bug <frontend-crash>`.
 
-If this does crash, then you should be able to debug this with the following
-:doc:`bugpoint <Bugpoint>` command:
-
-.. code-block:: bash
-
-   bugpoint foo.bc -O3
-
-Run this, then file a bug with the instructions and reduced .bc
-files that bugpoint emits.
-
-If bugpoint doesn't reproduce the crash, ``llvm-reduce`` is an alternative
-way to reduce LLVM IR. Create a script that repros the crash and run:
+If this does crash, then you can debug this with the :doc:`llvm-reduce
+<CommandGuide/llvm-reduce>` tool. Create a script that reproduces the
+crash and run:
 
 .. code-block:: bash
 
    llvm-reduce --test=path/to/script foo.bc
 
-which should produce reduced IR that reproduces the crash. Be warned the
-``llvm-reduce`` is still fairly immature and may crash.
+which should produce reduced IR that reproduces the crash.
 
-If none of the above work, you can get the IR before a crash by running the
-``opt`` command with the ``--print-before-all --print-module-scope`` flags to
-dump the IR before every pass. Be warned that this is very verbose.
+.. TIP::
+   ``llvm-reduce -j $NUM_THREADS`` is multi-threaded and can therefore
+   potentially be much faster.
+
+.. TIP::
+   Reduction is fastest and most effective the simpler the
+   reproduction script is. Ideally, this will be running `opt` with a
+   single pass. The most effective way to extract the IR before a
+   specific point is a two step process. First, run the testcase with
+   the ``-print-pass-numbers`` flag. This will print the name of a
+   pass and an integer ID. You can then use the last ID printed before
+   the crash and add 3 flags,
+   ``-print-before-pass-number=<integer-id> -print-module-scope -ir-dump-directory=/my/debug/path``.
+   This will place failing IR files in the given directory.
+   ``-print-before-pass-number`` is the minimum required flag, but
+   will not produce an output directly consumable by a tool. It will
+   print to stderr, and will be incomplete in most situations without
+   ``-print-module-scope``.
+
+   A more brute force approach is to use the ``--print-before-all
+   --print-module-scope`` flags to dump the IR before every pass. Be
+   warned that this is very verbose.
 
 .. _backend-crash:
 
@@ -132,26 +141,25 @@ Backend code generator bugs
 ---------------------------
 
 If you find a bug that crashes clang in the code generator, compile your
-source file to a .bc file by passing "``-emit-llvm -c -o foo.bc``" to
-clang (in addition to the options you already pass).  Once your have
-foo.bc, one of the following commands should fail:
+source file to a ``.bc`` file by passing "``-emit-llvm -c -o foo.bc``" to
+clang (in addition to the options you already pass).  Once you have
+``foo.bc``, one of the following commands should fail:
 
 #. ``llc foo.bc``
 #. ``llc foo.bc -relocation-model=pic``
 #. ``llc foo.bc -relocation-model=static``
 
-If none of these crash, please follow the instructions for a :ref:`front-end
-bug<frontend-crash>`. If one of these do crash, you should be able to reduce
-this with one of the following :doc:`bugpoint <Bugpoint>` command lines (use
-the one corresponding to the command above that failed):
+If none of these crash, please follow the instructions for a
+:ref:`front-end bug<frontend-crash>`. If one of these crashes, you
+should be able to reduce this with :doc:`llvm-reduce
+<CommandGuide/llvm-reduce>`, similar to middle end bugs. In this
+case, your test script should use :doc:`llc <CommandGuide/llc>`
+instead of `opt`.
 
-#. ``bugpoint -run-llc foo.bc``
-#. ``bugpoint -run-llc foo.bc --tool-args -relocation-model=pic``
-#. ``bugpoint -run-llc foo.bc --tool-args -relocation-model=static``
-
-Please run this, then file a bug with the instructions and reduced .bc file
-that bugpoint emits.  If something goes wrong with bugpoint, please submit
-the "foo.bc" file and the option that llc crashes with.
+Please run this, then file a bug with the instructions and reduced
+``.bc`` file that `llvm-reduce` emits.  If something goes wrong with
+`llvm-reduce`, please submit the ``foo.bc`` file and the option that
+`llc` crashes with.
 
 LTO bugs
 ---------------------------
@@ -169,7 +177,7 @@ in addition to your existing compilation options:
 These options enable LTO and save temporary files generated during compilation
 for later analysis.
 
-On Windows, you should be using lld-link as the linker. Adjust your compilation 
+On Windows, use lld-link as the linker. Adjust your compilation 
 flags as follows:
 * Add ``/lldsavetemps`` to the linker flags.
 * When linking from the compiler driver, add ``/link /lldsavetemps`` in order to forward that flag to the linker.
@@ -194,7 +202,7 @@ command line (use the bc file corresponding to the command above that failed):
 
    llvm-reduce --test reduce.sh a.out.0.2.internalize.bc
 
-Example of reduce.sh script
+Example of ``reduce.sh`` script
 
 .. code-block:: bash
 
@@ -204,9 +212,9 @@ Example of reduce.sh script
    path/to/not --crash path/to/opt "-passes=lto<O3>" $1 -o temp.bc  2> err.log
    grep -q "It->second == &Insn" err.log
 
-Here we have grepped the failed assert message.
+Here we have grepped for the failed assert message.
 
-Please run this, then file a bug with the instructions and reduced .bc file
+Please run this, then file a bug with the instructions and reduced ``.bc`` file
 that llvm-reduce emits.
 
 .. _miscompiling:
@@ -216,16 +224,16 @@ Miscompilations
 
 If clang successfully produces an executable, but that executable doesn't run
 right, this is either a bug in the code or a bug in the compiler. The first
-thing to check is to make sure it is not using undefined behavior (e.g.
+thing to check is to make sure it is not using undefined behavior (e.g.,
 reading a variable before it is defined). In particular, check to see if the
 program is clean under various `sanitizers
-<https://github.com/google/sanitizers>`_ (e.g. ``clang
+<https://github.com/google/sanitizers>`_ (e.g., ``clang
 -fsanitize=undefined,address``) and `valgrind <http://valgrind.org/>`_. Many
 "LLVM bugs" that we have chased down ended up being bugs in the program being
 compiled, not LLVM.
 
 Once you determine that the program itself is not buggy, you should choose
-which code generator you wish to compile the program with (e.g. LLC or the JIT)
+which code generator you wish to compile the program with (e.g., LLC or the JIT)
 and optionally a series of LLVM passes to run.  For example:
 
 .. code-block:: bash
@@ -239,71 +247,3 @@ resulting error.
 
 The :doc:`OptBisect <OptBisect>` page shows an alternative method for finding
 incorrect optimization passes.
-
-Incorrect code generation
-=========================
-
-Similarly to debugging incorrect compilation by mis-behaving passes, you
-can debug incorrect code generation by either LLC or the JIT, using
-``bugpoint``. The process ``bugpoint`` follows in this case is to try to
-narrow the code down to a function that is miscompiled by one or the other
-method, but since for correctness, the entire program must be run,
-``bugpoint`` will compile the code it deems to not be affected with the C
-Backend, and then link in the shared object it generates.
-
-To debug the JIT:
-
-.. code-block:: bash
-
-   bugpoint -run-jit -output=[correct output file] [bitcode file]  \
-            --tool-args -- [arguments to pass to lli]              \
-            --args -- [program arguments]
-
-Similarly, to debug the LLC, one would run:
-
-.. code-block:: bash
-
-   bugpoint -run-llc -output=[correct output file] [bitcode file]  \
-            --tool-args -- [arguments to pass to llc]              \
-            --args -- [program arguments]
-
-**Special note:** if you are debugging MultiSource or SPEC tests that
-already exist in the ``llvm/test`` hierarchy, there is an easier way to
-debug the JIT, LLC, and CBE, using the pre-written Makefile targets, which
-will pass the program options specified in the Makefiles:
-
-.. code-block:: bash
-
-   cd llvm/test/../../program
-   make bugpoint-jit
-
-At the end of a successful ``bugpoint`` run, you will be presented
-with two bitcode files: a *safe* file which can be compiled with the C
-backend and the *test* file which either LLC or the JIT
-mis-codegenerates, and thus causes the error.
-
-To reproduce the error that ``bugpoint`` found, it is sufficient to do
-the following:
-
-#. Regenerate the shared object from the safe bitcode file:
-
-   .. code-block:: bash
-
-      llc -march=c safe.bc -o safe.c
-      gcc -shared safe.c -o safe.so
-
-#. If debugging LLC, compile test bitcode native and link with the shared
-   object:
-
-   .. code-block:: bash
-
-      llc test.bc -o test.s
-      gcc test.s safe.so -o test.llc
-      ./test.llc [program options]
-
-#. If debugging the JIT, load the shared object and supply the test
-   bitcode:
-
-   .. code-block:: bash
-
-      lli -load=safe.so test.bc [program options]

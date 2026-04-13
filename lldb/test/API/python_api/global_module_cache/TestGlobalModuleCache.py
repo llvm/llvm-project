@@ -14,6 +14,7 @@ import time
 
 
 class GlobalModuleCacheTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     # NO_DEBUG_INFO_TESTCASE = True
 
     def check_counter_var(self, thread, value):
@@ -45,7 +46,7 @@ class GlobalModuleCacheTestCase(TestBase):
     # On Arm and AArch64 Linux, this test attempts to pop a thread plan when
     # we only have the base plan remaining. Skip it until we can figure out
     # the bug this is exposing (https://github.com/llvm/llvm-project/issues/76057).
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_OneTargetOneDebugger(self):
         self.do_test(True, True)
 
@@ -53,13 +54,13 @@ class GlobalModuleCacheTestCase(TestBase):
     # This test tests for the desired behavior as an expected fail.
     @skipIfWindows
     @expectedFailureAll
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_TwoTargetsOneDebugger(self):
         self.do_test(False, True)
 
     @skipIfWindows
     @expectedFailureAll
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_OneTargetTwoDebuggers(self):
         self.do_test(True, False)
 

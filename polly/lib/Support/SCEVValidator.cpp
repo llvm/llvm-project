@@ -83,7 +83,7 @@ public:
 
   /// Add the parameters of Source to this result.
   void addParamsFrom(const ValidatorResult &Source) {
-    Parameters.insert(Source.Parameters.begin(), Source.Parameters.end());
+    Parameters.insert_range(Source.Parameters);
   }
 
   /// Merge a result.
@@ -154,6 +154,10 @@ public:
     if (Type == SCEVType::IV)
       return ValidatorResult(SCEVType::INVALID);
     return ValidatorResult(SCEVType::PARAM, Expr);
+  }
+
+  ValidatorResult visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+    return visit(Expr->getOperand());
   }
 
   ValidatorResult visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
@@ -423,7 +427,7 @@ public:
 
     auto *Divisor = SRem->getOperand(1);
     auto *CI = dyn_cast<ConstantInt>(Divisor);
-    if (!CI || CI->isZeroValue())
+    if (!CI || CI->isNullValue())
       return visitGenericInst(SRem, S);
 
     auto *Dividend = SRem->getOperand(0);
@@ -633,7 +637,7 @@ static bool isAffineExpr(Value *V, const Region *R, Loop *Scope,
     return false;
 
   auto ResultParams = Result.getParameters();
-  Params.insert(ResultParams.begin(), ResultParams.end());
+  Params.insert_range(ResultParams);
 
   return true;
 }
@@ -696,7 +700,7 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
   }
 
   if (auto *Add = dyn_cast<SCEVAddExpr>(S)) {
-    SmallVector<const SCEV *, 4> LeftOvers;
+    SmallVector<SCEVUse, 4> LeftOvers;
     auto Op0Pair = extractConstantFactor(Add->getOperand(0), SE);
     auto *Factor = Op0Pair.first;
     if (SE.isKnownNegative(Factor)) {
@@ -725,7 +729,7 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
   if (!Mul)
     return std::make_pair(ConstPart, S);
 
-  SmallVector<const SCEV *, 4> LeftOvers;
+  SmallVector<SCEVUse, 4> LeftOvers;
   for (const SCEV *Op : Mul->operands())
     if (isa<SCEVConstant>(Op))
       ConstPart = cast<SCEVConstant>(SE.getMulExpr(ConstPart, Op));

@@ -20,24 +20,53 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
-class EPCGenericJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
+class LLVM_ABI EPCGenericJITLinkMemoryManager
+    : public jitlink::JITLinkMemoryManager {
 public:
-  /// Function addresses for memory access.
+  /// Symbol addresses for memory management implementation.
   struct SymbolAddrs {
     ExecutorAddr Allocator;
     ExecutorAddr Reserve;
-    ExecutorAddr Finalize;
-    ExecutorAddr Deallocate;
+    ExecutorAddr Initialize;
+    ExecutorAddr Deinitialize;
+    ExecutorAddr Release;
   };
+
+  /// Symbol names for memory management implementation.
+  struct SymbolNames {
+    StringRef AllocatorName;
+    StringRef ReserveName;
+    StringRef InitializeName;
+    StringRef DeinitializeName;
+    StringRef ReleaseName;
+  };
+
+  /// Default symbol names for the ORC runtime's SimpleNativeMemoryMap SPS
+  /// interface.
+  static const SymbolNames orc_rt_SimpleNativeMemoryMapSPSSymbols;
 
   /// Create an EPCGenericJITLinkMemoryManager instance from a given set of
   /// function addrs.
   EPCGenericJITLinkMemoryManager(ExecutorProcessControl &EPC, SymbolAddrs SAs)
       : EPC(EPC), SAs(SAs) {}
+
+  /// Create an EPCGenericJITLinkMemoryManager using the given implementation
+  /// symbol names. These will be looked up in the given JITDylib.
+  static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
+  Create(JITDylib &JD,
+         SymbolNames SNs = orc_rt_SimpleNativeMemoryMapSPSSymbols);
+
+  /// Create an EPCGenericJITLinkMemoryManager using the given implementation
+  /// symbol names. These will be looked up in the given ExecutionSession's
+  /// Bootstrap JITDylib.
+  static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
+  Create(ExecutionSession &ES,
+         SymbolNames SNs = orc_rt_SimpleNativeMemoryMapSPSSymbols);
 
   void allocate(const jitlink::JITLinkDylib *JD, jitlink::LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;

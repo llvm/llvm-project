@@ -1,5 +1,5 @@
 add_llvm_library(LLVMBOLTPasses
-  ADRRelaxationPass.cpp
+  AArch64RelaxationPass.cpp
   Aligner.cpp
   AllocCombiner.cpp
   AsmDump.cpp
@@ -27,6 +27,8 @@ add_llvm_library(LLVMBOLTPasses
   PAuthGadgetScanner.cpp
   PettisAndHansen.cpp
   PLTCall.cpp
+  PointerAuthCFIAnalyzer.cpp
+  PointerAuthCFIFixup.cpp
   ProfileQualityStats.cpp
   RegAnalysis.cpp
   RegReAssign.cpp

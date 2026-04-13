@@ -1,6 +1,5 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=GCN %s
-; RUN: llc -mtriple=r600-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=R600 %s
-target datalayout = "A5"
+; RUN: llc -mtriple=amdgcn-- -mcpu=unknown < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=GCN %s
+; RUN: llc -mtriple=r600-- -mcpu=unknown < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=R600 %s
 
 ; Should not crash when the processor is not recognized and the
 ; wavefront size feature not set.

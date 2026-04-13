@@ -6,8 +6,6 @@
 // section in XCOFF yet.
 // UNSUPPORTED: target={{.*}}-aix{{.*}}
 
-// REQUIRES: shell
-
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/modules-pch/* %t
 

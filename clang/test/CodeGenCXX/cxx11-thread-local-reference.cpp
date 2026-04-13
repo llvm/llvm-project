@@ -35,5 +35,5 @@ int &g() { return r; }
 // DARWIN-LABEL: define internal cxx_fast_tlscc void @__tls_init()
 // CHECK: call void @[[R_INIT]]()
 
-// LINUX_AIX: attributes [[ATTR0]] = { {{.*}}"target-features"{{.*}} }
+// LINUX_AIX: attributes [[ATTR0]] = { {{.*}} }
 // DARWIN: attributes [[ATTR1]] = { {{.*}}nounwind{{.*}}"target-features"{{.*}}  }

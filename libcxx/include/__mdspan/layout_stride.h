@@ -72,9 +72,9 @@ public:
                 "layout_stride::mapping template argument must be a specialization of extents.");
 
   using extents_type = _Extents;
-  using index_type   = typename extents_type::index_type;
-  using size_type    = typename extents_type::size_type;
-  using rank_type    = typename extents_type::rank_type;
+  using index_type   = extents_type::index_type;
+  using size_type    = extents_type::size_type;
+  using rank_type    = extents_type::rank_type;
   using layout_type  = layout_stride;
 
 private:
@@ -272,11 +272,10 @@ public:
       return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
         if ((__extents_.extent(_Pos) * ... * 1) == 0)
           return static_cast<index_type>(0);
-        else
-          return static_cast<index_type>(
-              static_cast<index_type>(1) +
-              (((__extents_.extent(_Pos) - static_cast<index_type>(1)) * __strides_[_Pos]) + ... +
-               static_cast<index_type>(0)));
+
+        return static_cast<index_type>(
+            static_cast<index_type>(1) + (((__extents_.extent(_Pos) - static_cast<index_type>(1)) * __strides_[_Pos]) +
+                                          ... + static_cast<index_type>(0)));
       }(make_index_sequence<__rank_>());
     }
   }

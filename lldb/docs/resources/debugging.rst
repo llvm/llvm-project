@@ -130,7 +130,7 @@ The inferior will stop, you place the breakpoint and then ``continue``. Go back
 to the inferior and input the command that should trigger the breakpoint.
 
 If you are running debugger and inferior in the same window, input ``ctrl+c``
-instead of ``process interrupt`` and then folllow the rest of the steps.
+instead of ``process interrupt`` and then follow the rest of the steps.
 
 If you are doing this with ``lldb-server`` and find your breakpoint is never
 hit, check that you are breaking in code that is actually run by
@@ -187,7 +187,7 @@ predictable way, or change the prompt of one or both copies of ``lldb``.
 If you are debugging a scenario where the ``lldb-server`` starts in ``platform``
 mode, but you want to debug the ``gdbserver`` mode you'll have to work out what
 subprocess it's starting for the ``gdbserver`` part. One way is to look at the
-list of runninng processes and take the command line from there.
+list of running processes and take the command line from there.
 
 In theory it should be possible to use LLDB's
 ``target.process.follow-fork-mode`` or GDB's ``follow-fork-mode`` to
@@ -236,7 +236,7 @@ in. For example, to find a process that acted as a ``gdbserver`` instance::
 Remote Debugging
 ----------------
 
-If you want to debug part of LLDB running on a remote machine, the principals
+If you want to debug part of LLDB running on a remote machine, the principles
 are the same but we will have to start debug servers, then attach debuggers to
 those servers.
 
@@ -387,8 +387,8 @@ an issue or asking for help. This is simply inspiration.
 Reduction
 *********
 
-The first step is to reduce uneeded compexity where it is cheap to do so. If
-something is easily removed or frozen to a cerain value, do so. The goal is to
+The first step is to reduce unneeded complexity where it is cheap to do so. If
+something is easily removed or frozen to a certain value, do so. The goal is to
 keep the failure mode the same, with fewer dependencies.
 
 This includes, but is not limited to:
@@ -396,11 +396,11 @@ This includes, but is not limited to:
 * Removing test cases that don't crash.
 * Replacing dynamic lookups with constant values.
 * Replace supporting functions with stubs that do nothing.
-* Moving the test case to less unqiue system. If your machine has an exotic
+* Moving the test case to less unique system. If your machine has an exotic
   extension, try it on a readily available commodity machine.
 * Removing irrelevant parts of the test program.
 * Reproducing the issue without using the LLDB test runner.
-* Converting a remote debuging scenario into a local one.
+* Converting a remote debugging scenario into a local one.
 
 Now we hopefully have a smaller reproducer than we started with. Next we need to
 find out what components of the software stack might be failing.
@@ -578,14 +578,14 @@ Doing it this way instead of exactly copying what LLDB does will save a few
 ptrace calls. The AArch64 example program shows how to do this.
 
 * The inferior contains ``BRK #0`` then ``NOP``.
-* 2 4 byte instructins means 8 bytes of data to replace, which matches the
+* 2 4-byte instructions means 8 bytes of data to replace, which matches the
   minimum size you can write with ``PTRACE_POKETEXT``.
 * The inferior runs to the ``BRK``, which brings us into the debugger.
 * The debugger reads ``PC`` and writes ``NOP`` then ``NOP`` to the location
   pointed to by ``PC``.
 * The debugger then single steps the inferior to the next instruction
   (this is not required in this specific scenario, you could just continue but
-  it is included because this more cloesly matches what ``lldb`` does).
+  it is included because this more closely matches what ``lldb`` does).
 * The debugger then continues the inferior.
 * The inferior exits, and the whole program exits.
 

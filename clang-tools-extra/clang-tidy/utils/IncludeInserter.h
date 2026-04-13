@@ -1,4 +1,4 @@
-//===---------- IncludeInserter.h - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H
 
 #include "IncludeSorter.h"
 #include "clang/Basic/Diagnostic.h"
@@ -72,15 +72,14 @@ public:
   /// Returns ``std::nullopt`` on error or if the inclusion directive already
   /// exists.
   std::optional<FixItHint> createIncludeInsertion(FileID FileID,
-                                                  llvm::StringRef Header);
+                                                  StringRef Header);
 
   /// Creates a \p Header inclusion directive fixit in the main file.
   /// When \p Header is enclosed in angle brackets, uses angle brackets in the
   /// inclusion directive, otherwise uses quotes.
   /// Returns ``std::nullopt`` on error or if the inclusion directive already
   /// exists.
-  std::optional<FixItHint>
-  createMainFileIncludeInsertion(llvm::StringRef Header);
+  std::optional<FixItHint> createMainFileIncludeInsertion(StringRef Header);
 
   IncludeSorter::IncludeStyle getStyle() const { return Style; }
 
@@ -100,4 +99,4 @@ private:
 
 } // namespace tidy::utils
 } // namespace clang
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H

@@ -18,27 +18,27 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
 define hidden swifttailcc void @"$ss23withCheckedContinuation8function_xSS_yScCyxs5NeverOGXEtYalFTQ0_"(ptr nocapture readonly %0) #1 {
 ; CHECK-LABEL: $ss23withCheckedContinuation8function_xSS_yScCyxs5NeverOGXEtYalFTQ0_:
 ; CHECK:       // %bb.0: // %entryresume.0
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    stp x30, x29, [sp, #24] // 16-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #24
-; CHECK-NEXT:    str x19, [sp, #40] // 8-byte Folded Spill
-; CHECK-NEXT:    adrp x19, __imp_swift_task_dealloc
-; CHECK-NEXT:    str xzr, [sp, #16]
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    stur x8, [x29, #-8]
-; CHECK-NEXT:    ldr x20, [x0]
-; CHECK-NEXT:    ldp x22, x0, [x8, #16]
-; CHECK-NEXT:    stur x20, [x29, #-8]
-; CHECK-NEXT:    ldr x19, [x19, :lo12:__imp_swift_task_dealloc]
-; CHECK-NEXT:    blr x19
-; CHECK-NEXT:    mov x0, x22
-; CHECK-NEXT:    blr x19
-; CHECK-NEXT:    ldp x30, x29, [sp, #24] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x0, x20
-; CHECK-NEXT:    ldr x1, [x20, #8]
-; CHECK-NEXT:    ldr x19, [sp, #40] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #48
-; CHECK-NEXT:    br x1
+; CHECK-NEXT:    sub	sp, sp, #48
+; CHECK-NEXT:    str	x19, [sp, #16] // 8-byte Spill
+; CHECK-NEXT:    adrp	x19, __imp_swift_task_dealloc
+; CHECK-NEXT:    stp	x29, x30, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    add	x29, sp, #32
+; CHECK-NEXT:    str	xzr, [sp, #24]
+; CHECK-NEXT:    ldr	x8, [x0]
+; CHECK-NEXT:    stur	x8, [x29, #-8]
+; CHECK-NEXT:    ldr	x20, [x0]
+; CHECK-NEXT:    ldp	x22, x0, [x8, #16]
+; CHECK-NEXT:    stur	x20, [x29, #-8]
+; CHECK-NEXT:    ldr	x19, [x19, :lo12:__imp_swift_task_dealloc]
+; CHECK-NEXT:    blr	x19
+; CHECK-NEXT:    mov	x0, x22
+; CHECK-NEXT:    blr	x19
+; CHECK-NEXT:    ldp	x29, x30, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    mov	x0, x20
+; CHECK-NEXT:    ldr	x1, [x20, #8]
+; CHECK-NEXT:    ldr	x19, [sp, #16] // 8-byte Reload
+; CHECK-NEXT:    add	sp, sp, #48
+; CHECK-NEXT:    br	x1
 entryresume.0:
   %1 = load ptr, ptr %0, align 8
   %2 = tail call ptr @llvm.swift.async.context.addr() #4
@@ -70,4 +70,3 @@ attributes #1 = { nounwind "frame-pointer"="none" "no-trapping-math"="true" "sta
 attributes #2 = { nounwind readnone }
 attributes #3 = { argmemonly nounwind }
 attributes #4 = { nounwind }
-

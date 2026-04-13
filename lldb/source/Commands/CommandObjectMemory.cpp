@@ -156,6 +156,7 @@ public:
 
     case eFormatBinary:
     case eFormatFloat:
+    case eFormatFloat128:
     case eFormatOctal:
     case eFormatDecimal:
     case eFormatEnum:
@@ -359,10 +360,12 @@ protected:
       result.AppendErrorWithFormat("%s takes a start address expression with "
                                    "an optional end address expression.\n",
                                    m_cmd_name.c_str());
-      result.AppendWarning("Expressions should be quoted if they contain "
-                           "spaces or other special characters.");
+      result.AppendWarning("expressions should be quoted if they contain "
+                           "spaces or other special characters");
       return;
     }
+
+    ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
 
     CompilerType compiler_type;
     Status error;
@@ -519,7 +522,7 @@ protected:
         --pointer_count;
       }
 
-      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      auto size_or_err = compiler_type.GetByteSize(exe_scope);
       if (!size_or_err) {
         result.AppendErrorWithFormat(
             "unable to get the byte size of the type '%s'\n%s",
@@ -562,16 +565,8 @@ protected:
     }
 
     size_t item_count = m_format_options.GetCountValue().GetCurrentValue();
-
-    // TODO For non-8-bit byte addressable architectures this needs to be
-    // revisited to fully support all lldb's range of formatting options.
-    // Furthermore code memory reads (for those architectures) will not be
-    // correctly formatted even w/o formatting options.
     size_t item_byte_size =
-        target->GetArchitecture().GetDataByteSize() > 1
-            ? target->GetArchitecture().GetDataByteSize()
-            : m_format_options.GetByteSizeValue().GetCurrentValue();
-
+        m_format_options.GetByteSizeValue().GetCurrentValue();
     const size_t num_per_line =
         m_memory_options.m_num_per_line.GetCurrentValue();
 
@@ -639,7 +634,7 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      auto size_or_err = compiler_type.GetByteSize(exe_scope);
       if (!size_or_err) {
         result.AppendError(llvm::toString(size_or_err.takeError()));
         return;
@@ -660,7 +655,7 @@ protected:
         return;
       }
 
-      Address address(addr, nullptr);
+      Address address(addr);
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
@@ -675,10 +670,9 @@ protected:
       }
 
       if (bytes_read < total_byte_size)
-        result.AppendWarningWithFormat(
-            "Not all bytes (%" PRIu64 "/%" PRIu64
-            ") were able to be read from 0x%" PRIx64 ".\n",
-            (uint64_t)bytes_read, (uint64_t)total_byte_size, addr);
+        result.AppendWarningWithFormatv("not all bytes ({0} / {1}) "
+                                        "were able to be read from {2:x}",
+                                        bytes_read, total_byte_size, addr);
     } else {
       // we treat c-strings as a special case because they do not have a fixed
       // size
@@ -708,8 +702,8 @@ protected:
         std::string buffer;
         buffer.resize(item_byte_size + 1, 0);
         Status error;
-        size_t read = target->ReadCStringFromMemory(data_addr, &buffer[0],
-                                                    item_byte_size + 1, error);
+        size_t read = target->ReadCStringFromMemory(
+            Address(data_addr), &buffer[0], item_byte_size + 1, error);
         if (error.Fail()) {
           result.AppendErrorWithFormat(
               "failed to read memory from 0x%" PRIx64 ".\n", addr);
@@ -717,9 +711,9 @@ protected:
         }
 
         if (item_byte_size == read) {
-          result.AppendWarningWithFormat(
-              "unable to find a NULL terminated string at 0x%" PRIx64
-              ". Consider increasing the maximum read length.\n",
+          result.AppendWarningWithFormatv(
+              "unable to find a NULL terminated string at {0:x}"
+              ". Consider increasing the maximum read length",
               data_addr);
           --read;
           break_on_no_NULL = true;
@@ -799,7 +793,6 @@ protected:
       output_stream_p = &result.GetOutputStream();
     }
 
-    ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     if (compiler_type.GetOpaqueQualType()) {
       for (uint32_t i = 0; i < item_count; ++i) {
         addr_t item_addr = addr + (i * item_byte_size);
@@ -832,8 +825,7 @@ protected:
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
     DataExtractor data(data_sp, target->GetArchitecture().GetByteOrder(),
-                       target->GetArchitecture().GetAddressByteSize(),
-                       target->GetArchitecture().GetDataByteSize());
+                       target->GetArchitecture().GetAddressByteSize());
 
     Format format = m_format_options.GetFormat();
     if (((format == eFormatChar) || (format == eFormatCharPrintable)) &&
@@ -858,10 +850,10 @@ protected:
     }
 
     assert(output_stream_p);
-    size_t bytes_dumped = DumpDataExtractor(
-        data, output_stream_p, 0, format, item_byte_size, item_count,
-        num_per_line / target->GetArchitecture().GetDataByteSize(), addr, 0, 0,
-        exe_scope, m_memory_tag_options.GetShowTags().GetCurrentValue());
+    size_t bytes_dumped =
+        DumpDataExtractor(data, output_stream_p, 0, format, item_byte_size,
+                          item_count, num_per_line, addr, 0, 0, exe_scope,
+                          m_memory_tag_options.GetShowTags().GetCurrentValue());
     m_next_addr = addr + bytes_dumped;
     output_stream_p->EOL();
   }
@@ -884,6 +876,61 @@ protected:
 
 #define LLDB_OPTIONS_memory_find
 #include "CommandOptions.inc"
+
+static llvm::Error CopyExpressionResult(ValueObject &result,
+                                        DataBufferHeap &buffer,
+                                        ExecutionContextScope *scope) {
+  uint64_t value = result.GetValueAsUnsigned(0);
+  auto size_or_err = result.GetCompilerType().GetByteSize(scope);
+  if (!size_or_err)
+    return size_or_err.takeError();
+
+  switch (*size_or_err) {
+  case 1: {
+    uint8_t byte = (uint8_t)value;
+    buffer.CopyData(&byte, 1);
+  } break;
+  case 2: {
+    uint16_t word = (uint16_t)value;
+    buffer.CopyData(&word, 2);
+  } break;
+  case 4: {
+    uint32_t lword = (uint32_t)value;
+    buffer.CopyData(&lword, 4);
+  } break;
+  case 8: {
+    buffer.CopyData(&value, 8);
+  } break;
+  default:
+    return llvm::createStringError(
+        "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are "
+        "supported. For other pattern sizes the --string (-s) option may be "
+        "used.");
+  }
+
+  return llvm::Error::success();
+}
+
+static llvm::Expected<ValueObjectSP>
+EvaluateExpression(llvm::StringRef expression, StackFrame &frame,
+                   Process &process) {
+  ValueObjectSP result_sp;
+  auto status =
+      process.GetTarget().EvaluateExpression(expression, &frame, result_sp);
+  if (!result_sp)
+    return llvm::createStringError(
+        "No result returned from expression. Exit status: %d", status);
+
+  if (status != eExpressionCompleted)
+    return result_sp->GetError().ToError();
+
+  result_sp = result_sp->GetQualifiedRepresentationIfAvailable(
+      result_sp->GetDynamicValueType(), /*synthValue=*/true);
+  if (!result_sp)
+    return llvm::createStringError("failed to get dynamic result type");
+
+  return result_sp;
+}
 
 // Find the specified data in memory
 class CommandObjectMemoryFind : public CommandObjectParsed {
@@ -1026,49 +1073,20 @@ protected:
       }
       buffer.CopyData(str);
     } else if (m_memory_options.m_expr.OptionWasSet()) {
-      StackFrame *frame = m_exe_ctx.GetFramePtr();
-      ValueObjectSP result_sp;
-      if ((eExpressionCompleted ==
-           process->GetTarget().EvaluateExpression(
-               m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(
-                   ""),
-               frame, result_sp)) &&
-          result_sp) {
-        uint64_t value = result_sp->GetValueAsUnsigned(0);
-        std::optional<uint64_t> size = llvm::expectedToOptional(
-            result_sp->GetCompilerType().GetByteSize(nullptr));
-        if (!size)
-          return;
-        switch (*size) {
-        case 1: {
-          uint8_t byte = (uint8_t)value;
-          buffer.CopyData(&byte, 1);
-        } break;
-        case 2: {
-          uint16_t word = (uint16_t)value;
-          buffer.CopyData(&word, 2);
-        } break;
-        case 4: {
-          uint32_t lword = (uint32_t)value;
-          buffer.CopyData(&lword, 4);
-        } break;
-        case 8: {
-          buffer.CopyData(&value, 8);
-        } break;
-        case 3:
-        case 5:
-        case 6:
-        case 7:
-          result.AppendError("unknown type. pass a string instead");
-          return;
-        default:
-          result.AppendError(
-              "result size larger than 8 bytes. pass a string instead");
-          return;
-        }
-      } else {
-        result.AppendError(
-            "expression evaluation failed. pass a string instead");
+      auto result_or_err = EvaluateExpression(
+          m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(""),
+          m_exe_ctx.GetFrameRef(), *process);
+      if (!result_or_err) {
+        result.AppendError("Expression evaluation failed: ");
+        result.AppendError(llvm::toString(result_or_err.takeError()));
+        return;
+      }
+
+      ValueObjectSP result_sp = *result_or_err;
+
+      if (auto err = CopyExpressionResult(*result_sp, buffer,
+                                          m_exe_ctx.GetFramePtr())) {
+        result.AppendError(llvm::toString(std::move(err)));
         return;
       }
     } else {
@@ -1091,8 +1109,8 @@ protected:
           result.AppendMessage("no more matches within the range.\n");
         break;
       }
-      result.AppendMessageWithFormat("data found at location: 0x%" PRIx64 "\n",
-                                     found_location);
+      result.AppendMessageWithFormatv("data found at location: {0:x}",
+                                      found_location);
 
       DataBufferHeap dumpbuffer(32, 0);
       process->ReadMemory(
@@ -1260,10 +1278,7 @@ protected:
       return;
     }
 
-    StreamString buffer(
-        Stream::eBinary,
-        process->GetTarget().GetArchitecture().GetAddressByteSize(),
-        process->GetTarget().GetArchitecture().GetByteOrder());
+    StreamString buffer(Stream::eBinary, process->GetByteOrder());
 
     OptionValueUInt64 &byte_size_value = m_format_options.GetByteSizeValue();
     size_t item_byte_size = byte_size_value.GetCurrentValue();
@@ -1317,7 +1332,7 @@ protected:
       return;
     } else if (item_byte_size == 0) {
       if (m_format_options.GetFormat() == eFormatPointer)
-        item_byte_size = buffer.GetAddressByteSize();
+        item_byte_size = process->GetAddressByteSize();
       else
         item_byte_size = 1;
     }
@@ -1330,6 +1345,7 @@ protected:
       switch (m_format_options.GetFormat()) {
       case kNumFormats:
       case eFormatFloat: // TODO: add support for floats soon
+      case eFormatFloat128:
       case eFormatCharPrintable:
       case eFormatBytesWithASCII:
       case eFormatComplex:
@@ -1547,7 +1563,7 @@ protected:
     }
 
     Status error;
-    lldb::addr_t addr = OptionArgParser::ToAddress(
+    lldb::addr_t addr = OptionArgParser::ToRawAddress(
         &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
@@ -1622,12 +1638,18 @@ public:
   };
 
   CommandObjectMemoryRegion(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "memory region",
-                            "Get information on the memory region containing "
-                            "an address in the current target process.",
-                            "memory region <address-expression> (or --all)",
-                            eCommandRequiresProcess | eCommandTryTargetAPILock |
-                                eCommandProcessMustBeLaunched) {
+      : CommandObjectParsed(
+            interpreter, "memory region",
+            "Get information on the memory region containing "
+            "an address in the current target process.\n"
+            "If this command is given an <address-expression> once "
+            "and then repeated without options, it will try to print "
+            "the memory region that follows the previously printed "
+            "region. The command can be repeated until the end of "
+            "the address range is reached.",
+            "memory region <address-expression> (or --all)",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched) {
     // Address in option set 1.
     m_arguments.push_back(CommandArgumentEntry{CommandArgumentData(
         eArgTypeAddressOrExpression, eArgRepeatPlain, LLDB_OPT_SET_1)});
@@ -1662,31 +1684,32 @@ protected:
         range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
         range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
         name, section_name ? " " : "", section_name);
-    MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
-    if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool memory_tagged = range_info.GetMemoryTagged();
+    if (memory_tagged == eLazyBoolYes)
       result.AppendMessage("memory tagging: enabled");
-    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
-    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+    LazyBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
     if (dirty_page_list) {
       const size_t page_count = dirty_page_list->size();
-      result.AppendMessageWithFormat(
-          "Modified memory (dirty) page list provided, %zu entries.\n",
+      result.AppendMessageWithFormatv(
+          "Modified memory (dirty) page list provided, {0} entries.",
           page_count);
       if (page_count > 0) {
         bool print_comma = false;
-        result.AppendMessageWithFormat("Dirty pages: ");
+        Stream &strm = result.GetOutputStream();
+        strm << "Dirty pages: ";
         for (size_t i = 0; i < page_count; i++) {
           if (print_comma)
-            result.AppendMessageWithFormat(", ");
+            strm << ", ";
           else
             print_comma = true;
-          result.AppendMessageWithFormat("0x%" PRIx64, (*dirty_page_list)[i]);
+          strm << llvm::formatv("{0:x}", (*dirty_page_list)[i]);
         }
-        result.AppendMessageWithFormat(".\n");
+        strm << ".\n";
       }
     }
   }
@@ -1706,7 +1729,25 @@ protected:
     const size_t argc = command.GetArgumentCount();
     const lldb::ABISP &abi = process_sp->GetABI();
 
-    if (argc == 1) {
+    if (argc == 0) {
+      if (!m_memory_region_options.m_all) {
+        if ( // When we're repeating the command, the previous end
+             // address is used for load_addr. If that was 0xF...F then
+             // we must have reached the end of memory.
+            (load_addr == LLDB_INVALID_ADDRESS) ||
+            // If the target has non-address bits (tags, limited virtual
+            // address size, etc.), the end of mappable memory will be
+            // lower than that. So if we find any non-address bit set,
+            // we must be at the end of the mappable range.
+            (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
+          result.AppendErrorWithFormat(
+              "No next region address set: one address expression argument or "
+              "\"--all\" option required:\nUsage: %s\n",
+              m_cmd_syntax.c_str());
+          return;
+        }
+      }
+    } else if (argc == 1) {
       if (m_memory_region_options.m_all) {
         result.AppendError(
             "The \"--all\" option cannot be used when an address "
@@ -1722,17 +1763,8 @@ protected:
                                      command[0].c_str(), error.AsCString());
         return;
       }
-    } else if (argc > 1 ||
-               // When we're repeating the command, the previous end address is
-               // used for load_addr. If that was 0xF...F then we must have
-               // reached the end of memory.
-               (argc == 0 && !m_memory_region_options.m_all &&
-                load_addr == LLDB_INVALID_ADDRESS) ||
-               // If the target has non-address bits (tags, limited virtual
-               // address size, etc.), the end of mappable memory will be lower
-               // than that. So if we find any non-address bit set, we must be
-               // at the end of the mappable range.
-               (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
+    } else {
+      // argc > 1
       result.AppendErrorWithFormat(
           "'%s' takes one argument or \"--all\" option:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());

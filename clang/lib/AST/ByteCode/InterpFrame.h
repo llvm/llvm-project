@@ -14,7 +14,8 @@
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
 #include "Frame.h"
-#include "Program.h"
+#include "InterpBlock.h"
+#include "Pointer.h"
 
 namespace clang {
 namespace interp {
@@ -45,21 +46,42 @@ public:
   /// Destroys the frame, killing all live pointers to stack slots.
   ~InterpFrame();
 
+  /// Returns the number of bytes needed to allocate an InterpFrame for the
+  /// given function.
+  static size_t allocSize(const Function *F) {
+    return sizeof(InterpFrame) + F->getFrameSize() +
+           (F->getArgSize() + (sizeof(Block) * F->getNumWrittenParams()));
+  }
+
+  std::string getName() const {
+    if (!Func)
+      return "Bottom frame";
+    return Func->getName();
+  }
+
   static void free(InterpFrame *F) {
-    if (!F->isBottomFrame())
-      delete F;
+    if (!F->isBottomFrame()) {
+      F->~InterpFrame();
+      delete[] reinterpret_cast<char *>(F);
+    } else {
+      F->~InterpFrame();
+    }
   }
 
   /// Invokes the destructors for a scope.
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
   void destroyScopes();
+  void enableLocal(unsigned Idx);
+  bool isLocalEnabled(unsigned Idx) const {
+    return localInlineDesc(Idx)->IsActive;
+  }
 
   /// Describes the frame with arguments for diagnostic purposes.
   void describe(llvm::raw_ostream &OS) const override;
 
   /// Returns the parent frame object.
-  Frame *getCaller() const override;
+  Frame *getCaller() const override { return Caller; }
 
   /// Returns the location of the call to the frame.
   SourceRange getCallRange() const override;
@@ -86,28 +108,40 @@ public:
 
   /// Returns a pointer to a local variables.
   Pointer getLocalPointer(unsigned Offset) const;
+  Block *getLocalBlock(unsigned Offset) const;
 
   /// Returns the value of an argument.
-  template <typename T> const T &getParam(unsigned Offset) const {
-    auto Pt = Params.find(Offset);
-    if (Pt == Params.end())
-      return stackRef<T>(Offset);
-    return Pointer(reinterpret_cast<Block *>(Pt->second.get())).deref<T>();
+  template <typename T> const T &getParam(unsigned Index) const {
+    Block *ArgBlock = argBlock(Index);
+    if (!ArgBlock->isInitialized())
+      return stackRef<T>(Func->getParamDescriptor(Index).Offset);
+    return ArgBlock->deref<T>();
   }
 
   /// Mutates a local copy of a parameter.
-  template <typename T> void setParam(unsigned Offset, const T &Value) {
-    getParamPointer(Offset).deref<T>() = Value;
+  template <typename T> void setParam(unsigned Index, const T &Value) {
+    argBlock(Index)->deref<T>() = Value;
   }
 
   /// Returns a pointer to an argument - lazily creates a block.
   Pointer getParamPointer(unsigned Offset);
 
+  bool hasThisPointer() const { return Func && Func->hasThisPointer(); }
+
   /// Returns the 'this' pointer.
-  const Pointer &getThis() const { return This; }
+  const Pointer &getThis() const {
+    assert(hasThisPointer());
+    assert(!isBottomFrame());
+    return stackRef<Pointer>(ThisPointerOffset);
+  }
 
   /// Returns the RVO pointer, if the Function has one.
-  const Pointer &getRVOPtr() const { return RVOPtr; }
+  const Pointer &getRVOPtr() const {
+    assert(Func);
+    assert(Func->hasRVO());
+    assert(!isBottomFrame());
+    return stackRef<Pointer>(0);
+  }
 
   /// Checks if the frame is a root frame - return should quit the interpreter.
   bool isRoot() const { return !Func; }
@@ -119,7 +153,7 @@ public:
   CodePtr getRetPC() const { return RetPC; }
 
   /// Map a location to a source.
-  virtual SourceInfo getSource(CodePtr PC) const;
+  SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
   SourceRange getRange(CodePtr PC) const;
@@ -128,7 +162,7 @@ public:
 
   bool isStdFunction() const;
 
-  bool isBottomFrame() const { return IsBottom; }
+  bool isBottomFrame() const { return !Caller; }
 
   void dump() const { dump(llvm::errs(), 0); }
   void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;
@@ -142,17 +176,35 @@ private:
 
   /// Returns an offset to a local.
   template <typename T> T &localRef(unsigned Offset) const {
-    return getLocalPointer(Offset).deref<T>();
+    return localBlock(Offset)->deref<T>();
+  }
+
+  /// Pointer to local memory.
+  char *locals() const {
+    return (reinterpret_cast<char *>(const_cast<InterpFrame *>(this))) +
+           align(sizeof(InterpFrame));
+  }
+
+  /// Pointer to argument memory.
+  char *args() const {
+    return (reinterpret_cast<char *>(const_cast<InterpFrame *>(this))) +
+           sizeof(InterpFrame) + Func->getFrameSize();
   }
 
   /// Returns a pointer to a local's block.
   Block *localBlock(unsigned Offset) const {
-    return reinterpret_cast<Block *>(Locals.get() + Offset - sizeof(Block));
+    return reinterpret_cast<Block *>(locals() + Offset - sizeof(Block));
+  }
+
+  /// Returns a pointer to an argument block.
+  Block *argBlock(unsigned Index) const {
+    unsigned ByteOffset = Func->getParamDescriptor(Index).BlockOffset;
+    return reinterpret_cast<Block *>(args() + ByteOffset);
   }
 
   /// Returns the inline descriptor of the local.
   InlineDescriptor *localInlineDesc(unsigned Offset) const {
-    return reinterpret_cast<InlineDescriptor *>(Locals.get() + Offset);
+    return reinterpret_cast<InlineDescriptor *>(locals() + Offset);
   }
 
 private:
@@ -162,23 +214,19 @@ private:
   unsigned Depth;
   /// Reference to the function being executed.
   const Function *Func;
-  /// Current object pointer for methods.
-  Pointer This;
-  /// Pointer the non-primitive return value gets constructed in.
-  Pointer RVOPtr;
+  /// Offset of the instance pointer. Use with stackRef<>().
+  unsigned ThisPointerOffset;
   /// Return address.
   CodePtr RetPC;
   /// The size of all the arguments.
   const unsigned ArgSize;
   /// Pointer to the arguments in the callee's frame.
   char *Args = nullptr;
-  /// Fixed, initial storage for known local variables.
-  std::unique_ptr<char[]> Locals;
   /// Offset on the stack at entry.
   const size_t FrameOffset;
-  /// Mapping from arg offsets to their argument blocks.
-  llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Params;
-  bool IsBottom = false;
+
+public:
+  unsigned MSVCConstexprAllowed = 0;
 };
 
 } // namespace interp

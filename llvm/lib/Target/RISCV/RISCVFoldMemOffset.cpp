@@ -180,8 +180,10 @@ bool RISCVFoldMemOffset::foldOffset(
       case RISCV::SW_INX:
       case RISCV::FSW:
       case RISCV::LD:
+      case RISCV::LD_RV32:
       case RISCV::FLD:
       case RISCV::SD:
+      case RISCV::SD_RV32:
       case RISCV::FSD: {
         // Can't fold into store value.
         if (User.getOperand(0).getReg() == Reg)
@@ -274,6 +276,7 @@ bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
         MemMI->getOperand(2).setImm(NewOffset);
 
       MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+      MRI.clearKillFlags(MI.getOperand(1).getReg());
       MI.eraseFromParent();
     }
   }

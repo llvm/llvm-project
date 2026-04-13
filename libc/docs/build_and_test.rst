@@ -38,6 +38,12 @@ The libc can be built and tested in two different modes:
 
         $> ninja libc-integration-tests
 
+   #. Shared tests - You can run tests for shared, standalone components (like math primitives) without needing the full libc runtime by the command:
+
+      .. code-block:: sh
+
+        $> ninja libc-shared-tests
+
 Building with VSCode
 ====================
 
@@ -47,12 +53,18 @@ and put the following in your settings.json file:
 .. code-block:: javascript
 
    {
-     "cmake.sourceDirectory": "${workspaceFolder}/llvm",
+     "cmake.sourceDirectory": "${workspaceFolder}/runtimes",
      "cmake.configureSettings": {
-         "LLVM_ENABLE_PROJECTS" : "libc",
-         "LLVM_LIBC_FULL_BUILD" : true,
-         "LLVM_ENABLE_SPHINX" : true,
-         "LIBC_INCLUDE_DOCS" : true
+       "LLVM_ENABLE_RUNTIMES" : ["libc", "compiler-rt"],
+       "LLVM_LIBC_FULL_BUILD" : true,
+       "LLVM_ENABLE_SPHINX" : true,
+       "LIBC_INCLUDE_DOCS" : true,
+       "LLVM_LIBC_INCLUDE_SCUDO" : true,
+       "COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC": true,
+       "COMPILER_RT_BUILD_GWP_ASAN" : false,
+       "COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED" : false,
+       "CMAKE_EXPORT_COMPILE_COMMANDS" : true,
+       "LIBC_CMAKE_VERBOSE_LOGGING" : true
      }
    }
 
@@ -102,3 +114,10 @@ As an example, to build and test in a container for 32-bit Arm:
         --arch arm docker.io/ubuntu:jammy bash
 
 #. Install necessary packages, invoke CMake, build, and run tests.
+
+Building and Testing with an Emulator
+=====================================
+
+If you are cross-compiling the libc for a different architecture, you can use an emulator
+such as QEMU to run the tests directly on your host without a container. See
+:ref:`full_cross_build` for detailed instructions on configuring CMake to use an emulator.

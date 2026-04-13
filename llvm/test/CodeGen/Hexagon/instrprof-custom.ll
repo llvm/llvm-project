@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=hexagon -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon --mattr=+hvxv68,+hvx-length128b,+hvx-qfloat,-hvx-ieee-fp < %s | FileCheck %s
 
 ; CHECK-LABEL: test1:
 ; CHECK: {{call my_instrprof_handler|r0 = #999}}
@@ -14,7 +14,4 @@ entry:
 }
 
 ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
-declare void @llvm.hexagon.instrprof.custom(ptr, i32) #1
-
-attributes #0 = { "target-features"="+hvxv68,+hvx-length128b,+hvx-qfloat,-hvx-ieee-fp,+hmxv68" }
-attributes #1 = { inaccessiblememonly nofree nosync nounwind willreturn }
+declare void @llvm.hexagon.instrprof.custom(ptr, i32)

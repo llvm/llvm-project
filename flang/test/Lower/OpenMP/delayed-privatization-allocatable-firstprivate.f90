@@ -2,9 +2,9 @@
 
 ! RUN: split-file %s %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/test_ir.f90 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %t/test_ir.f90 2>&1 |\
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %t/test_ir.f90 2>&1 |\
 ! RUN:   FileCheck %s
 
 !--- test_ir.f90
@@ -38,7 +38,7 @@ end subroutine
 ! CHECK-NEXT:    hlfir.assign %[[ORIG_BASE_LD]] to %[[PRIV_PRIV_ARG]] realloc
 ! CHECK-NEXT:  }
 
-! RUN: %flang -c -emit-llvm -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang -c -emit-llvm -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/test_compilation_to_obj.f90 | \
 ! RUN:   llvm-dis 2>&1 |\
 ! RUN:   FileCheck %s -check-prefix=LLVM
@@ -57,4 +57,4 @@ end program compilation_to_obj
 ! LLVM: @[[GLOB_VAR:[^[:space:]]+]]t = internal global
 
 ! LLVM: define internal void @_QQmain..omp_par
-! LLVM: call void @llvm.memcpy.p0.p0.i32(ptr %{{.+}}, ptr @[[GLOB_VAR]]t, i32 48, i1 false)
+! LLVM: call void @llvm.memcpy.p0.p0.i32(ptr{{.*}}%{{.+}}, ptr{{.*}}@[[GLOB_VAR]]t, i32 48, i1 false)

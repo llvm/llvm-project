@@ -111,15 +111,11 @@ SUnit *ScheduleDAGSDNodes::Clone(SUnit *Old) {
 static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                       const TargetRegisterInfo *TRI,
                                       const TargetInstrInfo *TII,
-                                      const TargetLowering &TLI,
                                       MCRegister &PhysReg, int &Cost) {
   if (Op != 2 || User->getOpcode() != ISD::CopyToReg)
     return;
 
   Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
-  if (TLI.checkForPhysRegDependency(Def, User, Op, TRI, TII, PhysReg, Cost))
-    return;
-
   if (Reg.isVirtual())
     return;
 
@@ -136,7 +132,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
   if (PhysReg) {
     const TargetRegisterClass *RC =
         TRI->getMinimalPhysRegClass(Reg, Def->getSimpleValueType(ResNo));
-    Cost = RC->getCopyCost();
+    Cost = RC->expensiveOrImpossibleToCopy() ? -1 : RC->getCopyCost();
   }
 }
 
@@ -333,6 +329,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
   unsigned NumNodes = 0;
   for (SDNode &NI : DAG->allnodes()) {
     NI.setNodeId(-1);
+    NI.setSchedulerWorklistVisited(false);
     ++NumNodes;
   }
 
@@ -347,16 +344,19 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
   SmallVector<SDNode*, 64> Worklist;
   SmallPtrSet<SDNode*, 32> Visited;
   Worklist.push_back(DAG->getRoot().getNode());
-  Visited.insert(DAG->getRoot().getNode());
+  DAG->getRoot().getNode()->setSchedulerWorklistVisited(true);
 
   SmallVector<SUnit*, 8> CallSUnits;
   while (!Worklist.empty()) {
     SDNode *NI = Worklist.pop_back_val();
 
     // Add all operands to the worklist unless they've already been added.
-    for (const SDValue &Op : NI->op_values())
-      if (Visited.insert(Op.getNode()).second)
-        Worklist.push_back(Op.getNode());
+    for (const SDValue &Op : NI->op_values()) {
+      if (Op.getNode()->getSchedulerWorklistVisited())
+        continue;
+      Op.getNode()->setSchedulerWorklistVisited(true);
+      Worklist.push_back(Op.getNode());
+    }
 
     if (isPassiveNode(NI))  // Leaf node, e.g. a TargetImmediate.
       continue;
@@ -490,8 +490,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         MCRegister PhysReg;
         int Cost = 1;
         // Determine if this is a physical register dependency.
-        const TargetLowering &TLI = DAG->getTargetLoweringInfo();
-        CheckForPhysRegDependency(OpN, N, i, TRI, TII, TLI, PhysReg, Cost);
+        CheckForPhysRegDependency(OpN, N, i, TRI, TII, PhysReg, Cost);
         assert((!PhysReg || !isChain) && "Chain dependence via physreg data?");
         // FIXME: See ScheduleDAGSDNodes::EmitCopyFromReg. For now, scheduler
         // emits a copy from the physical register to a virtual register unless
@@ -888,7 +887,8 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForAdditionalCallInfo()) {
-      if (DAG->getTarget().Options.EmitCallSiteInfo)
+      if (DAG->getTarget().Options.EmitCallSiteInfo ||
+          DAG->getTarget().Options.EmitCallGraphSection)
         MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
 
       if (auto CalledGlobal = DAG->getCalledGlobal(Node))

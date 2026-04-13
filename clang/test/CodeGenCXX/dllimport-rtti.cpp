@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -triple i686-windows-gnu  -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -triple i686-windows-msvc  -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MSVC
+// RUN: %clang_cc1 -triple i686-windows-gnu   -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -triple x86_64-windows-gnu -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -triple i686-pc-cygwin     -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin   -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
 
 struct __declspec(dllimport) S {
   virtual void f() {}

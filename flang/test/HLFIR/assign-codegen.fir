@@ -104,10 +104,9 @@ func.func @scalar_character(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>) {
 // CHECK:  %[[VAL_10:.*]] = arith.constant 1 : i64
 // CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_9]] : (index) -> i64
 // CHECK:  %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_11]] : i64
-// CHECK:  %[[VAL_13:.*]] = arith.constant false
-// CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_14]], %[[VAL_15]], %[[VAL_12]], %[[VAL_13]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:  "llvm.intr.memmove"(%[[VAL_14]], %[[VAL_15]], %[[VAL_12]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:  %[[VAL_16:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_17:.*]] = arith.subi %[[VAL_2]]#1, %[[VAL_16]] : index
 // CHECK:  %[[VAL_18:.*]] = arith.constant 32 : i8
@@ -480,4 +479,60 @@ func.func @test_scalar_opt_char_box(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fi
 // CHECK:             fir.result %[[VAL_8]], %[[VAL_9]] : !fir.ref<!fir.char<1,?>>, index
 // CHECK:           }
 // ...
-// CHECK:           fir.call @llvm.memmove.p0.p0.i64(
+// CHECK:           "llvm.intr.memmove"
+
+// Trivial scalar allocatable: should inline instead of calling _FortranAAssign.
+// This avoids pulling in the heavyweight runtime which causes excessive
+// register and stack usage in GPU device kernels.
+//
+// Example 1 (already allocated, hits the "then" branch -- direct store):
+//   integer, allocatable :: k
+//   allocate(k)
+//   k = 42
+//
+// Example 2 (not allocated, hits the "else" branch -- allocmem + store):
+//   integer, allocatable :: k
+//   k = 42
+func.func @alloc_assign_trivial_scalar(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>) {
+  %c42 = arith.constant 42 : i32
+  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "k"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+  hlfir.assign %c42 to %0#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+  return
+}
+// CHECK-LABEL:   func.func @alloc_assign_trivial_scalar(
+// CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>) {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 42 : i32
+// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "k"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK:           %[[BOX:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK:           %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+// CHECK:           %[[ADDR_INT:.*]] = fir.convert %[[ADDR]]
+// CHECK:           %[[C0:.*]] = arith.constant 0
+// CHECK:           %[[IS_ALLOC:.*]] = arith.cmpi ne, %[[ADDR_INT]], %[[C0]]
+// CHECK:           fir.if %[[IS_ALLOC]] {
+// CHECK:             fir.store %[[VAL_1]] to %[[ADDR]] : !fir.heap<i32>
+// CHECK:           } else {
+// CHECK:             %[[NEW_MEM:.*]] = fir.allocmem i32
+// CHECK:             fir.store %[[VAL_1]] to %[[NEW_MEM]] : !fir.heap<i32>
+// CHECK:             %[[NEW_BOX:.*]] = fir.embox %[[NEW_MEM]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+// CHECK:             fir.store %[[NEW_BOX]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK:           }
+// CHECK-NOT:       _FortranAAssign
+// CHECK:           return
+
+// Array allocatable should still use the runtime
+func.func @alloc_assign_array(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %arg1: !fir.box<!fir.array<?xi32>>) {
+  hlfir.assign %arg1 to %arg0 realloc : !fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  return
+}
+// CHECK-LABEL:   func.func @alloc_assign_array(
+// CHECK:           fir.call @_FortranAAssign
+
+// CUDA Fortran device allocatable should still use the runtime
+func.func @alloc_assign_cuf_device(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>) {
+  %c42 = arith.constant 42 : i32
+  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, data_attr = #cuf.cuda<device>, uniq_name = "k"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+  hlfir.assign %c42 to %0#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+  return
+}
+// CHECK-LABEL:   func.func @alloc_assign_cuf_device(
+// CHECK:           fir.call @_FortranAAssign

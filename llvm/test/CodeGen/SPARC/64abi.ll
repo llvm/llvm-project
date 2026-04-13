@@ -118,12 +118,10 @@ define double @floatarg(float %a0,    ; %f1
 ; SOFT: stx %i2, [%sp+2239]
 ; SOFT: stx %i2, [%sp+2231]
 ; SOFT: stx %i2, [%sp+2223]
-; SOFT: mov  %i2, %o0
-; SOFT: mov  %i1, %o1
-; SOFT: mov  %i1, %o2
-; SOFT: mov  %i1, %o3
-; SOFT: mov  %i2, %o4
-; SOFT: mov  %i2, %o5
+; SOFT: mov %i1, %o2
+; SOFT: mov %i1, %o3
+; SOFT: mov %i2, %o4
+; SOFT: mov %i2, %o5
 ; CHECK: call floatarg
 ; CHECK-NOT: add %sp
 ; CHECK: restore
@@ -174,11 +172,9 @@ define void @mixedarg(i8 %a0,      ; %i0
 
 ; CHECK-LABEL: call_mixedarg:
 ; CHECK: stx %i2, [%sp+2247]
-; SOFT:  stx %i1, [%sp+2239]
 ; CHECK: stx %i0, [%sp+2223]
 ; HARD: fmovd %f2, %f6
 ; HARD: fmovd %f2, %f16
-; SOFT: mov  %i1, %o3
 ; CHECK: call mixedarg
 ; CHECK-NOT: add %sp
 ; CHECK: restore
@@ -262,8 +258,8 @@ define i32 @inreg_if(float inreg %a0, ; %f0
 }
 
 ; CHECK-LABEL: call_inreg_if:
-; HARD: fmovs %f3, %f0
 ; HARD: mov %i2, %o0
+; HARD: fmovs %f3, %f0
 ; SOFT: srl %i2, 0, %i0
 ; SOFT: sllx %i1, 32, %i1
 ; SOFT: or %i1, %i0, %o0
@@ -477,12 +473,25 @@ declare i64 @receive_fp128(i64 %a, ...)
 ; HARD-DAG:   ldx [%sp+[[Offset0]]], %o2
 ; HARD-DAG:   ldx [%sp+[[Offset1]]], %o3
 ; SOFT-DAG:   mov  %i0, %o0
-; SOFT-DAG:   mov  %i1, %o1
 ; SOFT-DAG:   mov  %i2, %o2
+; SOFT-DAG:   mov  %i3, %o3
 ; CHECK:      call receive_fp128
 define i64 @test_fp128_variable_args(i64 %a, fp128 %b) {
 entry:
   %0 = call i64 (i64, ...) @receive_fp128(i64 %a, fp128 %b)
+  ret i64 %0
+}
+
+declare i64 @receive_i128(i64 %a, i128 %b)
+
+; CHECK-LABEL: test_i128_args:
+; CHECK:   mov  %i3, %o3
+; CHECK:   mov  %i2, %o2
+; CHECK:   mov  %i0, %o0
+; CHECK:   call receive_i128
+define i64 @test_i128_args(i64 %a, i128 %b) {
+entry:
+  %0 = call i64 @receive_i128(i64 %a, i128 %b)
   ret i64 %0
 }
 

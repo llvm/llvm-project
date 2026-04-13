@@ -15,7 +15,7 @@ int *invalidSLocOnRedecl(void) {
   // something like "The "compare" part of CompareAndSwap depends on an
   // undefined value".
   int *b;
-  OSAtomicCompareAndSwapPtrBarrier(0, 0, &b); // no-crash
+  OSAtomicCompareAndSwapPtrBarrier(0, 0, (void**)&b); // no-crash
   return b;
 }
 

@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -41,7 +40,7 @@ template <typename OpTy>
 static void createForAllDimensions(OpBuilder &builder, Location loc,
                                    SmallVectorImpl<Value> &values) {
   for (auto dim : {gpu::Dimension::x, gpu::Dimension::y, gpu::Dimension::z})
-    values.push_back(builder.create<OpTy>(loc, builder.getIndexType(), dim));
+    values.push_back(OpTy::create(builder, loc, builder.getIndexType(), dim));
 }
 
 /// Adds operations generating block/thread ids and grid/block dimensions at the
@@ -196,8 +195,8 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   }
   FunctionType type =
       FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
-  auto outlinedFunc = builder.create<gpu::GPUFuncOp>(
-      loc, kernelFnName, type,
+  auto outlinedFunc = gpu::GPUFuncOp::create(
+      builder, loc, kernelFnName, type,
       TypeRange(ValueRange(launchOp.getWorkgroupAttributions())),
       TypeRange(ValueRange(launchOp.getPrivateAttributions())));
   outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
@@ -212,6 +211,10 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   if (auto gridBounds =
           maybeConstantDimsAttr(launchOp.getGridSizeOperandValues()))
     outlinedFunc.setKnownGridSizeAttr(gridBounds);
+  if (auto clusterSize = launchOp.getClusterSizeOperandValues()) {
+    if (auto clusterBounds = maybeConstantDimsAttr(*clusterSize))
+      outlinedFunc.setKnownClusterSizeAttr(clusterBounds);
+  }
 
   IRMapping map;
 
@@ -248,7 +251,7 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
     if (!terminator)
       continue;
     OpBuilder replacer(terminator);
-    replacer.create<gpu::ReturnOp>(terminator->getLoc());
+    gpu::ReturnOp::create(replacer, terminator->getLoc());
     terminator->erase();
   }
 
@@ -267,7 +270,7 @@ gpu::GPUFuncOp mlir::outlineKernelFunc(gpu::LaunchOp launchOp,
                                        llvm::SmallVectorImpl<Value> &operands) {
   DenseSet<Value> inputOperandSet;
   inputOperandSet.insert_range(operands);
-  SetVector<Value> operandSet(operands.begin(), operands.end());
+  SetVector<Value> operandSet(llvm::from_range, operands);
   auto funcOp = outlineKernelFuncImpl(launchOp, kernelFnName, operandSet);
   for (auto operand : operandSet) {
     if (!inputOperandSet.count(operand))
@@ -288,9 +291,9 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
   Value asyncToken = launchOp.getAsyncToken();
   std::optional<gpu::KernelDim3> clusterSize =
       launchOp.getClusterSizeOperandValues();
-  auto launchFunc = builder.create<gpu::LaunchFuncOp>(
-      launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
-      launchOp.getBlockSizeOperandValues(),
+  auto launchFunc = gpu::LaunchFuncOp::create(
+      builder, launchOp.getLoc(), kernelFunc,
+      launchOp.getGridSizeOperandValues(), launchOp.getBlockSizeOperandValues(),
       launchOp.getDynamicSharedMemorySize(), operands,
       asyncToken ? asyncToken.getType() : nullptr,
       launchOp.getAsyncDependencies(), clusterSize);
@@ -357,8 +360,8 @@ public:
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
         std::string kernelFnName;
-        if (op.getKernelFunc()) {
-          kernelFnName = op.getKernelFunc()->getRootReference().str();
+        if (op.getFunction()) {
+          kernelFnName = op.getFunction()->str();
         } else {
           kernelFnName =
               Twine(op->getParentOfType<SymbolOpInterface>().getName(),
@@ -372,8 +375,11 @@ public:
         // Create nested module and insert outlinedFunc. The module will
         // originally get the same name as the function, but may be renamed on
         // insertion into the parent module.
-        auto kernelModule = createKernelModule(op, outlinedFunc, symbolTable);
-        symbolTable.insert(kernelModule, insertPt);
+        FailureOr<gpu::GPUModuleOp> kernelModule =
+            createKernelModule(op, outlinedFunc, symbolTable);
+        if (failed(kernelModule))
+          return WalkResult::interrupt();
+        symbolTable.insert(*kernelModule, insertPt);
 
         // Potentially changes signature, pulling in constants.
         convertToLaunchFuncOp(op, outlinedFunc, operands.getArrayRef());
@@ -393,9 +399,9 @@ public:
 
 private:
   /// Returns a gpu.module containing kernelFunc and all callees (recursive).
-  gpu::GPUModuleOp createKernelModule(gpu::LaunchOp gpuLaunchOp,
-                                      gpu::GPUFuncOp kernelFunc,
-                                      const SymbolTable &parentSymbolTable) {
+  FailureOr<gpu::GPUModuleOp>
+  createKernelModule(gpu::LaunchOp gpuLaunchOp, gpu::GPUFuncOp kernelFunc,
+                     const SymbolTable &parentSymbolTable) {
     // TODO: This code cannot use an OpBuilder because it must be inserted into
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
     // prevent manual building of Ops with symbols in code using SymbolTables
@@ -404,9 +410,8 @@ private:
     OpBuilder builder(context);
     std::string kernelModuleName;
     gpu::GPUModuleOp kernelModule;
-    if (gpuLaunchOp.getKernelModule()) {
-      kernelModuleName =
-          gpuLaunchOp.getKernelModule()->getRootReference().str();
+    if (gpuLaunchOp.getModule()) {
+      kernelModuleName = gpuLaunchOp.getModule()->str();
       kernelModule =
           parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName);
     } else {
@@ -416,8 +421,8 @@ private:
     // Check if the module already exists in the symbol table
     if (!kernelModule) {
       // If not found, create a new GPU module
-      kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
-                                                      kernelModuleName);
+      kernelModule = gpu::GPUModuleOp::create(builder, kernelFunc.getLoc(),
+                                              kernelModuleName);
     }
 
     // If a valid data layout spec was provided, attach it to the kernel module.
@@ -433,13 +438,31 @@ private:
       if (std::optional<SymbolTable::UseRange> symbolUses =
               SymbolTable::getSymbolUses(symbolDefWorklist.pop_back_val())) {
         for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
-          StringRef symbolName =
-              cast<FlatSymbolRefAttr>(symbolUse.getSymbolRef()).getValue();
+          // Nested symbol references (e.g. @M::@F) cannot be resolved inside
+          // the kernel module when @M exists in the parent: @M will not be
+          // available inside the outlined module after the transformation.
+          // Ignore references whose root does not exist in the parent, as those
+          // are phantom references (e.g. in unregistered-op attributes) that
+          // were already unresolvable and are simply copied as-is.
+          if (!symbolUse.getSymbolRef().getNestedReferences().empty() &&
+              parentSymbolTable.lookup(
+                  symbolUse.getSymbolRef().getRootReference())) {
+            symbolUse.getUser()->emitError("nested symbol reference '")
+                << symbolUse.getSymbolRef()
+                << "' cannot be resolved inside the outlined kernel module; "
+                   "gpu-kernel-outlining does not support cross-module symbol "
+                   "references inside gpu.launch bodies";
+            kernelModule->erase();
+            return failure();
+          }
+          StringAttr symbolName = symbolUse.getSymbolRef().getLeafReference();
           if (symbolTable.lookup(symbolName))
             continue;
 
-          Operation *symbolDefClone =
-              parentSymbolTable.lookup(symbolName)->clone();
+          Operation *symbolDef = parentSymbolTable.lookup(symbolName);
+          if (!symbolDef)
+            continue;
+          Operation *symbolDefClone = symbolDef->clone();
           symbolDefWorklist.push_back(symbolDefClone);
           symbolTable.insert(symbolDefClone);
         }

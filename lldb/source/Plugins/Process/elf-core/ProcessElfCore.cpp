@@ -9,7 +9,6 @@
 #include <cstdlib>
 
 #include <memory>
-#include <mutex>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -26,7 +25,6 @@
 #include "lldb/Utility/State.h"
 
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Support/Threading.h"
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
@@ -84,8 +82,9 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
   // For now we are just making sure the file exists for a given module
   if (!m_core_module_sp && FileSystem::Instance().Exists(m_core_file)) {
     ModuleSpec core_module_spec(m_core_file, target_sp->GetArchitecture());
+    core_module_spec.SetTarget(target_sp);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                             nullptr, nullptr, nullptr));
+                                             nullptr, nullptr));
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
       if (core_objfile && core_objfile->GetType() == ObjectFile::eTypeCoreFile)
@@ -99,7 +98,7 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp, core_file) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_uuids() {}
 
 // Destructor
 ProcessElfCore::~ProcessElfCore() {
@@ -176,6 +175,17 @@ Status ProcessElfCore::DoLoadCore() {
     return error;
   }
 
+  // Even if the architecture is set in the target, we need to override it to
+  // match the core file which is always single arch.
+  ArchSpec arch(m_core_module_sp->GetArchitecture());
+
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
+  target_arch.MergeFrom(core_arch);
+  GetTarget().SetArchitecture(target_arch, /*set_platform*/ true);
+
+  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
+
   SetCanJIT(false);
 
   m_thread_data_valid = true;
@@ -216,23 +226,12 @@ Status ProcessElfCore::DoLoadCore() {
     m_core_tag_ranges.Sort();
   }
 
-  // Even if the architecture is set in the target, we need to override it to
-  // match the core file which is always single arch.
-  ArchSpec arch(m_core_module_sp->GetArchitecture());
-
-  ArchSpec target_arch = GetTarget().GetArchitecture();
-  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
-  target_arch.MergeFrom(core_arch);
-  GetTarget().SetArchitecture(target_arch);
-
-  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
-
   // Ensure we found at least one thread that was stopped on a signal.
   bool siginfo_signal_found = false;
   bool prstatus_signal_found = false;
   // Check we found a signal in a SIGINFO note.
   for (const auto &thread_data : m_thread_data) {
-    if (thread_data.siginfo.si_signo != 0)
+    if (!thread_data.siginfo_bytes.empty() || thread_data.signo != 0)
       siginfo_signal_found = true;
     if (thread_data.prstatus_sig != 0)
       prstatus_signal_found = true;
@@ -242,10 +241,10 @@ Status ProcessElfCore::DoLoadCore() {
     // PRSTATUS note.
     if (prstatus_signal_found) {
       for (auto &thread_data : m_thread_data)
-        thread_data.siginfo.si_signo = thread_data.prstatus_sig;
+        thread_data.signo = thread_data.prstatus_sig;
     } else if (m_thread_data.size() > 0) {
       // If all else fails force the first thread to be SIGSTOP
-      m_thread_data.begin()->siginfo.si_signo =
+      m_thread_data.begin()->signo =
           GetUnixSignals()->GetSignalNumberFromName("SIGSTOP");
     }
   }
@@ -257,16 +256,39 @@ Status ProcessElfCore::DoLoadCore() {
   // the main executable using data we found in the core file notes.
   lldb::ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
   if (!exe_module_sp) {
-    // The first entry in the NT_FILE might be our executable
     if (!m_nt_file_entries.empty()) {
+      std::string executable_path = GetMainExecutablePath();
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
-      exe_module_spec.GetUUID() = m_nt_file_entries[0].uuid;
-      exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
+      exe_module_spec.GetUUID() = FindModuleUUID(executable_path);
+      exe_module_spec.GetFileSpec().SetFile(executable_path,
                                             FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp =
             GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
+        if (!exe_module_sp) {
+          // Create an ELF file from memory for the main executable. The dynamic
+          // loader requires the main executable so that it can extract the
+          // DT_DEBUG key/value pair from the dynamic section and get the list
+          // of shared libraries.
+          std::optional<lldb::addr_t> exe_header_addr;
+
+          // We need to find its load address
+          for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
+            if (file_entry.path == executable_path) {
+              exe_header_addr = file_entry.start;
+              break;
+            }
+          }
+          if (exe_header_addr) {
+            if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
+                    ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
+                                         *exe_header_addr))
+              exe_module_sp = *module_sp_or_err;
+            else
+              llvm::consumeError(module_sp_or_err.takeError());
+          }
+        }
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
@@ -277,20 +299,53 @@ Status ProcessElfCore::DoLoadCore() {
 
 void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   Log *log = GetLog(LLDBLog::Process);
+  m_uuids.clear();
   for (NT_FILE_Entry &entry : m_nt_file_entries) {
-    entry.uuid = FindBuidIdInCoreMemory(entry.start);
-    if (log && entry.uuid.IsValid())
+    UUID uuid = FindBuidIdInCoreMemory(entry.start);
+    if (uuid.IsValid()) {
+      // Assert that either the path is not in the map or the UUID matches
+      assert(m_uuids.count(entry.path) == 0 || m_uuids[entry.path] == uuid);
+      m_uuids[entry.path] = uuid;
       LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
-                __FUNCTION__, entry.start, entry.uuid.GetAsString().c_str(),
+                __FUNCTION__, entry.start, uuid.GetAsString().c_str(),
                 entry.path.c_str());
+    }
   }
 }
 
+std::string ProcessElfCore::GetMainExecutablePath() {
+  // Always try to read the program name from core file memory first via the
+  // AUXV_AT_EXECFN entry. This value is the address of a null terminated C
+  // string that contains the program path.
+  AuxVector aux_vector(m_auxv);
+  std::string execfn_str;
+  if (auto execfn = aux_vector.GetAuxValue(AuxVector::AUXV_AT_EXECFN)) {
+    Status error;
+    if (ReadCStringFromMemory(*execfn, execfn_str, error))
+      return execfn_str;
+  }
+
+  if (m_nt_file_entries.empty())
+    return {};
+
+  // The first entry in the NT_FILE might be our executable
+  std::string executable_path = m_nt_file_entries[0].path;
+  // Prefer the NT_FILE entry matching m_executable_name as main executable.
+  for (const NT_FILE_Entry &file_entry : m_nt_file_entries)
+    if (llvm::StringRef(file_entry.path).ends_with("/" + m_executable_name)) {
+      executable_path = file_entry.path;
+      break;
+    }
+  return executable_path;
+}
+
 UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
-  // Returns the gnu uuid from matched NT_FILE entry
-  for (NT_FILE_Entry &entry : m_nt_file_entries)
-    if (path == entry.path)
-      return entry.uuid;
+  // Lookup the UUID for the given path in the map.
+  // Note that this could be called by multiple threads so make sure
+  // we access the map in a thread safe way (i.e. don't use operator[]).
+  auto it = m_uuids.find(std::string(path));
+  if (it != m_uuids.end())
+    return it->second;
   return UUID();
 }
 
@@ -345,43 +400,43 @@ Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
       const Flags permissions(permission_entry->data);
       region_info.SetReadable(permissions.Test(lldb::ePermissionsReadable)
-                                  ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
+                                  ? eLazyBoolYes
+                                  : eLazyBoolNo);
       region_info.SetWritable(permissions.Test(lldb::ePermissionsWritable)
-                                  ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
+                                  ? eLazyBoolYes
+                                  : eLazyBoolNo);
       region_info.SetExecutable(permissions.Test(lldb::ePermissionsExecutable)
-                                    ? MemoryRegionInfo::eYes
-                                    : MemoryRegionInfo::eNo);
-      region_info.SetMapped(MemoryRegionInfo::eYes);
+                                    ? eLazyBoolYes
+                                    : eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolYes);
 
       // A region is memory tagged if there is a memory tag segment that covers
       // the exact same range.
-      region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+      region_info.SetMemoryTagged(eLazyBoolNo);
       const VMRangeToFileOffset::Entry *tag_entry =
           m_core_tag_ranges.FindEntryStartsAt(permission_entry->GetRangeBase());
       if (tag_entry &&
           tag_entry->GetRangeEnd() == permission_entry->GetRangeEnd())
-        region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
+        region_info.SetMemoryTagged(eLazyBoolYes);
     } else if (load_addr < permission_entry->GetRangeBase()) {
       region_info.GetRange().SetRangeBase(load_addr);
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
-      region_info.SetReadable(MemoryRegionInfo::eNo);
-      region_info.SetWritable(MemoryRegionInfo::eNo);
-      region_info.SetExecutable(MemoryRegionInfo::eNo);
-      region_info.SetMapped(MemoryRegionInfo::eNo);
-      region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+      region_info.SetReadable(eLazyBoolNo);
+      region_info.SetWritable(eLazyBoolNo);
+      region_info.SetExecutable(eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolNo);
+      region_info.SetMemoryTagged(eLazyBoolNo);
     }
     return Status();
   }
 
   region_info.GetRange().SetRangeBase(load_addr);
   region_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  region_info.SetReadable(MemoryRegionInfo::eNo);
-  region_info.SetWritable(MemoryRegionInfo::eNo);
-  region_info.SetExecutable(MemoryRegionInfo::eNo);
-  region_info.SetMapped(MemoryRegionInfo::eNo);
-  region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+  region_info.SetReadable(eLazyBoolNo);
+  region_info.SetWritable(eLazyBoolNo);
+  region_info.SetExecutable(eLazyBoolNo);
+  region_info.SetMapped(eLazyBoolNo);
+  region_info.SetMemoryTagged(eLazyBoolNo);
   return Status();
 }
 
@@ -470,12 +525,8 @@ void ProcessElfCore::Clear() {
 }
 
 void ProcessElfCore::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 lldb::addr_t ProcessElfCore::GetImageInfoAddress() {
@@ -495,10 +546,8 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   int pr_version = data.GetU32(&offset);
 
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    if (pr_version > 1)
-      LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
-  }
+  if (pr_version > 1)
+    LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
 
   // Skip padding, pr_statussz, pr_gregsetsz, pr_fpregsetsz, pr_osreldate
   if (lp64)
@@ -506,7 +555,7 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   else
     offset += 16;
 
-  thread_data.siginfo.si_signo = data.GetU32(&offset); // pr_cursig
+  thread_data.signo = data.GetU32(&offset); // pr_cursig
   thread_data.tid = data.GetU32(&offset);   // pr_pid
   if (lp64)
     offset += 4;
@@ -523,10 +572,8 @@ static void ParseFreeBSDPrPsInfo(ProcessElfCore &process,
   int pr_version = data.GetU32(&offset);
 
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    if (pr_version > 1)
-      LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
-  }
+  if (pr_version > 1)
+    LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
 
   // Skip pr_psinfosz, pr_fname, pr_psargs
   offset += 108;
@@ -545,15 +592,13 @@ static llvm::Error ParseNetBSDProcInfo(const DataExtractor &data,
 
   uint32_t version = data.GetU32(&offset);
   if (version != 1)
-    return llvm::make_error<llvm::StringError>(
-        "Error parsing NetBSD core(5) notes: Unsupported procinfo version",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Error parsing NetBSD core(5) notes: Unsupported procinfo version");
 
   uint32_t cpisize = data.GetU32(&offset);
   if (cpisize != NETBSD::NT_PROCINFO_SIZE)
-    return llvm::make_error<llvm::StringError>(
-        "Error parsing NetBSD core(5) notes: Unsupported procinfo size",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Error parsing NetBSD core(5) notes: Unsupported procinfo size");
 
   cpi_signo = data.GetU32(&offset); /* killing signal */
 
@@ -589,7 +634,7 @@ static void ParseOpenBSDProcInfo(ThreadData &thread_data,
     return;
 
   offset += 4;
-  thread_data.siginfo.si_signo = data.GetU32(&offset);
+  thread_data.signo = data.GetU32(&offset);
 }
 
 llvm::Expected<std::vector<CoreNote>>
@@ -600,8 +645,7 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
   while (offset < segment.GetByteSize()) {
     ELFNote note = ELFNote();
     if (!note.Parse(segment, &offset))
-      return llvm::make_error<llvm::StringError>(
-          "Unable to parse note segment", llvm::inconvertibleErrorCode());
+      return llvm::createStringError("unable to parse note segment");
 
     size_t note_start = offset;
     size_t note_size = llvm::alignTo(note.n_descsz, 4);
@@ -616,7 +660,6 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   ArchSpec arch = GetArchitecture();
   bool lp64 = (arch.GetMachine() == llvm::Triple::aarch64 ||
-               arch.GetMachine() == llvm::Triple::mips64 ||
                arch.GetMachine() == llvm::Triple::ppc64 ||
                arch.GetMachine() == llvm::Triple::x86_64);
   bool have_prstatus = false;
@@ -660,9 +703,8 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     }
   }
   if (!have_prstatus) {
-    return llvm::make_error<llvm::StringError>(
-        "Could not find NT_PRSTATUS note in core file.",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Could not find NT_PRSTATUS note in core file.");
   }
   m_thread_data.push_back(thread_data);
   return llvm::Error::success();
@@ -717,10 +759,9 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     } else if (name.consume_front("NetBSD-CORE@")) {
       lldb::tid_t tid;
       if (name.getAsInteger(10, tid))
-        return llvm::make_error<llvm::StringError>(
+        return llvm::createStringError(
             "Error parsing NetBSD core(5) notes: Cannot convert LWP ID "
-            "to integer",
-            llvm::inconvertibleErrorCode());
+            "to integer");
 
       switch (GetArchitecture().GetMachine()) {
       case llvm::Triple::aarch64: {
@@ -736,16 +777,14 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
           thread_data.gpregset = note.data;
           thread_data.tid = tid;
           if (thread_data.gpregset.GetByteSize() == 0)
-            return llvm::make_error<llvm::StringError>(
-                "Could not find general purpose registers note in core file.",
-                llvm::inconvertibleErrorCode());
+            return llvm::createStringError(
+                "Could not find general purpose registers note in core file.");
           had_nt_regs = true;
         } else if (note.info.n_type == NETBSD::AARCH64::NT_FPREGS) {
           if (!had_nt_regs || tid != thread_data.tid)
-            return llvm::make_error<llvm::StringError>(
+            return llvm::createStringError(
                 "Error parsing NetBSD core(5) notes: Unexpected order "
-                "of NOTEs PT_GETFPREG before PT_GETREG",
-                llvm::inconvertibleErrorCode());
+                "of NOTEs PT_GETFPREG before PT_GETREG");
           thread_data.notes.push_back(note);
         }
       } break;
@@ -762,16 +801,14 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
           thread_data.gpregset = note.data;
           thread_data.tid = tid;
           if (thread_data.gpregset.GetByteSize() == 0)
-            return llvm::make_error<llvm::StringError>(
-                "Could not find general purpose registers note in core file.",
-                llvm::inconvertibleErrorCode());
+            return llvm::createStringError(
+                "Could not find general purpose registers note in core file.");
           had_nt_regs = true;
         } else if (note.info.n_type == NETBSD::I386::NT_FPREGS) {
           if (!had_nt_regs || tid != thread_data.tid)
-            return llvm::make_error<llvm::StringError>(
+            return llvm::createStringError(
                 "Error parsing NetBSD core(5) notes: Unexpected order "
-                "of NOTEs PT_GETFPREG before PT_GETREG",
-                llvm::inconvertibleErrorCode());
+                "of NOTEs PT_GETFPREG before PT_GETREG");
           thread_data.notes.push_back(note);
         }
       } break;
@@ -788,16 +825,14 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
           thread_data.gpregset = note.data;
           thread_data.tid = tid;
           if (thread_data.gpregset.GetByteSize() == 0)
-            return llvm::make_error<llvm::StringError>(
-                "Could not find general purpose registers note in core file.",
-                llvm::inconvertibleErrorCode());
+            return llvm::createStringError(
+                "Could not find general purpose registers note in core file.");
           had_nt_regs = true;
         } else if (note.info.n_type == NETBSD::AMD64::NT_FPREGS) {
           if (!had_nt_regs || tid != thread_data.tid)
-            return llvm::make_error<llvm::StringError>(
+            return llvm::createStringError(
                 "Error parsing NetBSD core(5) notes: Unexpected order "
-                "of NOTEs PT_GETFPREG before PT_GETREG",
-                llvm::inconvertibleErrorCode());
+                "of NOTEs PT_GETFPREG before PT_GETREG");
           thread_data.notes.push_back(note);
         }
       } break;
@@ -812,22 +847,20 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     m_thread_data.push_back(thread_data);
 
   if (m_thread_data.empty())
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         "Error parsing NetBSD core(5) notes: No threads information "
-        "specified in notes",
-        llvm::inconvertibleErrorCode());
+        "specified in notes");
 
   if (m_thread_data.size() != nlwps)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         "Error parsing NetBSD core(5) notes: Mismatch between the number "
         "of LWPs in netbsd_elfcore_procinfo and the number of LWPs specified "
-        "by MD notes",
-        llvm::inconvertibleErrorCode());
+        "by MD notes");
 
   // Signal targeted at the whole process.
   if (siglwp == 0) {
     for (auto &data : m_thread_data)
-      data.siginfo.si_signo = signo;
+      data.signo = signo;
   }
   // Signal destined for a particular LWP.
   else {
@@ -835,16 +868,15 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 
     for (auto &data : m_thread_data) {
       if (data.tid == siglwp) {
-        data.siginfo.si_signo = signo;
+        data.signo = signo;
         passed = true;
         break;
       }
     }
 
     if (!passed)
-      return llvm::make_error<llvm::StringError>(
-          "Error parsing NetBSD core(5) notes: Signal passed to unknown LWP",
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(
+          "Error parsing NetBSD core(5) notes: Signal passed to unknown LWP");
   }
 
   return llvm::Error::success();
@@ -874,9 +906,8 @@ llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     }
   }
   if (thread_data.gpregset.GetByteSize() == 0) {
-    return llvm::make_error<llvm::StringError>(
-        "Could not find general purpose registers note in core file.",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Could not find general purpose registers note in core file.");
   }
   m_thread_data.push_back(thread_data);
   return llvm::Error::success();
@@ -935,15 +966,15 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
         return status.ToError();
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
+      m_executable_name = thread_data.name;
       break;
     }
     case ELF::NT_SIGINFO: {
-      const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
-      ELFLinuxSigInfo siginfo;
-      Status status = siginfo.Parse(note.data, arch, unix_signals);
-      if (status.Fail())
-        return status.ToError();
-      thread_data.siginfo = siginfo;
+      lldb::offset_t size = note.data.GetByteSize();
+      lldb::offset_t offset = 0;
+      const char *bytes =
+          static_cast<const char *>(note.data.GetData(&offset, size));
+      thread_data.siginfo_bytes = llvm::StringRef(bytes, size);
       break;
     }
     case ELF::NT_FILE: {
@@ -1000,9 +1031,8 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   case llvm::Triple::OpenBSD:
     return parseOpenBSDNotes(*notes_or_error);
   default:
-    return llvm::make_error<llvm::StringError>(
-        "Don't know how to parse core file. Unsupported OS.",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Don't know how to parse core file. Unsupported OS.");
   }
 }
 

@@ -35,7 +35,6 @@ namespace llvm {
 class Argument;
 class BasicBlock;
 class BranchProbabilityInfo;
-class DbgDeclareInst;
 class Function;
 class Instruction;
 class MachineFunction;
@@ -163,9 +162,9 @@ public:
   struct LiveOutInfo {
     unsigned NumSignBits : 31;
     unsigned IsValid : 1;
-    KnownBits Known = 1;
+    KnownBits Known;
 
-    LiveOutInfo() : NumSignBits(0), IsValid(true) {}
+    LiveOutInfo() : NumSignBits(0), IsValid(true), Known(1) {}
   };
 
   /// Record the preferred extend type (ISD::SIGN_EXTEND or ISD::ZERO_EXTEND)
@@ -191,9 +190,8 @@ public:
   /// The current call site index being processed, if any. 0 if none.
   unsigned CurCallSite = 0;
 
-  /// Collection of dbg.declare instructions handled after argument
+  /// Collection of dbg_declare instructions handled after argument
   /// lowering and before ISel proper.
-  SmallPtrSet<const DbgDeclareInst *, 8> PreprocessedDbgDeclares;
   SmallPtrSet<const DbgVariableRecord *, 8> PreprocessedDVRDeclares;
 
   /// set - Initialize this FunctionLoweringInfo with the given Function

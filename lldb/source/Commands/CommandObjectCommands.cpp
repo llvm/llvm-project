@@ -25,6 +25,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include <memory>
 #include <optional>
 
 using namespace lldb;
@@ -417,7 +418,7 @@ protected:
       if ((pos != std::string::npos) && (pos > 0))
         raw_command_string = raw_command_string.substr(pos);
     } else {
-      result.AppendError("Error parsing command string.  No alias created.");
+      result.AppendError("error parsing command string.  No alias created");
       return;
     }
 
@@ -467,7 +468,7 @@ protected:
     // Verify & handle any options/arguments passed to the alias command
 
     OptionArgVectorSP option_arg_vector_sp =
-        OptionArgVectorSP(new OptionArgVector);
+        std::make_shared<OptionArgVector>();
 
     const bool include_aliases = true;
     // Look up the command using command's name first.  This is to resolve
@@ -481,9 +482,8 @@ protected:
 
     if (m_interpreter.AliasExists(alias_command) ||
         m_interpreter.UserCommandExists(alias_command)) {
-      result.AppendWarningWithFormat(
-          "Overwriting existing definition for '%s'.\n",
-          alias_command.str().c_str());
+      result.AppendWarningWithFormatv(
+          "overwriting existing definition for '{0}'", alias_command);
     }
     if (CommandAlias *alias = m_interpreter.AddAlias(
             alias_command, cmd_obj_sp, raw_command_string)) {
@@ -543,7 +543,7 @@ protected:
     CommandObject *cmd_obj = command_obj_sp.get();
     CommandObject *sub_cmd_obj = nullptr;
     OptionArgVectorSP option_arg_vector_sp =
-        OptionArgVectorSP(new OptionArgVector);
+        std::make_shared<OptionArgVector>();
 
     while (cmd_obj->IsMultiwordObject() && !args.empty()) {
       auto sub_command = args[0].ref();
@@ -578,8 +578,8 @@ protected:
 
     if (m_interpreter.AliasExists(alias_command) ||
         m_interpreter.UserCommandExists(alias_command)) {
-      result.AppendWarningWithFormat(
-          "Overwriting existing definition for '%s'.\n", alias_command.c_str());
+      result.AppendWarningWithFormatv(
+          "overwriting existing definition for '{0}'", alias_command);
     }
 
     if (CommandAlias *alias = m_interpreter.AddAlias(
@@ -1537,9 +1537,8 @@ private:
           option_def.completion_type = (CommandArgumentType) completion_type;
         } else
           option_def.completion_type = eNoCompletion;
-        
+
         // Usage Text:
-        std::string usage_text;
         obj_sp = opt_dict->GetValueForKey("help");
         if (!obj_sp) {
           error = Status::FromErrorStringWithFormatv(
@@ -2037,7 +2036,8 @@ public:
     // option_element_vector:
 
     Options *options = GetOptions();
-    auto defs = options->GetDefinitions();
+    auto defs = options ? options->GetDefinitions()
+                        : llvm::ArrayRef<OptionDefinition>();
 
     std::unordered_set<size_t> option_slots;
     for (const auto &elem : option_vec) {
@@ -2505,9 +2505,9 @@ protected:
 
     CommandObjectSP new_cmd_sp;
     if (m_options.m_class_name.empty()) {
-      new_cmd_sp.reset(new CommandObjectPythonFunction(
+      new_cmd_sp = std::make_shared<CommandObjectPythonFunction>(
           m_interpreter, m_cmd_name, m_options.m_funct_name,
-          m_options.m_short_help, m_synchronicity, m_completion_type));
+          m_options.m_short_help, m_synchronicity, m_completion_type);
     } else {
       ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
       if (!interpreter) {
@@ -2529,9 +2529,9 @@ protected:
         if (!result.Succeeded())
           return;
       } else
-        new_cmd_sp.reset(new CommandObjectScriptingObjectRaw(
+        new_cmd_sp = std::make_shared<CommandObjectScriptingObjectRaw>(
             m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity,
-            m_completion_type));
+            m_completion_type);
     }
     
     // Assume we're going to succeed...
@@ -2888,7 +2888,7 @@ protected:
     size_t num_args = command.GetArgumentCount();
 
     if (num_args == 0) {
-      result.AppendError("No command was specified.");
+      result.AppendError("no command was specified");
       return;
     }
 

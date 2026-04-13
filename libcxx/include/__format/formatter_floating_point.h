@@ -19,6 +19,7 @@
 #include <__assert>
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_floating_point.h>
+#include <__charconv/to_chars_integral.h>
 #include <__charconv/to_chars_result.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
@@ -31,12 +32,12 @@
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/concepts.h>
+#include <__math/traits.h>
 #include <__memory/allocator.h>
 #include <__system_error/errc.h>
 #include <__type_traits/conditional.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <cmath>
 
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <__locale>
@@ -140,7 +141,7 @@ struct __traits<double> {
 /// Depending on the maximum size required for a value, the buffer is allocated
 /// on the stack or the heap.
 template <floating_point _Fp>
-class _LIBCPP_TEMPLATE_VIS __float_buffer {
+class __float_buffer {
   using _Traits _LIBCPP_NODEBUG = __traits<_Fp>;
 
 public:
@@ -636,10 +637,10 @@ _LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
 template <floating_point _Tp, class _CharT, class _FormatContext>
 _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
 __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__parsed_specifications<_CharT> __specs) {
-  bool __negative = std::signbit(__value);
+  bool __negative = __math::signbit(__value);
 
-  if (!std::isfinite(__value)) [[unlikely]]
-    return __formatter::__format_floating_point_non_finite(__ctx.out(), __specs, __negative, std::isnan(__value));
+  if (!__math::isfinite(__value)) [[unlikely]]
+    return __formatter::__format_floating_point_non_finite(__ctx.out(), __specs, __negative, __math::isnan(__value));
 
   // Depending on the std-format-spec string the sign and the value
   // might not be outputted together:
@@ -750,7 +751,7 @@ __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__par
 } // namespace __formatter
 
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_floating_point {
+struct __formatter_floating_point {
 public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -768,11 +769,11 @@ public:
 };
 
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<float, _CharT> : public __formatter_floating_point<_CharT> {};
+struct formatter<float, _CharT> : public __formatter_floating_point<_CharT> {};
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<double, _CharT> : public __formatter_floating_point<_CharT> {};
+struct formatter<double, _CharT> : public __formatter_floating_point<_CharT> {};
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS formatter<long double, _CharT> : public __formatter_floating_point<_CharT> {};
+struct formatter<long double, _CharT> : public __formatter_floating_point<_CharT> {};
 
 #  if _LIBCPP_STD_VER >= 23
 template <>

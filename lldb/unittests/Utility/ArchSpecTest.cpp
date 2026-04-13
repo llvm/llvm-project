@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 
@@ -112,6 +113,14 @@ TEST(ArchSpecTest, TestSetTriple) {
   EXPECT_TRUE(llvm::StringRef(AS.GetTriple().str())
                   .consume_front("powerpc-apple-darwin"));
   EXPECT_EQ(ArchSpec::eCore_ppc_ppc970, AS.GetCore());
+
+  AS = ArchSpec();
+  EXPECT_TRUE(AS.SetTriple("24-0-apple-unknown"));
+  EXPECT_EQ(uint32_t(llvm::MachO::CPU_TYPE_RISCV), AS.GetMachOCPUType());
+  EXPECT_EQ(0u, AS.GetMachOCPUSubType());
+  EXPECT_TRUE(llvm::StringRef(AS.GetTriple().str())
+                  .consume_front("riscv32-apple-unknown"));
+  EXPECT_EQ(ArchSpec::eCore_riscv32, AS.GetCore());
 
   AS = ArchSpec();
   EXPECT_TRUE(AS.SetTriple("i686-pc-windows"));

@@ -20,10 +20,13 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SISpillUtils.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -32,6 +35,18 @@ using namespace llvm;
 using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
 namespace {
+
+/// Insertion point for IMPLICIT_DEF: iterator may be MBB::end() and can't be
+/// dereferenced so the parent block is stored explicitly.
+struct LaneVGPRInsertPt {
+  MachineBasicBlock *MBB;
+  MachineBasicBlock::iterator It;
+};
+
+static LaneVGPRInsertPt insertPt(MachineBasicBlock *MBB,
+                                 MachineBasicBlock::iterator It) {
+  return {MBB, It};
+}
 
 static cl::opt<unsigned> MaxNumVGPRsForWwmAllocation(
     "amdgpu-num-vgprs-for-wwm-alloc",
@@ -45,23 +60,26 @@ private:
   LiveIntervals *LIS = nullptr;
   SlotIndexes *Indexes = nullptr;
   MachineDominatorTree *MDT = nullptr;
+  MachineCycleInfo *MCI = nullptr;
 
   // Save and Restore blocks of the current function. Typically there is a
   // single save block, unless Windows EH funclets are involved.
   MBBVector SaveBlocks;
   MBBVector RestoreBlocks;
 
+  MachineBasicBlock *getCycleDomBB(MachineCycle *C);
+
 public:
   SILowerSGPRSpills(LiveIntervals *LIS, SlotIndexes *Indexes,
-                    MachineDominatorTree *MDT)
-      : LIS(LIS), Indexes(Indexes), MDT(MDT) {}
+                    MachineDominatorTree *MDT, MachineCycleInfo *MCI)
+      : LIS(LIS), Indexes(Indexes), MDT(MDT), MCI(MCI) {}
   bool run(MachineFunction &MF);
   void calculateSaveRestoreBlocks(MachineFunction &MF);
   bool spillCalleeSavedRegs(MachineFunction &MF,
                             SmallVectorImpl<int> &CalleeSavedFIs);
   void updateLaneVGPRDomInstr(
       int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
-      DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr);
+      DenseMap<Register, LaneVGPRInsertPt> &LaneVGPRDomInstr);
   void determineRegsForWWMAllocation(MachineFunction &MF, BitVector &RegMask);
 };
 
@@ -75,15 +93,14 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineCycleInfoWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   MachineFunctionProperties getClearedProperties() const override {
     // SILowerSGPRSpills introduces new Virtual VGPRs for spilling SGPRs.
-    return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::IsSSA)
-        .set(MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setIsSSA().setNoVRegs();
   }
 };
 
@@ -96,6 +113,7 @@ INITIALIZE_PASS_BEGIN(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
                     "SI lower SGPR spill instructions", false, false)
 
@@ -118,27 +136,26 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
   MachineFunction &MF = *SaveBlock.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *RI = ST.getRegisterInfo();
 
   MachineBasicBlock::iterator I = SaveBlock.begin();
-  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
+  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, RI)) {
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
       MCRegister Reg = CS.getReg();
 
       MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
+      const TargetRegisterClass *RC = RI->getMinimalPhysRegClass(
           Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
 
       // If this value was already livein, we probably have a direct use of the
       // incoming register value, so don't kill at the spill point. This happens
       // since we pass some special inputs (workgroup IDs) in the callee saved
       // range.
-      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, TRI);
+      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, RI);
       TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
-                              RC, TRI, Register());
+                              RC, Register());
 
       if (Indexes) {
         assert(std::distance(MIS.begin(), I) == 1);
@@ -149,6 +166,14 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       if (LIS)
         LIS->removeAllRegUnitsForPhysReg(Reg);
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
@@ -160,25 +185,18 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
   // Restore all registers immediately before the return and any
   // terminators that precede it.
   MachineBasicBlock::iterator I = RestoreBlock.getFirstTerminator();
+  const MachineBasicBlock::iterator BeforeRestoresI =
+      I == RestoreBlock.begin() ? I : std::prev(I);
 
   // FIXME: Just emit the readlane/writelane directly
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      Register Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
-
-      TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI,
-                               Register());
-      assert(I != RestoreBlock.begin() &&
-             "loadRegFromStackSlot didn't insert any code!");
       // Insert in reverse order.  loadRegFromStackSlot can insert
       // multiple instructions.
+      TFI->restoreCalleeSavedRegister(RestoreBlock, I, CI, &TII, TRI);
 
       if (Indexes) {
         MachineInstr &Inst = *std::prev(I);
@@ -186,8 +204,17 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
       }
 
       if (LIS)
-        LIS->removeAllRegUnitsForPhysReg(Reg);
+        LIS->removeAllRegUnitsForPhysReg(CI.getReg());
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&RestoreBlock, BeforeRestoresI,
+                                    RestoreBlock.getFirstTerminator());
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
@@ -201,10 +228,15 @@ void SILowerSGPRSpills::calculateSaveRestoreBlocks(MachineFunction &MF) {
   // So set the save points for those.
 
   // Use the points found by shrink-wrapping, if any.
-  if (MFI.getSavePoint()) {
-    SaveBlocks.push_back(MFI.getSavePoint());
-    assert(MFI.getRestorePoint() && "Both restore and save must be set");
-    MachineBasicBlock *RestoreBlock = MFI.getRestorePoint();
+  if (!MFI.getSavePoints().empty()) {
+    assert(MFI.getSavePoints().size() == 1 &&
+           "Multiple save points not yet supported!");
+    const auto &SavePoint = *MFI.getSavePoints().begin();
+    SaveBlocks.push_back(SavePoint.first);
+    assert(MFI.getRestorePoints().size() == 1 &&
+           "Multiple restore points not yet supported!");
+    const auto &RestorePoint = *MFI.getRestorePoints().begin();
+    MachineBasicBlock *RestoreBlock = RestorePoint.first;
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
     // epilogue.
@@ -286,10 +318,28 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
   return false;
 }
 
+MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(MachineCycle *C) {
+  // If the insertion point lands on a cycle entry, move it to a block that
+  // dominates all entries.
+  if (C->isReducible()) {
+    if (auto *IDom = MDT->getNode(C->getHeader())->getIDom())
+      return IDom->getBlock();
+    llvm_unreachable("Expected cycle to have an IDom.");
+    return nullptr;
+  }
+
+  const SmallVectorImpl<MachineBasicBlock *> &Entries = C->getEntries();
+  assert(!Entries.empty() && "Expected cycle to have at least one entry.");
+  MachineBasicBlock *EntryBB = Entries[0];
+  for (unsigned I = 1; I < Entries.size(); ++I)
+    EntryBB = MDT->findNearestCommonDominator(EntryBB, Entries[I]);
+  return EntryBB;
+}
+
 void SILowerSGPRSpills::updateLaneVGPRDomInstr(
     int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
-    DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr) {
-  // For the Def of a virtual LaneVPGR to dominate all its uses, we should
+    DenseMap<Register, LaneVGPRInsertPt> &LaneVGPRDomInstr) {
+  // For the Def of a virtual LaneVGPR to dominate all its uses, we should
   // insert an IMPLICIT_DEF before the dominating spill. Switching to a
   // depth first order doesn't really help since the machine function can be in
   // the unstructured control flow post-SSA. For each virtual register, hence
@@ -307,19 +357,21 @@ void SILowerSGPRSpills::updateLaneVGPRDomInstr(
     PrevLaneVGPR = Spill.VGPR;
     auto I = LaneVGPRDomInstr.find(Spill.VGPR);
     if (Spill.Lane == 0 && I == LaneVGPRDomInstr.end()) {
-      // Initially add the spill instruction itself for Insertion point.
-      LaneVGPRDomInstr[Spill.VGPR] = InsertPt;
+      LaneVGPRDomInstr[Spill.VGPR] = insertPt(MBB, InsertPt);
     } else {
       assert(I != LaneVGPRDomInstr.end());
-      auto PrevInsertPt = I->second;
-      MachineBasicBlock *DomMBB = PrevInsertPt->getParent();
+      LaneVGPRInsertPt Prev = I->second;
+      MachineBasicBlock *PrevInsertMBB = Prev.MBB;
+      MachineBasicBlock::iterator PrevInsertPt = Prev.It;
+      MachineBasicBlock *DomMBB = PrevInsertMBB;
       if (DomMBB == MBB) {
         // The insertion point earlier selected in a predecessor block whose
         // spills are currently being lowered. The earlier InsertPt would be
         // the one just before the block terminator and it should be changed
         // if we insert any new spill in it.
-        if (MDT->dominates(&*InsertPt, &*PrevInsertPt))
-          I->second = InsertPt;
+        if (PrevInsertPt == MBB->end() ||
+            MDT->dominates(&*InsertPt, &*PrevInsertPt))
+          I->second = insertPt(MBB, InsertPt);
 
         continue;
       }
@@ -327,10 +379,11 @@ void SILowerSGPRSpills::updateLaneVGPRDomInstr(
       // Find the common dominator block between PrevInsertPt and the
       // current spill.
       DomMBB = MDT->findNearestCommonDominator(DomMBB, MBB);
+
       if (DomMBB == MBB)
-        I->second = InsertPt;
-      else if (DomMBB != PrevInsertPt->getParent())
-        I->second = &(*DomMBB->getFirstTerminator());
+        I->second = insertPt(MBB, InsertPt);
+      else if (DomMBB != PrevInsertMBB)
+        I->second = insertPt(DomMBB, DomMBB->getFirstTerminator());
     }
   }
 }
@@ -343,6 +396,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   BitVector ReservedRegs = TRI->getReservedRegs(MF);
   BitVector NonWwmAllocMask(TRI->getNumRegs());
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // FIXME: MaxNumVGPRsForWwmAllocation might need to be adjusted in the future
   // to have a balanced allocation between WWM values and per-thread vector
@@ -351,7 +405,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   NumRegs =
       std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
 
-  auto [MaxNumVGPRs, MaxNumAGPRs] = TRI->getMaxNumVectorRegs(MF);
+  auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
   // Try to use the highest available registers for now. Later after
   // vgpr-regalloc, they can be shifted to the lowest range.
   unsigned I = 0;
@@ -368,7 +422,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
     // Reserve an arbitrary register and report the error.
     TRI->markSuperRegs(RegMask, AMDGPU::VGPR0);
     MF.getFunction().getContext().emitError(
-        "can't find enough VGPRs for wwm-regalloc");
+        "cannot find enough VGPRs for wwm-regalloc");
   }
 }
 
@@ -379,7 +433,9 @@ bool SILowerSGPRSpillsLegacy::runOnMachineFunction(MachineFunction &MF) {
   SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  return SILowerSGPRSpills(LIS, Indexes, MDT).run(MF);
+  MachineCycleInfo *MCI =
+      &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
+  return SILowerSGPRSpills(LIS, Indexes, MDT, MCI).run(MF);
 }
 
 bool SILowerSGPRSpills::run(MachineFunction &MF) {
@@ -423,7 +479,7 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     BitVector SpillFIs(MFI.getObjectIndexEnd(), false);
 
     // To track the IMPLICIT_DEF insertion point for the lane vgprs.
-    DenseMap<Register, MachineBasicBlock::iterator> LaneVGPRDomInstr;
+    DenseMap<Register, LaneVGPRInsertPt> LaneVGPRDomInstr;
 
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
@@ -477,12 +533,15 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     }
 
     for (auto Reg : FuncInfo->getSGPRSpillVGPRs()) {
-      auto InsertPt = LaneVGPRDomInstr[Reg];
+      LaneVGPRInsertPt IP = LaneVGPRDomInstr[Reg];
+      if (MachineCycle *C = MCI->getTopLevelParentCycle(IP.MBB)) {
+        MachineBasicBlock *AdjMBB = getCycleDomBB(C);
+        IP = insertPt(AdjMBB, AdjMBB->getFirstTerminator());
+      }
       // Insert the IMPLICIT_DEF at the identified points.
-      MachineBasicBlock &Block = *InsertPt->getParent();
-      DebugLoc DL = Block.findDebugLoc(InsertPt);
-      auto MIB =
-          BuildMI(Block, *InsertPt, DL, TII->get(AMDGPU::IMPLICIT_DEF), Reg);
+      MachineBasicBlock &Block = *IP.MBB;
+      DebugLoc DL = Block.findDebugLoc(IP.It);
+      auto MIB = BuildMI(Block, IP.It, DL, TII->get(AMDGPU::IMPLICIT_DEF), Reg);
 
       // Add WWM flag to the virtual register.
       FuncInfo->setFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG);
@@ -510,24 +569,8 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
     }
 
-    for (MachineBasicBlock &MBB : MF) {
-      // FIXME: The dead frame indices are replaced with a null register from
-      // the debug value instructions. We should instead, update it with the
-      // correct register value. But not sure the register value alone is
-      // adequate to lower the DIExpression. It should be worked out later.
-      for (MachineInstr &MI : MBB) {
-        if (MI.isDebugValue()) {
-          uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
-          if (MI.getOperand(StackOperandIdx).isFI() &&
-              !MFI.isFixedObjectIndex(
-                  MI.getOperand(StackOperandIdx).getIndex()) &&
-              SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
-            MI.getOperand(StackOperandIdx)
-                .ChangeToRegister(Register(), false /*isDef*/);
-          }
-        }
-      }
-    }
+    for (MachineBasicBlock &MBB : MF)
+      clearDebugInfoForSpillFIs(MFI, MBB, SpillFIs);
 
     // All those frame indices which are dead by now should be removed from the
     // function frame. Otherwise, there is a side effect such as re-mapping of
@@ -567,6 +610,7 @@ SILowerSGPRSpillsPass::run(MachineFunction &MF,
   auto *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
   auto *Indexes = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
   MachineDominatorTree *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  SILowerSGPRSpills(LIS, Indexes, MDT).run(MF);
+  MachineCycleInfo &MCI = MFAM.getResult<MachineCycleAnalysis>(MF);
+  SILowerSGPRSpills(LIS, Indexes, MDT, &MCI).run(MF);
   return PreservedAnalyses::all();
 }

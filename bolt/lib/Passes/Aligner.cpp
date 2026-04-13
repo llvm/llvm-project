@@ -60,7 +60,7 @@ namespace llvm {
 namespace bolt {
 
 // Align function to the specified byte-boundary (typically, 64) offsetting
-// the fuction by not more than the corresponding value
+// the function by not more than the corresponding value
 static void alignMaxBytes(BinaryFunction &Function) {
   Function.setAlignment(opts::AlignFunctions);
   Function.setMaxAlignmentBytes(opts::AlignFunctionsMaxBytes);
@@ -68,7 +68,7 @@ static void alignMaxBytes(BinaryFunction &Function) {
 }
 
 // Align function to the specified byte-boundary (typically, 64) offsetting
-// the fuction by not more than the minimum over
+// the function by not more than the minimum over
 // -- the size of the function
 // -- the specified number of bytes
 static void alignCompact(BinaryFunction &Function,
@@ -76,6 +76,13 @@ static void alignCompact(BinaryFunction &Function,
   const BinaryContext &BC = Function.getBinaryContext();
   size_t HotSize = 0;
   size_t ColdSize = 0;
+
+  // On AArch64, larger cold code size may lead to more veneers and higher
+  // potential overhead for hot code. Minimize the cold code size.
+  if (!Function.hasProfile() && BC.isAArch64()) {
+    Function.setAlignment(Function.getMinAlignment());
+    return;
+  }
 
   for (const BinaryBasicBlock &BB : Function)
     if (BB.isSplit())

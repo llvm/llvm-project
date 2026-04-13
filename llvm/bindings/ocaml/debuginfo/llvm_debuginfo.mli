@@ -148,6 +148,7 @@ module MetadataKind : sig
     | DIArgListMetadataKind
     | DIAssignIDMetadataKind
     | DISubrangeTypeMetadataKind
+    | DIFixedPointTypeMetadataKind
 end
 
 (** The amount of debug information to emit. *)

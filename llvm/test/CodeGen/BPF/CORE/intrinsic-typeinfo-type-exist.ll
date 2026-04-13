@@ -17,7 +17,7 @@
 target triple = "bpf"
 
 ; Function Attrs: nounwind readnone
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !17 {
+define dso_local i32 @test() local_unnamed_addr !dbg !17 {
 entry:
   %0 = tail call i32 @llvm.bpf.preserve.type.info(i32 0, i64 0), !dbg !19, !llvm.preserve.access.index !8
   %1 = tail call i32 @llvm.bpf.preserve.type.info(i32 1, i64 0), !dbg !20, !llvm.preserve.access.index !21
@@ -59,10 +59,7 @@ entry:
 ; CHECK-NEXT:        .long   8
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.type.info(i32, i64) #1
-
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare i32 @llvm.bpf.preserve.type.info(i32, i64)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14, !15}

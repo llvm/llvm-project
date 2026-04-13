@@ -41,98 +41,42 @@ static_assert(CanInsert<Map, Iter, std::tuple<short, double>&&>);
 static_assert(!CanInsert<Map, int>);
 static_assert(!CanInsert<Map, Iter, int>);
 
-static int expensive_comparisons = 0;
-static int cheap_comparisons     = 0;
-
-struct CompareCounter {
-  int i_ = 0;
-  CompareCounter(int i) : i_(i) {}
-  friend auto operator<=>(const CompareCounter& x, const CompareCounter& y) {
-    expensive_comparisons += 1;
-    return x.i_ <=> y.i_;
-  }
-  bool operator==(const CompareCounter&) const = default;
-  friend auto operator<=>(const CompareCounter& x, int y) {
-    cheap_comparisons += 1;
-    return x.i_ <=> y;
-  }
-};
-
-template <class KeyContainer, class ValueContainer>
-void test() {
-  using Key   = typename KeyContainer::value_type;
-  using Value = typename ValueContainer::value_type;
-  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
-
-  const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}};
+constexpr bool test() {
   {
-    // insert(P&&)
+    // template<class K> pair<iterator, bool> insert(P&& x);
+    bool transparent_used = false;
+    TransparentComparator c(transparent_used);
+    using M = std::flat_map<int, int, TransparentComparator>;
+    M m(std::sorted_unique, {{1, 1}, {2, 2}, {4, 4}}, c);
+    assert(!transparent_used);
+
+    std::same_as<std::pair<typename M::iterator, bool>> decltype(auto) res =
+        m.insert(std::pair(ConvertibleTransparent<int>{3}, 3));
+
+    assert(res.second);
+    assert(res.first->first == 3);
+    assert(res.first->second == 3);
     //   Unlike flat_set, here we can't use key_compare to compare value_type versus P,
     //   so we must eagerly convert to value_type.
-    M m                   = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
-    expensive_comparisons = 0;
-    cheap_comparisons     = 0;
-    std::same_as<std::pair<typename M::iterator, bool>> auto p =
-        m.insert(std::make_pair(3, 3)); // conversion happens first
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(p == std::make_pair(m.begin() + 2, true));
-    assert(std::ranges::equal(m, expected));
+    assert(!transparent_used);
   }
   {
-    // insert(const_iterator, P&&)
-    M m                                        = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
-    expensive_comparisons                      = 0;
-    cheap_comparisons                          = 0;
-    std::same_as<typename M::iterator> auto it = m.insert(m.begin(), std::make_pair(3, 3));
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(it == m.begin() + 2);
-    assert(std::ranges::equal(m, expected));
-  }
-  {
-    // insert(value_type&&)
-    M m                   = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
-    expensive_comparisons = 0;
-    cheap_comparisons     = 0;
-    std::same_as<std::pair<typename M::iterator, bool>> auto p =
-        m.insert(std::make_pair(3, 3)); // conversion happens last
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(p == std::make_pair(m.begin() + 2, true));
-    assert(std::ranges::equal(m, expected));
-  }
-  {
-    // insert(const_iterator, value_type&&)
-    M m                                        = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
-    expensive_comparisons                      = 0;
-    cheap_comparisons                          = 0;
-    std::same_as<typename M::iterator> auto it = m.insert(m.begin(), std::make_pair(3, 3));
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(it == m.begin() + 2);
-    assert(std::ranges::equal(m, expected));
-  }
-  {
-    // emplace(Args&&...)
-    M m                   = {{1, 1}, {2, 2}, {4, 4}, {5, 5}};
-    expensive_comparisons = 0;
-    cheap_comparisons     = 0;
-    std::same_as<std::pair<typename M::iterator, bool>> auto p =
-        m.emplace(std::make_pair(3, 3)); // conversion happens first
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(p == std::make_pair(m.begin() + 2, true));
-    assert(std::ranges::equal(m, expected));
-  }
-}
+    // template<class K> iterator insert(const_iterator hint, P&& x);
+    bool transparent_used = false;
+    TransparentComparator c(transparent_used);
+    using M = std::flat_map<int, int, TransparentComparator>;
+    M m(std::sorted_unique, {{1, 1}, {2, 2}, {4, 4}}, c);
+    assert(!transparent_used);
 
-int main(int, char**) {
-  test<std::vector<CompareCounter>, std::vector<double>>();
-  test<std::deque<CompareCounter>, std::vector<double>>();
-  test<MinSequenceContainer<CompareCounter>, MinSequenceContainer<double>>();
-  test<std::vector<CompareCounter, min_allocator<CompareCounter>>, std::vector<double, min_allocator<double>>>();
+    std::same_as<typename M::iterator> decltype(auto) res =
+        m.insert(m.begin(), std::pair(ConvertibleTransparent<int>{3}, 3));
 
+    assert(res->first == 3);
+    assert(res->second == 3);
+    //   Unlike flat_set, here we can't use key_compare to compare value_type versus P,
+    //   so we must eagerly convert to value_type.
+    assert(!transparent_used);
+  }
   {
     // no ambiguity between insert(pos, P&&) and insert(first, last)
     using M = std::flat_map<int, int>;
@@ -145,23 +89,46 @@ int main(int, char**) {
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), Evil())), M::iterator);
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), m.end())), void);
   }
-  {
-    auto insert_func = [](auto& m, auto key_arg, auto value_arg) {
-      using FlatMap    = std::decay_t<decltype(m)>;
-      using tuple_type = std::tuple<typename FlatMap::key_type, typename FlatMap::mapped_type>;
-      tuple_type t(key_arg, value_arg);
-      m.insert(t);
-    };
-    test_emplace_exception_guarantee(insert_func);
+
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    {
+      auto insert_func = [](auto& m, auto key_arg, auto value_arg) {
+        using FlatMap    = std::decay_t<decltype(m)>;
+        using tuple_type = std::tuple<typename FlatMap::key_type, typename FlatMap::mapped_type>;
+        tuple_type t(key_arg, value_arg);
+        m.insert(t);
+      };
+      test_emplace_exception_guarantee(insert_func);
+    }
+    {
+      auto insert_func_iter = [](auto& m, auto key_arg, auto value_arg) {
+        using FlatMap    = std::decay_t<decltype(m)>;
+        using tuple_type = std::tuple<typename FlatMap::key_type, typename FlatMap::mapped_type>;
+        tuple_type t(key_arg, value_arg);
+        m.insert(m.begin(), t);
+      };
+      test_emplace_exception_guarantee(insert_func_iter);
+    }
   }
   {
-    auto insert_func_iter = [](auto& m, auto key_arg, auto value_arg) {
-      using FlatMap    = std::decay_t<decltype(m)>;
-      using tuple_type = std::tuple<typename FlatMap::key_type, typename FlatMap::mapped_type>;
-      tuple_type t(key_arg, value_arg);
-      m.insert(m.begin(), t);
-    };
-    test_emplace_exception_guarantee(insert_func_iter);
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    auto [it, inserted] = m.insert({"alpha", 1});
+    assert(!inserted);
+    assert(it == m.begin());
+    auto it2 = m.insert(m.begin(), {"beta2", 2});
+    assert(it2 == m.begin() + 2);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

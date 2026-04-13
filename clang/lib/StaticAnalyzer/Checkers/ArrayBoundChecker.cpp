@@ -23,7 +23,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -130,6 +129,20 @@ private:
 struct Messages {
   std::string Short, Full;
 };
+
+enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
+
+constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
+                                              "a negative or overflowing"};
+static StringRef asAdjective(BadOffsetKind Problem) {
+  return Adjectives[static_cast<int>(Problem)];
+}
+
+constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of",
+                                                "around"};
+static StringRef asPreposition(BadOffsetKind Problem) {
+  return Prepositions[static_cast<int>(Problem)];
+}
 
 // NOTE: The `ArraySubscriptExpr` and `UnaryOperator` callbacks are `PostStmt`
 // instead of `PreStmt` because the current implementation passes the whole
@@ -389,18 +402,6 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
   return SV ? getConcreteValue(*SV) : std::nullopt;
 }
 
-static Messages getPrecedesMsgs(const MemSpaceRegion *Space,
-                                const SubRegion *Region, NonLoc Offset) {
-  std::string RegName = getRegionName(Space, Region), OffsetStr = "";
-
-  if (auto ConcreteOffset = getConcreteValue(Offset))
-    OffsetStr = formatv(" {0}", ConcreteOffset);
-
-  return {
-      formatv("Out of bound access to memory preceding {0}", RegName),
-      formatv("Access of {0} at negative byte offset{1}", RegName, OffsetStr)};
-}
-
 /// Try to divide `Val1` and `Val2` (in place) by `Divisor` and return true if
 /// it can be performed (`Divisor` is nonzero and there is no remainder). The
 /// values `Val1` and `Val2` may be nullopt and in that case the corresponding
@@ -420,10 +421,11 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
   return true;
 }
 
-static Messages getExceedsMsgs(ASTContext &ACtx, const MemSpaceRegion *Space,
-                               const SubRegion *Region, NonLoc Offset,
-                               NonLoc Extent, SVal Location,
-                               bool AlsoMentionUnderflow) {
+static Messages getNonTaintMsgs(const ASTContext &ACtx,
+                                const MemSpaceRegion *Space,
+                                const SubRegion *Region, NonLoc Offset,
+                                std::optional<NonLoc> Extent, SVal Location,
+                                BadOffsetKind Problem) {
   std::string RegName = getRegionName(Space, Region);
   const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
   assert(EReg && "this checker only handles element access");
@@ -440,15 +442,21 @@ static Messages getExceedsMsgs(ASTContext &ACtx, const MemSpaceRegion *Space,
   SmallString<256> Buf;
   llvm::raw_svector_ostream Out(Buf);
   Out << "Access of ";
-  if (!ExtentN && !UseByteOffsets)
+  if (OffsetN && !ExtentN && !UseByteOffsets) {
+    // If the offset is reported as an index, then the report must mention the
+    // element type (because it is not always clear from the code). It's more
+    // natural to mention the element type later where the extent is described,
+    // but if the extent is unknown/irrelevant, then the element type can be
+    // inserted into the message at this point.
     Out << "'" << ElemType.getAsString() << "' element in ";
+  }
   Out << RegName << " at ";
-  if (AlsoMentionUnderflow) {
-    Out << "a negative or overflowing " << OffsetOrIndex;
-  } else if (OffsetN) {
+  if (OffsetN) {
+    if (Problem == BadOffsetKind::Negative)
+      Out << "negative ";
     Out << OffsetOrIndex << " " << *OffsetN;
   } else {
-    Out << "an overflowing " << OffsetOrIndex;
+    Out << asAdjective(Problem) << " " << OffsetOrIndex;
   }
   if (ExtentN) {
     Out << ", while it holds only ";
@@ -466,8 +474,7 @@ static Messages getExceedsMsgs(ASTContext &ACtx, const MemSpaceRegion *Space,
   }
 
   return {formatv("Out of bound access to memory {0} {1}",
-                  AlsoMentionUnderflow ? "around" : "after the end of",
-                  RegName),
+                  asPreposition(Problem), RegName),
           std::string(Buf)};
 }
 
@@ -636,7 +643,9 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
       } else {
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
-          Messages Msgs = getPrecedesMsgs(Space, Reg, ByteOffset);
+          Messages Msgs = getNonTaintMsgs(C.getASTContext(), Space, Reg,
+                                          ByteOffset, /*Extent=*/std::nullopt,
+                                          Location, BadOffsetKind::Negative);
           reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset, std::nullopt);
           return;
         }
@@ -678,9 +687,12 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
           return;
         }
 
+        BadOffsetKind Problem = AlsoMentionUnderflow
+                                    ? BadOffsetKind::Indeterminate
+                                    : BadOffsetKind::Overflowing;
         Messages Msgs =
-            getExceedsMsgs(C.getASTContext(), Space, Reg, ByteOffset,
-                           *KnownSize, Location, AlsoMentionUnderflow);
+            getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
+                            *KnownSize, Location, Problem);
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
         return;
       }

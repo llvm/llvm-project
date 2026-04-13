@@ -15,6 +15,7 @@
 #include "CXString.h"
 #include "CXTranslationUnit.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -304,7 +305,8 @@ public:
       : DataConsumer(dataConsumer) {}
 
   void Initialize(ASTContext &Context) override {
-    DataConsumer.setASTContext(Context);
+    // TODO: accept Context as IntrusiveRefCntPtr?
+    DataConsumer.setASTContext(&Context);
     DataConsumer.startedTranslationUnit();
   }
 
@@ -349,13 +351,10 @@ public:
                                                  StringRef InFile) override {
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
 
-    if (!PPOpts.ImplicitPCHInclude.empty()) {
-      if (auto File =
-              CI.getFileManager().getOptionalFileRef(PPOpts.ImplicitPCHInclude))
-        DataConsumer->importedPCH(*File);
-    }
+    if (!PPOpts.ImplicitPCHInclude.empty())
+      DataConsumer->importedPCH(PPOpts.ImplicitPCHInclude);
 
-    DataConsumer->setASTContext(CI.getASTContext());
+    DataConsumer->setASTContext(CI.getASTContextPtr());
     Preprocessor &PP = CI.getPreprocessor();
     PP.addPPCallbacks(std::make_unique<IndexPPCallbacks>(PP, *DataConsumer));
     DataConsumer->setPreprocessor(CI.getPreprocessorPtr());
@@ -389,9 +388,7 @@ public:
     if (SM.isInSystemHeader(Loc))
       return true; // always skip bodies from system headers.
 
-    FileID FID;
-    unsigned Offset;
-    std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
+    auto [FID, Offset] = SM.getDecomposedLoc(Loc);
     // Don't skip bodies from main files; this may be revisited.
     if (SM.getMainFileID() == FID)
       return false;
@@ -480,9 +477,10 @@ static CXErrorCode clang_indexSourceFile_Impl(
     CaptureDiag = new CaptureDiagnosticConsumer();
 
   // Configure the diagnostics.
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions, CaptureDiag,
+                                          *DiagOpts, CaptureDiag,
                                           /*ShouldOwnClient=*/true));
 
   // Recover resources if we crash before exiting this function.
@@ -554,7 +552,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   CInvok->getHeaderSearchOpts().ModuleFormat = std::string(
       CXXIdx->getPCHContainerOperations()->getRawReader().getFormats().front());
 
-  auto Unit = ASTUnit::create(CInvok, Diags, CaptureDiagnostics,
+  auto Unit = ASTUnit::create(CInvok, DiagOpts, Diags, CaptureDiagnostics,
                               /*UserFilesAreVolatile=*/true);
   if (!Unit)
     return CXError_InvalidArguments;
@@ -617,7 +615,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
       !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
   DiagnosticErrorTrap DiagTrap(*Diags);
   bool Success = ASTUnit::LoadFromCompilerInvocationAction(
-      std::move(CInvok), CXXIdx->getPCHContainerOperations(), Diags,
+      std::move(CInvok), CXXIdx->getPCHContainerOperations(), DiagOpts, Diags,
       IndexAction.get(), UPtr, Persistent, CXXIdx->getClangResourcesPath(),
       OnlyLocalDecls, CaptureDiagnostics, PrecompilePreambleAfterNParses,
       CacheCodeCompletionResults, /*UserFilesAreVolatile=*/true);
@@ -694,7 +692,7 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
 
   ASTUnit::ConcurrencyCheck Check(*Unit);
 
-  if (OptionalFileEntryRef PCHFile = Unit->getPCHFile())
+  if (std::optional<StringRef> PCHFile = Unit->getPCHFile())
     DataConsumer.importedPCH(*PCHFile);
 
   FileManager &FileMgr = Unit->getFileManager();
@@ -707,7 +705,7 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
   else
     DataConsumer.enteredMainFile(std::nullopt);
 
-  DataConsumer.setASTContext(Unit->getASTContext());
+  DataConsumer.setASTContext(Unit->getASTContextPtr());
   DataConsumer.startedTranslationUnit();
 
   indexPreprocessingRecord(*Unit, DataConsumer);

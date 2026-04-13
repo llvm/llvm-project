@@ -4,9 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zvfhmin,+v,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+v,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s
 
-
-declare <2 x half> @llvm.vp.fptrunc.v2f16.v2f32(<2 x float>, <2 x i1>, i32)
-
 define <2 x half> @vfptrunc_v2f16_v2f32(<2 x float> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f16_v2f32:
 ; CHECK:       # %bb.0:
@@ -28,8 +25,6 @@ define <2 x half> @vfptrunc_v2f16_v2f32_unmasked(<2 x float> %a, i32 zeroext %vl
   %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f32(<2 x float> %a, <2 x i1> splat (i1 true), i32 %vl)
   ret <2 x half> %v
 }
-
-declare <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double>, <2 x i1>, i32)
 
 define <2 x half> @vfptrunc_v2f16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f16_v2f64:
@@ -55,8 +50,6 @@ define <2 x half> @vfptrunc_v2f16_v2f64_unmasked(<2 x double> %a, i32 zeroext %v
   ret <2 x half> %v
 }
 
-declare <2 x float> @llvm.vp.fptrunc.v2f64.v2f32(<2 x double>, <2 x i1>, i32)
-
 define <2 x float> @vfptrunc_v2f32_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f32_v2f64:
 ; CHECK:       # %bb.0:
@@ -79,8 +72,6 @@ define <2 x float> @vfptrunc_v2f32_v2f64_unmasked(<2 x double> %a, i32 zeroext %
   ret <2 x float> %v
 }
 
-declare <15 x float> @llvm.vp.fptrunc.v15f64.v15f32(<15 x double>, <15 x i1>, i32)
-
 define <15 x float> @vfptrunc_v15f32_v15f64(<15 x double> %a, <15 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v15f32_v15f64:
 ; CHECK:       # %bb.0:
@@ -91,8 +82,6 @@ define <15 x float> @vfptrunc_v15f32_v15f64(<15 x double> %a, <15 x i1> %m, i32 
   %v = call <15 x float> @llvm.vp.fptrunc.v15f64.v15f32(<15 x double> %a, <15 x i1> %m, i32 %vl)
   ret <15 x float> %v
 }
-
-declare <32 x float> @llvm.vp.fptrunc.v32f64.v32f32(<32 x double>, <32 x i1>, i32)
 
 define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v32f32_v32f64:
@@ -123,8 +112,6 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
   ret <32 x float> %v
 }
 
-declare <2 x bfloat> @llvm.vp.fptrunc.v2bf16.v2f32(<2 x float>, <2 x i1>, i32)
-
 define <2 x bfloat> @vfptrunc_v2bf16_v2f32(<2 x float> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2bf16_v2f32:
 ; CHECK:       # %bb.0:
@@ -143,11 +130,9 @@ define <2 x bfloat> @vfptrunc_v2bf16_v2f32_unmasked(<2 x float> %a, i32 zeroext 
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <2 x bfloat> @llvm.vp.fptrunc.v2bf16.v2f32(<2 x float> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x bfloat> @llvm.vp.fptrunc.v2bf16.v2f32(<2 x float> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> poison, i1 true, i32 0), <2 x i1> poison, <2 x i32> zeroinitializer), i32 %vl)
   ret <2 x bfloat> %v
 }
-
-declare <2 x bfloat> @llvm.vp.fptrunc.v2bf16.v2f64(<2 x double>, <2 x i1>, i32)
 
 define <2 x bfloat> @vfptrunc_v2bf16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2bf16_v2f64:
@@ -169,6 +154,6 @@ define <2 x bfloat> @vfptrunc_v2bf16_v2f64_unmasked(<2 x double> %a, i32 zeroext
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <2 x bfloat> @llvm.vp.fptrunc.v2bf16.v2f64(<2 x double> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x bfloat> @llvm.vp.fptrunc.v2bf16.v2f64(<2 x double> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> poison, i1 true, i32 0), <2 x i1> poison, <2 x i32> zeroinitializer), i32 %vl)
   ret <2 x bfloat> %v
 }

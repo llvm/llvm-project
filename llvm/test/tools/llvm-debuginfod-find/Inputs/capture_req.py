@@ -14,7 +14,7 @@ class TrivialHandler(http.server.BaseHTTPRequestHandler):
         print(self.headers)
 
 
-httpd = http.server.HTTPServer(("", 0), TrivialHandler)
+httpd = http.server.HTTPServer(("localhost", 0), TrivialHandler)
 port = httpd.socket.getsockname()[1]
 
 try:

@@ -10,7 +10,7 @@
 #define LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
 
 #include "lldb/Host/StreamFile.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StreamTee.h"
 #include "lldb/Utility/StructuredData.h"
@@ -114,22 +114,11 @@ public:
 
   void AppendMessage(llvm::StringRef in_string);
 
-  void AppendMessageWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
-
   void AppendNote(llvm::StringRef in_string);
-
-  void AppendNoteWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
 
   void AppendWarning(llvm::StringRef in_string);
 
-  void AppendWarningWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
-
   void AppendError(llvm::StringRef in_string);
-
-  void AppendRawError(llvm::StringRef in_string);
 
   void AppendErrorWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));

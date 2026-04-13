@@ -552,3 +552,152 @@ define <2 x double> @select_eq_v2f64(i32 %i, <2 x double> %x, <2 x double> %y) {
   %res = select i1 %c, <2 x double> %x, <2 x double> %y
   ret <2 x double> %res
 }
+
+define <4 x i32> @select_splat_first_zero_and_icmp(<4 x i32> %x) {
+; CHECK-LABEL: select_splat_first_zero_and_icmp:
+; CHECK:         .functype select_splat_first_zero_and_icmp (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 2139095040, 2139095040, 2139095040, 2139095040
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    v128.const 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.ne
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    # fallthrough-return
+  %a = and <4 x i32> %x, splat (i32 2139095040)
+  %c = icmp eq <4 x i32> %a, zeroinitializer
+  %res = select <4 x i1> %c, <4 x i32> zeroinitializer, <4 x i32> %x
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @select_splat_second_zero_and_icmp(<4 x i32> %x) {
+; CHECK-LABEL: select_splat_second_zero_and_icmp:
+; CHECK:         .functype select_splat_second_zero_and_icmp (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 2139095040, 2139095040, 2139095040, 2139095040
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    v128.const 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    # fallthrough-return
+  %a = and <4 x i32> %x, splat (i32 2139095040)
+  %c = icmp eq <4 x i32> %a, zeroinitializer
+  %res = select <4 x i1> %c, <4 x i32> %x, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @select_splat_first_zero_cond_input(<4 x i1> %c, <4 x i32> %x) {
+; CHECK-LABEL: select_splat_first_zero_cond_input:
+; CHECK:         .functype select_splat_first_zero_cond_input (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 31
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 31
+; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    # fallthrough-return
+  %res = select <4 x i1> %c, <4 x i32> zeroinitializer, <4 x i32> %x
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @select_splat_second_zero_cond_input(<4 x i1> %c, <4 x i32> %x) {
+; CHECK-LABEL: select_splat_second_zero_cond_input:
+; CHECK:         .functype select_splat_second_zero_cond_input (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 31
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 31
+; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    # fallthrough-return
+  %res = select <4 x i1> %c, <4 x i32> %x, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+; ==============================================================================
+; vselect(cmp, vnot(x), zero) -> v128.andnot
+; ==============================================================================
+
+; Test that and(vnot(x), sext(cmp)) lowers to v128.andnot.
+;
+; DAGCombiner canonicalizes and(x, sext(cmp)) into vselect(cmp, x, zero).
+; When x is vnot(y), this produces vselect(cmp, vnot(y), zero) which the
+; generic vselect-to-bitselect pattern lowers as v128.not + v128.bitselect.
+; A dedicated ISel pattern matches this as a single v128.andnot instead.
+
+define <4 x i32> @andnot_sext_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x) {
+; CHECK-LABEL: andnot_sext_v4i32:
+; CHECK:         .functype andnot_sext_v4i32 (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.lt_s
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    v128.andnot
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp slt <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %not = xor <4 x i32> %x, splat (i32 -1)
+  %res = and <4 x i32> %not, %sext
+  ret <4 x i32> %res
+}
+
+define <16 x i8> @andnot_sext_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %x) {
+; CHECK-LABEL: andnot_sext_v16i8:
+; CHECK:         .functype andnot_sext_v16i8 (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.lt_s
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    v128.andnot
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp slt <16 x i8> %a, %b
+  %sext = sext <16 x i1> %cmp to <16 x i8>
+  %not = xor <16 x i8> %x, splat (i8 -1)
+  %res = and <16 x i8> %not, %sext
+  ret <16 x i8> %res
+}
+
+define <8 x i16> @andnot_sext_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %x) {
+; CHECK-LABEL: andnot_sext_v8i16:
+; CHECK:         .functype andnot_sext_v8i16 (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.lt_s
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    v128.andnot
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp slt <8 x i16> %a, %b
+  %sext = sext <8 x i1> %cmp to <8 x i16>
+  %not = xor <8 x i16> %x, splat (i16 -1)
+  %res = and <8 x i16> %not, %sext
+  ret <8 x i16> %res
+}
+
+define <2 x i64> @andnot_sext_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %x) {
+; CHECK-LABEL: andnot_sext_v2i64:
+; CHECK:         .functype andnot_sext_v2i64 (v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64x2.lt_s
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    v128.andnot
+; CHECK-NEXT:    # fallthrough-return
+  %cmp = icmp slt <2 x i64> %a, %b
+  %sext = sext <2 x i1> %cmp to <2 x i64>
+  %not = xor <2 x i64> %x, splat (i64 -1)
+  %res = and <2 x i64> %not, %sext
+  ret <2 x i64> %res
+}
+

@@ -18,9 +18,9 @@
 #error "Protected pages requires mmap and cannot be used in full build mode."
 #endif // defined(LIBC_FULL_BUILD) || !defined(LIBC_TARGET_OS_IS_LINUX)
 
+#include "hdr/stdint_proxy.h"                // uint8_t
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include <stddef.h>                          // size_t
-#include <stdint.h>                          // uint8_t
 #include <sys/mman.h>                        // mmap, munmap
 #include <unistd.h>                          // sysconf, _SC_PAGESIZE
 

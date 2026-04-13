@@ -73,6 +73,11 @@ MlirAffineExpr mlirAffineExprShiftSymbols(MlirAffineExpr affineExpr,
   return wrap(unwrap(affineExpr).shiftSymbols(numSymbols, shift, offset));
 }
 
+MlirAffineExpr mlirSimplifyAffineExpr(MlirAffineExpr expr, uint32_t numDims,
+                                      uint32_t numSymbols) {
+  return wrap(simplifyAffineExpr(unwrap(expr), numDims, numSymbols));
+}
+
 //===----------------------------------------------------------------------===//
 // Affine Dimension Expression.
 //===----------------------------------------------------------------------===//

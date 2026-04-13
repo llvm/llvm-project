@@ -12,18 +12,24 @@ add_llvm_executable(check-gdb-llvm-support
 )
 target_link_libraries(check-gdb-llvm-support PRIVATE LLVMSupport)
 
+add_subdirectory(debuginfo-tests/llvm-prettyprinters/lldb)
+
 set(CROSS_PROJECT_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(CROSS_PROJECT_TEST_DEPS
   FileCheck
   check-gdb-llvm-support
+  ${LLDB_FORMATTER_TESTS}
   count
-  llvm-dwarfdump
+  llvm-ar
   llvm-config
+  llvm-dis
+  llvm-dwarfdump
   llvm-objdump
-  split-file
   not
+  obj2yaml
+  split-file
   )
 
 if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
@@ -92,6 +98,20 @@ add_lit_testsuite(check-cross-amdgpu "Running AMDGPU cross-project tests"
   ${CMAKE_CURRENT_BINARY_DIR}/amdgpu
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS clang
+  )
+
+# DTLTO tests.
+add_lit_testsuite(check-cross-dtlto "Running DTLTO cross-project tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/dtlto
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
+  )
+
+# veclib tests.
+add_lit_testsuite(check-cross-veclib "Running veclib cross-project tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/veclib
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
 
 # Add check-cross-project-* targets.

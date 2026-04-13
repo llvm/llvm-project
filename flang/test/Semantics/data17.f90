@@ -1,8 +1,8 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 character(4) a, b, c, d, e, f
-!WARNING: DATA statement value '"abcde"' for 'a' has the wrong length
+!WARNING: DATA statement value '"abcde"' for 'a' has the wrong length [-Wdata-length]
 data a(1:4)/'abcde'/
-!WARNING: DATA statement value '"abc"' for 'b' has the wrong length
+!WARNING: DATA statement value '"abc"' for 'b' has the wrong length [-Wdata-length]
 data b(1:4)/'abc'/
 data c/'abcde'/ ! not a substring, conforms
 data d/'abc'/ ! not a substring, conforms

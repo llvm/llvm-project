@@ -8,13 +8,10 @@
 
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <numeric>
 #include <optional>
 
 using namespace llvm;
@@ -205,6 +202,12 @@ void RVVType::initBuiltinStr() {
   case ScalarTypeKind::BFloat:
     BuiltinStr += "y";
     break;
+  case ScalarTypeKind::FloatE4M3:
+    BuiltinStr += "a";
+    break;
+  case ScalarTypeKind::FloatE5M2:
+    BuiltinStr += "b";
+    break;
   default:
     llvm_unreachable("ScalarType is invalid!");
   }
@@ -247,6 +250,8 @@ void RVVType::initClangBuiltinStr() {
     ClangBuiltinStr += "int";
     break;
   case ScalarTypeKind::UnsignedInteger:
+  case ScalarTypeKind::FloatE4M3:
+  case ScalarTypeKind::FloatE5M2:
     ClangBuiltinStr += "uint";
     break;
   default:
@@ -322,6 +327,8 @@ void RVVType::initTypeStr() {
     Str += getTypeString("int");
     break;
   case ScalarTypeKind::UnsignedInteger:
+  case ScalarTypeKind::FloatE4M3:
+  case ScalarTypeKind::FloatE5M2:
     Str += getTypeString("uint");
     break;
   default:
@@ -348,6 +355,12 @@ void RVVType::initShortStr() {
     break;
   case ScalarTypeKind::UnsignedInteger:
     ShortStr = "u" + utostr(ElementBitwidth);
+    break;
+  case ScalarTypeKind::FloatE4M3:
+    ShortStr = "f8e4m3";
+    break;
+  case ScalarTypeKind::FloatE5M2:
+    ShortStr = "f8e5m2";
     break;
   default:
     llvm_unreachable("Unhandled case!");
@@ -397,6 +410,14 @@ void RVVType::applyBasicType() {
   case BasicType::BFloat16:
     ElementBitwidth = 16;
     ScalarType = ScalarTypeKind::BFloat;
+    break;
+  case BasicType::F8E4M3:
+    ElementBitwidth = 8;
+    ScalarType = ScalarTypeKind::FloatE4M3;
+    break;
+  case BasicType::F8E5M2:
+    ElementBitwidth = 8;
+    ScalarType = ScalarTypeKind::FloatE5M2;
     break;
   default:
     llvm_unreachable("Unhandled type code!");
@@ -460,7 +481,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
   default:
     llvm_unreachable("Illegal primitive type transformers!");
   }
-  PD.PT = static_cast<uint8_t>(PT);
+  PD.PT = PT;
   PrototypeDescriptorStr = PrototypeDescriptorStr.drop_back();
 
   // Compute the vector type transformers, it can only appear one time.
@@ -629,7 +650,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
       llvm_unreachable("Illegal complex type transformers!");
     }
   }
-  PD.VTM = static_cast<uint8_t>(VTM);
+  PD.VTM = VTM;
 
   // Compute the remain type transformers
   TypeModifier TM = TypeModifier::NoModifier;
@@ -657,6 +678,9 @@ PrototypeDescriptor::parsePrototypeDescriptor(
     case 'F':
       TM |= TypeModifier::Float;
       break;
+    case 'Y':
+      TM |= TypeModifier::BFloat;
+      break;
     case 'S':
       TM |= TypeModifier::LMUL1;
       break;
@@ -664,7 +688,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
       llvm_unreachable("Illegal non-primitive type transformer!");
     }
   }
-  PD.TM = static_cast<uint8_t>(TM);
+  PD.TM = TM;
 
   return PD;
 }
@@ -707,11 +731,19 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     ElementBitwidth *= 2;
     LMUL.MulLog2LMUL(1);
     Scale = LMUL.getScale(ElementBitwidth);
+    if (ScalarType == ScalarTypeKind::BFloat)
+      ScalarType = ScalarTypeKind::Float;
+    if (ScalarType == ScalarTypeKind::FloatE4M3 ||
+        ScalarType == ScalarTypeKind::FloatE5M2)
+      ScalarType = ScalarTypeKind::BFloat;
     break;
   case VectorTypeModifier::Widening4XVector:
     ElementBitwidth *= 4;
     LMUL.MulLog2LMUL(2);
     Scale = LMUL.getScale(ElementBitwidth);
+    if (ScalarType == ScalarTypeKind::FloatE4M3 ||
+        ScalarType == ScalarTypeKind::FloatE5M2)
+      ScalarType = ScalarTypeKind::Float;
     break;
   case VectorTypeModifier::Widening8XVector:
     ElementBitwidth *= 8;
@@ -936,13 +968,13 @@ RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
 static uint64_t computeRVVTypeHashValue(BasicType BT, int Log2LMUL,
                                         PrototypeDescriptor Proto) {
   // Layout of hash value:
-  // 0               8    16          24        32          40
+  // 0               8    24          32        40          48
   // | Log2LMUL + 3  | BT  | Proto.PT | Proto.TM | Proto.VTM |
   assert(Log2LMUL >= -3 && Log2LMUL <= 3);
-  return (Log2LMUL + 3) | (static_cast<uint64_t>(BT) & 0xff) << 8 |
-         ((uint64_t)(Proto.PT & 0xff) << 16) |
-         ((uint64_t)(Proto.TM & 0xff) << 24) |
-         ((uint64_t)(Proto.VTM & 0xff) << 32);
+  return (Log2LMUL + 3) | (static_cast<uint64_t>(BT) & 0xffff) << 8 |
+         (static_cast<uint64_t>(Proto.PT) << 24) |
+         (static_cast<uint64_t>(Proto.TM) << 32) |
+         (static_cast<uint64_t>(Proto.VTM) << 40);
 }
 
 std::optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
@@ -972,17 +1004,21 @@ std::optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
 //===----------------------------------------------------------------------===//
 // RVVIntrinsic implementation
 //===----------------------------------------------------------------------===//
-RVVIntrinsic::RVVIntrinsic(
-    StringRef NewName, StringRef Suffix, StringRef NewOverloadedName,
-    StringRef OverloadedSuffix, StringRef IRName, bool IsMasked,
-    bool HasMaskedOffOperand, bool HasVL, PolicyScheme Scheme,
-    bool SupportOverloading, bool HasBuiltinAlias, StringRef ManualCodegen,
-    const RVVTypes &OutInTypes, const std::vector<int64_t> &NewIntrinsicTypes,
-    unsigned NF, Policy NewPolicyAttrs, bool HasFRMRoundModeOp)
+RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
+                           StringRef NewOverloadedName,
+                           StringRef OverloadedSuffix, StringRef IRName,
+                           bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
+                           PolicyScheme Scheme, bool SupportOverloading,
+                           bool HasBuiltinAlias, StringRef ManualCodegen,
+                           const RVVTypes &OutInTypes,
+                           const std::vector<int64_t> &NewIntrinsicTypes,
+                           unsigned NF, Policy NewPolicyAttrs,
+                           bool HasFRMRoundModeOp, unsigned TWiden, bool AltFmt)
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
-      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs) {
+      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs),
+      TWiden(TWiden) {
 
   // Init BuiltinName, Name and OverloadedName
   BuiltinName = NewName.str();
@@ -997,7 +1033,7 @@ RVVIntrinsic::RVVIntrinsic(
     OverloadedName += "_" + OverloadedSuffix.str();
 
   updateNamesAndPolicy(IsMasked, hasPolicy(), Name, BuiltinName, OverloadedName,
-                       PolicyAttrs, HasFRMRoundModeOp);
+                       PolicyAttrs, HasFRMRoundModeOp, AltFmt);
 
   // Init OutputType and InputTypes
   OutputType = OutInTypes[0];
@@ -1050,10 +1086,9 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       } else if (NF > 1) {
         if (IsTuple) {
           PrototypeDescriptor BasePtrOperand = Prototype[1];
-          PrototypeDescriptor MaskoffType = PrototypeDescriptor(
-              static_cast<uint8_t>(BaseTypeModifier::Vector),
-              static_cast<uint8_t>(getTupleVTM(NF)),
-              BasePtrOperand.TM & ~static_cast<uint8_t>(TypeModifier::Pointer));
+          PrototypeDescriptor MaskoffType =
+              PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                  BasePtrOperand.TM & ~TypeModifier::Pointer);
           NewPrototype.insert(NewPrototype.begin() + 1, MaskoffType);
         } else {
           // Convert
@@ -1061,7 +1096,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
           // to
           // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
           PrototypeDescriptor MaskoffType = NewPrototype[1];
-          MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+          MaskoffType.TM &= ~TypeModifier::Pointer;
           NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
         }
       }
@@ -1089,10 +1124,9 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     } else if (PolicyAttrs.isTUPolicy() && HasPassthruOp) {
       if (IsTuple) {
         PrototypeDescriptor BasePtrOperand = Prototype[0];
-        PrototypeDescriptor MaskoffType = PrototypeDescriptor(
-            static_cast<uint8_t>(BaseTypeModifier::Vector),
-            static_cast<uint8_t>(getTupleVTM(NF)),
-            BasePtrOperand.TM & ~static_cast<uint8_t>(TypeModifier::Pointer));
+        PrototypeDescriptor MaskoffType =
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                BasePtrOperand.TM & ~TypeModifier::Pointer);
         NewPrototype.insert(NewPrototype.begin(), MaskoffType);
       } else {
         // NF > 1 cases for segment load operations.
@@ -1101,7 +1135,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
         // to
         // (void, op0 address, op1 address, maskedoff0, maskedoff1, ...)
         PrototypeDescriptor MaskoffType = Prototype[1];
-        MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+        MaskoffType.TM &= ~TypeModifier::Pointer;
         NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
       }
     }
@@ -1138,9 +1172,12 @@ RVVIntrinsic::getSupportedMaskedPolicies(bool HasTailPolicy,
                    "and mask policy");
 }
 
-void RVVIntrinsic::updateNamesAndPolicy(
-    bool IsMasked, bool HasPolicy, std::string &Name, std::string &BuiltinName,
-    std::string &OverloadedName, Policy &PolicyAttrs, bool HasFRMRoundModeOp) {
+void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
+                                        std::string &Name,
+                                        std::string &BuiltinName,
+                                        std::string &OverloadedName,
+                                        Policy &PolicyAttrs,
+                                        bool HasFRMRoundModeOp, bool AltFmt) {
 
   auto appendPolicySuffix = [&](const std::string &suffix) {
     Name += suffix;
@@ -1152,6 +1189,9 @@ void RVVIntrinsic::updateNamesAndPolicy(
     Name += "_rm";
     BuiltinName += "_rm";
   }
+
+  if (AltFmt)
+    BuiltinName += "_alt";
 
   if (IsMasked) {
     if (PolicyAttrs.isTUMUPolicy())
@@ -1196,33 +1236,52 @@ SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   return PrototypeDescriptors;
 }
 
+#define STRINGIFY(NAME)                                                        \
+  case NAME:                                                                   \
+    OS << #NAME;                                                               \
+    break;
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum PolicyScheme PS) {
+  switch (PS) {
+    STRINGIFY(SchemeNone)
+    STRINGIFY(HasPassthruOperand)
+    STRINGIFY(HasPolicyOperand)
+  }
+  return OS;
+}
+
+#undef STRINGIFY
+
 raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << "{";
-  OS << "\"" << Record.Name << "\",";
+  OS << "/*Name=*/\"" << Record.Name << "\", ";
   if (Record.OverloadedName == nullptr ||
       StringRef(Record.OverloadedName).empty())
-    OS << "nullptr,";
+    OS << "/*OverloadedName=*/nullptr, ";
   else
-    OS << "\"" << Record.OverloadedName << "\",";
-  OS << Record.PrototypeIndex << ",";
-  OS << Record.SuffixIndex << ",";
-  OS << Record.OverloadedSuffixIndex << ",";
-  OS << (int)Record.PrototypeLength << ",";
-  OS << (int)Record.SuffixLength << ",";
-  OS << (int)Record.OverloadedSuffixSize << ",";
-  OS << Record.RequiredExtensions << ",";
-  OS << (int)Record.TypeRangeMask << ",";
-  OS << (int)Record.Log2LMULMask << ",";
-  OS << (int)Record.NF << ",";
-  OS << (int)Record.HasMasked << ",";
-  OS << (int)Record.HasVL << ",";
-  OS << (int)Record.HasMaskedOffOperand << ",";
-  OS << (int)Record.HasTailPolicy << ",";
-  OS << (int)Record.HasMaskPolicy << ",";
-  OS << (int)Record.HasFRMRoundModeOp << ",";
-  OS << (int)Record.IsTuple << ",";
-  OS << (int)Record.UnMaskedPolicyScheme << ",";
-  OS << (int)Record.MaskedPolicyScheme << ",";
+    OS << "/*OverloadedName=*/\"" << Record.OverloadedName << "\", ";
+  OS << "/*RequiredExtensions=*/\"" << Record.RequiredExtensions << "\", ";
+  OS << "/*PrototypeIndex=*/" << Record.PrototypeIndex << ", ";
+  OS << "/*SuffixIndex=*/" << Record.SuffixIndex << ", ";
+  OS << "/*OverloadedSuffixIndex=*/" << Record.OverloadedSuffixIndex << ", ";
+  OS << "/*PrototypeLength=*/" << (int)Record.PrototypeLength << ", ";
+  OS << "/*SuffixLength=*/" << (int)Record.SuffixLength << ", ";
+  OS << "/*OverloadedSuffixSize=*/" << (int)Record.OverloadedSuffixSize << ", ";
+  OS << "/*TypeRangeMask=*/" << (int)Record.TypeRangeMask << ", ";
+  OS << "/*Log2LMULMask=*/" << (int)Record.Log2LMULMask << ", ";
+  OS << "/*NF=*/" << (int)Record.NF << ", ";
+  OS << "/*HasMasked=*/" << (int)Record.HasMasked << ", ";
+  OS << "/*HasVL=*/" << (int)Record.HasVL << ", ";
+  OS << "/*HasMaskedOffOperand=*/" << (int)Record.HasMaskedOffOperand << ", ";
+  OS << "/*HasTailPolicy=*/" << (int)Record.HasTailPolicy << ", ";
+  OS << "/*HasMaskPolicy=*/" << (int)Record.HasMaskPolicy << ", ";
+  OS << "/*HasFRMRoundModeOp=*/" << (int)Record.HasFRMRoundModeOp << ", ";
+  OS << "/*AltFmt=*/" << (int)Record.AltFmt << ",";
+  OS << "/*IsTuple=*/" << (int)Record.IsTuple << ", ";
+  OS << "/*UnMaskedPolicyScheme=*/" << (PolicyScheme)Record.UnMaskedPolicyScheme
+     << ", ";
+  OS << "/*MaskedPolicyScheme=*/" << (PolicyScheme)Record.MaskedPolicyScheme
+     << ", ";
   OS << "},\n";
   return OS;
 }

@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -53,11 +55,14 @@ STATISTIC(NumInstReplaced,
 // runSCCP() - Run the Sparse Conditional Constant Propagation algorithm,
 // and return true if the function was modified.
 static bool runSCCP(Function &F, const DataLayout &DL,
-                    const TargetLibraryInfo *TLI, DomTreeUpdater &DTU) {
+                    const TargetLibraryInfo *TLI, DominatorTree &DT,
+                    AssumptionCache &AC) {
   LLVM_DEBUG(dbgs() << "SCCP on function '" << F.getName() << "'\n");
   SCCPSolver Solver(
       DL, [TLI](Function &F) -> const TargetLibraryInfo & { return *TLI; },
       F.getContext());
+
+  Solver.addPredicateInfo(F, DT, AC);
 
   // While we don't do any actual inter-procedural analysis, still track
   // return values so we can infer attributes.
@@ -101,6 +106,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
   }
 
   // Remove unreachable blocks and non-feasible edges.
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   for (BasicBlock *DeadBB : BlocksToErase)
     NumInstRemoved += changeToUnreachable(&*DeadBB->getFirstNonPHIIt(),
                                           /*PreserveLCSSA=*/false, &DTU);
@@ -113,6 +119,8 @@ static bool runSCCP(Function &F, const DataLayout &DL,
     if (!DeadBB->hasAddressTaken())
       DTU.deleteBB(DeadBB);
 
+  Solver.removeSSACopies(F);
+
   Solver.inferReturnAttributes();
 
   return MadeChanges;
@@ -121,9 +129,9 @@ static bool runSCCP(Function &F, const DataLayout &DL,
 PreservedAnalyses SCCPPass::run(Function &F, FunctionAnalysisManager &AM) {
   const DataLayout &DL = F.getDataLayout();
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-  if (!runSCCP(F, DL, &TLI, DTU))
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  if (!runSCCP(F, DL, &TLI, DT, AC))
     return PreservedAnalyses::all();
 
   auto PA = PreservedAnalyses();

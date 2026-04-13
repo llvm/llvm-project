@@ -55,7 +55,7 @@ entry:
 ; LARGE-BSS-NEXT:  foo:
 ; LARGE-BSS:         stwu 1, -32(1)
 ; LARGE-BSS:         stw 30, 24(1)
-; LARGE-BSS:         bl [[PB]]
+; LARGE-BSS:         bcl 20, 31, [[PB]]
 ; LARGE-BSS-NEXT:  [[PB]]:
 ; LARGE-BSS:         mflr 30
 ; LARGE-BSS:         lwz [[REG:[0-9]+]], [[POFF]]-[[PB]](30)

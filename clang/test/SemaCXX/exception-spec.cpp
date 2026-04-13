@@ -52,3 +52,24 @@ namespace AssignmentOp {
     D2 &operator=(const D2&); // expected-error {{more lax}}
   };
 }
+
+namespace OverloadedFunctions {
+
+template <typename T>
+void f(T&) noexcept;
+
+template <typename T, int N>
+void f(T (&arr)[N]) noexcept(noexcept(f(*arr)));
+
+template <typename T>
+inline void f(T&) noexcept {}
+
+template <typename T, int N>
+inline void f(T (&arr)[N]) noexcept(noexcept(f(*arr))) {}
+
+void g() {
+    int x[1];
+    f(x);
+}
+
+}

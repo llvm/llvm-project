@@ -1,4 +1,6 @@
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
 
 // These tests validate parsing of the sycl_kernel_entry_point argument list
@@ -8,6 +10,9 @@
 template<int> struct ST; // #ST-decl
 template<int N> using TTA = ST<N>; // #TTA-decl
 
+// A generic kernel launch function.
+template<typename KN, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.
@@ -74,10 +79,10 @@ void test_ok13() {
 // Invalid declarations.
 ////////////////////////////////////////////////////////////////////////////////
 
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute takes one argument}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute takes one argument}}
 [[clang::sycl_kernel_entry_point]] void bad1();
 
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute takes one argument}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute takes one argument}}
 [[clang::sycl_kernel_entry_point()]] void bad2();
 
 struct B3;

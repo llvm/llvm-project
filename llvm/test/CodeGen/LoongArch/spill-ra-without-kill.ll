@@ -39,6 +39,7 @@ define dso_local ptr @f(i32 noundef signext %i) "frame-pointer"="all" {
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    ld.d $a0, $fp, -48 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ori $a1, $zero, 1
 ; CHECK-NEXT:    bne $a0, $a1, .LBB0_6
 ; CHECK-NEXT:    b .LBB0_4

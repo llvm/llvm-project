@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
+#ifndef LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVBASEINFO_H
+#define LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVBASEINFO_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
@@ -37,6 +38,11 @@ namespace Capability {
 #include "SPIRVGenTables.inc"
 } // namespace Capability
 
+namespace Environment {
+#define GET_Environment_DECL
+#include "SPIRVGenTables.inc"
+} // namespace Environment
+
 namespace SourceLanguage {
 #define GET_SourceLanguage_DECL
 #include "SPIRVGenTables.inc"
@@ -56,6 +62,11 @@ namespace MemoryModel {
 #define GET_MemoryModel_DECL
 #include "SPIRVGenTables.inc"
 } // namespace MemoryModel
+
+namespace MatrixMultiplyAccumulateOperands {
+#define GET_MatrixMultiplyAccumulateOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace MatrixMultiplyAccumulateOperands
 
 namespace ExecutionMode {
 #define GET_ExecutionMode_DECL
@@ -217,6 +228,16 @@ namespace CooperativeMatrixOperands {
 #include "SPIRVGenTables.inc"
 } // namespace CooperativeMatrixOperands
 
+namespace SpecConstantOpOperands {
+#define GET_SpecConstantOpOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace SpecConstantOpOperands
+
+namespace FPEncoding {
+#define GET_FPEncoding_DECL
+#include "SPIRVGenTables.inc"
+} // namespace FPEncoding
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
@@ -225,12 +246,18 @@ struct ExtendedBuiltin {
 
 enum InstFlags {
   // It is a half type
-  INST_PRINTER_WIDTH16 = 1
+  INST_PRINTER_WIDTH16 = 1,
+  // It is a 64-bit type
+  INST_PRINTER_WIDTH64 = INST_PRINTER_WIDTH16 << 1,
+
 };
 } // namespace SPIRV
 
 using CapabilityList = SmallVector<SPIRV::Capability::Capability, 8>;
 using ExtensionList = SmallVector<SPIRV::Extension::Extension, 8>;
+using EnvironmentList = SmallVector<SPIRV::Environment::Environment, 8>;
+
+using ExtensionSet = DenseSet<SPIRV::Extension::Extension>;
 
 std::string
 getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
@@ -244,6 +271,8 @@ getSymbolicOperandMaxVersion(SPIRV::OperandCategory::OperandCategory Category,
 CapabilityList
 getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
                                uint32_t Value);
+EnvironmentList getSymbolicOperandAllowedEnvironments(
+    SPIRV::OperandCategory::OperandCategory Category, uint32_t Value);
 CapabilityList
 getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension);
 ExtensionList
@@ -285,4 +314,4 @@ std::string getSPIRVStringOperand(const InstType &MI, unsigned StartIndex) {
   return s;
 }
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
+#endif // LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVBASEINFO_H

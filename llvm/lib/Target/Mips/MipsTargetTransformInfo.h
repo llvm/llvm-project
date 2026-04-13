@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-class MipsTTIImpl : public BasicTTIImplBase<MipsTTIImpl> {
+class MipsTTIImpl final : public BasicTTIImplBase<MipsTTIImpl> {
   using BaseT = BasicTTIImplBase<MipsTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -32,7 +32,19 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  bool hasDivRemOp(Type *DataType, bool IsSigned);
+  bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
+
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 };
 
 } // end namespace llvm

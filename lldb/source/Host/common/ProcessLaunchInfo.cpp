@@ -20,7 +20,10 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 
-#if !defined(_WIN32)
+#ifdef _WIN32
+#include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/WindowsFileAction.h"
+#else
 #include <climits>
 #endif
 
@@ -31,7 +34,10 @@ using namespace lldb_private;
 
 ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),
-      m_file_actions(), m_pty(new PseudoTerminal), m_monitor_callback(nullptr) {
+      m_file_actions(), m_monitor_callback(nullptr) {
+#ifndef _WIN32
+  m_pty = std::make_shared<PTY>();
+#endif
 }
 
 ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
@@ -40,7 +46,10 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &working_directory,
                                      uint32_t launch_flags)
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
-      m_file_actions(), m_pty(new PseudoTerminal) {
+      m_file_actions() {
+#ifndef _WIN32
+  m_pty = std::make_shared<PTY>();
+#endif
   if (stdin_file_spec) {
     FileAction file_action;
     const bool read = true;
@@ -83,6 +92,17 @@ bool ProcessLaunchInfo::AppendDuplicateFileAction(int fd, int dup_fd) {
   }
   return false;
 }
+
+#ifdef _WIN32
+bool ProcessLaunchInfo::AppendDuplicateFileAction(HANDLE fh, HANDLE dup_fh) {
+  WindowsFileAction file_action;
+  if (file_action.Duplicate(fh, dup_fh)) {
+    AppendFileAction(file_action);
+    return true;
+  }
+  return false;
+}
+#endif
 
 bool ProcessLaunchInfo::AppendOpenFileAction(int fd, const FileSpec &file_spec,
                                              bool read, bool write) {
@@ -199,6 +219,9 @@ void ProcessLaunchInfo::SetDetachOnError(bool enable) {
 llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   Log *log = GetLog(LLDBLog::Process);
 
+  if (!m_pty)
+    m_pty = std::make_shared<PTY>();
+
   bool stdin_free = GetFileActionForFD(STDIN_FILENO) == nullptr;
   bool stdout_free = GetFileActionForFD(STDOUT_FILENO) == nullptr;
   bool stderr_free = GetFileActionForFD(STDERR_FILENO) == nullptr;
@@ -208,13 +231,12 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 
   LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
-  int open_flags = O_RDWR | O_NOCTTY;
-#if !defined(_WIN32)
-  // We really shouldn't be specifying platform specific flags that are
-  // intended for a system call in generic code.  But this will have to
-  // do for now.
-  open_flags |= O_CLOEXEC;
-#endif
+#ifdef _WIN32
+  if (llvm::Error Err = m_pty->OpenPseudoConsole())
+    return Err;
+  return llvm::Error::success();
+#else
+  int open_flags = O_RDWR | O_NOCTTY | O_CLOEXEC;
   if (llvm::Error Err = m_pty->OpenFirstAvailablePrimary(open_flags))
     return Err;
 
@@ -229,7 +251,16 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   if (stderr_free)
     AppendOpenFileAction(STDERR_FILENO, secondary_file_spec, false, true);
   return llvm::Error::success();
+#endif
 }
+
+#ifdef _WIN32
+llvm::Error ProcessLaunchInfo::SetUpPipeRedirection() {
+  if (!m_pty)
+    m_pty = std::make_shared<PTY>();
+  return m_pty->OpenAnonymousPipes();
+}
+#endif
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
     Status &error, bool will_debug, bool first_arg_is_full_shell_command,

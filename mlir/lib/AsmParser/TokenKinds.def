@@ -70,6 +70,7 @@ TOK_PUNCTUATION(question, "?")
 TOK_PUNCTUATION(r_brace, "}")
 TOK_PUNCTUATION(r_paren, ")")
 TOK_PUNCTUATION(r_square, "]")
+TOK_PUNCTUATION(slash, "/")
 TOK_PUNCTUATION(star, "*")
 TOK_PUNCTUATION(vertical_bar, "|")
 

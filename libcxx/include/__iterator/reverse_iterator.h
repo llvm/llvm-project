@@ -15,17 +15,12 @@
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
-#include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
-#include <__iterator/prev.h>
-#include <__iterator/readable_traits.h>
-#include <__iterator/segmented_iterator.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
@@ -35,7 +30,6 @@
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__utility/declval.h>
-#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -43,21 +37,16 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Iter>
-class _LIBCPP_TEMPLATE_VIS reverse_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<typename iterator_traits<_Iter>::iterator_category,
-                      typename iterator_traits<_Iter>::value_type,
-                      typename iterator_traits<_Iter>::difference_type,
-                      typename iterator_traits<_Iter>::pointer,
-                      typename iterator_traits<_Iter>::reference>
-#endif
-{
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
-
+class reverse_iterator
+    : public __iterator_base<reverse_iterator<_Iter>,
+                             typename iterator_traits<_Iter>::iterator_category,
+                             typename iterator_traits<_Iter>::value_type,
+                             typename iterator_traits<_Iter>::difference_type,
+                             typename iterator_traits<_Iter>::pointer,
+                             typename iterator_traits<_Iter>::reference> {
 private:
-#ifndef _LIBCPP_ABI_NO_ITERATOR_BASES
+#ifndef _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER
   _Iter __t_; // no longer used as of LWG #2360, not removed due to ABI break
 #endif
 
@@ -88,7 +77,7 @@ public:
   using reference       = typename iterator_traits<_Iter>::reference;
 #endif
 
-#ifndef _LIBCPP_ABI_NO_ITERATOR_BASES
+#ifndef _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator() : __t_(), current() {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 explicit reverse_iterator(_Iter __x) : __t_(__x), current(__x) {}

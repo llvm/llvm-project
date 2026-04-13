@@ -20,7 +20,7 @@ struct NoDefault {
 struct test_initialization {
   template <typename T>
   TEST_CONSTEXPR_CXX14 void operator()() const {
-    // Check default initalization
+    // Check default initialization
     {
       std::array<T, 0> a0;
       (void)a0;

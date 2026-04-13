@@ -101,9 +101,11 @@ public:
                             bool AllowNestedNameSpecifiers);
 
   struct CodeCompleteExpressionData;
-  void CodeCompleteExpression(Scope *S, const CodeCompleteExpressionData &Data);
+  void CodeCompleteExpression(Scope *S, const CodeCompleteExpressionData &Data,
+                              bool IsAddressOfOperand = false);
   void CodeCompleteExpression(Scope *S, QualType PreferredType,
-                              bool IsParenthesized = false);
+                              bool IsParenthesized = false,
+                              bool IsAddressOfOperand = false);
   void CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base, Expr *OtherOpBase,
                                        SourceLocation OpLoc, bool IsArrow,
                                        bool IsBaseExprStatement,
@@ -156,7 +158,8 @@ public:
   void CodeCompleteAfterIf(Scope *S, bool IsBracedThen);
 
   void CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS, bool EnteringContext,
-                               bool IsUsingDeclaration, QualType BaseType,
+                               bool IsUsingDeclaration, bool IsAddressOfOperand,
+                               bool IsInDeclarationContext, QualType BaseType,
                                QualType PreferredType);
   void CodeCompleteUsing(Scope *S);
   void CodeCompleteUsingDirective(Scope *S);
@@ -193,8 +196,7 @@ public:
   void CodeCompleteObjCForCollection(Scope *S, DeclGroupPtrTy IterationVar);
   void CodeCompleteObjCSelector(Scope *S,
                                 ArrayRef<const IdentifierInfo *> SelIdents);
-  void
-  CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLocPair> Protocols);
+  void CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLoc> Protocols);
   void CodeCompleteObjCProtocolDecl(Scope *S);
   void CodeCompleteObjCInterfaceDecl(Scope *S);
   void CodeCompleteObjCClassForwardDecl(Scope *S);

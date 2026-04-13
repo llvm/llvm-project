@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-spill-sgpr-to-vgpr=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-spill-sgpr-to-vgpr=1 < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
 
 ; Verify registers used for tracking exec mask changes when all
 ; registers are spilled at the end of the block. The SGPR spill
@@ -110,12 +110,12 @@ endif:
 ; GCN: [[LOOP:.LBB[0-9]+_[0-9]+]]:
 ; GCN: buffer_load_dword v[[VAL_LOOP_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
 ; GCN: v_sub_i32_e32 v[[VAL_LOOP_RELOAD]], vcc, v[[VAL_LOOP_RELOAD]], v{{[0-9]+}}
-; GCN: s_cmp_lg_u32
+; GCN: s_cmp_{{lg|eq}}_u32
 ; VMEM: buffer_store_dword
 ; VMEM: buffer_store_dword
 ; VMEM: buffer_store_dword
 ; GCN: buffer_store_dword v[[VAL_LOOP_RELOAD]], off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
-; GCN-NEXT: s_cbranch_scc1 [[LOOP]]
+; GCN-NEXT: s_cbranch_vccnz [[LOOP]]
 
 ; GCN: buffer_store_dword v[[VAL_LOOP_RELOAD]], off, s[0:3], 0 offset:[[VAL_SUB_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
@@ -138,7 +138,7 @@ endif:
 define amdgpu_kernel void @divergent_loop(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %load0 = load volatile i32, ptr addrspace(3) null
+  %load0 = load volatile i32, ptr addrspace(3) zeroinitializer
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %loop, label %end
 
@@ -252,7 +252,7 @@ end:
 define amdgpu_kernel void @divergent_if_else_endif(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %load0 = load volatile i32, ptr addrspace(3) null
+  %load0 = load volatile i32, ptr addrspace(3) zeroinitializer
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %if, label %else
 

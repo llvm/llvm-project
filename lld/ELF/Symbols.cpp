@@ -15,7 +15,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 #include <cstring>
@@ -36,7 +35,7 @@ template <typename T> struct AssertSymbol {
                 "SymbolUnion not aligned enough");
 };
 
-LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
+[[maybe_unused]] static inline void assertSymbols() {
   AssertSymbol<Defined>();
   AssertSymbol<CommonSymbol>();
   AssertSymbol<Undefined>();
@@ -89,8 +88,16 @@ static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
     // To make this work, we incorporate the addend into the section
     // offset (and zero out the addend for later processing) so that
     // we find the right object in the section.
-    if (d.isSection())
+    if (d.isSection()) {
       offset += addend;
+      if (auto *ms = dyn_cast<MergeInputSection>(isec);
+          ms && offset >= ms->content().size()) {
+        if (offset > ms->content().size())
+          Err(ctx) << ms << ": offset 0x" << Twine::utohexstr(offset)
+                   << " is outside the section";
+        return 0;
+      }
+    }
 
     // In the typical case, this is actually very simple and boils
     // down to adding together 3 numbers:
@@ -334,10 +341,13 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
   if (sym.visibility() != STV_DEFAULT)
     return false;
 
-  // At this point copy relocations have not been created yet, so any
-  // symbol that is not defined locally is preemptible.
+  // At this point copy relocations have not been created yet.
+  // Shared symbols are preemptible. Undefined symbols are preemptible
+  // when zDynamicUndefined (default in dynamic linking). Weakness is not
+  // checked, though undefined non-weak would typically trigger relocation
+  // errors unless options like -z undefs are used.
   if (!sym.isDefined())
-    return true;
+    return !sym.isUndefined() || ctx.arg.zDynamicUndefined;
 
   if (!ctx.arg.shared)
     return false;
@@ -361,7 +371,6 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
   // can contain versions in the form of <name>@<version>.
   // Let them parse and update their names to exclude version suffix.
   // In addition, compute isExported and isPreemptible.
-  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->hasVersionSuffix)
       sym->parseSymbolVersion(ctx);
@@ -370,11 +379,11 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
       continue;
     }
     if (!sym->isDefined() && !sym->isCommon()) {
-      sym->isPreemptible = maybePreemptible && computeIsPreemptible(ctx, *sym);
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
     } else if (ctx.arg.exportDynamic &&
                (sym->isUsedInRegularObj || !sym->ltoCanOmit)) {
       sym->isExported = true;
-      sym->isPreemptible = maybePreemptible && computeIsPreemptible(ctx, *sym);
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
     }
   }
 }
@@ -500,6 +509,12 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // reference is weak.
     if (other.binding != STB_WEAK || !referenced)
       binding = other.binding;
+    // -u creates a placeholder Undefined (internalFile, STT_NOTYPE).
+    // Adopt the real file and type from the object file's undefined.
+    if (file == ctx.internalFile) {
+      file = other.file;
+      type = other.type;
+    }
   }
 }
 

@@ -8,7 +8,12 @@ if (SPHINX_FOUND)
     # want the dynamically generated .rst files to pollute the source tree.
     add_custom_target(copy-libc-rst-docs
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
-              "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
+              "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+              "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
+              "${CMAKE_CURRENT_BINARY_DIR}"
+      )
 
     # For headers that are nested in directories, we need to
     # `mkdir $build_dir/libc/docs/headers/$dir` since the above copy_directory
@@ -42,6 +47,7 @@ if (SPHINX_FOUND)
       dirent
       endian
       errno
+      fcntl
       fenv
       float
       glob
@@ -49,8 +55,7 @@ if (SPHINX_FOUND)
       locale
       net/if
       netinet/in
-      # TODO: https://github.com/llvm/llvm-project/issues/123821
-      # pthread
+      pthread
       setjmp
       signal
       stdbit
@@ -60,6 +65,7 @@ if (SPHINX_FOUND)
       strings
       sys/mman
       sys/resource
+      sys/socket
       sys/stat
       sys/statvfs
       sys/time
@@ -76,15 +82,17 @@ if (SPHINX_FOUND)
     foreach(stem IN LISTS docgen_list)
       # It is an error in cmake to have a target name that contains a "/", but
       # docgen relies on the "/" to find headers nested under directories.
-      # Replace with underscore.
+      # Replace with underscore and namespace the target to avoid collisions
+      # with other runtime targets in combined builds.
       string(REPLACE "/" "_" stem_rst ${stem})
+      set(docgen_target_name libc-docgen-${stem_rst})
 
       # docgen invocation.
-      add_custom_target(${stem_rst}
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../utils/docgen/docgen.py ${stem}.h >
+      add_custom_target(${docgen_target_name}
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../utils/docgen/docgen.py ${stem}.h >
                 ${CMAKE_CURRENT_BINARY_DIR}/headers/${stem}.rst)
       # depend on the docgen invocation.
-      add_dependencies(docs-libc-html ${stem_rst})
+      add_dependencies(docs-libc-html ${docgen_target_name})
     endforeach()
   endif()
 endif()

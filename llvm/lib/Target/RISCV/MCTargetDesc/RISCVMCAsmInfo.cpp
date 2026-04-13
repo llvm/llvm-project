@@ -11,21 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMCAsmInfo.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {RISCVMCExpr::VK_GOTPCREL, "GOTPCREL"},
-    {RISCVMCExpr::VK_PLT, "PLT"},
-};
-
 void RISCVMCAsmInfo::anchor() {}
 
 RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
+  IsLittleEndian = TT.isLittleEndian();
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   CommentString = "#";
   AlignmentIsInBytes = false;
@@ -33,8 +29,6 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
   ExceptionsType = ExceptionHandling::DwarfCFI;
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
-
-  initializeVariantKinds(variantKindDescs);
 }
 
 const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
@@ -50,5 +44,41 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   MCContext &Ctx = Streamer.getContext();
   const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
   assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
-  return RISCVMCExpr::create(ME, RISCVMCExpr::VK_32_PCREL, Ctx);
+  return MCSpecifierExpr::create(ME, ELF::R_RISCV_32_PCREL, Ctx);
+}
+
+void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                        const MCSpecifierExpr &Expr) const {
+  auto S = Expr.getSpecifier();
+  bool HasSpecifier = S != RISCV::S_None && S != RISCV::S_CALL_PLT;
+  if (HasSpecifier)
+    OS << '%' << RISCV::getSpecifierName(S) << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  if (HasSpecifier)
+    OS << ')';
+}
+
+RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin() {
+  CodePointerSize = 4;
+  InternalSymbolPrefix = "L";
+  PrivateLabelPrefix = "L";
+  SeparatorString = "%%";
+  CommentString = ";";
+  AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  UseDataRegionDirectives = true;
+  ExceptionsType = ExceptionHandling::DwarfCFI;
+  Data16bitsDirective = "\t.half\t";
+  Data32bitsDirective = "\t.word\t";
+}
+
+void RISCVMCAsmInfoDarwin::printSpecifierExpr(
+    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
+  auto S = Expr.getSpecifier();
+  bool HasSpecifier = S != RISCV::S_None && S != RISCV::S_CALL_PLT;
+  if (HasSpecifier)
+    OS << '%' << RISCV::getSpecifierName(S) << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  if (HasSpecifier)
+    OS << ')';
 }

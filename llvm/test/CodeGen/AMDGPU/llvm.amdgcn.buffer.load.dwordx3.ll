@@ -1,5 +1,5 @@
-;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx600 -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,SI
-;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx700 -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,GCNX3
+;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx600 | FileCheck %s -check-prefixes=CHECK,SI
+;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx700 | FileCheck %s -check-prefixes=CHECK,GCNX3
 
 ;CHECK-LABEL: {{^}}buffer_raw_load_immoffs_x3:
 ;SI: buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:40

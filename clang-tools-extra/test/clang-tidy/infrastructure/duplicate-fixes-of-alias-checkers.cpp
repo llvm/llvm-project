@@ -28,7 +28,7 @@ public:
 private:
   int _num1;
   int _num2;
-  // CHECK-FIXES: _num2{};
+  // CHECK-FIXES: int _num2{};
 };
 
 void should_use_emplace(std::vector<Foo> &v) {

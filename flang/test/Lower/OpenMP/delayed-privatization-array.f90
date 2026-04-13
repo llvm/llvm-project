@@ -2,19 +2,19 @@
 
 ! RUN: split-file %s %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/one_dim_array.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/one_dim_array.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/two_dim_array.f90 2>&1 | FileCheck %s --check-prefix=TWO_DIM
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/two_dim_array.f90 2>&1 | FileCheck %s --check-prefix=TWO_DIM
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/one_dim_array_default_lb.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM_DEFAULT_LB
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/one_dim_array_default_lb.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM_DEFAULT_LB
 
 !--- one_dim_array.f90
@@ -38,7 +38,6 @@ end subroutine
 ! ONE_DIM-NEXT:   %[[DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]]
 ! ONE_DIM-NEXT:   %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1
 ! ONE_DIM-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[DIMS]]#1
-! ONE_DIM-NEXT:   %[[TRUE:.*]] = arith.constant true
 ! ONE_DIM-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
 ! ONE_DIM-NEXT:   %[[C0_0:.*]] = arith.constant 0
 ! ONE_DIM-NEXT:   %[[DIMS2:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_0]]
@@ -76,7 +75,6 @@ end subroutine
 ! TWO_DIM-NEXT:   %[[DIMS_1:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C1]]
 ! TWO_DIM-NEXT:   %[[SHAPE:.*]] = fir.shape %[[DIMS_0]]#1, %[[DIMS_1]]#1
 ! TWO_DIM-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<?x?xi32>, %[[DIMS_0]]#1, %[[DIMS_1]]#1
-! TWO_DIM-NEXT:   %[[TRUE:.*]] = arith.constant true
 ! TWO_DIM-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
 ! TWO_DIM-NEXT:   %[[C0_0:.*]] = arith.constant 0
 ! TWO_DIM-NEXT:   %[[DIMS2_0:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_0]]
@@ -111,7 +109,6 @@ end program
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE:.*]] = fir.shape %[[C10]]
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<10xi32>
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[TRUE:.*]] = arith.constant true
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[ONE:.*]] = arith.constant 1 : index
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[TEN:.*]] = arith.constant 10 : index

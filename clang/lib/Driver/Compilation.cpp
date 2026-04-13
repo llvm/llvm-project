@@ -11,9 +11,9 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
@@ -232,11 +232,6 @@ static bool ActionFailed(const Action *A,
   return false;
 }
 
-static bool InputsOk(const Command &C,
-                     const FailingCommandList &FailingCommands) {
-  return !ActionFailed(&C.getSource(), FailingCommands);
-}
-
 void Compilation::ExecuteJobs(const JobList &Jobs,
                               FailingCommandList &FailingCommands,
                               bool LogOnly) const {
@@ -245,7 +240,7 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
   // In all but CLMode, execute all the jobs unless the necessary inputs for the
   // job is missing due to previous failures.
   for (const auto &Job : Jobs) {
-    if (!InputsOk(Job, FailingCommands))
+    if (ActionFailed(&Job.getSource(), FailingCommands))
       continue;
     const Command *FailingCommand = nullptr;
     if (int Res = ExecuteCommand(Job, FailingCommand, LogOnly)) {

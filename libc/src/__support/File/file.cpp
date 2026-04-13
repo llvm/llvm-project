@@ -13,10 +13,44 @@
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/alloc-checker.h"
+#include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h" // For error macros
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
+File *File::list_all = nullptr;
+Mutex File::list_lock(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+                      /*pshared=*/false);
+
+// Adds a file to the global list of all open files.
+void File::add_file(File *f) {
+  File::list_lock.lock();
+  f->next = File::list_all;
+  f->prev = nullptr;
+  if (File::list_all != nullptr)
+    File::list_all->prev = f;
+  File::list_all = f;
+  File::list_lock.unlock();
+}
+
+// Removes a file from the global list of all open files.
+void File::remove_file(File *f) {
+  File::list_lock.lock();
+  if (f->prev != nullptr)
+    f->prev->next = f->next;
+  if (f->next != nullptr)
+    f->next->prev = f->prev;
+  if (File::list_all == f)
+    File::list_all = f->next;
+  f->prev = nullptr;
+  f->next = nullptr;
+  File::list_lock.unlock();
+}
+
+File *File::get_first_file() { return File::list_all; }
+void File::lock_list() { File::list_lock.lock(); }
+void File::unlock_list() { File::list_lock.unlock(); }
 
 FileIOResult File::write_unlocked(const void *data, size_t len) {
   if (!write_allowed()) {
@@ -85,9 +119,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
 
   // Copy the first piece into the buffer.
-  // TODO: Replace the for loop below with a call to internal memcpy.
-  for (size_t i = 0; i < primary.size(); ++i)
-    bufref[pos + i] = primary[i];
+  inline_memcpy(bufref.data() + pos, primary.data(), primary.size());
   pos += primary.size();
 
   // If there is no remainder, we can return early, since the first piece has
@@ -115,15 +147,13 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   // know that if the second piece has data in it then the buffer has been
   // flushed, meaning that pos is always 0.
   if (remainder.size() < bufsize) {
-    // TODO: Replace the for loop below with a call to internal memcpy.
-    for (size_t i = 0; i < remainder.size(); ++i)
-      bufref[i] = remainder[i];
+    inline_memcpy(bufref.data(), remainder.data(), remainder.size());
     pos = remainder.size();
   } else {
 
     FileIOResult result =
         platform_write(this, remainder.data(), remainder.size());
-    size_t bytes_written = buf_result.value;
+    size_t bytes_written = result.value;
 
     // If less bytes were written than expected, then an error occurred. Return
     // the number of bytes that have been written from |data|.
@@ -209,9 +239,7 @@ size_t File::copy_data_from_buf(uint8_t *data, size_t len) {
   // available_data is never a wrapped around value.
   size_t available_data = read_limit - pos;
   if (len <= available_data) {
-    // TODO: Replace the for loop below with a call to internal memcpy.
-    for (size_t i = 0; i < len; ++i)
-      dataref[i] = bufref[i + pos];
+    inline_memcpy(dataref.data(), bufref.data() + pos, len);
     pos += len;
     return len;
   }
@@ -255,8 +283,7 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   size_t fetched_size = result.value;
   read_limit += fetched_size;
   size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
-  for (size_t i = 0; i < transfer_size; ++i)
-    dataref[i] = buf[i];
+  inline_memcpy(dataref.data(), buf, transfer_size);
   pos += transfer_size;
   if (result.has_error() || fetched_size < to_fetch) {
     if (!result.has_error())
@@ -373,8 +400,16 @@ int File::flush_unlocked() {
       return buf_result.error;
     }
     pos = 0;
+  } else if (prev_op == FileOp::READ) {
+    if (read_limit > pos) {
+      if (!platform_seek(this, -static_cast<off_t>(read_limit - pos), SEEK_CUR)
+               .has_value()) {
+        // We ignore seek errors for non-seekable files (like pipes) as per
+        // POSIX.
+      }
+    }
+    pos = read_limit = 0;
   }
-  // TODO: Add POSIX behavior for input streams.
   return 0;
 }
 
@@ -397,7 +432,7 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     // We exclude the case of buffer_mode == _IONBF in this branch
     // because we don't need to allocate buffer in such a case.
     if (own_buf) {
-      // This is one of the places where use a C allocation functon
+      // This is one of the places where a C allocation function is used
       // as C++ does not have an equivalent of realloc.
       buf = reinterpret_cast<uint8_t *>(realloc(buf, size));
       if (buf == nullptr)

@@ -74,7 +74,6 @@ enum class MallocFamily {
   MSVCNew,            // new(unsigned int)
   MSVCArrayNew,       // new[](unsigned int)
   VecMalloc,
-  KmpcAllocShared,
 };
 
 StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
@@ -95,8 +94,6 @@ StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
     return "??_U@YAPAXI@Z";
   case MallocFamily::VecMalloc:
     return "vec_malloc";
-  case MallocFamily::KmpcAllocShared:
-    return "__kmpc_alloc_shared";
   }
   llvm_unreachable("missing an alloc family");
 }
@@ -152,7 +149,6 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
     {LibFunc_dunder_strdup,                     {StrDupLike,       1, -1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_strndup,                           {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
     {LibFunc_dunder_strndup,                    {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc___kmpc_alloc_shared,               {MallocLike,       1,  0, -1, -1, MallocFamily::KmpcAllocShared}},
 };
 // clang-format on
 
@@ -428,6 +424,9 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
 Constant *llvm::getInitialValueOfAllocation(const Value *V,
                                             const TargetLibraryInfo *TLI,
                                             Type *Ty) {
+  if (isa<AllocaInst>(V))
+    return UndefValue::get(Ty);
+
   auto *Alloc = dyn_cast<CallBase>(V);
   if (!Alloc)
     return nullptr;
@@ -475,7 +474,6 @@ static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
     {LibFunc_msvc_delete_array_ptr64_longlong,   {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, ulonglong)
     {LibFunc_msvc_delete_array_ptr32_nothrow,    {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
     {LibFunc_msvc_delete_array_ptr64_nothrow,    {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
-    {LibFunc___kmpc_free_shared,                 {2, MallocFamily::KmpcAllocShared}},    // OpenMP Offloading RTL free
     {LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t, {3, MallocFamily::CPPNewAligned}},      // delete(void*, align_val_t, nothrow)
     {LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t, {3, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, align_val_t, nothrow)
     {LibFunc_ZdlPvjSt11align_val_t,              {3, MallocFamily::CPPNewAligned}},      // delete(void*, unsigned int, align_val_t)
@@ -586,6 +584,59 @@ bool llvm::getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
   return true;
 }
 
+std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
+                                                const DataLayout &DL,
+                                                const TargetLibraryInfo *TLI,
+                                                ObjectSizeOpts Opts) {
+  assert(Opts.EvalMode == ObjectSizeOpts::Mode::ExactSizeFromOffset &&
+         "Other modes are currently not supported");
+
+  auto Align = [&](TypeSize Size, MaybeAlign Alignment) {
+    if (Opts.RoundToAlign && Alignment && !Size.isScalable())
+      return TypeSize::getFixed(alignTo(Size.getFixedValue(), *Alignment));
+    return Size;
+  };
+
+  if (isa<UndefValue>(Ptr))
+    return TypeSize::getZero();
+
+  if (isa<ConstantPointerNull>(Ptr)) {
+    if (Opts.NullIsUnknownSize || Ptr->getType()->getPointerAddressSpace())
+      return std::nullopt;
+    return TypeSize::getZero();
+  }
+
+  if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {
+    if (!GV->getValueType()->isSized() || GV->hasExternalWeakLinkage() ||
+        !GV->hasInitializer() || GV->isInterposable())
+      return std::nullopt;
+    return Align(TypeSize::getFixed(GV->getGlobalSize(DL)), GV->getAlign());
+  }
+
+  if (auto *A = dyn_cast<Argument>(Ptr)) {
+    Type *MemoryTy = A->getPointeeInMemoryValueType();
+    if (!MemoryTy || !MemoryTy->isSized())
+      return std::nullopt;
+    return Align(DL.getTypeAllocSize(MemoryTy), A->getParamAlign());
+  }
+
+  if (auto *AI = dyn_cast<AllocaInst>(Ptr)) {
+    if (std::optional<TypeSize> Size = AI->getAllocationSize(DL))
+      return Align(*Size, AI->getAlign());
+    return std::nullopt;
+  }
+
+  if (auto *CB = dyn_cast<CallBase>(Ptr)) {
+    if (std::optional<APInt> Size = getAllocSize(CB, TLI)) {
+      if (std::optional<uint64_t> ZExtSize = Size->tryZExtValue())
+        return TypeSize::getFixed(*ZExtSize);
+    }
+    return std::nullopt;
+  }
+
+  return std::nullopt;
+}
+
 Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                                  const DataLayout &DL,
                                  const TargetLibraryInfo *TLI,
@@ -651,8 +702,8 @@ Value *llvm::lowerObjectSizeCall(
 
       // The non-constant size expression cannot evaluate to -1.
       if (!isa<Constant>(Size) || !isa<Constant>(Offset))
-        Builder.CreateAssumption(
-            Builder.CreateICmpNE(Ret, ConstantInt::get(ResultType, -1)));
+        Builder.CreateAssumption(Builder.CreateICmpNE(
+            Ret, ConstantInt::getAllOnesValue(ResultType)));
 
       return Ret;
     }
@@ -683,29 +734,30 @@ combinePossibleConstantValues(std::optional<APInt> LHS,
 }
 
 static std::optional<APInt> aggregatePossibleConstantValuesImpl(
-    const Value *V, ObjectSizeOpts::Mode EvalMode, unsigned recursionDepth) {
+    const Value *V, ObjectSizeOpts::Mode EvalMode, unsigned BitWidth,
+    unsigned recursionDepth) {
   constexpr unsigned maxRecursionDepth = 4;
   if (recursionDepth == maxRecursionDepth)
     return std::nullopt;
 
   if (const auto *CI = dyn_cast<ConstantInt>(V)) {
-    return CI->getValue();
+    return CI->getValue().sextOrTrunc(BitWidth);
   } else if (const auto *SI = dyn_cast<SelectInst>(V)) {
     return combinePossibleConstantValues(
         aggregatePossibleConstantValuesImpl(SI->getTrueValue(), EvalMode,
-                                            recursionDepth + 1),
+                                            BitWidth, recursionDepth + 1),
         aggregatePossibleConstantValuesImpl(SI->getFalseValue(), EvalMode,
-                                            recursionDepth + 1),
+                                            BitWidth, recursionDepth + 1),
         EvalMode);
   } else if (const auto *PN = dyn_cast<PHINode>(V)) {
     unsigned Count = PN->getNumIncomingValues();
     if (Count == 0)
       return std::nullopt;
     auto Acc = aggregatePossibleConstantValuesImpl(
-        PN->getIncomingValue(0), EvalMode, recursionDepth + 1);
+        PN->getIncomingValue(0), EvalMode, BitWidth, recursionDepth + 1);
     for (unsigned I = 1; Acc && I < Count; ++I) {
       auto Tmp = aggregatePossibleConstantValuesImpl(
-          PN->getIncomingValue(I), EvalMode, recursionDepth + 1);
+          PN->getIncomingValue(I), EvalMode, BitWidth, recursionDepth + 1);
       Acc = combinePossibleConstantValues(Acc, Tmp, EvalMode);
     }
     return Acc;
@@ -715,9 +767,10 @@ static std::optional<APInt> aggregatePossibleConstantValuesImpl(
 }
 
 static std::optional<APInt>
-aggregatePossibleConstantValues(const Value *V, ObjectSizeOpts::Mode EvalMode) {
+aggregatePossibleConstantValues(const Value *V, ObjectSizeOpts::Mode EvalMode,
+                                unsigned BitWidth) {
   if (auto *CI = dyn_cast<ConstantInt>(V))
-    return CI->getValue();
+    return CI->getValue().sextOrTrunc(BitWidth);
 
   if (EvalMode != ObjectSizeOpts::Mode::Min &&
       EvalMode != ObjectSizeOpts::Mode::Max)
@@ -726,7 +779,7 @@ aggregatePossibleConstantValues(const Value *V, ObjectSizeOpts::Mode EvalMode) {
   // Not using computeConstantRange here because we cannot guarantee it's not
   // doing optimization based on UB which we want to avoid when expanding
   // __builtin_object_size.
-  return aggregatePossibleConstantValuesImpl(V, EvalMode, 0u);
+  return aggregatePossibleConstantValuesImpl(V, EvalMode, BitWidth, 0u);
 }
 
 /// Align \p Size according to \p Alignment. If \p Size is greater than
@@ -788,9 +841,14 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
         Options.EvalMode == ObjectSizeOpts::Mode::Min
             ? ObjectSizeOpts::Mode::Max
             : ObjectSizeOpts::Mode::Min;
-    auto OffsetRangeAnalysis = [EvalMode](Value &VOffset, APInt &Offset) {
+    // For a GEPOperator the indices are first converted to offsets in the
+    // pointer’s index type, so we need to provide the index type to make sure
+    // the min/max operations are performed in correct type.
+    unsigned IdxTyBits = DL.getIndexTypeSizeInBits(V->getType());
+    auto OffsetRangeAnalysis = [EvalMode, IdxTyBits](Value &VOffset,
+                                                     APInt &Offset) {
       if (auto PossibleOffset =
-              aggregatePossibleConstantValues(&VOffset, EvalMode)) {
+              aggregatePossibleConstantValues(&VOffset, EvalMode, IdxTyBits)) {
         Offset = *PossibleOffset;
         return true;
       }
@@ -900,8 +958,9 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
     return OffsetSpan(Zero, align(Size, I.getAlign()));
 
   Value *ArraySize = I.getArraySize();
-  if (auto PossibleSize =
-          aggregatePossibleConstantValues(ArraySize, Options.EvalMode)) {
+  if (auto PossibleSize = aggregatePossibleConstantValues(
+          ArraySize, Options.EvalMode,
+          ArraySize->getType()->getScalarSizeInBits())) {
     APInt NumElems = *PossibleSize;
     if (!CheckedZextOrTrunc(NumElems))
       return ObjectSizeOffsetVisitor::unknown();
@@ -932,8 +991,8 @@ OffsetSpan ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
     if (!V->getType()->isIntegerTy())
       return V;
 
-    if (auto PossibleBound =
-            aggregatePossibleConstantValues(V, Options.EvalMode))
+    if (auto PossibleBound = aggregatePossibleConstantValues(
+            V, Options.EvalMode, V->getType()->getScalarSizeInBits()))
       return ConstantInt::get(V->getType(), *PossibleBound);
 
     return V;
@@ -984,7 +1043,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV) {
        Options.EvalMode != ObjectSizeOpts::Mode::Min))
     return ObjectSizeOffsetVisitor::unknown();
 
-  APInt Size(IntTyBits, DL.getTypeAllocSize(GV.getValueType()));
+  APInt Size(IntTyBits, GV.getGlobalSize(DL));
   return OffsetSpan(Zero, align(Size, GV.getAlign()));
 }
 
@@ -1282,15 +1341,11 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
-  Value *ArraySize = Builder.CreateZExtOrTrunc(
-      I.getArraySize(),
-      DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace()));
-  assert(ArraySize->getType() == Zero->getType() &&
+  Type *IndexTy = DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace());
+  assert(IndexTy == Zero->getType() &&
          "Expected zero constant to have pointer index type");
 
-  Value *Size = Builder.CreateTypeSize(
-      ArraySize->getType(), DL.getTypeAllocSize(I.getAllocatedType()));
-  Size = Builder.CreateMul(Size, ArraySize);
+  Value *Size = Builder.CreateAllocationSize(IndexTy, &I);
   return SizeOffsetValue(Size, Zero);
 }
 

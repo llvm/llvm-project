@@ -18,13 +18,13 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/ChainedDiagnosticConsumer.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,6 +38,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -54,6 +55,9 @@
 #include <optional>
 #include <set>
 #include <system_error>
+#if LLVM_ON_UNIX
+#include <signal.h>
+#endif
 
 using namespace clang;
 using namespace clang::driver;
@@ -156,6 +160,11 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
       }
 
       const char *FilteringStr = ::getenv("CC_PRINT_HEADERS_FILTERING");
+      if (!FilteringStr) {
+        TheDriver.Diag(clang::diag::err_drv_print_header_env_var_invalid_format)
+            << EnvVar;
+        return false;
+      }
       HeaderIncludeFilteringKind Filtering;
       if (!stringToHeaderIncludeFiltering(FilteringStr, Filtering)) {
         TheDriver.Diag(clang::diag::err_drv_print_header_env_var)
@@ -166,7 +175,7 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
       if ((TheDriver.CCPrintHeadersFormat == HIFMT_Textual &&
            Filtering != HIFIL_None) ||
           (TheDriver.CCPrintHeadersFormat == HIFMT_JSON &&
-           Filtering != HIFIL_Only_Direct_System)) {
+           Filtering == HIFIL_None)) {
         TheDriver.Diag(clang::diag::err_drv_print_header_env_var_combination)
             << EnvVar << FilteringStr;
         return false;
@@ -199,7 +208,8 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
 }
 
 static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
-                          const llvm::ToolContext &ToolContext) {
+                          const llvm::ToolContext &ToolContext,
+                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
@@ -207,7 +217,8 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   llvm::cl::ResetAllOptionOccurrences();
 
   llvm::BumpPtrAllocator A;
-  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
+  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine,
+                                  VFS.get());
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
@@ -249,14 +260,22 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   bool ClangCLMode =
       IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
 
-  if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A)) {
+  auto VFS = llvm::vfs::getRealFileSystem();
+
+  if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A, VFS.get())) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
 
   // Handle -cc1 integrated tools.
-  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
-    return ExecuteCC1Tool(Args, ToolContext);
+  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1")) {
+    // Note that this only enables the sandbox for direct -cc1 invocations and
+    // out-of-process -cc1 invocations launched by the driver. For in-process
+    // -cc1 invocations launched by the driver, the sandbox is enabled in
+    // CC1Command::Execute() for better crash recovery.
+    auto EnableSandbox = llvm::sys::sandbox::scopedEnable();
+    return ExecuteCC1Tool(Args, ToolContext, VFS);
+  }
 
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
@@ -300,7 +319,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (const char *OverrideStr = ::getenv("CCC_OVERRIDE_OPTIONS")) {
     // FIXME: Driver shouldn't take extra initial argument.
     driver::applyOverrideOptions(Args, OverrideStr, SavedStrings,
-                                 &llvm::errs());
+                                 "CCC_OVERRIDE_OPTIONS", &llvm::errs());
   }
 
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
@@ -316,30 +335,26 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                            .Case("-fintegrated-cc1", false)
                            .Default(UseNewCC1Process);
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-      CreateAndPopulateDiagOpts(Args);
+  std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(Args);
   // Driver's diagnostics don't use suppression mappings, so don't bother
   // parsing them. CC1 still receives full args, so this doesn't impact other
   // actions.
   DiagOpts->DiagnosticSuppressionMappingsFile.clear();
 
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagClient);
 
   if (!DiagOpts->DiagnosticSerializationFile.empty()) {
     auto SerializedConsumer =
         clang::serialized_diags::create(DiagOpts->DiagnosticSerializationFile,
-                                        &*DiagOpts, /*MergeChildRecords=*/true);
+                                        *DiagOpts, /*MergeChildRecords=*/true);
     Diags.setClient(new ChainedDiagnosticConsumer(
         Diags.takeClient(), std::move(SerializedConsumer)));
   }
 
-  auto VFS = llvm::vfs::getRealFileSystem();
   ProcessWarningOptions(Diags, *DiagOpts, *VFS, /*ReportDiags=*/false);
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags,
@@ -359,14 +374,15 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!SetBackdoorDriverOutputsFromEnvVars(TheDriver))
     return 1;
 
-  auto ExecuteCC1WithContext =
-      [&ToolContext](SmallVectorImpl<const char *> &ArgV) {
-        return ExecuteCC1Tool(ArgV, ToolContext);
-      };
+  auto ExecuteCC1WithContext = [&ToolContext,
+                                &VFS](SmallVectorImpl<const char *> &ArgV) {
+    return ExecuteCC1Tool(ArgV, ToolContext, VFS);
+  };
   if (!UseNewCC1Process) {
     TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes
-    llvm::CrashRecoveryContext::Enable();
+    llvm::CrashRecoveryContext::Enable(
+        /*NeedsPOSIXUtilitySignalHandling=*/true);
   }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
@@ -395,6 +411,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   Driver::CommandStatus CommandStatus = Driver::CommandStatus::Ok;
   // Pretend the first command failed if ReproStatus is Always.
   const Command *FailingCommand = nullptr;
+  int CommandRes = 0;
   if (!C->getJobs().empty())
     FailingCommand = &*C->getJobs().begin();
   if (C && !C->containsError()) {
@@ -402,7 +419,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
     for (const auto &P : FailingCommands) {
-      int CommandRes = P.first;
+      CommandRes = P.first;
       FailingCommand = P.second;
       if (!Res)
         Res = CommandRes;
@@ -438,8 +455,6 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                                                   *C, *FailingCommand))
     Res = 1;
 
-  Diags.getClient()->finish();
-
   if (!UseNewCC1Process && IsCrash) {
     // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
     // the internal linked list might point to already released stack frames.
@@ -457,6 +472,29 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // propagated.
   if (Res < 0)
     Res = 1;
+#endif
+
+#if LLVM_ON_UNIX
+  // On Unix, signals are represented by return codes of 128 plus the signal
+  // number. If the return code indicates it was from a signal handler, raise
+  // the signal so that the exit code includes the signal number, as required
+  // by POSIX. Return code 255 is excluded because some tools, such as
+  // llvm-ifs, exit with code 255 (-1) on failure.
+  if (CommandRes > 128 && CommandRes != 255) {
+    llvm::sys::unregisterHandlers();
+    // DiagnosticConsumer must be always destroyed.
+    Diags.getClient()->~DiagnosticConsumer();
+    raise(CommandRes - 128);
+  }
+  // When cc1 runs out-of-process (CLANG_SPAWN_CC1), ExecuteAndWait returns -2
+  // if the child was killed by a signal. The signal number is not preserved,
+  // so resignal with SIGABRT to ensure the driver exits via signal.
+  if (CommandRes == -2) {
+    llvm::sys::unregisterHandlers();
+    // DiagnosticConsumer must be always destroyed.
+    Diags.getClient()->~DiagnosticConsumer();
+    raise(SIGABRT);
+  }
 #endif
 
   // If we have multiple failing commands, we return the result of the first

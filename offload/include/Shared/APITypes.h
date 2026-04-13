@@ -21,6 +21,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <mutex>
 
 extern "C" {
 
@@ -36,6 +37,7 @@ struct __tgt_device_image {
 struct __tgt_device_info {
   void *Context = nullptr;
   void *Device = nullptr;
+  void *Platform = nullptr;
 };
 
 /// This struct is a record of all the host code that may be offloaded to a
@@ -75,6 +77,9 @@ struct __tgt_async_info {
   /// should be freed after finalization.
   llvm::SmallVector<void *, 2> AssociatedAllocations;
 
+  /// Mutex to guard access to AssociatedAllocations and the Queue.
+  std::mutex Mutex;
+
   /// The kernel launch environment used to issue a kernel. Stored here to
   /// ensure it is a valid location while the transfer to the device is
   /// happening.
@@ -97,8 +102,9 @@ struct KernelArgsTy {
   struct {
     uint64_t NoWait : 1; // Was this kernel spawned with a `nowait` clause.
     uint64_t IsCUDA : 1; // Was this kernel spawned via CUDA.
-    uint64_t Unused : 62;
-  } Flags = {0, 0, 0};
+    uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
+    uint64_t Unused : 60;
+  } Flags = {0, 0, 0, 0};
   // The number of teams (for x,y,z dimension).
   uint32_t NumTeams[3] = {0, 0, 0};
   // The number of threads (for x,y,z dimension).

@@ -148,6 +148,23 @@ func.func @valid_symbol_affine_scope(%n : index, %A : memref<?xf32>) {
 
 // -----
 
+// Test dimension constraints for linearize_index and delinearize_index
+
+// CHECK-LABEL: func @valid_dim_linearize_delinearize
+func.func @valid_dim_linearize_delinearize(%m : index, %n : index, %A : memref<?xf32>, %B: memref<?x32x?xf32>) {
+    affine.for %0 = 0 to %m {
+      affine.for %1 = 0 to %n {
+        %load_idx = affine.linearize_index disjoint [%0, %1] by (%m, %n) : index
+        %store_idx0, %store_idx1 = affine.delinearize_index %n into (32) : index, index
+        %v = affine.load %A[%load_idx] : memref<?xf32>
+        affine.store %v, %B[%0, %store_idx1, %store_idx0] : memref<?x32x?xf32>
+      }
+    }
+  return
+}
+
+// -----
+
 // Test the fact that module op always provides an affine scope.
 
 %idx = "test.foo"() : () -> (index)
@@ -299,6 +316,48 @@ func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basi
   return %1 : index
 }
 
+// CHECK-LABEL: @delinearize_vector
+func.func @delinearize_vector(%vec: vector<16xindex>) -> (vector<16xindex>, vector<16xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (4, 8) : vector<16xindex>, vector<16xindex>
+  %0:2 = affine.delinearize_index %vec into (4, 8) : vector<16xindex>, vector<16xindex>
+  return %0#0, %0#1 : vector<16xindex>, vector<16xindex>
+}
+
+// CHECK-LABEL: @delinearize_vector_3d
+func.func @delinearize_vector_3d(%vec: vector<8xindex>) -> (vector<8xindex>, vector<8xindex>, vector<8xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (2, 3, 4) : vector<8xindex>, vector<8xindex>, vector<8xindex>
+  %0:3 = affine.delinearize_index %vec into (2, 3, 4) : vector<8xindex>, vector<8xindex>, vector<8xindex>
+  return %0#0, %0#1, %0#2 : vector<8xindex>, vector<8xindex>, vector<8xindex>
+}
+
+// CHECK-LABEL: @delinearize_vector_dynamic_basis
+func.func @delinearize_vector_dynamic_basis(%vec: vector<4xindex>, %b0: index, %b1: index) -> (vector<4xindex>, vector<4xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (%{{.+}}, %{{.+}}) : vector<4xindex>, vector<4xindex>
+  %0:2 = affine.delinearize_index %vec into (%b0, %b1) : vector<4xindex>, vector<4xindex>
+  return %0#0, %0#1 : vector<4xindex>, vector<4xindex>
+}
+
+// CHECK-LABEL: @linearize_vector
+func.func @linearize_vector(%v0: vector<16xindex>, %v1: vector<16xindex>) -> vector<16xindex> {
+  // CHECK: affine.linearize_index [%{{.+}}, %{{.+}}] by (4, 8) : vector<16xindex>
+  %0 = affine.linearize_index [%v0, %v1] by (4, 8) : vector<16xindex>
+  return %0 : vector<16xindex>
+}
+
+// CHECK-LABEL: @linearize_vector_disjoint
+func.func @linearize_vector_disjoint(%v0: vector<16xindex>, %v1: vector<16xindex>) -> vector<16xindex> {
+  // CHECK: affine.linearize_index disjoint [%{{.+}}, %{{.+}}] by (4, 8) : vector<16xindex>
+  %0 = affine.linearize_index disjoint [%v0, %v1] by (4, 8) : vector<16xindex>
+  return %0 : vector<16xindex>
+}
+
+// CHECK-LABEL: @linearize_vector_3d
+func.func @linearize_vector_3d(%v0: vector<8xindex>, %v1: vector<8xindex>, %v2: vector<8xindex>) -> vector<8xindex> {
+  // CHECK: affine.linearize_index [%{{.+}}, %{{.+}}, %{{.+}}] by (2, 3, 4) : vector<8xindex>
+  %0 = affine.linearize_index [%v0, %v1, %v2] by (2, 3, 4) : vector<8xindex>
+  return %0 : vector<8xindex>
+}
+
 // -----
 
 // CHECK-LABEL: @gpu_launch_affine
@@ -309,9 +368,9 @@ func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basi
 module {
   func.func @gpu_launch_affine() {
     %c1 = arith.constant 1 : index
-    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) 
+    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1)
     threads(%arg3, %arg4, %arg5) in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1) {
-      %thread_id_x = gpu.thread_id  x
+      %thread_id_x = gpu.thread_id x
       %c128 = arith.constant 128 : index
       affine.for %arg12 = %thread_id_x to %c128 step 8 {
       }
@@ -321,7 +380,7 @@ module {
   }
 }
 
-// CHECK: %[[THREAD_ID:.*]] = gpu.thread_id  x
+// CHECK: %[[THREAD_ID:.*]] = gpu.thread_id x
 // CHECK: %[[VAL:.*]] = arith.constant 128 : index
 // CHECK: affine.for %{{.*}} = %[[THREAD_ID]] to %[[VAL]] step 8 {
 
@@ -340,7 +399,7 @@ module {
       %dim = memref.dim %arg0, %c3 : memref<?x?xf32>
       %c0 = arith.constant 0 : index
       affine.for %arg3 = %c0 to %dim step 32 {
-        %thread_id_x = gpu.thread_id  x
+        %thread_id_x = gpu.thread_id x
         %0 = affine.apply #map()[%thread_id_x]
         %c128 = arith.constant 128 : index
         affine.for %arg4 = %0 to %c128 step 8 {
@@ -357,7 +416,7 @@ module {
 // CHECK: %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x?xf32>
 // CHECK: %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK: affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
-// CHECK: %[[VAL_5:.*]] = gpu.thread_id  x
+// CHECK: %[[VAL_5:.*]] = gpu.thread_id x
 // CHECK: %[[VAL_6:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[VAL_5]]]
 // CHECK: %[[VAL_7:.*]] = arith.constant 128 : index
 // CHECK: affine.for %{{.*}} = %[[VAL_6]] to %[[VAL_7]] step 8 {
@@ -409,3 +468,43 @@ func.func @arith_add_vaild_symbol_lower_bound(%arg : index) {
 // CHECK:   affine.for %[[VAL_3:.*]] = #[[$ATTR_0]](%[[VAL_2]]){{\[}}%[[VAL_0]]] to 7 {
 // CHECK:   }
 // CHECK: }
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_xori_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("xori") -> (i32) {
+func.func @parallel_xori_reduce() {
+  %0 = memref.alloc() : memref<100xi32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("xori") -> (i32) {
+    %2 = affine.load %0[%i] : memref<100xi32>
+    affine.yield %2 : i32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_maxnumf_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("maxnumf") -> (f32) {
+func.func @parallel_maxnumf_reduce() {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("maxnumf") -> (f32) {
+    %2 = affine.load %0[%i] : memref<100xf32>
+    affine.yield %2 : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_minnumf_reduce() {
+// CHECK:           %[[PARALLEL_0:.*]] = affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("minnumf") -> (f32) {
+func.func @parallel_minnumf_reduce() {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = affine.parallel (%i) = (0) to (100) reduce ("minnumf") -> (f32) {
+    %2 = affine.load %0[%i] : memref<100xf32>
+    affine.yield %2 : f32
+  }
+  return
+}
+

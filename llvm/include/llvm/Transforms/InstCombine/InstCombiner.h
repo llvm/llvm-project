@@ -64,6 +64,8 @@ protected:
   /// A worklist of the instructions that need to be simplified.
   InstructionWorklist &Worklist;
 
+  Function &F;
+
   // Mode in which we are running the combiner.
   const bool MinimizeSize;
 
@@ -98,17 +100,17 @@ protected:
   bool ComputedBackEdges = false;
 
 public:
-  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
-               bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
-               TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
-               DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-               BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-               ProfileSummaryInfo *PSI, const DataLayout &DL,
+  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder, Function &F,
+               AAResults *AA, AssumptionCache &AC, TargetLibraryInfo &TLI,
+               TargetTransformInfo &TTI, DominatorTree &DT,
+               OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+               BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
+               const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
-        MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
-        SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
-           /*CanUseUndef*/ true, &DC),
+        F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC), TLI(TLI), DT(DT),
+        DL(DL), SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
+                   /*CanUseUndef*/ true, &DC),
         ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
@@ -144,9 +146,9 @@ public:
     if (isa<Constant>(V))
       return isa<UndefValue>(V) ? 0 : 1;
 
-    if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
-        match(V, m_Not(PatternMatch::m_Value())) ||
-        match(V, m_FNeg(PatternMatch::m_Value())))
+    using namespace llvm::PatternMatch;
+    if (isa<CastInst>(V) || match(V, m_Neg(m_Value())) ||
+        match(V, m_Not(m_Value())) || match(V, m_FNeg(m_Value())))
       return 2;
 
     return 3;
@@ -255,12 +257,12 @@ public:
         if (shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(I)))
           return false;
         break;
-      case Instruction::Br:
+      case Instruction::CondBr:
         assert(U.getOperandNo() == 0 && "Must be branching on that value.");
         break; // Free to invert by swapping true/false values/destinations.
       case Instruction::Xor: // Can invert 'xor' if it's a 'not', by ignoring
                              // it.
-        if (!match(I, m_Not(PatternMatch::m_Value())))
+        if (!match(I, PatternMatch::m_Not(PatternMatch::m_Value())))
           return false; // Not a 'not'.
         break;
       default:
@@ -327,6 +329,17 @@ public:
       Out[i] = isa<UndefValue>(C) ? SafeC : C;
     }
     return ConstantVector::get(Out);
+  }
+
+  /// Ignore all operations which only change the sign of a value, returning the
+  /// underlying magnitude value.
+  static Value *stripSignOnlyFPOps(Value *Val) {
+    using namespace llvm::PatternMatch;
+
+    match(Val, m_FNeg(m_Value(Val)));
+    match(Val, m_FAbs(m_Value(Val)));
+    match(Val, m_CopySign(m_Value(Val), m_Value()));
+    return Val;
   }
 
   void addToWorklist(Instruction *I) { Worklist.push(I); }
@@ -430,37 +443,46 @@ public:
   /// methods should return the value returned by this function.
   virtual Instruction *eraseInstFromFunction(Instruction &I) = 0;
 
-  void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
-                        const Instruction *CxtI) const {
-    llvm::computeKnownBits(V, Known, Depth, SQ.getWithInstruction(CxtI));
+  void computeKnownBits(const Value *V, KnownBits &Known,
+                        const Instruction *CxtI, unsigned Depth = 0) const {
+    llvm::computeKnownBits(V, Known, SQ.getWithInstruction(CxtI), Depth);
   }
 
-  KnownBits computeKnownBits(const Value *V, unsigned Depth,
-                             const Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, Depth, SQ.getWithInstruction(CxtI));
+  KnownBits computeKnownBits(const Value *V, const Instruction *CxtI,
+                             unsigned Depth = 0) const {
+    return llvm::computeKnownBits(V, SQ.getWithInstruction(CxtI), Depth);
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
-                              unsigned Depth = 0,
-                              const Instruction *CxtI = nullptr) {
-    return llvm::isKnownToBeAPowerOfTwo(V, OrZero, Depth,
-                                        SQ.getWithInstruction(CxtI));
+                              const Instruction *CxtI = nullptr,
+                              unsigned Depth = 0) {
+    return llvm::isKnownToBeAPowerOfTwo(V, OrZero, SQ.getWithInstruction(CxtI),
+                                        Depth);
   }
 
-  bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
-                         const Instruction *CxtI = nullptr) const {
+  bool MaskedValueIsZero(const Value *V, const APInt &Mask,
+                         const Instruction *CxtI = nullptr,
+                         unsigned Depth = 0) const {
     return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
   }
 
-  unsigned ComputeNumSignBits(const Value *Op, unsigned Depth = 0,
-                              const Instruction *CxtI = nullptr) const {
-    return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
+  unsigned ComputeNumSignBits(const Value *Op,
+                              const Instruction *CxtI = nullptr,
+                              unsigned Depth = 0) const {
+    return llvm::ComputeNumSignBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
 
-  unsigned ComputeMaxSignificantBits(const Value *Op, unsigned Depth = 0,
-                                     const Instruction *CxtI = nullptr) const {
-    return llvm::ComputeMaxSignificantBits(Op, DL, Depth, &AC, CxtI, &DT);
+  unsigned ComputeMaxSignificantBits(const Value *Op,
+                                     const Instruction *CxtI = nullptr,
+                                     unsigned Depth = 0) const {
+    return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
+
+  /// Return true if the cast from integer to FP can be proven to be exact
+  /// for all possible inputs (the conversion does not lose any precision).
+  bool isKnownExactCastIntToFP(CastInst &I) const;
+  bool canBeCastedExactlyIntToFP(Value *V, Type *FPTy, bool IsSigned,
+                                 const Instruction *CxtI = nullptr) const;
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
@@ -507,12 +529,13 @@ public:
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                     const APInt &DemandedMask, KnownBits &Known,
-                                    unsigned Depth, const SimplifyQuery &Q) = 0;
+                                    const SimplifyQuery &Q,
+                                    unsigned Depth = 0) = 0;
 
   bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                             const APInt &DemandedMask, KnownBits &Known) {
     return SimplifyDemandedBits(I, OpNo, DemandedMask, Known,
-                                /*Depth=*/0, SQ.getWithInstruction(I));
+                                SQ.getWithInstruction(I));
   }
 
   virtual Value *

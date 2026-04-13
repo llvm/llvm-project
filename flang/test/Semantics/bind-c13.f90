@@ -5,8 +5,8 @@ subroutine interop(ptr,ashape,arank,eshape,asize) bind(c)
   real, pointer, contiguous :: ptr(:)
   real, contiguous :: ashape(:) ! ok
   real, contiguous :: arank(..) ! ok
-  !PORTABILITY: CONTIGUOUS entity 'eshape' should be an array pointer, assumed-shape, or assumed-rank
+  !PORTABILITY: CONTIGUOUS entity 'eshape' should be an array pointer, assumed-shape, or assumed-rank [-Wredundant-contiguous]
   real, contiguous :: eshape(10)
-  !PORTABILITY: CONTIGUOUS entity 'asize' should be an array pointer, assumed-shape, or assumed-rank
+  !PORTABILITY: CONTIGUOUS entity 'asize' should be an array pointer, assumed-shape, or assumed-rank [-Wredundant-contiguous]
   real, contiguous :: asize(*)
 end

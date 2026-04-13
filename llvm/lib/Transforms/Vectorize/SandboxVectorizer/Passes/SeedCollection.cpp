@@ -24,10 +24,29 @@ static cl::opt<bool>
     AllowNonPow2("sbvec-allow-non-pow2", cl::init(false), cl::Hidden,
                  cl::desc("Allow non-power-of-2 vectorization."));
 
+#define LoadSeedsDef "loads"
+#define StoreSeedsDef "stores"
+cl::opt<std::string> CollectSeeds(
+    "sbvec-collect-seeds", cl::init(StoreSeedsDef), cl::Hidden,
+    cl::desc("Collect these seeds. Use empty for none or a comma-separated "
+             "list of '" StoreSeedsDef "' and '" LoadSeedsDef "'."));
+
 namespace sandboxir {
-SeedCollection::SeedCollection(StringRef Pipeline)
+
+SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
     : FunctionPass("seed-collection"),
-      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
+      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {
+  if (!AuxArg.empty()) {
+    if (AuxArg != DiffTypesArgStr) {
+      std::string ErrStr;
+      raw_string_ostream ErrSS(ErrStr);
+      ErrSS << "SeedCollection only supports '" << DiffTypesArgStr
+            << "' aux argument!\n";
+      reportFatalUsageError(ErrStr.c_str());
+    }
+    AllowDiffTypes = true;
+  }
+}
 
 bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
   bool Change = false;
@@ -38,10 +57,13 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
           : A.getTTI()
                 .getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
                 .getFixedValue();
+  bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
+  bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
 
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {
-    SeedCollector SC(&BB, A.getScalarEvolution());
+    SeedCollector SC(&BB, A.getScalarEvolution(), CollectStores, CollectLoads,
+                     AllowDiffTypes);
     for (SeedBundle &Seeds : SC.getStoreSeeds()) {
       unsigned ElmBits =
           Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(

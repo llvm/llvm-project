@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
+#include "llvm/Support/Compiler.h"
 
 #include <mutex>
 
@@ -24,6 +25,7 @@ namespace llvm {
 namespace orc {
 
 class ExecutorProcessControl;
+class MemoryAccess;
 
 /// Provides ExecutorProcessControl based indirect stubs, trampoline pool and
 /// lazy call through manager.
@@ -33,7 +35,7 @@ class EPCIndirectionUtils {
 public:
   /// ABI support base class. Used to write resolver, stub, and trampoline
   /// blocks.
-  class ABISupport {
+  class LLVM_ABI ABISupport {
   protected:
     ABISupport(unsigned PointerSize, unsigned TrampolineSize, unsigned StubSize,
                unsigned StubToPointerMaxDisplacement, unsigned ResolverCodeSize)
@@ -78,47 +80,44 @@ public:
   /// Create using the given ABI class.
   template <typename ORCABI>
   static std::unique_ptr<EPCIndirectionUtils>
-  CreateWithABI(ExecutorProcessControl &EPC);
+  CreateWithABI(ExecutorProcessControl &EPC, MemoryAccess &MemAccess);
 
   /// Create based on the ExecutorProcessControl triple.
-  static Expected<std::unique_ptr<EPCIndirectionUtils>>
-  Create(ExecutorProcessControl &EPC);
-
-  /// Create based on the ExecutorProcessControl triple.
-  static Expected<std::unique_ptr<EPCIndirectionUtils>>
-  Create(ExecutionSession &ES) {
-    return Create(ES.getExecutorProcessControl());
-  }
+  LLVM_ABI static Expected<std::unique_ptr<EPCIndirectionUtils>>
+  Create(ExecutorProcessControl &EPC, MemoryAccess &MemAccess);
 
   /// Return a reference to the ExecutorProcessControl object.
   ExecutorProcessControl &getExecutorProcessControl() const { return EPC; }
+
+  /// Return a reference to the MemoryAccess object for this instance.
+  MemoryAccess &getMemoryAccess() const { return MemAccess; }
 
   /// Return a reference to the ABISupport object for this instance.
   ABISupport &getABISupport() const { return *ABI; }
 
   /// Release memory for resources held by this instance. This *must* be called
   /// prior to destruction of the class.
-  Error cleanup();
+  LLVM_ABI Error cleanup();
 
   /// Write resolver code to the executor process and return its address.
   /// This must be called before any call to createTrampolinePool or
   /// createLazyCallThroughManager.
-  Expected<ExecutorAddr> writeResolverBlock(ExecutorAddr ReentryFnAddr,
-                                            ExecutorAddr ReentryCtxAddr);
+  LLVM_ABI Expected<ExecutorAddr>
+  writeResolverBlock(ExecutorAddr ReentryFnAddr, ExecutorAddr ReentryCtxAddr);
 
   /// Returns the address of the Resolver block. Returns zero if the
   /// writeResolverBlock method has not previously been called.
   ExecutorAddr getResolverBlockAddress() const { return ResolverBlockAddr; }
 
   /// Create an IndirectStubsManager for the executor process.
-  std::unique_ptr<IndirectStubsManager> createIndirectStubsManager();
+  LLVM_ABI std::unique_ptr<IndirectStubsManager> createIndirectStubsManager();
 
   /// Create a TrampolinePool for the executor process.
-  TrampolinePool &getTrampolinePool();
+  LLVM_ABI TrampolinePool &getTrampolinePool();
 
   /// Create a LazyCallThroughManager.
   /// This function should only be called once.
-  LazyCallThroughManager &
+  LLVM_ABI LazyCallThroughManager &
   createLazyCallThroughManager(ExecutionSession &ES,
                                ExecutorAddr ErrorHandlerAddr);
 
@@ -142,13 +141,14 @@ private:
   using IndirectStubInfoVector = std::vector<IndirectStubInfo>;
 
   /// Create an EPCIndirectionUtils instance.
-  EPCIndirectionUtils(ExecutorProcessControl &EPC,
+  EPCIndirectionUtils(ExecutorProcessControl &EPC, MemoryAccess &MemAccess,
                       std::unique_ptr<ABISupport> ABI);
 
   Expected<IndirectStubInfoVector> getIndirectStubs(unsigned NumStubs);
 
   std::mutex EPCUIMutex;
   ExecutorProcessControl &EPC;
+  MemoryAccess &MemAccess;
   std::unique_ptr<ABISupport> ABI;
   ExecutorAddr ResolverBlockAddr;
   FinalizedAlloc ResolverBlock;
@@ -170,7 +170,7 @@ private:
 /// called.
 ///
 /// This function is experimental and likely subject to revision.
-Error setUpInProcessLCTMReentryViaEPCIU(EPCIndirectionUtils &EPCIU);
+LLVM_ABI Error setUpInProcessLCTMReentryViaEPCIU(EPCIndirectionUtils &EPCIU);
 
 namespace detail {
 
@@ -213,9 +213,10 @@ public:
 
 template <typename ORCABI>
 std::unique_ptr<EPCIndirectionUtils>
-EPCIndirectionUtils::CreateWithABI(ExecutorProcessControl &EPC) {
+EPCIndirectionUtils::CreateWithABI(ExecutorProcessControl &EPC,
+                                   MemoryAccess &MemAccess) {
   return std::unique_ptr<EPCIndirectionUtils>(new EPCIndirectionUtils(
-      EPC, std::make_unique<detail::ABISupportImpl<ORCABI>>()));
+      EPC, MemAccess, std::make_unique<detail::ABISupportImpl<ORCABI>>()));
 }
 
 } // end namespace orc

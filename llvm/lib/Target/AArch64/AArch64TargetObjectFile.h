@@ -20,11 +20,6 @@ class AArch64_ELFTargetObjectFile : public TargetLoweringObjectFileELF {
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
 public:
-  AArch64_ELFTargetObjectFile() {
-    PLTRelativeSpecifier = MCSymbolRefExpr::VK_PLT;
-    SupportIndirectSymViaGOTPCRel = true;
-  }
-
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
                                           const MCSymbol *Sym,
                                           const MCValue &MV, int64_t Offset,
@@ -45,6 +40,9 @@ public:
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
+
+  /// Describe a TLS variable address within debug info.
+  const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.

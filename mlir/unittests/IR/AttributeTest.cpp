@@ -76,20 +76,6 @@ TEST(DenseSplatTest, BoolSplatRawRoundtrip) {
   EXPECT_EQ(trueSplat, trueSplatFromRaw);
 }
 
-TEST(DenseSplatTest, BoolSplatSmall) {
-  MLIRContext context;
-  Builder builder(&context);
-
-  // Check that splats that don't fill entire byte are handled properly.
-  auto tensorType = RankedTensorType::get({4}, builder.getI1Type());
-  std::vector<char> data{0b00001111};
-  auto trueSplatFromRaw =
-      DenseIntOrFPElementsAttr::getFromRawBuffer(tensorType, data);
-  EXPECT_TRUE(trueSplatFromRaw.isSplat());
-  DenseElementsAttr trueSplat = DenseElementsAttr::get(tensorType, true);
-  EXPECT_EQ(trueSplat, trueSplatFromRaw);
-}
-
 TEST(DenseSplatTest, LargeBoolSplat) {
   constexpr int64_t boolCount = 56;
 
@@ -477,8 +463,9 @@ TEST(SubElementTest, Nested) {
                 {strAttr, trueAttr, falseAttr, boolArrayAttr, dictAttr}));
 }
 
-// Test how many times we call copy-ctor when building an attribute.
-TEST(CopyCountAttr, CopyCount) {
+// Test how many times we call copy-ctor when building an attribute with the
+// 'get' method.
+TEST(CopyCountAttr, CopyCountGet) {
   MLIRContext context;
   context.loadDialect<test::TestDialect>();
 
@@ -489,13 +476,33 @@ TEST(CopyCountAttr, CopyCount) {
   test::CopyCount::counter = 0;
   test::TestCopyCountAttr::get(&context, std::move(copyCount));
 #ifndef NDEBUG
-  // One verification enabled only in assert-mode requires a copy.
-  EXPECT_EQ(counter1, 1);
-  EXPECT_EQ(test::CopyCount::counter, 1);
+  // One verification enabled only in assert-mode requires two copies: one for
+  // calling 'verifyInvariants' and one for calling 'verify' inside
+  // 'verifyInvariants'.
+  EXPECT_EQ(counter1, 2);
+  EXPECT_EQ(test::CopyCount::counter, 2);
 #else
   EXPECT_EQ(counter1, 0);
   EXPECT_EQ(test::CopyCount::counter, 0);
 #endif
+}
+
+// Test how many times we call copy-ctor when building an attribute with the
+// 'getChecked' method.
+TEST(CopyCountAttr, CopyCountGetChecked) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  auto loc = UnknownLoc::get(&context);
+  test::TestCopyCountAttr::getChecked(loc, &context, std::move(copyCount));
+  int counter1 = test::CopyCount::counter;
+  test::CopyCount::counter = 0;
+  test::TestCopyCountAttr::getChecked(loc, &context, std::move(copyCount));
+  // The verifiers require two copies: one for calling 'verifyInvariants' and
+  // one for calling 'verify' inside 'verifyInvariants'.
+  EXPECT_EQ(counter1, 2);
+  EXPECT_EQ(test::CopyCount::counter, 2);
 }
 
 // Test stripped printing using test dialect attribute.
@@ -515,5 +522,47 @@ TEST(CopyCountAttr, PrintStripped) {
   os << "]";
   EXPECT_EQ(str, "|#test.copy_count<hello>|[copy_count<hello>]");
 }
+
+//===----------------------------------------------------------------------===//
+// IntegerAttr
+//===----------------------------------------------------------------------===//
+
+TEST(IntegerAttrTest, CorrectBitWidths) {
+  MLIRContext context;
+
+  // Correct APInt width for i32.
+  IntegerType i32 = IntegerType::get(&context, 32);
+  IntegerAttr attr32 = IntegerAttr::get(i32, APInt(32, 42));
+  EXPECT_EQ(attr32.getType(), i32);
+  EXPECT_EQ(attr32.getValue().getBitWidth(), 32u);
+  EXPECT_EQ(attr32.getInt(), 42);
+
+  // Correct APInt width for index type.
+  IndexType indexTy = IndexType::get(&context);
+  IntegerAttr attrIdx =
+      IntegerAttr::get(indexTy, APInt(IndexType::kInternalStorageBitWidth, 5));
+  EXPECT_EQ(attrIdx.getType(), indexTy);
+  EXPECT_EQ(attrIdx.getValue().getBitWidth(),
+            (unsigned)IndexType::kInternalStorageBitWidth);
+}
+
+#ifndef NDEBUG
+TEST(IntegerAttrDeathTest, WrongBitWidthForIntegerType) {
+  MLIRContext context;
+  IntegerType i32 = IntegerType::get(&context, 32);
+  // APInt(8, 1) has bit width 8, but i32 requires 32.
+  EXPECT_DEATH(IntegerAttr::get(i32, APInt(8, 1)),
+               "APInt bit width must match integer type width");
+}
+
+TEST(IntegerAttrDeathTest, WrongBitWidthForIndexType) {
+  MLIRContext context;
+  IndexType indexTy = IndexType::get(&context);
+  // APInt(1, 1) has bit width 1, but index type requires 64.
+  EXPECT_DEATH(
+      IntegerAttr::get(indexTy, APInt(1, 1)),
+      "APInt bit width must match IndexType internal storage bit width");
+}
+#endif // NDEBUG
 
 } // namespace

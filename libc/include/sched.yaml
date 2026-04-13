@@ -1,6 +1,13 @@
 header: sched.h
-header_template: sched.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: SCHED_OTHER
+    macro_header: sched-macros.h
+  - macro_name: SCHED_FIFO
+    macro_header: sched-macros.h
+  - macro_name: SCHED_RR
+    macro_header: sched-macros.h
 types:
   - type_name: struct_timespec
   - type_name: time_t
@@ -18,6 +25,13 @@ functions:
     arguments:
       - type: size_t
       - type: const cpu_set_t *
+  - name: getcpu
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: unsigned int *
+      - type: unsigned int *
   - name: sched_get_priority_max
     standards:
       - POSIX

@@ -13,7 +13,7 @@
 ; CHECK: %[[#TStruct:]] = OpTypeStruct %[[#TInt8]] %[[#TInt32]] %[[#TInt8]] %[[#TInt8]]
 ; CHECK-NEXT: OpTypeStructContinuedINTEL %[[#TInt8]] %[[#TInt8]] %[[#TInt8]] %[[#TInt8]] %[[#TInt8]] %[[#TInt8]] %[[#TInt8]]{{$}}
 
-; CHECK-DAG: %[[#Const0:]] = OpConstant %[[#TInt8]] 0
+; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#TInt8]]
 ; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#TInt8]] 1
 ; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#TInt32]] 2
 

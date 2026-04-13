@@ -21,8 +21,7 @@ func.func @printmem8(%A: memref<?xf32>) {
   %mem = scf.for %i = %c0 to %c8 step %c1
     iter_args(%m_iter = %m) -> (vector<8xf32>) {
     %c = memref.load %A[%i] : memref<?xf32>
-    %i32 = arith.index_cast %i : index to i32
-    %m_new = vector.insertelement %c, %m_iter[%i32 : i32] : vector<8xf32>
+    %m_new = vector.insert %c, %m_iter[%i] : f32 into vector<8xf32>
     scf.yield %m_new : vector<8xf32>
   }
   vector.print %mem : vector<8xf32>

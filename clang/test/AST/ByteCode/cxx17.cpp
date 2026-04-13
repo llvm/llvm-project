@@ -1,5 +1,10 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++17 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both      %s
+
+[[clang::require_constant_initialization]] int cc = cc; // both-error {{variable does not have a constant initializer}} \
+                                                        // both-note {{attribute here}} \
+                                                        // both-note {{ead of object outside its lifetime}}
+
 
 struct F { int a; int b;};
 constexpr F getF() {
@@ -124,4 +129,49 @@ namespace constant {
     return a == 0 && b == 1 && c == 4;
   }
   static_assert(f());
+}
+
+
+template <int a> struct i; // both-note {{template is declared here}}
+template <> struct i<0> {};
+
+template <int x> constexpr auto c() {
+  i<x> g; // both-error {{implicit instantiation of undefined template 'i<1>'}}
+  return 0;
+}
+
+auto y = c<1>(); // both-note {{in instantiation of function template specialization 'c<1>' requested here}}
+
+namespace NonConstexprStructuredBinding {
+  void f1() {
+    int arr[2] = {};
+    auto [a, b] = arr;
+    static_assert(&a != &b);
+  }
+}
+
+
+
+
+int d, m;
+struct C {
+  constexpr C() {}
+  constexpr C(const C &) {}
+  template <int I> int &get() const {
+    // static_assert(d == 1 + I);
+    ++d;
+    return m;
+  }
+};
+
+template <> struct std::tuple_size<const C> {
+  static const int value = 3;
+};
+template <int I> struct std::tuple_element<I, const C> {
+  using type = int;
+};
+
+namespace ZeroInCheckInvoke {
+  constexpr C foo(const C &) { return C{}; }
+  thread_local const auto &[s, t, u] = foo(C{}); // both-warning {{thread_local}}
 }

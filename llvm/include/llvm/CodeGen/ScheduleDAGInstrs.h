@@ -18,7 +18,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
-#include "llvm/ADT/identity.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -26,6 +25,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <list>
@@ -77,27 +77,30 @@ namespace llvm {
   struct PhysRegSUOper {
     SUnit *SU;
     int OpIdx;
-    unsigned RegUnit;
+    MCRegUnit RegUnit;
 
-    PhysRegSUOper(SUnit *su, int op, unsigned R)
+    PhysRegSUOper(SUnit *su, int op, MCRegUnit R)
         : SU(su), OpIdx(op), RegUnit(R) {}
 
-    unsigned getSparseSetIndex() const { return RegUnit; }
+    unsigned getSparseSetIndex() const {
+      return static_cast<unsigned>(RegUnit);
+    }
   };
 
   /// Use a SparseMultiSet to track physical registers. Storage is only
   /// allocated once for the pass. It can be cleared in constant time and reused
   /// without any frees.
   using RegUnit2SUnitsMap =
-      SparseMultiSet<PhysRegSUOper, identity<unsigned>, uint16_t>;
+      SparseMultiSet<PhysRegSUOper, MCRegUnit, MCRegUnitToIndex, uint16_t>;
 
   /// Track local uses of virtual registers. These uses are gathered by the DAG
   /// builder and may be consulted by the scheduler to avoid iterating an entire
   /// vreg use list.
-  using VReg2SUnitMultiMap = SparseMultiSet<VReg2SUnit, VirtReg2IndexFunctor>;
+  using VReg2SUnitMultiMap =
+      SparseMultiSet<VReg2SUnit, Register, VirtReg2IndexFunctor>;
 
   using VReg2SUnitOperIdxMultiMap =
-      SparseMultiSet<VReg2SUnitOperIdx, VirtReg2IndexFunctor>;
+      SparseMultiSet<VReg2SUnitOperIdx, Register, VirtReg2IndexFunctor>;
 
   using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
 
@@ -112,7 +115,7 @@ namespace llvm {
   using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
-  class ScheduleDAGInstrs : public ScheduleDAG {
+  class LLVM_ABI ScheduleDAGInstrs : public ScheduleDAG {
   protected:
     const MachineLoopInfo *MLI = nullptr;
     const MachineFrameInfo &MFI;
@@ -179,6 +182,8 @@ namespace llvm {
     /// No other SU ever gets scheduled around it (except in the special
     /// case of a huge region that gets reduced).
     SUnit *BarrierChain = nullptr;
+
+    SmallVector<ClusterInfo> Clusters;
 
   public:
     /// A list of SUnits, used in Value2SUsMap, during DAG construction.
@@ -382,6 +387,14 @@ namespace llvm {
     /// \returns true if the edge may be added without creating a cycle OR if an
     /// equivalent edge already existed (false indicates failure).
     bool addEdge(SUnit *SuccSU, const SDep &PredDep);
+
+    /// Returns the array of the clusters.
+    SmallVector<ClusterInfo> &getClusters() { return Clusters; }
+
+    /// Get the specific cluster, return nullptr for InvalidClusterId.
+    ClusterInfo *getCluster(unsigned Idx) {
+      return Idx != InvalidClusterId ? &Clusters[Idx] : nullptr;
+    }
 
   protected:
     void initSUnits();

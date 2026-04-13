@@ -30,6 +30,7 @@ def CLASS_REMARK    : DiagClass;
 def CLASS_WARNING   : DiagClass;
 def CLASS_EXTENSION : DiagClass;
 def CLASS_ERROR     : DiagClass;
+def CLASS_TRAP      : DiagClass;
 
 // Responses to a diagnostic in a SFINAE context.
 class SFINAEResponse;
@@ -64,6 +65,23 @@ class DiagGroup<string Name, list<DiagGroup> subgroups = [], code docs = [{}]> {
 class InGroup<DiagGroup G> { DiagGroup Group = G; }
 //class IsGroup<string Name> { DiagGroup Group = DiagGroup<Name>; }
 
+// Specifies an explicit Stable ID for a diagnostic, rather than the default one
+// generated from the diagnostic's name.
+class StableId<string Id> { string StableId = Id; }
+
+// Specifies a list of Stable IDs by which the diagnostic was previously known.
+// If the Stable ID of a diagnostic is renamed, the previous Stable ID should be
+// added to the LegacyStableIds list.
+//
+// If a diagnostic is split into two or more diagnostics for specific cases, the
+// Stable ID of the original diagnostic should be added to the LegacyStableIds
+// list of each of the new diagnostics created from it.
+//
+// If two or more diagnostics are merged into a single diagnostic, the Stable ID
+// of each of the original diagnostics should be added to the LegacyStableIds
+// list of the new (merged) diagnostic.
+class LegacyStableIds<list<string> Ids> { list<string> LegacyStableIds = Ids; }
+
 // This defines documentation for diagnostic groups.
 include "DiagnosticDocs.td"
 
@@ -89,6 +107,10 @@ class Diagnostic<string summary, DiagClass DC, Severity defaultmapping> {
   Severity       DefaultSeverity = defaultmapping;
   DiagGroup      Group;
   string         CategoryName = "";
+  /// The default of "" means that the actual Stable ID should be generated from
+  /// the name of the diagnostic.
+  string         StableId = "";
+  list<string>   LegacyStableIds = [];
 }
 
 class SFINAEFailure {
@@ -144,7 +166,8 @@ class Extension<string str> : Diagnostic<str, CLASS_EXTENSION, SEV_Ignored>;
 class ExtWarn<string str>   : Diagnostic<str, CLASS_EXTENSION, SEV_Warning>;
 // Notes can provide supplementary information on errors, warnings, and remarks.
 class Note<string str>      : Diagnostic<str, CLASS_NOTE, SEV_Fatal/*ignored*/>;
-
+// Trap messages attached to traps in debug info.
+class Trap<string str>      : Diagnostic<str, CLASS_TRAP, SEV_Fatal/*ignored*/>;
 
 class DefaultIgnore { Severity DefaultSeverity = SEV_Ignored; }
 class DefaultWarn   { Severity DefaultSeverity = SEV_Warning; }
@@ -154,6 +177,19 @@ class DefaultWarnNoWerror {
   bit WarningNoWerror = 1;
 }
 class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
+
+class CompatWarningId<string name, int std, string diag, string diag_pre> {
+  string Component = ?;
+  string Name = name;
+  string Diag = diag;
+  string DiagPre = diag_pre;
+  int Std = std;
+
+  // This is unused, but Tablegen will complain if it's missing because we define
+  // the compatibility ids in the same place as the other diagnostics (which means
+  // that we'll be inside a 'let CategoryName = "" in { ... }' block).
+  string CategoryName = ?;
+}
 
 // C++ compatibility warnings.
 multiclass CXXCompat<
@@ -178,6 +214,11 @@ multiclass CXXCompat<
                                      "CXX98Compat",
                                      "CXXPre"#std_ver#"Compat"))>,
         DefaultIgnore;
+
+    def : CompatWarningId<
+        NAME, std_ver,
+        "compat_cxx"#std_ver#"_"#NAME,
+        "compat_pre_cxx"#std_ver#"_"#NAME>;
 }
 
 // These generate pairs of C++ compatibility warnings of the form:
@@ -217,3 +258,4 @@ include "DiagnosticParseKinds.td"
 include "DiagnosticRefactoringKinds.td"
 include "DiagnosticSemaKinds.td"
 include "DiagnosticSerializationKinds.td"
+include "DiagnosticTrapKinds.td"

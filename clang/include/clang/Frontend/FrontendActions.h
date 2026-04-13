@@ -114,6 +114,15 @@ public:
 };
 
 class GenerateModuleAction : public ASTFrontendAction {
+public:
+  /// When \c OS is non-null, uses it for outputting the PCM file instead of
+  /// automatically creating an output file.
+  explicit GenerateModuleAction(std::unique_ptr<raw_pwrite_stream> OS = nullptr)
+      : OS(std::move(OS)) {}
+
+private:
+  std::unique_ptr<raw_pwrite_stream> OS;
+
   virtual std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) = 0;
 
@@ -145,6 +154,9 @@ protected:
 };
 
 class GenerateModuleFromModuleMapAction : public GenerateModuleAction {
+public:
+  using GenerateModuleAction::GenerateModuleAction;
+
 private:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 
@@ -156,6 +168,7 @@ private:
 /// files) for C++20 Named Modules.
 class GenerateModuleInterfaceAction : public GenerateModuleAction {
 protected:
+  bool PrepareToExecuteAction(CompilerInstance &CI) override;
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -319,13 +332,16 @@ protected:
   bool hasPCHSupport() const override { return true; }
 };
 
-class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
-  StringRef ModuleName;
+//===----------------------------------------------------------------------===//
+// HLSL Specific Actions
+//===----------------------------------------------------------------------===//
+
+class HLSLFrontendAction : public WrapperFrontendAction {
+protected:
   void ExecuteAction() override;
 
 public:
-  GetDependenciesByModuleNameAction(StringRef ModuleName)
-      : ModuleName(ModuleName) {}
+  HLSLFrontendAction(std::unique_ptr<FrontendAction> WrappedAction);
 };
 
 }  // end namespace clang

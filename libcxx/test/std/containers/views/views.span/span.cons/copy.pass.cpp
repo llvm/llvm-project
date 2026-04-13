@@ -98,7 +98,7 @@ constexpr bool test_all() {
 #if defined(_LIBCPP_VERSION) && TEST_STD_VER < 23
   // libc++ supports span<Incomplete> as an extension in C++20 mode,
   // but the extension is incompatible with changes of span in C++23.
-  // Regression test for https://github.com/llvm/llvm-project/issues/104496
+  // Regression test for https://llvm.org/PR104496
   {
     struct Incomplete;
     std::span<Incomplete> x;

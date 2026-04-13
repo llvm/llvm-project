@@ -3,4 +3,5 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._vector_ops_gen import *
+from ._vector_ops_gen import _Dialect
 from ._vector_enum_gen import *

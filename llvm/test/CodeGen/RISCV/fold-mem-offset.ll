@@ -183,7 +183,7 @@ define zeroext i8 @test_add(ptr %p, iXLen %x, iXLen %y) {
 ; CHECK-NEXT:    lbu a1, 1800(a1)
 ; CHECK-NEXT:    lbu a0, 1810(a0)
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
 ;
 ; ZBA-LABEL: test_add:
@@ -193,7 +193,7 @@ define zeroext i8 @test_add(ptr %p, iXLen %x, iXLen %y) {
 ; ZBA-NEXT:    lbu a1, 1800(a1)
 ; ZBA-NEXT:    lbu a0, 1810(a0)
 ; ZBA-NEXT:    add a0, a0, a1
-; ZBA-NEXT:    andi a0, a0, 255
+; ZBA-NEXT:    zext.b a0, a0
 ; ZBA-NEXT:    ret
 entry:
   %e = getelementptr inbounds nuw i8, ptr %p, i64 1800
@@ -213,12 +213,12 @@ define i64 @test_sh3add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV32I-NEXT:    slli a2, a2, 3
 ; RV32I-NEXT:    add a1, a0, a1
 ; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    lw a2, 404(a0)
-; RV32I-NEXT:    lw a3, 400(a1)
+; RV32I-NEXT:    lw a2, 400(a1)
 ; RV32I-NEXT:    lw a1, 404(a1)
+; RV32I-NEXT:    lw a3, 404(a0)
 ; RV32I-NEXT:    lw a4, 400(a0)
-; RV32I-NEXT:    add a1, a2, a1
-; RV32I-NEXT:    add a0, a4, a3
+; RV32I-NEXT:    add a1, a3, a1
+; RV32I-NEXT:    add a0, a4, a2
 ; RV32I-NEXT:    sltu a2, a0, a4
 ; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
@@ -240,12 +240,12 @@ define i64 @test_sh3add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    sh3add a1, a1, a0
 ; RV32ZBA-NEXT:    sh3add a0, a2, a0
-; RV32ZBA-NEXT:    lw a2, 404(a0)
-; RV32ZBA-NEXT:    lw a3, 400(a1)
+; RV32ZBA-NEXT:    lw a2, 400(a1)
 ; RV32ZBA-NEXT:    lw a1, 404(a1)
+; RV32ZBA-NEXT:    lw a3, 404(a0)
 ; RV32ZBA-NEXT:    lw a4, 400(a0)
-; RV32ZBA-NEXT:    add a1, a2, a1
-; RV32ZBA-NEXT:    add a0, a4, a3
+; RV32ZBA-NEXT:    add a1, a3, a1
+; RV32ZBA-NEXT:    add a0, a4, a2
 ; RV32ZBA-NEXT:    sltu a2, a0, a4
 ; RV32ZBA-NEXT:    add a1, a1, a2
 ; RV32ZBA-NEXT:    ret
@@ -397,7 +397,7 @@ define zeroext i8 @test_add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV32I-NEXT:    lbu a1, 1800(a1)
 ; RV32I-NEXT:    lbu a0, 1800(a0)
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_add_uw:
@@ -411,7 +411,7 @@ define zeroext i8 @test_add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV64I-NEXT:    lbu a1, 1800(a1)
 ; RV64I-NEXT:    lbu a0, 1800(a0)
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: test_add_uw:
@@ -421,7 +421,7 @@ define zeroext i8 @test_add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV32ZBA-NEXT:    lbu a1, 1800(a1)
 ; RV32ZBA-NEXT:    lbu a0, 1800(a0)
 ; RV32ZBA-NEXT:    add a0, a0, a1
-; RV32ZBA-NEXT:    andi a0, a0, 255
+; RV32ZBA-NEXT:    zext.b a0, a0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: test_add_uw:
@@ -431,7 +431,7 @@ define zeroext i8 @test_add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV64ZBA-NEXT:    lbu a1, 1800(a1)
 ; RV64ZBA-NEXT:    lbu a0, 1800(a0)
 ; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    andi a0, a0, 255
+; RV64ZBA-NEXT:    zext.b a0, a0
 ; RV64ZBA-NEXT:    ret
 entry:
   %e = getelementptr inbounds nuw i8, ptr %p, i64 1800
@@ -575,12 +575,11 @@ define signext i32 @test_large_offset(ptr %p, iXLen %x, iXLen %y) {
 ; RV64I-NEXT:    lui a3, 2
 ; RV64I-NEXT:    slli a1, a1, 2
 ; RV64I-NEXT:    slli a2, a2, 2
-; RV64I-NEXT:    addiw a3, a3, -1392
 ; RV64I-NEXT:    add a0, a0, a3
 ; RV64I-NEXT:    add a1, a0, a1
 ; RV64I-NEXT:    add a0, a2, a0
-; RV64I-NEXT:    lw a1, 0(a1)
-; RV64I-NEXT:    lw a0, 40(a0)
+; RV64I-NEXT:    lw a1, -1392(a1)
+; RV64I-NEXT:    lw a0, -1352(a0)
 ; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -675,7 +674,7 @@ define zeroext i8 @test_optsize(ptr %p, iXLen %x, iXLen %y) optsize {
 ; CHECK-NEXT:    lbu a1, 0(a1)
 ; CHECK-NEXT:    lbu a0, 10(a0)
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
 ;
 ; ZBA-LABEL: test_optsize:
@@ -686,7 +685,7 @@ define zeroext i8 @test_optsize(ptr %p, iXLen %x, iXLen %y) optsize {
 ; ZBA-NEXT:    lbu a1, 0(a1)
 ; ZBA-NEXT:    lbu a0, 10(a0)
 ; ZBA-NEXT:    add a0, a0, a1
-; ZBA-NEXT:    andi a0, a0, 255
+; ZBA-NEXT:    zext.b a0, a0
 ; ZBA-NEXT:    ret
 entry:
   %e = getelementptr inbounds nuw i8, ptr %p, i64 1800
@@ -708,7 +707,7 @@ define zeroext i8 @test_minsize(ptr %p, iXLen %x, iXLen %y) minsize {
 ; CHECK-NEXT:    lbu a1, 0(a1)
 ; CHECK-NEXT:    lbu a0, 10(a0)
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
 ;
 ; ZBA-LABEL: test_minsize:
@@ -719,7 +718,7 @@ define zeroext i8 @test_minsize(ptr %p, iXLen %x, iXLen %y) minsize {
 ; ZBA-NEXT:    lbu a1, 0(a1)
 ; ZBA-NEXT:    lbu a0, 10(a0)
 ; ZBA-NEXT:    add a0, a0, a1
-; ZBA-NEXT:    andi a0, a0, 255
+; ZBA-NEXT:    zext.b a0, a0
 ; ZBA-NEXT:    ret
 entry:
   %e = getelementptr inbounds nuw i8, ptr %p, i64 1800

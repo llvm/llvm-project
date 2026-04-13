@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// In the modules build, adding another overload of `memmove` doesn't work.
-// UNSUPPORTED: clang-modules-build
+
 // GCC complains about "ambiguating" `__builtin_memmove`.
 // UNSUPPORTED: gcc
+
+// In the modules build, adding another overload of `memmove` doesn't work.
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // <algorithm>
 
@@ -314,7 +316,7 @@ constexpr bool test() {
   test_copy_and_move<int*, const int*>();
 
   // `memmove` does not support volatile pointers.
-  // (See also https://github.com/llvm/llvm-project/issues/28901).
+  // (See also https://llvm.org/PR28527).
   if (!std::is_constant_evaluated()) {
     test_both_directions<volatile int, int>();
     test_both_directions<volatile int, volatile int>();

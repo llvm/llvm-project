@@ -303,8 +303,6 @@ static void nopInstrFill(Ctx &ctx, uint8_t *buf, size_t size) {
   if (size == 0)
     return;
   unsigned i = 0;
-  if (size == 0)
-    return;
   std::vector<std::vector<uint8_t>> nopFiller = *ctx.target->nopInstrs;
   unsigned num = size / nopFiller.back().size();
   for (unsigned c = 0; c < num; ++c) {
@@ -627,7 +625,7 @@ static void finalizeShtGroup(Ctx &ctx, OutputSection *os,
   // new size. The content will be rewritten in InputSection::copyShtGroup.
   DenseSet<uint32_t> seen;
   ArrayRef<InputSectionBase *> sections = section->file->getSections();
-  for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
+  for (auto &idx : section->getDataAs<std::array<char, 4>>().slice(1))
     if (OutputSection *osec = sections[read32(ctx, &idx)]->getOutputSection())
       seen.insert(osec->sectionIndex);
   os->size = (1 + seen.size()) * sizeof(uint32_t);
@@ -889,9 +887,19 @@ void OutputSection::sortInitFini() {
 std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
   if (filler)
     return *filler;
-  if (flags & SHF_EXECINSTR)
-    return ctx.target->trapInstr;
-  return {0, 0, 0, 0};
+  if (!(flags & SHF_EXECINSTR))
+    return {0, 0, 0, 0};
+  if (ctx.arg.relocatable && ctx.arg.emachine == EM_RISCV) {
+    // See RISCV::maybeSynthesizeAlign: Synthesized NOP bytes and ALIGN
+    // relocations might be needed between two input sections. Use a NOP for the
+    // filler.
+    if (ctx.arg.eflags & EF_RISCV_RVC)
+      return {1, 0, 1, 0};
+    return {0x13, 0, 0, 0};
+  }
+  if (ctx.arg.relocatable && ctx.arg.emachine == EM_LOONGARCH)
+    return {0, 0, 0x40, 0x03};
+  return ctx.target->trapInstr;
 }
 
 void OutputSection::checkDynRelAddends(Ctx &ctx) {

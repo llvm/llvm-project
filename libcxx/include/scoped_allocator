@@ -110,7 +110,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/scoped_allocator>
+#  include <__cxx03/__config>
 #else
 #  include <__config>
 #  include <__memory/allocator_traits.h>
@@ -334,7 +334,7 @@ struct __outermost<_Alloc, true> {
 };
 
 template <class _OuterAlloc, class... _InnerAllocs>
-class _LIBCPP_TEMPLATE_VIS scoped_allocator_adaptor<_OuterAlloc, _InnerAllocs...>
+class scoped_allocator_adaptor<_OuterAlloc, _InnerAllocs...>
     : public __scoped_allocator_storage<_OuterAlloc, _InnerAllocs...> {
   typedef __scoped_allocator_storage<_OuterAlloc, _InnerAllocs...> _Base;
   typedef allocator_traits<_OuterAlloc> _OuterTraits;
@@ -382,13 +382,17 @@ public:
   // scoped_allocator_adaptor& operator=(scoped_allocator_adaptor&&) = default;
   // ~scoped_allocator_adaptor() = default;
 
-  _LIBCPP_HIDE_FROM_ABI inner_allocator_type& inner_allocator() _NOEXCEPT { return _Base::inner_allocator(); }
-  _LIBCPP_HIDE_FROM_ABI const inner_allocator_type& inner_allocator() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inner_allocator_type& inner_allocator() _NOEXCEPT {
+    return _Base::inner_allocator();
+  }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const inner_allocator_type& inner_allocator() const _NOEXCEPT {
     return _Base::inner_allocator();
   }
 
-  _LIBCPP_HIDE_FROM_ABI outer_allocator_type& outer_allocator() _NOEXCEPT { return _Base::outer_allocator(); }
-  _LIBCPP_HIDE_FROM_ABI const outer_allocator_type& outer_allocator() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI outer_allocator_type& outer_allocator() _NOEXCEPT {
+    return _Base::outer_allocator();
+  }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const outer_allocator_type& outer_allocator() const _NOEXCEPT {
     return _Base::outer_allocator();
   }
 
@@ -403,7 +407,7 @@ public:
     allocator_traits<outer_allocator_type>::deallocate(outer_allocator(), __p, __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI size_type max_size() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type max_size() const {
     return allocator_traits<outer_allocator_type>::max_size(outer_allocator());
   }
 
@@ -434,10 +438,10 @@ public:
         piecewise_construct,
         __transform_tuple(typename __uses_alloc_ctor< _T1, inner_allocator_type&, _Args1... >::type(),
                           std::move(__x),
-                          typename __make_tuple_indices<sizeof...(_Args1)>::type{}),
+                          __index_sequence_for<_Args1...>()),
         __transform_tuple(typename __uses_alloc_ctor< _T2, inner_allocator_type&, _Args2... >::type(),
                           std::move(__y),
-                          typename __make_tuple_indices<sizeof...(_Args2)>::type{}));
+                          __index_sequence_for<_Args2...>()));
   }
 
   template <class _T1, class _T2>
@@ -473,7 +477,8 @@ public:
     allocator_traits<typename _OM::type>::destroy(_OM()(outer_allocator()), __p);
   }
 
-  _LIBCPP_HIDE_FROM_ABI scoped_allocator_adaptor select_on_container_copy_construction() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI scoped_allocator_adaptor
+  select_on_container_copy_construction() const _NOEXCEPT {
     return _Base::select_on_container_copy_construction();
   }
 
@@ -503,20 +508,20 @@ private:
 
   template <class... _Args, size_t... _Idx>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&...>
-  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, __tuple_indices<_Idx...>) {
+  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
     return std::forward_as_tuple(std::get<_Idx>(std::move(__t))...);
   }
 
   template <class... _Args, size_t... _Idx>
   _LIBCPP_HIDE_FROM_ABI tuple<allocator_arg_t, inner_allocator_type&, _Args&&...>
-  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, __tuple_indices<_Idx...>) {
+  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
     using _Tup = tuple<allocator_arg_t, inner_allocator_type&, _Args&&...>;
     return _Tup(allocator_arg, inner_allocator(), std::get<_Idx>(std::move(__t))...);
   }
 
   template <class... _Args, size_t... _Idx>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&..., inner_allocator_type&>
-  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, __tuple_indices<_Idx...>) {
+  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
     using _Tup = tuple<_Args&&..., inner_allocator_type&>;
     return _Tup(std::get<_Idx>(std::move(__t))..., inner_allocator());
   }

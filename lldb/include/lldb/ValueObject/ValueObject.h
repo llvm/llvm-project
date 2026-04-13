@@ -349,7 +349,7 @@ public:
 
   void SetNeedsUpdate();
 
-  CompilerType GetCompilerType() { return MaybeCalculateCompleteType(); }
+  CompilerType GetCompilerType();
 
   // this vends a TypeImpl that is useful at the SB API layer
   virtual TypeImpl GetTypeImpl() { return TypeImpl(GetCompilerType()); }
@@ -453,17 +453,17 @@ public:
   /// value to a boolean and return that. Otherwise return an error.
   llvm::Expected<bool> GetValueAsBool();
 
-  /// Update an existing integer ValueObject with a new integer value. This
-  /// is only intended to be used with 'temporary' ValueObjects, i.e. ones that
-  /// are not associated with program variables. It does not update program
-  /// memory, registers, stack, etc.
-  void SetValueFromInteger(const llvm::APInt &value, Status &error);
+  /// Update an existing integer ValueObject with a new integer value. If
+  /// can_update_var is true, will allow updating objects associated with
+  /// program variables; otherwise not.
+  void SetValueFromInteger(const llvm::APInt &value, Status &error,
+                           bool can_update_var = true);
 
   /// Update an existing integer ValueObject with an integer value created
-  /// frome 'new_val_sp'.  This is only intended to be used with 'temporary'
-  /// ValueObjects, i.e. ones that are not associated with program variables.
-  /// It does not update program  memory, registers, stack, etc.
-  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error);
+  /// frome 'new_val_sp'. If can_update_var is true, will allow updating objects
+  /// associated with program variables; otherwise not.
+  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error,
+                           bool can_update_var = true);
 
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 
@@ -498,7 +498,7 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 
-  virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name);
 
   llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
   /// Like \c GetNumChildren but returns 0 on error.  You probably
@@ -573,10 +573,17 @@ public:
   /// child as well.
   void SetName(ConstString name) { m_name = name; }
 
-  virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
-                                    AddressType *address_type = nullptr);
+  struct AddrAndType {
+    lldb::addr_t address = LLDB_INVALID_ADDRESS;
+    AddressType type = eAddressTypeInvalid;
+  };
 
-  lldb::addr_t GetPointerValue(AddressType *address_type = nullptr);
+  virtual AddrAndType GetAddressOf(bool scalar_is_load_address = true);
+
+  /// Remove ptrauth bits from address if the type has a ptrauth qualifier.
+  std::optional<lldb::addr_t> GetStrippedPointerValue(lldb::addr_t address);
+
+  AddrAndType GetPointerValue();
 
   lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
 
@@ -723,26 +730,33 @@ public:
                             const ExecutionContext &exe_ctx, CompilerType type);
 
   /// Create a value object containing the given APInt value.
-  static lldb::ValueObjectSP CreateValueObjectFromAPInt(lldb::TargetSP target,
-                                                        const llvm::APInt &v,
-                                                        CompilerType type,
-                                                        llvm::StringRef name);
+  static lldb::ValueObjectSP
+  CreateValueObjectFromAPInt(const ExecutionContext &exe_ctx,
+                             const llvm::APInt &v, CompilerType type,
+                             llvm::StringRef name);
 
   /// Create a value object containing the given APFloat value.
   static lldb::ValueObjectSP
-  CreateValueObjectFromAPFloat(lldb::TargetSP target, const llvm::APFloat &v,
-                               CompilerType type, llvm::StringRef name);
+  CreateValueObjectFromAPFloat(const ExecutionContext &exe_ctx,
+                               const llvm::APFloat &v, CompilerType type,
+                               llvm::StringRef name);
+
+  /// Create a value object containing the given Scalar value.
+  static lldb::ValueObjectSP
+  CreateValueObjectFromScalar(const ExecutionContext &exe_ctx, Scalar &s,
+                              CompilerType type, llvm::StringRef name);
 
   /// Create a value object containing the given boolean value.
-  static lldb::ValueObjectSP CreateValueObjectFromBool(lldb::TargetSP target,
-                                                       bool value,
-                                                       llvm::StringRef name);
+  static lldb::ValueObjectSP
+  CreateValueObjectFromBool(const ExecutionContext &exe_ctx,
+                            lldb::TypeSystemSP typesystem, bool value,
+                            llvm::StringRef name);
 
   /// Create a nullptr value object with the specified type (must be a
   /// nullptr type).
-  static lldb::ValueObjectSP CreateValueObjectFromNullptr(lldb::TargetSP target,
-                                                          CompilerType type,
-                                                          llvm::StringRef name);
+  static lldb::ValueObjectSP
+  CreateValueObjectFromNullptr(const ExecutionContext &exe_ctx,
+                               CompilerType type, llvm::StringRef name);
 
   lldb::ValueObjectSP Persist();
 
@@ -1095,7 +1109,6 @@ protected:
   virtual void DoUpdateChildrenAddressType(ValueObject &valobj) {};
 
 private:
-  virtual CompilerType MaybeCalculateCompleteType();
   void UpdateChildrenAddressType() {
     GetRoot()->DoUpdateChildrenAddressType(*this);
   }
@@ -1109,6 +1122,84 @@ private:
 
   ValueObject(const ValueObject &) = delete;
   const ValueObject &operator=(const ValueObject &) = delete;
+};
+
+// The two classes below are used by the public SBValue API implementation. This
+// is useful here because we need them in order to access the underlying
+// ValueObject from SBValue without introducing a back-dependency from the API
+// library to the more core libs.
+
+class ValueImpl {
+public:
+  ValueImpl() = default;
+
+  ValueImpl(lldb::ValueObjectSP in_valobj_sp,
+            lldb::DynamicValueType use_dynamic, bool use_synthetic,
+            const char *name = nullptr);
+
+  ValueImpl(const ValueImpl &rhs) = default;
+
+  ValueImpl &operator=(const ValueImpl &rhs);
+
+  bool IsValid();
+
+  lldb::ValueObjectSP GetRootSP() { return m_valobj_sp; }
+
+  lldb::ValueObjectSP GetSP(Process::StopLocker &stop_locker,
+                            std::unique_lock<std::recursive_mutex> &lock,
+                            Status &error);
+
+  void SetUseDynamic(lldb::DynamicValueType use_dynamic) {
+    m_use_dynamic = use_dynamic;
+  }
+
+  void SetUseSynthetic(bool use_synthetic) { m_use_synthetic = use_synthetic; }
+
+  lldb::DynamicValueType GetUseDynamic() { return m_use_dynamic; }
+
+  bool GetUseSynthetic() { return m_use_synthetic; }
+
+  // All the derived values that we would make from the m_valobj_sp will share
+  // the ExecutionContext with m_valobj_sp, so we don't need to do the
+  // calculations in GetSP to return the Target, Process, Thread or Frame.  It
+  // is convenient to provide simple accessors for these, which I do here.
+  lldb::TargetSP GetTargetSP() {
+    return m_valobj_sp ? m_valobj_sp->GetTargetSP() : lldb::TargetSP{};
+  }
+
+  lldb::ProcessSP GetProcessSP() {
+    return m_valobj_sp ? m_valobj_sp->GetProcessSP() : lldb::ProcessSP{};
+  }
+
+  lldb::ThreadSP GetThreadSP() {
+    return m_valobj_sp ? m_valobj_sp->GetThreadSP() : lldb::ThreadSP{};
+  }
+
+  lldb::StackFrameSP GetFrameSP() {
+    return m_valobj_sp ? m_valobj_sp->GetFrameSP() : lldb::StackFrameSP{};
+  }
+
+private:
+  lldb::ValueObjectSP m_valobj_sp;
+  lldb::DynamicValueType m_use_dynamic;
+  bool m_use_synthetic;
+  ConstString m_name;
+};
+
+class ValueLocker {
+public:
+  ValueLocker() = default;
+
+  lldb::ValueObjectSP GetLockedSP(ValueImpl &in_value) {
+    return in_value.GetSP(m_stop_locker, m_lock, m_lock_error);
+  }
+
+  Status &GetError() { return m_lock_error; }
+
+private:
+  Process::StopLocker m_stop_locker;
+  std::unique_lock<std::recursive_mutex> m_lock;
+  Status m_lock_error;
 };
 
 } // namespace lldb_private

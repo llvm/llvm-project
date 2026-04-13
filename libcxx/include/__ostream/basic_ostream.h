@@ -15,6 +15,9 @@
 
 #  include <__exception/operations.h>
 #  include <__fwd/memory.h>
+#  include <__iterator/ostreambuf_iterator.h>
+#  include <__locale_dir/num.h>
+#  include <__locale_dir/pad_and_output.h>
 #  include <__memory/addressof.h>
 #  include <__memory/unique_ptr.h>
 #  include <__new/exceptions.h>
@@ -27,7 +30,6 @@
 #  include <__utility/declval.h>
 #  include <bitset>
 #  include <ios>
-#  include <locale>
 #  include <streambuf>
 #  include <string_view>
 
@@ -41,7 +43,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS basic_ostream : virtual public basic_ios<_CharT, _Traits> {
+class basic_ostream : virtual public basic_ios<_CharT, _Traits> {
 public:
   // types (inherited from basic_ios (27.5.4)):
   typedef _CharT char_type;
@@ -51,7 +53,7 @@ public:
   typedef typename traits_type::off_type off_type;
 
   // 27.7.2.2 Constructor/destructor:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 explicit basic_ostream(basic_streambuf<char_type, traits_type>* __sb) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 explicit basic_ostream(basic_streambuf<char_type, traits_type>* __sb) {
     this->init(__sb);
   }
   ~basic_ostream() override;
@@ -65,26 +67,26 @@ protected:
   // 27.7.2.3 Assign/swap
   inline _LIBCPP_HIDE_FROM_ABI basic_ostream& operator=(basic_ostream&& __rhs);
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void swap(basic_ostream& __rhs) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 void swap(basic_ostream& __rhs) {
     basic_ios<char_type, traits_type>::swap(__rhs);
   }
 
 public:
   // 27.7.2.4 Prefix/suffix:
-  class _LIBCPP_TEMPLATE_VIS sentry;
+  class sentry;
 
   // 27.7.2.6 Formatted output:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& operator<<(basic_ostream& (*__pf)(basic_ostream&)) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream& operator<<(basic_ostream& (*__pf)(basic_ostream&)) {
     return __pf(*this);
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream&
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream&
   operator<<(basic_ios<char_type, traits_type>& (*__pf)(basic_ios<char_type, traits_type>&)) {
     __pf(*this);
     return *this;
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& operator<<(ios_base& (*__pf)(ios_base&)) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream& operator<<(ios_base& (*__pf)(ios_base&)) {
     __pf(*this);
     return *this;
   }
@@ -172,16 +174,16 @@ public:
   basic_ostream& flush();
 
   // 27.7.2.5 seeks:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 pos_type tellp();
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& seekp(pos_type __pos);
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& seekp(off_type __off, ios_base::seekdir __dir);
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 pos_type tellp();
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream& seekp(pos_type __pos);
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream& seekp(off_type __off, ios_base::seekdir __dir);
 
 protected:
   _LIBCPP_HIDE_FROM_ABI basic_ostream() {} // extension, intentially does not initialize
 };
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS basic_ostream<_CharT, _Traits>::sentry {
+class basic_ostream<_CharT, _Traits>::sentry {
   bool __ok_;
   basic_ostream<_CharT, _Traits>& __os_;
 

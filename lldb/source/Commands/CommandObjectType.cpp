@@ -51,12 +51,13 @@ public:
   FormatterMatchType m_match_type;
   ConstString m_name;
   std::string m_category;
+  uint32_t m_ptr_match_depth;
 
   ScriptAddOptions(const TypeSummaryImpl::Flags &flags,
                    FormatterMatchType match_type, ConstString name,
-                   std::string catg)
+                   std::string catg, uint32_t m_ptr_match_depth)
       : m_flags(flags), m_match_type(match_type), m_name(name),
-        m_category(catg) {}
+        m_category(catg), m_ptr_match_depth(m_ptr_match_depth) {}
 
   typedef std::shared_ptr<ScriptAddOptions> SharedPointer;
 };
@@ -66,14 +67,16 @@ public:
   bool m_skip_pointers;
   bool m_skip_references;
   bool m_cascade;
+  bool m_wants_deref;
   FormatterMatchType m_match_type;
   StringList m_target_types;
   std::string m_category;
 
-  SynthAddOptions(bool sptr, bool sref, bool casc,
+  SynthAddOptions(bool sptr, bool sref, bool casc, bool wants_deref,
                   FormatterMatchType match_type, std::string catg)
       : m_skip_pointers(sptr), m_skip_references(sref), m_cascade(casc),
-        m_match_type(match_type), m_category(catg) {}
+        m_wants_deref(wants_deref), m_match_type(match_type), m_category(catg) {
+  }
 
   typedef std::shared_ptr<SynthAddOptions> SharedPointer;
 };
@@ -88,11 +91,10 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
       continue;
     auto next = command.entries()[entry.index() + 1].ref();
     if (next == "int" || next == "short" || next == "char" || next == "long") {
-      result.AppendWarningWithFormat(
-          "unsigned %s being treated as two types. if you meant the combined "
-          "type "
-          "name use  quotes, as in \"unsigned %s\"\n",
-          next.str().c_str(), next.str().c_str());
+      result.AppendWarningWithFormatv(
+          "unsigned {0} being treated as two types. if you meant the combined "
+          "type name use quotes, as in \"unsigned {0}\"",
+          next);
       return true;
     }
   }
@@ -146,6 +148,7 @@ private:
     std::string m_python_function;
     bool m_is_add_script = false;
     std::string m_category;
+    uint32_t m_ptr_match_depth = 1;
   };
 
   CommandOptions m_options;
@@ -211,7 +214,7 @@ public:
                 TypeSummaryImplSP script_format;
                 script_format = std::make_shared<ScriptSummaryFormat>(
                     options->m_flags, funct_name_str.c_str(),
-                    lines.CopyList("    ").c_str());
+                    lines.CopyList("    ").c_str(), options->m_ptr_match_depth);
 
                 Status error;
 
@@ -287,11 +290,11 @@ protected:
 static const char *g_synth_addreader_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
     "You must define a Python class with these methods:\n"
-    "    def __init__(self, valobj, internal_dict):\n"
-    "    def num_children(self):\n"
-    "    def get_child_at_index(self, index):\n"
-    "    def get_child_index(self, name):\n"
-    "    def update(self):\n"
+    "    def __init__(self, valobj: lldb.SBValue, internal_dict):\n"
+    "    def num_children(self) -> int:\n"
+    "    def get_child_at_index(self, index: int) -> lldb.SBValue | None:\n"
+    "    def get_child_index(self, name: str) -> int:\n"
+    "    def update(self) -> bool:\n"
     "        '''Optional'''\n"
     "class synthProvider:\n";
 
@@ -319,6 +322,13 @@ private:
         if (!success)
           error = Status::FromErrorStringWithFormat(
               "invalid value for cascade: %s", option_arg.str().c_str());
+        break;
+      case 'D':
+        m_wants_deref = OptionArgParser::ToBoolean(option_arg, true, &success);
+        if (!success)
+          error = Status::FromErrorStringWithFormat(
+              "invalid value for wants-dereference: %s",
+              option_arg.str().c_str());
         break;
       case 'P':
         handwrite_python = true;
@@ -359,6 +369,7 @@ private:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_cascade = true;
+      m_wants_deref = true;
       m_class_name = "";
       m_skip_pointers = false;
       m_skip_references = false;
@@ -377,6 +388,7 @@ private:
     bool m_cascade;
     bool m_skip_references;
     bool m_skip_pointers;
+    bool m_wants_deref;
     std::string m_class_name;
     bool m_input_python;
     std::string m_category;
@@ -452,7 +464,8 @@ protected:
                     SyntheticChildren::Flags()
                         .SetCascades(options->m_cascade)
                         .SetSkipPointers(options->m_skip_pointers)
-                        .SetSkipReferences(options->m_skip_references),
+                        .SetSkipReferences(options->m_skip_references)
+                        .SetFrontEndWantsDereference(options->m_wants_deref),
                     class_name_str.c_str());
 
                 lldb::TypeCategoryImplSP category;
@@ -1178,6 +1191,13 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
   case 'p':
     m_flags.SetSkipPointers(true);
     break;
+  case 'd':
+    if (option_arg.getAsInteger(0, m_ptr_match_depth)) {
+      error = Status::FromErrorStringWithFormat(
+          "invalid integer value for option '%c': %s", short_option,
+          option_arg.data());
+    }
+    break;
   case 'r':
     m_flags.SetSkipReferences(true);
     break;
@@ -1266,14 +1286,15 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
         ("    " + m_options.m_python_function + "(valobj,internal_dict)");
 
     script_format = std::make_shared<ScriptSummaryFormat>(
-        m_options.m_flags, funct_name, code.c_str());
+        m_options.m_flags, funct_name, code.c_str(),
+        m_options.m_ptr_match_depth);
 
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
     if (interpreter && !interpreter->CheckObjectExists(funct_name))
-      result.AppendWarningWithFormat(
-          "The provided function \"%s\" does not exist - "
-          "please define it before attempting to use this summary.\n",
+      result.AppendWarningWithFormatv(
+          "the provided function \"{0}\" does not exist - "
+          "please define it before attempting to use this summary",
           funct_name);
   } else if (!m_options.m_python_script
                   .empty()) // we have a quick 1-line script, just use it
@@ -1300,12 +1321,13 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     std::string code = "    " + m_options.m_python_script;
 
     script_format = std::make_shared<ScriptSummaryFormat>(
-        m_options.m_flags, funct_name_str.c_str(), code.c_str());
+        m_options.m_flags, funct_name_str.c_str(), code.c_str(),
+        m_options.m_ptr_match_depth);
   } else {
     // Use an IOHandler to grab Python code from the user
     auto options = std::make_unique<ScriptAddOptions>(
         m_options.m_flags, m_options.m_match_type, m_options.m_name,
-        m_options.m_category);
+        m_options.m_category, m_options.m_ptr_match_depth);
 
     for (auto &entry : command.entries()) {
       if (entry.ref().empty()) {
@@ -1380,8 +1402,8 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
     return false;
   }
 
-  std::unique_ptr<StringSummaryFormat> string_format(
-      new StringSummaryFormat(m_options.m_flags, format_cstr));
+  std::unique_ptr<StringSummaryFormat> string_format(new StringSummaryFormat(
+      m_options.m_flags, format_cstr, m_options.m_ptr_match_depth));
   if (!string_format) {
     result.AppendError("summary creation failed");
     return false;
@@ -1593,7 +1615,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2120,7 +2142,8 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
     Args &command, CommandReturnObject &result) {
   auto options = std::make_unique<SynthAddOptions>(
       m_options.m_skip_pointers, m_options.m_skip_references,
-      m_options.m_cascade, m_options.m_match_type, m_options.m_category);
+      m_options.m_cascade, m_options.m_wants_deref, m_options.m_match_type,
+      m_options.m_category);
 
   for (auto &entry : command.entries()) {
     if (entry.ref().empty()) {
@@ -2162,6 +2185,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   ScriptedSyntheticChildren *impl = new ScriptedSyntheticChildren(
       SyntheticChildren::Flags()
           .SetCascades(m_options.m_cascade)
+          .SetFrontEndWantsDereference(m_options.m_wants_deref)
           .SetSkipPointers(m_options.m_skip_pointers)
           .SetSkipReferences(m_options.m_skip_references),
       m_options.m_class_name.c_str());
@@ -2170,10 +2194,12 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
 
   ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
-  if (interpreter &&
-      !interpreter->CheckObjectExists(impl->GetPythonClassName()))
-    result.AppendWarning("The provided class does not exist - please define it "
-                         "before attempting to use this synthetic provider");
+  const char *python_class_name = impl->GetPythonClassName();
+  if (interpreter && !interpreter->CheckObjectExists(python_class_name))
+    result.AppendWarningWithFormatv(
+        "the provided class '{0}' does not exist - please define it "
+        "before attempting to use this synthetic provider",
+        llvm::StringRef(python_class_name));
 
   // now I have a valid provider, let's add it to every type
 
@@ -2235,10 +2261,10 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter,
                              false)) {
       if (error)
-        *error = Status::FromErrorStringWithFormat(
-            "cannot add synthetic for type %s when "
+        *error = Status::FromErrorStringWithFormatv(
+            "cannot add synthetic for type {0} when "
             "filter is defined in same category!",
-            type_name.AsCString());
+            type_name);
       return false;
     }
   }
@@ -2254,7 +2280,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2377,11 +2403,11 @@ private:
       if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth,
                                false)) {
         if (error)
-          *error = Status::FromErrorStringWithFormat(
-              "cannot add filter for type %s when "
+          *error = Status::FromErrorStringWithFormatv(
+              "cannot add filter for type {0} when "
               "synthetic is defined in same "
               "category!",
-              type_name.AsCString());
+              type_name);
         return false;
       }
     }
@@ -2523,7 +2549,7 @@ protected:
     if (lang_type != lldb::eLanguageTypeUnknown)
       return lang_type;
 
-    Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
+    const Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
     if (s)
       lang_type = s->GetMangled().GuessLanguage();
 
@@ -2599,7 +2625,7 @@ public:
     Language::ForEach([&](Language *lang) {
       if (const char *help = lang->GetLanguageSpecificTypeLookupHelp())
         stream.Printf("%s\n", help);
-      return true;
+      return IterationAction::Continue;
     });
 
     m_cmd_help_long = std::string(stream.GetString());
@@ -2638,7 +2664,7 @@ public:
              (m_command_options.m_language == eLanguageTypeUnknown))) {
       Language::ForEach([&](Language *lang) {
         languages.push_back(lang);
-        return true;
+        return IterationAction::Continue;
       });
     } else {
       languages.push_back(Language::FindPlugin(m_command_options.m_language));
@@ -2700,8 +2726,8 @@ public:
     }
 
     if (!any_found)
-      result.AppendMessageWithFormat("no type was found matching '%s'\n",
-                                     name_of_type);
+      result.AppendMessageWithFormatv("no type was found matching '{0}'",
+                                      name_of_type);
 
     result.SetStatus(any_found ? lldb::eReturnStatusSuccessFinishResult
                                : lldb::eReturnStatusSuccessFinishNoResult);

@@ -79,7 +79,7 @@ def read_cfg():
 
 
 # perf2bolt mode
-PERF2BOLT_MODE = ["-aggregate-only", "-ignore-build-id"]
+PERF2BOLT_MODE = ["-aggregate-only", "-ignore-build-id", "-show-density"]
 
 # boltdiff mode
 BOLTDIFF_MODE = ["-diff-only", "-o", "/dev/null"]

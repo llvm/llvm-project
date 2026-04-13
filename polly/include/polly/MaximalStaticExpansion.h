@@ -14,29 +14,11 @@
 #ifndef POLLY_MAXIMALSTATICEXPANSION_H
 #define POLLY_MAXIMALSTATICEXPANSION_H
 
-#include "polly/ScopPass.h"
-#include "llvm/IR/PassManager.h"
+#include "polly/DependenceInfo.h"
 
 namespace polly {
 
-class MaximalStaticExpansionPass
-    : public llvm::PassInfoMixin<MaximalStaticExpansionPass> {
-public:
-  llvm::PreservedAnalyses run(Scop &, ScopAnalysisManager &,
-                              ScopStandardAnalysisResults &, SPMUpdater &);
-};
-
-struct MaximalStaticExpansionPrinterPass
-    : llvm::PassInfoMixin<MaximalStaticExpansionPrinterPass> {
-  MaximalStaticExpansionPrinterPass(raw_ostream &OS) : OS(OS) {}
-
-  PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
-                        ScopStandardAnalysisResults &SAR, SPMUpdater &);
-
-private:
-  llvm::raw_ostream &OS;
-};
-
+void runMaximalStaticExpansion(Scop &S, DependenceAnalysis::Result &DI);
 } // namespace polly
 
 #endif /* POLLY_MAXIMALSTATICEXPANSION_H */

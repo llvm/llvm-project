@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -79,6 +80,15 @@ enum : unsigned {
   WASM_TYPE_REC = 0x4E,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
+
+// Memory ordering encodings for atomic instructions.
+enum : unsigned {
+  WASM_MEM_ORDER_SEQ_CST = 0x00,
+  WASM_MEM_ORDER_ACQ_REL = 0x01,
+  // RMW/CMPXCHG operations have 2 orderings but they must currently match.
+  WASM_MEM_ORDER_RMW_ACQ_REL = 0x11,
+};
+const unsigned WASM_MEMARG_HAS_MEM_ORDER = 0x20;
 
 // Kinds of externals (for imports and exports).
 enum : unsigned {
@@ -252,7 +262,7 @@ const unsigned WASM_SYMBOL_ABSOLUTE = 0x200;
 
 #define WASM_RELOC(name, value) name = value,
 
-enum : unsigned {
+enum WasmRelocType : unsigned {
 #include "WasmRelocs.def"
 };
 
@@ -451,6 +461,8 @@ struct WasmRelocation {
   uint32_t Index;  // Index into either symbol or type index space.
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
+
+  WasmRelocType getType() const { return static_cast<WasmRelocType>(Type); }
 };
 
 struct WasmInitFunc {
@@ -547,10 +559,10 @@ inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
   return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
 }
 
-llvm::StringRef toString(WasmSymbolType type);
-llvm::StringRef relocTypetoString(uint32_t type);
-llvm::StringRef sectionTypeToString(uint32_t type);
-bool relocTypeHasAddend(uint32_t type);
+LLVM_ABI llvm::StringRef toString(WasmSymbolType type);
+LLVM_ABI llvm::StringRef relocTypetoString(uint32_t type);
+LLVM_ABI llvm::StringRef sectionTypeToString(uint32_t type);
+LLVM_ABI bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm
 } // end namespace llvm

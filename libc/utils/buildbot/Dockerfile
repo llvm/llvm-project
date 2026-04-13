@@ -1,4 +1,4 @@
-FROM debian:10
+FROM docker.io/debian:10
 
 # Installing dependencies.
 RUN dpkg --add-architecture i386
@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y build-essential clang subversion git \
   ninja-build python3
 RUN python -m pip install buildbot-worker==2.8.4
 
-# Temporary dependencies for AOR tests.
+# Dependencies for math tests.
 RUN apt-get install -y libmpfr-dev libmpc-dev
 
 # Change linker to gold.

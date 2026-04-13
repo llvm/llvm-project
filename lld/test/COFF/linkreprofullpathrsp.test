@@ -1,0 +1,43 @@
+# REQUIRES: x86
+
+# RUN: rm -rf %t.dir %t.obj
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
+# RUN: yaml2obj %p/Inputs/empty.yaml -o %t.archive.obj
+# RUN: rm -f %t.archive.lib
+# RUN: llvm-ar rcs %t.archive.lib %t.archive.obj
+# RUN: llvm-pdbutil yaml2pdb %S/Inputs/pdb-type-server-simple-ts.yaml -pdb %t.pdb
+
+
+Test link.exe-style /linkreprofullpathrsp: flag.
+# RUN: mkdir -p %t.dir/build1
+# RUN: cd %t.dir/build1
+# RUN: lld-link /subsystem:console %t.obj %p/Inputs/std32.lib /defaultlib:%p/Inputs/library.lib \
+# RUN:  /libpath:%p/Inputs /defaultlib:std64.lib ret42.lib /entry:main@0 /linkreprofullpathrsp:%t.rsp \
+# RUN:   %t.pdb /wholearchive:%t.archive.lib /out:%t.exe /timestamp:0
+# # RUN: FileCheck %s --check-prefix=RSP -DT=%t -DP=%p < %t.rsp
+
+# RUN: lld-link /subsystem:console @%t.rsp /out:%t2.exe /entry:main@0 /timestamp:0
+# RUN: diff %t.exe %t2.exe
+
+# RSP: "[[T]].obj"
+# RSP-NEXT: "[[P]]{{[/\\]}}Inputs{{[/\\]}}std32.lib"
+# RSP-NEXT: "[[P]]{{[/\\]}}Inputs{{[/\\]}}ret42.lib"
+# RSP-NEXT: "[[T]].pdb"
+# RSP-NEXT: "/wholearchive:[[T]].archive.lib"
+# RSP-NEXT: "/defaultlib:[[P]]{{[/\\]}}Inputs{{[/\\]}}library.lib"
+# RSP-NEXT: "/defaultlib:[[P]]{{[/\\]}}Inputs{{[/\\]}}std64.lib"
+
+#--- drectve.s
+        .section .drectve, "yn"
+        .ascii "/defaultlib:std32"
+
+#--- archive.s
+	.text
+	.intel_syntax noprefix
+	.globl	exportfn3
+	.p2align	4
+exportfn3:
+	ret
+
+	.section	.drectve,"yni"
+	.ascii	" /EXPORT:exportfn3"

@@ -10,6 +10,8 @@ from lldbsuite.test.lldbutil import get_stopped_thread, get_caller_symbol
 
 
 class ThreadAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_get_process(self):
         """Test Python SBThread.GetProcess() API."""
         self.build()
@@ -29,7 +31,7 @@ class ThreadAPITestCase(TestBase):
         self.run_to_address(self.exe_name)
 
     @skipIfAsan  # The output looks different under ASAN.
-    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr45892")
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"], bugnumber="llvm.org/pr45892")
     @expectedFailureAll(oslist=["windows"])
     def test_step_out_of_malloc_into_function_b(self):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
@@ -137,6 +139,11 @@ class ThreadAPITestCase(TestBase):
         self.assertEqual(
             "breakpoint 1.1", thread.GetStopDescription(len("breakpoint 1.1") + 100)
         )
+
+        # Test the stream variation
+        stream = lldb.SBStream()
+        self.assertTrue(thread.GetStopDescription(stream))
+        self.assertEqual("breakpoint 1.1", stream.GetData())
 
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""

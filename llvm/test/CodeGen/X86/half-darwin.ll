@@ -105,7 +105,7 @@ define void @strict_truncsfhf(float %in, ptr %ptr) nounwind strictfp {
 ; CHECK-F16C-LABEL: strict_truncsfhf:
 ; CHECK-F16C:       ## %bb.0:
 ; CHECK-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; CHECK-F16C-NEXT:    retq

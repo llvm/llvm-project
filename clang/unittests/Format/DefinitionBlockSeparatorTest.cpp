@@ -540,7 +540,7 @@ TEST_F(DefinitionBlockSeparatorTest, Leave) {
 TEST_F(DefinitionBlockSeparatorTest, CSharp) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("namespace {\r\n"
                "public class SomeTinyClass {\r\n"
@@ -574,6 +574,11 @@ TEST_F(DefinitionBlockSeparatorTest, CSharp) {
                "\r\n"
                "public class FoobarClass {\r\n"
                "  int foobar;\r\n"
+               "}\r\n"
+               "\r\n"
+               "public class LogFactory<TLogger>\r\n"
+               "    where TLogger : class, new() {\r\n"
+               "  int i;\r\n"
                "}",
                Style);
 }
@@ -581,7 +586,7 @@ TEST_F(DefinitionBlockSeparatorTest, CSharp) {
 TEST_F(DefinitionBlockSeparatorTest, JavaScript) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_JavaScript);
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("export const enum Foo {\n"
                "  A = 1,\n"

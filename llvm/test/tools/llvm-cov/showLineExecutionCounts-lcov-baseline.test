@@ -1,0 +1,37 @@
+// FULL: SF:{{.*}}showLineExecutionCounts.cpp
+// FULL: FN:6,main
+// FULL: FNDA:0,main
+// FULL: FNF:1
+// FULL: FNH:0
+int main() {                              // FULL: DA:[[@LINE]],0
+  int x = 0;                              // FULL: DA:[[@LINE]],0
+                                          // FULL: DA:[[@LINE]],0
+  if (x) {                                // FULL: DA:[[@LINE]],0
+    x = 0;                                // FULL: DA:[[@LINE]],0
+  } else {                                // FULL: DA:[[@LINE]],0
+    x = 1;                                // FULL: DA:[[@LINE]],0
+  }                                       // FULL: DA:[[@LINE]],0
+                                          // FULL: DA:[[@LINE]],0
+  for (int i = 0; i < 100; ++i) {         // FULL: DA:[[@LINE]],0
+    x = 1;                                // FULL: DA:[[@LINE]],0
+  }                                       // FULL: DA:[[@LINE]],0
+                                          // FULL: DA:[[@LINE]],0
+  x = x < 10 ? x + 1 : x - 1;             // FULL: DA:[[@LINE]],0
+  x = x > 10 ?                            // FULL: DA:[[@LINE]],0
+        x - 1:                            // FULL: DA:[[@LINE]],0
+        x + 1;                            // FULL: DA:[[@LINE]],0
+                                          // FULL: DA:[[@LINE]],0
+  return 0;                               // FULL: DA:[[@LINE]],0
+}                                         // FULL: DA:[[@LINE]],0
+// FULL: LF:20
+// FULL: LH:0
+// FULL: end_of_record
+// RUN: llvm-cov export -format=lcov %S/Inputs/lineExecutionCounts.covmapping -empty-profile %s | FileCheck -check-prefixes=FULL %s
+
+// RUN: llvm-cov export -format=lcov -summary-only %S/Inputs/lineExecutionCounts.covmapping -empty-profile %s | FileCheck -check-prefixes=SUMMARYONLY %s
+// SUMMARYONLY: SF:{{.*}}showLineExecutionCounts.cpp
+// SUMMARYONLY: FNF:1
+// SUMMARYONLY: FNH:0
+// SUMMARYONLY: LF:20
+// SUMMARYONLY: LH:0
+// SUMMARYONLY: end_of_record

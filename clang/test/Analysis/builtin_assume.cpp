@@ -62,3 +62,16 @@ int using_builtin_assume_has_no_sideeffects(int y) {
 
   return y;
 }
+
+template <int ...args>
+bool issue151529() {
+  // no-crash
+  [[assume((true))]]; 
+  // no-crash
+  [[assume(((args >= 0) && ...))]];  // expected-warning {{pack fold expression is a C++17 extension}}
+  return ((args >= 0) && ...); // expected-warning {{pack fold expression is a C++17 extension}}
+}
+
+void instantiate_issue151529() {
+  issue151529<0>();
+}

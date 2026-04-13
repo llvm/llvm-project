@@ -8,12 +8,12 @@
 
 // <list>
 
-// iterator       begin();
-// iterator       end();
-// const_iterator begin()  const;
-// const_iterator end()    const;
-// const_iterator cbegin() const;
-// const_iterator cend()   const;
+// iterator       begin();        // constexpr since C++26
+// iterator       end();          // constexpr since C++26
+// const_iterator begin()  const; // constexpr since C++26
+// const_iterator end()    const; // constexpr since C++26
+// const_iterator cbegin() const; // constexpr since C++26
+// const_iterator cend()   const; // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -27,7 +27,7 @@ struct A {
   int second;
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int T;
     typedef std::list<T> C;
@@ -74,6 +74,8 @@ int main(int, char**) {
     typedef std::list<T> C;
     C::iterator i;
     C::const_iterator j;
+    (void)i;
+    (void)j;
   }
 #if TEST_STD_VER >= 11
   {
@@ -122,6 +124,8 @@ int main(int, char**) {
     typedef std::list<T, min_allocator<T>> C;
     C::iterator i;
     C::const_iterator j;
+    (void)i;
+    (void)j;
   }
   {
     typedef A T;
@@ -148,6 +152,15 @@ int main(int, char**) {
     assert(!(ii1 != cii));
     assert(!(cii != ii1));
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

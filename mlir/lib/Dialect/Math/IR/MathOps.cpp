@@ -285,6 +285,16 @@ OpFoldResult math::SinhOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// SinCosOp getShapeForUnroll
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>> math::SincosOp::getShapeForUnroll() {
+  if (auto vt = mlir::dyn_cast<VectorType>(getOperand().getType()))
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
 // CountLeadingZerosOp folder
 //===----------------------------------------------------------------------===//
 
@@ -360,6 +370,9 @@ OpFoldResult math::IPowIOp::fold(FoldAdaptor adaptor) {
       [](const APInt &base, const APInt &power) -> std::optional<APInt> {
         unsigned width = base.getBitWidth();
         auto zeroValue = APInt::getZero(width);
+        // i1 folding is ambiguous with signed semantics, don't fold.
+        if (width == 1)
+          return {};
         APInt oneValue{width, 1ULL, /*isSigned=*/true};
         APInt minusOneValue{width, -1ULL, /*isSigned=*/true};
 
@@ -370,7 +383,7 @@ OpFoldResult math::IPowIOp::fold(FoldAdaptor adaptor) {
           // Leave 0 raised to negative power not folded.
           if (base.isZero())
             return {};
-          if (base.eq(oneValue))
+          if (base.isOne())
             return oneValue;
           // If abs(base) > 1, then the result is zero.
           if (base.ne(minusOneValue))
@@ -501,6 +514,28 @@ OpFoldResult math::PowFOp::fold(FoldAdaptor adaptor) {
           return APFloat(powf(a.convertToFloat(), b.convertToFloat()));
 
         return {};
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// RsqrtOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::RsqrtOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        if (a.isNegative())
+          return {};
+
+        APFloat one(a.getSemantics(), 1);
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return one / APFloat(sqrt(a.convertToDouble()));
+        case 32:
+          return one / APFloat(sqrtf(a.convertToFloat()));
+        default:
+          return {};
+        }
       });
 }
 
@@ -746,7 +781,7 @@ Operation *math::MathDialect::materializeConstant(OpBuilder &builder,
                                                   Attribute value, Type type,
                                                   Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }

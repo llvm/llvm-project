@@ -7,9 +7,9 @@
 
 ; CHECK: Capability LongCompositesINTEL
 ; CHECK: Extension "SPV_INTEL_long_composites"
-; CHECK: %[[#TInt:]] = OpTypeInt 8 0
-; CHECK: %[[#TIntPtr:]] = OpTypePointer Generic %[[#TInt]]
-; CHECK: %[[#TArr:]] = OpTypeArray
+; CHECK-DAG: %[[#TInt:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#TIntPtr:]] = OpTypePointer Generic %[[#TInt]]
+; CHECK-DAG: %[[#TArr:]] = OpTypeArray
 
 ; CHECK: OpTypeStruct %[[#TIntPtr]] %[[#TIntPtr]] %[[#TArr]] %[[#TInt]] %[[#TInt]] %[[#TInt]]
 ; CHECK-NEXT: OpTypeStructContinuedINTEL %[[#TInt]] %[[#TInt]] %[[#TInt]] %[[#TInt]] %[[#TInt]] %[[#TInt]] %[[#TInt]] %[[#TInt]] %[[#TInt]]{{$}}
@@ -20,5 +20,6 @@
 define spir_kernel void @test() {
 entry:
   %a = alloca %struct.A, align 8
+  store i8 0, ptr %a
   ret void
 }

@@ -19,6 +19,8 @@
 namespace llvm {
 
 class BasicBlock;
+class CallBrInst;
+class LoopInfo;
 class DomTreeUpdater;
 
 /// Given a set of branch descriptors [BB, Succ0, Succ1], create a "hub" such
@@ -104,7 +106,8 @@ struct ControlFlowHub {
         : BB(BB), Succ0(Succ0), Succ1(Succ1) {}
   };
 
-  void addBranch(BasicBlock *BB, BasicBlock *Succ0, BasicBlock *Succ1) {
+  void addBranch(BasicBlock *BB, BasicBlock *Succ0,
+                 BasicBlock *Succ1 = nullptr) {
     assert(BB);
     assert(Succ0 || Succ1);
     Branches.emplace_back(BB, Succ0, Succ1);

@@ -13,7 +13,6 @@ llvm.func @parallel_infinite_loop() -> () {
 }
 
 // CHECK-LABEL: define void @parallel_infinite_loop() {
-// CHECK:         %[[VAL_2:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         br label %[[VAL_3:.*]]
 // CHECK:       omp_parallel:
 // CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 0, ptr @parallel_infinite_loop..omp_par)
@@ -21,9 +20,11 @@ llvm.func @parallel_infinite_loop() -> () {
 // CHECK:       omp.region.cont:                                  ; No predecessors!
 // CHECK:         br label %[[VAL_4:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_5:.*]]
-// CHECK:         br label %[[VAL_6:.*]]
-// CHECK:       omp.par.exit:                                     ; preds = %[[VAL_4]]
+// CHECK:         br label %[[FINI:.*]]
+// CHECK:       [[OMP_PAR_EXIT:omp.par.exit]]:                                     ; preds = %[[FINI]]
 // CHECK:         ret void
+// CHECK:       [[FINI]]:
+// CHECK:         br label %[[OMP_PAR_EXIT]]
 // CHECK:       }
 
 // CHECK-LABEL: define internal void @parallel_infinite_loop..omp_par(

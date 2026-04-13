@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_PTHREAD_MACRO_H
 #define LLVM_LIBC_MACROS_PTHREAD_MACRO_H
 
-#include "null-macro.h"
+#define PTHREAD_NULL {0}
 
 #define PTHREAD_CREATE_JOINABLE 0
 #define PTHREAD_CREATE_DETACHED 1
@@ -21,6 +21,8 @@
 
 #define PTHREAD_MUTEX_STALLED 0
 #define PTHREAD_MUTEX_ROBUST 1
+
+#define PTHREAD_BARRIER_SERIAL_THREAD -1
 
 #define PTHREAD_ONCE_INIT {0}
 
@@ -45,15 +47,17 @@
 
 #define PTHREAD_RWLOCK_INITIALIZER                                             \
   {                                                                            \
-      /* .__is_pshared = */ 0,                                                 \
-      /* .__preference = */ 0,                                                 \
-      /* .__state = */ 0,                                                      \
+      /* .__raw = */ {                                                         \
+          /* .__is_pshared = */ 0,                                             \
+          /* .__preference = */ 0,                                             \
+          /* .__state = */ 0,                                                  \
+          /* .__wait_queue_mutex = */ {0},                                     \
+          /* .__pending_readers = */ {0},                                      \
+          /* .__pending_writers = */ {0},                                      \
+          /* .__reader_serialization = */ {0},                                 \
+          /* .__writer_serialization = */ {0},                                 \
+      },                                                                       \
       /* .__write_tid = */ 0,                                                  \
-      /* .__wait_queue_mutex = */ {0},                                         \
-      /* .__pending_readers = */ {0},                                          \
-      /* .__pending_writers = */ {0},                                          \
-      /* .__reader_serialization = */ {0},                                     \
-      /* .__writer_serialization = */ {0},                                     \
   }
 
 // glibc extensions

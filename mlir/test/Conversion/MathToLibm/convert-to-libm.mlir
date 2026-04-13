@@ -79,21 +79,17 @@ func.func @absf_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-LABEL:   func @absf_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @fabsf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @fabsf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @fabs(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @fabs(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 func.func @absf_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.absf %float : vector<2xf32>
@@ -116,21 +112,17 @@ func.func @acos_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-LABEL:   func @acos_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @acosf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @acosf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @acos(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @acos(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 func.func @acos_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.acos %float : vector<2xf32>
@@ -153,21 +145,17 @@ func.func @acosh_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-LABEL:   func @acosh_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @acoshf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @acoshf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @acosh(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @acosh(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 func.func @acosh_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.acosh %float : vector<2xf32>
@@ -190,21 +178,17 @@ func.func @asin_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-LABEL:   func @asin_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @asinf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @asinf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @asin(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @asin(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 func.func @asin_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.asin %float : vector<2xf32>
@@ -227,21 +211,17 @@ func.func @asinh_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-LABEL:   func @asinh_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @asinhf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @asinhf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @asinh(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @asinh(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 func.func @asinh_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.asinh %float : vector<2xf32>
@@ -274,21 +254,17 @@ func.func @atan_caller(%float: f32, %double: f64, %half: f16, %bfloat: bf16) -> 
 // CHECK-LABEL:   func @atan_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @atanf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @atanf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @atan(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @atan(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 func.func @atan_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.atan %float : vector<2xf32>
@@ -321,21 +297,17 @@ func.func @atanh_caller(%float: f32, %double: f64, %half: f16, %bfloat: bf16) ->
 // CHECK-LABEL:   func @atanh_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @atanhf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @atanhf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @atanh(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @atanh(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 func.func @atanh_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.atanh %float : vector<2xf32>
@@ -419,23 +391,19 @@ func.func @erf_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
 func.func @erf_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-  // CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-  // CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
   // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
   // CHECK:           %[[OUT0_F32:.*]] = call @erff(%[[IN0_F32]]) : (f32) -> f32
-  // CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
   // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
   // CHECK:           %[[OUT1_F32:.*]] = call @erff(%[[IN1_F32]]) : (f32) -> f32
-  // CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+  // CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
   %float_result = math.erf %float : vector<2xf32>
   // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
   // CHECK:           %[[OUT0_F64:.*]] = call @erf(%[[IN0_F64]]) : (f64) -> f64
-  // CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
   // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
   // CHECK:           %[[OUT1_F64:.*]] = call @erf(%[[IN1_F64]]) : (f64) -> f64
-  // CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+  // CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
   %double_result = math.erf %double : vector<2xf64>
-  // CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+  // CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
   return %float_result, %double_result : vector<2xf32>, vector<2xf64>
 }
 
@@ -459,21 +427,17 @@ func.func @exp_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vec
 // CHECK-LABEL:   func @exp_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @expf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @expf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @exp(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @exp(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 // CHECK-LABEL: func @exp2_caller
@@ -496,21 +460,17 @@ func.func @exp2_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (ve
 // CHECK-LABEL:   func @exp2_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @exp2f(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @exp2f(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @exp2(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @exp2(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 // CHECK-LABEL: func @log_caller
@@ -533,21 +493,17 @@ func.func @log_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vec
 // CHECK-LABEL:   func @log_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @logf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @logf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @log(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @log(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 // CHECK-LABEL: func @log2_caller
@@ -570,21 +526,17 @@ func.func @log2_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (ve
 // CHECK-LABEL:   func @log2_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @log2f(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @log2f(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @log2(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @log2(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 // CHECK-LABEL: func @log10_caller
@@ -607,21 +559,17 @@ func.func @log10_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (v
 // CHECK-LABEL:   func @log10_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @log10f(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @log10f(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @log10(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @log10(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 // CHECK-LABEL: func @expm1_caller
@@ -644,21 +592,17 @@ func.func @expm1_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (v
 // CHECK-LABEL:   func @expm1_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @expm1f(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @expm1f(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @expm1(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @expm1(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 func.func @expm1_multidim_vec_caller(%float: vector<2x2xf32>) -> (vector<2x2xf32>) {
@@ -667,20 +611,16 @@ func.func @expm1_multidim_vec_caller(%float: vector<2x2xf32>) -> (vector<2x2xf32
 }
 // CHECK-LABEL:   func @expm1_multidim_vec_caller(
 // CHECK-SAME:                           %[[VAL:.*]]: vector<2x2xf32>
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2x2xf32>
 // CHECK:           %[[IN0_0_F32:.*]] = vector.extract %[[VAL]][0, 0] : f32 from vector<2x2xf32>
 // CHECK:           %[[OUT0_0_F32:.*]] = call @expm1f(%[[IN0_0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_1:.*]] = vector.insert %[[OUT0_0_F32]], %[[CVF]] [0, 0] : f32 into vector<2x2xf32>
 // CHECK:           %[[IN0_1_F32:.*]] = vector.extract %[[VAL]][0, 1] : f32 from vector<2x2xf32>
 // CHECK:           %[[OUT0_1_F32:.*]] = call @expm1f(%[[IN0_1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_2:.*]] = vector.insert %[[OUT0_1_F32]], %[[VAL_1]] [0, 1] : f32 into vector<2x2xf32>
 // CHECK:           %[[IN1_0_F32:.*]] = vector.extract %[[VAL]][1, 0] : f32 from vector<2x2xf32>
 // CHECK:           %[[OUT1_0_F32:.*]] = call @expm1f(%[[IN1_0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_3:.*]] = vector.insert %[[OUT1_0_F32]], %[[VAL_2]] [1, 0] : f32 into vector<2x2xf32>
 // CHECK:           %[[IN1_1_F32:.*]] = vector.extract %[[VAL]][1, 1] : f32 from vector<2x2xf32>
 // CHECK:           %[[OUT1_1_F32:.*]] = call @expm1f(%[[IN1_1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_4:.*]] = vector.insert %[[OUT1_1_F32]], %[[VAL_3]] [1, 1] : f32 into vector<2x2xf32>
-// CHECK:           return %[[VAL_4]] : vector<2x2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_0_F32]], %[[OUT0_1_F32]], %[[OUT1_0_F32]], %[[OUT1_1_F32]] : vector<2x2xf32>
+// CHECK:           return %[[RES_F32]] : vector<2x2xf32>
 // CHECK:         }
 
 // CHECK-LABEL: func @fma_caller(
@@ -704,29 +644,25 @@ func.func @fma_vec_caller(%float_a: vector<2xf32>, %float_b: vector<2xf32>, %flo
 // CHECK-SAME:                           %[[VAL_0A:.*]]: vector<2xf32>, %[[VAL_0B:.*]]: vector<2xf32>, %[[VAL_0C:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1A:.*]]: vector<2xf64>, %[[VAL_1B:.*]]: vector<2xf64>, %[[VAL_1C:.*]]: vector<2xf64>
 // CHECK-SAME:                           ) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32A:.*]] = vector.extract %[[VAL_0A]][0] : f32 from vector<2xf32>
 // CHECK:           %[[IN0_F32B:.*]] = vector.extract %[[VAL_0B]][0] : f32 from vector<2xf32>
 // CHECK:           %[[IN0_F32C:.*]] = vector.extract %[[VAL_0C]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @fmaf(%[[IN0_F32A]], %[[IN0_F32B]], %[[IN0_F32C]]) : (f32, f32, f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32A:.*]] = vector.extract %[[VAL_0A]][1] : f32 from vector<2xf32>
 // CHECK:           %[[IN1_F32B:.*]] = vector.extract %[[VAL_0B]][1] : f32 from vector<2xf32>
 // CHECK:           %[[IN1_F32C:.*]] = vector.extract %[[VAL_0C]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @fmaf(%[[IN1_F32A]], %[[IN1_F32B]], %[[IN1_F32C]]) : (f32, f32, f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64A:.*]] = vector.extract %[[VAL_1A]][0] : f64 from vector<2xf64>
 // CHECK:           %[[IN0_F64B:.*]] = vector.extract %[[VAL_1B]][0] : f64 from vector<2xf64>
 // CHECK:           %[[IN0_F64C:.*]] = vector.extract %[[VAL_1C]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @fma(%[[IN0_F64A]], %[[IN0_F64B]], %[[IN0_F64C]]) : (f64, f64, f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64A:.*]] = vector.extract %[[VAL_1A]][1] : f64 from vector<2xf64>
 // CHECK:           %[[IN1_F64B:.*]] = vector.extract %[[VAL_1B]][1] : f64 from vector<2xf64>
 // CHECK:           %[[IN1_F64C:.*]] = vector.extract %[[VAL_1C]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @fma(%[[IN1_F64A]], %[[IN1_F64B]], %[[IN1_F64C]]) : (f64, f64, f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 // CHECK-LABEL: func @round_caller
@@ -814,23 +750,19 @@ func.func @sin_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
 func.func @round_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-  // CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-  // CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
   // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
   // CHECK:           %[[OUT0_F32:.*]] = call @roundf(%[[IN0_F32]]) : (f32) -> f32
-  // CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
   // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
   // CHECK:           %[[OUT1_F32:.*]] = call @roundf(%[[IN1_F32]]) : (f32) -> f32
-  // CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+  // CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
   %float_result = math.round %float : vector<2xf32>
   // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
   // CHECK:           %[[OUT0_F64:.*]] = call @round(%[[IN0_F64]]) : (f64) -> f64
-  // CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
   // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
   // CHECK:           %[[OUT1_F64:.*]] = call @round(%[[IN1_F64]]) : (f64) -> f64
-  // CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+  // CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
   %double_result = math.round %double : vector<2xf64>
-  // CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+  // CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
   return %float_result, %double_result : vector<2xf32>, vector<2xf64>
 }
 
@@ -838,23 +770,19 @@ func.func @round_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (v
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
 func.func @roundeven_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-  // CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-  // CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
   // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
   // CHECK:           %[[OUT0_F32:.*]] = call @roundevenf(%[[IN0_F32]]) : (f32) -> f32
-  // CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
   // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
   // CHECK:           %[[OUT1_F32:.*]] = call @roundevenf(%[[IN1_F32]]) : (f32) -> f32
-  // CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+  // CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
   %float_result = math.roundeven %float : vector<2xf32>
   // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
   // CHECK:           %[[OUT0_F64:.*]] = call @roundeven(%[[IN0_F64]]) : (f64) -> f64
-  // CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
   // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
   // CHECK:           %[[OUT1_F64:.*]] = call @roundeven(%[[IN1_F64]]) : (f64) -> f64
-  // CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+  // CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
   %double_result = math.roundeven %double : vector<2xf64>
-  // CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+  // CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
   return %float_result, %double_result : vector<2xf32>, vector<2xf64>
 }
 
@@ -862,23 +790,19 @@ func.func @roundeven_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
 func.func @trunc_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-  // CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-  // CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
   // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
   // CHECK:           %[[OUT0_F32:.*]] = call @truncf(%[[IN0_F32]]) : (f32) -> f32
-  // CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
   // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
   // CHECK:           %[[OUT1_F32:.*]] = call @truncf(%[[IN1_F32]]) : (f32) -> f32
-  // CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+  // CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
   %float_result = math.trunc %float : vector<2xf32>
   // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
   // CHECK:           %[[OUT0_F64:.*]] = call @trunc(%[[IN0_F64]]) : (f64) -> f64
-  // CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
   // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
   // CHECK:           %[[OUT1_F64:.*]] = call @trunc(%[[IN1_F64]]) : (f64) -> f64
-  // CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+  // CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
   %double_result = math.trunc %double : vector<2xf64>
-  // CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+  // CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
   return %float_result, %double_result : vector<2xf32>, vector<2xf64>
 }
 
@@ -907,21 +831,17 @@ func.func @tan_caller(%float: f32, %double: f64, %half: f16, %bfloat: bf16) -> (
 // CHECK-LABEL:   func @tan_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @tanf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @tanf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @tan(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @tan(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 func.func @tan_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.tan %float : vector<2xf32>
@@ -985,21 +905,17 @@ func.func @sqrt_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (ve
 // CHECK-LABEL:   func @sqrt_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @sqrtf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @sqrtf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @sqrt(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @sqrt(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 // CHECK-LABEL: func @rsqrt_caller
@@ -1022,21 +938,17 @@ func.func @rsqrt_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (v
 // CHECK-LABEL:   func @rsqrt_vec_caller(
 // CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @rsqrtf(%[[IN0_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @rsqrtf(%[[IN1_F32]]) : (f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @rsqrt(%[[IN0_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @rsqrt(%[[IN1_F64]]) : (f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
 // CHECK-LABEL: func @powf_caller(
@@ -1060,23 +972,19 @@ func.func @powf_vec_caller(%float_a: vector<2xf32>, %float_b: vector<2xf32>, %do
 // CHECK-SAME:                           %[[VAL_0A:.*]]: vector<2xf32>, %[[VAL_0B:.*]]: vector<2xf32>,
 // CHECK-SAME:                           %[[VAL_1A:.*]]: vector<2xf64>, %[[VAL_1B:.*]]: vector<2xf64>
 // CHECK-SAME:                           ) -> (vector<2xf32>, vector<2xf64>) {
-// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
 // CHECK:           %[[IN0_F32A:.*]] = vector.extract %[[VAL_0A]][0] : f32 from vector<2xf32>
 // CHECK:           %[[IN0_F32B:.*]] = vector.extract %[[VAL_0B]][0] : f32 from vector<2xf32>
 // CHECK:           %[[OUT0_F32:.*]] = call @powf(%[[IN0_F32A]], %[[IN0_F32B]]) : (f32, f32) -> f32
-// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
 // CHECK:           %[[IN1_F32A:.*]] = vector.extract %[[VAL_0A]][1] : f32 from vector<2xf32>
 // CHECK:           %[[IN1_F32B:.*]] = vector.extract %[[VAL_0B]][1] : f32 from vector<2xf32>
 // CHECK:           %[[OUT1_F32:.*]] = call @powf(%[[IN1_F32A]], %[[IN1_F32B]]) : (f32, f32) -> f32
-// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[RES_F32:.*]] = vector.from_elements %[[OUT0_F32]], %[[OUT1_F32]] : vector<2xf32>
 // CHECK:           %[[IN0_F64A:.*]] = vector.extract %[[VAL_1A]][0] : f64 from vector<2xf64>
 // CHECK:           %[[IN0_F64B:.*]] = vector.extract %[[VAL_1B]][0] : f64 from vector<2xf64>
 // CHECK:           %[[OUT0_F64:.*]] = call @pow(%[[IN0_F64A]], %[[IN0_F64B]]) : (f64, f64) -> f64
-// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
 // CHECK:           %[[IN1_F64A:.*]] = vector.extract %[[VAL_1A]][1] : f64 from vector<2xf64>
 // CHECK:           %[[IN1_F64B:.*]] = vector.extract %[[VAL_1B]][1] : f64 from vector<2xf64>
 // CHECK:           %[[OUT1_F64:.*]] = call @pow(%[[IN1_F64A]], %[[IN1_F64B]]) : (f64, f64) -> f64
-// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
-// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:           %[[RES_F64:.*]] = vector.from_elements %[[OUT0_F64]], %[[OUT1_F64]] : vector<2xf64>
+// CHECK:           return %[[RES_F32]], %[[RES_F64]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }

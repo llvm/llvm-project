@@ -8,10 +8,10 @@ define i32 @r() {
 ; CHECK-LABEL: define i32 @r() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTLOC:%.*]] = alloca ptr, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DOTLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTLOC]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @outlined_ir_func_0(ptr [[DOTLOC]], i32 0)
 ; CHECK-NEXT:    [[DOTRELOAD:%.*]] = load ptr, ptr [[DOTLOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DOTLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTLOC]])
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_END8:%.*]], label [[ENTRY_AFTER_OUTLINE:%.*]]
 ; CHECK:       entry_after_outline:
 ; CHECK-NEXT:    [[CALL7:%.*]] = call i32 [[DOTRELOAD]]()
@@ -91,10 +91,10 @@ define i32 @w() !dbg !8 {
 ; CHECK-SAME: ) !dbg [[DBG8:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL_1_CE_LOC:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[RETVAL_1_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[RETVAL_1_CE_LOC]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @outlined_ir_func_0(ptr [[RETVAL_1_CE_LOC]], i32 1), !dbg [[DBG11:![0-9]+]]
 ; CHECK-NEXT:    [[RETVAL_1_CE_RELOAD:%.*]] = load i32, ptr [[RETVAL_1_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[RETVAL_1_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[RETVAL_1_CE_LOC]])
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[CLEANUP10:%.*]], label [[ENTRY_AFTER_OUTLINE:%.*]]
 ; CHECK:       entry_after_outline:
 ; CHECK-NEXT:    [[CALL8:%.*]] = call i32 @llvm.bswap.i32(i32 0)

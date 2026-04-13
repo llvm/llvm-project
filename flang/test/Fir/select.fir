@@ -7,8 +7,8 @@
 func.func @f(%a : i32) -> i32 {
    %1 = arith.constant 1 : i32
    %2 = arith.constant 42 : i32
-// CHECK: switch i32 %{{.*}}, label %{{.*}} [
-// CHECK:   i32 1, label %{{.*}}
+// CHECK: switch i64 %{{.*}}, label %{{.*}} [
+// CHECK:   i64 1, label %{{.*}}
 // CHECK: ]
    fir.select %a : i32 [1, ^bb2(%1:i32), unit, ^bb3(%2:i32)]
 ^bb2(%3 : i32) :
@@ -24,9 +24,9 @@ func.func @g(%a : i32) -> i32 {
    %1 = arith.constant 1 : i32
    %2 = arith.constant 42 : i32
 
-// CHECK: switch i32 %{{.*}}, label %{{.*}} [
-// CHECK:  i32 1, label %{{.*}}
-// CHECK:  i32 -1, label %{{.*}}
+// CHECK: switch i64 %{{.*}}, label %{{.*}} [
+// CHECK:  i64 1, label %{{.*}}
+// CHECK:  i64 -1, label %{{.*}}
 // CHECK: ]
    fir.select_rank %a : i32 [1, ^bb2(%1:i32), -1, ^bb4, unit, ^bb3(%2:i32)]
 ^bb2(%3 : i32) :
@@ -67,3 +67,17 @@ func.func @h(%a : i32) -> i32 {
    // CHECK: ret i32
    return %x : i32
 }
+
+func.func @empty_cases(%arg0 : i32) {
+  fir.select %arg0 : i32 [unit, ^bb1]
+^bb1:  // pred: ^bb0
+  fir.call @crash() fastmath<contract> : () -> ()
+  fir.unreachable
+}
+func.func private @crash()
+
+//CHECK-LABEL: @empty_cases(i32 %0) {
+//CHECK:  br label %[[BLOCK:.*]]
+//CHECK: [[BLOCK]]:
+//CHECK:  call void @crash()
+//CHECK:  unreachable

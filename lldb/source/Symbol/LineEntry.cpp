@@ -14,7 +14,7 @@
 using namespace lldb_private;
 
 LineEntry::LineEntry()
-    : range(), file_sp(std::make_shared<SupportFile>()),
+    : range(), synthetic(false), file_sp(std::make_shared<SupportFile>()),
       original_file_sp(std::make_shared<SupportFile>()),
       is_start_of_statement(0), is_start_of_basic_block(0), is_prologue_end(0),
       is_epilogue_begin(0), is_terminal_entry(0) {}
@@ -33,7 +33,8 @@ void LineEntry::Clear() {
 }
 
 bool LineEntry::IsValid() const {
-  return range.GetBaseAddress().IsValid() && line != LLDB_INVALID_LINE_NUMBER;
+  return (range.GetBaseAddress().IsValid() || synthetic) &&
+         line != LLDB_INVALID_LINE_NUMBER;
 }
 
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {

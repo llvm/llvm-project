@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
@@ -82,6 +81,10 @@ public:
   void visitBranchOperand(OpOperand &operand) override;
 
   void visitCallOperand(OpOperand &operand) override;
+
+  void
+  visitNonControlFlowArguments(RegionSuccessor &successor,
+                               ArrayRef<BlockArgument> arguments) override {}
 
   void visitExternalCall(CallOpInterface call, ArrayRef<WrittenTo *> operands,
                          ArrayRef<const WrittenTo *> results) override;
@@ -182,8 +185,7 @@ struct TestWrittenToPass
     SymbolTableCollection symbolTable;
 
     DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<WrittenToAnalysis>(symbolTable, assumeFuncWrites);
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
@@ -196,14 +198,23 @@ struct TestWrittenToPass
       os << "test_tag: " << tag.getValue() << ":\n";
       for (auto [index, operand] : llvm::enumerate(op->getOperands())) {
         const WrittenTo *writtenTo = solver.lookupState<WrittenTo>(operand);
-        assert(writtenTo && "expected a sparse lattice");
+        if (!writtenTo) {
+          // The lattice may not be computed for values in unreachable code
+          // (e.g., private functions not called from anywhere in
+          // interprocedural analysis mode).
+          os << " operand #" << index << ": <not computed>\n";
+          continue;
+        }
         os << " operand #" << index << ": ";
         writtenTo->print(os);
         os << "\n";
       }
       for (auto [index, operand] : llvm::enumerate(op->getResults())) {
         const WrittenTo *writtenTo = solver.lookupState<WrittenTo>(operand);
-        assert(writtenTo && "expected a sparse lattice");
+        if (!writtenTo) {
+          os << " result #" << index << ": <not computed>\n";
+          continue;
+        }
         os << " result #" << index << ": ";
         writtenTo->print(os);
         os << "\n";

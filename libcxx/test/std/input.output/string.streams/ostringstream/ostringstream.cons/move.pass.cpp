@@ -13,8 +13,6 @@
 
 // basic_ostringstream(basic_ostringstream&& rhs);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <sstream>
 #include <cassert>
 

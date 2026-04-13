@@ -44,4 +44,36 @@ def test1 : Pat<(AOp (BOp:$x $y), $_), (AOp $x, $y)>;
 // CHECK: test::AOp::Properties tblgen_props;
 // CHECK: tblgen_values.push_back((*x.getODSResults(0).begin()));
 // CHECK: tblgen_props.y = ::llvm::dyn_cast_if_present<decltype(tblgen_props.y)>(y);
-// CHECK: tblgen_AOp_0 = rewriter.create<test::AOp>(odsLoc, tblgen_types, tblgen_values, tblgen_props);
+// CHECK: tblgen_AOp_0 = test::AOp::create(rewriter, odsLoc, tblgen_types, tblgen_values, tblgen_props);
+
+// Note: These use strings to pick up a non-trivial storage/interface type
+// difference.
+def COp : NS_Op<"c_op", []> {
+  let arguments = (ins
+    I32:$x,
+    StringProp:$y
+  );
+
+  let results = (outs I32:$z);
+}
+
+def DOp : NS_Op<"d_op", []> {
+  let arguments = (ins
+    StringProp:$y
+  );
+
+  let results = (outs I32:$z);
+}
+def test2 : Pat<(COp (DOp:$x $y), $_), (COp $x, $y)>;
+// CHECK-LABEL: struct test2
+// CHECK: ::llvm::LogicalResult matchAndRewrite
+// CHECK-DAG: ::llvm::StringRef y;
+// CHECK-DAG: test::DOp x;
+// CHECK-DAG: ::llvm::SmallVector<::mlir::Operation *, 4> tblgen_ops;
+// CHECK: tblgen_ops.push_back(op0);
+// CHECK: x = castedOp1;
+// CHECK: tblgen_prop = castedOp1.getProperties().getY();
+// CHECK: y = tblgen_prop;
+// CHECK: tblgen_ops.push_back(op1);
+// CHECK: test::COp::Properties tblgen_props;
+// CHECK: tblgen_props.setY(y);

@@ -7,7 +7,7 @@ subroutine teams()
   ! BOTH: omp.target
 
   ! HOST-SAME: host_eval(%{{.*}} -> %[[NUM_TEAMS:.*]], %{{.*}} -> %[[THREAD_LIMIT:.*]] : i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
   !$omp target
@@ -22,8 +22,10 @@ subroutine teams()
 
   !$omp end target
 
-  ! BOTH: omp.teams
-  ! BOTH-SAME: num_teams({{.*}}) thread_limit({{.*}}) {
+  ! HOST: omp.teams
+  ! HOST-SAME: num_teams({{.*}}) thread_limit({{.*}}) {
+
+  ! DEVICE-NOT: omp.teams
   !$omp teams num_teams(1) thread_limit(2)
   call foo()
   !$omp end teams
@@ -32,9 +34,9 @@ end subroutine teams
 ! BOTH-LABEL: func.func @_QPdistribute_parallel_do
 subroutine distribute_parallel_do()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]], %{{.*}} -> %[[NUM_THREADS:.*]] : i32, i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -76,13 +78,18 @@ subroutine distribute_parallel_do()
   !$omp end distribute parallel do
   !$omp end target teams
 
-  ! BOTH: omp.teams
+  ! HOST: omp.teams
+  ! DEVICE-NOT: omp.teams
   !$omp teams
 
-  ! BOTH: omp.parallel
-  ! BOTH-SAME: num_threads({{.*}})
-  ! BOTH: omp.distribute
-  ! BOTH-NEXT: omp.wsloop
+  ! HOST: omp.parallel
+  ! HOST-SAME: num_threads({{.*}})
+  ! HOST: omp.distribute
+  ! HOST-NEXT: omp.wsloop
+
+  ! DEVICE-NOT: omp.parallel
+  ! DEVICE-NOT: omp.distribute
+  ! DEVICE-NOT: omp.wsloop
   !$omp distribute parallel do num_threads(1)
   do i=1,10
     call foo()
@@ -94,9 +101,9 @@ end subroutine distribute_parallel_do
 ! BOTH-LABEL: func.func @_QPdistribute_parallel_do_simd
 subroutine distribute_parallel_do_simd()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]], %{{.*}} -> %[[NUM_THREADS:.*]] : i32, i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -140,14 +147,20 @@ subroutine distribute_parallel_do_simd()
   !$omp end distribute parallel do simd
   !$omp end target teams
 
-  ! BOTH: omp.teams
+  ! HOST: omp.teams
+  ! DEVICE-NOT: omp.teams
   !$omp teams
 
-  ! BOTH: omp.parallel
-  ! BOTH-SAME: num_threads({{.*}})
-  ! BOTH: omp.distribute
-  ! BOTH-NEXT: omp.wsloop
-  ! BOTH-NEXT: omp.simd
+  ! HOST: omp.parallel
+  ! HOST-SAME: num_threads({{.*}})
+  ! HOST: omp.distribute
+  ! HOST-NEXT: omp.wsloop
+  ! HOST-NEXT: omp.simd
+
+  ! DEVICE-NOT: omp.parallel
+  ! DEVICE-NOT: omp.distribute
+  ! DEVICE-NOT: omp.wsloop
+  ! DEVICE-NOT: omp.simd
   !$omp distribute parallel do simd num_threads(1)
   do i=1,10
     call foo()
@@ -159,9 +172,9 @@ end subroutine distribute_parallel_do_simd
 ! BOTH-LABEL: func.func @_QPdistribute
 subroutine distribute()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -194,10 +207,12 @@ subroutine distribute()
   !$omp end distribute
   !$omp end target teams
 
-  ! BOTH: omp.teams
+  ! HOST: omp.teams
+  ! DEVICE-NOT: omp.teams
   !$omp teams
 
-  ! BOTH: omp.distribute
+  ! HOST: omp.distribute
+  ! DEVICE-NOT: omp.distribute
   !$omp distribute
   do i=1,10
     call foo()
@@ -209,9 +224,9 @@ end subroutine distribute
 ! BOTH-LABEL: func.func @_QPdistribute_simd
 subroutine distribute_simd()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -246,11 +261,15 @@ subroutine distribute_simd()
   !$omp end distribute simd
   !$omp end target teams
 
-  ! BOTH: omp.teams
+  ! HOST: omp.teams
+  ! DEVICE-NOT: omp.teams
   !$omp teams
 
-  ! BOTH: omp.distribute
-  ! BOTH-NEXT: omp.simd
+  ! HOST: omp.distribute
+  ! HOST-NEXT: omp.simd
+
+  ! DEVICE-NOT: omp.distribute
+  ! DEVICE-NOT: omp.simd
   !$omp distribute simd
   do i=1,10
     call foo()
@@ -258,3 +277,75 @@ subroutine distribute_simd()
   !$omp end distribute simd
   !$omp end teams
 end subroutine distribute_simd
+
+! BOTH-LABEL: func.func @_QPloop
+subroutine loop()
+  ! BOTH: omp.target
+
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+
+  ! BOTH: omp.teams
+  !$omp target teams
+
+  ! BOTH: omp.parallel
+
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp loop
+  do i=1,10
+  end do
+  !$omp end target teams
+end subroutine loop
+
+! BOTH-LABEL: func.func @_QPdistribute_parallel_do_with_modified_trip
+subroutine distribute_parallel_do_with_modified_trip()
+  integer :: i, x
+  integer :: m(1)
+  integer :: res(10)
+  m(1) = 10
+  x = 1000000
+
+  ! BOTH: omp.target
+  ! BOTH-NOT: host_eval({{.*}})
+  ! BOTH-SAME: {
+  ! BOTH: omp.teams
+  !$omp target teams map(res)
+  x = 1
+  ! BOTH: omp.parallel
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  !$omp distribute parallel do
+  do i = 1, m(x)
+    res(i) = 5 + i
+  end do
+  !$omp end distribute parallel do
+  !$omp end target teams
+end subroutine distribute_parallel_do_with_modified_trip
+
+! BOTH-LABEL: func.func @_QPdistribute_parallel_do_with_assignment
+subroutine distribute_parallel_do_with_assignment()
+  integer :: i, m
+  integer :: res(10)
+
+  ! BOTH: omp.target
+  ! BOTH-NOT: host_eval({{.*}})
+  ! BOTH-SAME: {
+  ! BOTH: omp.teams
+  !$omp target teams map(from:m,res) private(m)
+  m = 5
+  ! BOTH: omp.parallel
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  !$omp distribute parallel do
+  do i = 1, 10
+    res(i) = 5 + i
+  end do
+  !$omp end distribute parallel do
+  !$omp end target teams
+end subroutine distribute_parallel_do_with_assignment

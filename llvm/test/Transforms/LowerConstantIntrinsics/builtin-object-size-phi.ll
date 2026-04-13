@@ -200,8 +200,12 @@ if.end:
   ret i64 %size
 }
 
-define i64 @pick_negative_offset_different_width(i32 %n) {
-; CHECK-LABEL: @pick_negative_offset_different_width(
+; FIXME: The result here looks weird. Either we reference into buffer0 with an
+;        oob offset. Or we reference buffer1 (8 bytes) with a 4 byte
+;        offset. The result 5 is wrong in both cases. Probably better to
+;        return -1 here since we do not know if we have an oob pointer.
+define i64 @pick_negative_offset_different_width_index_maybe_too_small(i32 %n, i1 %c) {
+; CHECK-LABEL: @pick_negative_offset_different_width_index_maybe_too_small(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUFFER0:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    [[BUFFER1:%.*]] = alloca i8, i64 8, align 1
@@ -216,7 +220,8 @@ define i64 @pick_negative_offset_different_width(i32 %n) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[OFFSETED0]], [[IF_ELSE]] ], [ [[OFFSETED1]], [[IF_END]] ]
 ; CHECK-NEXT:    [[POFFSETED:%.*]] = getelementptr i8, ptr [[P]], i64 -2
-; CHECK-NEXT:    ret i64 5
+; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[C:%.*]], i64 5, i64 0
+; CHECK-NEXT:    ret i64 [[SIZE]]
 ;
 entry:
   %buffer0 = alloca i8, i64 4
@@ -235,7 +240,51 @@ if.else:
 if.end:
   %p = phi ptr [ %offseted0, %if.then ], [ %offseted1, %if.else ]
   %poffseted = getelementptr i8, ptr %p, i64 -2
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %poffseted, i1 false, i1 false, i1 false)
+  %sizemax = call i64 @llvm.objectsize.i64.p0(ptr %poffseted, i1 false, i1 false, i1 false)
+  %sizemin = call i64 @llvm.objectsize.i64.p0(ptr %poffseted, i1 true, i1 false, i1 false)
+  %size = select i1 %c, i64 %sizemax, i64 %sizemin
+  ret i64 %size
+}
+
+define i64 @pick_negative_offset_different_width_index_maybe_too_large(i32 %n, i1 %c) {
+; CHECK-LABEL: @pick_negative_offset_different_width_index_maybe_too_large(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BUFFER0:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[BUFFER1:%.*]] = alloca i8, i64 8, align 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[OFFSETED0:%.*]] = getelementptr i8, ptr [[BUFFER0]], i64 1
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[OFFSETED1:%.*]] = getelementptr i8, ptr [[BUFFER1]], i64 6
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[OFFSETED0]], [[IF_THEN]] ], [ [[OFFSETED1]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[POFFSETED:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[C:%.*]], i64 1, i64 0
+; CHECK-NEXT:    ret i64 [[SIZE]]
+;
+entry:
+  %buffer0 = alloca i8, i64 4
+  %buffer1 = alloca i8, i64 8
+  %cond = icmp eq i32 %n, 0
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %offseted0 = getelementptr i8, ptr %buffer0, i64 1
+  br label %if.end
+
+if.else:
+  %offseted1 = getelementptr i8, ptr %buffer1, i64 6
+  br label %if.end
+
+if.end:
+  %p = phi ptr [ %offseted0, %if.then ], [ %offseted1, %if.else ]
+  %poffseted = getelementptr i8, ptr %p, i64 2
+  %sizemax = call i64 @llvm.objectsize.i64.p0(ptr %poffseted, i1 false, i1 false, i1 false)
+  %sizemin = call i64 @llvm.objectsize.i64.p0(ptr %poffseted, i1 true, i1 false, i1 false)
+  %size = select i1 %c, i64 %sizemax, i64 %sizemin
   ret i64 %size
 }
 

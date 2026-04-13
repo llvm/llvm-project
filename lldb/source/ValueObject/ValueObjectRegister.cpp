@@ -25,6 +25,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <cassert>
 #include <memory>
@@ -139,13 +140,14 @@ ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
     return ValueObjectSP();
 }
 
-size_t ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
+llvm::Expected<size_t>
+ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
     if (reg_info != nullptr)
       return reg_info->kinds[eRegisterKindLLDB];
   }
-  return UINT32_MAX;
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 #pragma mark -

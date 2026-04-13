@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_IPDBSOURCEFILE_H
 
 #include "PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <string>
 
@@ -20,7 +21,7 @@ namespace pdb {
 
 /// IPDBSourceFile defines an interface used to represent source files whose
 /// information are stored in the PDB.
-class IPDBSourceFile {
+class LLVM_ABI IPDBSourceFile {
 public:
   virtual ~IPDBSourceFile();
 

@@ -55,6 +55,8 @@ static CompilerType GetCompilerTypeForFormat(lldb::Format format,
 
   case lldb::eFormatFloat:
     return type_system->GetBasicTypeFromAST(lldb::eBasicTypeFloat);
+  case lldb::eFormatFloat128:
+    return type_system->GetBasicTypeFromAST(lldb::eBasicTypeFloat128);
 
   case lldb::eFormatHex:
   case lldb::eFormatHexUppercase:
@@ -267,14 +269,6 @@ public:
             .value_or(0);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return lldb::ChildCacheState::eRefetch;
-  }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    const char *item_name = name.GetCString();
-    uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-      return UINT32_MAX;
-    return idx;
   }
 
 private:

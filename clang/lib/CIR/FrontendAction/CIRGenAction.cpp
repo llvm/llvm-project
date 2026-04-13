@@ -15,7 +15,10 @@
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace cir;
 using namespace clang;
@@ -44,8 +47,10 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
 }
 
 static std::unique_ptr<llvm::Module>
-lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx) {
-  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx);
+lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
+                     llvm::StringRef mlirSaveTempsOutFile = {}) {
+  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx,
+                                              mlirSaveTempsOutFile);
 }
 
 class CIRGenConsumer : public clang::ASTConsumer {
@@ -62,15 +67,16 @@ class CIRGenConsumer : public clang::ASTConsumer {
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> Gen;
   const FrontendOptions &FEOptions;
+  CodeGenOptions &CGO;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
-                 std::unique_ptr<raw_pwrite_stream> OS)
+                 CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS)
       : Action(Action), CI(CI), OutputStream(std::move(OS)),
         FS(&CI.getVirtualFileSystem()),
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
                                            CI.getCodeGenOpts())),
-        FEOptions(CI.getFrontendOpts()) {}
+        FEOptions(CI.getFrontendOpts()), CGO(CGO) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
@@ -81,6 +87,19 @@ public:
   bool HandleTopLevelDecl(DeclGroupRef D) override {
     Gen->HandleTopLevelDecl(D);
     return true;
+  }
+
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
+    Gen->HandleCXXStaticMemberVarInstantiation(VD);
+  }
+
+  void HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                     const OpenACCRoutineDecl *RD) override {
+    Gen->HandleOpenACCRoutineReference(FD, RD);
+  }
+
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override {
+    Gen->HandleInlineFunctionDefinition(D);
   }
 
   void HandleTranslationUnit(ASTContext &C) override {
@@ -101,8 +120,9 @@ public:
 
     if (!FEOptions.ClangIRDisablePasses) {
       // Setup and run CIR pipeline.
-      if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
-                            !FEOptions.ClangIRDisableCIRVerifier)
+      if (runCIRToCIRPasses(
+              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
@@ -121,9 +141,26 @@ public:
     case CIRGenAction::OutputType::EmitBC:
     case CIRGenAction::OutputType::EmitObj:
     case CIRGenAction::OutputType::EmitAssembly: {
+      StringRef saveTempsPrefix = CGO.SaveTempsFilePrefix;
+      std::string cirSaveTempsOutFile, mlirSaveTempsOutFile;
+      if (!saveTempsPrefix.empty()) {
+        SmallString<128> stem(saveTempsPrefix);
+        llvm::sys::path::replace_extension(stem, "cir");
+        cirSaveTempsOutFile = std::string(stem);
+        llvm::sys::path::replace_extension(stem, "mlir");
+        mlirSaveTempsOutFile = std::string(stem);
+      }
+
+      if (!cirSaveTempsOutFile.empty()) {
+        std::error_code ec;
+        llvm::raw_fd_ostream out(cirSaveTempsOutFile, ec);
+        if (!ec)
+          MlirModule->print(out);
+      }
+
       llvm::LLVMContext LLVMCtx;
       std::unique_ptr<llvm::Module> LLVMModule =
-          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx);
+          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, mlirSaveTempsOutFile);
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(
@@ -133,6 +170,23 @@ public:
     }
     }
   }
+
+  void HandleTagDeclDefinition(TagDecl *D) override {
+    PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
+                                   Context->getSourceManager(),
+                                   "CIR generation of declaration");
+    Gen->HandleTagDeclDefinition(D);
+  }
+
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+    Gen->HandleTagDeclRequiredDefinition(D);
+  }
+
+  void CompleteTentativeDefinition(VarDecl *D) override {
+    Gen->CompleteTentativeDefinition(D);
+  }
+
+  void HandleVTable(CXXRecordDecl *RD) override { Gen->HandleVTable(RD); }
 };
 } // namespace cir
 
@@ -168,8 +222,8 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (!Out)
     Out = getOutputStream(CI, InFile, Action);
 
-  auto Result =
-      std::make_unique<cir::CIRGenConsumer>(Action, CI, std::move(Out));
+  auto Result = std::make_unique<cir::CIRGenConsumer>(
+      Action, CI, CI.getCodeGenOpts(), std::move(Out));
 
   return Result;
 }

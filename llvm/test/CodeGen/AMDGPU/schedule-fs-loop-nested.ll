@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs < %s
+; RUN: llc -mtriple=r600 -mcpu=cayman -stress-sched -verify-misched < %s
 ; REQUIRES: asserts
 
 define amdgpu_kernel void @main() #0 {

@@ -246,8 +246,7 @@ define void @foo(ptr addrspace(3) %val) {
 define void @kernel_argument_promotion_pattern_intra_procedure(ptr %p, i32 %val) {
 ; CHECK-LABEL: define void @kernel_argument_promotion_pattern_intra_procedure(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[P_CAST_0:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
-; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[P_CAST_0]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %p.cast.0 = addrspacecast ptr %p to ptr addrspace(1)
@@ -259,8 +258,7 @@ define void @kernel_argument_promotion_pattern_intra_procedure(ptr %p, i32 %val)
 define internal void @use_argument_after_promotion(ptr %p, i32 %val) {
 ; CHECK-LABEL: define internal void @use_argument_after_promotion(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
-; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[TMP1]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 %val, ptr %p
@@ -278,3 +276,28 @@ define void @kernel_argument_promotion_pattern_inter_procedure(ptr %p, i32 %val)
   call void @use_argument_after_promotion(ptr %p.cast.1, i32 %val)
   ret void
 }
+
+define amdgpu_kernel void @kernel_argument_with_known_as(ptr addrspace(1) %p1, ptr addrspace(3) %p3, i32 %val) {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_argument_with_known_as(
+; CHECK-SAME: ptr addrspace(1) [[P1:%.*]], ptr addrspace(3) [[P3:%.*]], i32 [[VAL:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[P1_CAST:%.*]] = addrspacecast ptr addrspace(1) [[P1]] to ptr
+; CHECK-NEXT:    [[P3_CAST:%.*]] = addrspacecast ptr addrspace(3) [[P3]] to ptr
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[B]], ptr [[P1_CAST]], ptr [[P3_CAST]]
+; CHECK-NEXT:    [[ATOMIC_ADD:%.*]] = atomicrmw add ptr [[P]], i32 1 syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0:![0-9]+]], !amdgpu.no.fine.grained.memory [[META1:![0-9]+]], !amdgpu.no.remote.memory [[META1]]
+; CHECK-NEXT:    ret void
+;
+  %p1.cast = addrspacecast ptr addrspace(1) %p1 to ptr
+  %p3.cast = addrspacecast ptr addrspace(3) %p3 to ptr
+  %b = icmp eq i32 %val, 0
+  %p = select i1 %b, ptr %p1.cast, ptr %p3.cast
+  %atomic.add = atomicrmw add ptr %p, i32 1 syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1
+  ret void
+}
+
+!0 = !{i32 5, i32 6}
+!1 = !{}
+;.
+; CHECK: [[META0]] = !{i32 5, i32 6}
+; CHECK: [[META1]] = !{}
+;.

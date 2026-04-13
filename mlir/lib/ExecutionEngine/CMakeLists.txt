@@ -2,6 +2,7 @@
 # is a big dependency which most don't need.
 
 set(LLVM_OPTIONAL_SOURCES
+  APFloatWrappers.cpp
   ArmRunnerUtils.cpp
   ArmSMEStubs.cpp
   AsyncRuntime.cpp
@@ -14,6 +15,7 @@ set(LLVM_OPTIONAL_SOURCES
   RunnerUtils.cpp
   OptUtils.cpp
   JitRunner.cpp
+  LevelZeroRuntimeWrappers.cpp
   SpirvCpuRuntimeWrappers.cpp
   SyclRuntimeWrappers.cpp
   VulkanRuntimeWrappers.cpp
@@ -162,9 +164,34 @@ if(LLVM_ENABLE_PIC)
     Float16bits.cpp
 
     EXCLUDE_FROM_LIBMLIR
+
+    STANDALONE
     )
   set_property(TARGET mlir_float16_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_float16_utils PRIVATE mlir_float16_utils_EXPORTS)
+
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # TODO: This support library is only used on Linux and Mac builds until we figure
+    # out how to hide LLVM symbols in a way that works for all platforms.
+    add_mlir_library(mlir_apfloat_wrappers
+      SHARED
+      APFloatWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+
+      # Disable PCH reuse due to non-default symbol visibility.
+      DISABLE_PCH_REUSE
+      )
+    set_target_properties(
+      mlir_apfloat_wrappers
+      PROPERTIES CXX_STANDARD 17
+                CXX_VISIBILITY_PRESET hidden
+                VISIBILITY_INLINES_HIDDEN ON
+    )
+    target_compile_definitions(mlir_apfloat_wrappers PRIVATE mlir_apfloat_wrappers_EXPORTS)
+    # Hide LLVM symbols to avoid ODR violations.
+    target_link_options(mlir_apfloat_wrappers PRIVATE $<$<PLATFORM_ID:Linux>:LINKER:--exclude-libs,ALL>)
+  endif()
 
   add_subdirectory(SparseTensor)
 
@@ -179,9 +206,16 @@ if(LLVM_ENABLE_PIC)
     mlir_float16_utils
     MLIRSparseTensorEnums
     MLIRSparseTensorRuntime
+
+    STANDALONE
     )
   set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
+
+  # Conditionally link apfloat wrappers only on Linux and Mac.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    target_link_libraries(mlir_c_runner_utils PUBLIC mlir_apfloat_wrappers)
+  endif()
 
   add_mlir_library(mlir_runner_utils
     SHARED
@@ -191,8 +225,15 @@ if(LLVM_ENABLE_PIC)
 
     LINK_LIBS PUBLIC
     mlir_float16_utils
+
+    STANDALONE
   )
   target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
+
+    # Conditionally link apfloat wrappers only on Linux.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(mlir_runner_utils PUBLIC mlir_apfloat_wrappers)
+  endif()
 
   add_mlir_library(mlir_async_runtime
     SHARED
@@ -202,6 +243,13 @@ if(LLVM_ENABLE_PIC)
 
     LINK_LIBS PUBLIC
     ${LLVM_PTHREAD_LIB}
+
+    # TODO: this is merely a workaround. If this library depends on LLVMSupport,
+    # it should suppress symbols, or if it doesn't, it shouldn't link against
+    # it. This workaround prevents the library from defining the symbol
+    # llvm::EnableABIBreakingChecks, which would cause ODR-violations when
+    # dlopen-ed.
+    DISABLE_PCH_REUSE
   )
   set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
   target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
@@ -214,12 +262,28 @@ if(LLVM_ENABLE_PIC)
 
   add_mlir_library(mlir_arm_sme_abi_stubs
     SHARED
-    ArmSMEStubs.cpp)
+    ArmSMEStubs.cpp
+
+    # TODO: this is merely a workaround. If this library depends on LLVMSupport,
+    # it should suppress symbols, or if it doesn't, it shouldn't link against
+    # it. This workaround prevents the library from defining the symbol
+    # llvm::EnableABIBreakingChecks, which would cause ODR-violations when
+    # dlopen-ed.
+    DISABLE_PCH_REUSE
+  )
   target_compile_definitions(mlir_arm_sme_abi_stubs PRIVATE mlir_arm_sme_abi_stubs_EXPORTS)
 
   add_mlir_library(mlir_arm_runner_utils
     SHARED
-    ArmRunnerUtils.cpp)
+    ArmRunnerUtils.cpp
+
+    # TODO: this is merely a workaround. If this library depends on LLVMSupport,
+    # it should suppress symbols, or if it doesn't, it shouldn't link against
+    # it. This workaround prevents the library from defining the symbol
+    # llvm::EnableABIBreakingChecks, which would cause ODR-violations when
+    # dlopen-ed.
+    DISABLE_PCH_REUSE
+  )
 
   if(MLIR_ENABLE_CUDA_RUNNER)
     # Configure CUDA support. Using check_language first allows us to give a
@@ -241,6 +305,8 @@ if(LLVM_ENABLE_PIC)
       CudaRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+
+      STANDALONE
     )
     set_property(TARGET mlir_cuda_runtime PROPERTY CXX_STANDARD 14)
 
@@ -322,7 +388,6 @@ if(LLVM_ENABLE_PIC)
       endif()
       string(STRIP AGENTS_STRING ${AGENTS_STRING})
       string(REPLACE "\n" ";" AGENTS_LIST ${AGENTS_STRING})
-      list(FILTER AGENTS_LIST EXCLUDE REGEX "gfx000")
       if (AGENTS_LIST STREQUAL "")
         message(SEND_ERROR "No non-CPU ROCm agents found on the system, and ROCM_TEST_CHIPSET is not defined")
       else()
@@ -337,6 +402,13 @@ if(LLVM_ENABLE_PIC)
       RocmRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+
+      # TODO: this is merely a workaround. If this library depends on LLVMSupport,
+      # it should suppress symbols, or if it doesn't, it shouldn't link against
+      # it. This workaround prevents the library from defining the symbol
+      # llvm::EnableABIBreakingChecks, which would cause ODR-violations when
+      # dlopen-ed.
+      DISABLE_PCH_REUSE
     )
 
     # Supress compiler warnings from HIP headers
@@ -374,6 +446,15 @@ if(LLVM_ENABLE_PIC)
     )
   endif()
 
+  if(MLIR_ENABLE_SYCL_RUNNER OR MLIR_ENABLE_LEVELZERO_RUNNER)
+    # Both runtimes require LevelZero, so we can find it once.
+    find_package(LevelZeroRuntime)
+
+    if(NOT LevelZeroRuntime_FOUND)
+      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
+    endif()
+  endif()
+
   if(MLIR_ENABLE_SYCL_RUNNER)
     find_package(SyclRuntime)
 
@@ -381,32 +462,50 @@ if(LLVM_ENABLE_PIC)
       message(FATAL_ERROR "syclRuntime not found. Please set check oneapi installation and run setvars.sh.")
     endif()
 
-    find_package(LevelZero)
-
-    if(NOT LevelZero_FOUND)
-      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
-    endif()
-
+    set(LLVM_REQUIRES_RTTI ON)
+    set(LLVM_REQUIRES_EH ON)
     add_mlir_library(mlir_sycl_runtime
       SHARED
       SyclRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
-    )
 
-    check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
-    if(NOT CXX_HAS_FRTTI_FLAG)
-      message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
-    endif()
-    target_compile_options (mlir_sycl_runtime PUBLIC -fexceptions -frtti)
+      STANDALONE
+    )
+    unset(LLVM_REQUIRES_RTTI)
+    unset(LLVM_REQUIRES_EH)
+
 
     target_include_directories(mlir_sycl_runtime PRIVATE
       ${MLIR_INCLUDE_DIRS}
     )
 
-    target_link_libraries(mlir_sycl_runtime PRIVATE LevelZero::LevelZero SyclRuntime::SyclRuntime)
+    target_link_libraries(mlir_sycl_runtime PRIVATE LevelZeroRuntime::LevelZeroRuntime SyclRuntime::SyclRuntime)
 
-    set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZero_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
+    set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZeroRuntime_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
+  endif()
+
+  if(MLIR_ENABLE_LEVELZERO_RUNNER)
+    set(LLVM_REQUIRES_RTTI ON)
+    set(LLVM_REQUIRES_EH ON)
+    add_mlir_library(mlir_levelzero_runtime
+      SHARED
+      LevelZeroRuntimeWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+
+      STANDALONE
+    )
+    unset(LLVM_REQUIRES_RTTI)
+    unset(LLVM_REQUIRES_EH)
+
+    target_include_directories(mlir_levelzero_runtime PRIVATE
+      ${MLIR_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(mlir_levelzero_runtime PRIVATE LevelZeroRuntime::LevelZeroRuntime)
+
+    set_property(TARGET mlir_levelzero_runtime APPEND PROPERTY BUILD_RPATH "${LevelZeroRuntime_LIBRARIES_DIR}")
   endif()
 
   if(MLIR_ENABLE_SPIRV_CPU_RUNNER)
@@ -415,6 +514,8 @@ if(LLVM_ENABLE_PIC)
       SpirvCpuRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+
+      STANDALONE
     )
 
     target_compile_definitions(mlir_spirv_cpu_runtime
@@ -444,9 +545,13 @@ if(LLVM_ENABLE_PIC)
       message(FATAL_ERROR "Cannot find Vulkan library")
     endif()
 
-    add_llvm_library(mlir_vulkan_runtime SHARED
+    add_mlir_library(mlir_vulkan_runtime SHARED
       VulkanRuntimeWrappers.cpp
       VulkanRuntime.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+
+      STANDALONE
     )
 
     target_include_directories(mlir_vulkan_runtime

@@ -33,13 +33,13 @@ __device__ __host__ void test_invalid_format(float *a) {
   }
 }
 
-[[clang::atomic(no_remote_memory)]] // expected-error {{'atomic' attribute cannot be applied to a declaration}}
+[[clang::atomic(no_remote_memory)]] // expected-error {{'clang::atomic' attribute cannot be applied to a declaration}}
 __device__ __host__ void test_not_compound_stmt(float *a) {
     __scoped_atomic_fetch_add(a, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }
 
 __device__ __host__ void test_quoted(float *a) {
-  [[clang::atomic("no_remote_memory", "remote_memory")]] { // expected-error {{'atomic' attribute requires an identifier}}
+  [[clang::atomic("no_remote_memory", "remote_memory")]] { // expected-error {{'clang::atomic' attribute requires an identifier}}
     __scoped_atomic_fetch_add(a, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
   }
 }

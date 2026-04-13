@@ -3,6 +3,23 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
+; Test a v16i8 -> v8i16 unsigned widening multiplication
+; which is not folded into an even/odd widening operation.
+define <8 x i16> @f1_not(<16 x i8> %val1, <16 x i8> %val2) {
+; CHECK-LABEL: f1_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vuplhb %v0, %v24
+; CHECK-NEXT:    vuplhb %v1, %v26
+; CHECK-NEXT:    vmlhw %v24, %v0, %v1
+; CHECK-NEXT:    br %r14
+  %shuf1 = shufflevector <16 x i8> %val1, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %zext1 = zext <8 x i8> %shuf1 to <8 x i16>
+  %shuf2 = shufflevector <16 x i8> %val2, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %zext2 = zext <8 x i8> %shuf2 to <8 x i16>
+  %ret = mul <8 x i16> %zext1, %zext2
+  ret <8 x i16> %ret
+}
+
 ; Test a v16i8 (even) -> v8i16 unsigned widening multiplication.
 define <8 x i16> @f1(<16 x i8> %val1, <16 x i8> %val2) {
 ; CHECK-LABEL: f1:
@@ -28,6 +45,23 @@ define <8 x i16> @f2(<16 x i8> %val1, <16 x i8> %val2) {
   %shuf2 = shufflevector <16 x i8> %val2, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %zext2 = zext <8 x i8> %shuf2 to <8 x i16>
   %ret = mul <8 x i16> %zext1, %zext2
+  ret <8 x i16> %ret
+}
+
+; Test a v16i8 -> v8i16 signed widening multiplication
+; which is not folded into an even/odd widening operation.
+define <8 x i16> @f3_not(<16 x i8> %val1, <16 x i8> %val2) {
+; CHECK-LABEL: f3_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vuphb %v0, %v26
+; CHECK-NEXT:    vuphb %v1, %v24
+; CHECK-NEXT:    vmlhw %v24, %v1, %v0
+; CHECK-NEXT:    br %r14
+  %shuf1 = shufflevector <16 x i8> %val1, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %sext1 = sext <8 x i8> %shuf1 to <8 x i16>
+  %shuf2 = shufflevector <16 x i8> %val2, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %sext2 = sext <8 x i8> %shuf2 to <8 x i16>
+  %ret = mul <8 x i16> %sext1, %sext2
   ret <8 x i16> %ret
 }
 
@@ -59,6 +93,23 @@ define <8 x i16> @f4(<16 x i8> %val1, <16 x i8> %val2) {
   ret <8 x i16> %ret
 }
 
+; Test a v8i16 -> v4i32 unsigned widening multiplication
+; which is not folded into an even/odd widening operation.
+define <4 x i32> @f5_not(<8 x i16> %val1, <8 x i16> %val2) {
+; CHECK-LABEL: f5_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vuplhh %v0, %v24
+; CHECK-NEXT:    vuplhh %v1, %v26
+; CHECK-NEXT:    vmlf %v24, %v0, %v1
+; CHECK-NEXT:    br %r14
+  %shuf1 = shufflevector <8 x i16> %val1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %zext1 = zext <4 x i16> %shuf1 to <4 x i32>
+  %shuf2 = shufflevector <8 x i16> %val2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %zext2 = zext <4 x i16> %shuf2 to <4 x i32>
+  %ret = mul <4 x i32> %zext1, %zext2
+  ret <4 x i32> %ret
+}
+
 ; Test a v8i16 (even) -> v4i32 unsigned widening multiplication.
 define <4 x i32> @f5(<8 x i16> %val1, <8 x i16> %val2) {
 ; CHECK-LABEL: f5:
@@ -84,6 +135,23 @@ define <4 x i32> @f6(<8 x i16> %val1, <8 x i16> %val2) {
   %shuf2 = shufflevector <8 x i16> %val2, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %zext2 = zext <4 x i16> %shuf2 to <4 x i32>
   %ret = mul <4 x i32> %zext1, %zext2
+  ret <4 x i32> %ret
+}
+
+; Test a v8i16 -> v4i32 signed widening multiplication
+; which is not folded into an even/odd widening operation.
+define <4 x i32> @f7_not(<8 x i16> %val1, <8 x i16> %val2) {
+; CHECK-LABEL: f7_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vuphh %v0, %v26
+; CHECK-NEXT:    vuphh %v1, %v24
+; CHECK-NEXT:    vmlf %v24, %v1, %v0
+; CHECK-NEXT:    br %r14
+  %shuf1 = shufflevector <8 x i16> %val1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %sext1 = sext <4 x i16> %shuf1 to <4 x i32>
+  %shuf2 = shufflevector <8 x i16> %val2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %sext2 = sext <4 x i16> %shuf2 to <4 x i32>
+  %ret = mul <4 x i32> %sext1, %sext2
   ret <4 x i32> %ret
 }
 
@@ -115,6 +183,29 @@ define <4 x i32> @f8(<8 x i16> %val1, <8 x i16> %val2) {
   ret <4 x i32> %ret
 }
 
+; Test a v4i32 -> v2i64 unsigned widening multiplication
+; which is not folded into an even/odd widening operation.
+define <2 x i64> @f9_not(<4 x i32> %val1, <4 x i32> %val2) {
+; CHECK-LABEL: f9_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vuplhf %v0, %v24
+; CHECK-NEXT:    vuplhf %v1, %v26
+; CHECK-NEXT:    vlgvg %r0, %v1, 1
+; CHECK-NEXT:    vlgvg %r1, %v0, 1
+; CHECK-NEXT:    msgr %r1, %r0
+; CHECK-NEXT:    vlgvg %r0, %v1, 0
+; CHECK-NEXT:    vlgvg %r2, %v0, 0
+; CHECK-NEXT:    msgr %r2, %r0
+; CHECK-NEXT:    vlvgp %v24, %r2, %r1
+; CHECK-NEXT:    br %r14
+  %shuf1 = shufflevector <4 x i32> %val1, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %zext1 = zext <2 x i32> %shuf1 to <2 x i64>
+  %shuf2 = shufflevector <4 x i32> %val2, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %zext2 = zext <2 x i32> %shuf2 to <2 x i64>
+  %ret = mul <2 x i64> %zext1, %zext2
+  ret <2 x i64> %ret
+}
+
 ; Test a v4i32 (even) -> v2i64 unsigned widening multiplication.
 define <2 x i64> @f9(<4 x i32> %val1, <4 x i32> %val2) {
 ; CHECK-LABEL: f9:
@@ -140,6 +231,29 @@ define <2 x i64> @f10(<4 x i32> %val1, <4 x i32> %val2) {
   %shuf2 = shufflevector <4 x i32> %val2, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
   %zext2 = zext <2 x i32> %shuf2 to <2 x i64>
   %ret = mul <2 x i64> %zext1, %zext2
+  ret <2 x i64> %ret
+}
+
+; Test a v4i32 -> v2i64 signed widening multiplication
+; which is not folded into an even/odd widening operation.
+define <2 x i64> @f11_not(<4 x i32> %val1, <4 x i32> %val2) {
+; CHECK-LABEL: f11_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vuphf %v0, %v24
+; CHECK-NEXT:    vuphf %v1, %v26
+; CHECK-NEXT:    vlgvg %r0, %v1, 1
+; CHECK-NEXT:    vlgvg %r1, %v0, 1
+; CHECK-NEXT:    msgr %r1, %r0
+; CHECK-NEXT:    vlgvg %r0, %v1, 0
+; CHECK-NEXT:    vlgvg %r2, %v0, 0
+; CHECK-NEXT:    msgr %r2, %r0
+; CHECK-NEXT:    vlvgp %v24, %r2, %r1
+; CHECK-NEXT:    br %r14
+  %shuf1 = shufflevector <4 x i32> %val1, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %sext1 = sext <2 x i32> %shuf1 to <2 x i64>
+  %shuf2 = shufflevector <4 x i32> %val2, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %sext2 = sext <2 x i32> %shuf2 to <2 x i64>
+  %ret = mul <2 x i64> %sext1, %sext2
   ret <2 x i64> %ret
 }
 

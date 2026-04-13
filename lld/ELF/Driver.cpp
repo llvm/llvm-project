@@ -39,12 +39,10 @@
 #include "Writer.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
-#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -158,23 +156,23 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(Ctx &ctx,
 
   std::pair<ELFKind, uint16_t> ret =
       StringSwitch<std::pair<ELFKind, uint16_t>>(s)
-          .Cases("aarch64elf", "aarch64linux", {ELF64LEKind, EM_AARCH64})
-          .Cases("aarch64elfb", "aarch64linuxb", {ELF64BEKind, EM_AARCH64})
-          .Cases("armelf", "armelf_linux_eabi", {ELF32LEKind, EM_ARM})
-          .Cases("armelfb", "armelfb_linux_eabi", {ELF32BEKind, EM_ARM})
+          .Cases({"aarch64elf", "aarch64linux"}, {ELF64LEKind, EM_AARCH64})
+          .Cases({"aarch64elfb", "aarch64linuxb"}, {ELF64BEKind, EM_AARCH64})
+          .Cases({"armelf", "armelf_linux_eabi"}, {ELF32LEKind, EM_ARM})
+          .Cases({"armelfb", "armelfb_linux_eabi"}, {ELF32BEKind, EM_ARM})
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
-          .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
-          .Cases("elf32ltsmip", "elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
+          .Cases({"elf32btsmip", "elf32btsmipn32"}, {ELF32BEKind, EM_MIPS})
+          .Cases({"elf32ltsmip", "elf32ltsmipn32"}, {ELF32LEKind, EM_MIPS})
           .Case("elf32lriscv", {ELF32LEKind, EM_RISCV})
-          .Cases("elf32ppc", "elf32ppclinux", {ELF32BEKind, EM_PPC})
-          .Cases("elf32lppc", "elf32lppclinux", {ELF32LEKind, EM_PPC})
+          .Cases({"elf32ppc", "elf32ppclinux"}, {ELF32BEKind, EM_PPC})
+          .Cases({"elf32lppc", "elf32lppclinux"}, {ELF32LEKind, EM_PPC})
           .Case("elf32loongarch", {ELF32LEKind, EM_LOONGARCH})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
           .Case("elf64lriscv", {ELF64LEKind, EM_RISCV})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
           .Case("elf64lppc", {ELF64LEKind, EM_PPC64})
-          .Cases("elf_amd64", "elf_x86_64", {ELF64LEKind, EM_X86_64})
+          .Cases({"elf_amd64", "elf_x86_64"}, {ELF64LEKind, EM_X86_64})
           .Case("elf_i386", {ELF32LEKind, EM_386})
           .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
           .Case("elf64_sparc", {ELF64BEKind, EM_SPARCV9})
@@ -238,8 +236,10 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
-                                                offsetInArchive, lazy));
+  auto file = std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                            offsetInArchive, lazy);
+  file->obj->fatLTOObject(true);
+  files.push_back(std::move(file));
   return true;
 }
 
@@ -254,6 +254,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
   if (ctx.arg.formatBinary) {
     files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
+    if (!isInGroup)
+      ++nextGroupId;
     return;
   }
 
@@ -321,7 +323,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         ctx, mbref, withLOption ? path::filename(path) : path);
     f->init();
     files.push_back(std::move(f));
-    return;
+    break;
   }
   case file_magic::bitcode:
     files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
@@ -332,7 +334,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     break;
   default:
     ErrAlways(ctx) << path << ": unknown file type";
+    return;
   }
+  // All files within the same --{start,end}-group get the same group ID.
+  // Otherwise, a new file will get a new group ID.
+  if (!isInGroup)
+    ++nextGroupId;
 }
 
 // Add a given library by searching it from input search paths.
@@ -421,8 +428,22 @@ static void checkOptions(Ctx &ctx) {
           << "--pcrel-optimize is only supported on PowerPC64 targets";
   }
 
-  if (ctx.arg.relaxGP && ctx.arg.emachine != EM_RISCV)
-    ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+  if (ctx.arg.emachine != EM_RISCV) {
+    if (ctx.arg.relaxGP)
+      ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+    if (ctx.arg.zZicfilpUnlabeledReport != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfilip-unlabeled-report is only supported on "
+                        "RISC-V targets";
+    if (ctx.arg.zZicfilpFuncSigReport != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfilip-func-sig-report is only supported on "
+                        "RISC-V targets";
+    if (ctx.arg.zZicfissReport != ReportPolicy::None)
+      ErrAlways(ctx) << "-z zicfiss-report is only supported on RISC-V targets";
+    if (ctx.arg.zZicfilp != ZicfilpPolicy::Implicit)
+      ErrAlways(ctx) << "-z zicfilp is only supported on RISC-V targets";
+    if (ctx.arg.zZicfiss != ZicfissPolicy::Implicit)
+      ErrAlways(ctx) << "-z zicfiss is only supported on RISC-V targets";
+  }
 
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
       ctx.arg.zCetReport != ReportPolicy::None)
@@ -576,6 +597,65 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
   return ret;
 }
 
+static ZicfilpPolicy getZZicfilp(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ZicfilpPolicy::Implicit;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "zicfilp") {
+      arg->claim();
+      if (kv.second == "unlabeled")
+        ret = ZicfilpPolicy::Unlabeled;
+      else if (kv.second == "func-sig")
+        ret = ZicfilpPolicy::FuncSig;
+      else if (kv.second == "never")
+        ret = ZicfilpPolicy::Never;
+      else if (kv.second == "implicit")
+        ret = ZicfilpPolicy::Implicit;
+      else
+        ErrAlways(ctx) << "unknown -z zicfilp= value: " << kv.second;
+    }
+  }
+  return ret;
+}
+
+static ZicfissPolicy getZZicfiss(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ZicfissPolicy::Implicit;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "zicfiss") {
+      arg->claim();
+      if (kv.second == "always")
+        ret = ZicfissPolicy::Always;
+      else if (kv.second == "never")
+        ret = ZicfissPolicy::Never;
+      else if (kv.second == "implicit")
+        ret = ZicfissPolicy::Implicit;
+      else
+        ErrAlways(ctx) << "unknown -z zicfiss= value: " << kv.second;
+    }
+  }
+  return ret;
+}
+
+static int getZMemtagMode(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ELF::NT_MEMTAG_LEVEL_NONE;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "memtag-mode") {
+      arg->claim();
+      if (kv.second == "none")
+        ret = ELF::NT_MEMTAG_LEVEL_NONE;
+      else if (kv.second == "sync")
+        ret = ELF::NT_MEMTAG_LEVEL_SYNC;
+      else if (kv.second == "async")
+        ret = ELF::NT_MEMTAG_LEVEL_ASYNC;
+      else
+        ErrAlways(ctx) << "unknown -z memtag-mode= value: " << kv.second;
+    }
+  }
+  return ret;
+}
+
 // Report a warning for an unknown -z option.
 static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   // This function is called before getTarget(), when certain options are not
@@ -583,6 +663,7 @@ static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   args::getZOptionValue(args, OPT_z, "max-page-size", 0);
   args::getZOptionValue(args, OPT_z, "common-page-size", 0);
   getZFlag(args, "rel", "rela", false);
+  getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak", false);
   for (auto *arg : args.filtered(OPT_z))
     if (!arg->isClaimed())
       Warn(ctx) << "unknown -z value: " << StringRef(arg->getValue());
@@ -791,27 +872,19 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
 }
 
 static int getMemtagMode(Ctx &ctx, opt::InputArgList &args) {
-  StringRef memtagModeArg = args.getLastArgValue(OPT_android_memtag_mode);
-  if (memtagModeArg.empty()) {
-    if (ctx.arg.androidMemtagStack)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-stack a no-op";
-    else if (ctx.arg.androidMemtagHeap)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-heap a no-op";
-    return ELF::NT_MEMTAG_LEVEL_NONE;
+  auto memtagMode = getZMemtagMode(ctx, args);
+  if (memtagMode == ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (ctx.arg.memtagStack)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-stack a no-op";
+    if (ctx.arg.memtagHeap)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-heap a no-op";
+    if (ctx.arg.memtagAndroidNote)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "--android-memtag-note a no-op";
   }
-
-  if (memtagModeArg == "sync")
-    return ELF::NT_MEMTAG_LEVEL_SYNC;
-  if (memtagModeArg == "async")
-    return ELF::NT_MEMTAG_LEVEL_ASYNC;
-  if (memtagModeArg == "none")
-    return ELF::NT_MEMTAG_LEVEL_NONE;
-
-  ErrAlways(ctx) << "unknown --android-memtag-mode value: \"" << memtagModeArg
-                 << "\", should be one of {async, sync, none}";
-  return ELF::NT_MEMTAG_LEVEL_NONE;
+  return memtagMode;
 }
 
 static ICFLevel getICF(opt::InputArgList &args) {
@@ -1102,7 +1175,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
 
   SmallSetVector<StringRef, 0> vtableSymbolsWithNoRTTI;
   for (StringRef s : vtableSymbols)
-    if (!typeInfoSymbols.count(s))
+    if (!typeInfoSymbols.contains(s))
       vtableSymbolsWithNoRTTI.insert(s);
 
   // Remove known safe symbols.
@@ -1143,6 +1216,54 @@ static CGProfileSortKind getCGProfileSortKind(Ctx &ctx,
 }
 
 static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
+  auto addCompressionSortSpec = [&](StringRef value) {
+    SmallVector<StringRef, 3> parts;
+    value.split(parts, '=');
+
+    StringRef globString = parts[0];
+    unsigned layoutPriority = 0;
+    std::optional<unsigned> matchPriority;
+
+    if (parts.size() > 1 && !parts[1].empty()) {
+      if (!to_integer(parts[1], layoutPriority)) {
+        ErrAlways(ctx) << "--bp-compression-sort-section: expected integer "
+                          "for layout_priority, got '"
+                       << parts[1] << "'";
+        return;
+      }
+    }
+    if (parts.size() > 2 && !parts[2].empty()) {
+      unsigned mp;
+      if (!to_integer(parts[2], mp)) {
+        ErrAlways(ctx) << "--bp-compression-sort-section: expected integer "
+                          "for match_priority, got '"
+                       << parts[2] << "'";
+        return;
+      }
+      matchPriority = mp;
+    }
+    if (parts.size() > 3) {
+      ErrAlways(ctx) << "--bp-compression-sort-section: too many '=' in '"
+                     << value << "'";
+      return;
+    }
+
+    auto spec = BPCompressionSortSpec::create(globString, layoutPriority,
+                                              matchPriority);
+    if (!spec) {
+      ErrAlways(ctx) << "--bp-compression-sort-section: "
+                     << toString(spec.takeError());
+      return;
+    }
+    ctx.arg.bpCompressionSortSpecs.emplace_back(std::move(*spec));
+  };
+
+  for (auto *arg : args.filtered(OPT_bp_compression_sort_section))
+    addCompressionSortSpec(arg->getValue());
+  if (!ctx.arg.bpCompressionSortSpecs.empty() &&
+      args.hasArg(OPT_call_graph_ordering_file))
+    ErrAlways(ctx) << "--bp-compression-sort-section is incompatible with "
+                      "--call-graph-ordering-file";
   if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef s = arg->getValue();
     if (s == "function") {
@@ -1303,13 +1424,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false);
-  ctx.arg.androidMemtagHeap =
-      args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
-  ctx.arg.androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
-                                            OPT_no_android_memtag_stack, false);
+  ctx.arg.memtagHeap = hasZOption(args, "memtag-heap");
+  ctx.arg.memtagStack = hasZOption(args, "memtag-stack");
+  ctx.arg.memtagAndroidNote = args.hasArg(OPT_android_memtag_note);
   ctx.arg.fatLTOObjects =
       args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false);
-  ctx.arg.androidMemtagMode = getMemtagMode(ctx, args);
+  ctx.arg.memtagMode = getMemtagMode(ctx, args);
   ctx.arg.auxiliaryList = args::getStrings(args, OPT_auxiliary);
   ctx.arg.armBe8 = args.hasArg(OPT_be8);
   if (opt::Arg *arg = args.getLastArg(
@@ -1343,6 +1463,14 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
   ctx.arg.discard = getDiscard(args);
+  ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
+  ctx.arg.dtltoDistributorArgs =
+      args::getStrings(args, OPT_thinlto_distributor_arg);
+  ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler_eq);
+  ctx.arg.dtltoCompilerPrependArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg);
+  ctx.arg.dtltoCompilerArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
   ctx.arg.dwoDir = args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
   ctx.arg.dynamicLinker = getDynamicLinker(ctx, args);
   ctx.arg.ehFrameHdr =
@@ -1421,7 +1549,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   ctx.arg.mmapOutputFile =
-      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
@@ -1452,8 +1580,14 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
   ctx.arg.printIcfSections =
       args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
-  ctx.arg.printGcSections =
-      args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
+  if (auto *arg =
+          args.getLastArg(OPT_print_gc_sections, OPT_no_print_gc_sections,
+                          OPT_print_gc_sections_eq)) {
+    if (arg->getOption().matches(OPT_print_gc_sections))
+      ctx.arg.printGcSections = "-";
+    else if (arg->getOption().matches(OPT_print_gc_sections_eq))
+      ctx.arg.printGcSections = arg->getValue();
+  }
   ctx.arg.printMemoryUsage = args.hasArg(OPT_print_memory_usage);
   ctx.arg.printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   ctx.arg.printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
@@ -1467,8 +1601,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
-    for (const char *s : saveTempsValues)
-      ctx.arg.saveTempsArgs.insert(s);
+    ctx.arg.saveTempsArgs.insert_range(saveTempsValues);
   } else {
     for (auto *arg : args.filtered(OPT_save_temps_eq)) {
       StringRef s = arg->getValue();
@@ -1486,6 +1619,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     ctx.arg.randomizeSectionPadding =
         args::getInteger(args, OPT_randomize_section_padding, 0);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
+  ctx.arg.singleXoRx = !args.hasFlag(OPT_xosegment, OPT_no_xosegment, false);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
   ctx.arg.splitStackAdjustSize =
@@ -1545,10 +1679,21 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.warnSymbolOrdering =
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
   ctx.arg.whyExtract = args.getLastArgValue(OPT_why_extract);
+  for (opt::Arg *arg : args.filtered(OPT_why_live)) {
+    StringRef value(arg->getValue());
+    if (Expected<GlobPattern> pat = GlobPattern::create(arg->getValue())) {
+      ctx.arg.whyLive.emplace_back(std::move(*pat));
+    } else {
+      ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError();
+      continue;
+    }
+  }
   ctx.arg.zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   ctx.arg.zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
+  ctx.arg.zZicfilp = getZZicfilp(ctx, args);
+  ctx.arg.zZicfiss = getZZicfiss(ctx, args);
   ctx.arg.zGcs = getZGcs(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
@@ -1556,6 +1701,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zIfuncNoplt = hasZOption(args, "ifunc-noplt");
   ctx.arg.zInitfirst = hasZOption(args, "initfirst");
   ctx.arg.zInterpose = hasZOption(args, "interpose");
+  ctx.arg.zKeepDataSectionPrefix = getZFlag(
+      args, "keep-data-section-prefix", "nokeep-data-section-prefix", false);
   ctx.arg.zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
@@ -1566,7 +1713,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
   ctx.arg.zNow = getZFlag(args, "now", "lazy", false);
   ctx.arg.zOrigin = hasZOption(args, "origin");
-  ctx.arg.zPacPlt = hasZOption(args, "pac-plt");
+  ctx.arg.zPacPlt = getZFlag(args, "pac-plt", "nopac-plt", false);
   ctx.arg.zRelro = getZFlag(args, "relro", "norelro", true);
   ctx.arg.zRetpolineplt = hasZOption(args, "retpolineplt");
   ctx.arg.zRodynamic = hasZOption(args, "rodynamic");
@@ -1580,6 +1727,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(ctx, args);
   ctx.arg.power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
+  ctx.arg.branchToBranch = args.hasFlag(
+      OPT_branch_to_branch, OPT_no_branch_to_branch, ctx.arg.optimize >= 2);
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))
@@ -1622,13 +1771,26 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
+  if (ctx.arg.zForceBti) {
+    ctx.arg.zBtiReport = ReportPolicy::Warning;
+    ctx.arg.zBtiReportSource = "-z force-bti";
+  }
+  if (ctx.arg.zGcs == GcsPolicy::Always) {
+    ctx.arg.zGcsReport = ReportPolicy::Warning;
+    ctx.arg.zGcsReportSource = "-z gcs";
+  }
+
   auto reports = {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
       std::make_pair("cet-report", &ctx.arg.zCetReport),
       std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
       std::make_pair("gcs-report", &ctx.arg.zGcsReport),
       std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
-      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport),
+      std::make_pair("zicfilp-unlabeled-report",
+                     &ctx.arg.zZicfilpUnlabeledReport),
+      std::make_pair("zicfilp-func-sig-report", &ctx.arg.zZicfilpFuncSigReport),
+      std::make_pair("zicfiss-report", &ctx.arg.zZicfissReport)};
   bool hasGcsReportDynamic = false;
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
@@ -1649,6 +1811,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       }
       hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
+      if (option.first == "bti-report")
+        ctx.arg.zBtiReportSource = "-z bti-report";
+      else if (option.first == "gcs-report")
+        ctx.arg.zGcsReportSource = "-z gcs-report";
     }
   }
 
@@ -2229,11 +2395,11 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &args) {
 // This is not a popular option, but some programs such as bionic libc use it.
 static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
   DenseSet<StringRef> libs = getExcludeLibs(args);
-  bool all = libs.count("ALL");
+  bool all = libs.contains("ALL");
 
   auto visit = [&](InputFile *file) {
     if (file->archiveName.empty() ||
-        !(all || libs.count(path::filename(file->archiveName))))
+        !(all || libs.contains(path::filename(file->archiveName))))
       return;
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
@@ -2310,8 +2476,7 @@ static void writeArchiveStats(Ctx &ctx) {
 
   os << "members\textracted\tarchive\n";
 
-  SmallVector<StringRef, 0> archives;
-  DenseMap<CachedHashStringRef, unsigned> all, extracted;
+  DenseMap<CachedHashStringRef, unsigned> extracted;
   for (ELFFileBase *file : ctx.objectFiles)
     if (file->archiveName.size())
       ++extracted[CachedHashStringRef(file->archiveName)];
@@ -2602,7 +2767,7 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   for (BitcodeFile *file : ctx.lazyBitcodeFiles)
     bufs.insert(file->mb.getBufferStart());
   for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
-    if (bufs.count(mb.getBufferStart()))
+    if (bufs.contains(mb.getBufferStart()))
       mb.dontNeedIfMmap();
 }
 
@@ -2616,8 +2781,27 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
 template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
+
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  if (!ctx.bitcodeFiles.empty()) {
+    // Triple must be captured before the bitcode is moved into the compiler.
+    // Note that the below assumes that the set of possible libfuncs is roughly
+    // equivalent for all bitcode translation units.
+    llvm::Triple tt =
+        llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver))
+      if (Symbol *sym = ctx.symtab->find(libFunc);
+          sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+        bitcodeLibFuncs.push_back(libFunc);
+  }
+
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
   for (BitcodeFile *file : ctx.bitcodeFiles)
     lto->add(*file);
 
@@ -2628,6 +2812,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   for (auto &file : ltoObjectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
+
+    // This is only needed for AArch64 PAuth to set correct key in AUTH GOT
+    // entry based on symbol type (STT_FUNC or not).
+    // TODO: check if PAuth is actually used.
+    if (ctx.arg.emachine == EM_AARCH64) {
+      for (typename ELFT::Sym elfSym : obj->template getGlobalELFSyms<ELFT>()) {
+        StringRef elfSymName = check(elfSym.getName(obj->getStringTable()));
+        if (Symbol *sym = ctx.symtab->find(elfSymName))
+          if (sym->type == STT_NOTYPE)
+            sym->type = elfSym.getType();
+      }
+    }
 
     // For defined symbols in non-relocatable output,
     // compute isExported and parse '@'.
@@ -2811,9 +3007,12 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
 // For AArch64 PAuth-enabled object files, the core info of all of them must
 // match. Missing info for some object files with matching info for remaining
 // ones can be allowed (see -z pauth-report).
+//
+// RISC-V Zicfilp/Zicfiss extension also use the same mechanism to record
+// enabled features in the GNU_PROPERTY_RISCV_FEATURE_1_AND bit mask.
 static void readSecurityNotes(Ctx &ctx) {
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.emachine != EM_AARCH64)
+      ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_RISCV)
     return;
 
   ctx.arg.andFeatures = -1;
@@ -2821,15 +3020,15 @@ static void readSecurityNotes(Ctx &ctx) {
   StringRef referenceFileName;
   if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
-      return !f->aarch64PauthAbiCoreInfo.empty();
+      return f->aarch64PauthAbiCoreInfo.has_value();
     });
     if (it != ctx.objectFiles.end()) {
       ctx.aarch64PauthAbiCoreInfo = (*it)->aarch64PauthAbiCoreInfo;
       referenceFileName = (*it)->getName();
     }
   }
-  bool hasValidPauthAbiCoreInfo = llvm::any_of(
-      ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
+  bool hasValidPauthAbiCoreInfo =
+      ctx.aarch64PauthAbiCoreInfo && ctx.aarch64PauthAbiCoreInfo->isValid();
 
   auto report = [&](ReportPolicy policy) -> ELFSyncStream {
     return {ctx, toDiagLevel(policy)};
@@ -2844,14 +3043,14 @@ static void readSecurityNotes(Ctx &ctx) {
 
     reportUnless(ctx.arg.zBtiReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
-        << f
-        << ": -z bti-report: file does not have "
+        << f << ": " << ctx.arg.zBtiReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
     reportUnless(ctx.arg.zGcsReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
-        << f
-        << ": -z gcs-report: file does not have "
+        << f << ": " << ctx.arg.zGcsReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
     reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
@@ -2865,12 +3064,47 @@ static void readSecurityNotes(Ctx &ctx) {
         << ": -z cet-report: file does not have "
            "GNU_PROPERTY_X86_FEATURE_1_SHSTK property";
 
+    if (ctx.arg.emachine == EM_RISCV) {
+      reportUnless(ctx.arg.zZicfilpUnlabeledReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED)
+          << f
+          << ": -z zicfilp-unlabeled-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED property";
+
+      reportUnless(ctx.arg.zZicfilpFuncSigReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG)
+          << f
+          << ": -z zicfilp-func-sig-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG property";
+
+      if ((features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED) &&
+          (features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG))
+        Err(ctx) << f
+                 << ": file has conflicting properties: "
+                    "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED and "
+                    "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG";
+
+      reportUnless(ctx.arg.zZicfissReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS)
+          << f
+          << ": -z zicfiss-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property";
+
+      if (ctx.arg.zZicfilp == ZicfilpPolicy::Unlabeled &&
+          (features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG))
+        Warn(ctx) << f
+                  << ": -z zicfilp=unlabeled: file has conflicting property: "
+                     "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG";
+
+      if (ctx.arg.zZicfilp == ZicfilpPolicy::FuncSig &&
+          (features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED))
+        Warn(ctx) << f
+                  << ": -z zicfilp=func-sig: file has conflicting property: "
+                     "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED";
+    }
+
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      if (ctx.arg.zBtiReport == ReportPolicy::None)
-        Warn(ctx) << f
-                  << ": -z force-bti: file does not have "
-                     "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
     } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
       if (ctx.arg.zCetReport == ReportPolicy::None)
@@ -2889,10 +3123,10 @@ static void readSecurityNotes(Ctx &ctx) {
     }
     ctx.arg.andFeatures &= features;
 
-    if (ctx.aarch64PauthAbiCoreInfo.empty())
+    if (!ctx.aarch64PauthAbiCoreInfo)
       continue;
 
-    if (f->aarch64PauthAbiCoreInfo.empty()) {
+    if (!f->aarch64PauthAbiCoreInfo) {
       report(ctx.arg.zPauthReport)
           << f
           << ": -z pauth-report: file does not have AArch64 "
@@ -2902,11 +3136,18 @@ static void readSecurityNotes(Ctx &ctx) {
     }
 
     if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
-      Err(ctx) << "incompatible values of AArch64 PAuth core info found\n>>> "
-               << referenceFileName << ": 0x"
-               << toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true)
-               << "\n>>> " << f << ": 0x"
-               << toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true);
+      Err(ctx)
+          << "incompatible values of AArch64 PAuth core info found\n"
+          << "platform:\n"
+          << ">>> " << referenceFileName << ": 0x"
+          << toHex(ctx.aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
+          << "\n>>> " << f << ": 0x"
+          << toHex(f->aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
+          << "\nversion:\n"
+          << ">>> " << referenceFileName << ": 0x"
+          << toHex(ctx.aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true)
+          << "\n>>> " << f << ": 0x"
+          << toHex(f->aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true);
   }
 
   // Force enable Shadow Stack.
@@ -2918,6 +3159,25 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+  if (ctx.arg.emachine == EM_RISCV) {
+    // Force enable/disable Zicfilp.
+    if (ctx.arg.zZicfilp == ZicfilpPolicy::Unlabeled) {
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
+    } else if (ctx.arg.zZicfilp == ZicfilpPolicy::FuncSig) {
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+    } else if (ctx.arg.zZicfilp == ZicfilpPolicy::Never)
+      ctx.arg.andFeatures &= ~(GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED |
+                               GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG);
+
+    // Force enable/disable Zicfiss.
+    if (ctx.arg.zZicfiss == ZicfissPolicy::Always)
+      ctx.arg.andFeatures |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+    else if (ctx.arg.zZicfiss == ZicfissPolicy::Never)
+      ctx.arg.andFeatures &= ~GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+  }
 
   // If we are utilising GCS at any stage, the sharedFiles should be checked to
   // ensure they also support this feature. The gcs-report-dynamic option is
@@ -2984,6 +3244,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.symtab->insert(arg->getValue())->traced = true;
 
   ctx.internalFile = createInternalFile(ctx, "<internal>");
+  ctx.dummySym = make<Undefined>(ctx.internalFile, "", STB_LOCAL, 0, 0);
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
@@ -2995,6 +3256,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
   ctx.arg.exportDynamic &= ctx.hasDynsym;
+
+  // Preemptibility of undefined symbols when ctx.hasDynsym is true. Default is
+  // true for dynamic linking.
+  ctx.arg.zDynamicUndefined =
+      getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak",
+               ctx.sharedFiles.size() || ctx.arg.shared) &&
+      ctx.hasDynsym;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
@@ -3284,6 +3552,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // output sections in the usual way.
   if (!ctx.arg.relocatable)
     combineEhSections(ctx);
+
+  // Merge .hexagon.attributes sections.
+  if (ctx.arg.emachine == EM_HEXAGON)
+    mergeHexagonAttributesSections(ctx);
 
   // Merge .riscv.attributes sections.
   if (ctx.arg.emachine == EM_RISCV)

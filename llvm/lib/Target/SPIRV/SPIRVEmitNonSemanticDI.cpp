@@ -5,7 +5,7 @@
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -21,18 +21,19 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "spirv-nonsemantic-debug-info"
 
-namespace llvm {
+using namespace llvm;
+
+namespace {
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
-  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM);
-  SPIRVEmitNonSemanticDI();
+  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM = nullptr)
+      : MachineFunctionPass(ID), TM(TM) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -40,9 +41,7 @@ private:
   bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF);
 };
-} // namespace llvm
-
-using namespace llvm;
+} // anonymous namespace
 
 INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
                 "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)
@@ -52,15 +51,6 @@ char SPIRVEmitNonSemanticDI::ID = 0;
 MachineFunctionPass *
 llvm::createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {
   return new SPIRVEmitNonSemanticDI(TM);
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM)
-    : MachineFunctionPass(ID), TM(TM) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI() : MachineFunctionPass(ID) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
 }
 
 enum BaseTypeAttributeEncoding {
@@ -104,8 +94,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   SmallVector<int64_t> LLVMSourceLanguages;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
-  SmallPtrSet<DIBasicType *, 12> BasicTypes;
-  SmallPtrSet<DIDerivedType *, 12> PointerDerivedTypes;
+  SetVector<DIBasicType *> BasicTypes;
+  SetVector<DIDerivedType *> PointerDerivedTypes;
   // Searching through the Module metadata to find nescessary
   // information like DwarfVersion or SourceLanguage
   {
@@ -116,16 +106,25 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
     if (!DbgCu)
       return false;
+    // NonSemantic.Shader.DebugInfo.100 requires SPV_KHR_non_semantic_info.
+    // Bail out if the extension is not available for this target. Targets that
+    // do not enable this extension by default should enable it explicitly with
+    // --spirv-ext=+SPV_KHR_non_semantic_info.
+    if (!TM->getSubtargetImpl()->canUseExtension(
+            SPIRV::Extension::SPV_KHR_non_semantic_info))
+      return false;
     for (const auto *Op : DbgCu->operands()) {
       if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
         DIFile *File = CompileUnit->getFile();
         FilePaths.emplace_back();
         sys::path::append(FilePaths.back(), File->getDirectory(),
                           File->getFilename());
-        LLVMSourceLanguages.push_back(CompileUnit->getSourceLanguage());
+        LLVMSourceLanguages.push_back(
+            CompileUnit->getSourceLanguage().getUnversionedName());
       }
     }
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
+    assert(ModuleFlags && "Expected llvm.module.flags metadata to be present");
     for (const auto *Op : ModuleFlags->operands()) {
       const MDOperand &MaybeStrOp = Op->getOperand(1);
       if (MaybeStrOp.equalsStr("Dwarf Version"))
@@ -192,7 +191,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       return StrReg;
     };
 
-    const SPIRVType *VoidTy =
+    const SPIRVTypeInst VoidTy =
         GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
 
@@ -217,7 +216,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           return InstReg;
         };
 
-    const SPIRVType *I32Ty =
+    const SPIRVTypeInst I32Ty =
         GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
 

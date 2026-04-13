@@ -1,4 +1,4 @@
-//===--- IncludeOrderCheck.h - clang-tidy -----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@ namespace clang::tidy::llvm_check {
 
 /// Checks the correct order of `#includes`.
 ///
-/// See http://llvm.org/docs/CodingStandards.html#include-style
+/// See https://llvm.org/docs/CodingStandards.html#include-style
 class IncludeOrderCheck : public ClangTidyCheck {
 public:
   IncludeOrderCheck(StringRef Name, ClangTidyContext *Context)

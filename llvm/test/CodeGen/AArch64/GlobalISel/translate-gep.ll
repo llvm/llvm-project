@@ -136,8 +136,8 @@ define <2 x ptr> @vec_gep_scalar_base(<2 x i64> %offs) {
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[GV]](p0), [[GV]](p0)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[COPY]], [[BUILD_VECTOR1]]
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(<2 x p0>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(<2 x s64>) = nsw G_MUL [[COPY]], [[BUILD_VECTOR1]]
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(<2 x p0>) = nusw inbounds G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY [[PTR_ADD]](<2 x p0>)
   ; CHECK-NEXT:   $q0 = COPY [[COPY1]](<2 x p0>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
@@ -153,7 +153,9 @@ define <4 x ptr> @vector_gep_v4i32(<4 x ptr> %b, <4 x i32> %off) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x p0>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY]](<2 x s64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY1]](<2 x s64>)
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x p0>) = G_CONCAT_VECTORS [[BITCAST]](<2 x p0>), [[BITCAST1]](<2 x p0>)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(<4 x s64>) = G_SEXT [[COPY2]](<4 x s32>)
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(<4 x p0>) = G_PTR_ADD [[CONCAT_VECTORS]], [[SEXT]](<4 x s64>)

@@ -570,3 +570,53 @@ svuint64_t test_svcnt_f64_x(svbool_t pg, svfloat64_t op) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svcnt,_f64,_x,)(pg, op);
 }
+
+// CHECK-LABEL: @test_svcnt_bf16_z(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8bf16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z17test_svcnt_bf16_zu10__SVBool_tu14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8bf16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
+//
+svuint16_t test_svcnt_bf16_z(svbool_t pg, svbfloat16_t op) MODE_ATTR {
+  // expected-warning@+1 {{implicit declaration of function 'svcnt_bf16_z'}}
+  return SVE_ACLE_FUNC(svcnt, _bf16, _z, )(pg, op);
+}
+
+// CHECK-LABEL: @test_svcnt_bf16_m(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8bf16(<vscale x 8 x i16> [[INACTIVE:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z17test_svcnt_bf16_mu12__SVUint16_tu10__SVBool_tu14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8bf16(<vscale x 8 x i16> [[INACTIVE:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
+//
+svuint16_t test_svcnt_bf16_m(svuint16_t inactive, svbool_t pg, svbfloat16_t op) MODE_ATTR {
+  // expected-warning@+1 {{implicit declaration of function 'svcnt_bf16_m'}}
+  return SVE_ACLE_FUNC(svcnt, _bf16, _m, )(inactive, pg, op);
+}
+// CHECK-LABEL: @test_svcnt_bf16_x(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8bf16(<vscale x 8 x i16> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z17test_svcnt_bf16_xu10__SVBool_tu14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8bf16(<vscale x 8 x i16> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
+//
+svuint16_t test_svcnt_bf16_x(svbool_t pg, svbfloat16_t op) MODE_ATTR {
+  // expected-warning@+1 {{implicit declaration of function 'svcnt_bf16_x'}}
+  return SVE_ACLE_FUNC(svcnt, _bf16, _x, )(pg, op);
+}

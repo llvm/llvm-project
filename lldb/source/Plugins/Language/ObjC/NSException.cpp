@@ -10,6 +10,8 @@
 
 #include "Cocoa.h"
 
+#include "llvm/Support/ErrorExtras.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -148,7 +150,7 @@ public:
                : lldb::ChildCacheState::eRefetch;
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     // NSException has 4 members:
     //   NSString *name;
     //   NSString *reason;
@@ -162,7 +164,7 @@ public:
     if (name == g_reason) return 1;
     if (name == g_userInfo) return 2;
     if (name == g_reserved) return 3;
-    return UINT32_MAX;
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
 private:

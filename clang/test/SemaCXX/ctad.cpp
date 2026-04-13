@@ -1,5 +1,31 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-unused-value -std=c++20 %s
 
+namespace GH39811 {
+
+template<int = 0> class C {};
+
+C (a);
+C (b) = C();
+C (c) {};
+C (((((d)))));
+
+template<C (e)> class X;
+template<C (...f)> class Y;
+
+void test() {
+    C (g);
+    C (h) = C();
+    C (i) {};
+    (void)g;
+    (void)h;
+    (void)i;
+}
+
+C* (bad1); // expected-error {{cannot form pointer to deduced class template specialization type}}
+C (*bad2); // expected-error {{cannot form pointer to deduced class template specialization type}}
+
+}
+
 namespace GH64347 {
 
 template<typename X, typename Y> struct A { X x; Y y;};
@@ -147,3 +173,27 @@ using alias_template = class_template<Extents...>;
 alias_template var2{converible_to_one{}, 2};
 
 }
+
+namespace GH136624 {
+  // expected-note@+1 2{{no known conversion}}
+  template<typename U> struct A {
+    U t;
+  };
+
+  template<typename V> A(V) -> A<V>;
+
+  namespace foo {
+    template<class Y> using Alias = A<Y>;
+  }
+
+  // FIXME: This diagnostic is missing 'foo::Alias', as written.
+  foo::Alias t = 0;
+  // expected-error@-1 {{no viable conversion from 'int' to 'GH136624::A<int>' (aka 'A<int>')}}
+} // namespace GH136624
+
+namespace GH131342 {
+  template <class> constexpr int val{0};
+  template <class T, int> struct A { A(T) {} };
+  template <class T> using AA = A<T, val<T>>;
+  AA a{0};
+} // namespace GH131342

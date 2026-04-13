@@ -19,6 +19,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace mlir {
@@ -35,7 +36,7 @@ using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
 using TargetDeviceSpecListRef = llvm::ArrayRef<TargetDeviceSpecInterface>;
 using TargetDeviceSpecEntry = std::pair<StringAttr, TargetDeviceSpecInterface>;
 using DataLayoutIdentifiedEntryMap =
-    ::llvm::DenseMap<::mlir::StringAttr, ::mlir::DataLayoutEntryInterface>;
+    ::llvm::MapVector<::mlir::StringAttr, ::mlir::DataLayoutEntryInterface>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
 class ModuleOp;
@@ -100,6 +101,14 @@ Attribute getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry);
 /// DataLayoutInterface if specified, otherwise returns the default.
 uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
+/// Default handler for the function pointer alignment request. Dispatches to
+/// the DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultFunctionPointerAlignment(DataLayoutEntryInterface entry);
+
+/// Default handler for the legal int widths request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultLegalIntWidths(DataLayoutEntryInterface entry);
+
 /// Returns the value of the property from the specified DataLayoutEntry. If the
 /// property is missing from the entry, returns std::nullopt.
 std::optional<Attribute> getDevicePropertyValue(DataLayoutEntryInterface entry);
@@ -144,56 +153,11 @@ llvm::TypeSize divideCeil(llvm::TypeSize numerator, uint64_t denominator);
 } // namespace mlir
 
 #include "mlir/Interfaces/DataLayoutAttrInterface.h.inc"
+#include "mlir/Interfaces/DataLayoutDialectInterface.h.inc"
 #include "mlir/Interfaces/DataLayoutOpInterface.h.inc"
 #include "mlir/Interfaces/DataLayoutTypeInterface.h.inc"
 
 namespace mlir {
-
-//===----------------------------------------------------------------------===//
-// DataLayoutDialectInterface
-//===----------------------------------------------------------------------===//
-
-/// An interface to be implemented by dialects that can have identifiers in the
-/// data layout specification entries. Provides hooks for verifying the entry
-/// validity and combining two entries.
-class DataLayoutDialectInterface
-    : public DialectInterface::Base<DataLayoutDialectInterface> {
-public:
-  DataLayoutDialectInterface(Dialect *dialect) : Base(dialect) {}
-
-  /// Checks whether the given data layout entry is valid and reports any errors
-  /// at the provided location. Derived classes should override this.
-  virtual LogicalResult verifyEntry(DataLayoutEntryInterface entry,
-                                    Location loc) const {
-    return success();
-  }
-
-  /// Checks whether the given data layout entry is valid and reports any errors
-  /// at the provided location. Derived classes should override this.
-  virtual LogicalResult verifyEntry(TargetDeviceSpecInterface entry,
-                                    Location loc) const {
-    return success();
-  }
-
-  /// Default implementation of entry combination that combines identical
-  /// entries and returns null otherwise.
-  static DataLayoutEntryInterface
-  defaultCombine(DataLayoutEntryInterface outer,
-                 DataLayoutEntryInterface inner) {
-    if (!outer || outer == inner)
-      return inner;
-    return {};
-  }
-
-  /// Combines two entries with identifiers that belong to this dialect. Returns
-  /// the combined entry or null if the entries are not compatible. Derived
-  /// classes likely need to reimplement this.
-  virtual DataLayoutEntryInterface
-  combine(DataLayoutEntryInterface outer,
-          DataLayoutEntryInterface inner) const {
-    return defaultCombine(outer, inner);
-  }
-};
 
 //===----------------------------------------------------------------------===//
 // DataLayout
@@ -258,6 +222,12 @@ public:
   /// unspecified.
   uint64_t getStackAlignment() const;
 
+  /// Returns function pointer alignment.
+  Attribute getFunctionPointerAlignment() const;
+
+  /// Returns the legal int widths.
+  Attribute getLegalIntWidths() const;
+
   /// Returns the value of the specified property if the property is defined for
   /// the given device ID, otherwise returns std::nullopt.
   std::optional<Attribute>
@@ -302,6 +272,10 @@ private:
 
   /// Cache for stack alignment.
   mutable std::optional<uint64_t> stackAlignment;
+  /// Cache for function pointer alignment.
+  mutable std::optional<Attribute> functionPointerAlignment;
+  /// Cache for legal int widths.
+  mutable std::optional<Attribute> legalIntWidths;
 };
 
 } // namespace mlir

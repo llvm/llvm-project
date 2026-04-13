@@ -43,7 +43,8 @@ public:
 TEST(FileCollectorTest, addFile) {
   TempDir root("add_file_root", /*Unique*/ true);
   std::string root_fs(root.path());
-  TestingFileCollector FileCollector(root_fs, root_fs);
+  TestingFileCollector FileCollector(root_fs, root_fs,
+                                     vfs::getRealFileSystem());
 
   FileCollector.addFile("/path/to/a");
   FileCollector.addFile("/path/to/b");
@@ -77,7 +78,8 @@ TEST(FileCollectorTest, addDirectory) {
   TempFile c(ccc.str());
 
   std::string root_fs(file_root.path());
-  TestingFileCollector FileCollector(root_fs, root_fs);
+  TestingFileCollector FileCollector(root_fs, root_fs,
+                                     vfs::getRealFileSystem());
 
   FileCollector.addDirectory(file_root.path());
 
@@ -105,7 +107,8 @@ TEST(FileCollectorTest, copyFiles) {
   // Create file collector and add files.
   TempDir root("copy_files_root", /*Unique*/ true);
   std::string root_fs(root.path());
-  TestingFileCollector FileCollector(root_fs, root_fs);
+  TestingFileCollector FileCollector(root_fs, root_fs,
+                                     vfs::getRealFileSystem());
   FileCollector.addFile(a.path());
   FileCollector.addFile(b.path());
   FileCollector.addFile(c.path());
@@ -133,7 +136,8 @@ TEST(FileCollectorTest, recordAndConstructDirectory) {
   // Create file collector and add files.
   TempDir root("copy_files_root", /*Unique*/ true);
   std::string root_fs(root.path());
-  TestingFileCollector FileCollector(root_fs, root_fs);
+  TestingFileCollector FileCollector(root_fs, root_fs,
+                                     vfs::getRealFileSystem());
   FileCollector.addFile(a.path());
 
   // The empty directory isn't seen until we add it.
@@ -169,7 +173,8 @@ TEST(FileCollectorTest, recordVFSAccesses) {
   // Create file collector and add files.
   TempDir root("copy_files_root", /*Unique*/ true);
   std::string root_fs(root.path());
-  auto Collector = std::make_shared<TestingFileCollector>(root_fs, root_fs);
+  auto Collector = std::make_shared<TestingFileCollector>(
+      root_fs, root_fs, vfs::getRealFileSystem());
   auto VFS =
       FileCollector::createCollectorVFS(vfs::getRealFileSystem(), Collector);
   VFS->status(a.path());
@@ -216,7 +221,8 @@ TEST(FileCollectorTest, Symlinks) {
   // Root where files are copied to.
   TempDir reproducer_root("reproducer_root", /*Unique*/ true);
   std::string root_fs(reproducer_root.path());
-  TestingFileCollector FileCollector(root_fs, root_fs);
+  TestingFileCollector FileCollector(root_fs, root_fs,
+                                     vfs::getRealFileSystem());
 
   // Add all the files to the collector.
   FileCollector.addFile(a.path());
@@ -264,7 +270,8 @@ TEST(FileCollectorTest, recordVFSSymlinkAccesses) {
   // Create file collector and add files.
   TempDir root("copy_files_root", true);
   std::string root_fs(root.path());
-  auto Collector = std::make_shared<TestingFileCollector>(root_fs, root_fs);
+  auto Collector = std::make_shared<TestingFileCollector>(
+      root_fs, root_fs, vfs::getRealFileSystem());
   auto VFS =
       FileCollector::createCollectorVFS(vfs::getRealFileSystem(), Collector);
   SmallString<256> Output;

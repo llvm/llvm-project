@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the global defintions (mostly command line parameters)
+// This file contains the global definitions (mostly command line parameters)
 // shared between llvm-tblgen and llvm-min-tblgen.
 //
 //===----------------------------------------------------------------------===//
@@ -25,15 +25,6 @@
 #include <vector>
 
 using namespace llvm;
-
-namespace llvm {
-cl::opt<bool> EmitLongStrLiterals(
-    "long-string-literals",
-    cl::desc("when emitting large string tables, prefer string literals over "
-             "comma-separated char literals. This can be a readability and "
-             "compile-time performance win, but upsets some compilers"),
-    cl::Hidden, cl::init(true));
-} // end namespace llvm
 
 static cl::OptionCategory PrintEnumsCat("Options for -print-enums");
 static cl::opt<std::string> Class("class",
@@ -69,7 +60,9 @@ static TableGen::Emitter::Opt X[] = {
      true},
     {"print-detailed-records", EmitDetailedRecords,
      "Print full details of all records to stdout"},
-    {"null-backend", [](const RecordKeeper &Records, raw_ostream &OS) {},
+    {"null-backend",
+     TableGen::Emitter::FnT(
+         [](const RecordKeeper &Records, raw_ostream &OS) {}),
      "Do nothing after parsing (useful for timing)"},
     {"dump-json", EmitJSON, "Dump all records as machine-readable JSON"},
     {"print-enums", printEnums, "Print enum values for a class"},
@@ -80,7 +73,8 @@ int tblgen_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv);
 
-  return TableGenMain(argv[0]);
+  MultiFileTableGenMainFn MainFn = nullptr;
+  return TableGenMain(argv[0], MainFn);
 }
 
 #ifndef __has_feature

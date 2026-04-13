@@ -37,10 +37,6 @@
 ; Test fcopysign scenarios where the sign argument is casted to the type of the
 ; magnitude argument. Those casts can be folded away by the DAGCombiner.
 
-declare double @llvm.copysign.f64(double, double)
-declare float @llvm.copysign.f32(float, float)
-declare half @llvm.copysign.f16(half, half)
-
 define double @fold_promote_d_s(double %a, float %b) nounwind {
 ; RV32I-LABEL: fold_promote_d_s:
 ; RV32I:       # %bb.0:
@@ -257,8 +253,7 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32IZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IZDINX-NEXT:    mv s1, a1
-; RV32IZDINX-NEXT:    mv s0, a0
+; RV32IZDINX-NEXT:    fmv.d s0, a0
 ; RV32IZDINX-NEXT:    mv a0, a2
 ; RV32IZDINX-NEXT:    call __extendhfsf2
 ; RV32IZDINX-NEXT:    fcvt.d.s a0, a0

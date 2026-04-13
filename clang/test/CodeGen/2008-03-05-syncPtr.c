@@ -34,7 +34,7 @@ int* foo5(int** a, int* b) {
 
 
 int* foo6(int** a, int*** b) {
-  return __sync_lock_test_and_set (a, b);
+  return __sync_lock_test_and_set (a, (int*)b);
 }
 // CHECK-LABEL: define{{.*}} ptr @foo6
 // CHECK: atomicrmw xchg {{.*}}, align 8

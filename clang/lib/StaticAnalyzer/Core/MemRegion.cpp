@@ -28,7 +28,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -49,7 +48,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -194,11 +192,11 @@ QualType ObjCIvarRegion::getValueType() const {
 }
 
 QualType CXXBaseObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType CXXDerivedObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType ParamVarRegion::getValueType() const {
@@ -1024,27 +1022,60 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
   return (const StackFrameContext *)nullptr;
 }
 
+static bool isStdStreamVar(const VarDecl *D) {
+  const IdentifierInfo *II = D->getIdentifier();
+  if (!II)
+    return false;
+  if (!D->getDeclContext()->isTranslationUnit())
+    return false;
+  StringRef N = II->getName();
+  QualType FILETy = D->getASTContext().getFILEType();
+  if (FILETy.isNull())
+    return false;
+  FILETy = FILETy.getCanonicalType();
+  QualType Ty = D->getType().getCanonicalType();
+  return Ty->isPointerType() && Ty->getPointeeType() == FILETy &&
+         (N == "stdin" || N == "stdout" || N == "stderr");
+}
+
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const LocationContext *LC) {
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();
     const StackFrameContext *SFC = LC->getStackFrame();
-    const Stmt *CallSite = SFC->getCallSite();
+    const Expr *CallSite = SFC->getCallSite();
     if (CallSite) {
-      const Decl *D = SFC->getDecl();
-      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-        if (Index < FD->param_size() && FD->parameters()[Index] == PVD)
-          return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
-                                              getStackArgumentsRegion(SFC));
-      } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
-        if (Index < BD->param_size() && BD->parameters()[Index] == PVD)
-          return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
-                                              getStackArgumentsRegion(SFC));
-      } else {
-        return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
-                                            getStackArgumentsRegion(SFC));
+      const Decl *CalleeDecl = SFC->getDecl();
+      bool CurrentParam = true;
+      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
+        CurrentParam =
+            (Index < FD->param_size() && FD->getParamDecl(Index) == PVD);
+      } else if (const auto *BD = dyn_cast<BlockDecl>(CalleeDecl)) {
+        CurrentParam =
+            (Index < BD->param_size() && BD->getParamDecl(Index) == PVD);
       }
+
+      if (CurrentParam) {
+        // If this is a parameter of the *current* stack frame, we can
+        // represent it with a `ParamVarRegion`.
+        return getSubRegion<ParamVarRegion>(CallSite, Index,
+                                            getStackArgumentsRegion(SFC));
+      } else {
+        // TODO: Parameters of other stack frames (which may have been be
+        // captured by a lambda or a block) are currently represented by
+        // `NonParamVarRegion`s. This behavior is present since commit
+        // 98db1f990fc273adc1ae36d4ce97ce66fd27ac30 which introduced
+        // `ParamVarRegion` in 2020; and appears to work (at least to some
+        // extent); but it would be nice to clean this up (if somebody has time
+        // and knowledge for a proper investigation).
+      }
+    } else {
+      // TODO: Parameters of the entrypoint stack frame (where `CallSite` is
+      // null) are currently represented by `NonParamVarRegion`s. This behavior
+      // is also present since 98db1f990fc273adc1ae36d4ce97ce66fd27ac30 which
+      // introduced `ParamVarRegion` in 2020, but it would be nice to clean it
+      // up for the sake of clarity and consistency.
     }
   }
 
@@ -1056,10 +1087,18 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     assert(!Ty.isNull());
     if (Ty.isConstQualified()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
-    } else if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
-      sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
     } else {
-      sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      // Pointer value of C standard streams is usually not modified by calls
+      // to functions declared in system headers. This means that they should
+      // not get invalidated by calls to functions declared in system headers,
+      // so they are placed in the global internal space, which is not
+      // invalidated by calls to functions declared in system headers.
+      if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
+          !isStdStreamVar(D)) {
+        sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
+      } else {
+        sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      }
     }
 
   // Finally handle static locals.
@@ -1197,6 +1236,16 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
                                    const ASTContext &Ctx) {
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
 
+  // The address space must be preserved because some target-specific address
+  // spaces influence the size of the pointer value which is represented by the
+  // element region.
+  LangAS AS = elementType.getAddressSpace();
+  if (AS != LangAS::Default) {
+    Qualifiers Quals;
+    Quals.setAddressSpace(AS);
+    T = Ctx.getQualifiedType(T, Quals);
+  }
+
   llvm::FoldingSetNodeID ID;
   ElementRegion::ProfileRegion(ID, T, Idx, superRegion);
 
@@ -1236,10 +1285,10 @@ const SymbolicRegion *MemRegionManager::getSymbolicHeapRegion(SymbolRef Sym) {
   return getSubRegion<SymbolicRegion>(Sym, getHeapRegion());
 }
 
-const FieldRegion*
-MemRegionManager::getFieldRegion(const FieldDecl *d,
-                                 const SubRegion* superRegion){
-  return getSubRegion<FieldRegion>(d, superRegion);
+const FieldRegion *
+MemRegionManager::getFieldRegion(const FieldDecl *FD,
+                                 const SubRegion *SuperRegion) {
+  return getSubRegion<FieldRegion>(FD->getCanonicalDecl(), SuperRegion);
 }
 
 const ObjCIvarRegion*
@@ -1672,16 +1721,23 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       if (SymbolicOffsetBase)
         continue;
 
-      // Get the field number.
-      unsigned idx = 0;
-      for (RecordDecl::field_iterator FI = RD->field_begin(),
-             FE = RD->field_end(); FI != FE; ++FI, ++idx) {
-        if (FR->getDecl() == *FI)
-          break;
+      assert(FR->getDecl()->getCanonicalDecl() == FR->getDecl());
+      auto MaybeFieldIdx = [FR, RD]() -> std::optional<unsigned> {
+        for (auto [Idx, Field] : llvm::enumerate(RD->fields())) {
+          if (FR->getDecl() == Field->getCanonicalDecl())
+            return Idx;
+        }
+        return std::nullopt;
+      }();
+
+      if (!MaybeFieldIdx.has_value()) {
+        assert(false && "Field not found");
+        goto Finish; // Invalid offset.
       }
+
       const ASTRecordLayout &Layout = R->getContext().getASTRecordLayout(RD);
       // This is offset in bits.
-      Offset += Layout.getFieldOffset(idx);
+      Offset += Layout.getFieldOffset(MaybeFieldIdx.value());
       break;
     }
     }

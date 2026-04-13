@@ -17,9 +17,6 @@
 #include <memory>
 #include <unordered_set>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 namespace sampleprof {
 
@@ -126,6 +123,8 @@ protected:
 
   void showDensitySuggestion(double Density);
 
+  void markAllContextPreinlined(SampleProfileMap &ProfileMap);
+
   void collectProfiledFunctions();
 
   bool collectFunctionsFromRawProfile(
@@ -182,9 +181,10 @@ private:
   populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
   void populateBoundarySamplesWithProbesForAllFunctions(
       const BranchSample &BranchCounters);
+  void
+  populateTypeSamplesForAllFunctions(const DataAccessSample &DataAccessSamples);
   void postProcessProfiles();
-  void trimColdProfiles(const SampleProfileMap &Profiles,
-                        uint64_t ColdCntThreshold);
+  void trimColdProfiles(uint64_t ColdCntThreshold);
   bool collectFunctionsFromLLVMProfile(
       std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
 };

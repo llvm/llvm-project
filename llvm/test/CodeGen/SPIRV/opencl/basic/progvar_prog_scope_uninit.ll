@@ -10,7 +10,7 @@
 @var = addrspace(1) global <2 x i8> zeroinitializer, align 2
 @g_var = addrspace(1) global <2 x i8> zeroinitializer, align 2
 @a_var = addrspace(1) global [2 x <2 x i8>] zeroinitializer, align 2
-@p_var = addrspace(1) global <2 x i8> addrspace(1)* null, align 8
+@p_var = addrspace(1) global ptr addrspace(1) null, align 8
 
 define spir_func <2 x i8> @from_buf(<2 x i8> %a) {
 entry:
@@ -22,9 +22,9 @@ entry:
   ret <2 x i8> %a
 }
 
-define spir_kernel void @global_check(i32 addrspace(1)* %out) {
+define spir_kernel void @global_check(ptr addrspace(1) %out) {
 entry:
-  %0 = load <2 x i8>, <2 x i8> addrspace(1)* @var, align 2
+  %0 = load <2 x i8>, ptr addrspace(1) @var, align 2
   %cmp = icmp eq <2 x i8> %0, zeroinitializer
   %sext = select <2 x i1> %cmp, <2 x i8> <i8 -1, i8 -1>, <2 x i8> zeroinitializer
   %cast = icmp slt <2 x i8> %sext, zeroinitializer
@@ -37,7 +37,7 @@ entry:
   %and = and i32 %conv, %call
   %tobool1 = icmp ne i32 %and, 0
   %frombool = select i1 %tobool1, i8 1, i8 0
-  %2 = load <2 x i8>, <2 x i8> addrspace(1)* @g_var, align 2
+  %2 = load <2 x i8>, ptr addrspace(1) @g_var, align 2
   %cmp2 = icmp eq <2 x i8> %2, zeroinitializer
   %sext3 = select <2 x i1> %cmp2, <2 x i8> <i8 -1, i8 -1>, <2 x i8> zeroinitializer
   %cast2 = icmp slt <2 x i8> %sext3, zeroinitializer
@@ -50,8 +50,8 @@ entry:
   %and7 = and i32 %conv6, %call4
   %tobool8 = icmp ne i32 %and7, 0
   %frombool9 = select i1 %tobool8, i8 1, i8 0
-  %4 = getelementptr inbounds [2 x <2 x i8>], [2 x <2 x i8>] addrspace(1)* @a_var, i64 0, i64 0
-  %5 = load <2 x i8>, <2 x i8> addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds [2 x <2 x i8>], ptr addrspace(1) @a_var, i64 0, i64 0
+  %5 = load <2 x i8>, ptr addrspace(1) %4, align 2
   %cmp10 = icmp eq <2 x i8> %5, zeroinitializer
   %sext11 = select <2 x i1> %cmp10, <2 x i8> <i8 -1, i8 -1>, <2 x i8> zeroinitializer
   %cast4 = icmp slt <2 x i8> %sext11, zeroinitializer
@@ -64,8 +64,8 @@ entry:
   %and15 = and i32 %conv14, %call12
   %tobool16 = icmp ne i32 %and15, 0
   %frombool17 = select i1 %tobool16, i8 1, i8 0
-  %7 = getelementptr inbounds [2 x <2 x i8>], [2 x <2 x i8>] addrspace(1)* @a_var, i64 0, i64 1
-  %8 = load <2 x i8>, <2 x i8> addrspace(1)* %7, align 2
+  %7 = getelementptr inbounds [2 x <2 x i8>], ptr addrspace(1) @a_var, i64 0, i64 1
+  %8 = load <2 x i8>, ptr addrspace(1) %7, align 2
   %cmp18 = icmp eq <2 x i8> %8, zeroinitializer
   %sext19 = select <2 x i1> %cmp18, <2 x i8> <i8 -1, i8 -1>, <2 x i8> zeroinitializer
   %cast6 = icmp slt <2 x i8> %sext19, zeroinitializer
@@ -78,9 +78,9 @@ entry:
   %and23 = and i32 %conv22, %call20
   %tobool24 = icmp ne i32 %and23, 0
   %frombool25 = select i1 %tobool24, i8 1, i8 0
-  %10 = load <2 x i8> addrspace(1)*, <2 x i8> addrspace(1)* addrspace(1)* @p_var, align 8
-  %11 = ptrtoint <2 x i8> addrspace(1)* %10 to i64
-  %12 = ptrtoint <2 x i8> addrspace(1)* null to i64
+  %10 = load ptr addrspace(1), ptr addrspace(1) @p_var, align 8
+  %11 = ptrtoint ptr addrspace(1) %10 to i64
+  %12 = ptrtoint ptr addrspace(1) null to i64
   %cmp26 = icmp eq i64 %11, %12
   %conv27 = select i1 %cmp26, i32 1, i32 0
   %13 = and i8 %frombool25, 1
@@ -93,60 +93,60 @@ entry:
   %tobool33 = icmp ne i8 %14, 0
   %15 = select i1 %tobool33, i64 1, i64 0
   %cond = select i1 %tobool33, i32 1, i32 0
-  store i32 %cond, i32 addrspace(1)* %out, align 4
+  store i32 %cond, ptr addrspace(1) %out, align 4
   ret void
 }
 
 declare spir_func i1 @OpAll_v2i8(<2 x i8>)
 
-define spir_kernel void @writer(<2 x i8> addrspace(1)* %src, i32 %idx) {
+define spir_kernel void @writer(ptr addrspace(1) %src, i32 %idx) {
 entry:
-  %arrayidx = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %src, i64 0
-  %0 = load <2 x i8>, <2 x i8> addrspace(1)* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds <2 x i8>, ptr addrspace(1) %src, i64 0
+  %0 = load <2 x i8>, ptr addrspace(1) %arrayidx, align 2
   %call = call spir_func <2 x i8> @from_buf(<2 x i8> %0)
-  store <2 x i8> %call, <2 x i8> addrspace(1)* @var, align 2
-  %arrayidx1 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %src, i64 1
-  %1 = load <2 x i8>, <2 x i8> addrspace(1)* %arrayidx1, align 2
+  store <2 x i8> %call, ptr addrspace(1) @var, align 2
+  %arrayidx1 = getelementptr inbounds <2 x i8>, ptr addrspace(1) %src, i64 1
+  %1 = load <2 x i8>, ptr addrspace(1) %arrayidx1, align 2
   %call2 = call spir_func <2 x i8> @from_buf(<2 x i8> %1)
-  store <2 x i8> %call2, <2 x i8> addrspace(1)* @g_var, align 2
-  %arrayidx3 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %src, i64 2
-  %2 = load <2 x i8>, <2 x i8> addrspace(1)* %arrayidx3, align 2
+  store <2 x i8> %call2, ptr addrspace(1) @g_var, align 2
+  %arrayidx3 = getelementptr inbounds <2 x i8>, ptr addrspace(1) %src, i64 2
+  %2 = load <2 x i8>, ptr addrspace(1) %arrayidx3, align 2
   %call4 = call spir_func <2 x i8> @from_buf(<2 x i8> %2)
-  %3 = getelementptr inbounds [2 x <2 x i8>], [2 x <2 x i8>] addrspace(1)* @a_var, i64 0, i64 0
-  store <2 x i8> %call4, <2 x i8> addrspace(1)* %3, align 2
-  %arrayidx5 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %src, i64 3
-  %4 = load <2 x i8>, <2 x i8> addrspace(1)* %arrayidx5, align 2
+  %3 = getelementptr inbounds [2 x <2 x i8>], ptr addrspace(1) @a_var, i64 0, i64 0
+  store <2 x i8> %call4, ptr addrspace(1) %3, align 2
+  %arrayidx5 = getelementptr inbounds <2 x i8>, ptr addrspace(1) %src, i64 3
+  %4 = load <2 x i8>, ptr addrspace(1) %arrayidx5, align 2
   %call6 = call spir_func <2 x i8> @from_buf(<2 x i8> %4)
-  %5 = getelementptr inbounds [2 x <2 x i8>], [2 x <2 x i8>] addrspace(1)* @a_var, i64 0, i64 1
-  store <2 x i8> %call6, <2 x i8> addrspace(1)* %5, align 2
+  %5 = getelementptr inbounds [2 x <2 x i8>], ptr addrspace(1) @a_var, i64 0, i64 1
+  store <2 x i8> %call6, ptr addrspace(1) %5, align 2
   %idx.ext = zext i32 %idx to i64
-  %add.ptr = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %3, i64 %idx.ext
-  store <2 x i8> addrspace(1)* %add.ptr, <2 x i8> addrspace(1)* addrspace(1)* @p_var, align 8
+  %add.ptr = getelementptr inbounds <2 x i8>, ptr addrspace(1) %3, i64 %idx.ext
+  store ptr addrspace(1) %add.ptr, ptr addrspace(1) @p_var, align 8
   ret void
 }
 
-define spir_kernel void @reader(<2 x i8> addrspace(1)* %dest, <2 x i8> %ptr_write_val) {
+define spir_kernel void @reader(ptr addrspace(1) %dest, <2 x i8> %ptr_write_val) {
 entry:
   %call = call spir_func <2 x i8> @from_buf(<2 x i8> %ptr_write_val)
-  %0 = load <2 x i8> addrspace(1)*, <2 x i8> addrspace(1)* addrspace(1)* @p_var, align 8
-  store <2 x i8> %call, <2 x i8> addrspace(1)* %0, align 2
-  %1 = load <2 x i8>, <2 x i8> addrspace(1)* @var, align 2
+  %0 = load ptr addrspace(1), ptr addrspace(1) @p_var, align 8
+  store <2 x i8> %call, ptr addrspace(1) %0, align 2
+  %1 = load <2 x i8>, ptr addrspace(1) @var, align 2
   %call1 = call spir_func <2 x i8> @to_buf(<2 x i8> %1)
-  %arrayidx = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %dest, i64 0
-  store <2 x i8> %call1, <2 x i8> addrspace(1)* %arrayidx, align 2
-  %2 = load <2 x i8>, <2 x i8> addrspace(1)* @g_var, align 2
+  %arrayidx = getelementptr inbounds <2 x i8>, ptr addrspace(1) %dest, i64 0
+  store <2 x i8> %call1, ptr addrspace(1) %arrayidx, align 2
+  %2 = load <2 x i8>, ptr addrspace(1) @g_var, align 2
   %call2 = call spir_func <2 x i8> @to_buf(<2 x i8> %2)
-  %arrayidx3 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %dest, i64 1
-  store <2 x i8> %call2, <2 x i8> addrspace(1)* %arrayidx3, align 2
-  %3 = getelementptr inbounds [2 x <2 x i8>], [2 x <2 x i8>] addrspace(1)* @a_var, i64 0, i64 0
-  %4 = load <2 x i8>, <2 x i8> addrspace(1)* %3, align 2
+  %arrayidx3 = getelementptr inbounds <2 x i8>, ptr addrspace(1) %dest, i64 1
+  store <2 x i8> %call2, ptr addrspace(1) %arrayidx3, align 2
+  %3 = getelementptr inbounds [2 x <2 x i8>], ptr addrspace(1) @a_var, i64 0, i64 0
+  %4 = load <2 x i8>, ptr addrspace(1) %3, align 2
   %call4 = call spir_func <2 x i8> @to_buf(<2 x i8> %4)
-  %arrayidx5 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %dest, i64 2
-  store <2 x i8> %call4, <2 x i8> addrspace(1)* %arrayidx5, align 2
-  %5 = getelementptr inbounds [2 x <2 x i8>], [2 x <2 x i8>] addrspace(1)* @a_var, i64 0, i64 1
-  %6 = load <2 x i8>, <2 x i8> addrspace(1)* %5, align 2
+  %arrayidx5 = getelementptr inbounds <2 x i8>, ptr addrspace(1) %dest, i64 2
+  store <2 x i8> %call4, ptr addrspace(1) %arrayidx5, align 2
+  %5 = getelementptr inbounds [2 x <2 x i8>], ptr addrspace(1) @a_var, i64 0, i64 1
+  %6 = load <2 x i8>, ptr addrspace(1) %5, align 2
   %call6 = call spir_func <2 x i8> @to_buf(<2 x i8> %6)
-  %arrayidx7 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(1)* %dest, i64 3
-  store <2 x i8> %call6, <2 x i8> addrspace(1)* %arrayidx7, align 2
+  %arrayidx7 = getelementptr inbounds <2 x i8>, ptr addrspace(1) %dest, i64 3
+  store <2 x i8> %call6, ptr addrspace(1) %arrayidx7, align 2
   ret void
 }

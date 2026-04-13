@@ -55,9 +55,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "packets"
 
-static cl::opt<bool>
-    DisablePacketizer("disable-packetizer", cl::Hidden,
-                      cl::desc("Disable Hexagon packetizer pass"));
+cl::opt<bool> DisablePacketizer("disable-packetizer", cl::Hidden,
+                                cl::desc("Disable Hexagon packetizer pass"));
 
 static cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
                                 cl::init(true),
@@ -76,13 +75,6 @@ static cl::opt<bool>
                           cl::desc("Disable vector double new-value-stores"));
 
 extern cl::opt<bool> ScheduleInlineAsm;
-
-namespace llvm {
-
-FunctionPass *createHexagonPacketizer(bool Minimal);
-void initializeHexagonPacketizerPass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
@@ -108,8 +100,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
   private:
@@ -205,8 +196,7 @@ static MachineBasicBlock::iterator moveInstrOut(MachineInstr &MI,
 
 bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   // FIXME: This pass causes verification failures.
-  MF.getProperties().set(
-      MachineFunctionProperties::Property::FailsVerification);
+  MF.getProperties().setFailsVerification();
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
@@ -662,7 +652,7 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
   const MCInstrDesc& MCID = PacketMI.getDesc();
 
   // First operand is always the result.
-  const TargetRegisterClass *PacketRC = HII->getRegClass(MCID, 0, HRI, MF);
+  const TargetRegisterClass *PacketRC = HII->getRegClass(MCID, 0);
   // Double regs can not feed into new value store: PRM section: 5.4.2.2.
   if (PacketRC == &Hexagon::DoubleRegsRegClass)
     return false;
@@ -875,7 +865,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
     return false;
 
   const MCInstrDesc& MCID = PI.getDesc();
-  const TargetRegisterClass *VecRC = HII->getRegClass(MCID, 0, HRI, MF);
+  const TargetRegisterClass *VecRC = HII->getRegClass(MCID, 0);
   if (DisableVecDblNVStores && VecRC == &Hexagon::HvxWRRegClass)
     return false;
 

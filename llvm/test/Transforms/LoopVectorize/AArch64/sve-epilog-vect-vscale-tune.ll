@@ -10,7 +10,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @foo(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i64 %len) #0 {
 ; CHECK-EPILOG:      vec.epilog.ph:
 ; CHECK-EPILOG:      vec.epilog.vector.body:
-; CHECK-EPILOG:        load <vscale x 4 x i16>
+; CHECK-EPILOG:        load <8 x i16>
 
 ; The epilogue loop gets vectorised vscale x 2 x i16 wide.
 ; CHECK-EPILOG-V2:      vec.epilog.ph:
@@ -22,7 +22,7 @@ define void @foo(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i6
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %p, i64 %indvars.iv
   %0 = load i16, ptr %arrayidx
@@ -33,7 +33,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i64 %indvars.iv.next, %len
   br i1 %exitcond, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }
 

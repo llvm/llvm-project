@@ -154,6 +154,8 @@ bool AMDGPUAtomicOptimizerImpl::run() {
   // Scan option None disables the Pass
   if (ScanImpl == ScanOptions::None)
     return false;
+  if (ST.isSingleLaneExecution(F))
+    return false;
 
   visit(F);
   if (ToReplace.empty())
@@ -589,7 +591,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   // return the next active lane
   auto *Mask = B.CreateShl(ConstantInt::get(WaveTy, 1), FF1);
 
-  auto *InverseMask = B.CreateXor(Mask, ConstantInt::get(WaveTy, -1));
+  auto *InverseMask = B.CreateXor(Mask, ConstantInt::getAllOnesValue(WaveTy));
   auto *NewActiveBits = B.CreateAnd(ActiveBits, InverseMask);
   ActiveBits->addIncoming(NewActiveBits, ComputeLoop);
 
@@ -666,7 +668,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     // Record I's original position as the entry block.
     PixelEntryBB = I.getParent();
 
-    Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {}, {});
+    Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {});
     Instruction *const NonHelperTerminator =
         SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
@@ -698,15 +700,14 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // using the mbcnt intrinsic.
   Value *Mbcnt;
   if (ST.isWave32()) {
-    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
-                              {Ballot, B.getInt32(0)});
+    Mbcnt =
+        B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {Ballot, B.getInt32(0)});
   } else {
     Value *const ExtractLo = B.CreateTrunc(Ballot, Int32Ty);
     Value *const ExtractHi = B.CreateTrunc(B.CreateLShr(Ballot, 32), Int32Ty);
-    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
+    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo,
                               {ExtractLo, B.getInt32(0)});
-    Mbcnt =
-        B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {}, {ExtractHi, Mbcnt});
+    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {ExtractHi, Mbcnt});
   }
 
   Function *F = I.getFunction();
@@ -839,7 +840,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     //
     // OriginalBB is known to have a branch as terminator because
     // SplitBlockAndInsertIfThen will have inserted one.
-    BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
+    CondBrInst *Terminator = cast<CondBrInst>(OriginalBB->getTerminator());
     B.SetInsertPoint(ComputeEnd);
     Terminator->removeFromParent();
     B.Insert(Terminator);

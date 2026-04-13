@@ -158,36 +158,6 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 !type = tensor<2048x2048xf32>
-func.func @fold_add_on_transposed_matmuls(%arg0: !type, %arg1: !type) -> !type {
-  %0 = arith.constant dense<1.111111e+00> : !type
-  %cst = arith.constant 0.000000e+00 : f32
-  %1 = tensor.empty() : !type
-  %2 = linalg.fill ins(%cst : f32) outs(%1 : !type) -> !type
-  %3 = linalg.matmul_transpose_a ins(%arg0, %0 : !type, !type) outs(%2 : !type) -> !type
-  %4 = linalg.matmul_transpose_b ins(%arg1, %0 : !type, !type) outs(%2 : !type) -> !type
-  %5 = linalg.add ins(%3, %4 : !type, !type) outs(%1 : !type) -> !type
-  return %5 : !type
-}
-
-// CHECK-LABEL: func.func @fold_add_on_transposed_matmuls
-// CHECK: %[[ACC:.+]] = linalg.matmul_transpose_a
-// CHECK-NEXT: %[[RES:.+]] = linalg.matmul_transpose_b ins({{.+}}) outs(%[[ACC]]
-// CHECK-NOT: linalg.add
-// CHECK-NEXT: return %[[RES]]
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.apply_patterns to %func {
-      transform.apply_patterns.linalg.fold_add_into_dest
-    } : !transform.any_op
-    transform.yield
-  }
-}
-
-// -----
-
-!type = tensor<2048x2048xf32>
 func.func @expect_no_fold_of_add_as_dominated_op_is_not_a_contraction(%arg0: !type, %arg1: !type) -> !type {
   %0 = arith.constant dense<1.111111e+00> : !type
   %cst = arith.constant 0.000000e+00 : f32

@@ -20,9 +20,6 @@
 #include "gtest/gtest.h"
 #include <gmock/gmock.h>
 #include <string>
-#include <utility>
-
-using ::testing::StartsWith;
 
 namespace llvm {
 
