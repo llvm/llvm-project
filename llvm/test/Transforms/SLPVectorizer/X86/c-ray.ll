@@ -64,25 +64,18 @@ define i32 @ray_sphere(ptr nocapture noundef readonly %sph, ptr nocapture nounde
 ; SSE2:       if.end:
 ; SSE2-NEXT:    [[CALL:%.*]] = tail call double @sqrt(double noundef [[TMP25]])
 ; SSE2-NEXT:    [[FNEG87:%.*]] = fneg double [[TMP12]]
+; SSE2-NEXT:    [[ADD:%.*]] = fsub double [[CALL]], [[TMP12]]
 ; SSE2-NEXT:    [[MUL88:%.*]] = fmul double [[TMP4]], 2.000000e+00
-; SSE2-NEXT:    [[TMP26:%.*]] = insertelement <2 x double> poison, double [[FNEG87]], i32 0
-; SSE2-NEXT:    [[TMP27:%.*]] = insertelement <2 x double> [[TMP26]], double [[CALL]], i32 1
-; SSE2-NEXT:    [[TMP28:%.*]] = shufflevector <2 x double> [[TMP27]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
-; SSE2-NEXT:    [[TMP29:%.*]] = insertelement <2 x double> [[TMP28]], double [[TMP12]], i32 1
-; SSE2-NEXT:    [[TMP30:%.*]] = fsub <2 x double> [[TMP27]], [[TMP29]]
-; SSE2-NEXT:    [[TMP31:%.*]] = insertelement <2 x double> poison, double [[MUL88]], i32 0
-; SSE2-NEXT:    [[TMP32:%.*]] = shufflevector <2 x double> [[TMP31]], <2 x double> poison, <2 x i32> zeroinitializer
-; SSE2-NEXT:    [[TMP33:%.*]] = fdiv <2 x double> [[TMP30]], [[TMP32]]
-; SSE2-NEXT:    [[TMP34:%.*]] = extractelement <2 x double> [[TMP33]], i32 1
+; SSE2-NEXT:    [[TMP34:%.*]] = fdiv double [[ADD]], [[MUL88]]
+; SSE2-NEXT:    [[SUB90:%.*]] = fsub double [[FNEG87]], [[CALL]]
+; SSE2-NEXT:    [[TMP35:%.*]] = fdiv double [[SUB90]], [[MUL88]]
 ; SSE2-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP34]], 0x3EB0C6F7A0B5ED8D
-; SSE2-NEXT:    [[TMP35:%.*]] = extractelement <2 x double> [[TMP33]], i32 0
 ; SSE2-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP35]], 0x3EB0C6F7A0B5ED8D
 ; SSE2-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP93]], i1 [[CMP94]], i1 false
 ; SSE2-NEXT:    br i1 [[OR_COND]], label [[CLEANUP]], label [[LOR_LHS_FALSE:%.*]]
 ; SSE2:       lor.lhs.false:
-; SSE2-NEXT:    [[TMP36:%.*]] = fcmp ule <2 x double> [[TMP33]], splat (double 1.000000e+00)
-; SSE2-NEXT:    [[TMP37:%.*]] = extractelement <2 x i1> [[TMP36]], i32 0
-; SSE2-NEXT:    [[TMP38:%.*]] = extractelement <2 x i1> [[TMP36]], i32 1
+; SSE2-NEXT:    [[TMP38:%.*]] = fcmp ule double [[TMP34]], 1.000000e+00
+; SSE2-NEXT:    [[TMP37:%.*]] = fcmp ule double [[TMP35]], 1.000000e+00
 ; SSE2-NEXT:    [[OR_COND106:%.*]] = select i1 [[TMP38]], i1 true, i1 [[TMP37]]
 ; SSE2-NEXT:    [[SPEC_SELECT:%.*]] = zext i1 [[OR_COND106]] to i32
 ; SSE2-NEXT:    br label [[CLEANUP]]
@@ -145,24 +138,18 @@ define i32 @ray_sphere(ptr nocapture noundef readonly %sph, ptr nocapture nounde
 ; AVX:       if.end:
 ; AVX-NEXT:    [[CALL:%.*]] = tail call double @sqrt(double noundef [[TMP25]])
 ; AVX-NEXT:    [[FNEG87:%.*]] = fneg double [[TMP12]]
-; AVX-NEXT:    [[MUL88:%.*]] = fmul double [[TMP4]], 2.000000e+00
 ; AVX-NEXT:    [[ADD:%.*]] = fsub double [[CALL]], [[TMP12]]
+; AVX-NEXT:    [[MUL88:%.*]] = fmul double [[TMP4]], 2.000000e+00
+; AVX-NEXT:    [[TMP31:%.*]] = fdiv double [[ADD]], [[MUL88]]
 ; AVX-NEXT:    [[SUB90:%.*]] = fsub double [[FNEG87]], [[CALL]]
-; AVX-NEXT:    [[TMP26:%.*]] = insertelement <2 x double> poison, double [[SUB90]], i32 0
-; AVX-NEXT:    [[TMP27:%.*]] = insertelement <2 x double> [[TMP26]], double [[ADD]], i32 1
-; AVX-NEXT:    [[TMP28:%.*]] = insertelement <2 x double> poison, double [[MUL88]], i32 0
-; AVX-NEXT:    [[TMP29:%.*]] = shufflevector <2 x double> [[TMP28]], <2 x double> poison, <2 x i32> zeroinitializer
-; AVX-NEXT:    [[TMP30:%.*]] = fdiv <2 x double> [[TMP27]], [[TMP29]]
-; AVX-NEXT:    [[TMP31:%.*]] = extractelement <2 x double> [[TMP30]], i32 1
+; AVX-NEXT:    [[TMP32:%.*]] = fdiv double [[SUB90]], [[MUL88]]
 ; AVX-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP31]], 0x3EB0C6F7A0B5ED8D
-; AVX-NEXT:    [[TMP32:%.*]] = extractelement <2 x double> [[TMP30]], i32 0
 ; AVX-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP32]], 0x3EB0C6F7A0B5ED8D
 ; AVX-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP93]], i1 [[CMP94]], i1 false
 ; AVX-NEXT:    br i1 [[OR_COND]], label [[CLEANUP]], label [[LOR_LHS_FALSE:%.*]]
 ; AVX:       lor.lhs.false:
-; AVX-NEXT:    [[TMP33:%.*]] = fcmp ule <2 x double> [[TMP30]], splat (double 1.000000e+00)
-; AVX-NEXT:    [[TMP34:%.*]] = extractelement <2 x i1> [[TMP33]], i32 0
-; AVX-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP33]], i32 1
+; AVX-NEXT:    [[TMP35:%.*]] = fcmp ule double [[TMP31]], 1.000000e+00
+; AVX-NEXT:    [[TMP34:%.*]] = fcmp ule double [[TMP32]], 1.000000e+00
 ; AVX-NEXT:    [[OR_COND106:%.*]] = select i1 [[TMP35]], i1 true, i1 [[TMP34]]
 ; AVX-NEXT:    [[SPEC_SELECT:%.*]] = zext i1 [[OR_COND106]] to i32
 ; AVX-NEXT:    br label [[CLEANUP]]
@@ -225,24 +212,18 @@ define i32 @ray_sphere(ptr nocapture noundef readonly %sph, ptr nocapture nounde
 ; AVX2:       if.end:
 ; AVX2-NEXT:    [[CALL:%.*]] = tail call double @sqrt(double noundef [[TMP25]])
 ; AVX2-NEXT:    [[FNEG87:%.*]] = fneg double [[TMP12]]
-; AVX2-NEXT:    [[MUL88:%.*]] = fmul double [[TMP4]], 2.000000e+00
 ; AVX2-NEXT:    [[ADD:%.*]] = fsub double [[CALL]], [[TMP12]]
+; AVX2-NEXT:    [[MUL88:%.*]] = fmul double [[TMP4]], 2.000000e+00
+; AVX2-NEXT:    [[TMP31:%.*]] = fdiv double [[ADD]], [[MUL88]]
 ; AVX2-NEXT:    [[SUB90:%.*]] = fsub double [[FNEG87]], [[CALL]]
-; AVX2-NEXT:    [[TMP26:%.*]] = insertelement <2 x double> poison, double [[SUB90]], i32 0
-; AVX2-NEXT:    [[TMP27:%.*]] = insertelement <2 x double> [[TMP26]], double [[ADD]], i32 1
-; AVX2-NEXT:    [[TMP28:%.*]] = insertelement <2 x double> poison, double [[MUL88]], i32 0
-; AVX2-NEXT:    [[TMP29:%.*]] = shufflevector <2 x double> [[TMP28]], <2 x double> poison, <2 x i32> zeroinitializer
-; AVX2-NEXT:    [[TMP30:%.*]] = fdiv <2 x double> [[TMP27]], [[TMP29]]
-; AVX2-NEXT:    [[TMP31:%.*]] = extractelement <2 x double> [[TMP30]], i32 1
+; AVX2-NEXT:    [[TMP32:%.*]] = fdiv double [[SUB90]], [[MUL88]]
 ; AVX2-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP31]], 0x3EB0C6F7A0B5ED8D
-; AVX2-NEXT:    [[TMP32:%.*]] = extractelement <2 x double> [[TMP30]], i32 0
 ; AVX2-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP32]], 0x3EB0C6F7A0B5ED8D
 ; AVX2-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP93]], i1 [[CMP94]], i1 false
 ; AVX2-NEXT:    br i1 [[OR_COND]], label [[CLEANUP]], label [[LOR_LHS_FALSE:%.*]]
 ; AVX2:       lor.lhs.false:
-; AVX2-NEXT:    [[TMP33:%.*]] = fcmp ule <2 x double> [[TMP30]], splat (double 1.000000e+00)
-; AVX2-NEXT:    [[TMP34:%.*]] = extractelement <2 x i1> [[TMP33]], i32 0
-; AVX2-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP33]], i32 1
+; AVX2-NEXT:    [[TMP35:%.*]] = fcmp ule double [[TMP31]], 1.000000e+00
+; AVX2-NEXT:    [[TMP34:%.*]] = fcmp ule double [[TMP32]], 1.000000e+00
 ; AVX2-NEXT:    [[OR_COND106:%.*]] = select i1 [[TMP35]], i1 true, i1 [[TMP34]]
 ; AVX2-NEXT:    [[SPEC_SELECT:%.*]] = zext i1 [[OR_COND106]] to i32
 ; AVX2-NEXT:    br label [[CLEANUP]]

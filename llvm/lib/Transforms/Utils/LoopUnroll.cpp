@@ -1124,21 +1124,26 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(!UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
+  Loop *OuterL = L->getParentLoop();
+  std::vector<BasicBlock *> Blocks;
+  // Update LoopInfo if the loop is completely removed.
+  if (CompletelyUnroll) {
+    Blocks = L->getBlocks();
+    LI->erase(L);
+    // We shouldn't try to use `L` anymore.
+    L = nullptr;
+  }
+
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.
-  simplifyLoopAfterUnroll(L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC,
-                          TTI, L->getBlocks(), AA);
+  simplifyLoopAfterUnroll(
+      L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC, TTI,
+      CompletelyUnroll ? ArrayRef<BasicBlock *>(Blocks) : L->getBlocks(), AA);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;
 
-  Loop *OuterL = L->getParentLoop();
-  // Update LoopInfo if the loop is completely removed.
-  if (CompletelyUnroll) {
-    LI->erase(L);
-    // We shouldn't try to use `L` anymore.
-    L = nullptr;
-  } else {
+  if (!CompletelyUnroll) {
     // Update metadata for the loop's branch weights and estimated trip count:
     // - If ULO.Runtime, UnrollRuntimeLoopRemainder sets the guard branch
     //   weights, latch branch weights, and estimated trip count of the
