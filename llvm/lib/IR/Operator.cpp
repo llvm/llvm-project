@@ -302,10 +302,10 @@ void FastMathFlags::print(raw_ostream &O) const {
 }
 
 unsigned short &FPMathOperator::getFMFValue() {
-  auto *V = static_cast<Value *>(this);
-  auto *I = dyn_cast<Instruction>(V);
+  Value *V = this;
+  auto *I = cast<Instruction>(V);
 
-  if (FastMathFlagsStorage *Op = dyn_cast<UnaryOperator>(I))
+  if (FastMathFlagsStorage *Op = dyn_cast<FPUnaryOperator>(I))
     return Op->FMFValue;
   if (FastMathFlagsStorage *Op = dyn_cast<FPBinaryOperator>(I))
     return Op->FMFValue;
@@ -326,10 +326,10 @@ unsigned short &FPMathOperator::getFMFValue() {
 }
 
 unsigned short FPMathOperator::getFMFValue() const {
-  const auto *V = static_cast<const Value *>(this);
-  const auto *I = dyn_cast<Instruction>(V);
+  const Value *V = this;
+  const auto *I = cast<Instruction>(V);
 
-  if (const FastMathFlagsStorage *Op = dyn_cast<UnaryOperator>(I))
+  if (const FastMathFlagsStorage *Op = dyn_cast<FPUnaryOperator>(I))
     return Op->FMFValue;
   if (const FastMathFlagsStorage *Op = dyn_cast<FPBinaryOperator>(I))
     return Op->FMFValue;

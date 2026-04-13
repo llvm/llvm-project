@@ -140,7 +140,7 @@ HANDLE_TERM_INST  (12, CallBr        , CallBrInst) // A call-site terminator
 
 // Standard unary operators...
  FIRST_UNARY_INST(13)
-HANDLE_UNARY_INST(13, FNeg  , UnaryOperator)
+HANDLE_UNARY_INST(13, FNeg  , FPUnaryOperator)
   LAST_UNARY_INST(13)
 
 // Standard binary operators...

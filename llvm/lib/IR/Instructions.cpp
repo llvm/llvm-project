@@ -2613,7 +2613,12 @@ UnaryOperator::UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
 
 UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S, const Twine &Name,
                                      InsertPosition InsertBefore) {
-  return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  switch (Op) {
+  case UnaryOps::FNeg:
+    return new FPUnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  default:
+    return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  }
 }
 
 void UnaryOperator::AssertOK() {
@@ -2719,11 +2724,16 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        InsertPosition InsertBefore) {
   assert(S1->getType() == S2->getType() &&
          "Cannot create binary operator with two operands of differing type!");
-  return FPMathOperator::isSupportedFloatingPointType(S1->getType())
-             ? new FPBinaryOperator(Op, S1, S2, S1->getType(), Name,
-                                    InsertBefore)
-             : new BinaryOperator(Op, S1, S2, S1->getType(), Name,
-                                  InsertBefore);
+  switch (Op) {
+  case BinaryOps::FAdd:
+  case BinaryOps::FSub:
+  case BinaryOps::FMul:
+  case BinaryOps::FDiv:
+  case BinaryOps::FRem:
+    return new FPBinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  default:
+    return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  }
 }
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
@@ -2754,14 +2764,6 @@ bool BinaryOperator::swapOperands() {
     return true; // Can't commute operands
   Op<0>().swap(Op<1>());
   return false;
-}
-
-FPBinaryOperator *FPBinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
-                                           const Twine &Name,
-                                           InsertPosition InsertBefore) {
-  assert(S1->getType() == S2->getType() &&
-         "Cannot create binary operator with two operands of differing type!");
-  return new FPBinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4361,19 +4363,24 @@ GetElementPtrInst *GetElementPtrInst::cloneImpl() const {
 }
 
 UnaryOperator *UnaryOperator::cloneImpl() const {
-  auto *I = Create(getOpcode(), Op<0>());
+  return Create(getOpcode(), Op<0>());
+}
+
+FPUnaryOperator *FPUnaryOperator::cloneImpl() const {
+  auto *I = static_cast<FPUnaryOperator *>(Create(getOpcode(), Op<0>()));
   I->FMFValue = FMFValue;
   return I;
 }
 
 BinaryOperator *BinaryOperator::cloneImpl() const {
-  if (auto *I = dyn_cast<FPBinaryOperator>(this))
-    return I->cloneImpl();
+  assert(!isa<FPBinaryOperator>(this) &&
+         "Should call FPBinaryOperator::cloneImpl!");
   return Create(getOpcode(), Op<0>(), Op<1>());
 }
 
 FPBinaryOperator *FPBinaryOperator::cloneImpl() const {
-  FPBinaryOperator *I = Create(getOpcode(), Op<0>(), Op<1>());
+  auto *I =
+      static_cast<FPBinaryOperator *>(Create(getOpcode(), Op<0>(), Op<1>()));
   I->FMFValue = FMFValue;
   return I;
 }
