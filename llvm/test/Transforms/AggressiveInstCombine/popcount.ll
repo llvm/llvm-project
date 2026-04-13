@@ -309,7 +309,7 @@ define  i64 @popcnt1_64(i64 noundef %uWord) {
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
-  %and = and i64 %uWord, 6148914691236517205 ; 0x5555555555555555
+  %and = and i64 %uWord, u0x5555555555555555 ; 0x5555555555555555
   %shr = lshr i64 %uWord, 1
   %and1 = and i64 %shr, 6148914691236517205
   %add = add i64 %and1, %and
