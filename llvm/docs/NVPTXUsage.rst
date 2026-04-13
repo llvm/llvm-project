@@ -1181,7 +1181,7 @@ specified destination format. The ``satfinite`` modifier is assumed to be
 present for conversions involving ``e4m3`` and ``e5m2`` types as the 
 destination.
 
-For scale factor, see :ref:`scale-factor`.
+For scale factor, see :ref:`scale-factor <scale-factor>`.
 
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
@@ -1215,7 +1215,7 @@ result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the
 input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
 destination format.
 
-For scale factor, see :ref:`scale-factor`.
+For scale factor, see :ref:`scale-factor <scale-factor>`.
 
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
@@ -1253,7 +1253,7 @@ result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the
 input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
 destination format.
 
-For scale factor, see :ref:`scale-factor`.
+For scale factor, see :ref:`scale-factor <scale-factor>`.
 
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
@@ -1292,7 +1292,7 @@ result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the
 input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
 destination format.
 
-For scale factor, see :ref:`scale-factor`.
+For scale factor, see :ref:`scale-factor <scale-factor>`.
 
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
