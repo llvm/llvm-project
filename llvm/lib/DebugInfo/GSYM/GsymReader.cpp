@@ -120,10 +120,9 @@ llvm::Error GsymReader::parse() {
         GlobalInfoType::StringTable, GlobalInfoType::FileTable,
         GlobalInfoType::FunctionInfo})
     if (!GlobalDataSections.count(Type))
-      return createStringError(std::errc::invalid_argument,
-                               "missing required section type %s (%u)",
-                               getNameForGlobalInfoType(Type).data(),
-                               static_cast<uint32_t>(Type));
+      return createStringError(
+          std::errc::invalid_argument, "missing required section type %s (%u)",
+          getNameForGlobalInfoType(Type).data(), static_cast<uint32_t>(Type));
 
   if (GlobalDataSections[GlobalInfoType::AddrOffsets].FileSize !=
       static_cast<uint64_t>(getNumAddresses()) * getAddressOffsetSize())

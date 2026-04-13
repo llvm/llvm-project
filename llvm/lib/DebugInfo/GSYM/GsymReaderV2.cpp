@@ -33,7 +33,8 @@ llvm::Error GsymReaderV2::parseHeaderAndGlobalDataEntries() {
 void GsymReaderV2::dump(raw_ostream &OS) {
   OS << *Hdr << "\n";
 
-  // Print GlobalData entries sorted by the entries appearance in the GlobalData section.
+  // Print GlobalData entries sorted by the entries appearance in the GlobalData
+  // section.
   OS << "Global Data Sections:\n";
   OS << "TYPE            FILE OFFSET 64      FILE SIZE 64\n";
   OS << "=============== ==================  ==================\n";
@@ -54,7 +55,8 @@ void GsymReaderV2::dump(raw_ostream &OS) {
 
     GlobalDataSections[GD.Type] = GD;
     OS << format("%-15s ", getNameForGlobalInfoType(GD.Type).data())
-       << HEX64(GlobalDataSections[GD.Type].FileOffset) << "  " << HEX64(GlobalDataSections[GD.Type].FileSize) << "\n";
+       << HEX64(GlobalDataSections[GD.Type].FileOffset) << "  "
+       << HEX64(GlobalDataSections[GD.Type].FileSize) << "\n";
   }
   OS << "\n";
 
