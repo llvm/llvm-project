@@ -3261,136 +3261,6 @@ AArch64TargetLowering::EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const {
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitInitTPIDR2Object(MachineInstr &MI,
-                                            MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
-  MachineFrameInfo &MFI = MF->getFrameInfo();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
-  TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
-  if (TPIDR2.Uses > 0) {
-    // Note: This case just needs to do `SVL << 48`. It is not implemented as we
-    // generally don't support big-endian SVE/SME.
-    if (!Subtarget->isLittleEndian())
-      reportFatalInternalError(
-          "TPIDR2 block initialization is not supported on big-endian targets");
-
-    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-    // Store buffer pointer and num_za_save_slices.
-    // Bytes 10-15 are implicitly zeroed.
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STPXi))
-        .addReg(MI.getOperand(0).getReg())
-        .addReg(MI.getOperand(1).getReg())
-        .addFrameIndex(TPIDR2.FrameIndex)
-        .addImm(0);
-  } else
-    MFI.RemoveStackObject(TPIDR2.FrameIndex);
-
-  BB->remove_instr(&MI);
-  return BB;
-}
-
-MachineBasicBlock *
-AArch64TargetLowering::EmitAllocateZABuffer(MachineInstr &MI,
-                                            MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
-  MachineFrameInfo &MFI = MF->getFrameInfo();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
-  // TODO This function grows the stack with a subtraction, which doesn't work
-  // on Windows. Some refactoring to share the functionality in
-  // LowerWindowsDYNAMIC_STACKALLOC will be required once the Windows ABI
-  // supports SME
-  assert(!MF->getSubtarget<AArch64Subtarget>().isTargetWindows() &&
-         "Lazy ZA save is not yet supported on Windows");
-
-  TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
-
-  if (TPIDR2.Uses > 0) {
-    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-
-    // The SUBXrs below won't always be emitted in a form that accepts SP
-    // directly
-    Register SP = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), SP)
-        .addReg(AArch64::SP);
-
-    // Allocate a lazy-save buffer object of the size given, normally SVL * SVL
-    auto Size = MI.getOperand(1).getReg();
-    auto Dest = MI.getOperand(0).getReg();
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::MSUBXrrr), Dest)
-        .addReg(Size)
-        .addReg(Size)
-        .addReg(SP);
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-            AArch64::SP)
-        .addReg(Dest);
-
-    // We have just allocated a variable sized object, tell this to PEI.
-    MFI.CreateVariableSizedObject(Align(16), nullptr);
-  }
-
-  BB->remove_instr(&MI);
-  return BB;
-}
-
-// TODO: Find a way to merge this with EmitAllocateZABuffer.
-MachineBasicBlock *
-AArch64TargetLowering::EmitAllocateSMESaveBuffer(MachineInstr &MI,
-                                                 MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
-  MachineFrameInfo &MFI = MF->getFrameInfo();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
-  assert(!MF->getSubtarget<AArch64Subtarget>().isTargetWindows() &&
-         "Lazy ZA save is not yet supported on Windows");
-
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  if (FuncInfo->isSMESaveBufferUsed()) {
-    // Allocate a buffer object of the size given by MI.getOperand(1).
-    auto Size = MI.getOperand(1).getReg();
-    auto Dest = MI.getOperand(0).getReg();
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::SUBXrx64), AArch64::SP)
-        .addReg(AArch64::SP)
-        .addReg(Size)
-        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), Dest)
-        .addReg(AArch64::SP);
-
-    // We have just allocated a variable sized object, tell this to PEI.
-    MFI.CreateVariableSizedObject(Align(16), nullptr);
-  } else
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF),
-            MI.getOperand(0).getReg());
-
-  BB->remove_instr(&MI);
-  return BB;
-}
-
-MachineBasicBlock *
-AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const {
-  // If the buffer is used, emit a call to __arm_sme_state_size()
-  MachineFunction *MF = BB->getParent();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  if (FuncInfo->isSMESaveBufferUsed()) {
-    RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE_SIZE;
-    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
-        .addExternalSymbol(getLibcallName(LC))
-        .addReg(AArch64::X0, RegState::ImplicitDefine)
-        .addRegMask(TRI->getCallPreservedMask(*MF, getLibcallCallingConv(LC)));
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-            MI.getOperand(0).getReg())
-        .addReg(AArch64::X0);
-  } else
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-            MI.getOperand(0).getReg())
-        .addReg(AArch64::XZR);
-  BB->remove_instr(&MI);
-  return BB;
-}
-
-MachineBasicBlock *
 AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
                                          MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
@@ -3524,14 +3394,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MI.dump();
 #endif
     llvm_unreachable("Unexpected instruction for custom inserter!");
-  case AArch64::InitTPIDR2Obj:
-    return EmitInitTPIDR2Object(MI, BB);
-  case AArch64::AllocateZABuffer:
-    return EmitAllocateZABuffer(MI, BB);
-  case AArch64::AllocateSMESaveBuffer:
-    return EmitAllocateSMESaveBuffer(MI, BB);
-  case AArch64::GetSMESaveSize:
-    return EmitGetSMESaveSize(MI, BB);
   case AArch64::EntryPStateSM:
     return EmitEntryPStateSM(MI, BB);
   case AArch64::F128CSEL:
@@ -8748,81 +8610,6 @@ static bool isPassedInFPR(EVT VT) {
          (VT.isFloatingPoint() && !VT.isScalableVector());
 }
 
-static SDValue getZT0FrameIndex(MachineFrameInfo &MFI,
-                                AArch64FunctionInfo &FuncInfo,
-                                SelectionDAG &DAG) {
-  if (!FuncInfo.hasZT0SpillSlotIndex())
-    FuncInfo.setZT0SpillSlotIndex(MFI.CreateSpillStackObject(64, Align(16)));
-
-  return DAG.getFrameIndex(
-      FuncInfo.getZT0SpillSlotIndex(),
-      DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-}
-
-// Emit a call to __arm_sme_save or __arm_sme_restore.
-static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
-                                       SelectionDAG &DAG,
-                                       AArch64FunctionInfo *Info, SDLoc DL,
-                                       SDValue Chain, bool IsSave) {
-  MachineFunction &MF = DAG.getMachineFunction();
-  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
-  FuncInfo->setSMESaveBufferUsed();
-  TargetLowering::ArgListTy Args;
-  Args.emplace_back(
-      DAG.getCopyFromReg(Chain, DL, Info->getSMESaveBufferAddr(), MVT::i64),
-      PointerType::getUnqual(*DAG.getContext()));
-
-  RTLIB::Libcall LC =
-      IsSave ? RTLIB::SMEABI_SME_SAVE : RTLIB::SMEABI_SME_RESTORE;
-  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
-  SDValue Callee =
-      DAG.getExternalSymbol(LCImpl, TLI.getPointerTy(DAG.getDataLayout()));
-  auto *RetTy = Type::getVoidTy(*DAG.getContext());
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy, Callee,
-      std::move(Args));
-  return TLI.LowerCallTo(CLI).second;
-}
-
-static SDValue emitRestoreZALazySave(SDValue Chain, SDLoc DL,
-                                     const AArch64TargetLowering &TLI,
-                                     const AArch64RegisterInfo &TRI,
-                                     AArch64FunctionInfo &FuncInfo,
-                                     SelectionDAG &DAG) {
-  // Conditionally restore the lazy save using a pseudo node.
-  RTLIB::Libcall LC = RTLIB::SMEABI_TPIDR2_RESTORE;
-  TPIDR2Object &TPIDR2 = FuncInfo.getTPIDR2Obj();
-
-  RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC);
-  SDValue RegMask = DAG.getRegisterMask(TRI.getCallPreservedMask(
-      DAG.getMachineFunction(),
-      DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl)));
-  SDValue RestoreRoutine = DAG.getTargetExternalSymbol(
-      LibcallImpl, TLI.getPointerTy(DAG.getDataLayout()));
-  SDValue TPIDR2_EL0 = DAG.getNode(
-      ISD::INTRINSIC_W_CHAIN, DL, MVT::i64, Chain,
-      DAG.getTargetConstant(Intrinsic::aarch64_sme_get_tpidr2, DL, MVT::i32));
-  // Copy the address of the TPIDR2 block into X0 before 'calling' the
-  // RESTORE_ZA pseudo.
-  SDValue Glue;
-  SDValue TPIDR2Block = DAG.getFrameIndex(
-      TPIDR2.FrameIndex,
-      DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-  Chain = DAG.getCopyToReg(Chain, DL, AArch64::X0, TPIDR2Block, Glue);
-  Chain =
-      DAG.getNode(AArch64ISD::RESTORE_ZA, DL, MVT::Other,
-                  {Chain, TPIDR2_EL0, DAG.getRegister(AArch64::X0, MVT::i64),
-                   RestoreRoutine, RegMask, Chain.getValue(1)});
-  // Finally reset the TPIDR2_EL0 register to 0.
-  Chain = DAG.getNode(
-      ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
-      DAG.getTargetConstant(Intrinsic::aarch64_sme_set_tpidr2, DL, MVT::i32),
-      DAG.getConstant(0, DL, MVT::i64));
-  TPIDR2.Uses++;
-  return Chain;
-}
-
 SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
                                                SelectionDAG &DAG) const {
   assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
@@ -8830,8 +8617,6 @@ SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
 
   MachineFunction &MF = DAG.getMachineFunction();
   auto &FuncInfo = *MF.getInfo<AArch64FunctionInfo>();
-  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
-  const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
 
   SMEAttrs SMEFnAttrs = FuncInfo.getSMEFnAttrs();
 
@@ -8858,34 +8643,6 @@ SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
   else if (SMEFnAttrs.hasStreamingCompatibleInterface())
     Chain = changeStreamingMode(DAG, DL, /*Enable=*/true, Chain, Glue,
                                 AArch64SME::IfCallerIsStreaming);
-
-  if (getTM().useNewSMEABILowering())
-    return Chain;
-
-  if (SMEFnAttrs.hasAgnosticZAInterface()) {
-    // Restore full ZA
-    Chain = emitSMEStateSaveRestore(*this, DAG, &FuncInfo, DL, Chain,
-                                    /*IsSave=*/false);
-  } else if (SMEFnAttrs.hasZAState() || SMEFnAttrs.hasZT0State()) {
-    // SMSTART ZA
-    Chain = DAG.getNode(
-        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue), Chain,
-        DAG.getTargetConstant(int32_t(AArch64SVCR::SVCRZA), DL, MVT::i32));
-
-    // Restore ZT0
-    if (SMEFnAttrs.hasZT0State()) {
-      SDValue ZT0FrameIndex =
-          getZT0FrameIndex(MF.getFrameInfo(), FuncInfo, DAG);
-      Chain =
-          DAG.getNode(AArch64ISD::RESTORE_ZT, DL, DAG.getVTList(MVT::Other),
-                      {Chain, DAG.getConstant(0, DL, MVT::i32), ZT0FrameIndex});
-    }
-
-    // Restore ZA
-    if (SMEFnAttrs.hasZAState())
-      Chain = emitRestoreZALazySave(Chain, DL, *this, TRI, FuncInfo, DAG);
-  }
-
   return Chain;
 }
 
@@ -9300,91 +9057,38 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  if (getTM().useNewSMEABILowering()) {
-    if (Subtarget->isTargetWindows() || hasInlineStackProbe(MF)) {
-      SDValue Size;
-      if (Attrs.hasZAState()) {
-        SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                                  DAG.getConstant(1, DL, MVT::i32));
-        Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
-      } else if (Attrs.hasAgnosticZAInterface()) {
-        RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE_SIZE;
-        RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
-
-        SDValue Callee =
-            DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
-        auto *RetTy = EVT(MVT::i64).getTypeForEVT(*DAG.getContext());
-        TargetLowering::CallLoweringInfo CLI(DAG);
-        CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-            DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy, Callee,
-            {});
-        std::tie(Size, Chain) = LowerCallTo(CLI);
-      }
-      if (Size) {
-        SDValue Buffer = DAG.getNode(
-            ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
-            {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
-        Chain = Buffer.getValue(1);
-
-        Register BufferPtr =
-            MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
-        Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
-        Chain = DAG.getNode(AArch64ISD::SME_STATE_ALLOC, DL,
-                            DAG.getVTList(MVT::Other), Chain);
-        FuncInfo->setEarlyAllocSMESaveBuffer(BufferPtr);
-        MFI.CreateVariableSizedObject(Align(16), nullptr);
-      }
-    }
-  } else {
-    // Old SME ABI lowering (deprecated):
-    // Create a 16 Byte TPIDR2 object. The dynamic buffer
-    // will be expanded and stored in the static object later using a
-    // pseudonode.
+  if (Subtarget->isTargetWindows() || hasInlineStackProbe(MF)) {
+    SDValue Size;
     if (Attrs.hasZAState()) {
-      TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
-      TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
       SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
                                 DAG.getConstant(1, DL, MVT::i32));
-      SDValue Buffer;
-      if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
-        Buffer = DAG.getNode(AArch64ISD::ALLOCATE_ZA_BUFFER, DL,
-                             DAG.getVTList(MVT::i64, MVT::Other), {Chain, SVL});
-      } else {
-        SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
-        Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL,
-                             DAG.getVTList(MVT::i64, MVT::Other),
-                             {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
-        MFI.CreateVariableSizedObject(Align(16), nullptr);
-      }
-      SDValue NumZaSaveSlices = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                                            DAG.getConstant(1, DL, MVT::i32));
-      Chain = DAG.getNode(
-          AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
-          {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0),
-           /*Num save slices*/ NumZaSaveSlices});
+      Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
     } else if (Attrs.hasAgnosticZAInterface()) {
-      // Call __arm_sme_state_size().
-      SDValue BufferSize =
-          DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
-                      DAG.getVTList(MVT::i64, MVT::Other), Chain);
-      Chain = BufferSize.getValue(1);
-      SDValue Buffer;
-      if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
-        Buffer = DAG.getNode(AArch64ISD::ALLOC_SME_SAVE_BUFFER, DL,
-                             DAG.getVTList(MVT::i64, MVT::Other),
-                             {Chain, BufferSize});
-      } else {
-        // Allocate space dynamically.
-        Buffer = DAG.getNode(
-            ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
-            {Chain, BufferSize, DAG.getConstant(1, DL, MVT::i64)});
-        MFI.CreateVariableSizedObject(Align(16), nullptr);
-      }
-      // Copy the value to a virtual register, and save that in FuncInfo.
+      RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE_SIZE;
+      RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+
+      SDValue Callee =
+          DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
+      auto *RetTy = EVT(MVT::i64).getTypeForEVT(*DAG.getContext());
+      TargetLowering::CallLoweringInfo CLI(DAG);
+      CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy, Callee,
+          {});
+      std::tie(Size, Chain) = LowerCallTo(CLI);
+    }
+    if (Size) {
+      SDValue Buffer = DAG.getNode(
+          ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
+          {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
+      Chain = Buffer.getValue(1);
+
       Register BufferPtr =
           MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
-      FuncInfo->setSMESaveBufferAddr(BufferPtr);
-      Chain = DAG.getCopyToReg(Buffer.getValue(1), DL, BufferPtr, Buffer);
+      Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
+      Chain = DAG.getNode(AArch64ISD::SME_STATE_ALLOC, DL,
+                          DAG.getVTList(MVT::Other), Chain);
+      FuncInfo->setEarlyAllocSMESaveBuffer(BufferPtr);
+      MFI.CreateVariableSizedObject(Align(16), nullptr);
     }
   }
 
@@ -10118,18 +9822,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
 
   std::optional<unsigned> ZAMarkerNode;
-  bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
-
-  if (UseNewSMEABILowering) {
-    if (CallAttrs.requiresLazySave() ||
-        CallAttrs.requiresPreservingAllZAState())
-      ZAMarkerNode = AArch64ISD::REQUIRES_ZA_SAVE;
-    else if (CallAttrs.requiresPreservingZT0())
-      ZAMarkerNode = AArch64ISD::REQUIRES_ZT0_SAVE;
-    else if (CallAttrs.caller().hasZAState() ||
-             CallAttrs.caller().hasZT0State())
-      ZAMarkerNode = AArch64ISD::INOUT_ZA_USE;
-  }
+  if (CallAttrs.requiresLazySave() || CallAttrs.requiresPreservingAllZAState())
+    ZAMarkerNode = AArch64ISD::REQUIRES_ZA_SAVE;
+  else if (CallAttrs.requiresPreservingZT0())
+    ZAMarkerNode = AArch64ISD::REQUIRES_ZT0_SAVE;
+  else if (CallAttrs.caller().hasZAState() || CallAttrs.caller().hasZT0State())
+    ZAMarkerNode = AArch64ISD::INOUT_ZA_USE;
 
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
@@ -10203,33 +9901,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return R;
   };
 
-  bool RequiresLazySave = !UseNewSMEABILowering && CallAttrs.requiresLazySave();
-  bool RequiresSaveAllZA =
-      !UseNewSMEABILowering && CallAttrs.requiresPreservingAllZAState();
-  if (RequiresLazySave) {
-    TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
-    SDValue TPIDR2ObjAddr = DAG.getFrameIndex(
-        TPIDR2.FrameIndex,
-        DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-    Chain = DAG.getNode(
-        ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
-        DAG.getTargetConstant(Intrinsic::aarch64_sme_set_tpidr2, DL, MVT::i32),
-        TPIDR2ObjAddr);
-    OptimizationRemarkEmitter ORE(&MF.getFunction());
-    ORE.emit([&]() {
-      auto R = CLI.CB ? OptimizationRemarkAnalysis("sme", "SMELazySaveZA",
-                                                   CLI.CB)
-                      : OptimizationRemarkAnalysis("sme", "SMELazySaveZA",
-                                                   &MF.getFunction());
-      return DescribeCallsite(R) << " sets up a lazy save for ZA";
-    });
-  } else if (RequiresSaveAllZA) {
-    assert(!CallAttrs.callee().hasSharedZAInterface() &&
-           "Cannot share state that may not exist");
-    Chain = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
-                                    /*IsSave=*/true);
-  }
-
   bool RequiresSMChange = CallAttrs.requiresSMChange();
   if (RequiresSMChange) {
     OptimizationRemarkEmitter ORE(&MF.getFunction());
@@ -10242,32 +9913,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       return R;
     });
   }
-
-  SDValue ZTFrameIdx;
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool ShouldPreserveZT0 =
-      !UseNewSMEABILowering && CallAttrs.requiresPreservingZT0();
-
-  // If the caller has ZT0 state which will not be preserved by the callee,
-  // spill ZT0 before the call.
-  if (ShouldPreserveZT0) {
-    ZTFrameIdx = getZT0FrameIndex(MFI, *FuncInfo, DAG);
-
-    Chain = DAG.getNode(AArch64ISD::SAVE_ZT, DL, DAG.getVTList(MVT::Other),
-                        {Chain, DAG.getConstant(0, DL, MVT::i32), ZTFrameIdx});
-  }
-
-  // If caller shares ZT0 but the callee is not shared ZA, we need to stop
-  // PSTATE.ZA before the call if there is no lazy-save active.
-  bool DisableZA =
-      !UseNewSMEABILowering && CallAttrs.requiresDisablingZABeforeCall();
-  assert((!DisableZA || !RequiresLazySave) &&
-         "Lazy-save should have PSTATE.SM=1 on entry to the function");
-
-  if (DisableZA)
-    Chain = DAG.getNode(
-        AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue), Chain,
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
 
   // Adjust the stack pointer for the new arguments... and mark ZA uses.
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -10742,27 +10387,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         getSMToggleCondition(CallAttrs));
   }
 
-  if (!UseNewSMEABILowering &&
-      (RequiresLazySave || CallAttrs.requiresEnablingZAAfterCall()))
-    // Unconditionally resume ZA.
-    Result = DAG.getNode(
-        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue), Result,
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
-
-  if (ShouldPreserveZT0)
-    Result =
-        DAG.getNode(AArch64ISD::RESTORE_ZT, DL, DAG.getVTList(MVT::Other),
-                    {Result, DAG.getConstant(0, DL, MVT::i32), ZTFrameIdx});
-
-  if (RequiresLazySave) {
-    Result = emitRestoreZALazySave(Result, DL, *this, *TRI, *FuncInfo, DAG);
-  } else if (RequiresSaveAllZA) {
-    Result = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Result,
-                                     /*IsSave=*/false);
-  }
-
-  if (RequiresSMChange || RequiresLazySave || ShouldPreserveZT0 ||
-      RequiresSaveAllZA) {
+  if (RequiresSMChange) {
     for (unsigned I = 0; I < InVals.size(); ++I) {
       // The smstart/smstop is chained as part of the call, but when the
       // resulting chain is discarded (which happens when the call is not part
