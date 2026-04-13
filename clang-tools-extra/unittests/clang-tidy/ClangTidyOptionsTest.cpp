@@ -379,11 +379,12 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtils) {
 
   EXPECT_THAT(
       DiagConsumer.take(),
-      ElementsAre(AllOf(
-          ToolDiagMessage("performance-faster-string-find is deprecated and "
-                          "will be removed in a future release; consider using "
-                          "performance-prefer-single-char-overloads instead"),
-          ToolDiagLevel(Warning))));
+      ElementsAre(
+          AllOf(ToolDiagMessage(
+                    "'performance-faster-string-find' check is deprecated and "
+                    "will be removed in a future release; consider using "
+                    "'performance-prefer-single-char-overloads' instead"),
+                ToolDiagLevel(Warning))));
 }
 
 TEST(CheckOptionsValidation, DeprecatedAliasUtilsDisabledByCanonicalCheck) {
@@ -426,11 +427,12 @@ TEST(CheckOptionsValidation, DeprecatedAliasUtilsEnabledByWildcardAlias) {
 
   EXPECT_THAT(
       DiagConsumer.take(),
-      ElementsAre(AllOf(
-          ToolDiagMessage("performance-faster-string-find is deprecated and "
-                          "will be removed in a future release; consider using "
-                          "performance-prefer-single-char-overloads instead"),
-          ToolDiagLevel(Warning))));
+      ElementsAre(
+          AllOf(ToolDiagMessage(
+                    "'performance-faster-string-find' check is deprecated and "
+                    "will be removed in a future release; consider using "
+                    "'performance-prefer-single-char-overloads' instead"),
+                ToolDiagLevel(Warning))));
 }
 
 TEST(CheckOptionsValidation,

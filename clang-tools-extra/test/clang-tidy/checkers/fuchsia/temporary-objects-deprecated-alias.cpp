@@ -12,7 +12,7 @@ public:
 
 void f() {
   Foo();
-  // CHECK-MESSAGES: warning: zircon-temporary-objects is deprecated and will be removed in a future release; consider using fuchsia-temporary-objects instead [clang-tidy-config]
+  // CHECK-MESSAGES: warning: 'zircon-temporary-objects' check is deprecated and will be removed in a future release; consider using 'fuchsia-temporary-objects' instead [clang-tidy-config]
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: creating a temporary object of type 'Foo' is prohibited [zircon-temporary-objects]
   // CHECK-MESSAGES-BOTH: :[[@LINE-3]]:3: warning: creating a temporary object of type 'Foo' is prohibited
 }

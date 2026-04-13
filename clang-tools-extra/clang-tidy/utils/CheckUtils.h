@@ -16,8 +16,8 @@ inline void diagDeprecatedCheckAlias(ClangTidyCheck &Check,
     return;
 
   Check.configurationDiag(
-      "%0 is deprecated and will be removed in a future release; "
-      "consider using %1 instead")
+      "'%0' check is deprecated and will be removed in a future release; "
+      "consider using '%1' instead")
       << DeprecatedName << CanonicalName;
 }
 
