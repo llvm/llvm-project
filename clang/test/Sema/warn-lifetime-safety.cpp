@@ -2693,4 +2693,15 @@ std::function<void()> reassign_lambda_to_functor() {
   return f;
 }
 
+struct [[gsl::Pointer]] function_ref {
+  template <typename Callable>
+  function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {}
+  void (*ref)();
+};
+
+function_ref function_ref_from_non_capturing_lambda() {
+  return []() {}; // expected-warning {{address of stack memory is returned later}} \
+                  // expected-note {{returned here}}
+}
+
 } // namespace callable_wrappers
