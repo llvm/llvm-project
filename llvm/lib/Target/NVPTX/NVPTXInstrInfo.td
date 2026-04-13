@@ -671,24 +671,21 @@ let hasSideEffects = false in {
   defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
   defm CVT_e5m2x2 : CVT_TO_F8X2<"e5m2">;
   
-  multiclass CVT_F8x2_TO_BF16x2<string F8Name> {
-    def _ # F8Name # x2_scale :
+  multiclass CVT_F8x2_TO_FP16x2<string F8Name> {
+    def f16x2_ # F8Name # x2 :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.f16x2." # F8Name # "x2">,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+    def bf16x2_ # F8Name # x2_scale :
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F8Name # "x2">;
+                "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F8Name # "x2">,
+      Requires<[callSubTarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
   }
 
-  defm CVT_bf16x2 : CVT_F8x2_TO_BF16x2<"e4m3">;
-  defm CVT_bf16x2 : CVT_F8x2_TO_BF16x2<"e5m2">;
-
-  class CVT_f16x2_fp8<string F8Name> :
-    BasicFlagsNVPTXInst<(outs B32:$dst),
-              (ins B16:$src), (ins CvtMode:$mode),
-              "cvt${mode:base}${mode:relu}.f16x2." # F8Name # "x2">,
-    Requires<[hasPTX<81>, hasSM<89>]>;
-
-  def CVT_f16x2_e4m3x2 : CVT_f16x2_fp8<"e4m3">;
-  def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
+  defm CVT_ : CVT_F8x2_TO_FP16x2<"e4m3">;
+  defm CVT_ : CVT_F8x2_TO_FP16x2<"e5m2">;
   
   class CVT_TO_FP8X4<string F8Name> :
     NVPTXInst<(outs B32:$dst),
@@ -737,21 +734,21 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
 }
 
   // FP6 conversions.
-  foreach type = ["e2m3x2", "e3m2x2"] in {
-    def CVT_f16x2_ # type : BasicFlagsNVPTXInst<(outs B32:$dst),
-                                      (ins B16:$src), (ins CvtMode:$mode),
-                                      "cvt${mode:base}${mode:relu}.f16x2." # type>;
-  }
-  
-  multiclass CVT_F6x2_TO_BF16x2<string F6Name> {
-    def _ # F6Name # x2_scale :
+  multiclass CVT_F6x2_TO_FP16x2<string F6Name> {
+    def f16x2_ # F6Name # x2 :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.f16x2." # F6Name # "x2">,
+      Requires<[callSubTarget<"hasNarrowFPConversionSupport">]>;
+    def bf16x2_ # F6Name # x2_scale :
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F6Name # "x2">;
+                "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F6Name # "x2">,
+      Requires<[callSubTarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
   }
 
-  defm CVT_bf16x2 : CVT_F6x2_TO_BF16x2<"e2m3">;
-  defm CVT_bf16x2 : CVT_F6x2_TO_BF16x2<"e3m2">;
+  defm CVT_ : CVT_F6x2_TO_FP16x2<"e2m3">;
+  defm CVT_ : CVT_F6x2_TO_FP16x2<"e3m2">;
   
   class CVT_TO_FP6X4<string F6Name> :
     NVPTXInst<(outs B32:$dst),
@@ -804,7 +801,8 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
               ".reg .b8 \t%e2m1x2_in; \n\t" #
               "cvt.u8.u16 \t%e2m1x2_in, $src1; \n\t" #
               "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.e2m1x2 \t$dst, %e2m1x2_in, $src2; \n\t" #
-              "}}", []>;
+              "}}", []>,
+    Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
                  
   def CVT_e2m1x4_f32x4_rs_sf :
     NVPTXInst<(outs B16:$dst),
