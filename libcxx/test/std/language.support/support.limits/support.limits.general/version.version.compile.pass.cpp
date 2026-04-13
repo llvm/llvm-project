@@ -5662,12 +5662,12 @@
 #    error "__cpp_lib_ranges should have the value 202406L in c++23"
 #  endif
 
-# ifndef __cpp_lib_ranges_as_const
-#   error "__cpp_lib_ranges_as_const should be defined in c++23"
-# endif
-# if __cpp_lib_ranges_as_const != 202311L
-#   error "__cpp_lib_ranges_as_const should have the value 202311L in c++23"
-# endif
+#  ifndef __cpp_lib_ranges_as_const
+#    error "__cpp_lib_ranges_as_const should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_as_const != 202311L
+#    error "__cpp_lib_ranges_as_const should have the value 202311L in c++23"
+#  endif
 
 #  ifndef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should be defined in c++23"
@@ -7569,12 +7569,12 @@
 #    error "__cpp_lib_ranges should have the value 202406L in c++26"
 #  endif
 
-# ifndef __cpp_lib_ranges_as_const
-#   error "__cpp_lib_ranges_as_const should be defined in c++26"
-# endif
-# if __cpp_lib_ranges_as_const != 202311L
-#   error "__cpp_lib_ranges_as_const should have the value 202311L in c++26"
-# endif
+#  ifndef __cpp_lib_ranges_as_const
+#    error "__cpp_lib_ranges_as_const should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_as_const != 202311L
+#    error "__cpp_lib_ranges_as_const should have the value 202311L in c++26"
+#  endif
 
 #  ifndef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should be defined in c++26"
