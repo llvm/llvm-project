@@ -639,14 +639,14 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
         continue;
       if (F.getIntrinsicID())
         continue;
-      // If we happen to have an intrinsic previously not lowered, i.e.,
-      // unrecognized intrinsics, we should let the user know that the final
-      // declaration emitted may lead to illegal PTX.
+      // An unrecognized intrinsic would produce an invalid PTX declaration. Let
+      // the user know that, and skip it.
       if (F.isIntrinsic()) {
-        F.getContext().emitError(
-            "unknown intrinsic '" + F.getName() +
-            "' is not supported by this version of the NVPTX "
-            "backend; may result in invalid PTX.");
+        LLVMContext &Ctx = F.getContext();
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, Twine("unknown intrinsic '") + F.getName() +
+                   "' is not supported by this version of the NVPTX "
+                   "backend; may result in invalid PTX."));
         continue;
       }
       emitDeclaration(&F, O);
