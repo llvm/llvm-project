@@ -6506,7 +6506,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(
     }
   }
 
-  auto *MiddleVPBB = Plan.getMiddleBlock();
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   for (VPInstruction *VPI : MemOps) {
