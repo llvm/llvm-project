@@ -7356,9 +7356,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   // does not apply. This specifically fails when N = INT_MIN.
   //
   // Instead, for power-of-two D, we use:
-  // FIXME: Why do we need to add anything?
-  // - A = 2^(W-1)
-  // |-> Order-preserving map from [-2^(W-1), 2^(W-1) - 1] to [0,2^W - 1])
+  // - A = 0
+  // | -> No offset needed. We're effectively treating it the same as urem.
   // - Q = 2^(W-K) - 1
   // |-> Test that the top K bits are zero after rotation
   assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
@@ -7434,8 +7433,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
     // If D was a power of two, apply the alternate constant derivation.
     if (D0.isOne()) {
-      // A = 2^(W-1)
-      A = APInt::getSignedMinValue(W);
+      // A = 0
+      A = APInt(W, 0);
       // - Q = 2^(W-K) - 1
       Q = APInt::getLowBitsSet(W, W - K);
     }
@@ -8131,11 +8130,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   assert(VT.getScalarSizeInBits() == BitWidth &&
          HiLoVT.getScalarSizeInBits() == HBitWidth && "Unexpected VTs");
 
-  // Divisor needs to less than (1 << HBitWidth).
-  APInt HalfMaxPlus1 = APInt::getOneBitSet(BitWidth, HBitWidth);
-  if (Divisor.uge(HalfMaxPlus1))
-    return false;
-
   // We depend on the UREM by constant optimization in DAGCombiner that requires
   // high multiply.
   if (!isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
@@ -8156,6 +8150,12 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     TrailingZeros = Divisor.countr_zero();
     Divisor.lshrInPlace(TrailingZeros);
   }
+
+  // After removing trailing zeros, the divisor needs to be less than
+  // (1 << HBitWidth).
+  APInt HalfMaxPlus1 = APInt::getOneBitSet(BitWidth, HBitWidth);
+  if (Divisor.uge(HalfMaxPlus1))
+    return false;
 
   // Look for the largest chunk width W such that (1 << W) % Divisor == 1 or
   // (1 << W) % Divisor == -1.
@@ -8208,14 +8208,45 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
             DAG.getShiftAmountConstant(HBitWidth - ShiftAmt, HiLoVT, dl)));
   };
 
+  // Helper to perform a right shift on a 128-bit value split into two halves.
+  // Handles shifts >= HBitWidth by moving Hi to Lo and shifting Hi.
+  auto ShiftRight = [&](SDValue &Lo, SDValue &Hi, unsigned ShiftAmt) {
+    if (ShiftAmt == 0)
+      return;
+    if (ShiftAmt < HBitWidth) {
+      Lo = GetFSHR(Lo, Hi, ShiftAmt);
+      Hi = DAG.getNode(ISD::SRL, dl, HiLoVT, Hi,
+                       DAG.getShiftAmountConstant(ShiftAmt, HiLoVT, dl));
+    } else if (ShiftAmt == HBitWidth) {
+      Lo = Hi;
+      Hi = DAG.getConstant(0, dl, HiLoVT);
+    } else {
+      Lo = DAG.getNode(
+          ISD::SRL, dl, HiLoVT, Hi,
+          DAG.getShiftAmountConstant(ShiftAmt - HBitWidth, HiLoVT, dl));
+      Hi = DAG.getConstant(0, dl, HiLoVT);
+    }
+  };
+
   // Shift the input by the number of TrailingZeros in the divisor. The
   // shifted out bits will be added to the remainder later.
-  SDValue PartialRem;
+  SDValue PartialRemL, PartialRemH;
   if (TrailingZeros && Opcode != ISD::UDIV) {
     // Save the shifted off bits if we need the remainder.
-    APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
-    PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
-                             DAG.getConstant(Mask, dl, HiLoVT));
+    if (TrailingZeros < HBitWidth) {
+      APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
+      PartialRemL = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
+                                DAG.getConstant(Mask, dl, HiLoVT));
+    } else if (TrailingZeros == HBitWidth) {
+      // All of LL is part of the remainder.
+      PartialRemL = LL;
+    } else {
+      // TrailingZeros > HBitWidth: LL and part of LH are the remainder.
+      PartialRemL = LL;
+      APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros - HBitWidth);
+      PartialRemH = DAG.getNode(ISD::AND, dl, HiLoVT, LH,
+                                DAG.getConstant(Mask, dl, HiLoVT));
+    }
   }
 
   SDValue Sum;
@@ -8224,11 +8255,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   if (BestChunkWidth == HBitWidth) {
     assert(!Alternate);
     // Shift LH:LL right if there were trailing zeros in the divisor.
-    if (TrailingZeros) {
-      LL = GetFSHR(LL, LH, TrailingZeros);
-      LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
-                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-    }
+    ShiftRight(LL, LH, TrailingZeros);
 
     // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
     EVT SetCCType =
@@ -8310,11 +8337,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   if (Opcode != ISD::UREM) {
     // If we didn't shift LH/LR earlier, do it now.
-    if (BestChunkWidth != HBitWidth && TrailingZeros) {
-      LL = GetFSHR(LL, LH, TrailingZeros);
-      LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
-                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-    }
+    if (BestChunkWidth != HBitWidth)
+      ShiftRight(LL, LH, TrailingZeros);
 
     // Subtract the remainder from the shifted dividend.
     SDValue Dividend = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
@@ -8340,11 +8364,32 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     // If we shifted the input, shift the remainder left and add the bits we
     // shifted off the input.
     if (TrailingZeros) {
-      RemL = DAG.getNode(ISD::SHL, dl, HiLoVT, RemL,
-                         DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-
-      RemL = DAG.getNode(ISD::OR, dl, HiLoVT, RemL, PartialRem,
-                         SDNodeFlags::Disjoint);
+      if (TrailingZeros < HBitWidth) {
+        // Shift RemH:RemL left by TrailingZeros.
+        // RemH gets the high bits shifted out of RemL.
+        RemH = DAG.getNode(
+            ISD::SRL, dl, HiLoVT, RemL,
+            DAG.getShiftAmountConstant(HBitWidth - TrailingZeros, HiLoVT, dl));
+        RemL =
+            DAG.getNode(ISD::SHL, dl, HiLoVT, RemL,
+                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+        // OR in the partial remainder.
+        RemL = DAG.getNode(ISD::OR, dl, HiLoVT, RemL, PartialRemL,
+                           SDNodeFlags::Disjoint);
+      } else if (TrailingZeros == HBitWidth) {
+        // Shift left by exactly HBitWidth: RemH becomes RemL, RemL becomes
+        // PartialRemL.
+        RemH = RemL;
+        RemL = PartialRemL;
+      } else {
+        // Shift left by more than HBitWidth.
+        RemH = DAG.getNode(
+            ISD::SHL, dl, HiLoVT, RemL,
+            DAG.getShiftAmountConstant(TrailingZeros - HBitWidth, HiLoVT, dl));
+        RemH = DAG.getNode(ISD::OR, dl, HiLoVT, RemH, PartialRemH,
+                           SDNodeFlags::Disjoint);
+        RemL = PartialRemL;
+      }
     }
     Result.push_back(RemL);
     Result.push_back(RemH);

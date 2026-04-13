@@ -5902,7 +5902,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_zero_initialized_in_bss);
 
   bool OFastEnabled = isOptimizationLevelFast(Args);
-  if (OFastEnabled)
+  if (Args.hasArg(options::OPT_Ofast))
     D.Diag(diag::warn_drv_deprecated_arg_ofast);
   // If -Ofast is the optimization level, then -fstrict-aliasing should be
   // enabled.  This alias option is being used to simplify the hasFlag logic.

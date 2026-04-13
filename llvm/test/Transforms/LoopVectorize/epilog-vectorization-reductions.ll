@@ -1056,10 +1056,7 @@ define i64 @reduction_with_ptr_iv_inttoptr_exit_cond(ptr %base, ptr %src) {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP26]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF1:%.*]] = urem i64 [[TMP4]], 4
-; CHECK-NEXT:    [[N_VEC2:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF1]]
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[N_VEC2]], 24
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[START]], i64 96
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -1072,7 +1069,7 @@ define i64 @reduction_with_ptr_iv_inttoptr_exit_cond(ptr %base, ptr %src) {
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP23:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP22]])
-; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC2]]
+; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi ptr [ [[TMP17]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP24]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], %[[VECTOR_SCEVCHECK]] ], [ [[START]], %[[ITER_CHECK]] ]
