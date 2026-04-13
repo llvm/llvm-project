@@ -1,11 +1,13 @@
 # REQUIRES: asserts
-## Verify that boundary alignment converges may require O(N)
-## iterations where N is the number of BoundaryAlign fragments.
+## Verify that boundary alignment converges in O(1) inner iterations,
+## not O(N) where N is the number of BoundaryAlign fragments.
+## The fused relaxation+layout pass gives each BoundaryAlign fragment fresh
+## upstream offsets, so all padding is computed correctly in a single pass.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 --stats \
 # RUN:   --x86-align-branch-boundary=32 --x86-align-branch=jcc+call %s \
 # RUN:   -o %t 2>&1 | FileCheck %s --check-prefix=STATS
-# STATS: 13 assembler - Number of assembler layout and relaxation steps
+# STATS: 3 assembler - Number of assembler layout and relaxation steps
 
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 # CHECK:        0: testl

@@ -177,10 +177,11 @@ define ptr @test4() {
 ; NONPOWEROF2-NEXT:    [[TMP8:%.*]] = phi <6 x float> [ poison, [[TMP6:%.*]] ], [ [[TMP5]], [[TMP0:%.*]] ]
 ; NONPOWEROF2-NEXT:    br label [[TMP9:%.*]]
 ; NONPOWEROF2:       10:
-; NONPOWEROF2-NEXT:    [[TMP12:%.*]] = fmul <6 x float> zeroinitializer, [[TMP8]]
-; NONPOWEROF2-NEXT:    [[TMP11:%.*]] = shufflevector <6 x float> [[TMP12]], <6 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; NONPOWEROF2-NEXT:    [[TMP10:%.*]] = shufflevector <6 x float> [[TMP8]], <6 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; NONPOWEROF2-NEXT:    [[TMP11:%.*]] = fmul <3 x float> zeroinitializer, [[TMP10]]
+; NONPOWEROF2-NEXT:    [[TMP12:%.*]] = shufflevector <6 x float> [[TMP8]], <6 x float> poison, <3 x i32> <i32 3, i32 4, i32 5>
+; NONPOWEROF2-NEXT:    [[TMP13:%.*]] = fmul <3 x float> zeroinitializer, [[TMP12]]
 ; NONPOWEROF2-NEXT:    [[TMP14:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP11]])
-; NONPOWEROF2-NEXT:    [[TMP13:%.*]] = shufflevector <6 x float> [[TMP12]], <6 x float> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; NONPOWEROF2-NEXT:    [[TMP15:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP13]])
 ; NONPOWEROF2-NEXT:    [[TMP16:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP14]])
 ; NONPOWEROF2-NEXT:    [[TMP17:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP15]])

@@ -336,14 +336,13 @@ Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   auto endIt = getPadded() ? std::prev(members.end()) : members.end();
   if (endIt == members.begin())
     return {};
-  return *std::max_element(
-      members.begin(), endIt, [&](Type lhs, Type rhs) {
-        return dataLayout.getTypeABIAlignment(lhs) <
-                   dataLayout.getTypeABIAlignment(rhs) ||
-               (dataLayout.getTypeABIAlignment(lhs) ==
-                    dataLayout.getTypeABIAlignment(rhs) &&
-                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
-      });
+  return *std::max_element(members.begin(), endIt, [&](Type lhs, Type rhs) {
+    return dataLayout.getTypeABIAlignment(lhs) <
+               dataLayout.getTypeABIAlignment(rhs) ||
+           (dataLayout.getTypeABIAlignment(lhs) ==
+                dataLayout.getTypeABIAlignment(rhs) &&
+            dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+  });
 }
 
 bool RecordType::isLayoutIdentical(const RecordType &other) {
