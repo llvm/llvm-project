@@ -7260,6 +7260,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   // Quick detour: at this point we can say what the type of strided load would
   // be if all the checks pass. Check if this type is legal for the target.
   bool NeedsWidening = Sz != GroupSize;
+  const uint64_t UnitBitWidth = DL->getTypeSizeInBits(ScalarTy).getFixedValue();
   if (NeedsWidening) {
     if (Sz % GroupSize != 0)
       return false;
@@ -7267,9 +7268,9 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     if (StrideWithinGroup != 1)
       return false;
     VecSz = Sz / GroupSize;
-    NewScalarTy = Type::getIntNTy(
-        SE->getContext(),
-        DL->getTypeSizeInBits(ScalarTy).getFixedValue() * GroupSize);
+    NewScalarTy = Type::getIntNTy(SE->getContext(), UnitBitWidth * GroupSize);
+  } else if (ScalarTy->isVectorTy()) {
+    NewScalarTy = Type::getIntNTy(SE->getContext(), UnitBitWidth);
   }
 
   if (!isStridedLoad(PointerOps, NewScalarTy, Alignment, Diff, VecSz))
