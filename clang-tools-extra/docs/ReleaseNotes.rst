@@ -262,6 +262,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing a false
+  positive when converting a ``bool`` to a signed integer type.
+
 - Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
   by fixing a false positive when ``operator[]`` is used in a dependent context.
