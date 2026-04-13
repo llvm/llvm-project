@@ -1255,9 +1255,8 @@ const AvailabilityAttr *getEffectiveAttr() const {
   return this;
 }
 AvailabilityAttr *getEffectiveAttr() {
-  if (auto *Inf = getInferredAttr())
-    return Inf;
-  return this;
+  return const_cast<AvailabilityAttr *>(
+      static_cast<const AvailabilityAttr *>(this)->getEffectiveAttr());
 }
 VersionTuple getEffectiveIntroduced() const { return getEffectiveAttr()->getIntroduced(); }
 const IdentifierInfo *getEffectiveEnvironment() const {

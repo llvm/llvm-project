@@ -292,8 +292,7 @@ namespace {
 #define USE_DEFAULT_EQUALITY                                                   \
   (std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||          \
    std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, ParamIdx> ||       \
-   std::is_same_v<T, Attr *> || std::is_same_v<T, char *> ||                   \
-   std::is_enum_v<T> || std::is_integral_v<T>)
+   std::is_same_v<T, char *> || std::is_enum_v<T> || std::is_integral_v<T>)
 
 template <class T>
 typename std::enable_if_t<!USE_DEFAULT_EQUALITY, bool>
@@ -320,18 +319,11 @@ bool equalAttrArgs(T *A1_B, T *A1_E, T *A2_B, T *A2_E,
   return true;
 }
 
-template <>
-bool equalAttrArgs<Attr *>(Attr *A1, Attr *A2,
-                           StructuralEquivalenceContext &Context) {
-  return A1->isEquivalent(*A2, Context);
-}
-
-// AvailabilityAttr::InferredAttr is an optional WrappedAttr field that can be
+// Handles Attr* and any subclass pointer. Optional WrappedAttr fields may be
 // null.
-template <>
-bool equalAttrArgs<AvailabilityAttr *>(AvailabilityAttr *A1,
-                                       AvailabilityAttr *A2,
-                                       StructuralEquivalenceContext &Context) {
+template <class T>
+typename std::enable_if_t<std::is_base_of_v<Attr, T>, bool>
+equalAttrArgs(T *A1, T *A2, StructuralEquivalenceContext &Context) {
   if (!A1 || !A2)
     return A1 == A2;
   return A1->isEquivalent(*A2, Context);
