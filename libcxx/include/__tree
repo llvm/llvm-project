@@ -630,12 +630,7 @@ public:
     allocator_traits<_Alloc>::construct(__na, std::addressof(__get_value()), std::forward<_Args>(__args)...);
   }
 
-// This line fails with:
-// libcxx/test-suite-install/include/c++/v1/__memory/construct_at.h:38:49: note: non-literal type
-// `'std::__tree_node<std::__value_type<Key, int>, void *>' cannot be used in a constant expression`
-// during constant evaluation as part of P3372
-// on:
-// 1. AppleClang
+// TODO: Remove the workaround when Apple Clang fixes the bug not recognizing `__tree_node` as a literal type.
 #if defined(_LIBCPP_APPLE_CLANG_VER)
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__tree_node() {}
 #else
