@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 // All 17 cases from clang/test/CodeGenCXX/trivial_abi.cpp, adapted for
@@ -340,19 +340,15 @@ void g(S* s) { new(s) S(f()); }
 // OGCG-LABEL: define {{.*}} void @_Z23testReturnHasNonTrivialv(ptr {{.*}}sret(%struct.NonTrivial)
 // OGCG:   call {{.*}} @_ZN10NonTrivialC1Ev(
 
-// OGCG-LABEL: define {{.*}} void @_Z18testExceptionSmallv() {{.*}} personality ptr @__gxx_personality_v0
+// OGCG-LABEL: define {{.*}} void @_Z18testExceptionSmallv()
 // OGCG:   call {{.*}} @_ZN5SmallC1Ev(
-// OGCG:   invoke {{.*}} @_ZN5SmallC1Ev(
+// OGCG:   call {{.*}} @_ZN5SmallC1Ev(
 // OGCG:   call void @_Z20calleeExceptionSmall5SmallS_(
-// OGCG:   landingpad
-// OGCG:   call {{.*}} @_ZN5SmallD1Ev(
 
-// OGCG-LABEL: define {{.*}} void @_Z18testExceptionLargev() {{.*}} personality ptr @__gxx_personality_v0
+// OGCG-LABEL: define {{.*}} void @_Z18testExceptionLargev()
 // OGCG:   call {{.*}} @_ZN5LargeC1Ev(
-// OGCG:   invoke {{.*}} @_ZN5LargeC1Ev(
+// OGCG:   call {{.*}} @_ZN5LargeC1Ev(
 // OGCG:   call void @_Z20calleeExceptionLarge5LargeS_(
-// OGCG:   landingpad
-// OGCG:   call {{.*}} @_ZN5LargeD1Ev(
 
 // OGCG-LABEL: define {{.*}} void @_ZN7GH930401gEPNS_1SE(
 // OGCG:   call void @_ZN7GH930401fEv(ptr {{.*}}sret(

@@ -1329,7 +1329,9 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
     RValue rv = slot.asRValue();
     args.add(rv, argType);
 
-    assert(!cir::MissingFeatures::ehCleanupScope());
+    if (destroyedInCallee && getLangOpts().Exceptions)
+      cgm.errorNYI(e->getSourceRange(),
+                   "callee-destructed param with exceptions");
     return;
   }
 
