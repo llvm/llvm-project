@@ -71,7 +71,7 @@ public:
                                          DILLexer lexer,
                                          std::shared_ptr<StackFrame> frame_sp,
                                          lldb::DynamicValueType use_dynamic,
-                                         uint32_t options);
+                                         uint32_t options, lldb::DILMode mode);
 
   ~DILParser() = default;
 
@@ -88,12 +88,13 @@ private:
                      std::shared_ptr<StackFrame> frame_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member,
-                     llvm::Error &error);
+                     llvm::Error &error, lldb::DILMode mode);
 
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
   ASTNodeUP ParseAdditiveExpression();
+  ASTNodeUP ParseMultiplicativeExpression();
   ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
@@ -146,6 +147,9 @@ private:
   bool m_use_synthetic;
   bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
+
+  // DIL Mode requested by the caller.
+  lldb::DILMode m_mode;
 }; // class DILParser
 
 } // namespace lldb_private::dil
