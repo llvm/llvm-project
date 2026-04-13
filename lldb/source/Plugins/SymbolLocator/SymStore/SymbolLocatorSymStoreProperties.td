@@ -4,4 +4,7 @@ let Definition = "symbollocatorsymstore", Path = "plugin.symbol-locator.symstore
   def SymStoreURLs : Property<"urls", "Array">,
     ElementType<"String">,
     Desc<"List of local symstore directories to query for symbols">;
+  def CachePath : Property<"cache", "String">,
+    DefaultStringValue<"">,
+    Desc<"Default cache directory for downloaded symbol files. Used when no cache is specified in _NT_SYMBOL_PATH.">;
 }

@@ -66,6 +66,26 @@ class MockedSymStore:
         self._test.runCmd("settings clear plugin.symbol-locator.symstore")
 
 
+class NtSymbolPath:
+    """
+    Context Manager to temporarily set the _NT_SYMBOL_PATH environment variable.
+    """
+
+    def __init__(self, value):
+        self._value = value
+        self._saved = None
+
+    def __enter__(self):
+        self._saved = os.environ.get("_NT_SYMBOL_PATH")
+        os.environ["_NT_SYMBOL_PATH"] = self._value
+
+    def __exit__(self, *exc_info):
+        if self._saved is None:
+            os.environ.pop("_NT_SYMBOL_PATH", None)
+        else:
+            os.environ["_NT_SYMBOL_PATH"] = self._saved
+
+
 class HTTPServer:
     """
     Context Manager to serve a local directory tree via HTTP.
@@ -162,10 +182,44 @@ class SymStoreTests(TestBase):
     # certs, non-HTTPS redirects, etc.
     def test_http(self):
         """
-        Check that breakpoint hits with remote SymStore.
+        Check that breakpoint resolves with remote SymStore.
         """
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym) as dir:
             with HTTPServer(dir) as url:
                 self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {url}")
                 self.try_breakpoint(exe, should_have_loc=True)
+
+    def test_nt_symbol_path_local(self):
+        """
+        Check that breakpoint resolves with a local SymStore path in
+        _NT_SYMBOL_PATH, and that the PDB is not copied to the cache.
+        """
+        exe, sym = self.build_inferior()
+        cache_dir = self.getBuildArtifact("cache")
+        symstore = MockedSymStore(self, exe, sym)
+        with symstore as dir:
+            self.runCmd(
+                f"settings set plugin.symbol-locator.symstore.cache {cache_dir}"
+            )
+            with NtSymbolPath(dir):
+                self.try_breakpoint(exe, should_have_loc=True)
+            self.assertFalse(any(files for _, _, files in os.walk(cache_dir)))
+
+    def test_nt_symbol_path_srv(self):
+        """
+        Check that breakpoint resolves with an HTTP symbol server in
+        _NT_SYMBOL_PATH using the srv* syntax, and that the PDB is cached.
+        """
+        exe, sym = self.build_inferior()
+        cache_dir = self.getBuildArtifact("cache")
+        symstore = MockedSymStore(self, exe, sym)
+        with symstore as dir:
+            self.runCmd(
+                f"settings set plugin.symbol-locator.symstore.cache {cache_dir}"
+            )
+            with HTTPServer(dir) as url:
+                with NtSymbolPath(f"srv*{url}"):
+                    self.try_breakpoint(exe, should_have_loc=True)
+            key = symstore.get_key_pdb(exe)
+            self.assertTrue(os.path.isfile(os.path.join(cache_dir, sym, key, sym)))
