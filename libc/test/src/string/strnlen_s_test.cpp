@@ -14,8 +14,8 @@ TEST(LlvmLibcStrNLenSTest, NullPointerInput) {
   const char *str = nullptr;
   // If the string input is a null pointer, it should return 0 regardless of
   // the max len arg value.
-  ASSERT_EQ(static_cast<size_t>(0), LIBC_NAMESPACE::strnlen_s(str, 0));
-  ASSERT_EQ(static_cast<size_t>(0), LIBC_NAMESPACE::strnlen_s(str, 1));
+  ASSERT_EQ(LIBC_NAMESPACE::strnlen_s(str, 0), size_t(0));
+  ASSERT_EQ(LIBC_NAMESPACE::strnlen_s(str, 1), size_t(0));
 }
 
 // The semantics when the string input is not null are the same as strnlen. The

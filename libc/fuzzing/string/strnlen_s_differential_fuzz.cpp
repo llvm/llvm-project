@@ -1,4 +1,4 @@
-//===-- strnlen_s_fuzz.cpp ------------------------------------------------===//
+//===-- strnlen_s_differential_fuzz.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Fuzzing test for llvm-libc strnlen_s implementation.
+/// Differential fuzz test for llvm-libc strnlen_s implementation.
 ///
 //===----------------------------------------------------------------------===//
 

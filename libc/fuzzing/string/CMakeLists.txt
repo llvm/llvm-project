@@ -50,9 +50,9 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
-  strnlen_s_fuzz
+  strnlen_s_differential_fuzz
   SRCS
-    strnlen_s_fuzz.cpp
+    strnlen_s_differential_fuzz.cpp
   DEPENDS
     libc.src.string.strnlen_s
 )
