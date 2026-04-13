@@ -764,7 +764,26 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
       };
 
       if (auto embox = dyn_cast_or_null<fir::EmboxOp>(baseOp)) {
-        bool projectedSlice = hasProjectedSlice(getSliceOp(embox.getSlice()));
+        // A projected slice changes the element type of the boxed view.  We
+        // can only lower it here when the storage element is complex<T> and
+        // the projection is the real or imaginary part (i.e. %re / %im).  For
+        // such cases sizeof(complex<T>) == 2*sizeof(T), so
+        // divsi(byte_stride, elesize) is always an exact integer.
+        //
+        // Derived-type component projections (e.g. a%x, a%y) may produce a
+        // non-integer element-unit stride (e.g. sizeof(T)=24,
+        // sizeof(complex<f64>)=16 -> 24/16 = 1 after truncation, which is
+        // wrong).  For those, the type-restriction check below fires and we
+        // bail out, leaving the ops for downstream FIR-to-LLVM lowering.
+        auto isComplexComponentProjection = [&](fir::EmboxOp embox) -> bool {
+          if (!hasProjectedSlice(getSliceOp(embox.getSlice())))
+            return false;
+          Type memTy = fir::unwrapRefType(embox.getMemref().getType());
+          if (auto seqTy = dyn_cast<fir::SequenceType>(memTy))
+            memTy = seqTy.getEleTy();
+          return mlir::isa<mlir::ComplexType>(memTy);
+        };
+        bool projectedSlice = isComplexComponentProjection(embox);
         if (!projectedSlice &&
             !sameBaseBoxTypes(embox.getType(), embox.getMemref().getType())) {
           LLVM_DEBUG(llvm::dbgs()

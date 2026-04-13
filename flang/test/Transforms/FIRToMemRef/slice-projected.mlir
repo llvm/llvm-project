@@ -106,3 +106,37 @@ func.func @projected_slice_rev(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   }
   return
 }
+
+// ----------------------------------------------------------------------------
+// Derived-type component projection: a%x where a : TYPE{x:f64, y:complex<f64>}
+//
+// This is NOT a complex projection — the storage element is the derived type T,
+// not complex<T>.  FIRToMemRef cannot safely compute element-unit strides via
+// divsi(byte_stride, elesize) because sizeof(T)/sizeof(component) may not be an
+// integer (e.g. sizeof(T)=24, sizeof(complex<f64>)=16 -> 1.5, truncated to 1).
+//
+// The pass must leave fir.array_coor and fir.store/fir.load unconverted;
+// downstream FIR-to-LLVM lowering handles them correctly via the descriptor.
+//
+// CHECK-LABEL: func.func @derived_component_not_projected
+// The fir.array_coor must survive (not be erased).
+// CHECK:       fir.array_coor
+// The store must remain as fir.store, not memref.store.
+// CHECK:       fir.store
+// CHECK-NOT:   memref.store
+// ----------------------------------------------------------------------------
+func.func @derived_component_not_projected(
+    %arg0: !fir.ref<!fir.array<4x!fir.type<T{x:f64,y:complex<f64>}>>>) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 9.9e+01 : f64
+  %field = fir.field_index x, !fir.type<T{x:f64,y:complex<f64>}>
+  %shape = fir.shape %c4 : (index) -> !fir.shape<1>
+  %slice = fir.slice %c1, %c4, %c1 path %field : (index, index, index, !fir.field) -> !fir.slice<1>
+  %embox = fir.embox %arg0(%shape) [%slice] : (!fir.ref<!fir.array<4x!fir.type<T{x:f64,y:complex<f64>}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<4xf64>>
+  fir.do_loop %i = %c1 to %c4 step %c1 unordered {
+    %coor = fir.array_coor %embox %i : (!fir.box<!fir.array<4xf64>>, index) -> !fir.ref<f64>
+    fir.store %cst to %coor : !fir.ref<f64>
+  }
+  return
+}
