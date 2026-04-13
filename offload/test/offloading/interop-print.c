@@ -6,7 +6,8 @@
 // RUN:   %libomptarget-run-generic 2>&1 | \
 // RUN:   %fcheck-nvptx64-nvidia-cuda -check-prefixes=NVIDIA
 
-// RUN: %libomptarget-compile-and-run-spirv64-intel 2>&1 | %fcheck-spirv64-intel -check-prefixes=INTEL
+// RUN: %libomptarget-compile-and-run-spirv64-intel 2>&1 | \
+// RUN:   %fcheck-spirv64-intel -check-prefixes=INTEL
 
 // REQUIRES: gpu
 // XFAIL: nvptx64-nvidia-cuda
