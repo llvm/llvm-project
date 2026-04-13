@@ -971,6 +971,9 @@ public:
   GenModuleActionWrapperFunc getGenModuleActionWrapper() const {
     return GenModuleActionWrapper;
   }
+  void makeModuleAndDependenciesVisible(Module *Mod);
+  Module *loadIPCReceivedHeaderUnit(StringRef FileName,
+                                    SourceLocation ImportLoc) override;
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));

@@ -4100,6 +4100,15 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   Args.ClaimAllArgs(options::OPT_fmodules_reduced_bmi);
   Args.ClaimAllArgs(options::OPT_fno_modules_reduced_bmi);
 
+  if (const Arg *A = Args.getLastArg(options::OPT_use_ipc_file)) {
+    CmdArgs.push_back(
+        Args.MakeArgString(llvm::Twine("-useIPC=") + A->getValue()));
+    A->claim();
+  } else if (Args.hasArg(options::OPT_use_ipc)) {
+    CmdArgs.push_back("-useIPC");
+    Args.claimAllArgs(options::OPT_use_ipc);
+  }
+
   // We need to include the case the input file is a module file here.
   // Since the default compilation model for C++ module interface unit will
   // create temporary module file and compile the temporary module file

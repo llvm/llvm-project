@@ -10096,3 +10096,11 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+
+def use_ipc : Flag<["-", "/"], "useIPC">,
+    Visibility<[ClangOption, CC1Option, CLOption]>,
+    HelpText<"Enable IPC approach">;
+
+def use_ipc_file : Joined<["-", "/"], "useIPC=">,
+    Visibility<[ClangOption, CC1Option, CLOption]>,
+    HelpText<"Enable IPC approach with mock file">;

@@ -34,6 +34,7 @@
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Options/Options.h"
@@ -3404,6 +3405,14 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 
   for (const std::string &F : Opts.VFSOverlayFiles)
     GenerateArg(Consumer, OPT_ivfsoverlay, F);
+
+  if (P2978::managerCompiler) {
+    if (!P2978::managerCompiler->mockFilePath.empty())
+      GenerateArg(Consumer, OPT_use_ipc_file,
+                  P2978::managerCompiler->mockFilePath);
+    else
+      GenerateArg(Consumer, OPT_use_ipc);
+  }
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
@@ -3523,6 +3532,13 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   for (const auto *A : Args.filtered(OPT_ivfsoverlay, OPT_vfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
+
+  if (Args.hasArg(OPT_use_ipc) || Args.hasArg(OPT_use_ipc_file)) {
+    P2978::managerCompiler = new P2978::IPCManagerCompiler{};
+    StringRef MockPath = Args.getLastArgValue(OPT_use_ipc_file);
+    if (!MockPath.empty())
+      P2978::managerCompiler->readEntriesFromFile(MockPath);
+  }
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
