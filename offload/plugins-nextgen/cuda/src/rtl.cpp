@@ -686,6 +686,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = Plugin::check(Res, "error in cuMemAddressReserve: %s"))
       return Err;
 
+    if (ExpectedVAddr != 0 && ExpectedVAddr != DevPtr)
+      ODBG(OLDT_Alloc) << "cuMemAddressReserve reserved device virtual address "
+                       << reinterpret_cast<void *>(DevPtr) << " instead of "
+                       << reinterpret_cast<void *>(ExpectedVAddr);
+
     // Create a handle of the allocation.
     CUmemGenericAllocationHandle Handle;
     Res = cuMemCreate(&Handle, Size, &Prop, 0);

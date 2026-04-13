@@ -1,4 +1,4 @@
-//===- RecordReplay.h - Record Replay interface ---------------------------===//
+//===- RecordReplay.h - Target independent kernel record replay interface -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,7 +59,6 @@ protected:
   void *StartAddr = nullptr;
   uint64_t TotalSize = 0;
   uint64_t CurrentSize = 0;
-  std::mutex AllocationLock;
 
   /// Status of the record or replay.
   StatusTy Status;
@@ -79,7 +78,10 @@ protected:
   };
 
   /// List of all globals mapped to the device.
-  llvm::SmallVector<GlobalEntryTy> GlobalEntries;
+  SmallVector<GlobalEntryTy> GlobalEntries;
+
+  /// Mutex that protects dynamic allocations and globals.
+  std::mutex AllocationLock;
 
   // An instance of a kernel record replay.
   struct InstanceTy {
@@ -145,6 +147,7 @@ public:
 
   /// Add information about a global.
   void addGlobal(const char *Name, uint64_t Size, void *Addr) {
+    std::lock_guard<std::mutex> Lock(AllocationLock);
     GlobalEntries.emplace_back(GlobalEntryTy{Name, Size, Addr});
   }
 

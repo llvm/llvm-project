@@ -320,7 +320,7 @@ struct AMDGPUMemoryPoolTy {
     return (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT);
   }
 
-  /// Get the page size.
+  /// Get the allocation granularity of the pool.
   size_t getGranule() const { return Granule; }
 
   /// Allocate memory on the memory pool.
@@ -2351,6 +2351,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = Plugin::check(Status,
                                  "error in hsa_amd_vmem_address_reserve: %s\n"))
       return Err;
+
+    if (ExpectedVAddr != 0 && reinterpret_cast<void *>(ExpectedVAddr) != VAddr)
+      ODBG(OLDT_Alloc)
+          << "hsa_amd_vmem_address_reserve reserved device virtual address "
+          << VAddr << " instead of " << reinterpret_cast<void *>(ExpectedVAddr);
 
     // Create a handle of the allocation.
     hsa_amd_vmem_alloc_handle_t Handle;

@@ -1,3 +1,13 @@
+//===- RecordReplay.cpp - Target independent kernel record replay ---------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//===----------------------------------------------------------------------===//
+
 #include "PluginInterface.h"
 
 #include "Shared/APITypes.h"
@@ -21,14 +31,21 @@ using namespace plugin;
 using namespace error;
 
 Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
+  if (!VAddr && isReplaying())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "VAddr cannot be null when replaying");
   if (!VAddr)
     VAddr = Device.getSuggestedVirtualAddress();
 
   auto StartAddrOrErr = Device.allocateWithVirtualAddress(MemSize, VAddr);
   if (!StartAddrOrErr)
     return StartAddrOrErr.takeError();
+
   if (!*StartAddrOrErr)
     return Plugin::error(ErrorCode::OUT_OF_RESOURCES, "allocating memory");
+  if (isReplaying() && *StartAddrOrErr != VAddr)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "could not reserve recorded virtual address");
 
   StartAddr = *StartAddrOrErr;
   TotalSize = MemSize;
@@ -162,7 +179,7 @@ Error NativeRecordReplayTy::recordDescImpl(
 }
 
 Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
-  // Another thread may be allocating memory.
+  // Another thread may be allocating memory. The size can only increase.
   AllocationLock.lock();
   uint64_t RecordSize = CurrentSize;
   AllocationLock.unlock();
@@ -202,12 +219,19 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
   uint64_t TotalSize = 0;
   uint32_t NumGlobals = 0;
 
-  for (auto &OffloadEntry : GlobalEntries) {
-    if (!OffloadEntry.Size)
+  AllocationLock.lock();
+  // Copy the globals into a local vector so we can read it safely from this
+  // thread. This vector should have a few entries in general. No need to lock
+  // the entire function.
+  SmallVector<GlobalEntryTy> Globals = GlobalEntries;
+  AllocationLock.unlock();
+
+  for (auto &Global : Globals) {
+    if (!Global.Size)
       continue;
     // Get the total size of the string and entry including the null byte.
-    TotalSize += OffloadEntry.Size + sizeof(uint32_t) + sizeof(uint64_t) +
-                 OffloadEntry.Name.length() + 1;
+    TotalSize += Global.Size + sizeof(uint32_t) + sizeof(uint64_t) +
+                 Global.Name.length() + 1;
     NumGlobals++;
   }
 
@@ -221,24 +245,24 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
   *((uint32_t *)(BufferPtr)) = NumGlobals;
   BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
-  for (auto &OffloadEntry : GlobalEntries) {
-    if (!OffloadEntry.Size)
+  for (auto &Global : Globals) {
+    if (!Global.Size)
       continue;
 
-    uint32_t NameLength = OffloadEntry.Name.length() + 1;
+    uint32_t NameLength = Global.Name.length() + 1;
     *((uint32_t *)(BufferPtr)) = NameLength;
     BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
-    *((uint64_t *)(BufferPtr)) = OffloadEntry.Size;
+    *((uint64_t *)(BufferPtr)) = Global.Size;
     BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint64_t));
 
-    memcpy(BufferPtr, OffloadEntry.Name.data(), NameLength);
+    memcpy(BufferPtr, Global.Name.data(), NameLength);
     BufferPtr = utils::advancePtr(BufferPtr, NameLength);
 
-    if (auto Err = Device.dataRetrieve(BufferPtr, OffloadEntry.Addr,
-                                       OffloadEntry.Size, nullptr))
+    if (auto Err =
+            Device.dataRetrieve(BufferPtr, Global.Addr, Global.Size, nullptr))
       return Err;
-    BufferPtr = utils::advancePtr(BufferPtr, OffloadEntry.Size);
+    BufferPtr = utils::advancePtr(BufferPtr, Global.Size);
   }
   assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
          "Buffer over/under-filled.");
