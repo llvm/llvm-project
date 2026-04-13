@@ -2280,7 +2280,8 @@ def Tosa_ReshapeBlockScaledOp
   let description = [{
     Returns a tensor-list with the same type/values as the input, with a new
     shape specified by the shape argument. Reshape may operate on block-scaled
-    or non-block-scaled tensors of any rank. No data conversion happens during
+    tensors (values tensor followed by scale tensor) of rank 1 or higher; or a
+    single non-block-scaled tensor of any rank. No data conversion happens during
     a reshape operation. Reshape must retain the relationship between values
     and their scale in a block for block-scaled content.
   }];

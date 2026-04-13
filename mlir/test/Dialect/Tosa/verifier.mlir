@@ -1195,6 +1195,14 @@ func.func @test_matmul_t_block_scaled_batch_mismatch(%arg0: tensor<4x8x32xf8E4M3
 
 // -----
 
+func.func @test_matmul_t_block_scaled_block_size_mismatch(%arg0: tensor<4x8x32xf8E4M3FN>, %arg1: tensor<4x8x1xf8E8M0FNU>, %arg2: tensor<4x16x32xf8E4M3FN>, %arg3: tensor<4x16x1xf8E8M0FNU>) -> tensor<4x8x16xf32> {
+  // expected-error@+1 {{'tosa.matmul_t_block_scaled' op expect block size to be 32, got 1}}
+  %0 = tosa.matmul_t_block_scaled %arg0, %arg1, %arg2, %arg3 {block_size = #tosa.block_size<BLOCK_SIZE_1>} : (tensor<4x8x32xf8E4M3FN>, tensor<4x8x1xf8E8M0FNU>, tensor<4x16x32xf8E4M3FN>, tensor<4x16x1xf8E8M0FNU>) -> tensor<4x8x16xf32>
+  return %0 : tensor<4x8x16xf32>
+}
+
+// -----
+
 func.func @cast_from_block_scaled_incompatible_input_output_shape(%arg0: tensor<4x32xf4E2M1FN>, %arg1: tensor<4x1xf8E8M0FNU>) -> tensor<5x32xf32> {
   // expected-error@+1 {{'tosa.cast_from_block_scaled' op require compatible shapes for input_data ('tensor<4x32xf4E2M1FN>') and output_data ('tensor<5x32xf32>')}}
   %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>) -> tensor<5x32xf32>
@@ -1230,6 +1238,14 @@ func.func @cast_from_block_scaled_data_scale_mismatch(%arg0: tensor<4x32xf4E2M1F
 func.func @cast_from_block_scaled_data_scale_channel_mismatch(%arg0: tensor<4x32xf4E2M1FN>, %arg1: tensor<4x2xf8E8M0FNU>) -> tensor<4x32xf32> {
   // expected-error@+1 {{'tosa.cast_from_block_scaled' op expect last dimension of input_scale (2) to be equal to last dimension of input_data / block_size (1)}}
   %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<4x32xf4E2M1FN>, tensor<4x2xf8E8M0FNU>) -> tensor<4x32xf32>
+  return %0 : tensor<4x32xf32>
+}
+
+// -----
+
+func.func @test_cast_from_block_scaled_block_size_mismatch(%arg0: tensor<4x32xf4E2M1FN>, %arg1: tensor<4x1xf8E8M0FNU>) -> tensor<4x32xf32> {
+  // expected-error@+1 {{'tosa.cast_from_block_scaled' op expect block size to be 32, got 1}}
+  %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = #tosa.block_size<BLOCK_SIZE_1> : i32} : (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>) -> tensor<4x32xf32>
   return %0 : tensor<4x32xf32>
 }
 
@@ -1271,6 +1287,14 @@ func.func @test_cast_to_block_scaled_data_scale_channel_mismatch(%arg0: tensor<4
   // expected-error@+1 {{'tosa.cast_to_block_scaled' op expect last dimension of output_scale (2) to be equal to last dimension of output_data / block_size (1)}}
   %0:2 = tosa.cast_to_block_scaled %arg0 {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<4x32xf32>) -> (tensor<4x32xf4E2M1FN>, tensor<4x2xf8E8M0FNU>)
   return %0#0, %0#1 : tensor<4x32xf4E2M1FN>, tensor<4x2xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_cast_to_block_scaled_block_size_mismatch(%arg0: tensor<4x32xf32>) -> (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.cast_to_block_scaled' op expect block size to be 32, got 1}}
+  %0:2 = tosa.cast_to_block_scaled %arg0 {block_size = #tosa.block_size<BLOCK_SIZE_1>} : (tensor<4x32xf32>) -> (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>)
+  return %0#0, %0#1 : tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>
 }
 
 // -----
@@ -1539,6 +1563,17 @@ func.func @test_conv2d_block_scaled_invalid_bias_size(%arg0: tensor<1x4x4x64xf4E
 
 // -----
 
+func.func @test_conv2d_block_scaled_block_size_mismatch(%arg0: tensor<1x4x4x64xf4E2M1FN>, %arg1: tensor<1x4x4x2xf8E8M0FNU>, %arg2: tensor<8x1x1x64xf4E2M1FN>, %arg3: tensor<8x1x1x2xf8E8M0FNU>, %arg4: tensor<1xf32>) -> tensor<*xf32> {
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %dilation = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.conv2d_block_scaled' op expect block size to be 32, got 1}}
+  %3 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size =  #tosa.block_size<BLOCK_SIZE_1>} : (tensor<1x4x4x64xf4E2M1FN>, tensor<1x4x4x2xf8E8M0FNU>, tensor<8x1x1x64xf4E2M1FN>, tensor<8x1x1x2xf8E8M0FNU>, tensor<1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xf32>
+  return %3 : tensor<*xf32>
+}
+
+// -----
+
 func.func @test_missmatched_ranks() {
   %0 = tosa.const_shape {values = dense<[10]> : tensor<1xindex>} : () -> !tosa.shape<1>
   %1 = tosa.const_shape {values = dense<[10, 15]> : tensor<2xindex>} : () -> !tosa.shape<2>
@@ -1633,7 +1668,7 @@ func.func @test_reshape_block_scaled_types_mismatch(%arg0 : tensor<2x4xf32>) -> 
 func.func @test_reshape_block_scaled_outputs_mismatch_inputs(%arg0 : tensor<64xf8E4M3FN>) -> () {
   %s = tosa.const_shape {values = dense<[2, 32]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape_block_scaled' op requires number of results to match inputs}}
-  %0:2 = "tosa.reshape_block_scaled"(%arg0, %s) {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<64xf8E4M3FN>, !tosa.shape<2>) -> (tensor<2x32xf8E4M3FN>, tensor<2x1xf8E8M0FNU>)
+  %0:2 = "tosa.reshape_block_scaled"(%arg0, %s) {block_size = #tosa.block_size<BLOCK_SIZE_1> : i32} : (tensor<64xf8E4M3FN>, !tosa.shape<2>) -> (tensor<2x32xf8E4M3FN>, tensor<2x1xf8E8M0FNU>)
   return
 }
 
@@ -1693,7 +1728,7 @@ func.func @test_reshape_block_scaled_scale_dims_mismatch(%arg0 : tensor<1x64xf8E
 
 // -----
 
-func.func @test_reshape_block_scaled_block_size_mismatch(%arg0 : tensor<60xf8E4M3FN>, %arg1 : tensor<2xf8E8M0FNU>) -> () {
+func.func @test_reshape_block_scaled_block_size_dim_mismatch(%arg0 : tensor<60xf8E4M3FN>, %arg1 : tensor<2xf8E8M0FNU>) -> () {
   %s = tosa.const_shape {values = dense<[2, 32]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape_block_scaled' op expect last dimension of input_data (60) to be divisible by block_size (32)}}
   %0:2 = "tosa.reshape_block_scaled"(%arg0, %arg1, %s) {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<60xf8E4M3FN>, tensor<2xf8E8M0FNU>, !tosa.shape<2>) -> (tensor<2x32xf8E4M3FN>, tensor<2x1xf8E8M0FNU>)
@@ -1711,7 +1746,7 @@ func.func @test_reshape_block_scaled_scale_blocks_mismatch(%arg0 : tensor<64xf8E
 
 // -----
 
-func.func @test_reshape_block_scaled_new_shape_block_size_mismatch(%arg0 : tensor<64xf8E4M3FN>, %arg1 : tensor<2xf8E8M0FNU>) -> () {
+func.func @test_reshape_block_scaled_new_shape_block_size_dim_mismatch(%arg0 : tensor<64xf8E4M3FN>, %arg1 : tensor<2xf8E8M0FNU>) -> () {
   %s = tosa.const_shape {values = dense<[2, 30]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape_block_scaled' op expect last dimension of new shape (30) to be divisible by block_size (32)}}
   %0:2 = "tosa.reshape_block_scaled"(%arg0, %arg1, %s) {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<64xf8E4M3FN>, tensor<2xf8E8M0FNU>, !tosa.shape<2>) -> (tensor<2x30xf8E4M3FN>, tensor<2x1xf8E8M0FNU>)
@@ -1761,4 +1796,22 @@ func.func @test_reshape_block_scaled_rank0_scale_input(%arg0 : tensor<64xf8E4M3F
   // expected-error@+1 {{'tosa.reshape_block_scaled' op requires new shape to have a rank greater than 0}}
   %0:2 = "tosa.reshape_block_scaled"(%arg0, %arg1, %s) {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<64xf8E4M3FN>, tensor<2xf8E8M0FNU>, !tosa.shape<0>) -> (tensor<2x32xf8E4M3FN>, tensor<2x2xf8E8M0FNU>)
   return
+}
+
+// -----
+
+func.func @test_reshape_non_block_scaled_block_size_mismatch(%arg0: tensor<13x21x3xf32>) -> tensor<1x819xf32> {
+  %s = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape_block_scaled' op expect block size to be 1, got 32}}
+  %0 = "tosa.reshape_block_scaled"(%arg0, %s) {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<13x21x3xf32>, !tosa.shape<2>) -> tensor<1x819xf32>
+  return %0 : tensor<1x819xf32>
+}
+
+// -----
+
+func.func @test_reshape_block_scaled_block_size_mismatch(%arg0: tensor<4x32xf4E2M1FN>, %arg1: tensor<4x1xf8E8M0FNU>) -> (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) {
+  %s = tosa.const_shape {values = dense<[2, 64]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape_block_scaled' op expect block size to be 32, got 1}}
+  %0:2 = "tosa.reshape_block_scaled"(%arg0, %arg1, %s) {block_size = #tosa.block_size<BLOCK_SIZE_1> : i32} : (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>, !tosa.shape<2>) -> (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>)
+  return %0#0, %0#1 : tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>
 }
