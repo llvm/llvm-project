@@ -7363,9 +7363,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
   unsigned MinProfitableStridedOps =
       IsLoad ? MinProfitableStridedLoads : MinProfitableStridedStores;
-  unsigned InputTyNumElts = 1;
-  if (auto *FVT = dyn_cast<FixedVectorType>(ScalarTy))
-    InputTyNumElts = FVT->getNumElements();
+  const unsigned InputTyNumElts = getNumElements(ScalarTy);
   if (Sz * InputTyNumElts <= MinProfitableStridedOps ||
       !TTI->isTypeLegal(StridedLoadTy) ||
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
