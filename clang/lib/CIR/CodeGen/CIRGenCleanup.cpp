@@ -308,12 +308,13 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
 /// the normal cleanup to be executed even when the cleanup has been
 /// deactivated.
 static bool bodyHasBranchThroughExits(mlir::Region &bodyRegion) {
-  bool found = false;
-  bodyRegion.walk([&](mlir::Operation *op) {
-    if (isa<cir::ReturnOp, cir::GotoOp>(op))
-      found = true;
-  });
-  return found;
+  return bodyRegion
+      .walk([&](mlir::Operation *op) {
+        if (isa<cir::ReturnOp, cir::GotoOp>(op))
+          return mlir::WalkResult::interrupt();
+        return mlir::WalkResult::advance();
+      })
+      .wasInterrupted();
 }
 
 /// Pop a cleanup block from the stack.
