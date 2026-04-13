@@ -98,11 +98,12 @@ void CndVar::broadcast() {
     // atomically update the waiter status to WS_Signalled before waking
     // up the waiter. A dummy location is used for the other futex of
     // FUTEX_WAKE_OP.
+    CndWaiter *snapshot = waiter;
+    waiter = static_cast<CndWaiter *>(snapshot->next);
     LIBC_NAMESPACE::syscall_impl<long>(
         FUTEX_SYSCALL_ID, &dummy_futex_word, FUTEX_WAKE_OP, 1, 1,
-        &waiter->futex_word.val,
+        &snapshot->futex_word.val,
         FUTEX_OP(FUTEX_OP_SET, WS_Signalled, FUTEX_OP_CMP_EQ, WS_Waiting));
-    waiter = static_cast<CndWaiter *>(waiter->next);
   }
 }
 
