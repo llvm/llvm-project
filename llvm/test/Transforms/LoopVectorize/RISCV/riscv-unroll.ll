@@ -4,7 +4,6 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-target-max-vector-interleave=1 -mtriple=riscv64 -mattr=+v -scalable-vectorization=off -riscv-v-register-bit-width-lmul=2 -S | FileCheck %s --check-prefix=LMUL2
 ; RUN: opt < %s -passes=loop-vectorize -force-target-max-vector-interleave=1 -mtriple=riscv32 -mattr=+v -scalable-vectorization=off -riscv-v-register-bit-width-lmul=2 -S | FileCheck %s --check-prefix=LMUL2
 
-; Function Attrs: nounwind
 define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr %c, i32 %size) {
 ; LMUL1-LABEL: @array_add(
 ; LMUL1-NEXT:  entry:
@@ -106,10 +105,10 @@ entry:
   %cmp10 = icmp sgt i32 %size, 0
   br i1 %cmp10, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -123,9 +122,9 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %size
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret ptr %c
 }

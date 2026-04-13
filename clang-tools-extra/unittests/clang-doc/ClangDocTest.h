@@ -31,25 +31,32 @@ FunctionInfo *InfoAsFunction(Info *I);
 EnumInfo *InfoAsEnum(Info *I);
 TypedefInfo *InfoAsTypedef(Info *I);
 
-// Unlike the operator==, these functions explicitly does not check USRs, as
-// that may change and it would be better to not rely on its implementation.
-void CheckReference(Reference &Expected, Reference &Actual);
-void CheckTypeInfo(TypeInfo *Expected, TypeInfo *Actual);
-void CheckFieldTypeInfo(FieldTypeInfo *Expected, FieldTypeInfo *Actual);
-void CheckMemberTypeInfo(MemberTypeInfo *Expected, MemberTypeInfo *Actual);
+void CheckCommentInfo(ArrayRef<CommentInfo> Expected,
+                      ArrayRef<CommentInfo> Actual);
+void CheckCommentInfo(const OwningVec<CommentInfo> &Expected,
+                      const OwningVec<CommentInfo> &Actual);
+void CheckReference(const Reference &Expected, const Reference &Actual);
+void CheckTypeInfo(const TypeInfo *Expected, const TypeInfo *Actual);
+void CheckFieldTypeInfo(const FieldTypeInfo *Expected,
+                        const FieldTypeInfo *Actual);
+void CheckMemberTypeInfo(const MemberTypeInfo *Expected,
+                         const MemberTypeInfo *Actual);
 
 // This function explicitly does not check USRs, as that may change and it would
 // be better to not rely on its implementation.
-void CheckBaseInfo(Info *Expected, Info *Actual);
-void CheckSymbolInfo(SymbolInfo *Expected, SymbolInfo *Actual);
-void CheckFunctionInfo(FunctionInfo *Expected, FunctionInfo *Actual);
-void CheckEnumInfo(EnumInfo *Expected, EnumInfo *Actual);
-void CheckTypedefInfo(TypedefInfo *Expected, TypedefInfo *Actual);
-void CheckNamespaceInfo(NamespaceInfo *Expected, NamespaceInfo *Actual);
-void CheckRecordInfo(RecordInfo *Expected, RecordInfo *Actual);
-void CheckBaseRecordInfo(BaseRecordInfo *Expected, BaseRecordInfo *Actual);
+void CheckBaseInfo(const Info *Expected, const Info *Actual);
+void CheckSymbolInfo(const SymbolInfo *Expected, const SymbolInfo *Actual);
+void CheckFunctionInfo(const FunctionInfo *Expected,
+                       const FunctionInfo *Actual);
+void CheckEnumInfo(const EnumInfo *Expected, const EnumInfo *Actual);
+void CheckTypedefInfo(const TypedefInfo *Expected, const TypedefInfo *Actual);
+void CheckNamespaceInfo(const NamespaceInfo *Expected,
+                        const NamespaceInfo *Actual);
+void CheckRecordInfo(const RecordInfo *Expected, const RecordInfo *Actual);
+void CheckBaseRecordInfo(const BaseRecordInfo *Expected,
+                         const BaseRecordInfo *Actual);
 
-void CheckIndex(Index &Expected, Index &Actual);
+void CheckIndex(const Index &Expected, const Index &Actual);
 
 class ClangDocContextTest : public ::testing::Test {
 protected:

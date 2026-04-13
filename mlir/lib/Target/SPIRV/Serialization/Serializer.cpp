@@ -728,6 +728,11 @@ LogicalResult Serializer::prepareBasicType(
     return processTypeDecoration(loc, runtimeArrayType, resultID);
   }
 
+  if (isa<spirv::SamplerType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeSampler;
+    return success();
+  }
+
   if (auto sampledImageType = dyn_cast<spirv::SampledImageType>(type)) {
     typeEnum = spirv::Opcode::OpTypeSampledImage;
     uint32_t imageTypeID = 0;

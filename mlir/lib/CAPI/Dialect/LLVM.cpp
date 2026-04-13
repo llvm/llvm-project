@@ -342,16 +342,22 @@ MlirAttribute mlirLLVMDIFileAttrGet(MlirContext ctx, MlirAttribute name,
 
 MlirStringRef mlirLLVMDIFileAttrGetName(void) { return wrap(DIFileAttr::name); }
 
+MlirAttribute mlirLLVMDICompileUnitAttrGetRecSelf(MlirAttribute recId) {
+  return wrap(DICompileUnitAttr::getRecSelf(cast<DistinctAttr>(unwrap(recId))));
+}
+
 MlirAttribute mlirLLVMDICompileUnitAttrGet(
-    MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
-    MlirAttribute file, MlirAttribute producer, bool isOptimized,
-    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
-    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
-    intptr_t nImportedEntities, MlirAttribute const *importedEntities) {
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguage, MlirAttribute file, MlirAttribute producer,
+    bool isOptimized, MlirLLVMDIEmissionKind emissionKind,
+    bool isDebugInfoForProfiling, MlirLLVMDINameTableKind nameTableKind,
+    MlirAttribute splitDebugFilename, intptr_t nImportedEntities,
+    MlirAttribute const *importedEntities) {
   SmallVector<Attribute> importsStorage;
   importsStorage.reserve(nImportedEntities);
   return wrap(DICompileUnitAttr::get(
-      unwrap(ctx), cast<DistinctAttr>(unwrap(id)), sourceLanguage,
+      unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
+      cast<DistinctAttr>(unwrap(id)), sourceLanguage,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
       isOptimized, DIEmissionKind(emissionKind), isDebugInfoForProfiling,
       DINameTableKind(nameTableKind),

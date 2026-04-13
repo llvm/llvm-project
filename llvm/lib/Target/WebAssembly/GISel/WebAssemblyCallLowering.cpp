@@ -23,11 +23,13 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "wasm-call-lowering"
 
@@ -48,6 +50,32 @@ static bool callingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::Swift;
 }
 
+static unsigned extendOpFromFlags(ISD::ArgFlagsTy Flags) {
+  if (Flags.isSExt())
+    return TargetOpcode::G_SEXT;
+  if (Flags.isZExt())
+    return TargetOpcode::G_ZEXT;
+  return TargetOpcode::G_ANYEXT;
+}
+
+static LLT getLLTForWasmMVT(MVT Ty, const DataLayout &DL) {
+  if (Ty == MVT::externref) {
+    return LLT::pointer(
+        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF,
+        DL.getPointerSizeInBits(
+            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF));
+  }
+
+  if (Ty == MVT::funcref) {
+    return LLT::pointer(
+        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF,
+        DL.getPointerSizeInBits(
+            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF));
+  }
+
+  return llvm::getLLTForMVT(Ty);
+}
+
 WebAssemblyCallLowering::WebAssemblyCallLowering(
     const WebAssemblyTargetLowering &TLI)
     : CallLowering(&TLI) {}
@@ -65,13 +93,117 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                           ArrayRef<Register> VRegs,
                                           FunctionLoweringInfo &FLI,
                                           Register SwiftErrorVReg) const {
-  if (!Val)
-    return true; // allow only void returns for now
+  MachineFunction &MF = MIRBuilder.getMF();
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
+  const Function &F = MF.getFunction();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
+  const DataLayout &DL = F.getDataLayout();
 
-  return false;
+  MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(WebAssembly::RETURN);
+
+  assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
+         "Return value without a vreg or vice versa");
+
+  if (Val) {
+    LLVMContext &Ctx = Val->getType()->getContext();
+
+    if (!FLI.CanLowerReturn) {
+      insertSRetStores(MIRBuilder, Val->getType(), VRegs, FLI.DemoteRegister);
+    } else {
+      SmallVector<EVT, 4> SplitEVTs;
+      ComputeValueVTs(TLI, DL, Val->getType(), SplitEVTs);
+      assert(VRegs.size() == SplitEVTs.size() &&
+             "For each split Type there should be exactly one VReg.");
+
+      SmallVector<ArgInfo, 8> SplitRets;
+      CallingConv::ID CallConv = F.getCallingConv();
+
+      unsigned RetIdx = 0;
+      for (EVT SplitEVT : SplitEVTs) {
+        Register CurVReg = VRegs[RetIdx];
+        ArgInfo CurRetInfo = ArgInfo{CurVReg, SplitEVT.getTypeForEVT(Ctx), 0};
+        setArgFlags(CurRetInfo, AttributeList::ReturnIndex, DL, F);
+
+        splitToValueTypes(CurRetInfo, SplitRets, DL, CallConv);
+        ++RetIdx;
+      }
+
+      for (ArgInfo &Ret : SplitRets) {
+        const EVT OrigVT = TLI.getValueType(DL, Ret.Ty);
+        const MVT NewVT =
+            TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+        const LLT OrigLLT =
+            getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+        const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+
+        const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
+
+        // If we need to split the type over multiple regs, check it's a
+        // scenario we currently support.
+        const unsigned NumParts =
+            TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
+
+        const ISD::ArgFlagsTy OrigFlags = Ret.Flags[0];
+        Ret.Flags.clear();
+
+        for (unsigned Part = 0; Part < NumParts; ++Part) {
+          ISD::ArgFlagsTy Flags = OrigFlags;
+
+          if (Part == 0) {
+            Flags.setSplit();
+          } else {
+            Flags.setOrigAlign(Align(1));
+            if (Part == NumParts - 1)
+              Flags.setSplitEnd();
+          }
+
+          Ret.Flags.push_back(Flags);
+        }
+
+        Ret.OrigRegs.assign(Ret.Regs.begin(), Ret.Regs.end());
+        if (NumParts != 1 || OrigLLT != NewLLT) {
+          // If we can't directly assign the register, we need one or more
+          // intermediate values.
+          Ret.Regs.resize(NumParts);
+
+          // For each split register, create and assign a vreg that will store
+          // the incoming component of the larger value. These will later be
+          // merged to form the final vreg.
+          for (unsigned Part = 0; Part < NumParts; ++Part) {
+            Register NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
+
+            if (!RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI))
+              reportFatalInternalError(
+                  "Couldn't constrain brand-new register?");
+
+            MIB.addUse(NewOutReg);
+
+            Ret.Regs[Part] = NewOutReg;
+          }
+
+          buildCopyToRegs(MIRBuilder, Ret.Regs, Ret.OrigRegs[0], OrigLLT,
+                          NewLLT, extendOpFromFlags(Ret.Flags[0]));
+        } else {
+          MIB.addUse(Ret.Regs[0]);
+        }
+      }
+    }
+  }
+
+  if (SwiftErrorVReg) {
+    reportFatalInternalError(
+        "Wasm does not `supportSwiftError`, yet SwiftErrorVReg is "
+        "improperly valid.");
+  }
+
+  MIRBuilder.insertInstr(MIB);
+  return true;
 }
 
-static unsigned getWASMArgumentOpcode(MVT ArgType) {
+static unsigned getWasmArgumentOpcode(MVT ArgType) {
   switch (ArgType.SimpleTy) {
   case MVT::i32:
     return WebAssembly::ARGUMENT_i32;
@@ -106,25 +238,7 @@ static unsigned getWASMArgumentOpcode(MVT ArgType) {
   default:
     break;
   }
-  llvm_unreachable("Found unexpected type for WASM argument");
-}
-
-static LLT getLLTForWasmMVT(MVT Ty, const DataLayout &DL) {
-  if (Ty == MVT::externref) {
-    return LLT::pointer(
-        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF,
-        DL.getPointerSizeInBits(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF));
-  }
-
-  if (Ty == MVT::funcref) {
-    return LLT::pointer(
-        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF,
-        DL.getPointerSizeInBits(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF));
-  }
-
-  return llvm::getLLTForMVT(Ty);
+  llvm_unreachable("Found unexpected type for Wasm argument");
 }
 
 bool WebAssemblyCallLowering::lowerFormalArguments(
@@ -221,7 +335,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
     for (unsigned Part = 0; Part < NumParts; ++Part) {
       MachineInstrBuilder ArgInst =
-          MIRBuilder.buildInstr(getWASMArgumentOpcode(NewVT))
+          MIRBuilder.buildInstr(getWasmArgumentOpcode(NewVT))
               .addDef(Arg.Regs[Part])
               .addImm(FinalArgIdx);
 
@@ -262,7 +376,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
     MFI->setVarargBufferVreg(VarargVreg);
 
     MachineInstrBuilder ArgInst =
-        MIRBuilder.buildInstr(getWASMArgumentOpcode(PtrVT))
+        MIRBuilder.buildInstr(getWasmArgumentOpcode(PtrVT))
             .addDef(VarargVreg)
             .addImm(FinalArgIdx);
 

@@ -8379,8 +8379,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
     Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
         this->Obj.decodeBBAddrMap(*Sec, RelocSec, &PGOAnalyses);
     if (!BBAddrMapOrErr) {
-      this->reportUniqueWarning("unable to dump " + this->describe(*Sec) +
-                                ": " + toString(BBAddrMapOrErr.takeError()));
+      this->reportUniqueWarning("unable to dump BB addr map section: " +
+                                toString(BBAddrMapOrErr.takeError()));
       continue;
     }
     for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {

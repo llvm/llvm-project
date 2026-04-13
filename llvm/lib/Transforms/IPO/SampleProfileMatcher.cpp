@@ -187,6 +187,7 @@ bool SampleProfileMatcher::isProfileUnused(const FunctionId &ProfileFuncName) {
   // module. Check if the function name exists in the pseudo_probe descriptors.
   return (SymbolMap->find(ProfileFuncName) == SymbolMap->end()) &&
          (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
+          !FunctionSamples::ProfileIsProbeBased ||
           !ProfileFuncName.isStringRef() ||
           (ProbeManager->getDesc(ProfileFuncName.stringRef()) == nullptr));
 }
