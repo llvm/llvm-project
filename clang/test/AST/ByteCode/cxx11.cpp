@@ -345,6 +345,16 @@ namespace ReadMutableInCopyCtor {
                        // both-note {{in call to 'G(g1)'}}
 }
 
+namespace ReadAnonUnionInCopyCtor {
+  struct G {
+    struct X {};
+    union U { X a; };
+    union {X a; };
+  };
+  constexpr G g1 = {};
+  constexpr G g2 = g1;
+}
+
 namespace GH150709 {
   struct C { };
   struct D : C {
@@ -353,7 +363,7 @@ namespace GH150709 {
   struct E : C { };
   struct F : D { };
   struct G : E { };
-  
+
   constexpr C c1, c2[2];
   constexpr D d1, d2[2];
   constexpr E e1, e2[2];
