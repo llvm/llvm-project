@@ -2941,7 +2941,6 @@ void TextNodeDumper::VisitExplicitInstantiationDecl(
   dumpTemplateSpecializationKind(D->getTemplateSpecializationKind());
   if (D->isExternTemplate())
     OS << " extern";
-  OS << " template";
   if (D->getQualifierLoc())
     dumpNestedNameSpecifier(D->getQualifierLoc().getNestedNameSpecifier());
   if (const NamedDecl *Spec = D->getSpecialization()) {
