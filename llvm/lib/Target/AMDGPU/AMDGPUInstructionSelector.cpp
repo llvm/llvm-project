@@ -849,7 +849,8 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SrcRC, DstSize / 8);
   for (int I = 0, E = NumDst; I != E; ++I) {
     MachineOperand &Dst = MI.getOperand(I);
-    // hi16:sreg_32 is not allowed so explicitly shift upper 16-bits.
+    // SGPRs do not support hi16 subregister, so extract upper 16-bits with a
+    // shift and skip the subclass constraint step.
     if (SrcBank->getID() == AMDGPU::SGPRRegBankID &&
         SubRegs[I] == AMDGPU::hi16) {
       BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst.getReg())
@@ -858,12 +859,12 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
     } else {
       BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
           .addReg(SrcReg, {}, SubRegs[I]);
-    }
 
-    // Make sure the subregister index is valid for the source register.
-    SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
-    if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
-      return false;
+      // Make sure the subregister index is valid for the source register.
+      SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
+      if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
+        return false;
+    }
 
     const TargetRegisterClass *DstRC =
       TRI.getConstrainedRegClassForOperand(Dst, *MRI);

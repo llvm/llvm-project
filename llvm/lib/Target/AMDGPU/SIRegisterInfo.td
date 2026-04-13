@@ -143,11 +143,13 @@ multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
                     /* isHi16 */ 1> {
     let isArtificial = ArtificialHigh;
   }
-  def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
-                                   !cast<Register>(NAME#"_HI16")]>,
+  def "" : RegisterWithSubRegs<n, !if(!not(ArtificialHigh),
+                                      [!cast<Register>(NAME#"_LO16"),
+                                       !cast<Register>(NAME#"_HI16")],
+                                      [!cast<Register>(NAME#"_LO16")])>,
            DwarfRegNum<DwarfEncodings> {
     let Namespace = "AMDGPU";
-    let SubRegIndices = [lo16, hi16];
+    let SubRegIndices = !if(!not(ArtificialHigh), [lo16, hi16], [lo16]);
     let CoveredBySubRegs = !not(ArtificialHigh);
 
     let HWEncoding{9-0} = regIdx;
