@@ -892,7 +892,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     QualType DestType = E->getType();
 
     const OptPrimType DestT = classify(DestType);
-    if (DestT) {
+    if (OptPrimType DestT = classify(DestType)) {
       // When the destination is a scalar, we only need the first scalar
       // element of the source.
       unsigned SrcPtrOffset =
