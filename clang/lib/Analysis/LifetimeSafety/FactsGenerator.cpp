@@ -729,20 +729,18 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   if (!MD || !MD->isInstance())
     return;
 
+  const auto *MemberCall = dyn_cast_or_null<CXXMemberCallExpr>(Call);
+  if (!MemberCall)
+    return;
+
+  if (!dyn_cast_or_null<CXXThisExpr>(MemberCall->getImplicitObjectArgument()))
+    return;
+
   const auto *ClassDecl = MD->getParent()->getDefinition();
   if (!ClassDecl)
     return;
 
   const auto UseFields = [&](const CXXRecordDecl *RD) {
-    const auto *MemberCall = dyn_cast_or_null<CXXMemberCallExpr>(Call);
-    if (!MemberCall)
-      return;
-
-    const auto *This =
-        dyn_cast_or_null<CXXThisExpr>(MemberCall->getImplicitObjectArgument());
-    if (!This)
-      return;
-
     for (const auto *Field : RD->fields())
       if (auto *FieldList = getOriginsList(*Field))
         CurrentBlockFacts.push_back(
