@@ -23,8 +23,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:rgpr = COPY $r0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:rgpr = COPY $r1
-  ; CHECK-NEXT:   [[t2ADCrs:%[0-9]+]]:rgpr = t2ADCrs [[COPY]], [[COPY1]], 19, 14 /* CC::al */, $noreg, $noreg, implicit $cpsr, implicit-def $cpsr
-  ; CHECK-NEXT:   t2CMPri [[t2ADCrs]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   [[t2ADCrs:%[0-9]+]]:rgpr = t2ADCrs [[COPY]], [[COPY1]], 19, 14 /* CC::al */, $noreg, def $cpsr, implicit $cpsr, implicit-def $cpsr
   ; CHECK-NEXT:   t2Bcc %bb.1, 0 /* CC::eq */, $cpsr
   ; CHECK-NEXT:   t2B %bb.2, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}

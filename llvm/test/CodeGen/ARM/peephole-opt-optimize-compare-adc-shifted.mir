@@ -23,8 +23,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $r1
-  ; CHECK-NEXT:   [[ADCrsi:%[0-9]+]]:gpr = ADCrsi [[COPY]], [[COPY1]], 234, 14 /* CC::al */, $noreg, $noreg, implicit $cpsr, implicit-def $cpsr
-  ; CHECK-NEXT:   CMPri [[ADCrsi]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   [[ADCrsi:%[0-9]+]]:gpr = ADCrsi [[COPY]], [[COPY1]], 234, 14 /* CC::al */, $noreg, def $cpsr, implicit $cpsr, implicit-def $cpsr
   ; CHECK-NEXT:   Bcc %bb.1, 0 /* CC::eq */, $cpsr
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -74,8 +73,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnopc = COPY $r0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gprnopc = COPY $r1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gprnopc = COPY $r2
-  ; CHECK-NEXT:   [[ADCrsr:%[0-9]+]]:gprnopc = ADCrsr [[COPY]], [[COPY1]], [[COPY2]], 2, 14 /* CC::al */, $noreg, $noreg, implicit $cpsr, implicit-def $cpsr
-  ; CHECK-NEXT:   CMPri [[ADCrsr]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   [[ADCrsr:%[0-9]+]]:gprnopc = ADCrsr [[COPY]], [[COPY1]], [[COPY2]], 2, 14 /* CC::al */, $noreg, def $cpsr, implicit $cpsr, implicit-def $cpsr
   ; CHECK-NEXT:   Bcc %bb.1, 0 /* CC::eq */, $cpsr
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}

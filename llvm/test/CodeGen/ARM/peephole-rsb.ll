@@ -7,8 +7,7 @@ define i8 @abd_ext_i8_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-NEXT:    lsl r0, r0, #24
 ; CHECK-NEXT:    lsl r1, r1, #24
 ; CHECK-NEXT:    asr r0, r0, #24
-; CHECK-NEXT:    sub r0, r0, r1, asr #24
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    subs r0, r0, r1, asr #24
 ; CHECK-NEXT:    rsbmi r0, r0, #0
 ; CHECK-NEXT:    bx lr
   %aext = sext i8 %a to i64
