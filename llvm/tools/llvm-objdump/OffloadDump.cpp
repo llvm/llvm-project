@@ -61,8 +61,7 @@ static void printOffloadBinaryMetadata(const OffloadBinary &OB,
 }
 
 static void printBinary(const OffloadBinary &OB, uint64_t Index,
-                        uint64_t Level = 0,
-                        Twine ParentIndexPrefix = "") {
+                        uint64_t Level = 0, Twine ParentIndexPrefix = "") {
   outs() << "\n";
   outs().indent(Level * 2) << "OFFLOADING IMAGE [" << ParentIndexPrefix << Index
                            << "]:\n";
@@ -91,8 +90,7 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index,
 
   for (uint64_t I = 0, E = InnerBinaries.size(); I != E; ++I) {
     const OffloadBinary *InnerOB = InnerBinaries[I].getBinary();
-    printBinary(*InnerOB, I, Level + 1,
-                ParentIndexPrefix + Twine(Index) + ".");
+    printBinary(*InnerOB, I, Level + 1, ParentIndexPrefix + Twine(Index) + ".");
   }
 }
 
