@@ -16,12 +16,17 @@
 #ifndef LLVM_ADT_BITSET_H
 #define LLVM_ADT_BITSET_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/bit.h"
 #include <array>
 #include <climits>
 #include <cstdint>
 
 namespace llvm {
+
+// Forward declare Bitset and hash_value for friend declarations.
+template <unsigned NumBits> class Bitset;
+template <unsigned NumBits> hash_code hash_value(const Bitset<NumBits> &);
 
 /// This is a constexpr reimplementation of a subset of std::bitset. It would be
 /// nice to use std::bitset directly, but it doesn't support constant
@@ -52,6 +57,8 @@ template <unsigned NumBits> class Bitset {
   constexpr void maskLastWord() { Bits[getLastWordIndex()] &= RemainderMask; }
 
 protected:
+  constexpr const StorageType &getData() const { return Bits; }
+
   constexpr Bitset(const std::array<uint64_t, (NumBits + 63) / 64> &B) {
     if constexpr (sizeof(BitWord) == sizeof(uint64_t)) {
       for (size_t I = 0; I != B.size(); ++I)
@@ -194,8 +201,86 @@ public:
     }
     return false;
   }
+
+  constexpr Bitset &operator<<=(unsigned N) {
+    if (N == 0)
+      return *this;
+    if (N >= NumBits) {
+      return *this = Bitset();
+    }
+    const unsigned WordShift = N / BitwordBits;
+    const unsigned BitShift = N % BitwordBits;
+    if (BitShift == 0) {
+      for (int I = NumWords - 1; I >= static_cast<int>(WordShift); --I)
+        Bits[I] = Bits[I - WordShift];
+    } else {
+      const unsigned CarryShift = BitwordBits - BitShift;
+      for (int I = NumWords - 1; I > static_cast<int>(WordShift); --I) {
+        Bits[I] = (Bits[I - WordShift] << BitShift) |
+                  (Bits[I - WordShift - 1] >> CarryShift);
+      }
+      Bits[WordShift] = Bits[0] << BitShift;
+    }
+    for (unsigned I = 0; I < WordShift; ++I)
+      Bits[I] = 0;
+    maskLastWord();
+    return *this;
+  }
+
+  constexpr Bitset operator<<(unsigned N) const {
+    Bitset Result(*this);
+    Result <<= N;
+    return Result;
+  }
+
+  constexpr Bitset &operator>>=(unsigned N) {
+    if (N == 0)
+      return *this;
+    if (N >= NumBits) {
+      return *this = Bitset();
+    }
+    const unsigned WordShift = N / BitwordBits;
+    const unsigned BitShift = N % BitwordBits;
+    if (BitShift == 0) {
+      for (unsigned I = 0; I < NumWords - WordShift; ++I)
+        Bits[I] = Bits[I + WordShift];
+    } else {
+      const unsigned CarryShift = BitwordBits - BitShift;
+      for (unsigned I = 0; I < NumWords - WordShift - 1; ++I) {
+        Bits[I] = (Bits[I + WordShift] >> BitShift) |
+                  (Bits[I + WordShift + 1] << CarryShift);
+      }
+      Bits[NumWords - WordShift - 1] = Bits[NumWords - 1] >> BitShift;
+    }
+    for (unsigned I = NumWords - WordShift; I < NumWords; ++I)
+      Bits[I] = 0;
+    maskLastWord();
+    return *this;
+  }
+
+  constexpr Bitset operator>>(unsigned N) const {
+    Bitset Result(*this);
+    Result >>= N;
+    return Result;
+  }
+
+  friend hash_code hash_value<NumBits>(const Bitset<NumBits> &);
+  friend struct std::hash<Bitset<NumBits>>;
 };
 
+template <unsigned NumBits>
+inline hash_code hash_value(const Bitset<NumBits> &B) {
+  return hash_combine_range(B.Bits.begin(), B.Bits.end());
+}
+
 } // end namespace llvm
+
+namespace std {
+template <unsigned NumBits> struct hash<llvm::Bitset<NumBits>> {
+  size_t operator()(const llvm::Bitset<NumBits> &B) const {
+    return llvm::hash_combine_range(B.Bits.begin(), B.Bits.end());
+  }
+};
+} // end namespace std
 
 #endif

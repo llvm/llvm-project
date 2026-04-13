@@ -332,11 +332,11 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
                             ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
 
-  assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
-         getSubRegIndexLaneMask(AMDGPU::sub31).getAsInteger() == (3ULL << 62) &&
+  assert(getSubRegIndexLaneMask(AMDGPU::sub0) == LaneBitmask(3) &&
+         getSubRegIndexLaneMask(AMDGPU::sub31) == LaneBitmask(3ULL << 62) &&
          (getSubRegIndexLaneMask(AMDGPU::lo16) |
-          getSubRegIndexLaneMask(AMDGPU::hi16)).getAsInteger() ==
-           getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() &&
+          getSubRegIndexLaneMask(AMDGPU::hi16)) ==
+             getSubRegIndexLaneMask(AMDGPU::sub0) &&
          "getNumCoveredRegs() will not work with generated subreg masks!");
 
   RegPressureIgnoredUnits.resize(getNumRegUnits());

@@ -912,12 +912,20 @@ bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
       if (Token.isNot(MIToken::IntegerLiteral) &&
           Token.isNot(MIToken::HexLiteral))
         return error("expected a lane mask");
-      static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
-                    "Use correct get-function for lane mask");
-      LaneBitmask::Type V;
-      if (getUint64(V))
-        return error("invalid lane mask value");
-      Mask = LaneBitmask(V);
+
+      if (Token.is(MIToken::IntegerLiteral)) {
+        // Parse as integer literal (fits in 64 bits).
+        uint64_t V;
+        if (getUint64(V))
+          return error("invalid lane mask value");
+        Mask = LaneBitmask(V);
+      } else {
+        // Parse as hex literal (may be > 64 bits).
+        APInt A;
+        if (getHexUint(A))
+          return error("invalid lane mask value");
+        Mask = LaneBitmask(A);
+      }
       lex();
     }
     MBB.addLiveIn(Reg, Mask);
@@ -3117,12 +3125,21 @@ bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
   // Parse lanemask.
   if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
     return error("expected a valid lane mask value");
-  static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
-                "Use correct get-function for lane mask.");
-  LaneBitmask::Type V;
-  if (getUint64(V))
-    return true;
-  LaneBitmask LaneMask(V);
+
+  LaneBitmask LaneMask;
+  if (Token.is(MIToken::IntegerLiteral)) {
+    // Parse as integer literal (fits in 64 bits).
+    uint64_t V;
+    if (getUint64(V))
+      return error("invalid lane mask value");
+    LaneMask = LaneBitmask(V);
+  } else {
+    // Parse as hex literal (may be > 64 bits).
+    APInt A;
+    if (getHexUint(A))
+      return error("invalid lane mask value");
+    LaneMask = LaneBitmask(A);
+  }
   lex();
 
   if (expectAndConsume(MIToken::rparen))

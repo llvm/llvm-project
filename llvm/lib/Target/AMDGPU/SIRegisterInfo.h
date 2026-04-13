@@ -404,11 +404,10 @@ public:
   static unsigned getNumCoveredRegs(LaneBitmask LM) {
     // The assumption is that every lo16 subreg is an even bit and every hi16
     // is an adjacent odd bit or vice versa.
-    uint64_t Mask = LM.getAsInteger();
-    uint64_t Even = Mask & 0xAAAAAAAAAAAAAAAAULL;
-    Mask = (Even >> 1) | Mask;
-    uint64_t Odd = Mask & 0x5555555555555555ULL;
-    return llvm::popcount(Odd);
+    LaneBitmask Even = LM & LaneBitmask(0xAAAAAAAAAAAAAAAAULL);
+    LaneBitmask Mask = (Even >> 1) | LM;
+    LaneBitmask Odd = Mask & LaneBitmask(0x5555555555555555ULL);
+    return Odd.count();
   }
 
   // \returns a DWORD offset of a \p SubReg
