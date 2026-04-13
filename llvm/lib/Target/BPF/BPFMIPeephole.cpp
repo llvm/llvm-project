@@ -771,7 +771,7 @@ bool BPFMIPreEmitPeephole::expandStackArgPseudos() {
         int16_t Off = MI.getOperand(1).getImm();
 
         BuildMI(MBB, MI, DL, TII->get(BPF::LDD), DstReg)
-            .addReg(BPF::R12)
+            .addReg(BPF::R11)
             .addImm(Off);
         MI.eraseFromParent();
         Changed = true;
@@ -786,7 +786,7 @@ bool BPFMIPreEmitPeephole::expandStackArgPseudos() {
 
         BuildMI(MBB, MI, DL, TII->get(BPF::STD))
             .addReg(SrcReg, getKillRegState(IsKill))
-            .addReg(BPF::R12)
+            .addReg(BPF::R11)
             .addImm(Off);
         MI.eraseFromParent();
         Changed = true;
@@ -799,7 +799,7 @@ bool BPFMIPreEmitPeephole::expandStackArgPseudos() {
 
         BuildMI(MBB, MI, DL, TII->get(BPF::STD_imm))
             .addImm(Val)
-            .addReg(BPF::R12)
+            .addReg(BPF::R11)
             .addImm(Off);
         MI.eraseFromParent();
         Changed = true;

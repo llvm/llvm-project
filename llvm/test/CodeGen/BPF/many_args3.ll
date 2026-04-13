@@ -59,8 +59,8 @@ define dso_local i64 @foo1(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 n
 }
 
 ; CHECK-LABEL:   foo1:
-; CHECK:         r[[#]] = *(u64 *)(r12 + 8)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 16)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 8)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 16)
 
 define dso_local i64 @foo2(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3, i32 noundef %4, [2 x i64] %5, i32 noundef %6) local_unnamed_addr {
   %8 = extractvalue [2 x i64] %5, 0
@@ -78,9 +78,9 @@ define dso_local i64 @foo2(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 n
 }
 
 ; CHECK-LABEL:   foo2:
-; CHECK:         r[[#]] = *(u64 *)(r12 + 8)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 16)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 24)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 8)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 16)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 24)
 
 define dso_local i64 @foo3([2 x i64] %0, i32 noundef %1, i32 noundef %2, i32 noundef %3, i32 noundef %4, [2 x i64] %5) local_unnamed_addr {
   %7 = extractvalue [2 x i64] %0, 0
@@ -102,9 +102,9 @@ define dso_local i64 @foo3([2 x i64] %0, i32 noundef %1, i32 noundef %2, i32 nou
 }
 
 ; CHECK-LABEL:   foo3:
-; CHECK:         r[[#]] = *(u64 *)(r12 + 8)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 16)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 24)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 8)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 16)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 24)
 
 define dso_local i64 @foo4(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3, i32 noundef %4, [2 x i64] %5, [2 x i64] %6) local_unnamed_addr {
   %8 = extractvalue [2 x i64] %5, 0
@@ -124,10 +124,10 @@ define dso_local i64 @foo4(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 n
 }
 
 ; CHECK-LABEL:   foo4:
-; CHECK:         r[[#]] = *(u64 *)(r12 + 8)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 16)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 24)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 32)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 8)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 16)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 24)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 32)
 
 define dso_local i64 @foo5(i32 noundef %0, i32 noundef %1, i32 noundef %2) local_unnamed_addr {
   %4 = trunc i32 %0 to i16
@@ -137,8 +137,8 @@ define dso_local i64 @foo5(i32 noundef %0, i32 noundef %1, i32 noundef %2) local
 }
 
 ; CHECK-LABEL:   foo5:
-; CHECK:         *(u64 *)(r12 - 16) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 8) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 16) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
 
 declare dso_local i64 @bar5(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, i16 noundef signext, i64 noundef) local_unnamed_addr
 
@@ -152,9 +152,9 @@ define dso_local i64 @foo6(i32 noundef %0, i32 noundef %1, i32 noundef %2) local
 }
 
 ; CHECK-LABEL:   foo6:
-; CHECK:         *(u64 *)(r12 - 24) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 16) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 8) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 24) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 16) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
 
 declare dso_local i64 @bar6(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64], i32 noundef) local_unnamed_addr
 
@@ -171,9 +171,9 @@ define dso_local i64 @foo7(i32 noundef %0, i32 noundef %1, i32 noundef %2) local
 }
 
 ; CHECK-LABEL:   foo7:
-; CHECK:         *(u64 *)(r12 - 24) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 16) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 8) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 24) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 16) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
 
 declare dso_local i64 @bar7([2 x i64], i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64]) local_unnamed_addr
 
@@ -189,11 +189,11 @@ define dso_local i64 @foo8(i32 noundef %0, i32 noundef %1, i32 noundef %2) local
 }
 
 ; CHECK-LABEL:   foo8:
-; CHECK:         *(u64 *)(r12 - 32) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 24) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 16) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 8) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 32) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 24) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 16) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
 
-; CHECK-NOT:     *(u64 *)(r12 - 40) = r[[#]]
+; CHECK-NOT:     *(u64 *)(r11 - 40) = r[[#]]
 
 declare dso_local i64 @bar8(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64], [2 x i64]) local_unnamed_addr

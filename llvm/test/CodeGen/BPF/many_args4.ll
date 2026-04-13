@@ -30,7 +30,7 @@ define dso_local range(i64 -2147483648, 2147483648) i64 @foo1(i32 noundef %0, i3
 }
 
 ; CHECK-LABEL:   foo1:
-; CHECK:         r[[#]] = *(u64 *)(r12 + 8)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 8)
 
 define dso_local range(i64 -2147483648, 2147483648) i64 @foo2(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3, i32 noundef %4, i32 noundef %5, i32 noundef %6) local_unnamed_addr {
   %8 = add nsw i32 %1, %0
@@ -44,8 +44,8 @@ define dso_local range(i64 -2147483648, 2147483648) i64 @foo2(i32 noundef %0, i3
 }
 
 ; CHECK-LABEL:   foo2:
-; CHECK:         r[[#]] = *(u64 *)(r12 + 8)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 16)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 8)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 16)
 
 define dso_local range(i64 -4294967296, 4294967295) i64 @bar(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3, i32 noundef %4, i32 noundef %5, i32 noundef %6) local_unnamed_addr {
   %8 = add nsw i32 %6, %5
@@ -56,10 +56,10 @@ define dso_local range(i64 -4294967296, 4294967295) i64 @bar(i32 noundef %0, i32
 }
 
 ; CHECK-LABEL:   bar:
-; CHECK:         r[[#]] = *(u64 *)(r12 + 8)
-; CHECK:         r[[#]] = *(u64 *)(r12 + 16)
-; CHECK:         *(u64 *)(r12 - 8) = r[[#]]
+; CHECK:         r[[#]] = *(u64 *)(r11 + 8)
+; CHECK:         r[[#]] = *(u64 *)(r11 + 16)
+; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
 ; CHECK:         call foo1
-; CHECK:         *(u64 *)(r12 - 16) = r[[#]]
-; CHECK:         *(u64 *)(r12 - 8) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 16) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
 ; CHECK:         call foo2

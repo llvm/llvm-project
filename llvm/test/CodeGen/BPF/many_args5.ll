@@ -19,9 +19,9 @@ define dso_local i64 @bar(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 no
 declare dso_local i64 @foo(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, i64 noundef) local_unnamed_addr
 
 ; CHECK-LABEL:   bar:
-; CHECK:         *(u64 *)(r12 - 8) = r[[#]]
-; CHECK-V4:      *(u64 *)(r12 - 8) = 16
+; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
+; CHECK-V4:      *(u64 *)(r11 - 8) = 16
 ; CHECK:         call foo
 ; CHECK-V4:      call foo
-; CHECK:         *(u64 *)(r12 - 8) = r[[#]]
-; CHECK-V4:      *(u64 *)(r12 - 8) = r[[#]]
+; CHECK:         *(u64 *)(r11 - 8) = r[[#]]
+; CHECK-V4:      *(u64 *)(r11 - 8) = r[[#]]
