@@ -126,6 +126,7 @@ public:
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
   mlir::Value cxxabiThisValue = nullptr;
   mlir::Value cxxThisValue = nullptr;
+  clang::CharUnits cxxabiThisAlignment;
   clang::CharUnits cxxThisAlignment;
 
   /// When generating code for a constructor or destructor, this will hold the
@@ -2418,6 +2419,7 @@ private:
           oldCurCodeDecl(cgf.curCodeDecl),
           oldCxxabiThisDecl(cgf.cxxabiThisDecl),
           oldCxxThisValue(cgf.cxxThisValue),
+          oldCxxabiThisAlignment(cgf.cxxabiThisAlignment),
           oldCxxThisAlignment(cgf.cxxThisAlignment),
           oldReturnValue(cgf.returnValue), oldFnRetTy(cgf.fnRetTy),
           oldCxxInheritedCtorInitExprArgs(
@@ -2429,10 +2431,11 @@ private:
       cgf.cxxabiThisValue = nullptr;
       cgf.cxxThisValue = nullptr;
       cgf.cxxThisAlignment = CharUnits();
+      cgf.cxxabiThisAlignment = CharUnits();
       cgf.returnValue = Address::invalid();
       cgf.fnRetTy = QualType();
       cgf.cxxInheritedCtorInitExprArgs.clear();
-      // FIXME: at one point when we wnat to call one of these, we'll need
+      // FIXME: at one point when we want to call one of these, we'll need
       // CXXInheritedCtorInitExprArgs here too.
     }
     ~InlinedInheritingConstructorScope() {
@@ -2443,6 +2446,7 @@ private:
       cgf.cxxabiThisValue = oldCxxabiThisValue;
       cgf.cxxThisValue = oldCxxThisValue;
       cgf.cxxThisAlignment = oldCxxThisAlignment;
+      cgf.cxxabiThisAlignment = oldCxxabiThisAlignment;
       cgf.returnValue = oldReturnValue;
       cgf.fnRetTy = oldFnRetTy;
       cgf.cxxInheritedCtorInitExprArgs =
@@ -2457,6 +2461,7 @@ private:
     ImplicitParamDecl *oldCxxabiThisDecl;
     mlir::Value oldCxxabiThisValue;
     mlir::Value oldCxxThisValue;
+    clang::CharUnits oldCxxabiThisAlignment;
     clang::CharUnits oldCxxThisAlignment;
     Address oldReturnValue;
     QualType oldFnRetTy;

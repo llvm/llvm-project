@@ -1387,9 +1387,8 @@ void CIRGenFunction::emitInheritedCXXConstructorCall(
 
   if (inheritedFromVBase &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
-    cgm.errorNYI(
-        e->getSourceRange(),
-        "emitInheritedCXXConstructorCall inheritedFromVBasewith ctor variants");
+    cgm.errorNYI(e->getSourceRange(), "emitInheritedCXXConstructorCall "
+                                      "inheritedFromVBase with ctor variants");
     return;
   } else if (!cxxInheritedCtorInitExprArgs.empty()) {
     // The inheriting constructor was inlined; just inject its arguments.
@@ -1433,6 +1432,10 @@ void CIRGenFunction::emitInlinedInheritingCXXConstructorCall(
 
   FunctionArgList params;
   QualType retTy = buildFunctionArgList(gd, params);
+  // FIXME(cir): When we get to the !isVoidType NYI below, this probably is
+  // going to be important.  In the meantime, this is likely not really doing
+  // anything.
+  fnRetTy = retTy;
 
   cgm.getCXXABI().addImplicitConstructorArgs(*this, d, ctorType, forVirtualBase,
                                              delegating, args);
