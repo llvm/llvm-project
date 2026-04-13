@@ -258,16 +258,19 @@ struct PGOAnalysisMap {
 /// resolution.
 class AddressExtractor {
   const DataExtractor &Data;
+  unsigned AddressSize;
 
 public:
-  AddressExtractor(const DataExtractor &Data) : Data(Data) {}
+  AddressExtractor(const DataExtractor &Data, unsigned AddressSize)
+      : Data(Data), AddressSize(AddressSize) {}
+
   virtual ~AddressExtractor() = default;
 
   const DataExtractor &getDataExtractor() const { return Data; }
 
   /// Extract and resolve an address at the current \p Cur position.
   virtual Expected<uint64_t> extractAddress(DataExtractor::Cursor &Cur) {
-    uint64_t Address = Data.getAddress(Cur);
+    uint64_t Address = Data.getUnsigned(Cur, AddressSize);
     if (!Cur)
       return Cur.takeError();
     return Address;

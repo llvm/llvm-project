@@ -732,9 +732,9 @@ class ELFBBAddrMapAddressExtractor : public AddressExtractor {
   DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
 
   ELFBBAddrMapAddressExtractor(
-      const DataExtractor &Data, bool IsRelocatable,
+      const DataExtractor &Data, unsigned AddressSize, bool IsRelocatable,
       DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations)
-      : AddressExtractor(Data), IsRelocatable(IsRelocatable),
+      : AddressExtractor(Data, AddressSize), IsRelocatable(IsRelocatable),
         FunctionOffsetTranslations(std::move(FunctionOffsetTranslations)) {}
 
 public:
@@ -772,7 +772,8 @@ public:
       }
     }
 
-    return ELFBBAddrMapAddressExtractor(Data, IsRelocatable,
+    unsigned AddressSize = sizeof(typename ELFFile<ELFT>::uintX_t);
+    return ELFBBAddrMapAddressExtractor(Data, AddressSize, IsRelocatable,
                                         std::move(FunctionOffsetTranslations));
   }
 
@@ -822,8 +823,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     Content = DecompressedContentRef;
   }
 
-  DataExtractor Data(Content, EF.isLE(),
-                     sizeof(typename ELFFile<ELFT>::uintX_t));
+  DataExtractor Data(Content, EF.isLE());
   auto ExtractorOrErr =
       ELFBBAddrMapAddressExtractor::create(Data, EF, Sec, RelaSec);
   if (!ExtractorOrErr)

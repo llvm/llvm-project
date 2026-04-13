@@ -69,8 +69,7 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
           "0x%8.8" PRIx64 ": missing FunctionInfo data for InfoType %u",
           Offset, IT);
     DataExtractor InfoData(Data.getData().substr(Offset, InfoLength),
-                           Data.isLittleEndian(),
-                           Data.getAddressSize());
+                           Data.isLittleEndian());
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
@@ -275,8 +274,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
     if (InfoLength != InfoBytes.size())
       return createStringError(std::errc::io_error,
                                "FunctionInfo data is truncated");
-    DataExtractor InfoData(InfoBytes, Data.isLittleEndian(),
-                           Data.getAddressSize());
+    DataExtractor InfoData(InfoBytes, Data.isLittleEndian());
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
