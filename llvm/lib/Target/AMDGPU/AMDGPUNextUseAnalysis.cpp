@@ -304,7 +304,7 @@ private:
   unsigned sizeOf(const MachineInstr &MI) const {
     // When !Cfg.CountPhis, PHIs do not contribute to distances/sizes since they
     // generally don't result in the generation of a machine instruction.
-    // FIXME: Consider using MI.isPseudo()
+    // FIXME: Consider using MI.isPseudo() or maybe MI.isMetaInstruction().
     return Cfg.CountPhis ? 1 : !MI.isPHI();
   }
 
@@ -662,8 +662,8 @@ private:
     return ChildLoop ? ChildLoop->getLoopPreheader() : nullptr;
   }
 
-  static const MachineBasicBlock *mbbForPhiOp(const MachineInstr *MI,
-                                              const MachineOperand *MO) {
+  static const MachineBasicBlock *
+  getIncomingBlockIfPhiUse(const MachineInstr *MI, const MachineOperand *MO) {
     return MI->isPHI() ? MI->getOperand(MO->getOperandNo() + 1).getMBB()
                        : nullptr;
   }
@@ -1458,7 +1458,7 @@ private:
 
     if (Cfg.PreciseUseModeling) {
       // Map PHI use to the end of its incoming edge block.
-      if (const MachineBasicBlock *PhiUseEdge = mbbForPhiOp(UseMI, UseMO)) {
+      if (auto *PhiUseEdge = getIncomingBlockIfPhiUse(UseMI, UseMO)) {
         UseMI = &PhiUseEdge->back();
         UseMBB = PhiUseEdge;
         UseLoop = MLI->getLoopFor(PhiUseEdge);
@@ -1571,8 +1571,8 @@ private:
 
     // PHI uses are considered part of the incoming BB. Check for reachability
     // at the edge.
-    if (const MachineBasicBlock *EdgeMBB = mbbForPhiOp(UseMI, UseMO)) {
-      if (!isReachableOrSame(MBB, EdgeMBB))
+    if (auto *PhiUseEdge = getIncomingBlockIfPhiUse(UseMI, UseMO)) {
+      if (!isReachableOrSame(MBB, PhiUseEdge))
         return false;
     }
 
