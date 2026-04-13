@@ -121,7 +121,8 @@ llvm::Error GsymReader::parse() {
         GlobalInfoType::FunctionInfo})
     if (!GlobalDataSections.count(Type))
       return createStringError(std::errc::invalid_argument,
-                               "missing required section type %u",
+                               "missing required section type %s (%u)",
+                               getNameForGlobalInfoType(Type).data(),
                                static_cast<uint32_t>(Type));
 
   if (GlobalDataSections[GlobalInfoType::AddrOffsets].FileSize !=
@@ -435,41 +436,37 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
     return createStringError(std::errc::invalid_argument,
                              "failed to extract address[%" PRIu64 "]", AddrIdx);
   FuncStartAddr = *OptFuncStartAddr;
-  return DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
+  auto Data = DataExtractor(Bytes, Endian == llvm::endianness::little, 4);
+  Data.setStringOffsetSize(getStringOffsetSize());
+  return Data;
 }
 
 llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
   uint64_t FuncStartAddr = 0;
-  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr)) {
-    ExpectedData->setStringOffsetSize(getStringOffsetSize());
+  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
-  } else {
+  else
     return ExpectedData.takeError();
-  }
 }
 
 llvm::Expected<FunctionInfo>
 GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
   uint64_t FuncStartAddr = 0;
-  if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr)) {
-    ExpectedData->setStringOffsetSize(getStringOffsetSize());
+  if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr))
     return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
-  } else {
+  else
     return ExpectedData.takeError();
-  }
 }
 
 llvm::Expected<LookupResult>
 GsymReader::lookup(uint64_t Addr,
                    std::optional<DataExtractor> *MergedFunctionsData) const {
   uint64_t FuncStartAddr = 0;
-  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr)) {
-    ExpectedData->setStringOffsetSize(getStringOffsetSize());
+  if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr))
     return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr,
                                 MergedFunctionsData);
-  } else {
+  else
     return ExpectedData.takeError();
-  }
 }
 
 llvm::Expected<std::vector<LookupResult>>

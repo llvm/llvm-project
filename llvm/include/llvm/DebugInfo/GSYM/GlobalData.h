@@ -35,9 +35,13 @@ enum class GlobalInfoType : uint32_t {
   // index into the address info offsets table, where the location of the
   // FunctionInfo for the same function can be found in the GSYM.
   AddrOffsets = 1u,
-  // The address info offsets table. Each entry is an offset relative to the
-  // start of the FunctionInfo section where the FunctionInfo for the
-  // corresponding function can be found.
+  // The address info offsets table. Each entry is an offset relative to a
+  // version-dependent reference position in the GSYM data where the
+  // FunctionInfo for the corresponding function can be found.
+  //
+  // In version 1, the reference position is the start of the GSYM data.
+  // In version 2 and later, the reference position is the start of the
+  // FunctionInfo section.
   AddrInfoOffsets = 2u,
   // The string table. It contains all the strings used by the rest of the GSYM.
   // The exact storage of the strings is determined by

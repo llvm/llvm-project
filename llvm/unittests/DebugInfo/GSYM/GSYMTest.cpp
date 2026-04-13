@@ -1081,7 +1081,7 @@ TEST(GSYMTest, TestHeaderV2EncodeErrors) {
   TestHeaderEncodeError(H, "invalid address offset size 12");
   InitHeaderV2(H);
   H.StrTableEncoding = static_cast<StringTableEncoding>(12);
-  TestHeaderEncodeError(H, "invalid string table encoding 12");
+  TestHeaderEncodeError(H, "unsupported string table encoding 12");
 }
 
 TEST(GSYMTest, TestHeaderV2DecodeErrors) {

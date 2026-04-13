@@ -223,15 +223,15 @@ static void parseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_output_version_EQ)) {
     StringRef Val = A->getValue();
-    if (Val == "v1")
-      OutputVersion = Header::getVersion();
-    else if (Val == "v2")
-      OutputVersion = HeaderV2::getVersion();
-    else {
+    uint32_t Version;
+    if (Val.getAsInteger(10, Version) ||
+        (Version != Header::getVersion() &&
+         Version != HeaderV2::getVersion())) {
       llvm::errs() << ToolName << ": for the --output-version option: '" << Val
-                   << "' is invalid. Use 'v1' or 'v2'.\n";
+                   << "' is invalid. Use '1' or '2'.\n";
       std::exit(1);
     }
+    OutputVersion = Version;
   }
 }
 

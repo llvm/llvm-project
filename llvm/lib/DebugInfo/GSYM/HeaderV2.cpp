@@ -48,7 +48,7 @@ llvm::Error HeaderV2::checkForError() const {
     break;
   default:
     return createStringError(std::errc::invalid_argument,
-                             "invalid string table encoding %u", Encoding);
+                             "unsupported string table encoding %u", Encoding);
   }
   return Error::success();
 }
