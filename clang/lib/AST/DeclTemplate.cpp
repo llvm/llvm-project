@@ -1785,6 +1785,27 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
   return D;
 }
 
+ExplicitInstantiationDecl::ExplicitInstantiationDecl(
+    DeclContext *DC, NamedDecl *Specialization, SourceLocation ExternLoc,
+    SourceLocation TemplateLoc, NestedNameSpecifierLoc QualifierLoc,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+    TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK)
+    : Decl(ExplicitInstantiation, DC, TemplateLoc),
+      SpecAndTSK(Specialization, TSK), ExternLoc(ExternLoc), NameLoc(NameLoc) {
+  unsigned Flags = 0;
+  if (QualifierLoc)
+    Flags |= HasQualifierFlag;
+  if (ArgsAsWritten)
+    Flags |= HasArgsAsWrittenFlag;
+  // Set flags BEFORE writing trailing objects, because
+  // numTrailingObjects reads TypeAndFlags.getInt() to compute offsets.
+  TypeAndFlags.setPointerAndInt(TypeAsWritten, Flags);
+  if (QualifierLoc)
+    *getTrailingObjects<NestedNameSpecifierLoc>() = QualifierLoc;
+  if (ArgsAsWritten)
+    *getTrailingObjects<const ASTTemplateArgumentListInfo *>() = ArgsAsWritten;
+}
+
 ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
     ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
     SourceLocation ExternLoc, SourceLocation TemplateLoc,

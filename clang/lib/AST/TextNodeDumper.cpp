@@ -2942,7 +2942,10 @@ void TextNodeDumper::VisitExplicitInstantiationDecl(
   if (D->isExternTemplate())
     OS << " extern";
   OS << " template";
-  if (D->getQualifierLoc())
+  // Only dump the qualifier here if it is a trailing object (function/variable
+  // templates). For class templates and nested classes, the qualifier is inside
+  // TypeSourceInfo and will be dumped as part of the TypeLoc subtree.
+  if (D->hasTrailingQualifier())
     dumpNestedNameSpecifier(D->getQualifierLoc().getNestedNameSpecifier());
   if (const NamedDecl *Spec = D->getSpecialization()) {
     OS << " '" << Spec->getDeclName() << "'";

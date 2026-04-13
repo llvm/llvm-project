@@ -1749,7 +1749,10 @@ DEF_TRAVERSE_DECL(StaticAssertDecl, {
 })
 
 DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
-  if (D->getQualifierLoc())
+  // Only traverse trailing objects here; for class templates and nested
+  // classes the qualifier and template args are inside TypeSourceInfo and
+  // will be traversed as part of TraverseTypeLoc below.
+  if (D->hasTrailingQualifier())
     TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   if (const auto *ArgsAsWritten = D->getTemplateArgsAsWritten())
     for (unsigned I = 0, E = ArgsAsWritten->NumTemplateArgs; I != E; ++I)

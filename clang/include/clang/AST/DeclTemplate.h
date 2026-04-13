@@ -3458,33 +3458,11 @@ class ExplicitInstantiationDecl final
     return hasTrailingQualifier() ? 1 : 0;
   }
 
-  bool hasTrailingQualifier() const {
-    return TypeAndFlags.getInt() & HasQualifierFlag;
-  }
-  bool hasTrailingArgsAsWritten() const {
-    return TypeAndFlags.getInt() & HasArgsAsWrittenFlag;
-  }
-
   ExplicitInstantiationDecl(
       DeclContext *DC, NamedDecl *Specialization, SourceLocation ExternLoc,
       SourceLocation TemplateLoc, NestedNameSpecifierLoc QualifierLoc,
       const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
-      TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK)
-      : Decl(ExplicitInstantiation, DC, TemplateLoc),
-        SpecAndTSK(Specialization, TSK), ExternLoc(ExternLoc),
-        NameLoc(NameLoc) {
-    unsigned Flags = 0;
-    if (QualifierLoc) {
-      Flags |= HasQualifierFlag;
-      *getTrailingObjects<NestedNameSpecifierLoc>() = QualifierLoc;
-    }
-    if (ArgsAsWritten) {
-      Flags |= HasArgsAsWrittenFlag;
-      *getTrailingObjects<const ASTTemplateArgumentListInfo *>() =
-          ArgsAsWritten;
-    }
-    TypeAndFlags.setPointerAndInt(TypeAsWritten, Flags);
-  }
+      TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK);
 
   ExplicitInstantiationDecl(EmptyShell Empty)
       : Decl(ExplicitInstantiation, Empty) {}
@@ -3513,6 +3491,16 @@ public:
   /// For class templates / nested classes, the tag keyword location is
   /// stored inside TypeSourceInfo; otherwise returns an invalid location.
   SourceLocation getTagKWLoc() const;
+
+  /// Whether the qualifier is stored as a trailing object (function / variable
+  /// templates) rather than inside TypeSourceInfo (class templates / nested
+  /// classes).
+  bool hasTrailingQualifier() const {
+    return TypeAndFlags.getInt() & HasQualifierFlag;
+  }
+  bool hasTrailingArgsAsWritten() const {
+    return TypeAndFlags.getInt() & HasArgsAsWrittenFlag;
+  }
 
   /// For class templates / nested classes, the qualifier is stored inside
   /// TypeSourceInfo; for function / variable templates it is a trailing object.
