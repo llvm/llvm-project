@@ -1886,8 +1886,8 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     // This might be a fp constant stored as an int. Bitcast and store if it has
     // appropriate size.
     Type *BitcastTy = nullptr; // The FT type to bitcast to.
-    if (auto *CInt = dyn_cast<ConstantInt>(C)) {
-      switch (CInt->getType()->getScalarSizeInBits()) {
+    if (isa<ConstantInt, ConstantDataVector>(C)) {
+      switch (C->getType()->getScalarSizeInBits()) {
       case 32:
         BitcastTy = Type::getFloatTy(Context);
         break;
@@ -1900,25 +1900,9 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
       default:
         break;
       }
-    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
-      const int NumElements =
-          cast<VectorType>(CDV->getType())->getElementCount().getFixedValue();
-      switch (CDV->getType()->getScalarSizeInBits()) {
-      case 32:
-        BitcastTy =
-            VectorType::get(Type::getFloatTy(Context), NumElements, false);
-        break;
-      case 64:
-        BitcastTy =
-            VectorType::get(Type::getDoubleTy(Context), NumElements, false);
-        break;
-      case 80:
-        BitcastTy =
-            VectorType::get(Type::getX86_FP80Ty(Context), NumElements, false);
-        break;
-      default:
-        break;
-      }
+
+      if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+        BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);

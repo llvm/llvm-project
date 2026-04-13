@@ -254,6 +254,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
   if (ctx.arg.formatBinary) {
     files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
+    if (!isInGroup)
+      ++nextGroupId;
     return;
   }
 
@@ -321,7 +323,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         ctx, mbref, withLOption ? path::filename(path) : path);
     f->init();
     files.push_back(std::move(f));
-    return;
+    break;
   }
   case file_magic::bitcode:
     files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
@@ -332,7 +334,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     break;
   default:
     ErrAlways(ctx) << path << ": unknown file type";
+    return;
   }
+  // All files within the same --{start,end}-group get the same group ID.
+  // Otherwise, a new file will get a new group ID.
+  if (!isInGroup)
+    ++nextGroupId;
 }
 
 // Add a given library by searching it from input search paths.
@@ -2774,8 +2781,27 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
 template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
+
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  if (!ctx.bitcodeFiles.empty()) {
+    // Triple must be captured before the bitcode is moved into the compiler.
+    // Note that the below assumes that the set of possible libfuncs is roughly
+    // equivalent for all bitcode translation units.
+    llvm::Triple tt =
+        llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver))
+      if (Symbol *sym = ctx.symtab->find(libFunc);
+          sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+        bitcodeLibFuncs.push_back(libFunc);
+  }
+
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
   for (BitcodeFile *file : ctx.bitcodeFiles)
     lto->add(*file);
 

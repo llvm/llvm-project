@@ -61,6 +61,7 @@ add_fp_unittest(
     libc.src.__support.math.canonicalizef16
     libc.src.__support.math.canonicalizel
     libc.src.__support.math.cbrt
+    libc.src.__support.math.cbrtbf16
     libc.src.__support.math.cbrtf
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
@@ -276,3 +277,31 @@ add_fp_unittest(
     libc.src.__support.math.ceill
     libc.src.__support.math.log
 )
+
+add_fp_unittest(
+  shared_str_to_num_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_str_to_num_test.cpp
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.__support.str_to_integer
+)
+
+# FIXME: The LLVM libc full build does not support 'system' yet.
+if(NOT LLVM_LIBC_FULL_BUILD)
+add_libc_test(
+  shared_rpc_test
+  UNIT_TEST_ONLY
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_rpc_test.cpp
+  DEPENDS
+    libc.src.stdio.printf_core.converter
+    libc.src.stdio.printf_core.parser
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.arg_list
+)
+endif()

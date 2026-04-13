@@ -18102,6 +18102,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
                                                unsigned FillCount) {
   SmallVector<Expr *> SanitizedCountExprs(CountExprs);
 
+  // OpenMP 6.0: each list item in counts(...) is either the omp_fill keyword
+  // or an integral constant expression (non-negative). Runtime variables are
+  // not permitted; this matches split codegen, which needs segment sizes at
+  // compile time.
   for (unsigned I = 0; I < SanitizedCountExprs.size(); ++I) {
     Expr *&CountExpr = SanitizedCountExprs[I];
     if (FillIdx && I == *FillIdx)
@@ -18109,15 +18113,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
     if (!CountExpr)
       continue;
 
-    bool IsValid = isNonNegativeIntegerValue(CountExpr, SemaRef, OMPC_counts,
-                                             /*StrictlyPositive=*/false);
-
-    QualType CountTy = CountExpr->getType();
-    if (!CountTy->isIntegerType())
-      IsValid = false;
-
-    if (!CountExpr->isInstantiationDependent() && !IsValid)
+    ExprResult Verified = VerifyPositiveIntegerConstantInClause(
+        CountExpr, OMPC_counts, /*StrictlyPositive=*/false);
+    if (Verified.isInvalid())
       CountExpr = nullptr;
+    else
+      CountExpr = Verified.get();
   }
 
   if (FillCount != 1) {
@@ -20768,6 +20769,10 @@ static bool actOnOMPReductionKindClause(
         (DeclareReductionRef.isUnset() ||
          isa<UnresolvedLookupExpr>(DeclareReductionRef.get()))) {
       RD.push(RefExpr, DeclareReductionRef.get());
+      // Handle non-dependent inscan reduction variables in dependent contexts.
+      if (RD.RedModifier == OMPC_REDUCTION_inscan)
+        Stack->addDSA(D, RefExpr->IgnoreParens(), OMPC_reduction, nullptr,
+                      RD.RedModifier, ASE || OASE);
       continue;
     }
     if (BOK == BO_Comma && DeclareReductionRef.isUnset()) {
@@ -23569,6 +23574,21 @@ static void checkMappableExpressionList(
           << getOpenMPClauseNameForDiag(CKind);
       reportOriginalDsa(SemaRef, DSAS, VD, DVar);
       continue;
+    }
+
+    // OpenMP 6.0 [7.9.6, map Clause, Restrictions, p. 386]
+    // A device-local variable must not appear as a list item in a map clause.
+    if (VD && CKind == OMPC_map) {
+      if (std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+              OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
+        if (*Res == OMPDeclareTargetDeclAttr::MT_Local) {
+          if (NoDiagnose)
+            continue;
+          SemaRef.Diag(ELoc, diag::err_omp_device_local_in_clause)
+              << VD << getOpenMPClauseNameForDiag(CKind);
+          continue;
+        }
+      }
     }
 
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.9]

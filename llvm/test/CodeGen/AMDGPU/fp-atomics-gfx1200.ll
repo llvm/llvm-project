@@ -102,8 +102,7 @@ define amdgpu_ps float @struct_buffer_atomic_add_v2bf16_ret(<2 x bfloat> %val, <
 ; GFX12-SDAG-LABEL: struct_buffer_atomic_add_v2bf16_ret:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s4 idxen offen th:TH_ATOMIC_RETURN
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
@@ -113,8 +112,7 @@ define amdgpu_ps float @struct_buffer_atomic_add_v2bf16_ret(<2 x bfloat> %val, <
 ; GFX12-GISEL-LABEL: struct_buffer_atomic_add_v2bf16_ret:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v[1:2], s[0:3], s4 idxen offen th:TH_ATOMIC_RETURN
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
@@ -157,8 +155,7 @@ define amdgpu_ps float @raw_buffer_atomic_add_v2bf16_ret(<2 x bfloat> %val, <4 x
 ; GFX12-SDAG-LABEL: raw_buffer_atomic_add_v2bf16_ret:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s4 offen th:TH_ATOMIC_RETURN
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
@@ -168,8 +165,7 @@ define amdgpu_ps float @raw_buffer_atomic_add_v2bf16_ret(<2 x bfloat> %val, <4 x
 ; GFX12-GISEL-LABEL: raw_buffer_atomic_add_v2bf16_ret:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s4 offen th:TH_ATOMIC_RETURN
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0

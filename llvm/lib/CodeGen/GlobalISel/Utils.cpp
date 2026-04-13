@@ -776,6 +776,10 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
     return minimum(C1, C2);
   case TargetOpcode::G_FMAXIMUM:
     return maximum(C1, C2);
+  case TargetOpcode::G_FMINIMUMNUM:
+    return minimumnum(C1, C2);
+  case TargetOpcode::G_FMAXIMUMNUM:
+    return maximumnum(C1, C2);
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not
@@ -790,15 +794,35 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
   return std::nullopt;
 }
 
+static GBuildVector *getBuildVectorLikeDef(Register Reg,
+                                           const MachineRegisterInfo &MRI) {
+  if (auto *BV = getOpcodeDef<GBuildVector>(Reg, MRI))
+    return BV;
+
+  auto *Bitcast = getOpcodeDef(TargetOpcode::G_BITCAST, Reg, MRI);
+  if (!Bitcast)
+    return nullptr;
+
+  auto [Dst, DstTy, Src, SrcTy] = Bitcast->getFirst2RegLLTs();
+  if (!SrcTy.isVector() || !DstTy.isVector())
+    return nullptr;
+  if (SrcTy.getElementCount() != DstTy.getElementCount())
+    return nullptr;
+  if (SrcTy.getScalarSizeInBits() != DstTy.getScalarSizeInBits())
+    return nullptr;
+
+  return getOpcodeDef<GBuildVector>(Src, MRI);
+}
+
 SmallVector<APInt>
 llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
                               const Register Op2,
                               const MachineRegisterInfo &MRI) {
-  auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+  auto *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
   if (!SrcVec2)
     return SmallVector<APInt>();
 
-  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+  auto *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
   if (!SrcVec1)
     return SmallVector<APInt>();
 

@@ -1028,7 +1028,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
                      const DominatorTree &DT,
                      std::optional<int64_t> Stride = std::nullopt) {
   // FIXME: This should probably only return true for NUW.
-  if (AR->getNoWrapFlags(SCEV::NoWrapMask))
+  if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
     return true;
 
   if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))

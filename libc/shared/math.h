@@ -64,6 +64,7 @@
 #include "math/canonicalizef16.h"
 #include "math/canonicalizel.h"
 #include "math/cbrt.h"
+#include "math/cbrtbf16.h"
 #include "math/cbrtf.h"
 #include "math/ceil.h"
 #include "math/ceilbf16.h"

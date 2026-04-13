@@ -316,6 +316,10 @@ public:
     }
     return anyVector ? false : (*this)(aRef.base());
   }
+  template <typename T> bool operator()(const evaluate::ConditionalExpr<T> &) {
+    // A conditional expression is not a variable and cannot be definable.
+    return false;
+  }
 
 private:
   evaluate::FoldingContext &foldingContext_;

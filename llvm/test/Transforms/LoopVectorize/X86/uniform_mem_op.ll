@@ -530,7 +530,7 @@ define i32 @uniform_load_constexpr() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %accum = phi i32 [ %accum.next, %for.body ], [ 0, %entry ]
   %load = load i32, ptr getelementptr (i32, ptr @GAddr, i64 5), align 4
@@ -539,6 +539,6 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %iv, 4096
   br i1 %exitcond, label %loopexit, label %for.body
 
-loopexit:                                         ; preds = %for.body
+loopexit:
   ret i32 %accum.next
 }

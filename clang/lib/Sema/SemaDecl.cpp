@@ -9274,9 +9274,12 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
         continue;
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
-        CheckOverridingFunctionReturnType(MD, BaseMD);
-        CheckOverridingFunctionAttributes(MD, BaseMD);
-        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
+        bool Invalid = false;
+        Invalid |= CheckOverridingFunctionReturnType(MD, BaseMD);
+        Invalid |= CheckOverridingFunctionAttributes(MD, BaseMD);
+        Invalid |= CheckOverridingFunctionExceptionSpec(MD, BaseMD);
+        if (Invalid)
+          MD->setInvalidDecl();
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
       }
 
@@ -12890,7 +12893,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
     return true;
   }
   const Expr *Culprit;
-  if (Init->isConstantInitializer(Context, false, &Culprit))
+  if (Init->isConstantInitializer(Context, /*ForRef=*/false, &Culprit))
     return false;
 
   // Emit ObjC-specific diagnostics for non-constant literals at file scope.
@@ -12900,7 +12903,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
     // the offender.
     if (auto ALE = dyn_cast<ObjCArrayLiteral>(Init)) {
       for (auto *Elm : ALE->elements()) {
-        if (!Elm->isConstantInitializer(Context, false, nullptr)) {
+        if (!Elm->isConstantInitializer(Context)) {
           Diag(Elm->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
               << ObjC().CheckLiteralKind(Init) << Elm->getSourceRange();
@@ -12915,14 +12918,14 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
 
         // Check that the key is a string literal and is constant.
         if (!isa<ObjCStringLiteral>(Elm.Key) ||
-            !Elm.Key->isConstantInitializer(Context, false, nullptr)) {
+            !Elm.Key->isConstantInitializer(Context)) {
           Diag(Elm.Key->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
               << ObjC().CheckLiteralKind(Init) << Elm.Key->getSourceRange();
           return true;
         }
 
-        if (!Elm.Value->isConstantInitializer(Context, false, nullptr)) {
+        if (!Elm.Value->isConstantInitializer(Context)) {
           Diag(Elm.Value->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
               << ObjC().CheckLiteralKind(Init) << Elm.Value->getSourceRange();
@@ -18047,7 +18050,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   bool IsFixed = !UnderlyingType.isUnset() || ScopedEnum;
 
   if (Kind == TagTypeKind::Enum) {
-    if (UnderlyingType.isInvalid() || (!UnderlyingType.get() && ScopedEnum)) {
+    if (UnderlyingType.isInvalid() || (!UnderlyingType.get() && ScopedEnum) ||
+        Invalid) {
       // No underlying type explicitly specified, or we failed to parse the
       // type, default to int.
       EnumUnderlying = Context.IntTy.getTypePtr();

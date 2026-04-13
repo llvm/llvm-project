@@ -255,10 +255,10 @@ void *operator new[](size_t Sz, BumpPtrAllocator &A, char C) {
 // C++ language weirdness
 void operator delete(void *Ptr, BumpPtrAllocator &A) { A.deallocate(Ptr); }
 
-namespace {
-
 // Disable instrumentation optimizations that sacrifice profile accuracy
 extern "C" bool __bolt_instr_conservative;
+
+namespace {
 
 /// Basic key-val atom stored in our hash
 struct SimpleHashTableEntryBase {

@@ -149,3 +149,18 @@ void complex_expr_with_cleanup_inside_cleanupscope() {
 // CHECK:   }
 // CHECK:   %[[RELOAD:.*]] = cir.load {{.*}} %[[TEMP_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CHECK:   cir.store {{.*}} %[[RELOAD]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+void test_cleanup_with_automatic_storage_duration() {
+  const Struk &ref = Struk{};
+}
+
+// CHECK: cir.func{{.*}} @_Z44test_cleanup_with_automatic_storage_durationv()
+// CHECK:   %[[REF_TMP:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["ref.tmp0"]
+// CHECK:   %[[REF:.*]] = cir.alloca !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>, ["ref", init, const]
+// CHECK:   cir.cleanup.scope {
+// CHECK:     cir.store{{.*}} %[[REF_TMP]], %[[REF]]
+// CHECK:     cir.yield
+// CHECK:   } cleanup normal {
+// CHECK:     cir.call @_ZN5StrukD1Ev(%[[REF_TMP]]) nothrow
+// CHECK:     cir.yield
+// CHECK:   }
