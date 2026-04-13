@@ -133,8 +133,9 @@ private:
   // Thread-specific array of pointers to a buffer. The buffer pointed to
   // is the last one allocated by this thread for a given device. The ith
   // element points to the buffer for the ith device. At most MAX_NUM_DEVICES
-  // devices are supported.
-  static thread_local BufPtr ArrayOfBufPtr[MAX_NUM_DEVICES];
+  // devices are supported. Stored as a function-local thread_local to avoid
+  // a global destructor.
+  static BufPtr *getArrayOfBufPtr();
 
   /*
    * A buffer is flushed when it fills up or when the tool invokes
