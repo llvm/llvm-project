@@ -132,6 +132,10 @@ FLAGS_ENUM(LaunchFlags){
                     ///< permissions but instead inherit them from its parent.
     eLaunchFlagMemoryTagging =
         (1u << 13), ///< Launch process with memory tagging explicitly enabled.
+    eLaunchFlagUsePipes =
+        (1u << 14), ///< Use anonymous pipes for stdio instead of a ConPTY on
+                    ///< Windows. Useful when terminal emulation is not needed
+                    ///< (e.g. lldb-dap internalConsole mode).
 };
 
 /// Thread Run Modes.
@@ -592,6 +596,7 @@ enum CommandArgumentType {
   eArgTypeFilename,
   eArgTypeFormat,
   eArgTypeFrameIndex,
+  eArgTypeFrameProviderIDRange,
   eArgTypeFullName,
   eArgTypeFunctionName,
   eArgTypeFunctionOrSymbol,

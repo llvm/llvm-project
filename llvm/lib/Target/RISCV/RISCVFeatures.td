@@ -141,7 +141,8 @@ def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                           "(Integer Conditional Operations)">;
 
 def FeatureStdExtZifencei
-    : RISCVExtension<2, 0, "fence.i">;
+    : RISCVExtension<2, 0, "fence.i">,
+      RISCVExtensionBitmask<1, 11>;
 def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
                         AssemblerPredicate<(all_of FeatureStdExtZifencei),
                                            "'Zifencei' (fence.i)">;
@@ -201,7 +202,8 @@ def FeatureZilsd4ByteAlign
 // Multiply Extensions
 
 def FeatureStdExtZmmul
-    : RISCVExtension<1, 0, "Integer Multiplication">;
+    : RISCVExtension<1, 0, "Integer Multiplication">,
+      RISCVExtensionBitmask<1, 12>;
 def HasStdExtZmmul : Predicate<"Subtarget->hasStdExtZmmul()">,
                      AssemblerPredicate<(all_of FeatureStdExtZmmul),
                      "'Zmmul' (Integer Multiplication)">;
@@ -691,9 +693,6 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
                                  [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
-def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
-                      AssemblerPredicate<(all_of FeatureStdExtZvfbfa),
-                          "'Zvfbfa' (Additional BF16 vector compute support)">;
 
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
@@ -1114,7 +1113,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 
 // Packed SIMD Extensions
 def FeatureStdExtP
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 21,
                                  "'Base P' (Packed SIMD)",
                                  [FeatureStdExtZmmul, FeatureStdExtZba,
                                   FeatureStdExtZbb, FeatureStdExtZicsr]>;
@@ -1670,13 +1669,6 @@ def FeatureVendorXqci
 
 // Rivos Extension(s)
 
-def FeatureVendorXRivosVisni
-    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Integer Small New">;
-def HasVendorXRivosVisni
-    : Predicate<"Subtarget->hasVendorXRivosVisni()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVisni),
-                         "'XRivosVisni' (Rivos Vector Integer Small New)">;
-
 def FeatureVendorXRivosVizip
     :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;
 def HasVendorXRivosVizip
@@ -1755,6 +1747,13 @@ def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
                           AssemblerPredicate<(all_of FeatureVendorXAIFET),
                           "'XAIFET' (AI Foundry ET Extension)">;
 
+def FeatureVendorXCheriot
+    : RISCVExtension<1, 0, "CHERIoT extension",
+    [FeatureStdExtZca, FeatureStdExtE, FeatureStdExtM]>;
+def HasCheriot
+    : Predicate<"Subtarget->hasVendorXCheriot()">,
+      AssemblerPredicate<(all_of FeatureVendorXCheriot), "'XCheriot' (CHERIoT Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1792,7 +1791,7 @@ def RV64 : HwMode<[IsRV64]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
-                       "Enable Linker relaxation.">;
+                       "Enable Linker relaxation">;
 
 def FeatureExactAssembly
     : SubtargetFeature<"exact-asm", "EnableExactAssembly", "true",
@@ -1804,12 +1803,12 @@ foreach i = {1-31} in
                        "true", "Reserve X"#i>;
 
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
-                                          "true", "Enable save/restore.">;
+                                          "true", "Enable save/restore">;
 
 def FeatureNoTrailingSeqCstFence : SubtargetFeature<"no-trailing-seq-cst-fence",
                                           "EnableTrailingSeqCstFence",
                                           "false",
-                                          "Disable trailing fence for seq-cst store.">;
+                                          "Disable trailing fence for seq-cst store">;
 
 def FeatureUnalignedScalarMem
    : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
@@ -1949,7 +1948,7 @@ def TuneDLenFactor2
 def TuneNoDefaultUnroll
     : RISCVTuneFeature<"no-default-unroll", "no-default-unroll",
                        "enable-default-unroll", "EnableDefaultUnroll", "false",
-                       "Disable default unroll preference.">;
+                       "Disable default unroll preference">;
 
 // Many Microarchitectures are able to fuse a branch over a single instruction
 // with the branched-over instruction. We call this fusion "short forward
@@ -2037,6 +2036,12 @@ def TuneHasSingleElementVecFP64
 def TuneVXRMPipelineFlush
     : RISCVSimpleTuneFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
                              "true", "VXRM writes causes pipeline flush">;
+
+def TunePreferAscendingLoadStore
+    : RISCVSimpleTuneFeature<"prefer-ascending-load-store",
+                             "PreferAscendingLoadStore", "true",
+                             "Prefer ascending load/store order for better "
+                             "clustering and performance">;
 
 def TunePreferVsetvliOverReadVLENB
     : RISCVSimpleTuneFeature<

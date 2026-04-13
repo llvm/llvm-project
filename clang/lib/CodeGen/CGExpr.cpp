@@ -2771,8 +2771,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       llvm::Type *VecTy = Vec->getType();
       llvm::Value *SrcVal = Src.getScalarVal();
 
-      if (SrcVal->getType()->getPrimitiveSizeInBits() <
-          VecTy->getScalarSizeInBits())
+      if (VecTy->isVectorTy() && SrcVal->getType()->getPrimitiveSizeInBits() <
+                                     VecTy->getScalarSizeInBits())
         SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
 
       auto *IRStoreTy = dyn_cast<llvm::IntegerType>(Vec->getType());
@@ -4287,7 +4287,7 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   llvm::BasicBlock *Cont = createBasicBlock("cfi.cont");
 
   llvm::BasicBlock *CheckBB = createBasicBlock("cfi.slowpath");
-  llvm::BranchInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
+  llvm::CondBrInst *BI = Builder.CreateCondBr(Cond, Cont, CheckBB);
 
   llvm::MDBuilder MDHelper(getLLVMContext());
   llvm::MDNode *Node = MDHelper.createLikelyBranchWeights();

@@ -1418,6 +1418,12 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.maximum.f32", Intrinsic::maximum, makeDoubleDoubleDouble},
     {"llvm.maximum.f64", Intrinsic::maximum, makeX86FP80X86FP80X86FP80},
     {"llvm.maximum.f80", Intrinsic::maximum, makeX86FP80X86FP80X86FP80},
+    {"llvm.minimumnum.f32", Intrinsic::minimumnum, makeDoubleDoubleDouble},
+    {"llvm.minimumnum.f64", Intrinsic::minimumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.minimumnum.f80", Intrinsic::minimumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.maximumnum.f32", Intrinsic::maximumnum, makeDoubleDoubleDouble},
+    {"llvm.maximumnum.f64", Intrinsic::maximumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.maximumnum.f80", Intrinsic::maximumnum, makeX86FP80X86FP80X86FP80},
     {"llvm.copysign.f32", Intrinsic::copysign, makeDoubleDoubleDouble},
     {"llvm.copysign.f64", Intrinsic::copysign, makeX86FP80X86FP80X86FP80},
     {"llvm.copysign.f80", Intrinsic::copysign, makeX86FP80X86FP80X86FP80},
@@ -1484,6 +1490,12 @@ const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
     {LibFunc_fminf, "llvm.minnum.f32"},
     {LibFunc_fmin, "llvm.minnum.f64"},
     {LibFunc_fminl, "llvm.minnum.f80"},
+    {LibFunc_fmaximum_numf, "llvm.maximumnum.f32"},
+    {LibFunc_fmaximum_num, "llvm.maximumnum.f64"},
+    {LibFunc_fmaximum_numl, "llvm.maximumnum.f80"},
+    {LibFunc_fminimum_numf, "llvm.minimumnum.f32"},
+    {LibFunc_fminimum_num, "llvm.minimumnum.f64"},
+    {LibFunc_fminimum_numl, "llvm.minimumnum.f80"},
     {LibFunc_ceilf, "llvm.ceil.f32"},
     {LibFunc_ceil, "llvm.ceil.f64"},
     {LibFunc_ceill, "llvm.ceil.f80"},
@@ -1874,8 +1886,8 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     // This might be a fp constant stored as an int. Bitcast and store if it has
     // appropriate size.
     Type *BitcastTy = nullptr; // The FT type to bitcast to.
-    if (auto *CInt = dyn_cast<ConstantInt>(C)) {
-      switch (CInt->getType()->getScalarSizeInBits()) {
+    if (isa<ConstantInt, ConstantDataVector>(C)) {
+      switch (C->getType()->getScalarSizeInBits()) {
       case 32:
         BitcastTy = Type::getFloatTy(Context);
         break;
@@ -1888,25 +1900,9 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
       default:
         break;
       }
-    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
-      const int NumElements =
-          cast<VectorType>(CDV->getType())->getElementCount().getFixedValue();
-      switch (CDV->getType()->getScalarSizeInBits()) {
-      case 32:
-        BitcastTy =
-            VectorType::get(Type::getFloatTy(Context), NumElements, false);
-        break;
-      case 64:
-        BitcastTy =
-            VectorType::get(Type::getDoubleTy(Context), NumElements, false);
-        break;
-      case 80:
-        BitcastTy =
-            VectorType::get(Type::getX86_FP80Ty(Context), NumElements, false);
-        break;
-      default:
-        break;
-      }
+
+      if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+        BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);

@@ -62,7 +62,7 @@ private:
 
   uint32_t m_ptr_size = UINT32_MAX;
   lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
-  Address m_address = LLDB_INVALID_ADDRESS;
+  Address m_address;
   std::unique_ptr<__CFBasicHash<uint32_t>> m_ht_32 = nullptr;
   std::unique_ptr<__CFBasicHash<uint64_t>> m_ht_64 = nullptr;
   ExecutionContextRef m_exe_ctx_ref;

@@ -332,7 +332,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Set a variable value whose name is a real child value, like "pt.x"
         # and verify the value by reading it
         varRef = varref_dict["pt"]
-        self.set_variable(varRef, "x", 111)
+        self.set_variable(varRef, "x", "g_global - 12")
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         value = response["body"]["variables"][0]["value"]
         self.assertEqual(
@@ -351,9 +351,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         verify_locals["argc"]["equals"]["value"] = "123"
         verify_locals["pt"]["children"]["x"]["equals"]["value"] = "111"
-        verify_locals["x @ main.cpp:23"] = {"equals": {"type": "int", "value": "89"}}
-        verify_locals["x @ main.cpp:25"] = {"equals": {"type": "int", "value": "42"}}
-        verify_locals["x @ main.cpp:27"] = {"equals": {"type": "int", "value": "72"}}
+        verify_locals["x @ main.cpp:27"] = {"equals": {"type": "int", "value": "89"}}
+        verify_locals["x @ main.cpp:29"] = {"equals": {"type": "int", "value": "42"}}
+        verify_locals["x @ main.cpp:31"] = {"equals": {"type": "int", "value": "72"}}
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -361,22 +361,22 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(self.set_local("x2", 9)["success"])
         self.assertFalse(self.set_local("x @ main.cpp:0", 9)["success"])
 
-        self.assertTrue(self.set_local("x @ main.cpp:23", 19)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:25", 21)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:27", 23)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:27", 19)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:29", 21)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:31", 23)["success"])
 
         # The following should have no effect
-        self.assertFalse(self.set_local("x @ main.cpp:27", "invalid")["success"])
+        self.assertFalse(self.set_local("x @ main.cpp:31", "invalid")["success"])
 
-        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "19"
-        verify_locals["x @ main.cpp:25"]["equals"]["value"] = "21"
-        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "23"
+        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "19"
+        verify_locals["x @ main.cpp:29"]["equals"]["value"] = "21"
+        verify_locals["x @ main.cpp:31"]["equals"]["value"] = "23"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
         self.assertTrue(self.set_local("x", 22)["success"])
-        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "22"
+        verify_locals["x @ main.cpp:31"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -393,9 +393,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         names = [var["name"] for var in locals]
         # The first shadowed x shouldn't have a suffix anymore
         verify_locals["x"] = {"equals": {"type": "int", "value": "19"}}
-        self.assertNotIn("x @ main.cpp:23", names)
-        self.assertNotIn("x @ main.cpp:25", names)
         self.assertNotIn("x @ main.cpp:27", names)
+        self.assertNotIn("x @ main.cpp:29", names)
+        self.assertNotIn("x @ main.cpp:31", names)
 
         self.verify_variables(verify_locals, locals)
 
@@ -422,14 +422,19 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             program, enableAutoVariableSummaries=enableAutoVariableSummaries
         )
         source = "main.cpp"
-        breakpoint1_line = line_number(source, "// breakpoint 1")
-        lines = [breakpoint1_line]
-        # Set breakpoint in the thread function so we can step the threads
+        lines = [
+            line_number(source, "// breakpoint 1"),
+            line_number(source, "// breakpoint 3"),
+            line_number(source, "// breakpoint 6"),
+            line_number(source, "// breakpoint 7"),
+            line_number(source, "// breakpoint 8"),
+        ]
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
-        self.continue_to_breakpoints(breakpoint_ids)
+        [bp1, bp3, bp6, bp7, bp8] = breakpoint_ids
+        self.continue_to_breakpoint(bp1)
 
         # Verify locals
         locals = self.dap_server.get_local_variables()
@@ -602,15 +607,139 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             expandable_expression["children"], response["body"]["variables"]
         )
 
+        self.continue_to_breakpoint(bp6)
+
+        locals = self.dap_server.get_local_variables()
+        self.verify_variables(
+            {
+                "my_var": {
+                    "equals": {
+                        "type": "(unnamed struct)",
+                        "value": '{name:"hello world!", x:42, y:7}'
+                        if enableAutoVariableSummaries
+                        else "(unnamed struct)",
+                        "evaluateName": "my_var",
+                    },
+                    "readOnly": True,
+                },
+            },
+            locals,
+        )
+
+        self.continue_to_breakpoint(bp7)
+
+        expr_varref_dict = {}
+        locals = self.dap_server.get_local_variables()
+        self.verify_variables(
+            {
+                "home": {
+                    "equals": {
+                        "type": "MySock",
+                        "value": "MySock",
+                        "evaluateName": "home",
+                    },
+                    "readOnly": True,
+                },
+            },
+            locals,
+            expr_varref_dict,
+        )
+
+        inner_var_ref = expr_varref_dict["home"]
+        anon_vars = self.dap_server.request_variables(inner_var_ref)["body"][
+            "variables"
+        ]
+        self.verify_variables(
+            {
+                "(anonymous)": {
+                    "equals": {"type": "MySock::(anonymous union)"},
+                    "matches": {
+                        "value": r"{ipv4:.*, ipv6:.*}"
+                        if enableAutoVariableSummaries
+                        else r"MySock::\(anonymous union\)",
+                    },
+                    "readOnly": True,
+                    "missing": ["evaluateName"],
+                }
+            },
+            anon_vars,
+        )
+        inner_union_vars = self.dap_server.request_variables(
+            anon_vars[0]["variablesReference"]
+        )["body"]["variables"]
+        self.verify_variables(
+            {
+                "ipv4": {
+                    "equals": {
+                        "type": "unsigned char[4]",
+                        "evaluateName": "home.ipv4",
+                    },
+                    "readOnly": True,
+                },
+                "ipv6": {
+                    "equals": {
+                        "type": "unsigned char[6]",
+                        "evaluateName": "home.ipv6",
+                    },
+                    "readOnly": True,
+                },
+            },
+            inner_union_vars,
+        )
+
+        self.continue_to_breakpoint(bp8)
+
+        locals = self.dap_server.get_local_variables()
+        self.verify_variables(
+            {
+                "e": {
+                    "equals": {
+                        "type": "example",
+                        "value": "{lo:10, hi:11}"
+                        if enableAutoVariableSummaries
+                        else "example",
+                        "evaluateName": "e",
+                    },
+                    "readOnly": True,
+                },
+            },
+            locals,
+        )
+        inner_bitfields_struct = self.dap_server.request_variables(
+            locals[0]["variablesReference"]
+        )["body"]["variables"]
+        self.verify_variables(
+            {
+                "lo": {
+                    "equals": {
+                        "type": "unsigned int",
+                        "value": "10",
+                        "evaluateName": "e.lo",
+                        "variablesReference": 0,
+                    }
+                },
+                "(anonymous)": {
+                    "equals": {
+                        "type": "int",
+                        "value": "0",
+                        "variablesReference": 0,
+                    }
+                },
+                "hi": {
+                    "equals": {
+                        "type": "unsigned int",
+                        "value": "11",
+                        "evaluateName": "e.hi",
+                        "variablesReference": 0,
+                    }
+                },
+            },
+            inner_bitfields_struct,
+        )
+
         # Continue to breakpoint 3, permanent variable should still exist
         # after resume.
-        breakpoint3_line = line_number(source, "// breakpoint 3")
-        lines = [breakpoint3_line]
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
-        )
-        self.continue_to_breakpoints(breakpoint_ids)
+        self.continue_to_breakpoint(bp3)
 
         var_ref = permanent_expandable_ref
         response = self.dap_server.request_variables(var_ref)

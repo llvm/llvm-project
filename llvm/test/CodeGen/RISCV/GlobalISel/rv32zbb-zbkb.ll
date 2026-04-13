@@ -389,3 +389,60 @@ define i16 @srai_i16(i16 %a) nounwind {
   %1 = ashr i16 %a, 9
   ret i16 %1
 }
+
+define i32 @binop_neg_and(i32 %a, i32 %b, i32 %c) {
+; RV32I-LABEL: binop_neg_and:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: binop_neg_and:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    add a1, a1, a2
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %not_b = xor i32 %b, -1
+  %sub = sub i32 %not_b, %c
+  %and = and i32 %a, %sub
+  ret i32 %and
+}
+
+define i32 @binop_neg_or(i32 %a, i32 %b, i32 %c) {
+; RV32I-LABEL: binop_neg_or:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: binop_neg_or:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    add a1, a1, a2
+; RV32ZBB-ZBKB-NEXT:    orn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %not_b = xor i32 %b, -1
+  %sub = sub i32 %not_b, %c
+  %or = or i32 %a, %sub
+  ret i32 %or
+}
+
+define i32 @binop_neg_xor(i32 %a, i32 %b, i32 %c) {
+; RV32I-LABEL: binop_neg_xor:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: binop_neg_xor:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    add a1, a1, a2
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV32ZBB-ZBKB-NEXT:    ret
+  %not_b = xor i32 %b, -1
+  %sub = sub i32 %not_b, %c
+  %xor = xor i32 %a, %sub
+  ret i32 %xor
+}

@@ -1386,6 +1386,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
     return AtomicRMWInst::FMaximum;
   case bitc::RMW_FMINIMUM:
     return AtomicRMWInst::FMinimum;
+  case bitc::RMW_FMAXIMUMNUM:
+    return AtomicRMWInst::FMaximumNum;
+  case bitc::RMW_FMINIMUMNUM:
+    return AtomicRMWInst::FMinimumNum;
   case bitc::RMW_UINC_WRAP:
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
@@ -2109,6 +2113,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::ElementType;
   case bitc::ATTR_KIND_FNRETTHUNK_EXTERN:
     return Attribute::FnRetThunkExtern;
+  case bitc::ATTR_KIND_FLATTEN:
+    return Attribute::Flatten;
   case bitc::ATTR_KIND_INLINE_HINT:
     return Attribute::InlineHint;
   case bitc::ATTR_KIND_IN_REG:

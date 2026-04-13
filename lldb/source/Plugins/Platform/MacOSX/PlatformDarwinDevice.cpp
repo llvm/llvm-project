@@ -23,123 +23,100 @@ using namespace lldb_private;
 PlatformDarwinDevice::~PlatformDarwinDevice() = default;
 
 FileSystem::EnumerateDirectoryResult
-PlatformDarwinDevice::GetContainedFilesIntoVectorOfStringsCallback(
+PlatformDarwinDevice::GetContainedFilesIntoVectorOfFileSpecsCallback(
     void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
-  ((PlatformDarwinDevice::SDKDirectoryInfoCollection *)baton)
-      ->push_back(PlatformDarwinDevice::SDKDirectoryInfo(FileSpec(path)));
+  ((std::vector<FileSpec> *)baton)->push_back(FileSpec(path));
   return FileSystem::eEnumerateDirectoryResultNext;
+}
+
+void PlatformDarwinDevice::AddSharedCacheDirectory(
+    llvm::StringRef dir, llvm::StringRef log_msg_descriptor) {
+  Log *log = GetLog(LLDBLog::Host);
+  const bool find_directories = true;
+  const bool find_files = false;
+  const bool find_other = false;
+  std::vector<FileSpec> shared_cache_expanded_directories;
+  FileSystem::Instance().EnumerateDirectory(
+      dir, find_directories, find_files, find_other,
+      GetContainedFilesIntoVectorOfFileSpecsCallback,
+      &shared_cache_expanded_directories);
+
+  /// shared_cache_expanded_directories will have the directories under \a dir.
+  /// Those that have a /Symbols/ subdir are shared cache dirs.
+  /// Those that have /<arch>/Symbols/ subdirs are shared cache dirs.
+
+  for (const FileSpec &sc_directory : shared_cache_expanded_directories) {
+    FileSpec sc_directory_symbols = sc_directory;
+    sc_directory_symbols.AppendPathComponent("Symbols");
+    if (FileSystem::Instance().Exists(sc_directory_symbols)) {
+      SDKDirectoryInfo thisdir(sc_directory,
+                               sc_directory.GetFilename().GetStringRef());
+      m_sdk_directory_infos.push_back(thisdir);
+      LLDB_LOGF(log,
+                "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                "added %s %s",
+                log_msg_descriptor.str().c_str(),
+                sc_directory.GetPath().c_str());
+    }
+
+    // See if we have arch subdirs under sc_directory, and if there is
+    // a Symbols subdir under those.
+    std::vector<FileSpec> subdirs;
+    FileSystem::Instance().EnumerateDirectory(
+        sc_directory.GetPath().c_str(), find_directories, find_files,
+        find_other, GetContainedFilesIntoVectorOfFileSpecsCallback, &subdirs);
+    for (const FileSpec &subdir : subdirs) {
+      FileSpec subdir_directory_symbols = subdir;
+      subdir_directory_symbols.AppendPathComponent("Symbols");
+      if (FileSystem::Instance().Exists(subdir_directory_symbols)) {
+        SDKDirectoryInfo thisdir(subdir,
+                                 sc_directory.GetFilename().GetStringRef());
+        m_sdk_directory_infos.push_back(thisdir);
+        LLDB_LOGF(log,
+                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                  "added %s %s",
+                  log_msg_descriptor.str().c_str(), subdir.GetPath().c_str());
+      }
+    }
+  }
 }
 
 bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
   Log *log = GetLog(LLDBLog::Host);
   std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
   if (m_sdk_directory_infos.empty()) {
+
     // A --sysroot option was supplied - add it to our list of SDKs to check
-    if (!m_sdk_sysroot.empty()) {
-      FileSpec sdk_sysroot_fspec(m_sdk_sysroot.c_str());
-      FileSystem::Instance().Resolve(sdk_sysroot_fspec);
-      const SDKDirectoryInfo sdk_sysroot_directory_info(sdk_sysroot_fspec);
-      m_sdk_directory_infos.push_back(sdk_sysroot_directory_info);
-      if (log) {
-        LLDB_LOGF(log,
-                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded added "
-                  "--sysroot SDK directory %s",
-                  m_sdk_sysroot.c_str());
-      }
-      return true;
-    }
+    if (!m_sdk_sysroot.empty())
+      AddSharedCacheDirectory(m_sdk_sysroot.c_str(), "--sysroot SDK directory");
+
     const char *device_support_dir = GetDeviceSupportDirectory();
-    if (log) {
-      LLDB_LOGF(log,
-                "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded Got "
-                "DeviceSupport directory %s",
-                device_support_dir);
-    }
+    LLDB_LOGF(log,
+              "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded Got "
+              "DeviceSupport directory %s",
+              device_support_dir);
     if (device_support_dir) {
-      const bool find_directories = true;
-      const bool find_files = false;
-      const bool find_other = false;
+      AddSharedCacheDirectory(device_support_dir, "builtin SDK directory");
 
-      SDKDirectoryInfoCollection builtin_sdk_directory_infos;
-      FileSystem::Instance().EnumerateDirectory(
-          m_device_support_directory, find_directories, find_files, find_other,
-          GetContainedFilesIntoVectorOfStringsCallback,
-          &builtin_sdk_directory_infos);
-
-      // Only add SDK directories that have symbols in them, some SDKs only
-      // contain developer disk images and no symbols, so they aren't useful to
-      // us.
-      FileSpec sdk_symbols_symlink_fspec;
-      for (const auto &sdk_directory_info : builtin_sdk_directory_infos) {
-        sdk_symbols_symlink_fspec = sdk_directory_info.directory;
-        sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
-        if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
-          m_sdk_directory_infos.push_back(sdk_directory_info);
-          if (log) {
-            LLDB_LOGF(log,
-                      "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                      "added builtin SDK directory %s",
-                      sdk_symbols_symlink_fspec.GetPath().c_str());
-          }
-        }
-      }
-
-      const uint32_t num_installed = m_sdk_directory_infos.size();
+      // "macOS DeviceSupport", "iOS DeviceSupport", etc.
       llvm::StringRef dirname = GetDeviceSupportDirectoryName();
       std::string local_sdk_cache_str = "~/Library/Developer/Xcode/";
       local_sdk_cache_str += std::string(dirname);
       FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
       FileSystem::Instance().Resolve(local_sdk_cache);
       if (FileSystem::Instance().Exists(local_sdk_cache)) {
-        if (log) {
-          LLDB_LOGF(log,
-                    "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                    "searching %s for additional SDKs",
-                    local_sdk_cache.GetPath().c_str());
-        }
-        char path[PATH_MAX];
-        if (local_sdk_cache.GetPath(path, sizeof(path))) {
-          FileSystem::Instance().EnumerateDirectory(
-              path, find_directories, find_files, find_other,
-              GetContainedFilesIntoVectorOfStringsCallback,
-              &m_sdk_directory_infos);
-          const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
-          // First try for an exact match of major, minor and update
-          for (uint32_t i = num_installed; i < num_sdk_infos; ++i) {
-            m_sdk_directory_infos[i].user_cached = true;
-            if (log) {
-              LLDB_LOGF(log,
-                        "PlatformDarwinDevice::"
-                        "UpdateSDKDirectoryInfosIfNeeded "
-                        "user SDK directory %s",
-                        m_sdk_directory_infos[i].directory.GetPath().c_str());
-            }
-          }
-        }
+        LLDB_LOGF(log,
+                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                  "searching %s for additional SDKs",
+                  local_sdk_cache.GetPath().c_str());
+        AddSharedCacheDirectory(local_sdk_cache.GetPath().c_str(),
+                                "system developer dir directory");
       }
 
       const char *addtional_platform_dirs = getenv("PLATFORM_SDK_DIRECTORY");
-      if (addtional_platform_dirs) {
-        SDKDirectoryInfoCollection env_var_sdk_directory_infos;
-        FileSystem::Instance().EnumerateDirectory(
-            addtional_platform_dirs, find_directories, find_files, find_other,
-            GetContainedFilesIntoVectorOfStringsCallback,
-            &env_var_sdk_directory_infos);
-        FileSpec sdk_symbols_symlink_fspec;
-        for (const auto &sdk_directory_info : env_var_sdk_directory_infos) {
-          sdk_symbols_symlink_fspec = sdk_directory_info.directory;
-          sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
-          if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
-            m_sdk_directory_infos.push_back(sdk_directory_info);
-            if (log) {
-              LLDB_LOGF(log,
-                        "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                        "added env var SDK directory %s",
-                        sdk_symbols_symlink_fspec.GetPath().c_str());
-            }
-          }
-        }
-      }
+      if (addtional_platform_dirs)
+        AddSharedCacheDirectory(addtional_platform_dirs,
+                                "env var SDK directory");
     }
   }
   return !m_sdk_directory_infos.empty();
@@ -300,16 +277,16 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     Process *process) {
 
   Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOGF(log,
-            "[%s] Trying to find module %s/%s - platform path %s/%s symbol "
-            "path %s/%s",
-            (IsHost() ? "host" : "remote"),
-            module_spec.GetFileSpec().GetDirectory().AsCString(),
-            module_spec.GetFileSpec().GetFilename().AsCString(),
-            module_spec.GetPlatformFileSpec().GetDirectory().AsCString(),
-            module_spec.GetPlatformFileSpec().GetFilename().AsCString(),
-            module_spec.GetSymbolFileSpec().GetDirectory().AsCString(),
-            module_spec.GetSymbolFileSpec().GetFilename().AsCString());
+  LLDB_LOG(log,
+           "[{0}] Trying to find module {1}/{2} - platform path {3}/{4} symbol "
+           "path {5}/{6}",
+           (IsHost() ? "host" : "remote"),
+           module_spec.GetFileSpec().GetDirectory(),
+           module_spec.GetFileSpec().GetFilename(),
+           module_spec.GetPlatformFileSpec().GetDirectory(),
+           module_spec.GetPlatformFileSpec().GetFilename(),
+           module_spec.GetSymbolFileSpec().GetDirectory(),
+           module_spec.GetSymbolFileSpec().GetFilename());
 
   Status err;
 
@@ -364,10 +341,10 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
           return err;
         if (FileSystem::Instance().Exists(module_cache_spec)) {
           Log *log = GetLog(LLDBLog::Platform);
-          LLDB_LOGF(log, "[%s] module %s/%s was rsynced and is now there",
-                    (IsHost() ? "host" : "remote"),
-                    module_spec.GetFileSpec().GetDirectory().AsCString(),
-                    module_spec.GetFileSpec().GetFilename().AsCString());
+          LLDB_LOG(log, "[{0}] module {1}/{2} was rsynced and is now there",
+                   (IsHost() ? "host" : "remote"),
+                   module_spec.GetFileSpec().GetDirectory(),
+                   module_spec.GetFileSpec().GetFilename());
           ModuleSpec local_spec(module_cache_spec,
                                 module_spec.GetArchitecture());
           module_sp = std::make_shared<Module>(local_spec);
@@ -398,11 +375,12 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
             requires_transfer = *MD5 != *remote_md5;
           if (requires_transfer) {
             // bring in the remote file
-            LLDB_LOGF(log,
-                      "[%s] module %s/%s needs to be replaced from remote copy",
-                      (IsHost() ? "host" : "remote"),
-                      module_spec.GetFileSpec().GetDirectory().AsCString(),
-                      module_spec.GetFileSpec().GetFilename().AsCString());
+            LLDB_LOG(
+                log,
+                "[{0}] module {1}/{2} needs to be replaced from remote copy",
+                (IsHost() ? "host" : "remote"),
+                module_spec.GetFileSpec().GetDirectory(),
+                module_spec.GetFileSpec().GetFilename());
             Status err =
                 BringInRemoteFile(this, module_spec, module_cache_spec);
             if (err.Fail())
@@ -414,27 +392,27 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
         module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
         Log *log = GetLog(LLDBLog::Platform);
-        LLDB_LOGF(log, "[%s] module %s/%s was found in the cache",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetDirectory().AsCString(),
-                  module_spec.GetFileSpec().GetFilename().AsCString());
+        LLDB_LOG(log, "[{0}] module {1}/{2} was found in the cache",
+                 (IsHost() ? "host" : "remote"),
+                 module_spec.GetFileSpec().GetDirectory(),
+                 module_spec.GetFileSpec().GetFilename());
         return Status();
       }
 
       // bring in the remote module file
-      LLDB_LOGF(log, "[%s] module %s/%s needs to come in remotely",
-                (IsHost() ? "host" : "remote"),
-                module_spec.GetFileSpec().GetDirectory().AsCString(),
-                module_spec.GetFileSpec().GetFilename().AsCString());
+      LLDB_LOG(log, "[{0}] module {1}/{2} needs to come in remotely",
+               (IsHost() ? "host" : "remote"),
+               module_spec.GetFileSpec().GetDirectory(),
+               module_spec.GetFileSpec().GetFilename());
       Status err = BringInRemoteFile(this, module_spec, module_cache_spec);
       if (err.Fail())
         return err;
       if (FileSystem::Instance().Exists(module_cache_spec)) {
         Log *log = GetLog(LLDBLog::Platform);
-        LLDB_LOGF(log, "[%s] module %s/%s is now cached and fine",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetDirectory().AsCString(),
-                  module_spec.GetFileSpec().GetFilename().AsCString());
+        LLDB_LOG(log, "[{0}] module {1}/{2} is now cached and fine",
+                 (IsHost() ? "host" : "remote"),
+                 module_spec.GetFileSpec().GetDirectory(),
+                 module_spec.GetFileSpec().GetFilename());
         ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
         module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());

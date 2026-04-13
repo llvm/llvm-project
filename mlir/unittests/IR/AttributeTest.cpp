@@ -523,4 +523,46 @@ TEST(CopyCountAttr, PrintStripped) {
   EXPECT_EQ(str, "|#test.copy_count<hello>|[copy_count<hello>]");
 }
 
+//===----------------------------------------------------------------------===//
+// IntegerAttr
+//===----------------------------------------------------------------------===//
+
+TEST(IntegerAttrTest, CorrectBitWidths) {
+  MLIRContext context;
+
+  // Correct APInt width for i32.
+  IntegerType i32 = IntegerType::get(&context, 32);
+  IntegerAttr attr32 = IntegerAttr::get(i32, APInt(32, 42));
+  EXPECT_EQ(attr32.getType(), i32);
+  EXPECT_EQ(attr32.getValue().getBitWidth(), 32u);
+  EXPECT_EQ(attr32.getInt(), 42);
+
+  // Correct APInt width for index type.
+  IndexType indexTy = IndexType::get(&context);
+  IntegerAttr attrIdx =
+      IntegerAttr::get(indexTy, APInt(IndexType::kInternalStorageBitWidth, 5));
+  EXPECT_EQ(attrIdx.getType(), indexTy);
+  EXPECT_EQ(attrIdx.getValue().getBitWidth(),
+            (unsigned)IndexType::kInternalStorageBitWidth);
+}
+
+#ifndef NDEBUG
+TEST(IntegerAttrDeathTest, WrongBitWidthForIntegerType) {
+  MLIRContext context;
+  IntegerType i32 = IntegerType::get(&context, 32);
+  // APInt(8, 1) has bit width 8, but i32 requires 32.
+  EXPECT_DEATH(IntegerAttr::get(i32, APInt(8, 1)),
+               "APInt bit width must match integer type width");
+}
+
+TEST(IntegerAttrDeathTest, WrongBitWidthForIndexType) {
+  MLIRContext context;
+  IndexType indexTy = IndexType::get(&context);
+  // APInt(1, 1) has bit width 1, but index type requires 64.
+  EXPECT_DEATH(
+      IntegerAttr::get(indexTy, APInt(1, 1)),
+      "APInt bit width must match IndexType internal storage bit width");
+}
+#endif // NDEBUG
+
 } // namespace

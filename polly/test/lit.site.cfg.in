@@ -4,12 +4,14 @@ config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.llvm_shlibext = "@LLVM_SHLIBEXT@"
 config.polly_obj_root = "@POLLY_BINARY_DIR@"
 config.polly_lib_dir = "@POLLY_LIB_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.llvm_polly_link_into_tools = "@LLVM_POLLY_LINK_INTO_TOOLS@"
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.extra_paths = "@POLLY_TEST_EXTRA_PATHS@".split(";")
+config.polly_test_c_compiler = "@POLLY_TEST_C_COMPILER@"
 
 ## Check the current platform with regex
 import re

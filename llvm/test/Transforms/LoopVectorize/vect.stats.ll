@@ -27,7 +27,7 @@ loop:
   %cmp2 = icmp sgt i64 %iv.next, %size
   br i1 %cmp2, label %exit, label %loop
 
-exit:                                          ; preds = %entry, %loop
+exit:
   ret void
 }
 

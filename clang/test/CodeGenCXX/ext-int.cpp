@@ -67,6 +67,18 @@ struct HasBitIntMiddle {
 };
 // CHECK: %struct.HasBitIntMiddle = type { i32, i64, i32 }
 
+// Check array filler lowering.
+namespace gh189643 {
+_BitInt(129) arr[2] = {};
+// LIN64: {{.*}}arr{{.*}} = {{.*}}global [2 x [24 x i8]] zeroinitializer
+// LIN32: {{.*}}arr{{.*}} = {{.*}}global [2 x [20 x i8]] zeroinitializer
+// WIN: {{.*}}arr{{.*}} = {{.*}}global [2 x [24 x i8]] zeroinitializer
+_BitInt(129) arr2[10] = {1};
+// LIN64: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [23 x i8] }>, [9 x <{ i8, [23 x i8] }>] }> <{ <{ i8, [23 x i8] }> <{ i8 1, [23 x i8] zeroinitializer }>, [9 x <{ i8, [23 x i8] }>] zeroinitializer }>
+// LIN32: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [19 x i8] }>, [9 x <{ i8, [19 x i8] }>] }> <{ <{ i8, [19 x i8] }> <{ i8 1, [19 x i8] zeroinitializer }>, [9 x <{ i8, [19 x i8] }>] zeroinitializer }>
+// WIN: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [23 x i8] }>, [9 x <{ i8, [23 x i8] }>] }> <{ <{ i8, [23 x i8] }> <{ i8 1, [23 x i8] zeroinitializer }>, [9 x <{ i8, [23 x i8] }>] zeroinitializer }>
+}
+
 // Force emitting of the above structs.
 void StructEmit() {
   BitFieldsByte A;
@@ -616,6 +628,24 @@ void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
   ExtInt = 5;
   ExtUInt = 5;
   Other = 5;
+}
+
+namespace gh189643 {
+void test() {
+// LIN: define{{.*}} void @_ZN8gh1896434testEv()
+// WIN: define dso_local void @"?test@gh189643@@YAXXZ"()
+_BitInt(140) arr3[2] = {};
+// LIN64: %[[ARR3:.+]] = alloca [2 x [24 x i8]], align 16
+// LIN32: %[[ARR3:.+]] = alloca [2 x [20 x i8]], align 4
+// WIN: %[[ARR3:.+]] = alloca [2 x [24 x i8]],
+_BitInt(239) arr4[10] = {1};
+// CHECK: %[[ARR4:.+]] = alloca [10 x i256],
+// LIN64: call void @llvm.memset{{.+}}(ptr align 16 %[[ARR3]], i8 0, i64 48,
+// LIN32: call void @llvm.memset{{.+}}(ptr align 4 %[[ARR3]], i8 0, i32 40,
+// WIN: call void @llvm.memset{{.+}}(ptr {{.*}} %[[ARR3]], i8 0, {{.*}} 48,
+// CHECK: call void @llvm.memset{{.+}}(ptr {{.*}} %[[ARR4]], i8 0, {{.*}} 320,
+// CHECK: store i256 1, ptr {{.*}}
+}
 }
 
 // NoNewStructPathTBAA-DAG: ![[CHAR_TBAA_ROOT:.+]] = !{!"omnipotent char", ![[TBAA_ROOT:.+]], i64 0}

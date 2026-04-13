@@ -1426,7 +1426,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   }
 
   if (Target.getTriple().isAMDGPU() ||
-      (AuxTarget && AuxTarget->getTriple().isAMDGPU())) {
+      (Target.getTriple().isSPIRV() &&
+       Target.getTriple().getVendor() == llvm::Triple::AMD) ||
+      (AuxTarget &&
+       (AuxTarget->getTriple().isAMDGPU() ||
+        ((AuxTarget->getTriple().isSPIRV() &&
+          AuxTarget->getTriple().getVendor() == llvm::Triple::AMD))))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"
@@ -12739,6 +12744,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.AMDGPUBufferRsrcTy;
       break;
     }
+    case 'c': {
+      Type = Context.AMDGPUFeaturePredicateTy;
+      break;
+    }
     case 't': {
       Type = Context.AMDGPUTextureTy;
       break;
@@ -13366,10 +13375,7 @@ VTableContextBase *ASTContext::getVTableContext() {
     if (ABI.isMicrosoft())
       VTContext.reset(new MicrosoftVTableContext(*this));
     else {
-      auto ComponentLayout = getLangOpts().RelativeCXXABIVTables
-                                 ? ItaniumVTableContext::Relative
-                                 : ItaniumVTableContext::Pointer;
-      VTContext.reset(new ItaniumVTableContext(*this, ComponentLayout));
+      VTContext.reset(new ItaniumVTableContext(*this));
     }
   }
   return VTContext.get();
@@ -15246,6 +15252,14 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
+    } else if (Target->getTriple().isOSAIX()) {
+      std::vector<std::string> Features;
+      StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
+      if (VersionStr.starts_with("cpu="))
+        TargetCPU = VersionStr.drop_front(sizeof("cpu=") - 1);
+      else
+        assert(VersionStr == "default");
       Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     } else {
       std::vector<std::string> Features;

@@ -32,6 +32,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
@@ -212,6 +213,27 @@ enum {
 };
 #endif
 
+static const FileSpecList &GetDefaultSafeAutoLoadPaths() {
+  static const FileSpecList sSafePaths = [] {
+    // FIXME: in c++20 this could be a std::array (with CTAD deduced size)
+    // and we could statically assert that all members are non-empty.
+    const llvm::SmallVector<llvm::StringRef> kVendorSafePaths = {
+#include "SafeAutoloadPaths.inc"
+    };
+    FileSpecList fspecs;
+    for (auto path : kVendorSafePaths) {
+      assert(!path.empty());
+      LLDB_LOG(GetLog(SystemLog::System), "Safe auto-load path configured: {0}",
+               path);
+      fspecs.EmplaceBack(path);
+    }
+
+    return fspecs;
+  }();
+
+  return sSafePaths;
+}
+
 #ifndef NDEBUG
 TestingProperties::TestingProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>("testing");
@@ -227,6 +249,27 @@ bool TestingProperties::GetInjectVarLocListError() const {
 TestingProperties &TestingProperties::GetGlobalTestingProperties() {
   static TestingProperties g_testing_properties;
   return g_testing_properties;
+}
+
+void TestingProperties::SetSafeAutoLoadPaths(FileSpecList paths) {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
+  assert(option_value);
+  option_value->SetCurrentValue(std::move(paths));
+}
+
+void TestingProperties::AppendSafeAutoLoadPaths(FileSpec path) {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
+  assert(option_value);
+  option_value->AppendCurrentValue(path);
+}
+
+FileSpecList TestingProperties::GetSafeAutoLoadPaths() const {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  return GetPropertyAtIndexAs<FileSpecList>(idx, {});
 }
 #endif
 
@@ -2146,9 +2189,10 @@ static bool RequiresFollowChildWorkaround(const Process &process) {
 
 lldb::thread_result_t Debugger::DefaultEventHandler() {
   ListenerSP listener_sp(GetListener());
-  ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
-  ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
-  ConstString broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_target(Target::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_process(
+      Process::GetStaticBroadcasterClass());
+  llvm::StringRef broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
   BroadcastEventSpec target_event_spec(broadcaster_class_target,
                                        Target::eBroadcastBitBreakpointChanged);
 
@@ -2200,7 +2244,7 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
         Broadcaster *broadcaster = event_sp->GetBroadcaster();
         if (broadcaster) {
           uint32_t event_type = event_sp->GetType();
-          ConstString broadcaster_class(broadcaster->GetBroadcasterClass());
+          llvm::StringRef broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
             if (ProcessSP process_sp = HandleProcessEvent(event_sp))
               if (!RequiresFollowChildWorkaround(*process_sp))
@@ -2273,7 +2317,8 @@ bool Debugger::StartEventHandlerThread() {
     // function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
     ConstString full_name("lldb.debugger.event-handler");
-    ListenerSP listener_sp(Listener::MakeListener(full_name.AsCString()));
+    ListenerSP listener_sp(
+        Listener::MakeListener(full_name.AsCString(nullptr)));
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 
@@ -2546,4 +2591,16 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       "A boolean value that indicates if lua support is enabled in LLDB");
   AddLLVMTargets(*config_up);
   return config_up;
+}
+
+FileSpecList Debugger::GetSafeAutoLoadPaths() {
+  FileSpecList fspecs = GetDefaultSafeAutoLoadPaths();
+
+#ifndef NDEBUG
+  for (const auto &fspec :
+       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
+    fspecs.Append(fspec);
+#endif
+
+  return fspecs;
 }

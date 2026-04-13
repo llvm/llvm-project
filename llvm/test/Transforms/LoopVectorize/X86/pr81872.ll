@@ -45,19 +45,19 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 bb5:
   br label %loop.header
 
-loop.header:                                             ; preds = %loop.latch, %bb8
+loop.header:
   %iv = phi i64 [ 99, %bb5 ], [ %iv.next, %loop.latch ]
   %and = and i64 %iv, 1
   %icmp17 = icmp eq i64 %and, 0
   br i1 %icmp17, label %bb18, label %loop.latch, !prof !21
 
-bb18:                                             ; preds = %loop.header
+bb18:
   %or = or disjoint i64 %iv, 1
   %getelementptr19 = getelementptr inbounds i64, ptr %arr, i64 %or
   store i64 1, ptr %getelementptr19, align 8
   br label %loop.latch
 
-loop.latch:                                             ; preds = %bb18, %loop.header
+loop.latch:
   %iv.next = add nsw i64 %iv, -1
   %icmp22 = icmp eq i64 %iv.next, 90
   br i1 %icmp22, label %bb6, label %loop.header, !prof !22

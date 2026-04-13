@@ -520,6 +520,8 @@ enum RMWOperations {
   RMW_USUB_SAT = 18,
   RMW_FMAXIMUM = 19,
   RMW_FMINIMUM = 20,
+  RMW_FMAXIMUMNUM = 21,
+  RMW_FMINIMUMNUM = 22,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -813,6 +815,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NO_CREATE_UNDEF_OR_POISON = 105,
   ATTR_KIND_DENORMAL_FPENV = 106,
   ATTR_KIND_NOOUTLINE = 107,
+  ATTR_KIND_FLATTEN = 108,
 };
 
 enum ComdatSelectionKindCodes {

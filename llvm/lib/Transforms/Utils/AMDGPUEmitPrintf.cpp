@@ -100,7 +100,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   //  Strictly speaking, the zero does not matter since
   // __ockl_printf_append_string_n ignores the length if the pointer is null.
   BasicBlock *Join = nullptr;
-  if (Prev->getTerminator()) {
+  if (Prev->hasTerminator()) {
     Join = Prev->splitBasicBlock(Builder.GetInsertPoint(),
                                  "strlen.join");
     Prev->getTerminator()->eraseFromParent();
@@ -475,7 +475,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
 
     Ptr = Builder.CreateConstInBoundsGEP1_32(Int8Ty, Ptr, 4);
 
-    // Create MD5 hash for costant format string, push low 64 bits of the
+    // Create MD5 hash for constant format string, push low 64 bits of the
     // same onto buffer and metadata.
     NamedMDNode *metaD = M->getOrInsertNamedMetadata("llvm.printf.fmts");
     if (IsConstFmtStr) {

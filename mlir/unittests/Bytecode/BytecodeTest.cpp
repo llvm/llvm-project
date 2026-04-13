@@ -266,3 +266,29 @@ TEST(Bytecode, DeepCallSiteLoc) {
   // Verify the location matches.
   EXPECT_EQ(module.get()->getLoc(), roundTripped->getLoc());
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/99626.
+// FusedLoc::get(context, locs) returns UnknownLoc when locs is empty, so the
+// bytecode reader must not use cast<FusedLoc>() on that result.
+TEST(Bytecode, EmptyFusedLocRoundtrip) {
+  MLIRContext context;
+
+  // FusedLoc with empty locations (no metadata). FusedLoc::get returns
+  // UnknownLoc in this case, but the bytecode writer stores a FusedLoc.
+  FusedLoc fusedLoc = FusedLoc::get(&context, /*locs=*/{}, /*metadata=*/{});
+  auto module = mlir::ModuleOp::create(fusedLoc, "test");
+
+  // Write the module to bytecode.
+  std::string buffer;
+  llvm::raw_string_ostream ostream(buffer);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module, ostream)));
+  ostream.flush();
+
+  // Parse it back - this used to crash with an assertion failure in cast<>.
+  ParserConfig parseConfig(&context);
+  OwningOpRef<Operation *> roundTripModule =
+      parseSourceString<Operation *>(buffer, parseConfig);
+  ASSERT_TRUE(roundTripModule);
+
+  module.erase();
+}

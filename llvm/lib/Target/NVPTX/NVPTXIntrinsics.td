@@ -23,7 +23,7 @@ def AS_match {
    return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_CONST;
   }];
   code param = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_PARAM;
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_ENTRY_PARAM;
   }];
 }
 

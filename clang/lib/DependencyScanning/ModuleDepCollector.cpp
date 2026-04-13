@@ -279,6 +279,7 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   if (!CI.getDependencyOutputOpts().OutputFile.empty())
     CI.getDependencyOutputOpts().OutputFile = "-";
   CI.getDependencyOutputOpts().Targets.clear();
+  CI.getDependencyOutputOpts().IncludeModuleFiles = MFDK_Direct;
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getLangOpts().ModuleName.clear();
@@ -440,6 +441,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
   resetBenignCodeGenOptions(CI.getFrontendOpts().ProgramAction,
                             CI.getLangOpts(), CI.getCodeGenOpts());
+  CI.getDependencyOutputOpts().IncludeModuleFiles = MFDK_Direct;
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
@@ -682,7 +684,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // -fmodule-name is used to compile a translation unit that imports this
   // module. In that case it can be skipped. The appropriate header
   // dependencies will still be reported as expected.
-  if (!M->getASTFile())
+  if (!M->getASTFileKey())
     return {};
 
   // If this module has been handled already, just return its ID.
@@ -716,7 +718,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
-          *M->getASTFile());
+          *M->getASTFileKey());
 
   llvm::SmallString<256> Storage;
   MD.FileDepsBaseDir =
@@ -938,7 +940,7 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
   if (PrebuiltModuleFileIt == PrebuiltModuleFiles.end())
     return false;
   assert("Prebuilt module came from the expected AST file" &&
-         PrebuiltModuleFileIt->second == M->getASTFile()->getName());
+         PrebuiltModuleFileIt->second == M->getASTFileName()->str());
   return true;
 }
 

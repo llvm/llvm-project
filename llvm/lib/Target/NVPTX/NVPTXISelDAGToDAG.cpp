@@ -496,30 +496,21 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   return true;
 }
 
-static std::optional<NVPTX::AddressSpace> convertAS(unsigned AS) {
-  switch (AS) {
-  case llvm::ADDRESS_SPACE_LOCAL:
-    return NVPTX::AddressSpace::Local;
-  case llvm::ADDRESS_SPACE_GLOBAL:
-    return NVPTX::AddressSpace::Global;
-  case llvm::ADDRESS_SPACE_SHARED:
-    return NVPTX::AddressSpace::Shared;
-  case llvm::ADDRESS_SPACE_SHARED_CLUSTER:
-    return NVPTX::AddressSpace::SharedCluster;
-  case llvm::ADDRESS_SPACE_GENERIC:
-    return NVPTX::AddressSpace::Generic;
-  case llvm::ADDRESS_SPACE_PARAM:
-    return NVPTX::AddressSpace::Param;
-  case llvm::ADDRESS_SPACE_CONST:
-    return NVPTX::AddressSpace::Const;
-  default:
-    return std::nullopt;
-  }
-}
-
 NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
-  return convertAS(N->getMemOperand()->getAddrSpace())
-      .value_or(NVPTX::AddressSpace::Generic);
+  auto AS =
+      static_cast<NVPTX::AddressSpace>(N->getMemOperand()->getAddrSpace());
+  switch (AS) {
+  case NVPTX::AddressSpace::Generic:
+  case NVPTX::AddressSpace::Global:
+  case NVPTX::AddressSpace::Shared:
+  case NVPTX::AddressSpace::Const:
+  case NVPTX::AddressSpace::Local:
+  case NVPTX::AddressSpace::SharedCluster:
+  case NVPTX::AddressSpace::EntryParam:
+  case NVPTX::AddressSpace::DeviceParam:
+    return AS;
+  }
+  llvm_unreachable("Unexpected address space");
 }
 
 NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
@@ -660,7 +651,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   //          a dead dummy volatile load.
   if (CodeAddrSpace == NVPTX::AddressSpace::Local ||
       CodeAddrSpace == NVPTX::AddressSpace::Const ||
-      CodeAddrSpace == NVPTX::AddressSpace::Param) {
+      CodeAddrSpace == NVPTX::AddressSpace::EntryParam ||
+      CodeAddrSpace == NVPTX::AddressSpace::DeviceParam) {
     return NVPTX::Ordering::NotAtomic;
   }
 
@@ -973,7 +965,7 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
     case ADDRESS_SPACE_LOCAL:
       Opc = TM.is64Bit() ? NVPTX::cvta_local_64 : NVPTX::cvta_local;
       break;
-    case ADDRESS_SPACE_PARAM:
+    case ADDRESS_SPACE_ENTRY_PARAM:
       Opc = TM.is64Bit() ? NVPTX::cvta_param_64 : NVPTX::cvta_param;
       break;
     }
@@ -1004,7 +996,7 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
     case ADDRESS_SPACE_LOCAL:
       Opc = TM.is64Bit() ? NVPTX::cvta_to_local_64 : NVPTX::cvta_to_local;
       break;
-    case ADDRESS_SPACE_PARAM:
+    case ADDRESS_SPACE_ENTRY_PARAM:
       Opc = TM.is64Bit() ? NVPTX::cvta_to_param_64 : NVPTX::cvta_to_param;
       break;
     }

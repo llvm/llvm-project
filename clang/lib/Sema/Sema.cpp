@@ -568,8 +568,13 @@ void Sema::Initialize() {
   }
 
   if (Context.getTargetInfo().getTriple().isAMDGPU() ||
+      (Context.getTargetInfo().getTriple().isSPIRV() &&
+       Context.getTargetInfo().getTriple().getVendor() == llvm::Triple::AMD) ||
       (Context.getAuxTargetInfo() &&
-       Context.getAuxTargetInfo()->getTriple().isAMDGPU())) {
+       (Context.getAuxTargetInfo()->getTriple().isAMDGPU() ||
+        (Context.getAuxTargetInfo()->getTriple().isSPIRV() &&
+         Context.getAuxTargetInfo()->getTriple().getVendor() ==
+             llvm::Triple::AMD)))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
@@ -956,6 +961,12 @@ bool Sema::isExternalWithNoLinkageType(const ValueDecl *VD) const {
          !isFunctionOrVarDeclExternC(VD);
 }
 
+bool Sema::isMainFileLoc(SourceLocation Loc) const {
+  if (TUKind != TU_Complete || getLangOpts().IsHeaderFile)
+    return false;
+  return SourceMgr.isInMainFile(Loc);
+}
+
 /// Obtains a sorted list of functions and variables that are undefined but
 /// ODR-used.
 void Sema::getUndefinedButUsed(
@@ -1083,6 +1094,15 @@ void Sema::LoadExternalWeakUndeclaredIdentifiers() {
     (void)WeakUndeclaredIdentifiers[WeakID.first].insert(WeakID.second);
 }
 
+void Sema::LoadExternalExtnameUndeclaredIdentifiers() {
+  if (!ExternalSource)
+    return;
+
+  SmallVector<std::pair<IdentifierInfo *, AsmLabelAttr *>, 4> ExtnameIDs;
+  ExternalSource->ReadExtnameUndeclaredIdentifiers(ExtnameIDs);
+  for (auto &ExtnameID : ExtnameIDs)
+    ExtnameUndeclaredIdentifiers[ExtnameID.first] = ExtnameID.second;
+}
 
 typedef llvm::DenseMap<const CXXRecordDecl*, bool> RecordCompleteMap;
 
@@ -1414,22 +1434,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   // in the module purview but has no definition before the end of the TU or
   // the start of a Private Module Fragment (if one is present).
   if (!PendingInlineFuncDecls.empty()) {
-    for (auto *D : PendingInlineFuncDecls) {
-      if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-        bool DefInPMF = false;
-        if (auto *FDD = FD->getDefinition()) {
-          DefInPMF = FDD->getOwningModule()->isPrivateModule();
-          if (!DefInPMF)
-            continue;
-        }
-        Diag(FD->getLocation(), diag::err_export_inline_not_defined)
-            << DefInPMF;
-        // If we have a PMF it should be at the end of the ModuleScopes.
-        if (DefInPMF &&
-            ModuleScopes.back().Module->Kind == Module::PrivateModuleFragment) {
-          Diag(ModuleScopes.back().BeginLoc,
-               diag::note_private_module_fragment);
-        }
+    for (auto *FD : PendingInlineFuncDecls) {
+      bool DefInPMF = false;
+      if (auto *FDD = FD->getDefinition()) {
+        DefInPMF = FDD->getOwningModule()->isPrivateModule();
+        if (!DefInPMF)
+          continue;
+      }
+      Diag(FD->getLocation(), diag::err_export_inline_not_defined) << DefInPMF;
+      // If we have a PMF it should be at the end of the ModuleScopes.
+      if (DefInPMF &&
+          ModuleScopes.back().Module->Kind == Module::PrivateModuleFragment) {
+        Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
       }
     }
     PendingInlineFuncDecls.clear();
@@ -1604,6 +1620,40 @@ void Sema::ActOnEndOfTranslationUnit() {
     emitAndClearUnusedLocalTypedefWarnings();
   }
 
+  if (!Diags.isIgnored(diag::warn_unused_but_set_global, SourceLocation())) {
+    // Diagnose unused-but-set static globals in a deterministic order.
+    // Not tracking shadowing info for static globals; there's nothing to
+    // shadow.
+    struct LocAndDiag {
+      SourceLocation Loc;
+      PartialDiagnostic PD;
+    };
+    SmallVector<LocAndDiag, 16> DeclDiags;
+    auto addDiag = [&DeclDiags](SourceLocation Loc, PartialDiagnostic PD) {
+      DeclDiags.push_back(LocAndDiag{Loc, std::move(PD)});
+    };
+
+    // For -Wunused-but-set-variable we only care about variables that were
+    // referenced by the TU end.
+    for (const auto &Ref : RefsMinusAssignments) {
+      const VarDecl *VD = Ref.first;
+      // Only diagnose internal linkage file vars defined in the main file to
+      // match -Wunused-variable behavior and avoid false positives from
+      // headers.
+      if (VD->isInternalLinkageFileVar() && isMainFileLoc(VD->getLocation()))
+        DiagnoseUnusedButSetDecl(VD, addDiag);
+    }
+
+    llvm::sort(DeclDiags,
+               [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
+                 // Sorting purely for determinism; matches behavior in
+                 // Sema::ActOnPopScope.
+                 return LHS.Loc < RHS.Loc;
+               });
+    for (const LocAndDiag &D : DeclDiags)
+      Diag(D.Loc, D.PD);
+  }
+
   if (!Diags.isIgnored(diag::warn_unused_private_field, SourceLocation())) {
     // FIXME: Load additional unused private field candidates from the external
     // source.
@@ -1611,7 +1661,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     RecordCompleteMap MNCComplete;
     for (const NamedDecl *D : UnusedPrivateFields) {
       const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-      if (RD && !RD->isUnion() &&
+      if (RD && !RD->isUnion() && !D->hasAttr<UnusedAttr>() &&
           IsRecordFullyDefined(RD, RecordsComplete, MNCComplete)) {
         Diag(D->getLocation(), diag::warn_unused_private_field)
               << D->getDeclName();

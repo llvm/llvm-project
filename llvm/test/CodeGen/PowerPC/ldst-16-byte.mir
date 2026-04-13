@@ -98,31 +98,31 @@ body: |
     ; CHECK-NEXT: renamable $g8p4 = LQARX $x5, $x6
     ; CHECK-NEXT: STD killed $x8, -176, $x1
     ; CHECK-NEXT: STD killed $x9, -168, $x1
-    ; CHECK-NEXT: renamable $g8p1 = LQARX $x3, renamable $x4
-    ; CHECK-NEXT: renamable $g8p4 = LQARX renamable $x7, renamable $x4
+    ; CHECK-NEXT: renamable $g8p14 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p4 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: STD killed $x8, -192, $x1
     ; CHECK-NEXT: STD killed $x9, -184, $x1
-    ; CHECK-NEXT: renamable $g8p4 = LQARX renamable $x7, renamable $x4
+    ; CHECK-NEXT: renamable $g8p4 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: STD killed $x8, -208, $x1
     ; CHECK-NEXT: STD killed $x9, -200, $x1
-    ; CHECK-NEXT: renamable $g8p4 = LQARX renamable $x7, renamable $x4
+    ; CHECK-NEXT: renamable $g8p4 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: STD killed $x8, -224, $x1
     ; CHECK-NEXT: STD killed $x9, -216, $x1
-    ; CHECK-NEXT: renamable $g8p12 = LQARX renamable $x7, renamable $x4
-    ; CHECK-NEXT: renamable $g8p11 = LQARX renamable $x7, renamable $x4
-    ; CHECK-NEXT: renamable $g8p10 = LQARX renamable $x7, renamable $x4
-    ; CHECK-NEXT: renamable $g8p9 = LQARX renamable $x7, renamable $x4
-    ; CHECK-NEXT: renamable $g8p8 = LQARX renamable $x7, renamable $x4
-    ; CHECK-NEXT: renamable $g8p7 = LQARX renamable $x7, renamable $x4
-    ; CHECK-NEXT: renamable $g8p15 = LQARX renamable $x7, renamable $x4
-    ; CHECK-NEXT: renamable $g8p13 = LQARX renamable $x7, renamable $x4
-    ; CHECK-NEXT: renamable $g8p14 = LQARX renamable $x7, renamable $x4
+    ; CHECK-NEXT: renamable $g8p12 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p11 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p10 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p9 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p8 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p7 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p15 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p1 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: renamable $g8p5 = LQARX renamable $x7, renamable $x4
     ; CHECK-NEXT: renamable $g8p4 = LQARX renamable $x7, renamable $x4
+    ; CHECK-NEXT: renamable $g8p13 = LQARX renamable $x7, renamable $x4
+    ; CHECK-NEXT: STQCX killed renamable $g8p13, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p4, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p5, renamable $x7, renamable $x4, implicit-def dead $cr0
-    ; CHECK-NEXT: STQCX killed renamable $g8p14, renamable $x7, renamable $x4, implicit-def dead $cr0
-    ; CHECK-NEXT: STQCX killed renamable $g8p13, renamable $x7, renamable $x4, implicit-def dead $cr0
+    ; CHECK-NEXT: STQCX killed renamable $g8p1, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p15, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p7, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p8, renamable $x7, renamable $x4, implicit-def dead $cr0
@@ -139,7 +139,8 @@ body: |
     ; CHECK-NEXT: $x8 = LD -192, $x1
     ; CHECK-NEXT: $x9 = LD -184, $x1
     ; CHECK-NEXT: STQCX killed renamable $g8p4, renamable $x7, renamable $x4, implicit-def dead $cr0
-    ; CHECK-NEXT: STQCX renamable $g8p1, killed renamable $x7, killed renamable $x4, implicit-def dead $cr0
+    ; CHECK-NEXT: STQCX renamable $g8p14, killed renamable $x7, killed renamable $x4, implicit-def dead $cr0
+    ; CHECK-NEXT: $x3 = OR8 $x29, killed $x29
     ; CHECK-NEXT: $x8 = LD -176, $x1
     ; CHECK-NEXT: $x9 = LD -168, $x1
     ; CHECK-NEXT: STQCX killed renamable $g8p4, $x5, $x6, implicit-def dead $cr0
