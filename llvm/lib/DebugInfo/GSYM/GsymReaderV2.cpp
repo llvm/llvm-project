@@ -35,7 +35,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
 
   // Print GlobalData entries.
   OS << "Global Data Sections:\n";
-  OS << "TYPE            FILE OFFSET 64      FILE SIZE 64\n";
+  OS << "TYPE            FILE OFFSET         FILE SIZE\n";
   OS << "=============== ==================  ==================\n";
   /// Re-parse the GlobalData entries to ensure we show the GlobalData
   /// in the exact order it appears in the GSYM data.
