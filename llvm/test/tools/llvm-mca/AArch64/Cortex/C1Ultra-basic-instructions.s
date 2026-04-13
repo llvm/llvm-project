@@ -476,28 +476,28 @@
 # CHECK-NEXT:  1      3     0.25                        smaddl	xzr, w10, w11, x12
 # CHECK-NEXT:  1      3     0.25                        smaddl	x13, wzr, w14, x15
 # CHECK-NEXT:  1      3     0.25                        smaddl	x16, w17, wzr, x18
-# CHECK-NEXT:  1      3     0.25                        smull	x19, w20, w21
+# CHECK-NEXT:  1      2     0.25                        smull	x19, w20, w21
 # CHECK-NEXT:  1      3     0.25                        smsubl	x3, w5, w2, x9
 # CHECK-NEXT:  1      3     0.25                        smsubl	xzr, w10, w11, x12
 # CHECK-NEXT:  1      3     0.25                        smsubl	x13, wzr, w14, x15
 # CHECK-NEXT:  1      3     0.25                        smsubl	x16, w17, wzr, x18
-# CHECK-NEXT:  1      3     0.25                        smnegl	x19, w20, w21
+# CHECK-NEXT:  1      2     0.25                        smnegl	x19, w20, w21
 # CHECK-NEXT:  1      3     0.25                        umaddl	x3, w5, w2, x9
 # CHECK-NEXT:  1      3     0.25                        umaddl	xzr, w10, w11, x12
 # CHECK-NEXT:  1      3     0.25                        umaddl	x13, wzr, w14, x15
 # CHECK-NEXT:  1      3     0.25                        umaddl	x16, w17, wzr, x18
-# CHECK-NEXT:  1      3     0.25                        umull	x19, w20, w21
+# CHECK-NEXT:  1      2     0.25                        umull	x19, w20, w21
 # CHECK-NEXT:  1      3     0.25                        umsubl	x3, w5, w2, x9
 # CHECK-NEXT:  1      3     0.25                        umsubl	x16, w17, wzr, x18
-# CHECK-NEXT:  1      3     0.25                        umnegl	x19, w20, w21
+# CHECK-NEXT:  1      2     0.25                        umnegl	x19, w20, w21
 # CHECK-NEXT:  1      2     0.25                        smulh	x23, x22, xzr
 # CHECK-NEXT:  1      2     0.25                        umulh	x23, x22, xzr
 # CHECK-NEXT:  1      2     0.25                        mul	x19, x20, xzr
 # CHECK-NEXT:  1      2     0.25                        mneg	w21, w22, w23
-# CHECK-NEXT:  1      3     0.25                        smull	x11, w13, w17
-# CHECK-NEXT:  1      3     0.25                        umull	x11, w13, w17
-# CHECK-NEXT:  1      3     0.25                        smnegl	x11, w13, w17
-# CHECK-NEXT:  1      3     0.25                        umnegl	x11, w13, w17
+# CHECK-NEXT:  1      2     0.25                        smull	x11, w13, w17
+# CHECK-NEXT:  1      2     0.25                        umull	x11, w13, w17
+# CHECK-NEXT:  1      2     0.25                        smnegl	x11, w13, w17
+# CHECK-NEXT:  1      2     0.25                        umnegl	x11, w13, w17
 # CHECK-NEXT:  1      3     0.13                        extr	w3, w5, w7, #0
 # CHECK-NEXT:  1      3     0.13                        extr	w11, w13, w17, #31
 # CHECK-NEXT:  1      3     0.13                        extr	x3, x5, x7, #15
@@ -779,7 +779,7 @@
 # CHECK-NEXT:  1      7     0.25    *                   ldr	d0, #1048572
 # CHECK-NEXT:  1      7     0.25    *                   ldr	q0, #-1048576
 # CHECK-NEXT:  1      5     0.25                  U     prfm	pldl1strm, #0
-# CHECK-NEXT:  1      5     0.25                  U     prfm	#22, #0
+# CHECK-NEXT:  1      5     0.25                  U     prfm	#25, #0
 # CHECK-NEXT:  2      5     0.50    *      *      U     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  2      5     0.50    *      *      U     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  2      5     0.50    *      *      U     stxr	w5, w6, [x17]
@@ -2055,7 +2055,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldr	d0, #1048572
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldr	q0, #-1048576
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     prfm	pldl1strm, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     prfm	#22, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     prfm	#25, #0
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     0.25   0.25   0.75   0.75    -      -      -      -      -      -      -      -      -      -      -      -      -      -     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     0.25   0.25   0.75   0.75    -      -      -      -      -      -      -      -      -      -      -      -      -      -     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     0.25   0.25   0.75   0.75    -      -      -      -      -      -      -      -      -      -      -      -      -      -     stxr	w5, w6, [x17]

@@ -769,6 +769,7 @@ def : InstRW<[C1UWrite_1c_1I],
 // Convert floating-point condition flags
 // Flag manipulation instructions
 def : WriteRes<WriteSys, []> { let Latency = 1; }
+def : InstRW<[C1UWrite_1c_1I], (instrs AXFLAG, XAFLAG)>;
 
 // Insert Random Tags
 def : InstRW<[C1UWrite_2c_1M], (instrs IRG, IRGstack)>;
@@ -809,7 +810,7 @@ def : InstRW<[C1UWrite_MAOrMul, ReadIM, ReadIM, C1URd_MA],
              (instregex "^M(ADD|SUB)[WX]rrr$")>;
 
 // Multiply accumulate long
-def : InstRW<[C1UWr_MA, ReadIM, ReadIM, C1URd_MA],
+def : InstRW<[C1UWrite_MAOrMul, ReadIM, ReadIM, C1URd_MA],
              (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
 
 // Multiply high
@@ -2083,7 +2084,7 @@ def : InstRW<[C1UWrite_10c_10V0], (instrs FADDA_VPZ_H)>;
 def : InstRW<[C1UWrite_6c_6V0], (instrs FADDA_VPZ_S)>;
 
 // Floating point associative add, F64
-def : InstRW<[C1UWrite_4c_1V], (instrs FADDA_VPZ_D)>;
+def : InstRW<[C1UWrite_4c_2V], (instrs FADDA_VPZ_D)>;
 
 // Floating point compare
 def : InstRW<[C1UWrite_2c_1V0], (instregex "^FACG[ET]_PPzZZ_[HSD]",
