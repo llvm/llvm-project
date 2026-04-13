@@ -9,8 +9,17 @@
 # See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 #
 # ------------------------------------------------------------------------------
-import lldbsuite.test.lldbinline as lldbinline
+"""
+Test Foundation.URL summary strings.
+"""
+
+import lldb
+import sys
+
+from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
+
 
 class TestCase(TestBase):
     @expectedFailureAll(archs=["arm64_32"], bugnumber="<rdar://problem/58065423>")

@@ -11,13 +11,13 @@
 // -----------------------------------------------------------------------------
 import Foundation
 
-func main() {
-  var url = URL(string: "http://www.apple.com")!
-  print("done!") //% self.expect("frame variable url", substrs=['www.apple.com'])
-   //% self.expect("expression -d run -- url", substrs=['www.apple.com'])
-}
-
 var g_url = URL(string: "http://www.apple.com")!
 
-main() //% self.expect("target variable g_url", substrs=['www.apple.com'])
-       //% self.expect("expression -d run -- g_url", substrs=['www.apple.com'])
+func main() {
+  let url = URL(string: "https://www.example.com/path?query#fragment")
+  let relativeURL = URL(string: "relative", relativeTo: URL(string: "https://www.example.com/"))
+
+  print("break here")
+}
+
+main()
