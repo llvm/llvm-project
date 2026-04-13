@@ -10029,6 +10029,20 @@ defm : St1LanePost128Pat<post_store, VectorIndexD, v2f64, f64, ST1i64_POST, 8>;
 defm : St1LanePost128Pat<post_store, VectorIndexH, v8f16, f16, ST1i16_POST, 2>;
 defm : St1LanePost128Pat<post_store, VectorIndexH, v8bf16, bf16, ST1i16_POST, 2>;
 
+let AddedComplexity = 19 in
+class St1Lane128SubvecPat<ValueType VTy, ComplexPattern extract_high>
+  : Pat<(store (extract_high (VTy V128:$Vt)), GPR64sp:$Rn),
+        (ST1i64 V128:$Vt, 1, GPR64sp:$Rn)>;
+
+def : St1Lane128SubvecPat<v16i8, extract_high_v16i8>;
+def : St1Lane128SubvecPat<v8i16, extract_high_v8i16>;
+def : St1Lane128SubvecPat<v4i32, extract_high_v4i32>;
+def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
+def : St1Lane128SubvecPat<v8f16, extract_high_v8f16>;
+def : St1Lane128SubvecPat<v8bf16, extract_high_v8bf16>;
+def : St1Lane128SubvecPat<v4f32, extract_high_v4f32>;
+def : St1Lane128SubvecPat<v2f64, extract_high_v2f64>;
+
 let mayStore = 1, hasSideEffects = 0 in {
 defm ST2 : SIMDStSingleB<1, 0b000,       "st2", VecListTwob,   GPR64pi2>;
 defm ST2 : SIMDStSingleH<1, 0b010, 0,    "st2", VecListTwoh,   GPR64pi4>;
