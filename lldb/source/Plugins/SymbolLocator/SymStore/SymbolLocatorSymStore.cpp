@@ -122,15 +122,15 @@ SymbolLocator *SymbolLocatorSymStore::CreateInstance() {
 
 namespace {
 
-SymbolLocatorSymStore::LookupEntry make_lookup_entry(llvm::StringRef source) {
+SymbolLocatorSymStore::LookupEntry MakeLookupEntry(llvm::StringRef source) {
   SymbolLocatorSymStore::LookupEntry entry;
   entry.source = source.str();
   entry.cache = std::nullopt;
   return entry;
 }
 
-SymbolLocatorSymStore::LookupEntry make_lookup_entry(llvm::StringRef source,
-                                                     llvm::StringRef cache) {
+SymbolLocatorSymStore::LookupEntry MakeLookupEntry(llvm::StringRef source,
+                                                   llvm::StringRef cache) {
   SymbolLocatorSymStore::LookupEntry entry;
   entry.source = source.str();
   entry.cache = cache.str();
@@ -141,7 +141,7 @@ std::vector<SymbolLocatorSymStore::LookupEntry> getGlobalLookupOrder() {
   std::vector<SymbolLocatorSymStore::LookupEntry> result;
 
   for (const auto &url : GetGlobalPluginProperties().GetURLs())
-    result.push_back(make_lookup_entry(url.ref()));
+    result.push_back(MakeLookupEntry(url.ref()));
 
   const char *sym_path = std::getenv("_NT_SYMBOL_PATH");
   for (auto entry : SymbolLocatorSymStore::ParseEnvSymbolPaths(sym_path))
@@ -160,9 +160,9 @@ ParseSrvEntry(llvm::StringRef entry) {
   entry.trim().split(parts, '*');
   switch (parts.size()) {
   case 2:
-    return make_lookup_entry(parts[1]);
+    return MakeLookupEntry(parts[1]);
   case 3:
-    return make_lookup_entry(parts[2], parts[1]);
+    return MakeLookupEntry(parts[2], parts[1]);
   default:
     return {}; // Ignore entries with invalid number of parts.
   }
@@ -452,7 +452,7 @@ SymbolLocatorSymStore::ParseEnvSymbolPaths(llvm::StringRef val) {
     }
 
     // Plain local paths aren't cached.
-    result.push_back(make_lookup_entry(entry));
+    result.push_back(MakeLookupEntry(entry));
   }
 
   return result;
