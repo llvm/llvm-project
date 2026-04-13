@@ -971,7 +971,7 @@ void DumpModuleInfoAction::ExecuteAction() {
       if (!Primary->Exports.empty())
         Out << "   Exports:\n";
       for (unsigned MN = 0, N = Primary->Exports.size(); MN != N; ++MN) {
-        if (Module *M = Primary->Exports[MN].getPointer()) {
+        if (Module *M = Primary->Exports[MN].first) {
           PrintSubMapEntry(M->Name, M->Kind);
         }
       }

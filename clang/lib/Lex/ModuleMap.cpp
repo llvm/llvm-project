@@ -1626,7 +1626,7 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
   Mod->UnresolvedExports.clear();
   for (auto &UE : Unresolved) {
     Module::ExportDecl Export = resolveExport(Mod, UE, Complain);
-    if (Export.getPointer() || Export.getInt())
+    if (Export.first || Export.second)
       Mod->Exports.push_back(Export);
     else
       Mod->UnresolvedExports.push_back(UE);

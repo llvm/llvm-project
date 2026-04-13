@@ -3208,8 +3208,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
       for (const auto &E : Mod->Exports) {
         // FIXME: This may fail; we don't require that all exported modules
         // are local or imported.
-        Record.push_back(getSubmoduleID(E.getPointer()));
-        Record.push_back(E.getInt());
+        Record.push_back(getSubmoduleID(E.first));
+        Record.push_back(E.second);
       }
       Stream.EmitRecord(SUBMODULE_EXPORTS, Record);
     }

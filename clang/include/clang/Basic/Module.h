@@ -562,7 +562,7 @@ public:
   ///
   /// The pointer is the module being re-exported, while the bit will be true
   /// to indicate that this is a wildcard export.
-  using ExportDecl = llvm::PointerIntPair<Module *, 1, bool>;
+  using ExportDecl = std::pair<Module *, bool>;
 
   /// The set of export declarations.
   SmallVector<ExportDecl, 2> Exports;
