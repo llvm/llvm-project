@@ -41,7 +41,7 @@ constexpr bool test() {
 }
 
 // Test P2447R4 "Annex C examples"
-// P2447R4 was revert by P4144R1, so we only test the "old" behavior
+// P2447R4 was reverted by P4144R1, so we only test the "old" behavior.
 
 constexpr int three(std::span<void* const> sp) { return static_cast<int>(sp.size()); }
 
