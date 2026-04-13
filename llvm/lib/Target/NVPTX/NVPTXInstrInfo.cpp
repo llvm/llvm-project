@@ -205,3 +205,169 @@ bool NVPTXInstrInfo::reverseBranchCondition(
   Cond[1].setImm(!Cond[1].getImm());
   return false;
 }
+
+bool NVPTXInstrInfo::invertPredicateBranchInstr(MachineBasicBlock &MBB) const {
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  if (analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return false;
+  if (Cond.empty())
+    return false;
+  if (reverseBranchCondition(Cond))
+    return false;
+  DebugLoc DL = MBB.findBranchDebugLoc();
+  removeBranch(MBB);
+  insertBranch(MBB, TBB, FBB, Cond, DL);
+  return true;
+}
+
+static bool isIntegerSetp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case NVPTX::SETP_i16rr:
+  case NVPTX::SETP_i16ri:
+  case NVPTX::SETP_i16ir:
+  case NVPTX::SETP_i32rr:
+  case NVPTX::SETP_i32ri:
+  case NVPTX::SETP_i32ir:
+  case NVPTX::SETP_i64rr:
+  case NVPTX::SETP_i64ri:
+  case NVPTX::SETP_i64ir:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isScalarFloatSetp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case NVPTX::SETP_bf16rr:
+  case NVPTX::SETP_f16rr:
+  case NVPTX::SETP_f32rr:
+  case NVPTX::SETP_f32ri:
+  case NVPTX::SETP_f32ir:
+  case NVPTX::SETP_f64rr:
+  case NVPTX::SETP_f64ri:
+  case NVPTX::SETP_f64ir:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static int64_t invertIntegerCmpMode(int64_t Mode) {
+  switch (Mode) {
+  case NVPTX::PTXCmpMode::EQ:
+    return NVPTX::PTXCmpMode::NE;
+  case NVPTX::PTXCmpMode::NE:
+    return NVPTX::PTXCmpMode::EQ;
+  case NVPTX::PTXCmpMode::LT:
+    return NVPTX::PTXCmpMode::GE;
+  case NVPTX::PTXCmpMode::LE:
+    return NVPTX::PTXCmpMode::GT;
+  case NVPTX::PTXCmpMode::GT:
+    return NVPTX::PTXCmpMode::LE;
+  case NVPTX::PTXCmpMode::GE:
+    return NVPTX::PTXCmpMode::LT;
+  case NVPTX::PTXCmpMode::LTU:
+    return NVPTX::PTXCmpMode::GEU;
+  case NVPTX::PTXCmpMode::LEU:
+    return NVPTX::PTXCmpMode::GTU;
+  case NVPTX::PTXCmpMode::GTU:
+    return NVPTX::PTXCmpMode::LEU;
+  case NVPTX::PTXCmpMode::GEU:
+    return NVPTX::PTXCmpMode::LTU;
+  default:
+    llvm_unreachable("Invalid integer comparison mode");
+  }
+}
+
+static int64_t invertScalarFloatCmpMode(int64_t Mode) {
+  switch (Mode) {
+  case NVPTX::PTXCmpMode::EQ:
+    return NVPTX::PTXCmpMode::NEU;
+  case NVPTX::PTXCmpMode::NE:
+    return NVPTX::PTXCmpMode::EQU;
+  case NVPTX::PTXCmpMode::EQU:
+    return NVPTX::PTXCmpMode::NE;
+  case NVPTX::PTXCmpMode::NEU:
+    return NVPTX::PTXCmpMode::EQ;
+  case NVPTX::PTXCmpMode::LT:
+    return NVPTX::PTXCmpMode::GEU;
+  case NVPTX::PTXCmpMode::LE:
+    return NVPTX::PTXCmpMode::GTU;
+  case NVPTX::PTXCmpMode::GT:
+    return NVPTX::PTXCmpMode::LEU;
+  case NVPTX::PTXCmpMode::GE:
+    return NVPTX::PTXCmpMode::LTU;
+  case NVPTX::PTXCmpMode::LTU:
+    return NVPTX::PTXCmpMode::GE;
+  case NVPTX::PTXCmpMode::LEU:
+    return NVPTX::PTXCmpMode::GT;
+  case NVPTX::PTXCmpMode::GTU:
+    return NVPTX::PTXCmpMode::LE;
+  case NVPTX::PTXCmpMode::GEU:
+    return NVPTX::PTXCmpMode::LT;
+  case NVPTX::PTXCmpMode::NUM:
+    return NVPTX::PTXCmpMode::NotANumber;
+  case NVPTX::PTXCmpMode::NotANumber:
+    return NVPTX::PTXCmpMode::NUM;
+  default:
+    llvm_unreachable("Invalid scalar float comparison mode");
+  }
+}
+
+static void invertScalarCompareInstr(MachineInstr &MI) {
+  MachineOperand &ModeOp = MI.getOperand(3);
+
+  if (isIntegerSetp(MI))
+    ModeOp.setImm(invertIntegerCmpMode(ModeOp.getImm()));
+  else if (isScalarFloatSetp(MI))
+    ModeOp.setImm(invertScalarFloatCmpMode(ModeOp.getImm()));
+  else
+    llvm_unreachable("Invalid SETP instruction");
+}
+
+bool NVPTXInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
+                                           unsigned &SrcOpIdx1,
+                                           unsigned &SrcOpIdx2) const {
+  if (isIntegerSetp(MI) || isScalarFloatSetp(MI))
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+}
+
+MachineInstr *NVPTXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
+                                                     bool NewMI,
+                                                     unsigned OpIdx1,
+                                                     unsigned OpIdx2) const {
+  assert(!NewMI && "this should never be used");
+
+  if (!isIntegerSetp(MI) && !isScalarFloatSetp(MI))
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+
+  invertScalarCompareInstr(MI);
+
+  // For now all users must be invertible conditional branches.
+  // TODO: Support other users such as selects.
+  bool AllInverted = true;
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  for (MachineInstr &UseMI :
+       MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+    if (!(UseMI.isConditionalBranch() &&
+          invertPredicateBranchInstr(*UseMI.getParent()))) {
+      AllInverted = false;
+      break;
+    }
+  }
+
+  if (!AllInverted) {
+    for (MachineInstr &UseMI :
+         MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+      if (!(UseMI.isConditionalBranch() &&
+            invertPredicateBranchInstr(*UseMI.getParent())))
+        break;
+    }
+    invertScalarCompareInstr(MI);
+    return nullptr;
+  }
+  return &MI;
+}
