@@ -1086,39 +1086,33 @@ TEST(GSYMTest, TestHeaderV2EncodeErrors) {
 
 TEST(GSYMTest, TestHeaderV2DecodeErrors) {
   const llvm::endianness ByteOrder = llvm::endianness::little;
-  // Encode a valid V2 header, then mutate raw bytes to test decode errors.
-  HeaderV2 H;
-  InitHeaderV2(H);
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
+  HeaderV2 H;
+  InitHeaderV2(H);
   llvm::Error Err = H.encode(FW);
   ASSERT_FALSE(Err);
-  // V2 header layout (little-endian):
-  //   offset 0: Magic (4 bytes)
-  //   offset 4: Version (2 bytes)
-  //   offset 6: AddrOffSize (1 byte)
-  //   offset 7: StrTableEncoding (1 byte)
-  //   offset 8: BaseAddress (8 bytes)
-  //   offset 16: NumAddresses (4 bytes)
-  std::string Bytes(OutStrm.str());
-  // Bad magic.
-  Bytes[0] = 0x0c;
-  Bytes[1] = 0;
-  Bytes[2] = 0;
-  Bytes[3] = 0;
-  TestHeaderDecodeError<HeaderV2>(Bytes, "invalid GSYM magic 0x0000000c");
-  // Restore magic, set bad version.
+  // bad magic
+  FW.fixup32(12, offsetof(HeaderV2, Magic));
+  TestHeaderDecodeError<HeaderV2>(OutStrm.str(),
+                                  "invalid GSYM magic 0x0000000c");
   FW.fixup32(GSYM_MAGIC, 0);
-  Bytes = std::string(OutStrm.str());
-  Bytes[4] = 12;
-  Bytes[5] = 0;
-  TestHeaderDecodeError<HeaderV2>(Bytes, "unsupported GSYM version 12");
-  // Restore version, set bad AddrOffSize.
-  Bytes = std::string(OutStrm.str());
-  Bytes[6] = 12;
-  TestHeaderDecodeError<HeaderV2>(Bytes, "invalid address offset size 12");
-  // Test truncated data.
+  // bad version
+  FW.fixup32(12, offsetof(HeaderV2, Version));
+  TestHeaderDecodeError<HeaderV2>(OutStrm.str(), "unsupported GSYM version 12");
+  FW.fixup32(HeaderV2::getVersion(), offsetof(HeaderV2, Version));
+  // bad address offset size
+  FW.fixup32(12, offsetof(HeaderV2, AddrOffSize));
+  TestHeaderDecodeError<HeaderV2>(OutStrm.str(),
+                                  "invalid address offset size 12");
+  FW.fixup32(8, offsetof(HeaderV2, AddrOffSize));
+  // bad string table encoding
+  FW.fixup32(12, offsetof(HeaderV2, StrTableEncoding));
+  TestHeaderDecodeError<HeaderV2>(OutStrm.str(),
+                                  "unsupported string table encoding 12");
+  FW.fixup32(1, offsetof(HeaderV2, StrTableEncoding));
+  // truncated header
   TestHeaderDecodeError<HeaderV2>(StringRef("short"),
                                   "not enough data for a gsym::HeaderV2");
 }
