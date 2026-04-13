@@ -167,6 +167,16 @@ define float @ret_powi_f32_finite_exp_one(float nofpclass(inf) %arg0) #0 {
   ret float %call
 }
 
+define float @ret_powi_f32_finite_exp_two(float nofpclass(nan inf) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_powi_f32_finite_exp_two
+; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(nan inf) [[ARG0]], i32 noundef 2) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 2)
+  ret float %call
+}
+
 define float @ret_powi_f32_normal_exp_neg_one(float nofpclass(inf zero sub) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_powi_f32_normal_exp_neg_one
 ; CHECK-SAME: (float nofpclass(inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
