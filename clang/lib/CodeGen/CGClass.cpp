@@ -1580,6 +1580,10 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
       // getOrCreateMSVCGlobalDeleteWrapper for details.
       llvm::Constant *GlobalDeleteWrapper = getOrCreateMSVCGlobalDeleteWrapper(
           CGF.CGM, Dtor->getGlobalArrayOperatorDelete());
+      // For dllexport classes, emit forwarding bodies since the dtor is
+      // exported and another TU may not provide the forwarding body.
+      if (Dtor->hasAttr<DLLExportAttr>())
+        CGF.CGM.noteDirectGlobalDelete();
       CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
                          CGF.getContext().getCanonicalTagType(ClassDecl),
                          numElements, cookieSize, GlobalDeleteWrapper);
@@ -1843,6 +1847,10 @@ void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
     // getOrCreateMSVCGlobalDeleteWrapper for details.
     llvm::Constant *GlobalDeleteWrapper =
         getOrCreateMSVCGlobalDeleteWrapper(CGF.CGM, GlobOD);
+    // For dllexport classes, emit forwarding bodies since the dtor is
+    // exported and another TU may not provide the forwarding body.
+    if (Dtor->hasAttr<DLLExportAttr>())
+      CGF.CGM.noteDirectGlobalDelete();
     EmitDeleteAndGoToEnd(GlobOD, GlobalDeleteWrapper);
     CGF.EmitBlock(ClassDelete);
   }
