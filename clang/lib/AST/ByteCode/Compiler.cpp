@@ -8074,7 +8074,7 @@ unsigned Compiler<Emitter>::countHLSLFlatElements(QualType Ty) {
     return Count;
   }
   // Scalar primitive types contribute one element.
-  if (classify(Ty))
+  if (canClassify(Ty))
     return 1;
   return 0;
 }
