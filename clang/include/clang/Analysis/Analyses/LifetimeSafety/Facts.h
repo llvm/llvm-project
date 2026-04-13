@@ -55,8 +55,7 @@ public:
     OriginEscapes,
     /// An origin is invalidated (e.g. vector resized).
     InvalidateOrigin,
-    /// All loans are cleared from an origin (e.g., assigning a callable without
-    /// tracked origins to std::function).
+    /// All loans of an origin are cleared.
     KillOrigin,
   };
 
@@ -319,6 +318,8 @@ public:
             const OriginManager &) const override;
 };
 
+/// All loans are cleared from an origin (e.g., assigning a callable without
+/// tracked origins to std::function).
 class KillOriginFact : public Fact {
   OriginID OID;
 
