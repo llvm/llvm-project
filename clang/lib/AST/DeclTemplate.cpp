@@ -1906,16 +1906,14 @@ SourceLocation ExplicitInstantiationDecl::getTemplateArgsRAngleLoc() const {
 }
 
 SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
-  SourceLocation End = NameLoc;
+  // For func/var templates with postfix type syntax (arrays, functions),
+  // the type extends past the name, so use the type's end location.
+  if (auto *TSI = getTypeAsWritten())
+    if (TSI->getType().hasPostfixDeclaratorSyntax())
+      return TSI->getTypeLoc().getEndLoc();
+  // Otherwise, template args RAngleLoc or NameLoc.
   SourceLocation RAngle = getTemplateArgsRAngleLoc();
-  if (RAngle.isValid() && RAngle > End)
-    End = RAngle;
-  if (auto *TSI = getTypeAsWritten()) {
-    SourceLocation TypeEnd = TSI->getTypeLoc().getEndLoc();
-    if (TypeEnd.isValid() && TypeEnd > End)
-      End = TypeEnd;
-  }
-  return End;
+  return RAngle.isValid() ? RAngle : NameLoc;
 }
 
 SourceRange ExplicitInstantiationDecl::getSourceRange() const {
