@@ -3380,10 +3380,11 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
 
-TaskloopOp TaskloopContextOp::getLoopOp() {
-  return cast<TaskloopOp>(
-      *llvm::find_if(getRegion().front(),
-                     [](mlir::Operation &op) { return isa<TaskloopOp>(op); }));
+TaskloopWrapperOp TaskloopContextOp::getLoopOp() {
+  return cast<TaskloopWrapperOp>(
+      *llvm::find_if(getRegion().front(), [](mlir::Operation &op) {
+        return isa<TaskloopWrapperOp>(op);
+      }));
 }
 
 LogicalResult TaskloopContextOp::verify() {
@@ -3420,37 +3421,39 @@ LogicalResult TaskloopContextOp::verifyRegions() {
   if (region.empty())
     return emitOpError() << "expected non-empty region";
 
-  auto count = llvm::count_if(
-      region.front(), [](mlir::Operation &op) { return isa<TaskloopOp>(op); });
+  auto count = llvm::count_if(region.front(), [](mlir::Operation &op) {
+    return isa<TaskloopWrapperOp>(op);
+  });
   if (count != 1)
-    return emitOpError() << "expected exactly 1 TaskloopOp directly nested in "
-                            "the region, but "
-                         << count << " were found";
+    return emitOpError()
+           << "expected exactly 1 TaskloopWrapperOp directly nested in "
+              "the region, but "
+           << count << " were found";
 
   return success();
 }
 
 //===----------------------------------------------------------------------===//
-// TaskloopOp
+// TaskloopWrapperOp
 //===----------------------------------------------------------------------===//
 
-void TaskloopOp::build(OpBuilder &builder, OperationState &state,
-                       [[maybe_unused]] const TaskloopOperands &clauses) {
-  TaskloopOp::build(builder, state);
+void TaskloopWrapperOp::build(OpBuilder &builder, OperationState &state,
+                              const TaskloopWrapperOperands &clauses) {
+  TaskloopWrapperOp::build(builder, state);
 }
 
-TaskloopContextOp TaskloopOp::getTaskloopContext() {
+TaskloopContextOp TaskloopWrapperOp::getTaskloopContext() {
   return dyn_cast<TaskloopContextOp>(getOperation()->getParentOp());
 }
 
-LogicalResult TaskloopOp::verify() {
+LogicalResult TaskloopWrapperOp::verify() {
   TaskloopContextOp context = getTaskloopContext();
   if (!context)
     return emitOpError() << "expected to be nested in a taskloop context op";
   return success();
 }
 
-LogicalResult TaskloopOp::verifyRegions() {
+LogicalResult TaskloopWrapperOp::verifyRegions() {
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -4412,7 +4415,7 @@ LogicalResult CancelOp::verify() {
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
       (!mlir::isa<omp::TaskOp>(structuralParent) &&
-       !mlir::isa<omp::TaskloopOp>(structuralParent->getParentOp()))) {
+       !mlir::isa<omp::TaskloopWrapperOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancel taskgroup must appear "
                          << "inside a task region";
   }
@@ -4454,7 +4457,7 @@ LogicalResult CancellationPointOp::verify() {
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
       (!mlir::isa<omp::TaskOp>(structuralParent) &&
-       !mlir::isa<omp::TaskloopOp>(structuralParent->getParentOp()))) {
+       !mlir::isa<omp::TaskloopWrapperOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancellation point taskgroup must appear "
                          << "inside a task region";
   }

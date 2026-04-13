@@ -3297,16 +3297,16 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
 
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
   firOpBuilder.setInsertionPointToStart(&taskLoopContextOp.getRegion().front());
-  mlir::omp::TaskloopOperands wrapperClauseOps;
+  mlir::omp::TaskloopWrapperOperands wrapperClauseOps;
   EntryBlockArgs wrapperEntryBlockArgs;
-  auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
+  auto taskLoopWrapperOp = genWrapperOp<mlir::omp::TaskloopWrapperOp>(
       converter, loc, wrapperClauseOps, wrapperEntryBlockArgs);
 
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{taskLoopContextOp, taskloopArgs}},
                 llvm::omp::Directive::OMPD_taskloop, dsp);
 
-  firOpBuilder.setInsertionPointAfter(taskLoopOp);
+  firOpBuilder.setInsertionPointAfter(taskLoopWrapperOp);
   mlir::omp::TerminatorOp::create(firOpBuilder, loc);
   return taskLoopContextOp;
 }
@@ -3603,7 +3603,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   return wsloopOp;
 }
 
-static mlir::omp::TaskloopOp genCompositeTaskloopSimd(
+static mlir::omp::TaskloopWrapperOp genCompositeTaskloopSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
