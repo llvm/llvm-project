@@ -1417,7 +1417,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FPOWI: {
-    if ((InterestedClasses & fcNegative) == fcNone)
+    if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
       break;
 
     Register Exp = MI.getOperand(2).getReg();
@@ -1425,9 +1425,22 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownBits ExponentKnownBits = getKnownBits(
         Exp, ExpTy.isVector() ? DemandedElts : APInt(1, 1), Depth + 1);
 
-    if (ExponentKnownBits.Zero[0]) { // Is even
-      Known.knownNot(fcNegative);
-      break;
+    FPClassTest InterestedSrcs = fcNone;
+    if ((InterestedClasses & fcNan) != fcNone)
+      InterestedSrcs |= fcNan;
+    if (!ExponentKnownBits.isZero()) {
+      if ((InterestedClasses & fcInf) != fcNone)
+        InterestedSrcs |= fcFinite | fcInf;
+      if ((InterestedClasses & fcNegative) != fcNone &&
+          !ExponentKnownBits.isEven())
+        InterestedSrcs |= fcNegative;
+    }
+
+    KnownFPClass KnownSrc;
+    if (InterestedSrcs != fcNone) {
+      Register Val = MI.getOperand(1).getReg();
+      computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc,
+                          Depth + 1);
     }
 
     // Given that exp is an integer, here are the
@@ -1438,11 +1451,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     //   pow(-0, exp)   --> -0 if exp is positive odd.
     //   pow(-inf, exp) --> -0 if exp is negative odd.
     //   pow(-inf, exp) --> -inf if exp is positive odd.
-    Register Val = MI.getOperand(1).getReg();
-    KnownFPClass KnownSrc;
-    computeKnownFPClass(Val, DemandedElts, fcNegative, KnownSrc, Depth + 1);
-    if (KnownSrc.isKnownNever(fcNegative))
-      Known.knownNot(fcNegative);
+    Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
     break;
   }
   case TargetOpcode::G_FLDEXP:
