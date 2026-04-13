@@ -2538,3 +2538,20 @@ struct Holder {
   Holder() {}
 };
 } // namespace CXXDefaultInitExprTests
+//===----------------------------------------------------------------------===//
+// Base Class Field Tests
+//===----------------------------------------------------------------------===//
+namespace base_class_fields {
+struct X { int* x; }; // expected-note {{this field dangles}}
+struct Y : X {
+  int* y;
+  void bar() {
+    {
+      int a;
+      x = &a; // expected-warning {{address of stack memory escapes to a field}}
+    }
+    (void)x;
+  }
+};
+} // namespace base_class_fields
+
