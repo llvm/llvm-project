@@ -306,6 +306,8 @@ add_fp_unittest(
     libc.src.__support.math.ddivl
     libc.src.__support.math.dmulf128
     libc.src.__support.math.dmull
+    libc.src.__support.math.dsubf128
+    libc.src.__support.math.dsubl
     libc.src.__support.math.floor
     libc.src.__support.math.floorbf16
     libc.src.__support.math.floorf
