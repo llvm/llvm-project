@@ -263,7 +263,7 @@ def SPIRV_INTELMaskedGatherOp : SPIRV_IntelVendorOp<"MaskedGather",
                       ".getPointeeType())">,
      TypesMatchWith<"mask must be a vector of i1 matching result shape",
                     "result", "mask",
-                    "getUnaryOpResultType($_self)">]> {
+                    "getMatchingBoolType($_self)">]> {
   let summary = "Gather values from memory using a vector of pointers and a mask";
 
   let description = [{
@@ -332,7 +332,7 @@ def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter",
                       ".getPointeeType())">,
      TypesMatchWith<"mask must be a vector of i1 matching input shape",
                     "input_vector", "mask",
-                    "getUnaryOpResultType($_self)">]> {
+                    "getMatchingBoolType($_self)">]> {
   let summary = "Scatter values to memory using a vector of pointers and a mask";
 
   let description = [{

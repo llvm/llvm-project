@@ -70,7 +70,7 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
       %alignment : i32,
       %mask : vector<4xi1>,
       %fill : vector<4xf32>) "None" {
-    // CHECK: spirv.INTEL.MaskedGather
+    // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32> -> vector<4xf32>
     %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
          : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
            vector<4xi1>, vector<4xf32> -> vector<4xf32>
@@ -83,7 +83,7 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
       %alignment : i32,
       %mask : vector<4xi1>,
       %fill : vector<4xi32>) "None" {
-    // CHECK: spirv.INTEL.MaskedGather
+    // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32> -> vector<4xi32>
     %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
          : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
            vector<4xi1>, vector<4xi32> -> vector<4xi32>
@@ -96,7 +96,7 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
       %alignment : i32,
       %mask : vector<4xi1>,
       %values : vector<4xf32>) "None" {
-    // CHECK: spirv.INTEL.MaskedScatter
+    // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32>
     spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
          : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
            vector<4xi1>, vector<4xf32>
@@ -109,7 +109,7 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
       %alignment : i32,
       %mask : vector<4xi1>,
       %values : vector<4xi32>) "None" {
-    // CHECK: spirv.INTEL.MaskedScatter
+    // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32>
     spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
          : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
            vector<4xi1>, vector<4xi32>
