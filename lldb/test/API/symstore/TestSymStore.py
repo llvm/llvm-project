@@ -95,9 +95,10 @@ class HTTPServer:
     Context Manager to serve a local directory tree via HTTP.
     """
 
-    def __init__(self, dir):
+    def __init__(self, dir, handler=None):
         address = ("localhost", 0)  # auto-select free port
-        handler = partial(http.server.SimpleHTTPRequestHandler, directory=dir)
+        if handler is None:
+            handler = partial(http.server.SimpleHTTPRequestHandler, directory=dir)
         self._server = socketserver.ThreadingTCPServer(address, handler)
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
 
@@ -112,6 +113,17 @@ class HTTPServer:
             self._server.server_close()
         if self._thread:
             self._thread.join()
+
+
+class RequestCounter(http.server.SimpleHTTPRequestHandler):
+    requests = 0  # class-level so all instances share one counter
+
+    def __init__(self, *args, directory=None, **kwargs):
+        super().__init__(*args, directory=directory, **kwargs)
+
+    def do_GET(self):
+        RequestCounter.requests += 1
+        super().do_GET()
 
 
 class SymStoreTests(TestBase):
@@ -227,3 +239,17 @@ class SymStoreTests(TestBase):
             self.assertTrue(os.path.isfile(cache_file))
             cached_files = sum(len(f) for _, _, f in os.walk(symstore.cache_dir))
             self.assertEqual(cached_files, 1)
+
+    def test_lookup_order(self):
+        """
+        Check that _NT_SYMBOL_PATH takes precedence over symstore.urls setting.
+        """
+        exe, sym = self.build_inferior()
+        symstore = MockedSymStore(self, exe, sym)
+        RequestCounter.requests = 0
+        with symstore as dir:
+            with HTTPServer(dir, RequestCounter) as url:
+                self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {url}")
+                with NtSymbolPath(dir):
+                    self.try_breakpoint(exe, should_have_loc=True)
+            self.assertEqual(RequestCounter.requests, 0)
