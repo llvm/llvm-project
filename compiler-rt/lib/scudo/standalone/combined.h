@@ -233,8 +233,7 @@ public:
       gwp_asan::segv_handler::installSignalHandlers(
           &GuardedAlloc, Printf,
           gwp_asan::backtrace::getPrintBacktraceFunction(),
-          gwp_asan::backtrace::getSegvBacktraceFunction(),
-          Opt.Recoverable);
+          gwp_asan::backtrace::getSegvBacktraceFunction(), Opt.Recoverable);
 
     GuardedAllocSlotSize =
         GuardedAlloc.getAllocatorState()->maximumAllocationSize();
@@ -1774,7 +1773,22 @@ private:
     }
   }
 
+  void getConfigStats(ScopedString *Str) {
+    const bool MaySupportMemoryTagging =
+        AllocatorConfig::getMaySupportMemoryTagging();
+    const bool QuarantineDisabled = AllocatorConfig::getQuarantineDisabled();
+    const bool ExactUsableSize = AllocatorConfig::getExactUsableSize();
+    Str->append("Config Stats Combined: MaySupportMemoryTagging: %s; "
+                "QuarantineDisabled: %s; ExactUsableSize: %s\n",
+                MaySupportMemoryTagging ? "true" : "false",
+                QuarantineDisabled ? "true" : "false",
+                ExactUsableSize ? "true" : "false");
+  }
+
   uptr getStats(ScopedString *Str) {
+    getConfigStats(Str);
+    Primary.getConfigStats(Str);
+    Secondary.getConfigStats(Str);
     Primary.getStats(Str);
     Secondary.getStats(Str);
     if (!AllocatorConfig::getQuarantineDisabled())

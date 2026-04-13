@@ -113,6 +113,7 @@ public:
   template <typename F> void iterateOverBlocks(F Callback);
 
   void getStats(ScopedString *Str);
+  void getConfigStats(ScopedString *Str);
   void getFragmentationInfo(ScopedString *Str);
   void getMemoryGroupFragmentationInfo(ScopedString *Str);
 
@@ -1097,6 +1098,24 @@ void SizeClassAllocator64<Config>::iterateOverBlocks(F Callback) {
     for (uptr Block = From; Block < To; Block += BlockSize)
       Callback(Block);
   }
+}
+
+template <typename Config>
+void SizeClassAllocator64<Config>::getConfigStats(ScopedString *Str) {
+  const uptr RegionSizeLog = Config::getRegionSizeLog();
+  const uptr GroupSizeLog = Config::getGroupSizeLog();
+  const uptr MapSizeIncrement = Config::getMapSizeIncrement();
+  const bool EnableBlockCache = Config::getEnableBlockCache();
+  const uptr CompactPtrScale = Config::getCompactPtrScale();
+  const bool EnableRandomOffset = Config::getEnableRandomOffset();
+  const bool EnableContiguousRegions = Config::getEnableContiguousRegions();
+  Str->append("Config Stats Primary64: RegionSizeLog: %zu; GroupSizeLog: %zu; "
+              "MapSizeIncrement: %zu; EnableBlockCache: %s; CompactPtrScale: "
+              "%zu; EnableRandomOffset: %s; EnableContiguousRegions: %s\n",
+              RegionSizeLog, GroupSizeLog, MapSizeIncrement,
+              EnableBlockCache ? "true" : "false", CompactPtrScale,
+              EnableRandomOffset ? "true" : "false",
+              EnableContiguousRegions ? "true" : "false");
 }
 
 template <typename Config>

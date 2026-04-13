@@ -142,6 +142,10 @@ public:
     return true;
   }
 
+  void getConfigStats(ScopedString *Str) {
+    Str->append("Secondary Cache Disabled\n");
+  }
+
   void getStats(UNUSED ScopedString *Str) {
     Str->append("Secondary Cache Disabled\n");
   }
@@ -212,6 +216,18 @@ public:
 template <typename Config, void (*unmapCallBack)(MemMapT &) = unmap>
 class MapAllocatorCache {
 public:
+  void getConfigStats(ScopedString *Str) {
+    const u32 EntriesArraySize = Config::getEntriesArraySize();
+    const u32 QuarantineSize = Config::getQuarantineSize();
+    const u32 DefaultMaxEntriesCount = Config::getDefaultMaxEntriesCount();
+    const uptr DefaultMaxEntrySize = Config::getDefaultMaxEntrySize();
+    Str->append("EntriesArraySize: %" PRIu32 "; QuarantineSize: %" PRIu32
+                "; DefaultMaxEntriesCount: %" PRIu32
+                "; DefaultMaxEntrySize: %zu\n",
+                EntriesArraySize, QuarantineSize, DefaultMaxEntriesCount,
+                DefaultMaxEntrySize);
+  }
+
   void getStats(ScopedString *Str) {
     ScopedLock L(Mutex);
     uptr Integral;
@@ -728,6 +744,8 @@ public:
 
   void unmapTestOnly() { Cache.unmapTestOnly(); }
 
+  void getConfigStats(ScopedString *Str);
+
   void getStats(ScopedString *Str);
 
 private:
@@ -950,6 +968,14 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
     MemMapT MemMap = H->MemMap;
     unmap(MemMap);
   }
+}
+
+template <typename Config>
+void MapAllocator<Config>::getConfigStats(ScopedString *Str) EXCLUDES(Mutex) {
+  const bool EnableGuardPages = Config::getEnableGuardPages();
+  Str->append("Config Stats Secondary: EnableGuardPages: %s; ",
+              EnableGuardPages ? "true" : "false");
+  Cache.getConfigStats(Str);
 }
 
 template <typename Config>

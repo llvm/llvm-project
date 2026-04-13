@@ -184,6 +184,20 @@ TEST(ScudoSecondaryTest, Basic) {
   testBasic<scudo::DefaultConfig>();
 }
 
+template <typename Config> static void testConfigStatsBool() {
+  AllocatorInfoType<Config> Info;
+
+  scudo::ScopedString Str;
+  Info.Allocator->getConfigStats(&Str);
+  std::string Output(Str.data());
+  EXPECT_TRUE(Output.find("EnableGuardPages: false") != std::string::npos);
+}
+
+TEST(ScudoSecondaryTest, ConfigStatsBool) {
+  testConfigStatsBool<TestNoCacheNoGuardPageConfig>();
+  testConfigStatsBool<TestCacheNoGuardPageConfig>();
+}
+
 // This exercises a variety of combinations of size and alignment for the
 // MapAllocator. The size computation done here mimic the ones done by the
 // combined allocator.
