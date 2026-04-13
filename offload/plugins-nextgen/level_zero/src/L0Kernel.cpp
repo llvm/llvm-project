@@ -368,14 +368,14 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
                                   uint32_t NumThreads[3],
                                   uint32_t NumBlocks[3]) const {
 
-  bool userDefinedGroups = NumThreads[0] != 0 && NumThreads[1] != 0 &&
-                           NumThreads[2] != 0 && NumBlocks[0] != 0 &&
-                           NumBlocks[1] != 0 && NumBlocks[2] != 0;
+  bool HasUserDefinedGroups = NumThreads[0] != 0 && NumThreads[1] != 0 &&
+                              NumThreads[2] != 0 && NumBlocks[0] != 0 &&
+                              NumBlocks[1] != 0 && NumBlocks[2] != 0;
 
   uint32_t GroupSizes[3];
-  bool GroupParamsReused = false;
+  bool CanReuseParams = false;
 
-  if (userDefinedGroups) {
+  if (HasUserDefinedGroups) {
     KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
     GroupSizes[0] = NumThreads[0];
     GroupSizes[1] = NumThreads[1];
@@ -390,10 +390,10 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
 
     auto &KernelPR = KEnv.KernelPR;
     // Check if we can reuse previous group parameters.
-    GroupParamsReused =
+    CanReuseParams =
         KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
 
-    if (!GroupParamsReused) {
+    if (!CanReuseParams) {
       if (auto Err =
               getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes, KEnv))
         return Err;
@@ -410,7 +410,7 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
        KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
        KEnv.GroupCounts.groupCountZ);
 
-  if (!GroupParamsReused) {
+  if (!CanReuseParams) {
     CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
                       GroupSizes[1], GroupSizes[2]);
   }
