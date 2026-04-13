@@ -162,10 +162,11 @@ constexpr bool test_basic_operations() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class It>() {
     using ConstIt = std::basic_const_iterator<It>;
     ASSERT_SAME_TYPE(typename ConstIt::value_type, int);
+    ASSERT_SAME_TYPE(typename ConstIt::iterator_type, It);
     static_assert(check_category_and_concept<It>());
 
     ASSERT_SAME_TYPE(std::iter_reference_t<ConstIt>, const int&);

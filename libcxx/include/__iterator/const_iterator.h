@@ -92,6 +92,7 @@ class basic_const_iterator : public __basic_const_iterator_category<_Iter> {
   using __rvalue_reference _LIBCPP_NODEBUG = __iter_const_rvalue_reference_t<_Iter>;
 
 public:
+  using iterator_type   = _Iter;
   using value_type      = iter_value_t<_Iter>;
   using difference_type = iter_difference_t<_Iter>;
   // clang-format off
