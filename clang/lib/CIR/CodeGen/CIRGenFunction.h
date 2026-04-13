@@ -127,6 +127,7 @@ public:
   struct FullExprCleanupScope {
     cir::CleanupScopeOp scope;
     size_t deferredCleanupStackSize;
+    EHScopeStack::stable_iterator ehStackDepth;
   };
   llvm::SmallVector<FullExprCleanupScope, 4> fullExprCleanupScopes;
 
@@ -1040,9 +1041,17 @@ public:
   void enterFullExprCleanupScope(const Expr *subExpr);
 
   /// Finalize the current full-expression cleanup scope. Emits any deferred
-  /// conditional cleanups into the scope's cleanup region, then pops the
-  /// entry from fullExprCleanupScopes.
-  void exitFullExprCleanupScope();
+  /// conditional cleanups into the scope's cleanup region, pops EH cleanups
+  /// that were pushed inside the scope, then pops the entry from
+  /// fullExprCleanupScopes.
+  ///
+  /// If \p valuesToReload is non-empty and a CleanupScopeOp was created, the
+  /// pointed-to values are spilled to temporary allocas while the builder is
+  /// still inside the body region, then reloaded after the scope is closed.
+  /// This handles the SSA dominance problem: values defined inside the body
+  /// cannot be referenced after the region is sealed.
+  void exitFullExprCleanupScope(
+      ArrayRef<mlir::Value *> valuesToReload = {});
 
   /// Promote a single pending cleanup entry onto the EH scope stack. If the
   /// entry has a valid activeFlag, the cleanup is configured as conditional.

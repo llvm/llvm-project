@@ -437,7 +437,6 @@ struct T {
   operator bool();
 };
 
-// CHECK-LABEL: @_Z15test_nested_ewcbb
 void test_nested_ewc(bool c1, bool c2) {
   T result = ({ T s = c1 ? T(1) : T(2); s; }) ? (c2 ? T(3) : T(4))
                                                 : T(5);

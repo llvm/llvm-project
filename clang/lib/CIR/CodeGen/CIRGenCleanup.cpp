@@ -107,10 +107,12 @@ void CIRGenFunction::enterFullExprCleanupScope(const Expr *subExpr) {
   }
 
   fullExprCleanupScopes.push_back(
-      {scope, deferredConditionalCleanupStack.size()});
+      {scope, deferredConditionalCleanupStack.size(),
+       ehStack.stable_begin()});
 }
 
-void CIRGenFunction::exitFullExprCleanupScope() {
+void CIRGenFunction::exitFullExprCleanupScope(
+    ArrayRef<mlir::Value *> valuesToReload) {
   assert(!fullExprCleanupScopes.empty() &&
          "exitFullExprCleanupScope without matching enter");
 
@@ -124,25 +126,41 @@ void CIRGenFunction::exitFullExprCleanupScope() {
     return;
   }
 
-  if (hasDeferredCleanups) {
-    // Terminate the body region.
-    mlir::Block &bodyBlock = scope.getBodyRegion().front();
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointToEnd(&bodyBlock);
-      if (bodyBlock.empty() ||
-          !bodyBlock.back().hasTrait<mlir::OpTrait::IsTerminator>())
-        builder.createYield(scope.getLoc());
+  // Spill values that callers need after the scope is closed. The builder is
+  // still inside the body region, so the store dominates the value definition.
+  SmallVector<Address> tempAllocas;
+  for (mlir::Value *valPtr : valuesToReload) {
+    mlir::Value val = *valPtr;
+    if (!val) {
+      tempAllocas.push_back(Address::invalid());
+      continue;
     }
+    Address temp = createDefaultAlignTempAlloca(val.getType(), val.getLoc(),
+                                                "tmp.exprcleanup");
+    tempAllocas.push_back(temp);
+    builder.createStore(val.getLoc(), val, temp);
+  }
 
-    // Emit each deferred cleanup directly into the pre-created scope's
-    // cleanup region rather than going through the EH stack (which would
-    // create a second CleanupScopeOp).
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      mlir::Block &cleanupBlock = scope.getCleanupRegion().front();
-      builder.setInsertionPointToEnd(&cleanupBlock);
+  // Terminate the body region's last block if it lacks a terminator.
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Block &lastBodyBlock = scope.getBodyRegion().back();
+    builder.setInsertionPointToEnd(&lastBodyBlock);
+    if (lastBodyBlock.empty() ||
+        !lastBodyBlock.back().hasTrait<mlir::OpTrait::IsTerminator>())
+      builder.createYield(scope.getLoc());
+  }
 
+  // Fill the cleanup region.
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Block &cleanupBlock = scope.getCleanupRegion().front();
+    builder.setInsertionPointToEnd(&cleanupBlock);
+
+    if (hasDeferredCleanups) {
+      // Emit each deferred cleanup directly into the pre-created scope's
+      // cleanup region rather than going through the EH stack (which would
+      // create a second CleanupScopeOp).
       for (const PendingCleanupEntry &entry : llvm::reverse(llvm::make_range(
                deferredConditionalCleanupStack.begin() + oldSize,
                deferredConditionalCleanupStack.end()))) {
@@ -159,46 +177,28 @@ void CIRGenFunction::exitFullExprCleanupScope() {
           emitDestroy(entry.addr, entry.type, entry.destroyer);
         }
       }
-      builder.createYield(scope.getLoc());
     }
+    builder.createYield(scope.getLoc());
+  }
 
-    deferredConditionalCleanupStack.truncate(oldSize);
-    builder.setInsertionPointAfter(scope);
-  } else if (scope.getBodyRegion().hasOneBlock()) {
-    // The scope was created (because the AST contained a conditional) but no
-    // conditional cleanups were actually deferred. Inline the body back into
-    // the parent block and erase the empty scope.
-    mlir::Block *parentBlock = scope->getBlock();
-    mlir::Block &bodyBlock = scope.getBodyRegion().front();
+  deferredConditionalCleanupStack.truncate(oldSize);
+  builder.setInsertionPointAfter(scope);
 
-    if (!bodyBlock.empty() && mlir::isa<cir::YieldOp>(bodyBlock.back()))
-      bodyBlock.back().erase();
+  // Reload spilled values now that the builder is after the closed scope.
+  for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
+    if (!addr.isValid())
+      continue;
+    *valPtr = builder.createLoad(valPtr->getLoc(), addr);
+  }
 
-    mlir::Block::iterator afterScope = std::next(scope->getIterator());
-    parentBlock->getOperations().splice(scope->getIterator(),
-                                        bodyBlock.getOperations());
-    scope->erase();
-    builder.setInsertionPoint(parentBlock, afterScope);
-  } else {
-    // Multi-block body (e.g. from throw splitting inside a ternary). Can't
-    // inline safely because block references would dangle. Terminate the last
-    // block and keep the scope for later passes.
-    mlir::Block &lastBodyBlock = scope.getBodyRegion().back();
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointToEnd(&lastBodyBlock);
-      if (lastBodyBlock.empty() ||
-          !lastBodyBlock.back().hasTrait<mlir::OpTrait::IsTerminator>())
-        builder.createYield(scope.getLoc());
-    }
-    // Terminate the cleanup region too.
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      mlir::Block &cleanupBlock = scope.getCleanupRegion().front();
-      builder.setInsertionPointToEnd(&cleanupBlock);
-      builder.createYield(scope.getLoc());
-    }
-    builder.setInsertionPointAfter(scope);
+  // Pop any EH cleanups that were pushed inside the full-expression scope
+  // (e.g. temporary destructors). We do this here rather than leaving it to
+  // RunCleanupsScope so we can preserve the builder position after the scope;
+  // ehStack.popCleanup repositions the builder inside the (now closed) body.
+  if (ehStack.stable_begin() != current.ehStackDepth) {
+    mlir::OpBuilder::InsertPoint saved = builder.saveInsertionPoint();
+    popCleanupBlocks(current.ehStackDepth);
+    builder.restoreInsertionPoint(saved);
   }
 }
 
