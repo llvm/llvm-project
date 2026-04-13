@@ -226,7 +226,7 @@ struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
         builder, loc, errorFunc.getFunctionType(), failImageOp);
     fir::CallOp::create(builder, loc, failImageFunc, args3);
 
-    // Intialize the multi-image parallel environment
+    // Initialize the multi-image parallel environment
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
         /*inputs*/ {builder.getRefType(i32Ty)}, /*results*/ {});

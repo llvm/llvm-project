@@ -242,13 +242,18 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
     case 'u':
     case 'o':
     case 'x':
-    case 'X':
-    case 'c': {
+    case 'X': {
       // FIXME: The format specifiers "b" and "B" are not implemented here
       // since currently MSVC doesn't support it.
       std::string HostFmt = CleanChunk + "ll" + Specifier;
       OS << format(HostFmt.c_str(), static_cast<unsigned long long>(
                                         Arg.asInteger().getZExtValue()));
+      break;
+    }
+    case 'c': {
+      std::string HostFmt = CleanChunk + Specifier;
+      OS << format(HostFmt.c_str(),
+                   static_cast<int>(Arg.asInteger().getZExtValue()));
       break;
     }
     case 'f':
