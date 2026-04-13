@@ -1301,6 +1301,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.ignore_handler_s
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc
     libc.src.stdlib.quick_exit
@@ -1439,7 +1440,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.wcsnrtombs
 
     # nl_types.h entrypoints
-    libc.src.nl_types.catopen 
+    libc.src.nl_types.catopen
     libc.src.nl_types.catclose
     libc.src.nl_types.catgets
   )
