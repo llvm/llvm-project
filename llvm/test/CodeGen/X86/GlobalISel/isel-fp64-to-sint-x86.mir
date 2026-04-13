@@ -122,10 +122,9 @@ body:             |
     ; GISEL-X86-LABEL: name: test_double_to_int8
     ; GISEL-X86: [[DEF:%[0-9]+]]:rfp64 = IMPLICIT_DEF
     ; GISEL-X86-NEXT: FP64_TO_INT16_IN_MEM %stack.0, 1, $noreg, 0, $noreg, [[DEF]], implicit-def dead $eflags :: (store (s16) into %stack.0)
-    ; GISEL-X86-NEXT: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm %stack.0, 1, $noreg, 0, $noreg :: (load (s16) from %stack.0)
-    ; GISEL-X86-NEXT: [[COPY:%[0-9]+]]:gr16_abcd = COPY [[MOV16rm]]
-    ; GISEL-X86-NEXT: [[COPY1:%[0-9]+]]:gr8_abcd_l = COPY [[COPY]].sub_8bit
-    ; GISEL-X86-NEXT: $al = COPY [[COPY1]]
+    ; GISEL-X86-NEXT: [[MOV16rm:%[0-9]+]]:gr16_abcd = MOV16rm %stack.0, 1, $noreg, 0, $noreg :: (load (s16) from %stack.0)
+    ; GISEL-X86-NEXT: [[COPY:%[0-9]+]]:gr8_abcd_l = COPY [[MOV16rm]].sub_8bit
+    ; GISEL-X86-NEXT: $al = COPY [[COPY]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
     %0:_(s64) = IMPLICIT_DEF
     %4:_(p0) = G_FRAME_INDEX %stack.0

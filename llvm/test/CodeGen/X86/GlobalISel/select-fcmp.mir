@@ -165,16 +165,15 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_oeq
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-    ; CHECK: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
-    ; CHECK: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
-    ; CHECK: $al = COPY [[AND8rr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
+    ; CHECK-NEXT: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; CHECK-NEXT: $al = COPY [[AND8rr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -205,14 +204,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_ogt
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -243,14 +241,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_oge
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -281,14 +278,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_olt
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY3]], [[COPY1]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY1]], [[COPY]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -319,14 +315,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_ole
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY3]], [[COPY1]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY1]], [[COPY]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -357,14 +352,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_one
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -395,14 +389,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_ord
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -433,14 +426,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_uno
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -471,14 +463,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_ueq
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -509,14 +500,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_ugt
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY3]], [[COPY1]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY1]], [[COPY]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -547,14 +537,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_uge
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY3]], [[COPY1]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY1]], [[COPY]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -585,14 +574,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_ult
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -623,14 +611,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_ule
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -661,16 +648,15 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_float_une
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
-    ; CHECK: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
-    ; CHECK: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
-    ; CHECK: $al = COPY [[OR8rr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISSrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
+    ; CHECK-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
+    ; CHECK-NEXT: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; CHECK-NEXT: $al = COPY [[OR8rr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -701,16 +687,15 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_oeq
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-    ; CHECK: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
-    ; CHECK: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
-    ; CHECK: $al = COPY [[AND8rr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
+    ; CHECK-NEXT: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; CHECK-NEXT: $al = COPY [[AND8rr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -741,14 +726,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_ogt
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -779,14 +763,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_oge
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -817,14 +800,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_olt
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY3]], [[COPY1]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY1]], [[COPY]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -855,14 +837,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_ole
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY3]], [[COPY1]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY1]], [[COPY]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -893,14 +874,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_one
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -931,14 +911,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_ord
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -969,14 +948,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_uno
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -1007,14 +985,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_ueq
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -1045,14 +1022,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_ugt
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY3]], [[COPY1]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY1]], [[COPY]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -1083,14 +1059,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_uge
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY3]], [[COPY1]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY1]], [[COPY]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -1121,14 +1096,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_ult
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -1159,14 +1133,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_ule
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
-    ; CHECK: $al = COPY [[SETCCr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
+    ; CHECK-NEXT: $al = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1
@@ -1197,16 +1170,15 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_double_une
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
-    ; CHECK: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
-    ; CHECK: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
-    ; CHECK: $al = COPY [[OR8rr]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
+    ; CHECK-NEXT: UCOMISDrr [[COPY]], [[COPY1]], implicit-def $eflags, implicit $mxcsr
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
+    ; CHECK-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
+    ; CHECK-NEXT: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; CHECK-NEXT: $al = COPY [[OR8rr]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
     %0:vecr(s64) = G_TRUNC %2(s128)
     %3:vecr(s128) = COPY $xmm1

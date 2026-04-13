@@ -19,12 +19,12 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: implicit_def
-    ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[DEF]], [[DEF]]
-    ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
-    %0(i32) = G_IMPLICIT_DEF
-    %1(i32) = G_ADD %0, %0
-    $w0 = COPY %1(i32)
+    ; CHECK: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[DEF]], [[DEF]]
+    ; CHECK-NEXT: $w0 = COPY [[ADD]](s32)
+    %0(s32) = G_IMPLICIT_DEF
+    %1(s32) = G_ADD %0, %0
+    $w0 = COPY %1(s32)
 ...
 ---
 name:            implicit_def_copy
@@ -38,9 +38,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: implicit_def_copy
     ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY [[DEF]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY]]
-    %0(i32) = G_IMPLICIT_DEF
-    %1(i32) = COPY %0(i32)
-    $w0 = COPY %1(i32)
+    ; CHECK-NEXT: $w0 = COPY [[DEF]]
+    %0(s32) = G_IMPLICIT_DEF
+    %1(s32) = COPY %0(s32)
+    $w0 = COPY %1(s32)
 ...

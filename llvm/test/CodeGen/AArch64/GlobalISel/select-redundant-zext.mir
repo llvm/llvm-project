@@ -97,9 +97,8 @@ body:             |
     ; CHECK-LABEL: name: dont_fold_bitcast
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr32all = COPY $w0
-    ; CHECK-NEXT: %bitcast1:gpr32 = COPY %copy
-    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %bitcast1, 0
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %copy, 0
     ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY %zext
     ; CHECK-NEXT: RET_ReallyLR implicit $x0

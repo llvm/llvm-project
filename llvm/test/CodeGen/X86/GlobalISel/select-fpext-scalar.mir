@@ -28,12 +28,12 @@ body:             |
     liveins: $xmm0
 
     ; ALL-LABEL: name: test
-    ; ALL: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-    ; ALL: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; ALL: %2:fr64 = nofpexcept CVTSS2SDrr [[COPY1]], implicit $mxcsr
-    ; ALL: [[COPY2:%[0-9]+]]:vr128 = COPY %2
-    ; ALL: $xmm0 = COPY [[COPY2]]
-    ; ALL: RET 0, implicit $xmm0
+    ; ALL: liveins: $xmm0
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; ALL-NEXT: [[CVTSS2SDrr:%[0-9]+]]:vr128 = nofpexcept CVTSS2SDrr [[COPY]], implicit $mxcsr
+    ; ALL-NEXT: $xmm0 = COPY [[CVTSS2SDrr]]
+    ; ALL-NEXT: RET 0, implicit $xmm0
     %1:vecr(s128) = COPY $xmm0
     %0:vecr(s32) = G_TRUNC %1(s128)
     %2:vecr(s64) = G_FPEXT %0(s32)

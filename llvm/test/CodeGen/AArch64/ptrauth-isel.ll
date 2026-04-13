@@ -238,19 +238,18 @@ define i64 @blend_and_sign_different_bbs(i64 %addr, i64 %cond) {
   ; GISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
   ; GISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
   ; GISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (i64) from @discvar)
-  ; GISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64noip = MOVKXi [[LDRXui]], 42, 48
+  ; GISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64common_and_gpr64noip = MOVKXi [[LDRXui]], 42, 48
   ; GISEL-NEXT:   CBZX [[COPY1]], %bb.3
   ; GISEL-NEXT:   B %bb.2
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.2.next:
   ; GISEL-NEXT:   successors: %bb.3(0x80000000)
   ; GISEL-NEXT: {{  $}}
-  ; GISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64common = COPY [[MOVKXi]]
-  ; GISEL-NEXT:   INLINEASM &nop, sideeffect attdialect, reguse:GPR64common, [[COPY2]]
+  ; GISEL-NEXT:   INLINEASM &nop, sideeffect attdialect, reguse:GPR64common, [[MOVKXi]]
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.3.exit:
-  ; GISEL-NEXT:   [[COPY3:%[0-9]+]]:gpr64noip = COPY [[LDRXui]]
-  ; GISEL-NEXT:   [[PAC:%[0-9]+]]:gpr64 = PAC [[COPY]], 2, 42, [[COPY3]], implicit-def dead $x16, implicit-def dead $x17
+  ; GISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64noip = COPY [[LDRXui]]
+  ; GISEL-NEXT:   [[PAC:%[0-9]+]]:gpr64 = PAC [[COPY]], 2, 42, [[COPY2]], implicit-def dead $x16, implicit-def dead $x17
   ; GISEL-NEXT:   $x0 = COPY [[PAC]]
   ; GISEL-NEXT:   RET_ReallyLR implicit $x0
 entry:

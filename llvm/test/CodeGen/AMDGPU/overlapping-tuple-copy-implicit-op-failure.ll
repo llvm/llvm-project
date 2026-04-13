@@ -8,75 +8,59 @@ define amdgpu_kernel void @test_long_add4(<4 x i64> %arg) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s7
-; CHECK-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 16
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
-; CHECK-NEXT:    ; kill: def $vgpr10_vgpr11_vgpr12_vgpr13 killed $vgpr10_vgpr11_vgpr12_vgpr13 def $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 killed $exec
+; CHECK-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; CHECK-NEXT:    ; kill: def $vgpr2_vgpr3_vgpr4_vgpr5 killed $vgpr2_vgpr3_vgpr4_vgpr5 def $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 killed $exec
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v17, v3
-; CHECK-NEXT:    v_mov_b32_e32 v16, v2
-; CHECK-NEXT:    v_mov_b32_e32 v15, v1
-; CHECK-NEXT:    v_mov_b32_e32 v14, v0
-; CHECK-NEXT:    v_mov_b32_e32 v8, v10
-; CHECK-NEXT:    v_mov_b32_e32 v9, v11
-; CHECK-NEXT:    v_mov_b32_e32 v6, v12
-; CHECK-NEXT:    v_mov_b32_e32 v7, v13
-; CHECK-NEXT:    v_mov_b32_e32 v4, v14
-; CHECK-NEXT:    v_mov_b32_e32 v5, v15
-; CHECK-NEXT:    v_mov_b32_e32 v2, v16
-; CHECK-NEXT:    v_mov_b32_e32 v3, v17
-; CHECK-NEXT:    v_mov_b32_e32 v1, v8
-; CHECK-NEXT:    v_mov_b32_e32 v0, v9
-; CHECK-NEXT:    v_readfirstlane_b32 s12, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s13, v0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v6
-; CHECK-NEXT:    v_mov_b32_e32 v0, v7
-; CHECK-NEXT:    v_readfirstlane_b32 s10, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s11, v0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v4
-; CHECK-NEXT:    v_mov_b32_e32 v0, v5
-; CHECK-NEXT:    v_readfirstlane_b32 s8, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s9, v0
+; CHECK-NEXT:    v_mov_b32_e32 v6, v10
+; CHECK-NEXT:    v_mov_b32_e32 v7, v11
+; CHECK-NEXT:    v_mov_b32_e32 v8, v12
+; CHECK-NEXT:    v_mov_b32_e32 v9, v13
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s12, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s13, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v4
+; CHECK-NEXT:    v_mov_b32_e32 v0, v5
+; CHECK-NEXT:    v_readfirstlane_b32 s10, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s11, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v6
+; CHECK-NEXT:    v_mov_b32_e32 v0, v7
+; CHECK-NEXT:    v_readfirstlane_b32 s8, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s9, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v8
+; CHECK-NEXT:    v_mov_b32_e32 v0, v9
 ; CHECK-NEXT:    v_readfirstlane_b32 s16, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s14, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s7
-; CHECK-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
-; CHECK-NEXT:    ; kill: def $vgpr10_vgpr11_vgpr12_vgpr13 killed $vgpr10_vgpr11_vgpr12_vgpr13 def $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 killed $exec
+; CHECK-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; CHECK-NEXT:    ; kill: def $vgpr2_vgpr3_vgpr4_vgpr5 killed $vgpr2_vgpr3_vgpr4_vgpr5 def $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 killed $exec
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v17, v3
-; CHECK-NEXT:    v_mov_b32_e32 v16, v2
-; CHECK-NEXT:    v_mov_b32_e32 v15, v1
-; CHECK-NEXT:    v_mov_b32_e32 v14, v0
-; CHECK-NEXT:    v_mov_b32_e32 v8, v10
-; CHECK-NEXT:    v_mov_b32_e32 v9, v11
-; CHECK-NEXT:    v_mov_b32_e32 v6, v12
-; CHECK-NEXT:    v_mov_b32_e32 v7, v13
-; CHECK-NEXT:    v_mov_b32_e32 v4, v14
-; CHECK-NEXT:    v_mov_b32_e32 v5, v15
-; CHECK-NEXT:    v_mov_b32_e32 v2, v16
-; CHECK-NEXT:    v_mov_b32_e32 v3, v17
-; CHECK-NEXT:    v_mov_b32_e32 v1, v8
-; CHECK-NEXT:    v_mov_b32_e32 v0, v9
-; CHECK-NEXT:    v_readfirstlane_b32 s23, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s22, v0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v6
-; CHECK-NEXT:    v_mov_b32_e32 v0, v7
-; CHECK-NEXT:    v_readfirstlane_b32 s21, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s20, v0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v4
-; CHECK-NEXT:    v_mov_b32_e32 v0, v5
-; CHECK-NEXT:    v_readfirstlane_b32 s19, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s18, v0
+; CHECK-NEXT:    v_mov_b32_e32 v6, v10
+; CHECK-NEXT:    v_mov_b32_e32 v7, v11
+; CHECK-NEXT:    v_mov_b32_e32 v8, v12
+; CHECK-NEXT:    v_mov_b32_e32 v9, v13
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s23, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s22, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v4
+; CHECK-NEXT:    v_mov_b32_e32 v0, v5
+; CHECK-NEXT:    v_readfirstlane_b32 s21, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s20, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v6
+; CHECK-NEXT:    v_mov_b32_e32 v0, v7
+; CHECK-NEXT:    v_readfirstlane_b32 s19, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s18, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v8
+; CHECK-NEXT:    v_mov_b32_e32 v0, v9
 ; CHECK-NEXT:    v_readfirstlane_b32 s17, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s15, v0
 ; CHECK-NEXT:    s_add_u32 s12, s12, s23

@@ -48,16 +48,15 @@ body:             |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[BFMWri:%[0-9]+]]:gpr32 = BFMWri [[DEF]], [[COPY]], 0, 15
     ; CHECK-NEXT: [[BFMWri1:%[0-9]+]]:gpr32 = BFMWri [[BFMWri]], [[COPY]], 16, 15
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[BFMWri1]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %1:gpr(i32) = COPY $w0
-    %2:gpr(i32) = COPY $w1
-    %3:gpr(i16) = G_TRUNC %1(i32)
-    %4:gpr(i16) = G_TRUNC %1(i32)
-    %5:gpr(i32) = G_IMPLICIT_DEF
-    %6:gpr(i32) = G_INSERT %5, %3(i16), 0
-    %7:gpr(i32) = G_INSERT %6, %4(i16), 16
-    %0:gpr(i32) = COPY %7(i32)
+    ; CHECK-NEXT: $w0 = COPY [[BFMWri1]]
+    %1:gpr(s32) = COPY $w0
+    %2:gpr(s32) = COPY $w1
+    %3:gpr(s16) = G_TRUNC %1(s32)
+    %4:gpr(s16) = G_TRUNC %1(s32)
+    %5:gpr(s32) = G_IMPLICIT_DEF
+    %6:gpr(s32) = G_INSERT %5, %3(s16), 0
+    %7:gpr(s32) = G_INSERT %6, %4(s16), 16
+    %0:gpr(s32) = COPY %7(s32)
     $w0 = COPY %0
 ...
 

@@ -31,9 +31,8 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (i16))
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
-    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16))
+    ; CHECK-NEXT: $w0 = COPY [[LDRHHui]]
     %0:gpr(p0) = COPY $x0
     %1:gpr(i16) = G_LOAD %0 :: (load (i16))
     %2:gpr(i32) = G_ZEXT %1

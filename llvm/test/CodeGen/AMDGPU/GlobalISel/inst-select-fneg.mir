@@ -509,8 +509,10 @@ body: |
     ; SI-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; SI-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; SI-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; SI-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; SI-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; SI-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32_xm0 = S_XOR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; SI-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; SI-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
     ; SI-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; VI-LABEL: name: fneg_s64_ss
@@ -520,8 +522,10 @@ body: |
     ; VI-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; VI-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; VI-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; VI-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; VI-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; VI-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32_xm0 = S_XOR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; VI-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; VI-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
     ; VI-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX9-LABEL: name: fneg_s64_ss
@@ -531,8 +535,10 @@ body: |
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; GFX9-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX9-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32_xm0 = S_XOR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX10-LABEL: name: fneg_s64_ss
@@ -542,8 +548,10 @@ body: |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; GFX10-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX10-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32_xm0 = S_XOR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX11-LABEL: name: fneg_s64_ss
@@ -553,8 +561,10 @@ body: |
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; GFX11-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX11-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32_xm0 = S_XOR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_FNEG %0
@@ -1217,8 +1227,10 @@ body: |
     ; SI-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; SI-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; SI-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; SI-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; SI-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; SI-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; SI-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; SI-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
     ; SI-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; VI-LABEL: name: fneg_fabs_s64_ss
@@ -1228,8 +1240,10 @@ body: |
     ; VI-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; VI-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; VI-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; VI-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; VI-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; VI-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; VI-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; VI-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
     ; VI-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX9-LABEL: name: fneg_fabs_s64_ss
@@ -1239,8 +1253,10 @@ body: |
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; GFX9-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX9-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX10-LABEL: name: fneg_fabs_s64_ss
@@ -1250,8 +1266,10 @@ body: |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; GFX10-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX10-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX11-LABEL: name: fneg_fabs_s64_ss
@@ -1261,8 +1279,10 @@ body: |
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; GFX11-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX11-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0 = S_OR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_FABS %0
