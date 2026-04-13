@@ -5327,6 +5327,23 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return ConstantInt::get(Builder.getInt32Ty(), 0);
   }
 
+  if (BuiltinID == AArch64::BI__ldar8 || BuiltinID == AArch64::BI__ldar16 ||
+      BuiltinID == AArch64::BI__ldar32 || BuiltinID == AArch64::BI__ldar64) {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    QualType ElTy = E->getArg(0)->getType()->getPointeeType();
+    CharUnits LoadSize = CGM.getContext().getTypeSizeInChars(ElTy);
+    llvm::Type *ITy =
+        llvm::IntegerType::get(getLLVMContext(), LoadSize.getQuantity() * 8);
+    llvm::LoadInst *Load = Builder.CreateAlignedLoad(ITy, Ptr, LoadSize);
+    // We need SeqCst instead of Acquire because with RCPC enabled the AArch64
+    // lowers Acquire loads to LDARP* instead of LDAR*.  The SeqCst has not RCPC
+    // override and always maps to LDAR*.  This is the same apprach used by
+    // __iso_volatile_load (which uses Monotonic plus volatile for plain ldr).
+    Load->setAtomic(llvm::AtomicOrdering::SequentiallyConsistent);
+    Load->setVolatile(true);
+    return Load;
+  }
+
   if (BuiltinID == NEON::BI__builtin_neon_vcvth_bf16_f32)
     return Builder.CreateFPTrunc(
         Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)),

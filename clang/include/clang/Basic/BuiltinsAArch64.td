@@ -409,3 +409,10 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
 	def __hlt : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int, ...)">;
 }
+
+let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
+	def __ldar8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char const volatile *)">;
+	def __ldar16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
+	def __ldar32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
+	def __ldar64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile*)">;
+}

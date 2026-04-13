@@ -41,5 +41,18 @@ typedef enum
   _ARM64_BARRIER_OSHLD = 0x1
 } _ARM64INTR_BARRIER_TYPE;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+unsigned __int8 __ldar8(const volatile unsigned __int8 *);
+unsigned __int16 __ldar16(const volatile unsigned __int16 *);
+unsigned __int32 __ldar32(const volatile unsigned __int32 *);
+unsigned __int64 __ldar64(const volatile unsigned __int64 *);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __ARM64INTR_H */
 #endif /* _MSC_VER */
