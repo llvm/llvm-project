@@ -7355,14 +7355,19 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     if (Sz % NumOffsets != 0)
       return false;
     VecSz = Sz / NumOffsets;
+  }
+  if (NumOffsets > 1 || ScalarTy->isVectorTy())
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * NumOffsets);
-  }
   FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
   unsigned MinProfitableStridedOps =
       IsLoad ? MinProfitableStridedLoads : MinProfitableStridedStores;
-  if (Sz <= MinProfitableStridedOps || !TTI->isTypeLegal(StridedLoadTy) ||
+  unsigned InputTyNumElts = 1;
+  if (auto *FVT = dyn_cast<FixedVectorType>(ScalarTy))
+    InputTyNumElts = FVT->getNumElements();
+  if (Sz * InputTyNumElts <= MinProfitableStridedOps ||
+      !TTI->isTypeLegal(StridedLoadTy) ||
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
     return false;
 
@@ -7378,7 +7383,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   if (NumOffsets > 1) {
     for (int I : seq<int>(1, SortedOffsetsV.size())) {
-      if (SortedOffsetsV[I] - SortedOffsetsV[I - 1] != 1)
+      if (SortedOffsetsV[I] - SortedOffsetsV[I - 1] != InputTyNumElts)
         return false;
     }
   }
