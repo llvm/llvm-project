@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVTypeInst.h"
+#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVInstrInfo.h"
 
 namespace llvm {
@@ -22,5 +23,13 @@ namespace llvm {
 SPIRVTypeInst::SPIRVTypeInst(const MachineInstr *MI) : MI(MI) {
   // A SPIRV Type whose result is not a type is invalid.
   assert(!MI || definesATypeRegister(*MI));
+}
+
+bool SPIRVTypeInst::isTypeIntN(unsigned N) const {
+  if (MI->getOpcode() != SPIRV::OpTypeInt)
+    return false;
+  if (N)
+    return MI->getOperand(1).getImm() == N;
+  return true;
 }
 } // namespace llvm
