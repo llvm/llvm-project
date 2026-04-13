@@ -92,7 +92,7 @@ public:
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init);
 
   /// Creates a global from a lifetime-extended temporary.
-  UnsignedOrNone createGlobal(const Expr *E);
+  UnsignedOrNone createGlobal(const Expr *E, QualType ExprType);
 
   /// Creates a new function from a code range.
   template <typename... Ts>

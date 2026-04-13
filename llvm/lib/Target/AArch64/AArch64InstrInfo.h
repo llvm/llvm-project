@@ -255,6 +255,12 @@ public:
   /// Returns whether the instruction is a pre-indexed load/store.
   static bool isPreLdSt(const MachineInstr &MI);
 
+  /// Returns whether the instruction is a zero-extending load.
+  static bool isZExtLoad(const MachineInstr &MI);
+
+  /// Returns whether the instruction is a sign-extending load.
+  static bool isSExtLoad(const MachineInstr &MI);
+
   /// Returns whether the instruction is a paired load/store.
   static bool isPairedLdSt(const MachineInstr &MI);
 
@@ -570,6 +576,9 @@ public:
   MachineBasicBlock::iterator probedStackAlloc(MachineBasicBlock::iterator MBBI,
                                                Register TargetReg,
                                                bool FrameSetup) const;
+
+  static int
+  findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr);
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"

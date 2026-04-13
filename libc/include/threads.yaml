@@ -73,9 +73,9 @@ functions:
   - name: mtx_destroy
     standards:
       - stdc
-    return_type: int
+    return_type: void
     arguments:
-      - type: void
+      - type: mtx_t *
   - name: mtx_init
     standards:
       - stdc
@@ -125,7 +125,7 @@ functions:
   - name: thrd_exit
     standards:
       - stdc
-    return_type: void
+    return_type: _Noreturn void
     arguments:
       - type: int
   - name: thrd_join
@@ -145,7 +145,7 @@ functions:
   - name: tss_delete
     standards:
       - stdc
-    return_type: int
+    return_type: void
     arguments:
       - type: tss_t
   - name: tss_get

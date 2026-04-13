@@ -68,6 +68,18 @@ INTERFACE WEAK void SCUDO_PREFIX(free)(void *ptr) {
   SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc);
 }
 
+INTERFACE WEAK void SCUDO_PREFIX(free_sized)(void *ptr, size_t size) {
+  reportDeallocation(ptr);
+  SCUDO_ALLOCATOR.deallocateSized(ptr, scudo::Chunk::Origin::Malloc, size);
+}
+
+INTERFACE WEAK void
+SCUDO_PREFIX(free_aligned_sized)(void *ptr, size_t alignment, size_t size) {
+  reportDeallocation(ptr);
+  SCUDO_ALLOCATOR.deallocateSizedAligned(ptr, scudo::Chunk::Origin::Malloc,
+                                         size, alignment);
+}
+
 INTERFACE WEAK struct SCUDO_MALLINFO SCUDO_PREFIX(mallinfo)(void) {
   struct SCUDO_MALLINFO Info = {};
   scudo::StatCounters Stats;
@@ -324,7 +336,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
   }
 
   void *Ptr =
-      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc, alignment);
+      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign, alignment);
   reportAllocation(Ptr, size);
 
   return scudo::setErrnoOnNull(Ptr);

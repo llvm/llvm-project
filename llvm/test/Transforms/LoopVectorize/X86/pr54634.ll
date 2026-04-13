@@ -4,11 +4,11 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:10:11:12:13"
 target triple = "x86_64-unknown-linux-gnu"
 
-@jlplt_ijl_alloc_array_1d_10294_got = external dso_local local_unnamed_addr global ptr
+@jlplt_ijl_alloc_array_1d_10294_got = external global ptr
 
-define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) local_unnamed_addr #0 {
+define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) #0 {
 ; CHECK-LABEL: define ptr addrspace(10) @japi1_vect_42283(
-; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = load atomic ptr, ptr @jlplt_ijl_alloc_array_1d_10294_got unordered, align 8

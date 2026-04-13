@@ -14,10 +14,13 @@
 #include "CIRGenFunction.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/Cuda.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -38,7 +41,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
   emission.isEscapingByRef = d.isEscapingByref();
   if (emission.isEscapingByRef)
     cgm.errorNYI(d.getSourceRange(),
-                 "emitAutoVarDecl: decl escaping by reference");
+                 "emitAutoVarAlloca: decl escaping by reference");
 
   CharUnits alignment = getContext().getDeclAlign(&d);
 
@@ -63,7 +66,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
         (d.isConstexpr() ||
          ((ty.isPODType(getContext()) ||
            getContext().getBaseElementType(ty)->isObjCObjectPointerType()) &&
-          d.getInit()->isConstantInitializer(getContext(), false)))) {
+          d.getInit()->isConstantInitializer(getContext())))) {
 
       // If the variable's a const type, and it's neither an NRVO
       // candidate nor a __block variable and has no mutable members,
@@ -363,7 +366,7 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
     if (d.getType()->isSamplerT()) {
       // Nothing needs to be done here, but let's flag it as an error until we
       // have a test. It requires OpenCL support.
-      cgm.errorNYI(d.getSourceRange(), "emitVarDecl static sampler type");
+      cgm.errorNYI(d.getSourceRange(), "emitVarDecl: static sampler type");
       return;
     }
 
@@ -378,7 +381,7 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
   }
 
   if (d.getType().getAddressSpace() == LangAS::opencl_local)
-    cgm.errorNYI(d.getSourceRange(), "emitVarDecl openCL address space");
+    cgm.errorNYI(d.getSourceRange(), "emitVarDecl: openCL address space");
 
   assert(d.hasLocalStorage());
 
@@ -399,11 +402,14 @@ static std::string getStaticDeclName(CIRGenModule &cgm, const VarDecl &d) {
   if (const auto *fd = dyn_cast<FunctionDecl>(dc))
     contextName = std::string(cgm.getMangledName(fd));
   else if (isa<BlockDecl>(dc))
-    cgm.errorNYI(d.getSourceRange(), "block decl context for static var");
+    cgm.errorNYI(d.getSourceRange(),
+                 "getStaticDeclName: block decl context for static var");
   else if (isa<ObjCMethodDecl>(dc))
-    cgm.errorNYI(d.getSourceRange(), "ObjC decl context for static var");
+    cgm.errorNYI(d.getSourceRange(),
+                 "getStaticDeclName: ObjC decl context for static var");
   else
-    cgm.errorNYI(d.getSourceRange(), "Unknown context for static var decl");
+    cgm.errorNYI(d.getSourceRange(),
+                 "getStaticDeclName: Unknown context for static var decl");
 
   contextName += "." + d.getNameAsString();
   return contextName;
@@ -433,12 +439,14 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   mlir::Type lty = getTypes().convertTypeForMem(ty);
   assert(!cir::MissingFeatures::addressSpace());
 
-  if (d.hasAttr<LoaderUninitializedAttr>() || d.hasAttr<CUDASharedAttr>())
-    errorNYI(d.getSourceRange(),
-             "getOrCreateStaticVarDecl: LoaderUninitializedAttr");
-  assert(!cir::MissingFeatures::addressSpace());
-
-  mlir::Attribute init = builder.getZeroInitAttr(convertType(ty));
+  // OpenCL variables in local address space and CUDA shared
+  // variables cannot have an initializer.
+  mlir::Attribute init = nullptr;
+  if (ty.getAddressSpace() == LangAS::opencl_local ||
+      d.hasAttr<CUDASharedAttr>() || d.hasAttr<LoaderUninitializedAttr>())
+    init = cir::UndefAttr::get(lty);
+  else
+    init = builder.getZeroInitAttr(convertType(ty));
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
       getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
@@ -667,8 +675,24 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
 
   // There are a lot of attributes that need to be handled here. Until
   // we start to support them, we just report an error if there are any.
-  if (d.hasAttrs())
-    cgm.errorNYI(d.getSourceRange(), "static var with attrs");
+  if (d.hasAttr<AnnotateAttr>())
+    cgm.errorNYI(d.getSourceRange(), "emitStaticVarDecl: Global annotations");
+  if (d.getAttr<PragmaClangBSSSectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitStaticVarDecl: CIR global BSS section attribute");
+  if (d.getAttr<PragmaClangDataSectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitStaticVarDecl: CIR global Data section attribute");
+  if (d.getAttr<PragmaClangRodataSectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitStaticVarDecl: CIR global Rodata section attribute");
+  if (d.getAttr<PragmaClangRelroSectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitStaticVarDecl: CIR global Relro section attribute");
+
+  if (d.getAttr<SectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitStaticVarDecl: CIR global object file section attribute");
 
   if (cgm.getCodeGenOpts().KeepPersistentStorageVariables)
     cgm.errorNYI(d.getSourceRange(), "static var keep persistent storage");
@@ -983,6 +1007,37 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 
+void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
+                                                 Address addr, QualType type,
+                                                 Destroyer *destroyer,
+                                                 bool useEHCleanupForArray) {
+  if (isInConditionalBranch()) {
+    cgm.errorNYI("conditional lifetime-extended destroy");
+    return;
+  }
+
+  // Classic codegen also uses pushDestroyAndDeferDeactivation here to push an
+  // EH cleanup that protects the temporary during the rest of the full
+  // expression, then deactivates it when the full expression ends. We don't
+  // have deferred deactivation yet, so we only queue the lifetime-extended
+  // cleanup below. When deferred deactivation is implemented, add the
+  // pushDestroyAndDeferDeactivation call here.
+  if (getLangOpts().Exceptions) {
+    cgm.errorNYI("lifetime-extended cleanup with exceptions enabled");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
+
+  pushCleanupAfterFullExpr(cleanupKind, addr, type, destroyer);
+}
+
+void CIRGenFunction::pushLifetimeExtendedCleanupToEHStack(
+    const LifetimeExtendedCleanupEntry &entry) {
+  ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
+                                     entry.destroyer);
+}
+
 /// Destroys all the elements of the given array, beginning from last to first.
 /// The array cannot be zero-length.
 ///
@@ -1010,7 +1065,7 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
       size = constIntAttr.getUInt();
   } else {
     cgm.errorNYI(begin.getDefiningOp()->getLoc(),
-                 "dynamic-length array expression");
+                 "emitArrayDestroy: dynamic-length array expression");
   }
 
   auto arrayTy = cir::ArrayType::get(cirElementType, size);

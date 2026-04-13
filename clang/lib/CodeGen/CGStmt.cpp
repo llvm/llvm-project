@@ -616,7 +616,7 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
 }
 
 void CodeGenFunction::SimplifyForwardingBlocks(llvm::BasicBlock *BB) {
-  llvm::BranchInst *BI = dyn_cast<llvm::BranchInst>(BB->getTerminator());
+  llvm::UncondBrInst *BI = dyn_cast<llvm::UncondBrInst>(BB->getTerminator());
 
   // If there is a cleanup stack, then we it isn't worth trying to
   // simplify this block (we would need to remove it from the scope map
@@ -625,14 +625,14 @@ void CodeGenFunction::SimplifyForwardingBlocks(llvm::BasicBlock *BB) {
     return;
 
   // Can only simplify direct branches.
-  if (!BI || !BI->isUnconditional())
+  if (!BI)
     return;
 
   // Can only simplify empty blocks.
   if (BI->getIterator() != BB->begin())
     return;
 
-  BB->replaceAllUsesWith(BI->getSuccessor(0));
+  BB->replaceAllUsesWith(BI->getSuccessor());
   BI->eraseFromParent();
   BB->eraseFromParent();
 }
@@ -663,7 +663,7 @@ void CodeGenFunction::EmitBranch(llvm::BasicBlock *Target) {
   // terminator, don't emit it.
   llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 
-  if (!CurBB || CurBB->getTerminator()) {
+  if (!CurBB || CurBB->hasTerminator()) {
     // If there is no insert point or the previous block is already
     // terminated, don't touch it.
   } else {
@@ -859,7 +859,7 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
   cast<llvm::PHINode>(IndGotoBB->begin())->addIncoming(V, CurBB);
 
   EmitBranch(IndGotoBB);
-  if (CurBB && CurBB->getTerminator())
+  if (CurBB && CurBB->hasTerminator())
     addInstToCurrentSourceAtom(CurBB->getTerminator(), nullptr);
 }
 

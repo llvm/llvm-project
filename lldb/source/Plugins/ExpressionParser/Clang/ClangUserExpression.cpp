@@ -506,8 +506,8 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
            files.GetSize());
   if (log && log->GetVerbose()) {
     for (auto &f : files)
-      LLDB_LOGV(log, "[C++ module config] Analyzing support file: {0}",
-                f.GetPath());
+      LLDB_LOG_VERBOSE(log, "[C++ module config] Analyzing support file: {0}",
+                       f.GetPath());
   }
 
   // Try to create a configuration from the files. If there is no valid

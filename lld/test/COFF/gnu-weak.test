@@ -13,9 +13,6 @@ For each of the weak definitions, GNU tools produce a regular symbol
 named .weak.<weaksymbol>.<othersymbol>, where the other symbol name is
 another symbol defined close by.
 
-This can't be reproduced by assembling with llvm-mc, as llvm-mc always
-produces similar regular symbols named .weak.<weaksymbol>.default.
-
 The bundled object files can be produced from test code that looks like
 this:
 

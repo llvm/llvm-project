@@ -749,9 +749,19 @@ public:
     return isUImmPred([](int64_t Imm) { return isUInt<5>(Imm) && Imm > 3; });
   }
 
+  bool isUImm4Plus1() const {
+    return isUImmPred(
+        [](int64_t Imm) { return Imm > 0 && isUInt<4>(Imm - 1); });
+  }
+
   bool isUImm5Plus1() const {
     return isUImmPred(
         [](int64_t Imm) { return Imm > 0 && isUInt<5>(Imm - 1); });
+  }
+
+  bool isUImm6Plus1() const {
+    return isUImmPred(
+        [](int64_t Imm) { return Imm > 0 && isUInt<6>(Imm - 1); });
   }
 
   bool isUImm5GE6Plus1() const {
@@ -904,8 +914,8 @@ public:
            VK == RISCV::S_QC_ABS20;
   }
 
-  bool isSImm8Unsigned() const { return isSImm<8>() || isUImm<8>(); }
-  bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
+  bool isSImm8PLI_B() const { return isSImm<8>() || isUImm<8>(); }
+  bool isSImm10PLUI() const { return isSImm<10>() || isUImm<10>(); }
 
   bool isSImm10PLI_H() const {
     return isSImm<10>() || isUImmPred([](int64_t Imm) {
@@ -1073,7 +1083,7 @@ public:
       break;
     case KindTy::FRM:
       OS << "<frm: ";
-      roundingModeToString(getFRM());
+      OS << roundingModeToString(getFRM());
       OS << '>';
       break;
     case KindTy::Fence:
@@ -1218,20 +1228,13 @@ public:
     addExpr(Inst, getExpr(), isRV64Expr());
   }
 
-  void addSImm8UnsignedOperands(MCInst &Inst, unsigned N) const {
+  template <unsigned Bits>
+  void addSExtImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     int64_t Imm;
     [[maybe_unused]] bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
     assert(IsConstant);
-    Inst.addOperand(MCOperand::createImm(SignExtend64<8>(Imm)));
-  }
-
-  void addSImm10UnsignedOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    int64_t Imm;
-    [[maybe_unused]] bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
-    assert(IsConstant);
-    Inst.addOperand(MCOperand::createImm(SignExtend64<10>(Imm)));
+    Inst.addOperand(MCOperand::createImm(SignExtend64<Bits>(Imm)));
   }
 
   void addFPImmOperands(MCInst &Inst, unsigned N) const {
@@ -1512,6 +1515,8 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 3) - 1);
   case Match_InvalidUImm4:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
+  case Match_InvalidUImm4Plus1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 4));
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
   case Match_InvalidUImm5NonZero:
@@ -1529,6 +1534,8 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
+  case Match_InvalidUImm6Plus1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 6));
   case Match_InvalidUImm7:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 7) - 1);
   case Match_InvalidUImm8:
@@ -1584,7 +1591,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidSImm8Unsigned:
+  case Match_InvalidSImm8PLI_B:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
                                       (1 << 8) - 1);
   case Match_InvalidSImm10:
@@ -1592,7 +1599,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm10PLI_W:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 9) - 1);
-  case Match_InvalidSImm10Unsigned:
+  case Match_InvalidSImm10PLUI:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 10) - 1);
   case Match_InvalidUImm10Lsb00NonZero:
@@ -3802,6 +3809,76 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgLegacyOp() const {
                                     llvm::SMLoc());
 }
 
+static unsigned getNFforLXSEG(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return 1;
+  case RISCV::VLOXSEG2EI8_V:
+  case RISCV::VLOXSEG2EI16_V:
+  case RISCV::VLOXSEG2EI32_V:
+  case RISCV::VLOXSEG2EI64_V:
+  case RISCV::VLUXSEG2EI8_V:
+  case RISCV::VLUXSEG2EI16_V:
+  case RISCV::VLUXSEG2EI32_V:
+  case RISCV::VLUXSEG2EI64_V:
+    return 2;
+  case RISCV::VLOXSEG3EI8_V:
+  case RISCV::VLOXSEG3EI16_V:
+  case RISCV::VLOXSEG3EI32_V:
+  case RISCV::VLOXSEG3EI64_V:
+  case RISCV::VLUXSEG3EI8_V:
+  case RISCV::VLUXSEG3EI16_V:
+  case RISCV::VLUXSEG3EI32_V:
+  case RISCV::VLUXSEG3EI64_V:
+    return 3;
+  case RISCV::VLOXSEG4EI8_V:
+  case RISCV::VLOXSEG4EI16_V:
+  case RISCV::VLOXSEG4EI32_V:
+  case RISCV::VLOXSEG4EI64_V:
+  case RISCV::VLUXSEG4EI8_V:
+  case RISCV::VLUXSEG4EI16_V:
+  case RISCV::VLUXSEG4EI32_V:
+  case RISCV::VLUXSEG4EI64_V:
+    return 4;
+  case RISCV::VLOXSEG5EI8_V:
+  case RISCV::VLOXSEG5EI16_V:
+  case RISCV::VLOXSEG5EI32_V:
+  case RISCV::VLOXSEG5EI64_V:
+  case RISCV::VLUXSEG5EI8_V:
+  case RISCV::VLUXSEG5EI16_V:
+  case RISCV::VLUXSEG5EI32_V:
+  case RISCV::VLUXSEG5EI64_V:
+    return 5;
+  case RISCV::VLOXSEG6EI8_V:
+  case RISCV::VLOXSEG6EI16_V:
+  case RISCV::VLOXSEG6EI32_V:
+  case RISCV::VLOXSEG6EI64_V:
+  case RISCV::VLUXSEG6EI8_V:
+  case RISCV::VLUXSEG6EI16_V:
+  case RISCV::VLUXSEG6EI32_V:
+  case RISCV::VLUXSEG6EI64_V:
+    return 6;
+  case RISCV::VLOXSEG7EI8_V:
+  case RISCV::VLOXSEG7EI16_V:
+  case RISCV::VLOXSEG7EI32_V:
+  case RISCV::VLOXSEG7EI64_V:
+  case RISCV::VLUXSEG7EI8_V:
+  case RISCV::VLUXSEG7EI16_V:
+  case RISCV::VLUXSEG7EI32_V:
+  case RISCV::VLUXSEG7EI64_V:
+    return 7;
+  case RISCV::VLOXSEG8EI8_V:
+  case RISCV::VLOXSEG8EI16_V:
+  case RISCV::VLOXSEG8EI32_V:
+  case RISCV::VLOXSEG8EI64_V:
+  case RISCV::VLUXSEG8EI8_V:
+  case RISCV::VLUXSEG8EI16_V:
+  case RISCV::VLUXSEG8EI32_V:
+  case RISCV::VLUXSEG8EI64_V:
+    return 8;
+  }
+}
+
 unsigned getLMULFromVectorRegister(MCRegister Reg) {
   if (RISCVMCRegisterClasses[RISCV::VRM2RegClassID].contains(Reg))
     return 2;
@@ -3874,7 +3951,8 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     assert(VS2Idx >= 0 && "No vs2 operand?");
     unsigned CheckEncoding =
         RI->getEncodingValue(Inst.getOperand(VS2Idx).getReg());
-    for (unsigned i = 0; i < Lmul; i++) {
+    unsigned NF = getNFforLXSEG(Opcode);
+    for (unsigned i = 0; i < std::max(NF, Lmul); i++) {
       if ((DestEncoding + i) == CheckEncoding)
         return Error(Loc, "the destination vector register group cannot overlap"
                           " the source vector register group");

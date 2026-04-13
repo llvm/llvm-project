@@ -2686,8 +2686,10 @@ path of execution, but that can be confusing:
 .. code-block:: c++
 
   if (b) {
-    [[unlikely]] --b; // In the path of execution,
-                      // this branch is considered unlikely.
+    [[unlikely]] --b; // Per the standard this is in the path of
+                      // execution, so this branch should be considered
+                      // unlikely. However, Clang ignores the attribute
+                      // here since it is not on the substatement.
   }
 
   if (b) {
@@ -3292,6 +3294,12 @@ multiversioned function would have if it had been declared without the attribute
 For backward compatibility with earlier Clang releases, a function alias with an
 ``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
 feature and support for it may be removed in the future.
+
+For PowerPC targets, ``target_clones`` is supported on AIX only. Only CPU
+(specified as ``cpu=CPU``) and ``default`` options are allowed. IFUNC is supported
+on AIX in Clang, so dispatch is implemented similar to other targets using IFUNC.
+An FMV function that is only declared in a translation unit is treated as a
+non-FMV. The resolver and the function clones are given internal linkage.
 }];
 }
 
@@ -6011,6 +6019,25 @@ TUs where it is used.
 This attribute can be used on static and non-static member functions of class
 templates, static data members of class templates and member classes of class
 templates.
+
+**Interaction with __declspec(dllexport/dllimport)**
+
+For a DLL platform (i.e., Windows), this attribute also means "this member will
+never be exported or imported". Despite its name, this semantics applies to
+implicit instantiations and non-template entities as well.
+
+  .. code-block:: c++
+
+    // in <exception>
+    class __declspec(dllimport) nested_exception {
+      ...
+    public:
+      __attribute__((exclude_from_explicit_instantiation))
+      exception_ptr nested_ptr() const noexcept { ... }
+    };
+
+In this case, ``nested_exception::nested_ptr`` will never be attempted to be
+imported.
   }];
 }
 
@@ -8552,6 +8579,18 @@ pointing to precise locations of the call site in the source.
       dontcall(); // No Warning
     sizeof(dontcall()); // No Warning
   }
+
+When the call occurs through inlined functions, the
+``-fdiagnostics-show-inlining-chain`` option can be used to show the
+inlining chain that led to the call. This helps identify which call site
+triggered the diagnostic when the attributed function is called from
+multiple locations through inline functions.
+
+When enabled, this option automatically uses debug info for accurate source
+locations if available (``-gline-directives-only`` (implicitly enabled at
+``-g1``) or higher), or falls back to a heuristic based on metadata tracking.
+When falling back, a note is emitted suggesting ``-gline-directives-only`` for
+more accurate locations.
   }];
 }
 
@@ -8945,6 +8984,29 @@ like follows:
 
 This variable will be lowered into a module-level variable, with the `Input`
 storage class, and the `BuiltIn 26` decoration.
+
+The full documentation for this inline SPIR-V attribute can be found here:
+https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
+  }];
+}
+
+def HLSLVkExtBuiltinOutputDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `Output` builtins. Those variables are externally
+visible to the driver/pipeline, but each copy is private to the current
+lane.
+
+Those builtins can be declared using the `[[vk::ext_builtin_output]]`
+attribute like follows:
+
+.. code-block:: c++
+
+  [[vk::ext_builtin_output(/* Position */ 0)]]
+  static float4 position;
+
+This variable will be lowered into a module-level variable, with the `Output`
+storage class, and the `BuiltIn 0` decoration.
 
 The full documentation for this inline SPIR-V attribute can be found here:
 https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
@@ -9827,9 +9889,9 @@ not all aspects of the implementation are needed for a given call, the compiler
 may redirect the call to the identifier given as the first argument to the
 attribute (the modular implementation function).
 
-The second argument is a implementation name, and the remaining arguments are
+The second argument is an implementation name, and the remaining arguments are
 aspects of the format string for the compiler to report. The implementation
-name is an unevaluated identifier be in the C namespace.
+name is an unevaluated identifier in the C namespace.
 
 The compiler reports that a call requires an aspect by issuing a relocation for
 the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
@@ -9884,7 +9946,7 @@ def PersonalityDocs : Documentation {
 routine that is different from the language that is being used to implement the
 function. This is a targeted, low-level feature aimed at language runtime
 implementors who write runtime support code in C/C++ but need that code to
-participate in a foreign language’s exception-handling or unwinding model.
+participate in a foreign language's exception-handling or unwinding model.
 
 A personality routine is a language-specific callback attached to each stack
 frame that the unwinder invokes to determine whether that frame handles a given

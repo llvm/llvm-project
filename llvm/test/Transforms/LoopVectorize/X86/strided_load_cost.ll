@@ -9,9 +9,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; even if it contains scalarized load (gather on AVX2)
 
 ; Function Attrs: norecurse nounwind readonly uwtable
-define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_unnamed_addr #0 {
+define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; CHECK-LABEL: define i32 @matrix_row_col(
-; CHECK-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[J]] to i64
@@ -240,7 +240,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ;
 ; MAX-BW-LABEL: define i32 @matrix_row_col(
-; MAX-BW-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; MAX-BW-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) #[[ATTR0:[0-9]+]] {
 ; MAX-BW-NEXT:  [[ITER_CHECK:.*]]:
 ; MAX-BW-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; MAX-BW-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[J]] to i64

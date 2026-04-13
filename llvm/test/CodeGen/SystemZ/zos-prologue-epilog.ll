@@ -400,6 +400,18 @@ define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
   ret void
 }
 
+; Verify stack alignment is 32
+; CHECK-LABEL: large_stack3
+; CHECK: agfi 4,-2147483648
+; CHECK-NEXT: aghi 4,-224
+; CHECK: agfi 4,2147483616
+; CHECK-NEXT: aghi 4,256
+define void @large_stack3() {
+  %arr = alloca [268435457 x i64], align 8
+  call i64 (ptr) @fun1(ptr %arr)
+  ret void
+}
+
 ; CHECK-LABEL: L#EPM_leaf_func0_0 DS 0H
 ; CHECK: * DSA Size 0x0
 ; CHECK: * Entry Flags

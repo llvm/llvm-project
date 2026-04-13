@@ -136,9 +136,10 @@ define void @basic_type() !dbg !3 {
 
 ; // -----
 
+; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
 ; CHECK: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
 ; CHECK: #[[PTR1:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]]>
-; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT]]>
+; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", file = #[[FILE]], line = 42, scope = #[[FILE]], baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT]]>
 ; CHECK: #[[PTR3:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]], dwarfAddressSpace = 3>
 ; CHECK: #llvm.di_subroutine_type<types = #[[PTR1]], #[[PTR2]], #[[PTR3]]>
 
@@ -156,7 +157,7 @@ define void @derived_type() !dbg !3 {
 !5 = !{!7, !8, !9}
 !6 = !DIBasicType(name: "int")
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6)
-!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
+!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, file: !2, line: 42, scope: !2, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, dwarfAddressSpace: 3)
 
 ; // -----
@@ -165,7 +166,7 @@ define void @derived_type() !dbg !3 {
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
 ; CHECK-DAG: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "size">
 ; CHECK-DAG: #[[GV:.+]] = #llvm.di_global_variable<{{.*}}name = "gv"{{.*}}>
-; CHECK-DAG: #[[COMP1:.+]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", line = 10, baseType = #[[INT]], sizeInBits = 128, alignInBits = 32>
+; CHECK-DAG: #[[COMP1:.+]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], line = 10, baseType = #[[INT]], sizeInBits = 128, alignInBits = 32>
 ; CHECK-DAG: #[[COMP2:.+]] = #llvm.di_composite_type<{{.*}}, file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT]]>
 ; CHECK-DAG: #[[COMP3:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<count = 4 : i64>>
 ; CHECK-DAG: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
@@ -189,7 +190,7 @@ define void @composite_type() !dbg !3 {
 !4 = !DISubroutineType(types: !5)
 !5 = !{!7, !8, !9, !10, !18, !22, !24}
 !6 = !DIBasicType(name: "int")
-!7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", line: 10, size: 128, align: 32, baseType: !6)
+!7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", file: !2, line: 10, size: 128, align: 32, baseType: !6)
 !8 = !DICompositeType(tag: DW_TAG_array_type, name: "array2", file: !2, scope: !2, baseType: !6)
 !9 = !DICompositeType(tag: DW_TAG_array_type, name: "array3", flags: DIFlagVector, elements: !13, baseType: !6)
 !10 = !DICompositeType(tag: DW_TAG_array_type, name: "array4", flags: DIFlagVector, elements: !14, baseType: !6)
@@ -217,7 +218,7 @@ define void @composite_type() !dbg !3 {
 ; // -----
 
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None, nameTableKind = None, splitDebugFilename = "test.dwo">
+; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None, isDebugInfoForProfiling = true, nameTableKind = None, splitDebugFilename = "test.dwo">
 ; Verify an empty subroutine types list is supported.
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
@@ -229,7 +230,7 @@ define void @subprogram() !dbg !3 {
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, nameTableKind: None, splitDebugFilename: "test.dwo")
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, nameTableKind: None, debugInfoForProfiling: true, splitDebugFilename: "test.dwo")
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "subprogram", linkageName: "subprogram", scope: !2, file: !2, line: 42, scopeLine: 42, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(cc: DW_CC_normal, types: !5)
@@ -341,7 +342,7 @@ define void @class_method() {
 ; Verify the cyclic composite type is handled correctly.
 ; CHECK-DAG: #[[COMP_SELF:.+]] = #llvm.di_composite_type<recId = [[REC_ID:.+]], isRecSelf = true>
 ; CHECK-DAG: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]], flags = "Artificial|ObjectPointer">
-; CHECK-DAG: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", baseType = #[[COMP_PTR_INNER]]>
+; CHECK-DAG: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", file = #{{.*}}, baseType = #[[COMP_PTR_INNER]]>
 ; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<recId = [[REC_ID]], tag = DW_TAG_class_type, name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
 ; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], flags = "Artificial|ObjectPointer">
 ; CHECK-DAG: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[COMP_PTR_OUTER]]>
@@ -636,12 +637,12 @@ declare !dbg !1 void @declaration()
 ; +--> B:B2 ----+
 ; This should result in only one B instance.
 
-; CHECK-DAG: #[[B1_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_SELF:.+]]>
-; CHECK-DAG: #[[B2_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_SELF]]>
+; CHECK-DAG: #[[B1_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", file = #{{.*}}, baseType = #[[B_SELF:.+]]>
+; CHECK-DAG: #[[B2_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", file = #{{.*}}, baseType = #[[B_SELF]]>
 ; CHECK-DAG: #[[B_INNER:.+]] = #llvm.di_composite_type<recId = [[B_RECID:.+]], tag = DW_TAG_class_type, name = "B", {{.*}}elements = #[[B1_INNER]], #[[B2_INNER]]
 
-; CHECK-DAG: #[[B1_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_INNER]]>
-; CHECK-DAG: #[[B2_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_INNER]]>
+; CHECK-DAG: #[[B1_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", file = #{{.*}}, baseType = #[[B_INNER]]>
+; CHECK-DAG: #[[B2_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", file = #{{.*}}, baseType = #[[B_INNER]]>
 ; CHECK-DAG: #[[A_OUTER:.+]] = #llvm.di_composite_type<recId = [[A_RECID:.+]], tag = DW_TAG_class_type, name = "A", {{.*}}elements = #[[B1_OUTER]], #[[B2_OUTER]]
 
 ; CHECK-DAG: #[[A_SELF:.+]] = #llvm.di_composite_type<recId = [[A_RECID]]
@@ -818,7 +819,30 @@ define void @imp_fn() !dbg !12 {
 ; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
 ; CHECK-DAG:  #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct{{.*}}<>, isRecSelf = true>
 ; CHECK-DAG: #[[IE:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[M]]{{.*}}>
-; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #[[IE]]>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = [#[[IE]]]>
+
+; // -----
+
+; CHECK-DAG: #[[M:.+]] = #llvm.di_module<{{.*}}name = "mod1"{{.*}}>
+; CHECK-DAG: #[[IE:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module{{.*}}entity = #[[M]]{{.*}}>
+; CHECK-DAG: #llvm.di_compile_unit<{{.*}}importedEntities = #[[IE]]>
+
+define void @compile_unit_imports() !dbg !4 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, imports: !5)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DISubroutineType(types: !8)
+!4 = distinct !DISubprogram(name: "compile_unit_imports", linkageName: "compile_unit_imports", scope: !2, file: !2, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !{!6}
+!6 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !2, entity: !7)
+!7 = !DIModule(scope: !2, name: "mod1", line: 5)
+!8 = !{}
 
 ; // -----
 

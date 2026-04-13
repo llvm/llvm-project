@@ -22,7 +22,6 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
-; Function Attrs: nounwind uwtable
 define void @do_not_interleave(ptr noalias nocapture readonly %in, ptr noalias nocapture %out, i32 %size) #0 !dbg !4 {
 entry:
   %cmp.4 = icmp eq i32 %size, 0, !dbg !10
@@ -50,7 +49,6 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void, !dbg !19
 }
 
-; Function Attrs: nounwind uwtable
 define void @interleave_not_profitable(ptr noalias nocapture readonly %in, ptr noalias nocapture %out, i32 %size) #0 !dbg !6 {
 entry:
   %cmp.4 = icmp eq i32 %size, 0, !dbg !20
@@ -72,7 +70,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void, !dbg !27
 }
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "use-soft-float"="false" }
+attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

@@ -21,12 +21,13 @@ define amdgpu_hs void @wwm(i32 inreg %arg, ptr addrspace(8) inreg %buffer) {
 ; GCN-NEXT:  ; %bb.1: ; %bb42
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:  .LBB0_2: ; %bb602
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
-; GCN-NEXT:    s_cbranch_vccnz .LBB0_4
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s1, v1
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN-NEXT:    s_cbranch_execz .LBB0_4
 ; GCN-NEXT:  ; %bb.3: ; %bb49
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GCN-NEXT:    tbuffer_store_format_x v1, off, s[4:7], 1 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT] offset:4 glc
-; GCN-NEXT:  .LBB0_4: ; %bb54
+; GCN-NEXT:  .LBB0_4: ; %UnifiedReturnBlock
 ; GCN-NEXT:    s_endpgm
 entry:
   br label %work
@@ -75,12 +76,13 @@ define amdgpu_hs void @strict_wwm(i32 inreg %arg, ptr addrspace(8) inreg %buffer
 ; GCN-NEXT:  ; %bb.1: ; %bb42
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:  .LBB1_2: ; %bb602
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
-; GCN-NEXT:    s_cbranch_vccnz .LBB1_4
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s1, v1
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN-NEXT:    s_cbranch_execz .LBB1_4
 ; GCN-NEXT:  ; %bb.3: ; %bb49
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GCN-NEXT:    tbuffer_store_format_x v1, off, s[4:7], 1 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT] offset:4 glc
-; GCN-NEXT:  .LBB1_4: ; %bb54
+; GCN-NEXT:  .LBB1_4: ; %UnifiedReturnBlock
 ; GCN-NEXT:    s_endpgm
 entry:
   br label %work

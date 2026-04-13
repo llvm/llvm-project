@@ -299,7 +299,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::sub(Known, Known2);
+    Known = KnownBits::sub(Known, Known2, MI.getFlag(MachineInstr::NoSWrap),
+                           MI.getFlag(MachineInstr::NoUWrap));
     break;
   }
   case TargetOpcode::G_XOR: {
@@ -370,6 +371,32 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
     Known = KnownBits::mulhs(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_ABDU: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::abdu(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_ABDS: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::abds(Known, Known2);
+
+    unsigned SignBits1 =
+        computeNumSignBits(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
+    if (SignBits1 == 1) {
+      break;
+    }
+    unsigned SignBits0 =
+        computeNumSignBits(MI.getOperand(1).getReg(), DemandedElts, Depth + 1);
+
+    Known.Zero.setHighBits(std::min(SignBits0, SignBits1) - 1);
     break;
   }
   case TargetOpcode::G_UDIV: {

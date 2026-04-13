@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/span.h"
 #include "src/__support/wctype_utils.h"
 #include "src/wctype/iswalpha.h"
 

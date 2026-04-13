@@ -50,6 +50,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include <TargetConditionals.h>
 #endif
 
@@ -196,32 +197,22 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
-  FileSpecList file_list;
+
+  assert(target.GetDebugger().GetScriptInterpreter() &&
+         "Trying to locate scripting resources but no ScriptInterpreter is "
+         "available.");
+
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
   while (module_spec.GetFilename()) {
-    std::string module_basename(module_spec.GetFilename().GetCString());
-    std::string original_module_basename(module_basename);
-
-    bool was_keyword = false;
-
-    // FIXME: for Python, don't allow certain characters in imported module
-    // filenames. Theoretically, different scripting languages may have
-    // different sets of forbidden tokens in filenames, and that should
-    // be dealt with by each ScriptInterpreter. For now, just replace dots
-    // with underscores. In order to support anything other than Python
-    // this will need to be reworked.
-    llvm::replace(module_basename, '.', '_');
-    llvm::replace(module_basename, ' ', '_');
-    llvm::replace(module_basename, '-', '_');
-    ScriptInterpreter *script_interpreter =
-        target.GetDebugger().GetScriptInterpreter();
-    if (script_interpreter &&
-        script_interpreter->IsReservedWord(module_basename.c_str())) {
-      module_basename.insert(module_basename.begin(), '_');
-      was_keyword = true;
-    }
+    ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
+        target.GetDebugger()
+            .GetScriptInterpreter()
+            ->GetSanitizedScriptingModuleName(
+                module_spec.GetFilename().GetStringRef());
 
     StreamString path_string;
     StreamString original_path_string;
@@ -231,47 +222,23 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     // file exists
     path_string.Format("{0}/../Python/{1}.py",
                        symfile_spec.GetDirectory().GetStringRef(),
-                       module_basename);
+                       sanitized_name.GetSanitizedName());
     original_path_string.Format("{0}/../Python/{1}.py",
                                 symfile_spec.GetDirectory().GetStringRef(),
-                                original_module_basename);
+                                sanitized_name.GetOriginalName());
 
     FileSpec script_fspec(path_string.GetString());
     FileSystem::Instance().Resolve(script_fspec);
     FileSpec orig_script_fspec(original_path_string.GetString());
     FileSystem::Instance().Resolve(orig_script_fspec);
 
-    // if we did some replacements of reserved characters, and a
-    // file with the untampered name exists, then warn the user
-    // that the file as-is shall not be loaded
-    if (module_basename != original_module_basename &&
-        FileSystem::Instance().Exists(orig_script_fspec)) {
-      const char *reason_for_complaint = was_keyword
-                                             ? "conflicts with a keyword"
-                                             : "contains reserved characters";
-      if (FileSystem::Instance().Exists(script_fspec))
-        feedback_stream.Format(
-            "warning: the symbol file '{0}' contains a debug "
-            "script. However, its name"
-            " '{1}' {2} and as such cannot be loaded. LLDB will"
-            " load '{3}' instead. Consider removing the file with "
-            "the malformed name to"
-            " eliminate this warning.\n",
-            symfile_spec.GetPath(), original_path_string.GetString(),
-            reason_for_complaint, path_string.GetString());
-      else
-        feedback_stream.Format(
-            "warning: the symbol file '{0}' contains a debug "
-            "script. However, its name"
-            " {1} and as such cannot be loaded. If you intend"
-            " to have this script loaded, please rename '{2}' to "
-            "'{3}' and retry.\n",
-            symfile_spec.GetPath(), reason_for_complaint,
-            original_path_string.GetString(), path_string.GetString());
-    }
+    WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
+                                         orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_list.Append(script_fspec);
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(script_fspec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
 
@@ -285,17 +252,19 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     module_spec.SetFilename(filename_no_extension);
   }
 
-  return file_list;
+  return file_specs;
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
   if (!target)
-    return {};
+    return empty;
 
   // For now only Python scripts supported for auto-loading.
   if (target->GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
-    return {};
+    return empty;
 
   // NB some extensions might be meaningful and should not be stripped -
   // "this.binary.file"
@@ -307,15 +276,15 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
   const FileSpec &module_spec = module.GetFileSpec();
 
   if (!module_spec)
-    return {};
+    return empty;
 
   SymbolFile *symfile = module.GetSymbolFile();
   if (!symfile)
-    return {};
+    return empty;
 
   ObjectFile *objfile = symfile->GetObjectFile();
   if (!objfile)
-    return {};
+    return empty;
 
   const FileSpec &symfile_spec = objfile->GetFileSpec();
   if (symfile_spec &&
@@ -325,7 +294,41 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
     return LocateExecutableScriptingResourcesFromDSYM(
         feedback_stream, module_spec, *target, symfile_spec);
 
-  return {};
+  return empty;
+}
+
+bool PlatformDarwin::IsSymbolFileTrusted(Module &module) {
+#if defined(__APPLE__)
+  SymbolFile *symfile = module.GetSymbolFile();
+  if (!symfile)
+    return false;
+
+  ObjectFile *objfile = symfile->GetObjectFile();
+  if (!objfile)
+    return false;
+
+  std::string symfile_path = objfile->GetFileSpec().GetPath();
+  llvm::StringRef path_ref(symfile_path);
+
+  // Find the .dSYM bundle root from the symfile path, which is typically
+  // .dSYM/Contents/Resources/DWARF/<name>.
+  auto pos = path_ref.find(".dSYM/");
+  if (pos == llvm::StringRef::npos)
+    return false;
+
+  FileSpec bundle_spec(path_ref.substr(0, pos + 5));
+
+  if (HostInfoMacOSX::IsBundleCodeSignTrusted(bundle_spec)) {
+    LLDB_LOG(GetLog(LLDBLog::Modules),
+             "dSYM bundle '{0}' has valid trusted code signature",
+             bundle_spec.GetPath());
+    return true;
+  }
+
+  return false;
+#else
+  return false;
+#endif
 }
 
 Status PlatformDarwin::ResolveSymbolFile(Target &target,
@@ -433,8 +436,9 @@ Status PlatformDarwin::GetModuleFromSharedCaches(
     UUID sc_uuid;
     LazyBool using_sc, private_sc;
     FileSpec sc_path;
+    std::optional<uint64_t> size;
     if (process->GetDynamicLoader()->GetSharedCacheInformation(
-            sc_base_addr, sc_uuid, using_sc, private_sc, sc_path)) {
+            sc_base_addr, sc_uuid, using_sc, private_sc, sc_path, size)) {
       if (module_spec.GetUUID())
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
                                                        sc_uuid, sc_mode);
@@ -898,18 +902,30 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   return FindSDKInXcodeForModules(sdk_type, sdks_spec);
 }
 
+// Discovering the correct version and build can help us
+// identify the most likely SDK directory when looking for
+// files.
+//
+// The directory name can be one of many formats, such as
+//     10.0 (21R329) universal
+//     17.0 (23A200) arm64e
+//     17.0 (20A352)
+//     Watch4,2 10.0 (21R329)
 std::tuple<llvm::VersionTuple, llvm::StringRef>
 PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
   llvm::StringRef build;
-  llvm::StringRef version_str;
-  llvm::StringRef build_str;
-  std::tie(version_str, build_str) = dir.split(' ');
   llvm::VersionTuple version;
-  if (!version.tryParse(version_str) ||
-      build_str.empty()) {
-    if (build_str.consume_front("(")) {
-      size_t pos = build_str.find(')');
-      build = build_str.slice(0, pos);
+
+  llvm::SmallVector<llvm::StringRef> parts;
+  dir.split(parts, ' ');
+  for (llvm::StringRef part : parts) {
+    // Look for an OS version number, eg "17.0"
+    if (isdigit(part[0]))
+      version.tryParse(part);
+    // Look for a build number, eg "(20A352)"
+    if (part.consume_front("(")) {
+      size_t pos = part.find(')');
+      build = part.slice(0, pos);
     }
   }
 
@@ -1092,11 +1108,11 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return llvm::createStringError("Failed to get module from target");
+    return llvm::createStringError("failed to get module from target");
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError("Failed to get symbol file from executable");
+    return llvm::createStringError("failed to get symbol file from executable");
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(

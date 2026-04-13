@@ -403,7 +403,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
 
   Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
   if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
-    if (isa<BranchInst>(LoopPred->getTerminator()))
+    if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
   return isDereferenceableAndAlignedPointerViaAssumption(

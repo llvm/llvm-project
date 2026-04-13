@@ -1201,6 +1201,12 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/ true,
                                CCE->requiresZeroInitialization());
+    if (getContext().getTargetInfo().emitVectorDeletingDtors(
+            getContext().getLangOpts())) {
+      CXXDestructorDecl *Dtor = Ctor->getParent()->getDestructor();
+      if (Dtor && Dtor->isVirtual())
+        CGM.requireVectorDestructorDefinition(Ctor->getParent());
+    }
     return;
   }
 

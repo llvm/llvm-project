@@ -2863,3 +2863,55 @@ entry:
   %and = and i32 %sub, 127
   ret i32 %and
 }
+
+define i32 @sub_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub i32 90, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 10
+  %r = sub i32 100, %a
+  ret i32 %r
+}
+
+define i32 @sub_nsw_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_nsw_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 90, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 10
+  %r = sub nsw i32 100, %a
+  ret i32 %r
+}
+
+define i32 @sub_nuw_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_nuw_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i32 100, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 0
+  %r = sub nuw i32 100, %a
+  ret i32 %r
+}
+
+define <2 x i32> @sub_const_or_disjoint_vec(<2 x i32> %x) {
+; CHECK-LABEL: @sub_const_or_disjoint_vec(
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i32> splat (i32 90), [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = or disjoint <2 x i32> %x, splat (i32 10)
+  %r = sub <2 x i32> splat (i32 100), %a
+  ret <2 x i32> %r
+}
+
+; negative test
+define i32 @sub_const_or_no_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_const_or_no_disjoint(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[R:%.*]] = sub i32 100, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or i32 %x, 10
+  %r = sub i32 100, %a
+  ret i32 %r
+}

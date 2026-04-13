@@ -686,6 +686,13 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
          "Expected the same scalar types");
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+
+  // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
+  // For now, skip all fixed vector cost analysis when P extension is available
+  // to avoid crashes in getMinRVVVectorSizeInBits()
+  if (ST->hasStdExtP() && isa<FixedVectorType>(SrcTy))
+    return 1;
+
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // First, handle cases where having a fixed length vector enables us to
@@ -1469,7 +1476,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         Op = RISCV::VSADD_VV;
         break;
       case Intrinsic::ssub_sat:
-        Op = RISCV::VSSUBU_VV;
+        Op = RISCV::VSSUB_VV;
         break;
       case Intrinsic::uadd_sat:
         Op = RISCV::VSADDU_VV;
@@ -1726,18 +1733,25 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // Find a suitable type for a stepvector.
     ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
     unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
-        MaskTy->getScalarType(), MaskTy->getElementCount(),
+        TLI->getVectorIdxTy(getDataLayout()), MaskTy->getElementCount(),
         /*ZeroIsPoison=*/true, &VScaleRange);
     EltWidth = std::max(EltWidth, MaskTy->getScalarSizeInBits());
     Type *StepTy = Type::getIntNTy(MaskTy->getContext(), EltWidth);
     auto *StepVecTy = VectorType::get(StepTy, ValTy->getElementCount());
     auto StepLT = getTypeLegalizationCost(StepVecTy);
+
+    // Currently expandVectorFindLastActive cannot handle step vector split.
+    // So return invalid when the type needs split.
+    // FIXME: Remove this if expandVectorFindLastActive supports split vector.
+    if (StepLT.first > 1)
+      return InstructionCost::getInvalid();
+
     InstructionCost Cost = 0;
     unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
 
     Cost += MaskLT.first *
             getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second, CostKind);
-    Cost += getCFInstrCost(Instruction::Br, CostKind, nullptr);
+    Cost += getCFInstrCost(Instruction::CondBr, CostKind, nullptr);
     Cost += StepLT.first *
             getRISCVInstructionCost(Opcodes, StepLT.second, CostKind);
     Cost += getCastInstrCost(Instruction::ZExt,
@@ -2031,7 +2045,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
                                      TTI::CastContextHint::None, CostKind) +
-                    getCFInstrCost(Instruction::Br, CostKind);
+                    getCFInstrCost(Instruction::CondBr, CostKind);
       }
       break;
 
@@ -2050,7 +2064,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
                                      TTI::CastContextHint::None, CostKind) +
-                    getCFInstrCost(Instruction::Br, CostKind);
+                    getCFInstrCost(Instruction::CondBr, CostKind);
       }
       break;
     }
@@ -2579,9 +2593,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
     if (Index == 0)
       // We can extract/insert the first element without vslidedown/vslideup.
       SlideCost = 0;
-    else if (ST->hasVendorXRivosVisni() && isUInt<5>(Index) &&
-             Val->getScalarType()->isIntegerTy())
-      SlideCost = 0; // With ri.vinsert/ri.vextract there is no slide needed
     else if (Opcode == Instruction::InsertElement)
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }
@@ -3582,8 +3593,7 @@ bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(
     // break point in the code - the end of a block with an unconditional
     // terminator.
     if (I->getOpcode() == Instruction::Or &&
-        isa<BranchInst>(I->getNextNode()) &&
-        cast<BranchInst>(I->getNextNode())->isUnconditional())
+        isa<UncondBrInst>(I->getNextNode()))
       return true;
 
     if (I->getOpcode() == Instruction::Add ||

@@ -19,6 +19,7 @@ import re
 import io
 import ast
 import enum
+import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
@@ -93,7 +94,8 @@ sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
-sig_update = 5
+sig_get_value = 5
+sig_update = 6
 
 SIGNATURES = {
     "summary": sig_summary,
@@ -101,6 +103,7 @@ SIGNATURES = {
     "get_num_children": sig_get_num_children,
     "get_child_index": sig_get_child_index,
     "get_child_at_index": sig_get_child_at_index,
+    "get_value": sig_get_value,
     "update": sig_update,
 }
 
@@ -226,6 +229,12 @@ class BytecodeSection:
         output.write(_to_uleb(len(bin)))
         output.write(self._to_binary())
 
+    def write_source(self, output: TextIO, language: str) -> None:
+        if language == "c":
+            self.write_c(output)
+        elif language == "swift":
+            self.write_swift(output)
+
     class _CBuilder:
         """Helper class for emitting binary data as a C-string literal."""
 
@@ -234,35 +243,63 @@ class BytecodeSection:
         def __init__(self) -> None:
             self.entries = []
 
-        def add_byte(self, x: int, comment: str) -> None:
-            self.add_bytes(_to_byte(x), comment)
+        def emit_byte(self, x: int, comment: str) -> None:
+            self.emit_bytes(_to_byte(x), comment)
 
-        def add_uleb(self, x: int, comment: str) -> None:
-            self.add_bytes(_to_uleb(x), comment)
+        def emit_uleb(self, x: int, comment: str) -> None:
+            self.emit_bytes(_to_uleb(x), comment)
 
-        def add_bytes(self, x: bytes, comment: str) -> None:
-            # Construct zero padded hex values with length two.
+        def emit_bytes(self, x: bytes, comment: str) -> None:
+            # Construct zero pemited hex values with length two.
             string = "".join(f"\\x{b:02x}" for b in x)
-            self.add_string(string, comment)
+            self.emit_string(string, comment)
 
-        def add_string(self, string: str, comment: str) -> None:
+        def emit_string(self, string: str, comment: str) -> None:
             self.entries.append((f'"{string}"', comment))
 
-    def write_source(self, output: TextIO) -> None:
+    class _SwiftBuilder:
+        """Helper class for emitting binary data as a Swift tuple literal."""
+
+        entries: list[Tuple[bytes, str]]
+
+        def __init__(self) -> None:
+            self.entries = []
+
+        def emit_byte(self, x: int, comment: str) -> None:
+            self.emit_bytes(_to_byte(x), comment)
+
+        def emit_uleb(self, x: int, comment: str) -> None:
+            self.emit_bytes(_to_uleb(x), comment)
+
+        def emit_bytes(self, x: bytes, comment: str) -> None:
+            self.entries.append((x, comment))
+
+        def emit_string(self, string: str, comment: str) -> None:
+            self.emit_bytes(string.encode(), comment)
+
+        @property
+        def type_decl(self):
+            total_bytes = sum((len(bs) for bs, _ in self.entries))
+            element_list = ", ".join(["UInt8"] * total_bytes)
+            return f"({element_list})"
+
+    def _build(self, builder) -> None:
+        size = len(self._to_binary())
+        builder.emit_byte(BINARY_VERSION, "version")
+        builder.emit_uleb(size, "remaining record size")
+        builder.emit_uleb(len(self.type_name), "type name size")
+        builder.emit_string(self.type_name, "type name")
+        builder.emit_byte(self.flags, "flags")
+        for sig, bc in self.signatures:
+            builder.emit_byte(SIGNATURES[sig], f"sig_{sig}")
+            builder.emit_uleb(len(bc), "program size")
+            builder.emit_bytes(bc, "program")
+
+    def write_c(self, output: TextIO) -> None:
         self.validate()
 
-        size = len(self._to_binary())
-
-        b = self._CBuilder()
-        b.add_byte(BINARY_VERSION, "version")
-        b.add_uleb(size, "remaining record size")
-        b.add_uleb(len(self.type_name), "type name size")
-        b.add_string(self.type_name, "type name")
-        b.add_byte(self.flags, "flags")
-        for sig, bc in self.signatures:
-            b.add_byte(SIGNATURES[sig], f"sig_{sig}")
-            b.add_uleb(len(bc), "program size")
-            b.add_bytes(bc, "program")
+        builder = self._CBuilder()
+        self._build(builder)
 
         print(
             textwrap.dedent(
@@ -276,17 +313,48 @@ class BytecodeSection:
             ),
             file=output,
         )
-        var_name = re.sub(r"\W", "_", self.type_name)
         print(
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char _{var_name}_synthetic[] =", file=output)
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
-        for string, comment in b.entries:
+        for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
             print(f"{indent}{string}", file=output)
         print(";", file=output)
+
+    def write_swift(self, output: TextIO) -> None:
+        self.validate()
+
+        builder = self._SwiftBuilder()
+        self._build(builder)
+
+        print(
+            textwrap.dedent(
+                """\
+                #if swift(>=6.3)
+                #if objectFormat(MachO)
+                @section("__DATA_CONST,__lldbformatters")
+                #else
+                @section(".lldbformatters")
+                #endif
+                @used"""
+            ),
+            file=output,
+        )
+        print(
+            f"let `{self.type_name} formatter`: {builder.type_decl} = (",
+            file=output,
+        )
+        indent = "    "
+        for bs, comment in builder.entries:
+            print(f"{indent}// {comment}", file=output)
+            byte_list = ", ".join(f"0x{b:02x}" for b in bs)
+            print(f"{indent}{byte_list},", file=output)
+        print(")", file=output)
+        print("#endif", file=output)  # swift(>=6.3)
 
 
 def assemble_file(type_name: str, input: TextIO) -> BytecodeSection:
@@ -777,10 +845,6 @@ class Compiler(ast.NodeVisitor):
     # methods are compiled.
     attrs: list[str]
 
-    # Temporaries currently on the stack above the locals/attrs frame.
-    # Always 0 at statement boundaries.
-    num_temps: int
-
     # Bytecode signature of the method being compiled, or None for top-level
     # functions.
     current_sig: Optional[str]
@@ -790,7 +854,6 @@ class Compiler(ast.NodeVisitor):
     def __init__(self) -> None:
         self.locals = []
         self.attrs = []
-        self.num_temps = 0
         self.current_sig = None
         self.buffer = io.StringIO()
 
@@ -824,7 +887,13 @@ class Compiler(ast.NodeVisitor):
 
     def _compile_method(self, node: ast.FunctionDef) -> None:
         self.current_sig = _METHOD_SIGS[node.name]
-        self.num_temps = 0
+
+        return_type = node.returns.id if isinstance(node.returns, ast.Name) else None
+        if node.name == "update" and return_type != "bool":
+            raise CompilerError(
+                "update must be declared to return bool: def update(self) -> bool:",
+                node,
+            )
 
         # Strip 'self' (and 'internal_dict' for __init__) from the arg list;
         # the remaining args become the initial locals.
@@ -863,18 +932,13 @@ class Compiler(ast.NodeVisitor):
         # XXX: Does not handle multiple comparisons, ex: `0 < x < 10`
         self.visit(node.comparators[0])
         self._output(_COMPS[type(node.ops[0])])
-        # The comparison consumes two values and produces one.
-        self.num_temps -= 1
 
     def visit_If(self, node: ast.If) -> None:
         self.visit(node.test)
-        # `if`/`ifelse` consumes the condition.
-        self.num_temps = 0
 
         self._output("{")
         self._visit_each(node.body)
         if node.orelse:
-            self.num_temps = 0
             self._output("} {")
             self._visit_each(node.orelse)
             self._output("} ifelse")
@@ -882,7 +946,6 @@ class Compiler(ast.NodeVisitor):
             self._output("} if")
 
     def visit_Return(self, node: ast.Return) -> None:
-        self.num_temps = 0
         if node.value:
             self.visit(node.value)
         self._output("return")
@@ -894,7 +957,6 @@ class Compiler(ast.NodeVisitor):
             self._output(int(node.value))
         else:
             self._output(node.value)
-        self.num_temps += 1
 
     def visit_Call(self, node: ast.Call) -> None:
         func = node.func
@@ -911,8 +973,6 @@ class Compiler(ast.NodeVisitor):
                 self.visit(receiver)
                 self._visit_each(node.args)
                 self._output(f"{selector} call")
-                # `call` pops the receiver and all args, and pushes one result.
-                self.num_temps -= len(node.args)
                 return
             raise CompilerError(f"unsupported method: {method}", node)
 
@@ -922,8 +982,6 @@ class Compiler(ast.NodeVisitor):
         raise CompilerError("unsupported function call expression", node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
-        self.num_temps = 0
-
         target = node.targets[0]
 
         # Handle self.attr = expr (attribute assignment).
@@ -990,17 +1048,14 @@ class Compiler(ast.NodeVisitor):
             raise CompilerError(
                 "unsupported attribute access (only self.attr is supported)", node
             )
-        attr_idx = self._attr_index(node.attr, node)
-        pick_idx = self.num_temps + attr_idx
-        self._output(f"{pick_idx} pick")  # "# self.{node.attr}"
-        self.num_temps += 1
+        pick_idx = self._attr_index(node.attr, node)
+        self._output(f"{pick_idx}u pick")  # "# self.{node.attr}"
 
     def visit_Name(self, node: ast.Name) -> None:
-        idx = self._stack_index(node)
+        idx = self._local_index(node)
         if idx is None:
             raise CompilerError(f"unknown local variable: {node.id}", node)
-        self._output(f"{idx} pick")  # "# {node.id}"
-        self.num_temps += 1
+        self._output(f"{idx}u pick")  # "# {node.id}"
 
     def _visit_each(self, nodes: Sequence[ast.AST]) -> None:
         for child in nodes:
@@ -1014,16 +1069,11 @@ class Compiler(ast.NodeVisitor):
         except ValueError:
             raise CompilerError(f"unknown attribute: {name}", node)
 
-    def _stack_index(self, name: ast.Name) -> Optional[int]:
-        # Offset past all attrs and any in-flight temporaries.
-        idx = self._local_index(name)
-        if idx is None:
-            return None
-        return len(self.attrs) + idx + self.num_temps
-
     def _local_index(self, name: ast.Name) -> Optional[int]:
         try:
-            return self.locals.index(name.id)
+            idx = self.locals.index(name.id)
+            # Offset past all attrs.
+            return len(self.attrs) + idx
         except ValueError:
             return None
 
@@ -1108,15 +1158,22 @@ def _main():
         help="output file (required for --assemble)",
     )
     parser.add_argument(
+        "--append", action="store_true", help="append to existing output file"
+    )
+    parser.add_argument(
         "-f",
         "--format",
-        choices=("binary", "c"),
+        choices=("binary", "c", "swift"),
         default="binary",
         help="output file format",
     )
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
+
+    if args.append and not args.compile:
+        parser.error("--append is valid only with --compile")
+
     if args.compile:
         if not args.type_name:
             parser.error("--type-name is required with --compile")
@@ -1133,9 +1190,10 @@ def _main():
         if args.format == "binary":
             with open(args.output, "wb") as output:
                 section.write_binary(output)
-        else:  # args.format == "c"
-            with open(args.output, "w") as output:
-                section.write_source(output)
+        else:
+            mode = "a" if args.append else "w"
+            with open(args.output, mode) as output:
+                section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:
             parser.error("--type-name is required with --assemble")
@@ -1146,9 +1204,9 @@ def _main():
         if args.format == "binary":
             with open(args.output, "wb") as output:
                 section.write_binary(output)
-        else:  # args.format == "c"
+        else:
             with open(args.output, "w") as output:
-                section.write_source(output)
+                section.write_source(output, language=args.format)
     elif args.disassemble:
         if args.output:
             with (
@@ -1242,11 +1300,11 @@ if __name__ == "__main__":
                 ],
             )
             out = io.StringIO()
-            section.write_source(out)
+            section.write_source(out, language="c")
             src = out.getvalue()
 
             self.assertIn("__attribute__((used, section(FORMATTER_SECTION)))", src)
-            self.assertIn("unsigned char _Account_synthetic[] =", src)
+            self.assertIn("unsigned char _Account_formatter[] =", src)
             self.assertIn('"\\x01"', src)  # version
             self.assertIn('"\\x15"', src)  # record size (21)
             self.assertIn('"\\x07"', src)  # type name size (7)
@@ -1265,7 +1323,7 @@ if __name__ == "__main__":
 
             # Non-identifier characters in the type name are replaced with '_'.
             out2 = io.StringIO()
-            BytecodeSection("std::vector<int>", 0, []).write_source(out2)
-            self.assertIn("_std__vector_int__synthetic[] =", out2.getvalue())
+            BytecodeSection("std::vector<int>", 0, []).write_source(out2, language="c")
+            self.assertIn("_std__vector_int__formatter[] =", out2.getvalue())
 
     unittest.main(argv=[__file__])

@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/stop.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -658,6 +659,28 @@ struct MIFFormTeamOpConversion
   }
 };
 
+/// Generate runtime call to 'prif_end_team' from mif.end_team operation.
+fir::CallOp genPrifEndTeamCallOp(mif::EndTeamOp op,
+                                 mlir::PatternRewriter &rewriter) {
+  auto mod = op->template getParentOfType<mlir::ModuleOp>();
+  fir::FirOpBuilder builder(rewriter, mod);
+  mlir::Location loc = op.getLoc();
+  mlir::Type errmsgTy = getPRIFErrmsgType(builder);
+  mlir::FunctionType ftype = mlir::FunctionType::get(
+      builder.getContext(),
+      /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
+      /*results*/ {});
+  mlir::func::FuncOp funcOp =
+      builder.createFunction(loc, getPRIFProcName("end_team"), ftype);
+
+  mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
+  auto [errmsgArg, errmsgAllocArg] =
+      genErrmsgPRIF(builder, loc, op.getErrmsg());
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
+  return fir::CallOp::create(rewriter, loc, funcOp, args);
+}
+
 /// Convert mif.change_team operation to runtime call of 'prif_change_team'
 struct MIFChangeTeamOpConversion
     : public mlir::OpRewritePattern<mif::ChangeTeamOp> {
@@ -668,7 +691,6 @@ struct MIFChangeTeamOpConversion
                   mlir::PatternRewriter &rewriter) const override {
     auto mod = op->template getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    builder.setInsertionPoint(op);
 
     mlir::Location loc = op.getLoc();
     mlir::Type errmsgTy = getPRIFErrmsgType(builder);
@@ -685,43 +707,37 @@ struct MIFChangeTeamOpConversion
         genErrmsgPRIF(builder, loc, op.getErrmsg());
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, op.getTeam(), stat, errmsgArg, errmsgAllocArg);
-    fir::CallOp::create(builder, loc, funcOp, args);
 
-    mlir::Operation *changeOp = op.getOperation();
-    auto &bodyRegion = op.getRegion();
-    mlir::Block &bodyBlock = bodyRegion.front();
+    mlir::Operation *changeTeamOp = op.getOperation();
+    mlir::Block *currentBlock = changeTeamOp->getBlock();
 
-    rewriter.inlineBlockBefore(&bodyBlock, changeOp);
+    mlir::Block *newBlock = rewriter.splitBlock(
+        currentBlock, std::next(changeTeamOp->getIterator()));
+    rewriter.setInsertionPoint(changeTeamOp);
+    // Creation of the call to prif_change_team
+    fir::CallOp::create(rewriter, loc, funcOp, args);
+
+    // Inlining all the region into the new block
+    mlir::Region &teamRegion = op.getRegion();
+    mlir::Block *firstBlock = &teamRegion.front();
+    mlir::Block *lastBlock = &teamRegion.back();
+    rewriter.inlineRegionBefore(teamRegion, newBlock);
+
+    rewriter.setInsertionPointToEnd(currentBlock);
+    mlir::cf::BranchOp::create(rewriter, loc, firstBlock);
+
+    // Removing mif.end_team operation and add the call to prif_end_team.
+    if (auto endTeamOp =
+            mlir::dyn_cast<mif::EndTeamOp>(lastBlock->getTerminator())) {
+      rewriter.setInsertionPoint(endTeamOp);
+      genPrifEndTeamCallOp(endTeamOp, rewriter);
+      mlir::cf::BranchOp::create(rewriter, loc, newBlock);
+      rewriter.eraseOp(endTeamOp);
+    } else
+      fir::emitFatalError(loc,
+                          "internal error: missing expected mif::EndTeamOp");
+
     rewriter.eraseOp(op);
-    return mlir::success();
-  }
-};
-
-/// Convert mif.end_team operation to runtime call of 'prif_end_team'
-struct MIFEndTeamOpConversion : public mlir::OpRewritePattern<mif::EndTeamOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mif::EndTeamOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::FunctionType ftype = mlir::FunctionType::get(
-        builder.getContext(),
-        /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
-        /*results*/ {});
-    mlir::func::FuncOp funcOp =
-        builder.createFunction(loc, getPRIFProcName("end_team"), ftype);
-
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
-    auto [errmsgArg, errmsgAllocArg] =
-        genErrmsgPRIF(builder, loc, op.getErrmsg());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-        builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
-    fir::CallOp callOp = fir::CallOp::create(builder, loc, funcOp, args);
-    rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
 };
@@ -814,7 +830,7 @@ public:
 
     mif::populateMIFOpConversionPatterns(patterns);
 
-    target.addLegalDialect<fir::FIROpsDialect>();
+    target.addLegalDialect<fir::FIROpsDialect, mlir::cf::ControlFlowDialect>();
     target.addLegalOp<mlir::ModuleOp>();
 
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
@@ -828,13 +844,11 @@ public:
 } // namespace
 
 void mif::populateMIFOpConversionPatterns(mlir::RewritePatternSet &patterns) {
-  patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
-                  MIFNumImagesOpConversion, MIFSyncAllOpConversion,
-                  MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,
-                  MIFSyncTeamOpConversion, MIFCoBroadcastOpConversion,
-                  MIFCoMaxOpConversion, MIFCoMinOpConversion,
-                  MIFCoSumOpConversion, MIFFormTeamOpConversion,
-                  MIFChangeTeamOpConversion, MIFEndTeamOpConversion,
-                  MIFGetTeamOpConversion, MIFTeamNumberOpConversion>(
-      patterns.getContext());
+  patterns.insert<
+      MIFInitOpConversion, MIFThisImageOpConversion, MIFNumImagesOpConversion,
+      MIFSyncAllOpConversion, MIFSyncImagesOpConversion,
+      MIFSyncMemoryOpConversion, MIFSyncTeamOpConversion,
+      MIFCoBroadcastOpConversion, MIFCoMaxOpConversion, MIFCoMinOpConversion,
+      MIFCoSumOpConversion, MIFFormTeamOpConversion, MIFChangeTeamOpConversion,
+      MIFGetTeamOpConversion, MIFTeamNumberOpConversion>(patterns.getContext());
 }

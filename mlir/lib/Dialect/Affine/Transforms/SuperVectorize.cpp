@@ -965,6 +965,19 @@ static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
 
   // Register vector replacement for future uses in the scope.
   state.registerOpVectorReplacement(constOp, newConstOp);
+
+  // Index-typed constants are also used as scalar indices in vectorized memory
+  // operations (e.g., as operands to vector.transfer_read/write). Register a
+  // scalar replacement so that getScalarValueReplacementsFor can find a live
+  // value in the vectorized loop body instead of falling back to the original
+  // constant, which will be erased along with the scalar loop.
+  if (isa<IndexType>(scalarTy)) {
+    auto scalarConstOp = arith::ConstantOp::create(
+        state.builder, constOp.getLoc(), constOp.getValue());
+    state.registerValueScalarReplacement(constOp.getResult(),
+                                         scalarConstOp.getResult());
+  }
+
   return newConstOp;
 }
 
@@ -1298,6 +1311,15 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
     return nullptr;
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
+
+  // A transfer_write with a broadcast dimension (constant expr in the
+  // permutation map) is invalid. Bail out to avoid producing invalid IR.
+  if (llvm::any_of(permutationMap.getResults(),
+                   llvm::IsaPred<AffineConstantExpr>)) {
+    LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ store permutation map has "
+                         "broadcast dims, bailing out\n");
+    return nullptr;
+  }
 
   auto transfer = vector::TransferWriteOp::create(
       state.builder, storeOp.getLoc(), vectorValue, storeOp.getMemRef(),

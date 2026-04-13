@@ -202,8 +202,8 @@ protected:
     uint32_t num_matches = 0;
     assert(module);
     if (cu) {
-      assert(file_spec.GetFilename().AsCString());
-      bool has_path = (file_spec.GetDirectory().AsCString() != nullptr);
+      assert(file_spec.GetFilename().AsCString(nullptr));
+      bool has_path = (file_spec.GetDirectory().AsCString(nullptr) != nullptr);
       const SupportFileList &cu_file_list = cu->GetSupportFiles();
       size_t file_idx = cu_file_list.FindFileIndex(0, file_spec, has_path);
       if (file_idx != UINT32_MAX) {
@@ -428,30 +428,29 @@ protected:
           StreamString error_strm;
           if (!GetSymbolContextsForAddress(module_list, addr, sc_list_lines,
                                            error_strm))
-            result.AppendWarningWithFormat("in symbol '%s': %s",
-                                           sc.GetFunctionName().AsCString(),
-                                           error_strm.GetData());
+            result.AppendWarningWithFormatv("in symbol '{0}': {1}",
+                                            sc.GetFunctionName(),
+                                            error_strm.GetData());
           else
             context_found_for_symbol = true;
         }
       }
       if (!context_found_for_symbol)
-        result.AppendWarningWithFormat("Unable to find line information"
-                                       " for matching symbol '%s'.\n",
-                                       sc.GetFunctionName().AsCString());
+        result.AppendWarningWithFormatv("Unable to find line information"
+                                        " for matching symbol '{0}'.\n",
+                                        sc.GetFunctionName());
     }
     if (sc_list_lines.GetSize() == 0) {
-      result.AppendErrorWithFormat("No line information could be found"
-                                   " for any symbols matching '%s'.\n",
-                                   name.AsCString());
+      result.AppendErrorWithFormatv("No line information could be found"
+                                    " for any symbols matching '{0}'.\n",
+                                    name);
       return false;
     }
     FileSpec file_spec;
     if (!DumpLinesInSymbolContexts(result.GetOutputStream(), sc_list_lines,
                                    module_list, file_spec)) {
-      result.AppendErrorWithFormat(
-          "Unable to dump line information for symbol '%s'.\n",
-          name.AsCString());
+      result.AppendErrorWithFormatv(
+          "Unable to dump line information for symbol '{0}'.\n", name);
       return false;
     }
     return true;
@@ -534,10 +533,6 @@ protected:
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
-
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
 
     // Collect the list of modules to search.
     m_module_list.Clear();

@@ -216,6 +216,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.calloc
     libc.src.stdlib.free
     libc.src.stdlib.malloc
+    libc.src.stdlib.posix_memalign
     libc.src.stdlib.realloc
 
     # stdio.h entrypoints
@@ -231,6 +232,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.sprintf
     libc.src.stdio.asprintf
     libc.src.stdio.sscanf
+    libc.src.stdio.stderr
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
     libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
@@ -284,6 +288,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.resource.getrlimit
     libc.src.sys.resource.setrlimit
 
+    # sys/sem.h entrypoints
+    libc.src.sys.sem.semget
+    libc.src.sys.sem.semctl
+    libc.src.sys.sem.semop
+
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
 
@@ -296,12 +305,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.utimensat
 
     # sys/statvfs.h
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
-    # sys/utimes.h entrypoints
+    # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
     # sys/utsname.h entrypoints
@@ -418,9 +428,17 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
+    libc.src.wctype.iswgraph
     libc.src.wctype.iswcntrl
     libc.src.wctype.iswdigit
+    libc.src.wctype.iswupper
+    libc.src.wctype.iswalnum
     libc.src.wctype.iswlower
+    libc.src.wctype.iswspace
+    libc.src.wctype.iswblank
+    libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
+    libc.src.wctype.iswprint
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -479,6 +497,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
@@ -535,6 +554,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorf
     libc.src.math.floorl
     libc.src.math.fma
+    libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
@@ -730,6 +750,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.asinhf16
     libc.src.math.asinpif16
     libc.src.math.atanf16
+    libc.src.math.atan2f16
     libc.src.math.atanhf16
     libc.src.math.atanpif16
     libc.src.math.canonicalizef16
@@ -738,6 +759,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.cosf16
     libc.src.math.coshf16
     libc.src.math.cospif16
+    libc.src.math.erff16
+    libc.src.math.erfcf16
     libc.src.math.exp10f16
     libc.src.math.exp10m1f16
     libc.src.math.exp2f16
@@ -790,7 +813,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llrintf16
     libc.src.math.llroundf16
     libc.src.math.log10f16
+    libc.src.math.log10p1f16
     libc.src.math.log2f16
+    libc.src.math.log2p1f16
     libc.src.math.logbf16
     libc.src.math.logf16
     libc.src.math.lrintf16
@@ -924,6 +949,8 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -960,6 +987,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
+  libc.src.math.hypotbf16
   libc.src.math.ilogbbf16
   libc.src.math.iscanonicalbf16
   libc.src.math.issignalingbf16
@@ -1308,6 +1336,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.lfind
     libc.src.search.lsearch
     libc.src.search.remque
+    libc.src.search.tdelete
+    libc.src.search.tdestroy
+    libc.src.search.tfind
+    libc.src.search.tsearch
+    libc.src.search.twalk
+    libc.src.search.twalk_r
 
     # threads.h entrypoints
     libc.src.threads.call_once
@@ -1380,6 +1414,7 @@ if(LLVM_LIBC_FULL_BUILD)
     # sys/socket.h entrypoints
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
+    libc.src.sys.socket.connect
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send
     libc.src.sys.socket.sendto

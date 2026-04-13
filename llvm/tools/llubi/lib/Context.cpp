@@ -375,6 +375,50 @@ void Context::storeRawBytes(MemoryObject &MO, uint64_t Offset, const void *Data,
     MO[Offset + I] = Byte::concrete(static_cast<const uint8_t *>(Data)[I]);
 }
 
+void Context::freeze(AnyValue &Val, Type *Ty) {
+  if (Val.isPoison()) {
+    uint32_t Bits = DL.getTypeSizeInBits(Ty);
+    APInt RandomVal = APInt::getZero(Bits);
+    if (UndefBehavior == UndefValueBehavior::NonDeterministic) {
+      SmallVector<APInt::WordType> RandomWords;
+      uint32_t NumWords = APInt::getNumWords(Bits);
+      RandomWords.reserve(NumWords);
+      static_assert(decltype(Rng)::word_size >=
+                        std::numeric_limits<APInt::WordType>::digits,
+                    "Unexpected Rng result type.");
+      for (uint32_t I = 0; I != NumWords; ++I)
+        RandomWords.push_back(static_cast<APInt::WordType>(Rng()));
+      RandomVal = APInt(Bits, RandomWords);
+    }
+    if (Ty->isIntegerTy())
+      Val = AnyValue(RandomVal);
+    else if (Ty->isFloatingPointTy())
+      Val = AnyValue(APFloat(Ty->getFltSemantics(), RandomVal));
+    else if (Ty->isPointerTy())
+      Val = AnyValue(Pointer(RandomVal));
+    else
+      llvm_unreachable("Unsupported scalar type for poison value");
+    return;
+  }
+  if (Val.isAggregate()) {
+    auto &SubVals = Val.asAggregate();
+    if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+      Type *ElemTy = VecTy->getElementType();
+      for (auto &SubVal : SubVals)
+        freeze(SubVal, ElemTy);
+    } else if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
+      Type *ElemTy = ArrTy->getElementType();
+      for (auto &SubVal : SubVals)
+        freeze(SubVal, ElemTy);
+    } else if (auto *StructTy = dyn_cast<StructType>(Ty)) {
+      for (uint32_t I = 0, E = SubVals.size(); I != E; ++I)
+        freeze(SubVals[I], StructTy->getElementType(I));
+    } else {
+      llvm_unreachable("Invalid aggregate type");
+    }
+  }
+}
+
 MemoryObject::~MemoryObject() = default;
 MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
                            unsigned AS, MemInitKind InitKind)

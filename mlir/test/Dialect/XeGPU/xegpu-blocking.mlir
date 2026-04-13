@@ -602,6 +602,24 @@ gpu.module @test_kernel {
 
 // -----
 
+#a = #xegpu.layout<inst_data = [8, 16]>
+gpu.module @test_kernel {
+  //CHECK-LABEL: gpu.func @convert_layout_scalar
+  gpu.func @convert_layout_scalar(%arg0: memref<16x16xf16>, %arg1: memref<4xf16>) {
+    %acc = arith.constant 0.000000e+00 : f16
+    %c0 = arith.constant 0 : index
+    %a_tdesc = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #a>
+    %a = xegpu.load_nd %a_tdesc {layout = #a}: !xegpu.tensor_desc<16x16xf16, #a> -> vector<16x16xf16>
+    %a_reduce = vector.multi_reduction <add>, %a, %acc {layout_operand_0 = #a, layout_result_0 = #xegpu.slice<#a, dims = [0, 1]>} [0, 1] : vector<16x16xf16> to f16
+    // CHECK-NOT: xegpu.convert_layout
+    %13 = xegpu.convert_layout %a_reduce <{input_layout = #xegpu.slice<#a, dims = [0, 1]>, target_layout = #xegpu.slice<#a, dims = [0, 1]>}> : f16
+    memref.store %13, %arg1[%c0] : memref<4xf16>
+    gpu.return
+  }
+}
+
+// -----
+
 #in = #xegpu.slice<#xegpu.layout<inst_data = [1, 16]>, dims = [1]>
 #out = #xegpu.slice<#xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>
 gpu.module @test_kernel {

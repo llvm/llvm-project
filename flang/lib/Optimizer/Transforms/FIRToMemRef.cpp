@@ -330,6 +330,7 @@ void FIRToMemRef::rewriteAlloca(fir::AllocaOp firAlloca,
   copyAttribute(firAlloca, alloca, firAlloca.getBindcNameAttrName());
   copyAttribute(firAlloca, alloca, firAlloca.getUniqNameAttrName());
   copyAttribute(firAlloca, alloca, cuf::getDataAttrName());
+  copyAttribute(firAlloca, alloca, acc::getVarNameAttrName());
 
   auto convert = fir::ConvertOp::create(rewriter, loc, type, alloca);
 
@@ -380,6 +381,46 @@ static Value castTypeToIndexType(Value originalValue,
   Type indexType = rewriter.getIndexType();
   return arith::IndexCastOp::create(rewriter, originalValue.getLoc(), indexType,
                                     originalValue);
+}
+
+static bool shouldUseBoundaryBitcast(mlir::Type fromTy, mlir::Type toTy) {
+  auto isBitcastCompatibleScalarType = [](mlir::Type ty) {
+    return mlir::isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>(
+               ty) ||
+           (mlir::isa<fir::CharacterType>(ty) &&
+            mlir::cast<fir::CharacterType>(ty).getLen() ==
+                fir::CharacterType::singleton());
+  };
+  auto getKnownScalarBitWidth = [](mlir::Type ty) -> std::optional<unsigned> {
+    if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
+      return intTy.getWidth();
+    if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(ty))
+      return floatTy.getWidth();
+    return std::nullopt;
+  };
+
+  if (fromTy == toTy)
+    return false;
+  const bool fromStd = fir::isa_std_type(fromTy);
+  const bool toStd = fir::isa_std_type(toTy);
+  if (fromStd == toStd)
+    return false;
+  if (!isBitcastCompatibleScalarType(fromTy) ||
+      !isBitcastCompatibleScalarType(toTy))
+    return false;
+  auto fromBits = getKnownScalarBitWidth(fromTy);
+  auto toBits = getKnownScalarBitWidth(toTy);
+  if (fromBits && toBits && *fromBits != *toBits)
+    return false;
+  return true;
+}
+
+static mlir::Value createTypeConversion(PatternRewriter &rewriter,
+                                        mlir::Location loc, mlir::Type toTy,
+                                        mlir::Value value) {
+  if (shouldUseBoundaryBitcast(value.getType(), toTy))
+    return fir::BitcastOp::create(rewriter, loc, toTy, value);
+  return fir::ConvertOp::create(rewriter, loc, toTy, value);
 }
 
 FailureOr<SmallVector<Value>>
@@ -443,8 +484,17 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     Value stride = isSliced ? sliceStrides[i] : one;
     Value sliceLb = isSliced ? sliceLbs[i] : shift;
 
-    Value oneIdx = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    Value indexAdjustment = isSliced ? oneIdx : sliceLb;
+    // When the array_coor has an explicit slice with a shape_shift (i.e.
+    // non-default lower bounds), the indices are in the shape_shift
+    // coordinate space; subtract the lower bound (shift) to get 0-based
+    // memref indices. Otherwise (the slice comes from an embox, or the
+    // shape has no shift), the indices are 1-based section indices;
+    // subtract 1.
+    bool indicesAreFortran = isShifted && arrayCoorOp.getSlice() != nullptr;
+    Value indexAdjustment =
+        (isSliced && !indicesAreFortran)
+            ? arith::ConstantIndexOp::create(rewriter, loc, 1)
+            : shift;
     Value delta = arith::SubIOp::create(rewriter, loc, index, indexAdjustment);
 
     Value scaled = arith::MulIOp::create(rewriter, loc, delta, stride);
@@ -534,8 +584,13 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   MemRefType memRefTy = dyn_cast<MemRefType>(convertedVal.getType());
 
   bool isRebox = firMemref.getDefiningOp<fir::ReboxOp>() != nullptr;
+  bool isDescriptor = mlir::isa<fir::BaseBoxType>(firMemref.getType()) ||
+                      firMemref.getDefiningOp<fir::BoxAddrOp>() != nullptr;
 
-  if (memRefTy.hasStaticShape() && !isRebox)
+  // Static shape does not imply contiguous layout for descriptor-backed
+  // entities (e.g. boxed array sections with non-unit stride). Keep the
+  // reinterpret-cast path so descriptor strides are preserved.
+  if (memRefTy.hasStaticShape() && !isRebox && !isDescriptor)
     return std::pair{*converted, indices};
 
   unsigned rank = arrayCoorOp.getIndices().size();
@@ -974,11 +1029,10 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
   LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: new memref.load op:\n";
              loadOp.dump(); assert(succeeded(verify(loadOp))));
 
-  if (isa<fir::LogicalType>(originalType)) {
-    Value logicalVal =
-        fir::ConvertOp::create(rewriter, loadOp.getLoc(), originalType, loadOp);
-    loadOp.getResult().replaceAllUsesExcept(logicalVal,
-                                            logicalVal.getDefiningOp());
+  if (loadOp.getType() != originalType) {
+    Value castVal =
+        createTypeConversion(rewriter, loadOp.getLoc(), originalType, loadOp);
+    loadOp.getResult().replaceAllUsesExcept(castVal, castVal.getDefiningOp());
   }
 
   if (!isa<fir::LogicalType>(originalType))
@@ -1010,11 +1064,10 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
   Value value = store.getValue();
   rewriter.setInsertionPointAfter(store);
 
-  if (isa<fir::LogicalType>(value.getType())) {
-    Type convertedType = typeConverter.convertType(value.getType());
+  Type convertedType = typeConverter.convertType(value.getType());
+  if (convertedType != value.getType())
     value =
-        fir::ConvertOp::create(rewriter, store.getLoc(), convertedType, value);
-  }
+        createTypeConversion(rewriter, store.getLoc(), convertedType, value);
 
   Attribute attr = (store.getOperation())->getAttr("tbaa");
   memref::StoreOp storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(

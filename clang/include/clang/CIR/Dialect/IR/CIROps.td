@@ -520,7 +520,25 @@ def CIR_MemOrder : CIR_I32EnumAttr<
 
 def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
   I32EnumAttrCase<"SingleThread", 0, "single_thread">,
-  I32EnumAttrCase<"System", 1, "system">
+  I32EnumAttrCase<"System", 1, "system">,
+  I32EnumAttrCase<"Device", 2, "device">,
+  I32EnumAttrCase<"Workgroup", 3, "workgroup">,
+  I32EnumAttrCase<"Wavefront", 4, "wavefront">,
+  I32EnumAttrCase<"Cluster", 5, "cluster">,
+
+  // HIP sync scopes
+  I32EnumAttrCase<"HIPSingleThread", 6, "hip_single_thread">,
+  I32EnumAttrCase<"HIPSystem", 7, "hip_system">,
+  I32EnumAttrCase<"HIPAgent", 8, "hip_agent">,
+  I32EnumAttrCase<"HIPWorkgroup", 9, "hip_workgroup">,
+  I32EnumAttrCase<"HIPWavefront", 10, "hip_wavefront">,
+  I32EnumAttrCase<"HIPCluster", 11, "hip_cluster">,
+
+  // OpenCL sync scopes
+  I32EnumAttrCase<"OpenCLWorkGroup", 12, "opencl_work_group">,
+  I32EnumAttrCase<"OpenCLDevice", 13, "opencl_device">,
+  I32EnumAttrCase<"OpenCLAllSVMDevices", 14, "opencl_all_svm_devices">,
+  I32EnumAttrCase<"OpenCLSubGroup", 15, "opencl_sub_group">,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -890,7 +908,8 @@ def CIR_IfOp : CIR_Op<"if", [
 def CIR_ConditionOp : CIR_Op<"condition", [
   Terminator,
   DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
-    "getSuccessorRegions"
+    "getSuccessorRegions",
+    "getMutableSuccessorOperands"
   ]>
 ]> {
   let summary = "Loop continuation condition.";
@@ -1037,7 +1056,9 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_ResumeOp : CIR_Op<"resume", [
-  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+    "getMutableSuccessorOperands"
+  ]>,
   Terminator,
   ParentOneOf<["cir::TryOp", "cir::CleanupScopeOp", "cir::FuncOp"]>
 ]> {
@@ -1276,6 +1297,74 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$cleanupBuilder)>
   ];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// CmpThreeWayOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
+  let summary = "Compare two values with C++ three-way comparison semantics";
+  let description = [{
+    The `cir.cmp3way` operation models the builtin `<=>` operator in C++20.
+    It takes two operands with the same type and produces a result indicating
+    the ordering between the two input operands.
+
+    The result of the operation is a signed integer that indicates the ordering
+    between the two input operands.
+
+    There are three kinds of ordering: strong, weak and partial ordering.
+    Comparing different types of values yields different kinds of orderings.
+    The `info` parameter gives the ordering kind and other necessary information
+    about the comparison.
+
+    Example:
+
+    ```mlir
+    !s32i = !cir.int<s, 32>
+
+    #cmpinfo_partial_ltn1eq0gt1unn127 =
+      #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
+    #cmpinfo_strong_ltn1eq0gt1 =
+      #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.cmp3way #cmpinfo_strong_ltn1eq0gt1 %0, %1 : !s32i -> !s8i
+
+    %3 = cir.const #cir.fp<0.0> : !cir.float
+    %4 = cir.const #cir.fp<1.0> : !cir.float
+    %5 = cir.cmp3way #cmpinfo_partial_ltn1eq0gt1unn127 %3, %4 : !cir.float -> !s8i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_AnyType:$lhs,
+    CIR_AnyType:$rhs,
+    CIR_CmpThreeWayInfoAttr:$info
+  );
+
+  let results = (outs CIR_AnySIntType:$result);
+
+  let assemblyFormat = [{
+    qualified($info) $lhs `,` $rhs `:` qualified(type($lhs))
+    `->` qualified(type($result)) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Determine whether this three-way comparison produces a partial ordering
+    bool isPartialOrdering() {
+      cir::CmpOrdering o = getInfo().getOrdering();
+      return o == cir::CmpOrdering::Partial;
+    }
+
+    /// Determine whether this three-way comparison compares integral operands.
+    bool isIntegralComparison() {
+      return mlir::isa<cir::IntType>(getLhs().getType());
+    }
+  }];
 
   let hasLLVMLowering = false;
 }
@@ -1702,50 +1791,132 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
 }
 
 //===----------------------------------------------------------------------===//
-// UnaryOp
+// Unary Operations
 //===----------------------------------------------------------------------===//
 
-def CIR_UnaryOpKind : CIR_I32EnumAttr<"UnaryOpKind", "unary operation kind", [
-  I32EnumAttrCase<"Inc",   0, "inc">,
-  I32EnumAttrCase<"Dec",   1, "dec">,
-  I32EnumAttrCase<"Plus",  2, "plus">,
-  I32EnumAttrCase<"Minus", 3, "minus">,
-  I32EnumAttrCase<"Not",   4, "not">
-]>;
+// Base class for all CIR unary operations.
+// `type` constrains the input/result type.
+class CIR_UnaryOp<string mnemonic, Type type, list<Trait> traits = []>
+    : CIR_Op<mnemonic, !listconcat([
+        Pure, SameOperandsAndResultType,
+        DeclareOpInterfaceMethods<CIR_UnaryOpInterface>
+      ], traits)>
+{
+  let arguments = (ins type:$input);
 
-def CIR_UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
-  let summary = "Unary operations";
+  let results = (outs type:$result);
+
+  let assemblyFormat = [{
+    $input `:` type($input) attr-dict
+  }];
+}
+
+// Base class for unary ops that support the nsw (no signed wrap) flag.
+class CIR_UnaryOpWithOverflowFlag<string mnemonic, Type type,
+                                   list<Trait> traits = []>
+    : CIR_UnaryOp<mnemonic, type, traits>
+{
+  let arguments = (ins type:$input, UnitProp:$no_signed_wrap);
+
+  let assemblyFormat = [{
+    (`nsw` $no_signed_wrap^)?
+    $input `:` type($input) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// IncOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IncOp : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyType> {
+  let summary = "Increment by one";
   let description = [{
-    `cir.unary` performs the unary operation according to
-    the specified opcode kind: [inc, dec, plus, minus, not].
+    The `cir.inc` operation increments the operand by one. The operand and
+    result must have the same type.
 
-    It requires one input operand and has one result, both types
-    should be the same.
+    The optional `nsw` (no signed wrap) attribute indicates that the result
+    is poison if signed overflow occurs.
 
-    If the `nsw` (no signed wrap) attribute is present, the result is poison if
-    signed overflow occurs.
+    Example:
 
     ```mlir
-    %7 = cir.unary(inc, %1) : i32 -> i32
-    %8 = cir.unary(dec, %2) nsw : i32 -> i32
+    %1 = cir.inc %0 : !s32i
+    %3 = cir.inc nsw %2 : !s32i
     ```
   }];
 
-  let arguments = (ins
-    Arg<CIR_UnaryOpKind, "unary op kind">:$kind,
-    Arg<CIR_AnyType>:$input,
-    UnitAttr:$no_signed_wrap
-  );
+  let hasFolder = 1;
+}
 
-  let results = (outs CIR_AnyType:$result);
+//===----------------------------------------------------------------------===//
+// DecOp
+//===----------------------------------------------------------------------===//
 
-  let assemblyFormat = [{
-      `(` $kind `,` $input `)`
-      (`nsw` $no_signed_wrap^)?
-      `:` type($input) `,` type($result) attr-dict
+def CIR_DecOp : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyType> {
+  let summary = "Decrement by one";
+  let description = [{
+    The `cir.dec` operation decrements the operand by one. The operand and
+    result must have the same type.
+
+    The optional `nsw` (no signed wrap) attribute indicates that the result
+    is poison if signed overflow occurs.
+
+    Example:
+
+    ```mlir
+    %1 = cir.dec %0 : !s32i
+    %3 = cir.dec nsw %2 : !s32i
+    ```
   }];
 
-  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MinusOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
+  let summary = "Unary minus (negation)";
+  let description = [{
+    The `cir.minus` operation negates the operand. The operand and result
+    must have the same type.
+
+    The optional `nsw` (no signed wrap) attribute indicates that the result
+    is poison if signed overflow occurs (e.g. negating the minimum signed
+    integer).
+
+    Example:
+
+    ```mlir
+    %1 = cir.minus %0 : !s32i
+    %3 = cir.minus nsw %2 : !s32i
+    %5 = cir.minus %4 : !cir.float
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// NotOp
+//===----------------------------------------------------------------------===//
+
+def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyType, [Involution]> {
+  let summary = "Bitwise NOT / logical NOT";
+  let description = [{
+    The `cir.not` operation performs a bitwise NOT on integer types or a
+    logical NOT on boolean types. The operand and result must have the same
+    type.
+
+    Example:
+
+    ```mlir
+    %1 = cir.not %0 : !s32i
+    %3 = cir.not %2 : !cir.bool
+    ```
+  }];
+
   let hasFolder = 1;
 }
 
@@ -2072,44 +2243,30 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
-// BinOpOverflowOp
+// Checked Binary Arithmetic Operations (with overflow)
 //===----------------------------------------------------------------------===//
 
-def CIR_BinOpOverflowKind : CIR_I32EnumAttr<
-  "BinOpOverflowKind", "checked binary arithmetic operation kind", [
-    I32EnumAttrCase<"Add", 0, "add">,
-    I32EnumAttrCase<"Sub", 1, "sub">,
-    I32EnumAttrCase<"Mul", 2, "mul">
-]>;
-
-def CIR_BinOpOverflowOp : CIR_Op<"binop.overflow", [Pure, SameTypeOperands]> {
-  let summary = "Perform binary integral arithmetic with overflow checking";
-  let description = [{
-    `cir.binop.overflow` performs binary arithmetic operations with overflow
-    checking on integral operands.
-
-    The `kind` argument specifies the kind of arithmetic operation to perform.
-    It can be either `add`, `sub`, or `mul`. The `lhs` and `rhs` arguments
-    specify the input operands of the arithmetic operation. The types of `lhs`
-    and `rhs` must be the same.
-
-    `cir.binop.overflow` produces two SSA values. `result` is the result of the
-    arithmetic operation truncated to its specified type. `overflow` is a
-    boolean value indicating whether overflow happens during the operation.
-
-    The exact semantic of this operation is as follows:
-
-      - `lhs` and `rhs` are promoted to an imaginary integral type that has
-        infinite precision.
-      - The arithmetic operation is performed on the promoted operands.
-      - The infinite-precision result is truncated to the type of `result`. The
-        truncated result is assigned to `result`.
-      - If the truncated result is equal to the un-truncated result, `overflow`
-        is assigned to false. Otherwise, `overflow` is assigned to true.
-  }];
+// Base class for binary arithmetic operations with overflow checking.
+//
+// Each op produces two SSA values: `result` is the arithmetic result truncated
+// to its specified type, and `overflow` is a boolean indicating whether
+// overflow occurred.
+//
+// The exact semantics are:
+//   - `lhs` and `rhs` are promoted to an imaginary infinite-precision
+//     integral type.
+//   - The arithmetic operation is performed on the promoted operands.
+//   - The infinite-precision result is truncated to the type of `result`.
+//   - `overflow` is true if the truncated result differs from the
+//     infinite-precision result.
+//
+// The type of `result` may differ from the operand type. This models C
+// builtins like `__builtin_*_overflow` where operands and the result can
+// have different widths or signedness.
+class CIR_BinOpOverflow<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, !listconcat([Pure, SameTypeOperands], traits)> {
 
   let arguments = (ins
-    CIR_BinOpOverflowKind:$kind,
     CIR_IntType:$lhs,
     CIR_IntType:$rhs
   );
@@ -2117,32 +2274,61 @@ def CIR_BinOpOverflowOp : CIR_Op<"binop.overflow", [Pure, SameTypeOperands]> {
   let results = (outs CIR_IntType:$result, CIR_BoolType:$overflow);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
-    `(` qualified(type($result)) `,` qualified(type($overflow)) `)`
+    $lhs `,` $rhs `:` qualified(type($lhs)) `->` qualified(type($result))
     attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "cir::IntType":$resultTy,
-                   "cir::BinOpOverflowKind":$kind,
                    "mlir::Value":$lhs,
                    "mlir::Value":$rhs), [{
       auto overflowTy = cir::BoolType::get($_builder.getContext());
-      build($_builder, $_state, resultTy, overflowTy, kind, lhs, rhs);
+      build($_builder, $_state, resultTy, overflowTy, lhs, rhs);
     }]>
   ];
 
-  let extraLLVMLoweringPatternDecl = [{
-    static std::string getLLVMIntrinName(cir::BinOpOverflowKind opKind,
-                                         bool isSigned, unsigned width);
+}
 
-    struct EncompassedTypeInfo {
-      bool sign;
-      unsigned width;
-    };
+def CIR_AddOverflowOp : CIR_BinOpOverflow<"add.overflow", [Commutative]> {
+  let summary = "Integer addition with overflow checking";
+  let description = [{
+    `cir.add.overflow` performs addition with overflow checking on integral
+    operands. See `CIR_BinOpOverflow` for semantics.
 
-    static EncompassedTypeInfo computeEncompassedTypeWidth(cir::IntType operandTy,
-                                                           cir::IntType resultTy);
+    Example:
+
+    ```mlir
+    %result, %overflow = cir.add.overflow %a, %b : !u32i -> !u32i
+    %result, %overflow = cir.add.overflow %a, %b : !cir.int<s, 33> -> !s32i
+    ```
+  }];
+}
+
+def CIR_SubOverflowOp : CIR_BinOpOverflow<"sub.overflow"> {
+  let summary = "Integer subtraction with overflow checking";
+  let description = [{
+    `cir.sub.overflow` performs subtraction with overflow checking on integral
+    operands. See `CIR_BinOpOverflow` for semantics.
+
+    Example:
+
+    ```mlir
+    %result, %overflow = cir.sub.overflow %a, %b : !u32i -> !u32i
+    ```
+  }];
+}
+
+def CIR_MulOverflowOp : CIR_BinOpOverflow<"mul.overflow", [Commutative]> {
+  let summary = "Integer multiplication with overflow checking";
+  let description = [{
+    `cir.mul.overflow` performs multiplication with overflow checking on
+    integral operands. See `CIR_BinOpOverflow` for semantics.
+
+    Example:
+
+    ```mlir
+    %result, %overflow = cir.mul.overflow %a, %b : !u32i -> !u32i
+    ```
   }];
 }
 
@@ -2333,8 +2519,9 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyArithType> {
 // AndOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Commutative, Idempotent traits
-def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType> {
+def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType, [
+  Commutative, Idempotent
+]> {
   let summary = "Bitwise AND";
   let description = [{
     The `cir.and` operation performs a bitwise AND on integer operands.
@@ -2353,8 +2540,9 @@ def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType> {
 // OrOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Commutative, Idempotent traits
-def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType> {
+def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType, [
+  Commutative, Idempotent
+]> {
   let summary = "Bitwise OR";
   let description = [{
     The `cir.or` operation performs a bitwise OR on integer operands.
@@ -2373,7 +2561,7 @@ def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType> {
 // XorOp
 //===----------------------------------------------------------------------===//
 
-def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType> {
+def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType, [Commutative]> {
   let summary = "Bitwise XOR";
   let description = [{
     The `cir.xor` operation performs a bitwise XOR on integer operands.
@@ -2392,17 +2580,44 @@ def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType> {
 // MaxOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MaxOp : CIR_BinaryOp<"max", CIR_AnyIntOrVecOfIntType> {
+def CIR_MaxOp : CIR_BinaryOp<"max", CIR_AnyIntOrVecOfIntType, [
+  Commutative, Idempotent
+]> {
   let summary = "Integer maximum";
   let description = [{
     The `cir.max` operation computes the maximum of two integer operands.
-    Both operands and the result must have the same integer type.
+    Both operands and the result must have the same integer type or vector of
+    integer type.
 
     Example:
 
     ```mlir
     %0 = cir.max %a, %b : !s32i
     %1 = cir.max %a, %b : !u32i
+    %2 = cir.max %a, %b : !cir.vector<4 x !s32i>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MinOp : CIR_BinaryOp<"min", CIR_AnyIntOrVecOfIntType, [
+  Commutative, Idempotent
+]> {
+  let summary = "Integer minimum";
+  let description = [{
+    The `cir.min` operation computes the minimum of two integer operands.
+    Both operands and the result must have the same integer type or vector of
+    integer type.
+
+    Example:
+
+    ```mlir
+    %0 = cir.min %a, %b : !s32i
+    %1 = cir.min %a, %b : !u32i
+    %2 = cir.min %a, %b : !cir.vector<4 x !s32i>
     ```
   }];
 }
@@ -2630,34 +2845,38 @@ def CIR_GlobalOp : CIR_Op<"global", [
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedAttr<
-                        CIR_VisibilityAttr,
-                        "VisibilityKind::Default"
+                       DefaultValuedProp<
+                        EnumProp<CIR_VisibilityKind>,
+                        "cir::VisibilityKind::Default"
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
+                       OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       UnitAttr:$comdat,
-                       UnitAttr:$constant,
-                       UnitAttr:$dso_local,
+                       UnitProp:$comdat,
+                       UnitProp:$constant,
+                       UnitProp:$dso_local,
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<ASTVarDeclInterface>:$ast);
+                       OptionalAttr<ASTVarDeclInterface>:$ast,
+                       OptionalAttr<StrAttr>:$section
+                       );
 
   let regions = (region MaxSizedRegion<1>:$ctorRegion,
                         MaxSizedRegion<1>:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
-    (`` $global_visibility^)?
+    ($global_visibility^)?
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
     ($tls_model^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
+    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
@@ -2678,6 +2897,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
       "llvm::StringRef":$sym_name,
       "mlir::Type":$sym_type,
       CArg<"bool", "false">:$isConstant,
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace,
       // CIR defaults to external linkage.
       CArg<"cir::GlobalLinkageKind",
            "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
@@ -2700,6 +2920,10 @@ def CIR_GlobalOp : CIR_Op<"global", [
 
     void setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+
+    llvm::SmallVector<mlir::NamedAttribute> lowerGlobalAttributes(
+        cir::GlobalOp op,
+        mlir::ConversionPatternRewriter &rewriter) const;
 
     mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
     mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
@@ -3461,7 +3685,10 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    CIR_VisibilityAttr:$global_visibility,
+    DefaultValuedProp<
+      EnumProp<CIR_VisibilityKind>,
+      "cir::VisibilityKind::Default"
+    >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
     UnitAttr:$coroutine,
@@ -3940,21 +4167,32 @@ def CIR_CopyOp : CIR_Op<"copy",[
 
     The `volatile` keyword indicates that the operation is volatile.
 
+    The `skip_tail_padding` keyword indicates that only the data bytes should
+    be copied, excluding any tail padding. This is used when copying
+    potentially-overlapping subobjects where the tail padding might be occupied
+    by other objects (e.g. fields marked with `[[no_unique_address]]`). This
+    is only valid when the pointee type is a record type.
+
     Examples:
 
     ```mlir
       // Copying contents from one record to another:
       cir.copy %0 to %1 : !cir.ptr<!record_ty>
+
+      // Copying without tail padding (for overlapping subobjects):
+      cir.copy %0 to %1 skip_tail_padding : !cir.ptr<!record_ty>
     ```
   }];
 
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
       Arg<CIR_PointerType, "", [MemRead]>:$src,
-      UnitAttr:$is_volatile
+      UnitAttr:$is_volatile,
+      UnitAttr:$skip_tail_padding
   );
 
   let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
+                        (`skip_tail_padding` $skip_tail_padding^)?
                         attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
@@ -3963,10 +4201,15 @@ def CIR_CopyOp : CIR_Op<"copy",[
     /// Returns the pointer type being copied.
     cir::PointerType getType() { return getSrc().getType(); }
 
-    /// Returns the number of bytes to be copied.
-    unsigned getLength(const mlir::DataLayout &dt) {
-      return dt.getTypeSize(getType().getPointee());
-    }    
+    /// Returns the number of bytes to be copied. When skip_tail_padding is
+    /// set, returns the data size (excluding tail padding) of the pointee
+    /// record type. Otherwise returns the full type size.
+    unsigned getCopySizeInBytes(const mlir::DataLayout &dl) {
+      if (getSkipTailPadding())
+        return mlir::cast<cir::RecordType>(getType().getPointee())
+            .computeStructDataSize(dl);
+      return dl.getTypeSize(getType().getPointee());
+    }
   }];
 }
 
@@ -4331,17 +4574,50 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
 // ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//
 
-class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
+def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
+  let summary = "Initialize array elements with C++ constructors";
+  let description = [{
+    Initialize each array element using the same C++ constructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array element to initialize.
+
+    When `num_elements` is absent, `addr` must be a pointer to a fixed-size
+    CIR array type and the element count is derived from that array type.
+
+    When `num_elements` is present, `addr` is a pointer to the first element
+    and `num_elements` provides the runtime element count (for example `new
+    T[n]`).
+
+    Examples:
+
+    ```mlir
+    cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+
+    cir.array.ctor(%ptr, %n : !cir.ptr<!rec_S>, !u64i) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+    ```
+  }];
+
   let arguments = (ins
-    Arg<CIR_PtrToArray, "array address", [MemWrite, MemRead]>:$addr
+    Arg<CIR_AnyPtrType, "array or element address", [MemWrite, MemRead]>:$addr,
+    Optional<CIR_AnyIntType>:$num_elements
   );
 
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat = [{
-    $addr `:` qualified(type($addr)) $body attr-dict
+    $addr (`,` $num_elements^)? `:` qualified(type($addr))
+    (`,` type($num_elements)^)? $body attr-dict
   }];
 
   let builders = [
+    // Static form: addr is ptr<array<T x N>>, no num_elements.
     OpBuilder<(ins "mlir::Value":$addr,
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
         assert(regionBuilder && "builder callback expected");
@@ -4350,48 +4626,95 @@ class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
         $_state.addOperands(ValueRange{addr});
         $_builder.createBlock(r);
         regionBuilder($_builder, $_state.location);
+    }]>,
+    // Dynamic form: addr is ptr<T>, num_elements is the runtime count.
+    OpBuilder<(ins "mlir::Value":$addr, "mlir::Value":$num_elements,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
+        assert(regionBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        mlir::Region *r = $_state.addRegion();
+        $_state.addOperands({addr, num_elements});
+        $_builder.createBlock(r);
+        regionBuilder($_builder, $_state.location);
     }]>
   ];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
-def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
-  let summary = "Initialize array elements with C++ constructors";
+def CIR_ArrayDtor : CIR_Op<"array.dtor"> {
+  let summary = "Destroy array elements with C++ destructors";
   let description = [{
-    Initialize each array element using the same C++ constructor. This
-    operation has one region, with one single block. The block has an
-    incoming argument for the current array element to initialize.
+    Destroy each array element using the same C++ destructor. This operation
+    has one region with one block whose argument is a pointer to the current
+    array element.
 
-    Example:
+    When `num_elements` is absent, `addr` must be a pointer to a fixed-size
+    CIR array type and the element count is derived from that array type.
+
+    When `num_elements` is present, `addr` is a pointer to the first element
+    and `num_elements` provides the runtime element count (e.g. from an array
+    cookie for `delete[]`).
+
+    Elements are destroyed in reverse order.
+
+    Examples:
 
     ```mlir
-    cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+    // Fixed-size (stack array, global):
+    cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
-        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+
+    // Dynamic count (delete[] with destructor):
+    cir.array.dtor %ptr, %n : !cir.ptr<!rec_S>, !u64i {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
         cir.yield
     }
     ```
   }];
-}
 
-def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
-  let summary = "Destroy array elements with C++ dtors";
-  let description = [{
-    Destroy each array element using the same C++ destructor. This
-    operation has one region, with one single block. The block has an
-    incoming argument for the current array element to destruct.
+  let arguments = (ins
+    Arg<CIR_AnyPtrType, "array or element address", [MemWrite, MemRead]>:$addr,
+    Optional<CIR_AnyIntType>:$num_elements
+  );
 
-    Example:
+  let regions = (region SizedRegion<1>:$body);
 
-    ```mlir
-    cir.array.dtor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
-      ^bb0(%arg0: !cir.ptr<!rec_S>):
-        cir.call @some_dtor(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
-    }
-    ```
+  let assemblyFormat = [{
+    $addr (`,` $num_elements^)? `:` qualified(type($addr))
+    (`,` type($num_elements)^)? $body attr-dict
   }];
+
+  let builders = [
+    // Static form: addr is ptr<array<T x N>>, no num_elements.
+    OpBuilder<(ins "mlir::Value":$addr,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
+        assert(regionBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        mlir::Region *r = $_state.addRegion();
+        $_state.addOperands(ValueRange{addr});
+        $_builder.createBlock(r);
+        regionBuilder($_builder, $_state.location);
+    }]>,
+    // Dynamic form: addr is ptr<T>, num_elements is the runtime count.
+    OpBuilder<(ins "mlir::Value":$addr, "mlir::Value":$num_elements,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
+        assert(regionBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        mlir::Region *r = $_state.addRegion();
+        $_state.addOperands({addr, num_elements});
+        $_builder.createBlock(r);
+        regionBuilder($_builder, $_state.location);
+    }]>
+  ];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5444,6 +5767,8 @@ def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
     %1 = cir.bitreverse %0: !u32i
     ```
   }];
+  
+  let append traits = [Involution];
 }
 
 def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
@@ -5467,6 +5792,8 @@ def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
     %1 = cir.byte_swap %0 : !u32i
     ```
   }];
+  
+  let append traits = [Involution];
 }
 
 //===----------------------------------------------------------------------===//
@@ -5543,7 +5870,7 @@ def FPClassTestEnum : CIR_I32EnumAttr<"FPClassTest", "floating-point class test 
   let cppNamespace = "::cir";
 }
 
-def CIR_IsFPClassOp : CIR_Op<"is_fp_class"> {
+def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
 
   let description = [{
@@ -6068,7 +6395,7 @@ def CIR_TanOp : CIR_UnaryFPToFPBuiltinOp<"tan", "TanOp"> {
   }];
 }
 
-def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "TruncOp"> {
+def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "FTruncOp"> {
   let summary = "Truncates floating-point value to integer";
   let description = [{
     `cir.trunc` truncates a floating-point operand to an integer value
@@ -6117,7 +6444,7 @@ def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
   let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
 }
 
-def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
+def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
   let summary = "Computes the floating-point floor value";
   let description = [{
     `cir.floor` computes the floor of a floating-point operand and returns
@@ -6219,6 +6546,8 @@ def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
     `cir.fmaxnum` returns the larger of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
+  // Needs custom lowering for FastmathFlags::nsz.
+  let llvmOp = "";
 }
 
 def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp"> {
@@ -6235,6 +6564,8 @@ def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
     `cir.fminnum` returns the smaller of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
+  // Needs custom lowering for FastmathFlags::nsz.
+  let llvmOp = "";
 }
 
 def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp"> {
@@ -6646,20 +6977,29 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     This helps CIR to pass down more accurate information for LLVM lowering
     to landingpads.
 
+    The `catch_all` attribute indicates that a catch-all handler exists for
+    the exception being dispatched. When lowered to LLVM IR, this results in
+    a `catch ptr null` clause on the landing pad. When `catch_all` is present
+    alongside typed catches, the landing pad will contain both the typed catch
+    clauses and a trailing `catch ptr null`.
+
     Example:
 
     ```mlir
     %exception_ptr, %type_id = cir.eh.inflight_exception
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
     %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+    %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
     ``
   }];
 
   let arguments = (ins UnitAttr:$cleanup,
+                       UnitAttr:$catch_all,
                        OptionalAttr<FlatSymbolRefArrayAttr>:$catch_type_list);
   let results = (outs CIR_VoidPtrType:$exception_ptr, CIR_UInt32:$type_id);
   let assemblyFormat = [{
     (`cleanup` $cleanup^)?
+    (`catch_all` $catch_all^)?
     ($catch_type_list^)?
     attr-dict
   }];
@@ -6776,6 +7116,46 @@ def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
   let results = (outs CIR_EhTokenType:$eh_token);
   let assemblyFormat = [{
     (`cleanup` $cleanup^)? `:` type($eh_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: EhTerminateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
+  Terminator
+]> {
+  let summary = "Terminate due to exception thrown during cleanup";
+  let description = [{
+    `cir.eh.terminate` terminates program execution when an exception is thrown
+    while executing cleanup code during exception unwinding. The C++ standard
+    requires that `std::terminate()` be called in this scenario.
+
+    This operation takes an `!cir.eh_token` from a `cir.eh.initiate` operation
+    and acts as a terminator. It is produced during CFG flattening when throwing
+    calls are found in EH cleanup regions.
+
+    During EH ABI lowering, this is replaced with target-specific termination
+    code. For the Itanium ABI, the `cir.eh.initiate` is lowered to
+    `cir.eh.inflight_exception` (producing an exception pointer), and the
+    `cir.eh.terminate` becomes a call to `__clang_call_terminate` with that
+    pointer, followed by an unreachable operation.
+
+    Example:
+
+    ```mlir
+    ^terminate_unwind:
+      %eh_token = cir.eh.initiate : !cir.eh_token
+      cir.eh.terminate %eh_token : !cir.eh_token
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) attr-dict
   }];
 
   let hasLLVMLowering = false;
@@ -7041,7 +7421,9 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Or", 4, "or">,
     I32EnumAttrCase<"Nand", 5, "nand">,
     I32EnumAttrCase<"Max", 6, "max">,
-    I32EnumAttrCase<"Min", 7, "min">
+    I32EnumAttrCase<"Min", 7, "min">,
+    I32EnumAttrCase<"UIncWrap", 8, "uinc_wrap">,
+    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
@@ -7054,7 +7436,8 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     C/C++ atomic fetch-and-update operation. This operation implements the C/C++
     builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
     `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
-    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, and `min`.
+    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, `min`,
+    `uinc_wrap`, and `udec_wrap`.
 
     This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
     type of `val` must match the pointee type of `ptr`. If the binary operation

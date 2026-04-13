@@ -17,9 +17,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;  }
 ;}
 
-define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) nounwind uwtable ssp {
+define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) {
 ; CHECK-LABEL: define void @function0(
-; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[START:%.*]], i32 [[END:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[START:%.*]], i32 [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp slt i32 [[START]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP16]], label %[[FOR_BODY_LR_PH:.*]], label %[[FOR_END:.*]]
@@ -141,9 +141,9 @@ for.end:
 ;   return sum;
 ; }
 
-define i32 @reduction_func(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
+define i32 @reduction_func(ptr nocapture %A, i32 %n) readonly {
 ; CHECK-LABEL: define i32 @reduction_func(
-; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP10]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]

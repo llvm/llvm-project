@@ -156,7 +156,7 @@ bool EnqueueDeferred(FnTy &&fn, Cookie cookie, Args &&...args) {
 }
 
 template <std::uint32_t NumLanes>
-rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
+rpc::RPCStatus HandleOpcodesImpl(rpc::Server::Port &port) {
   switch (port.get_opcode()) {
   case BeginExternalListOutput_Opcode:
     rpc::invoke<NumLanes>(port,

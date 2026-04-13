@@ -1,6 +1,7 @@
 # RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
 # RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler 2>&1\
 # RUN:   | FileCheck %s
+# REQUIRES: asserts
 
 # Schedule the AGHIK that defines the compare source low to help comparison
 # elimination.

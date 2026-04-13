@@ -51,6 +51,7 @@ RUN sudo apt-get update \
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         bash \
+        build-essential \
         bzip2 \
         ccache \
         curl \
@@ -74,6 +75,7 @@ RUN sudo apt-get update \
         python3-packaging \
         python3-setuptools \
         python3-psutil \
+        python3-venv \
         software-properties-common \
         swig \
         unzip \

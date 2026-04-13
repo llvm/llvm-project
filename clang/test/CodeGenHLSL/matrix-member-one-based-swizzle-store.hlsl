@@ -35,10 +35,10 @@ void OnesSwizzleToScalar(out int4x4 A, int I) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
@@ -90,10 +90,10 @@ void TwosSwizzleToScalar(out int4x4 A, int I) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 4
@@ -146,10 +146,10 @@ void ThreesSwizzleToScalar(out int4x4 A, int I) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 8
@@ -202,10 +202,10 @@ void FoursSwizzleToScalar(out int4x4 A, int I) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 3

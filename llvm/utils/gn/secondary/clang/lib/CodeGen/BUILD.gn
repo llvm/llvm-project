@@ -106,6 +106,7 @@ static_library("CodeGen") {
     "ModuleBuilder.cpp",
     "ObjectFilePCHContainerWriter.cpp",
     "PatternInit.cpp",
+    "QualTypeMapper.cpp",
     "SanitizerMetadata.cpp",
     "SwiftCallingConv.cpp",
     "TargetBuiltins/AMDGPU.cpp",

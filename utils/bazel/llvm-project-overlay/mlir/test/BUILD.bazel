@@ -5,6 +5,7 @@
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "package_path")
+load("//llvm:targets.bzl", "llvm_targets")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
 package(
@@ -41,7 +42,7 @@ expand_template(
         "@LLVM_HAS_NVPTX_TARGET@": "0",
         "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
-        "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
+        "@LLVM_HAS_AMDGPU_TARGET@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
         "@MLIR_ENABLE_SYCL_RUNNER@": "0",
         "@MLIR_ENABLE_LEVELZERO_RUNNER@": "0",
@@ -101,6 +102,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:Analysis",
         "//mlir:CallOpInterfaces",
+        "//mlir:ControlFlowDialect",
         "//mlir:ControlFlowInterfaces",
         "//mlir:FuncDialect",
         "//mlir:FunctionInterfaces",
@@ -383,9 +385,11 @@ cc_library(
         "//mlir:ArithDialect",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationInterfaces",
+        "//mlir:BytecodeDialectInterfaceIncGen",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
         "//mlir:CommonFolders",
+        "//mlir:ControlFlowDialect",
         "//mlir:ControlFlowInterfaces",
         "//mlir:ControlFlowTransforms",
         "//mlir:DLTIDialect",
@@ -739,7 +743,6 @@ cc_library(
     srcs = glob(["lib/Dialect/GPU/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
-        "//llvm:NVPTXCodeGen",
         "//llvm:Support",
         "//mlir:AMDGPUDialect",
         "//mlir:AMDGPUUtils",
@@ -778,7 +781,7 @@ cc_library(
         "//mlir:VectorDialect",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",
-    ],
+    ] + (["//llvm:NVPTXCodeGen"] if "NVPTX" in llvm_targets else []),
 )
 
 cc_library(

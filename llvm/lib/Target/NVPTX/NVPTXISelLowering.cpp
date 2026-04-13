@@ -20,6 +20,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1548,9 +1549,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         Align ParamAlign = commonAlignment(ArgAlign, ParamOffset);
         SDValue ParamAddr =
             DAG.getObjectPtrOffset(dl, ParamSymbol, ParamOffset);
-        SDValue StoreParam =
-            DAG.getStore(ArgDeclare, dl, SrcLoad, ParamAddr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), ParamAlign);
+        SDValue StoreParam = DAG.getStore(
+            ArgDeclare, dl, SrcLoad, ParamAddr,
+            MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), ParamAlign);
         CallPrereqs.push_back(StoreParam);
 
         J += NumElts;
@@ -1620,9 +1621,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
               return GetStoredValue(J + K);
             });
 
-        SDValue StoreParam =
-            DAG.getStore(ArgDeclare, dl, Val, Ptr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+        SDValue StoreParam = DAG.getStore(
+            ArgDeclare, dl, Val, Ptr,
+            MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), CurrentAlign);
         CallPrereqs.push_back(StoreParam);
 
         J += NumElts;
@@ -1737,9 +1738,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDValue Ptr =
           DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
 
-      SDValue R =
-          DAG.getLoad(VecVT, dl, Call, Ptr,
-                      MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+      SDValue R = DAG.getLoad(
+          VecVT, dl, Call, Ptr,
+          MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), CurrentAlign);
 
       LoadChains.push_back(R.getValue(1));
       for (const unsigned J : llvm::seq(NumElts))
@@ -4057,6 +4058,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   const Function &F = DAG.getMachineFunction().getFunction();
+  const bool IsKernel = isKernelFunction(F);
 
   SDValue Root = DAG.getRoot();
   SmallVector<SDValue, 16> OutChains;
@@ -4112,7 +4114,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(ByvalIn.VT == PtrVT && "ByVal argument must be a pointer");
 
       SDValue P;
-      if (isKernelFunction(F)) {
+      if (IsKernel) {
         assert(isParamGridConstant(Arg) && "ByVal argument must be lowered to "
                                            "grid_constant by NVPTXLowerArgs");
         P = ArgSymbol;
@@ -4145,11 +4147,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             dl, ArgSymbol, TypeSize::getFixed(Offsets[I]));
 
         const Align PartAlign = commonAlignment(ArgAlign, Offsets[I]);
-        SDValue P =
-            DAG.getLoad(VecVT, dl, Root, VecAddr,
-                        MachinePointerInfo(ADDRESS_SPACE_PARAM), PartAlign,
-                        MachineMemOperand::MODereferenceable |
-                            MachineMemOperand::MOInvariant);
+        const unsigned AS = IsKernel ? NVPTX::AddressSpace::EntryParam
+                                     : NVPTX::AddressSpace::DeviceParam;
+        SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
+                                MachinePointerInfo(AS), PartAlign,
+                                MachineMemOperand::MODereferenceable |
+                                    MachineMemOperand::MOInvariant);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
         for (const unsigned J : llvm::seq(NumElts)) {
           SDValue Elt = getExtractVectorizedValue(P, J, LoadVT, dl, DAG);
@@ -4226,7 +4229,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
         DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
 
     Chain = DAG.getStore(Chain, dl, Val, Ptr,
-                         MachinePointerInfo(ADDRESS_SPACE_PARAM), CurrentAlign);
+                         MachinePointerInfo(NVPTX::AddressSpace::DeviceParam),
+                         CurrentAlign);
 
     I += NumElts;
   }
@@ -7669,7 +7673,7 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
     unsigned Sign = Sel.getHiBits(1).getZExtValue();
     KnownBits Byte = BitField.extractBits(8, Idx * 8);
     if (Sign)
-      Byte = KnownBits::ashr(Byte, 8);
+      Byte = KnownBits::ashr(Byte, KnownBits::makeConstant(APInt(8, 7)));
     Known.insertBits(Byte, I * 8);
   }
 }

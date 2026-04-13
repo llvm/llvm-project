@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXTargetTransformInfo.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -403,7 +403,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
 // Returns true/false when we know the answer, nullopt otherwise.
 static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
-      AS == NVPTXAS::ADDRESS_SPACE_PARAM)
+      AS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
     return std::nullopt; // Got to check at run-time.
   switch (IID) {
   case Intrinsic::nvvm_isspacep_global:
@@ -579,7 +579,7 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     IRBuilder<> Builder(II);
     const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
     if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST ||
-        NewAS == NVPTXAS::ADDRESS_SPACE_PARAM)
+        NewAS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
       return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
                                           NewV);
     return nullptr;
@@ -671,10 +671,9 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidz", MaxNTID[2]});
 }
 
-InstructionUniformity
-NVPTXTTIImpl::getInstructionUniformity(const Value *V) const {
+ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
   if (isSourceOfDivergence(V))
-    return InstructionUniformity::NeverUniform;
+    return ValueUniformity::NeverUniform;
 
-  return InstructionUniformity::Default;
+  return ValueUniformity::Default;
 }

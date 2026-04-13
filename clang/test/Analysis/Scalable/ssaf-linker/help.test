@@ -1,11 +1,11 @@
-// Test ssaf-linker help option
+// Test clang-ssaf-linker help option
 
-// RUN: ssaf-linker --help-list-hidden \
+// RUN: clang-ssaf-linker --help-list-hidden \
 // RUN:           | FileCheck %s --match-full-lines
 
 // CHECK:      OVERVIEW: SSAF Linker
 // CHECK-EMPTY:
-// CHECK-NEXT: USAGE: ssaf-linker{{(\.exe)?}} [options] <input files>
+// CHECK-NEXT: USAGE: clang-ssaf-linker{{(\.exe)?}} [options] <input files>
 // CHECK-EMPTY:
 // CHECK-NEXT: OPTIONS:
 // CHECK-NEXT:   -h                  - Alias for --help

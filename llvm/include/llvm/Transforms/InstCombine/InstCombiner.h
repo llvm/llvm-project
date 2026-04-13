@@ -257,7 +257,7 @@ public:
         if (shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(I)))
           return false;
         break;
-      case Instruction::Br:
+      case Instruction::CondBr:
         assert(U.getOperandNo() == 0 && "Must be branching on that value.");
         break; // Free to invert by swapping true/false values/destinations.
       case Instruction::Xor: // Can invert 'xor' if it's a 'not', by ignoring
@@ -477,6 +477,10 @@ public:
                                      unsigned Depth = 0) const {
     return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
+
+  /// Return true if the cast from integer to FP can be proven to be exact
+  /// for all possible inputs (the conversion does not lose any precision).
+  bool isKnownExactCastIntToFP(CastInst &I) const;
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,

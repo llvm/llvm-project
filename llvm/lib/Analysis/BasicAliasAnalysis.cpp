@@ -31,6 +31,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -215,7 +216,10 @@ CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
 }
 
 static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
-                         const LoopInfo *LI) {
+                         const LoopInfo *LI, const CycleInfo *CI) {
+  if (CI)
+    return !CI->getCycle(I->getParent());
+
   BasicBlock *BB = const_cast<BasicBlock *>(I->getParent());
   SmallVector<BasicBlock *> Succs(successors(BB));
   return Succs.empty() ||
@@ -252,10 +256,10 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
     if (I == CaptureInst) {
       if (OrAt)
         return false;
-      return isNotInCycle(I, &DT, LI);
+      return isNotInCycle(I, &DT, LI, CI);
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI);
+    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
@@ -1287,10 +1291,24 @@ AliasResult BasicAAResult::aliasGEP(
   for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
     const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
     const APInt &Scale = Index.Scale;
+
+    KnownBits Known = computeKnownBits(Index.Val.V, DL, &AC, Index.CxtI, DT);
+
     APInt ScaleForGCD = Scale;
     if (!Index.IsNSW)
       ScaleForGCD =
           APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
+
+    // If V has known trailing zeros, V is a multiple of 2^VarTZ, so
+    // V*Scale is a multiple of ScaleForGCD * 2^VarTZ. Shift ScaleForGCD
+    // left to account for this (trailing zeros compose additively through
+    // multiplication, even in Z/2^n).
+    unsigned VarTZ = Known.countMinTrailingZeros();
+    if (VarTZ > 0) {
+      unsigned MaxShift =
+          Scale.getBitWidth() - ScaleForGCD.getSignificantBits();
+      ScaleForGCD <<= std::min(VarTZ, MaxShift);
+    }
 
     if (i == 0)
       GCD = ScaleForGCD.abs();
@@ -1299,7 +1317,6 @@ AliasResult BasicAAResult::aliasGEP(
 
     ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
                                             true, &AC, Index.CxtI);
-    KnownBits Known = computeKnownBits(Index.Val.V, DL, &AC, Index.CxtI, DT);
     CR = CR.intersectWith(
         ConstantRange::fromKnownBits(Known, /* Signed */ true),
         ConstantRange::Signed);
@@ -1897,7 +1914,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  return isNotInCycle(Inst, getDT(AAQI), /*LI*/ nullptr);
+  return isNotInCycle(Inst, getDT(AAQI), /*LI=*/nullptr, /*CI=*/nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.

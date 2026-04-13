@@ -161,4 +161,4 @@ LIBC_INLINE constexpr float16 acosf16(float16 x) {
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ACOS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ACOSF16_H

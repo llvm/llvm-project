@@ -55,7 +55,7 @@ define void @v_constained_fma_f16_fpexcept_strict_uni(half inreg %x, half inreg 
 ; GFX12-NEXT:    s_fmac_f16 s2, s0, s1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-NEXT:    v_mov_b16_e32 v2.l, s2
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fma.f16(half %x, half %y, half %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -104,7 +104,7 @@ define void @v_constained_fma_f16_fpexcept_strict_div(half %x, half %y, half %z,
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX12-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, v2.l
 ; GFX12-NEXT:    global_store_b16 v[3:4], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fma.f16(half %x, half %y, half %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -527,7 +527,7 @@ define void @v_constained_fma_f16_fpexcept_strict_fneg_uni(half inreg %x, half i
 ; GFX12-NEXT:    s_fmac_f16 s2, s0, s1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-NEXT:    v_mov_b16_e32 v2.l, s2
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.z = fneg half %z
@@ -577,7 +577,7 @@ define void @v_constained_fma_f16_fpexcept_strict_fneg_div(half %x, half %y, hal
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_f16 v0, v0, v1, -v2
+; GFX12-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, -v2.l
 ; GFX12-NEXT:    global_store_b16 v[3:4], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.z = fneg half %z
@@ -639,7 +639,7 @@ define void @v_constained_fma_f16_fpexcept_strict_fneg_fneg_uni(half inreg %x, h
 ; GFX12-NEXT:    s_fmac_f16 s2, s0, s1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-NEXT:    v_mov_b16_e32 v2.l, s2
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg half %x
@@ -690,7 +690,7 @@ define void @v_constained_fma_f16_fpexcept_strict_fneg_fneg_div(half %x, half %y
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_f16 v0, -v0, -v1, v2
+; GFX12-NEXT:    v_fma_f16 v0.l, -v0.l, -v1.l, v2.l
 ; GFX12-NEXT:    global_store_b16 v[3:4], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg half %x
@@ -753,7 +753,7 @@ define void @v_constained_fma_f16_fpexcept_strict_fabs_fabs_uni(half inreg %x, h
 ; GFX12-NEXT:    s_fmac_f16 s2, s0, s1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-NEXT:    v_mov_b16_e32 v2.l, s2
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = call half @llvm.fabs.f16(half %x) #0
@@ -804,7 +804,7 @@ define void @v_constained_fma_f16_fpexcept_strict_fabs_fabs_div(half %x, half %y
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_f16 v0, |v0|, |v1|, v2
+; GFX12-NEXT:    v_fma_f16 v0.l, |v0.l|, |v1.l|, v2.l
 ; GFX12-NEXT:    global_store_b16 v[3:4], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = call half @llvm.fabs.f16(half %x) #0

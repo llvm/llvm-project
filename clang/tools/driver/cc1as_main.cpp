@@ -473,6 +473,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.ImplicitMapSyms = Opts.ImplicitMapsyms;
   MCOptions.X86RelaxRelocations = Opts.X86RelaxRelocations;
   MCOptions.X86Sse2Avx = Opts.X86Sse2Avx;
+  MCOptions.MCNoExecStack = Opts.NoExecStack;
   MCOptions.CompressDebugSections = Opts.CompressDebugSections;
   MCOptions.AsSecureLogFile = Opts.AsSecureLogFile;
 

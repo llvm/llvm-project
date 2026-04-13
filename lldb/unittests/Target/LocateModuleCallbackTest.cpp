@@ -16,6 +16,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/ModuleCache.h"
 #include "lldb/Target/Target.h"
 #include "gmock/gmock.h"
 
@@ -999,4 +1000,43 @@ TEST_F(LocateModuleCallbackTest,
   ASSERT_EQ(m_module_sp->GetFileSpec(),
             FileSpec(GetInputFilePath(k_module_file)));
   ModuleList::RemoveSharedModule(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest, ModuleCacheGetDoesNotInvokeCallback) {
+  // The module file is cached. ModuleCache::Get should succeed to return the
+  // module from the cache without calling the locate module callback.
+  FileSpec uuid_view = BuildCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [&callback_call_count](const ModuleSpec &module_spec,
+                             FileSpec &module_file_spec,
+                             FileSpec &symbol_file_spec) {
+        callback_call_count++;
+        return Status();
+      });
+
+  ModuleCache mc;
+  ModuleSP cached_module_sp;
+  bool did_create = false;
+  FileSpec root_dir_spec(m_test_dir);
+  root_dir_spec.AppendPathComponent(k_platform_dir);
+  Status error = mc.GetAndPut(
+      root_dir_spec, "hostname", m_module_spec,
+      [](const ModuleSpec &module_spec,
+         const FileSpec &tmp_download_file_spec) {
+        return Status::FromErrorString("Should not be called");
+      },
+      [](const ModuleSP &module_sp, const FileSpec &tmp_download_file_spec) {
+        return Status::FromErrorString("Should not be called");
+      },
+      cached_module_sp, &did_create);
+
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(cached_module_sp);
+  ASSERT_EQ(cached_module_sp->GetFileSpec(), uuid_view);
+  // The locate module callback should not be called.
+  EXPECT_EQ(callback_call_count, 0);
+
+  ModuleList::RemoveSharedModule(cached_module_sp);
 }

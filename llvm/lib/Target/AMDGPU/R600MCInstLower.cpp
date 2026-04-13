@@ -77,7 +77,7 @@ void R600AsmPrinter::emitInstruction(const MachineInstr *MI) {
 const MCExpr *R600AsmPrinter::lowerConstant(const Constant *CV,
                                             const Constant *BaseCV,
                                             uint64_t Offset) {
-  if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
+  if (const MCExpr *E = lowerAddrSpaceCast(CV, OutContext))
     return E;
   return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }

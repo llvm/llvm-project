@@ -98,7 +98,7 @@ bool CheckDefaultArgumentVisitor::VisitExpr(const Expr *Node) {
 /// determine whether this declaration can be used in the default
 /// argument expression.
 bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
-  const ValueDecl *Decl = dyn_cast<ValueDecl>(DRE->getDecl());
+  const ValueDecl *Decl = DRE->getDecl();
 
   if (!isa<VarDecl, BindingDecl>(Decl))
     return false;
@@ -5044,10 +5044,8 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     }
 
     InitializedEntity Entity =
-        Indirect ? InitializedEntity::InitializeMember(Indirect, nullptr,
-                                                       /*Implicit*/ true)
-                 : InitializedEntity::InitializeMember(Field, nullptr,
-                                                       /*Implicit*/ true);
+        Indirect ? InitializedEntity::InitializeMemberImplicit(Indirect)
+                 : InitializedEntity::InitializeMemberImplicit(Field);
 
     // Direct-initialize to use the copy constructor.
     InitializationKind InitKind =
@@ -5078,10 +5076,8 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
 
   if (FieldBaseElementType->isRecordType()) {
     InitializedEntity InitEntity =
-        Indirect ? InitializedEntity::InitializeMember(Indirect, nullptr,
-                                                       /*Implicit*/ true)
-                 : InitializedEntity::InitializeMember(Field, nullptr,
-                                                       /*Implicit*/ true);
+        Indirect ? InitializedEntity::InitializeMemberImplicit(Indirect)
+                 : InitializedEntity::InitializeMemberImplicit(Field);
     InitializationKind InitKind =
       InitializationKind::CreateDefault(Loc);
 
@@ -5282,7 +5278,7 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
     if (DIE.isInvalid())
       return true;
 
-    auto Entity = InitializedEntity::InitializeMember(Field, nullptr, true);
+    auto Entity = InitializedEntity::InitializeMemberImplicit(Field);
     SemaRef.checkInitializerLifetime(Entity, DIE.get());
 
     CXXCtorInitializer *Init;
@@ -6590,23 +6586,33 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
   // Inherited constructors are created lazily; force their creation now so the
   // loop below can propagate the DLL attribute to them.
-  if (ClassExported) {
+  if (ClassExported && getLangOpts().DllExportInlines) {
     SmallVector<ConstructorUsingShadowDecl *, 4> Shadows;
     for (Decl *D : Class->decls())
       if (auto *S = dyn_cast<ConstructorUsingShadowDecl>(D))
         Shadows.push_back(S);
-    for (ConstructorUsingShadowDecl *S : Shadows)
-      if (auto *BC = dyn_cast<CXXConstructorDecl>(S->getTargetDecl());
-          BC && !BC->isDeleted())
-        findInheritingConstructor(Class->getLocation(), BC, S);
+    for (ConstructorUsingShadowDecl *S : Shadows) {
+      CXXConstructorDecl *BC = dyn_cast<CXXConstructorDecl>(S->getTargetDecl());
+      if (!BC || BC->isDeleted())
+        continue;
+      // Skip constructors whose requires clause is not satisfied.
+      // Normally overload resolution filters these, but we are bypassing
+      // it to eagerly create inherited constructors for dllexport.
+      if (BC->getTrailingRequiresClause()) {
+        ConstraintSatisfaction Satisfaction;
+        if (CheckFunctionConstraints(BC, Satisfaction) ||
+            !Satisfaction.IsSatisfied)
+          continue;
+      }
+      findInheritingConstructor(Class->getLocation(), BC, S);
+    }
   }
 
   // FIXME: MSVC's docs say all bases must be exportable, but this doesn't
   // seem to be true in practice?
 
   for (Decl *Member : Class->decls()) {
-    if (isTemplateInstantiation(TSK) &&
-        Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+    if (Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
       continue;
 
     VarDecl *VD = dyn_cast<VarDecl>(Member);
@@ -6621,38 +6627,53 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       if (MD->isDeleted())
         continue;
 
-      // Don't export inherited constructors whose parameters prevent ABI-
-      // compatible forwarding. When canEmitDelegateCallArgs (in CodeGen)
-      // returns false, Clang inlines the constructor body instead of
-      // emitting a forwarding thunk, producing code that is not ABI-
-      // compatible with MSVC. Suppress the export and warn so the user
-      // gets a linker error rather than a silent runtime mismatch.
-      if (ClassExported) {
-        if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
-          if (CD->getInheritedConstructor()) {
-            if (CD->isVariadic()) {
+      if (ClassExported && getLangOpts().DllExportInlines) {
+        CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(MD);
+        if (CD && CD->getInheritedConstructor()) {
+          // Inherited constructors already had their base constructor's
+          // constraints checked before creation via
+          // findInheritingConstructor, so only ABI-compatibility checks
+          // are needed here.
+          //
+          // Don't export inherited constructors whose parameters prevent
+          // ABI-compatible forwarding. When canEmitDelegateCallArgs (in
+          // CodeGen) returns false, Clang inlines the constructor body
+          // instead of emitting a forwarding thunk, producing code that
+          // is not ABI-compatible with MSVC. Suppress the export and warn
+          // so the user gets a linker error rather than a silent runtime
+          // mismatch.
+          if (CD->isVariadic()) {
+            Diag(CD->getLocation(),
+                 diag::warn_dllexport_inherited_ctor_unsupported)
+                << /*variadic=*/0;
+            continue;
+          }
+          if (Context.getTargetInfo()
+                  .getCXXABI()
+                  .areArgsDestroyedLeftToRightInCallee()) {
+            bool HasCalleeCleanupParam = false;
+            for (const ParmVarDecl *P : CD->parameters())
+              if (P->needsDestruction(Context)) {
+                HasCalleeCleanupParam = true;
+                break;
+              }
+            if (HasCalleeCleanupParam) {
               Diag(CD->getLocation(),
                    diag::warn_dllexport_inherited_ctor_unsupported)
-                  << /*variadic=*/0;
+                  << /*callee-cleanup=*/1;
               continue;
             }
-            if (Context.getTargetInfo()
-                    .getCXXABI()
-                    .areArgsDestroyedLeftToRightInCallee()) {
-              bool HasCalleeCleanupParam = false;
-              for (const auto *P : CD->parameters())
-                if (P->needsDestruction(Context)) {
-                  HasCalleeCleanupParam = true;
-                  break;
-                }
-              if (HasCalleeCleanupParam) {
-                Diag(CD->getLocation(),
-                     diag::warn_dllexport_inherited_ctor_unsupported)
-                    << /*callee-cleanup=*/1;
-                continue;
-              }
-            }
           }
+        } else if (MD->getTrailingRequiresClause()) {
+          // Don't export methods whose requires clause is not satisfied.
+          // For class template specializations, member constraints may
+          // depend on template arguments and an unsatisfied constraint
+          // means the member should not be available in this
+          // specialization.
+          ConstraintSatisfaction Satisfaction;
+          if (CheckFunctionConstraints(MD, Satisfaction) ||
+              !Satisfaction.IsSatisfied)
+            continue;
         }
       }
 
@@ -6699,13 +6720,8 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
       // Do not export/import inline function when -fno-dllexport-inlines is
       // passed. But add attribute for later local static var check.
-      // Inherited constructors are marked inline but must still be exported
-      // to match MSVC behavior, so exclude them from this override.
-      bool IsInheritedCtor = false;
-      if (auto *CD = dyn_cast_or_null<CXXConstructorDecl>(MD))
-        IsInheritedCtor = (bool)CD->getInheritedConstructor();
       if (!getLangOpts().DllExportInlines && MD && MD->isInlined() &&
-          !IsInheritedCtor && TSK != TSK_ExplicitInstantiationDeclaration &&
+          TSK != TSK_ExplicitInstantiationDeclaration &&
           TSK != TSK_ExplicitInstantiationDefinition) {
         if (ClassExported) {
           NewAttr = ::new (getASTContext())
@@ -9019,7 +9035,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       } else {
         Loc = MD->getLocation();
         if (FunctionTypeLoc Loc = MD->getFunctionTypeLoc())
-          InsertLoc = Loc.getRParenLoc();
+          InsertLoc = getLocForEndOfToken(Loc.getRParenLoc());
       }
       // Don't diagnose an implicit 'operator=='; we will have diagnosed the
       // corresponding defaulted 'operator<=>' already.
@@ -11248,6 +11264,7 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
 
       if (Context.getTargetInfo().emitVectorDeletingDtors(
               Context.getLangOpts())) {
+        bool DestructorIsExported = Destructor->hasAttr<DLLExportAttr>();
         // Lookup delete[] too in case we have to emit a vector deleting dtor.
         DeclarationName VDeleteName =
             Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
@@ -11261,7 +11278,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
                                                     VDeleteName);
           Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
           if (GlobalArrOperatorDelete &&
-              Context.classNeedsVectorDeletingDestructor(RD))
+              (Context.classMaybeNeedsVectorDeletingDestructor(RD) ||
+               DestructorIsExported))
             MarkFunctionReferenced(Loc, GlobalArrOperatorDelete);
         } else if (!ArrOperatorDelete) {
           ArrOperatorDelete = FindDeallocationFunctionForDestructor(
@@ -11269,7 +11287,9 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
               /*LookForGlobal*/ true, VDeleteName);
         }
         Destructor->setOperatorArrayDelete(ArrOperatorDelete);
-        if (ArrOperatorDelete && Context.classNeedsVectorDeletingDestructor(RD))
+        if (ArrOperatorDelete &&
+            (Context.classMaybeNeedsVectorDeletingDestructor(RD) ||
+             DestructorIsExported))
           MarkFunctionReferenced(Loc, ArrOperatorDelete);
       }
     }
@@ -19108,6 +19128,8 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
           // delete().
           ContextRAII SavedContext(*this, DD);
           CheckDestructor(DD);
+          if (!DD->getOperatorDelete())
+            DD->setInvalidDecl();
         } else {
           MarkFunctionReferenced(Loc, Class->getDestructor());
         }
@@ -19450,9 +19472,9 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
     Expr *Arg = nullptr;
     ArrayRef<Expr *> Args;
     if (const auto *G = dyn_cast<GuardedByAttr>(A))
-      Arg = G->getArg();
+      Args = llvm::ArrayRef(G->args_begin(), G->args_size());
     else if (const auto *G = dyn_cast<PtGuardedByAttr>(A))
-      Arg = G->getArg();
+      Args = llvm::ArrayRef(G->args_begin(), G->args_size());
     else if (const auto *AA = dyn_cast<AcquiredAfterAttr>(A))
       Args = llvm::ArrayRef(AA->args_begin(), AA->args_size());
     else if (const auto *AB = dyn_cast<AcquiredBeforeAttr>(A))

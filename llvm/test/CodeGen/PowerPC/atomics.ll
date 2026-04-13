@@ -315,8 +315,8 @@ define i64 @cas_weak_i64_release_monotonic(ptr %mem) {
 ; PPC64-NEXT:    cmpldi r3, 0
 ; PPC64-NEXT:    bnelr- cr0
 ; PPC64-NEXT:  # %bb.1: # %cmpxchg.fencedstore
-; PPC64-NEXT:    li r5, 1
 ; PPC64-NEXT:    lwsync
+; PPC64-NEXT:    li r5, 1
 ; PPC64-NEXT:    stdcx. r5, 0, r4
 ; PPC64-NEXT:    blr
   %val = cmpxchg weak ptr %mem, i64 0, i64 1 release monotonic

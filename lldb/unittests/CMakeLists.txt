@@ -24,6 +24,9 @@ function(add_lldb_unittest test_name)
   if ("liblldb" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
     message(FATAL_ERROR "The ${test_name} are not allowed to link liblldb.")
   endif()
+  if ("lldbSBUtilityHelpers" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
+    message(FATAL_ERROR "The ${test_name} are not allowed to link lldbSBUtilityHelpers.")
+  endif()
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
 
@@ -51,6 +54,7 @@ function(add_unittest_inputs test_name inputs)
 endfunction()
 
 add_subdirectory(TestingSupport)
+add_subdirectory(SBTestingSupport)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   # FIXME: Tests linking against libLLDB don't work on Windows.
   add_subdirectory(API)

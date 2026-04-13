@@ -1,5 +1,3 @@
-// UNSUPPORTED: system-windows
-
 // -----------------------------------------------------------------------------
 // Passing --musl
 // -----------------------------------------------------------------------------
@@ -12,6 +10,9 @@
 // CHECK000:      "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK000:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
 // CHECK000:      "-lc" "-lclang_rt.builtins-hexagon"
+// CHECK000:          "-L{{.*}}/Inputs/basic_linux_libcxx_tree{{/|\\\\}}lib{{/|\\\\}}v60"
+// CHECK000:          "-L{{.*}}/Inputs/basic_linux_libcxx_tree{{/|\\\\}}lib"
+
 // -----------------------------------------------------------------------------
 // Passing --musl --shared
 // -----------------------------------------------------------------------------
@@ -97,23 +98,20 @@
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK008 %s
-// CHECK008:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK008:   "-resource-dir" "[[RESOURCE:[^"]+]]"
-// CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
-// CHECK008-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
+// CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
+// CHECK008-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
 // RUN: %clang -### --target=hexagon-unknown-linux \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK009 %s
-// CHECK009:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
-// CHECK009-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
-// CHECK009-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
+// CHECK009-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
+// CHECK009-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
 // RUN: %clang -Werror -L/tmp \
 // RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK010 %s
-// CHECK010:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK010-NOT:  "-lstandalone"
 // CHECK010-NOT:  crt0_standalone.o
 // CHECK010:   crt1.o
@@ -126,7 +124,6 @@
 // RUN: %clangxx --unwindlib=none \
 // RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK011 %s
-// CHECK011:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK011:   "--eh-frame-hdr"
 // CHECK011:   crt1.o
 // CHECK011-NOT:  "-lunwind"
@@ -140,7 +137,6 @@
 // RUN: %clangxx \
 // RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK012 %s
-// CHECK012:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK012:   crt1.o
 // CHECK012:  "-lunwind"
 // CHECK012-NOT:  "-lgcc_eh"
@@ -153,3 +149,34 @@
 // CHECK013-NOT:  "-lgcc_eh"
 // CHECK013-NOT:  "-lgcc_s"
 // CHECK013-NOT:  "-lunwind"
+
+// -----------------------------------------------------------------------------
+// PIE is the default for linux-musl
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-DEFAULT %s
+// CHECK-PIE-DEFAULT:      "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -no-pie %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NO-PIE %s
+// CHECK-NO-PIE-NOT:  "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -shared %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-SHARED %s
+// CHECK-PIE-SHARED-NOT:  "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -r %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-RELOCATABLE %s
+// CHECK-PIE-RELOCATABLE-NOT:  "-pie"

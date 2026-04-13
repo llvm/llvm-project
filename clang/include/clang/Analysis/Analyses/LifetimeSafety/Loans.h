@@ -28,119 +28,101 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 }
 
 /// Represents the storage location being borrowed, e.g., a specific stack
-/// variable.
-/// TODO: Model access paths of other types, e.g., s.field, heap and globals.
+/// variable or a field within it: var.field.*
+///
+/// An AccessPath consists of a root which is one of:
+///   - ValueDecl: a local variable or global
+///   - MaterializeTemporaryExpr: a temporary object
+///   - ParmVarDecl: a function parameter (placeholder)
+///   - CXXMethodDecl: the implicit 'this' object (placeholder)
+///
+/// Placeholder paths never expire within the function scope, as they represent
+/// storage from the caller's scope.
+///
+/// TODO: Model access paths of other types, e.g. field, array subscript, heap
+/// and globals.
 class AccessPath {
-  // An access path can be:
-  // - ValueDecl * , to represent the storage location corresponding to the
-  //   variable declared in ValueDecl.
-  // - MaterializeTemporaryExpr * , to represent the storage location of the
-  //   temporary object materialized via this MaterializeTemporaryExpr.
-  const llvm::PointerUnion<const clang::ValueDecl *,
-                           const clang::MaterializeTemporaryExpr *>
-      P;
-
-public:
-  AccessPath(const clang::ValueDecl *D) : P(D) {}
-  AccessPath(const clang::MaterializeTemporaryExpr *MTE) : P(MTE) {}
-
-  const clang::ValueDecl *getAsValueDecl() const {
-    return P.dyn_cast<const clang::ValueDecl *>();
-  }
-
-  const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
-    return P.dyn_cast<const clang::MaterializeTemporaryExpr *>();
-  }
-
-  bool operator==(const AccessPath &RHS) const { return P == RHS.P; }
-};
-
-/// An abstract base class for a single "Loan" which represents lending a
-/// storage in memory.
-class Loan {
-  /// TODO: Represent opaque loans.
-  /// TODO: Represent nullptr: loans to no path. Accessing it UB! Currently it
-  /// is represented as empty LoanSet
 public:
   enum class Kind : uint8_t {
-    /// A loan with an access path to a storage location.
-    Path,
-    /// A non-expiring placeholder loan for a parameter, representing a borrow
-    /// from the function's caller.
-    Placeholder
+    ValueDecl,
+    MaterializeTemporary,
+    PlaceholderParam,
+    PlaceholderThis
   };
 
-  Loan(Kind K, LoanID ID) : K(K), ID(ID) {}
-  virtual ~Loan() = default;
+private:
+  Kind K;
+  const llvm::PointerUnion<const clang::ValueDecl *,
+                           const clang::MaterializeTemporaryExpr *,
+                           const ParmVarDecl *, const CXXMethodDecl *>
+      Root;
+
+public:
+  AccessPath(const clang::ValueDecl *D) : K(Kind::ValueDecl), Root(D) {}
+  AccessPath(const clang::MaterializeTemporaryExpr *MTE)
+      : K(Kind::MaterializeTemporary), Root(MTE) {}
+  static AccessPath Placeholder(const ParmVarDecl *PVD) {
+    return AccessPath(Kind::PlaceholderParam, PVD);
+  }
+  static AccessPath Placeholder(const CXXMethodDecl *MD) {
+    return AccessPath(Kind::PlaceholderThis, MD);
+  }
+  AccessPath(const AccessPath &Other) : K(Other.K), Root(Other.Root) {}
 
   Kind getKind() const { return K; }
-  LoanID getID() const { return ID; }
 
-  virtual void dump(llvm::raw_ostream &OS) const = 0;
+  const clang::ValueDecl *getAsValueDecl() const {
+    return K == Kind::ValueDecl ? Root.dyn_cast<const clang::ValueDecl *>()
+                                : nullptr;
+  }
+  const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
+    return K == Kind::MaterializeTemporary
+               ? Root.dyn_cast<const clang::MaterializeTemporaryExpr *>()
+               : nullptr;
+  }
+  const ParmVarDecl *getAsPlaceholderParam() const {
+    return K == Kind::PlaceholderParam ? Root.dyn_cast<const ParmVarDecl *>()
+                                       : nullptr;
+  }
+  const CXXMethodDecl *getAsPlaceholderThis() const {
+    return K == Kind::PlaceholderThis ? Root.dyn_cast<const CXXMethodDecl *>()
+                                      : nullptr;
+  }
+
+  bool operator==(const AccessPath &RHS) const {
+    return K == RHS.K && Root == RHS.Root;
+  }
+  bool operator!=(const AccessPath &RHS) const { return !(*this == RHS); }
+  void dump(llvm::raw_ostream &OS) const;
 
 private:
-  const Kind K;
+  AccessPath(Kind K, const ParmVarDecl *PVD) : K(K), Root(PVD) {}
+  AccessPath(Kind K, const CXXMethodDecl *MD) : K(K), Root(MD) {}
+};
+
+/// Represents lending a storage location.
+///
+/// A loan tracks the borrowing relationship created by operations like
+/// taking a pointer/reference (&x), creating a view (std::string_view sv = s),
+/// or receiving a parameter.
+///
+/// Examples:
+///   - `int* p = &x;` creates a loan to `x`
+///   - Parameter loans have no IssueExpr (created at function entry)
+class Loan {
   const LoanID ID;
-};
-
-/// PathLoan represents lending a storage location that is visible within the
-/// function's scope (e.g., a local variable on stack).
-class PathLoan : public Loan {
-  AccessPath Path;
-  /// The expression that creates the loan, e.g., &x.
-  const Expr *IssueExpr;
+  const AccessPath Path;
+  /// The expression that creates the loan, e.g., &x. Null for placeholder
+  /// loans.
+  const Expr *IssuingExpr;
 
 public:
-  PathLoan(LoanID ID, AccessPath Path, const Expr *IssueExpr)
-      : Loan(Kind::Path, ID), Path(Path), IssueExpr(IssueExpr) {}
-
+  Loan(LoanID ID, AccessPath Path, const Expr *IssuingExpr)
+      : ID(ID), Path(Path), IssuingExpr(IssuingExpr) {}
+  LoanID getID() const { return ID; }
   const AccessPath &getAccessPath() const { return Path; }
-  const Expr *getIssueExpr() const { return IssueExpr; }
-
-  void dump(llvm::raw_ostream &OS) const override;
-
-  static bool classof(const Loan *L) { return L->getKind() == Kind::Path; }
-};
-
-/// A placeholder loan held by a function parameter or an implicit 'this'
-/// object, representing a borrow from the caller's scope.
-///
-/// Created at function entry for each pointer or reference parameter or for
-/// the implicit 'this' parameter of instance methods, with an
-/// origin. Unlike PathLoan, placeholder loans:
-/// - Have no IssueExpr (created at function entry, not at a borrow site)
-/// - Have no AccessPath (the borrowed object is not visible to the function)
-/// - Do not currently expire, but may in the future when modeling function
-///   invalidations (e.g., vector::push_back)
-///
-/// When a placeholder loan escapes the function (e.g., via return), it
-/// indicates the parameter or method should be marked [[clang::lifetimebound]],
-/// enabling lifetime annotation suggestions.
-class PlaceholderLoan : public Loan {
-  /// The function parameter or method (representing 'this') that holds this
-  /// placeholder loan.
-  llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *> ParamOrMethod;
-
-public:
-  PlaceholderLoan(LoanID ID, const ParmVarDecl *PVD)
-      : Loan(Kind::Placeholder, ID), ParamOrMethod(PVD) {}
-
-  PlaceholderLoan(LoanID ID, const CXXMethodDecl *MD)
-      : Loan(Kind::Placeholder, ID), ParamOrMethod(MD) {}
-
-  const ParmVarDecl *getParmVarDecl() const {
-    return ParamOrMethod.dyn_cast<const ParmVarDecl *>();
-  }
-
-  const CXXMethodDecl *getMethodDecl() const {
-    return ParamOrMethod.dyn_cast<const CXXMethodDecl *>();
-  }
-
-  void dump(llvm::raw_ostream &OS) const override;
-
-  static bool classof(const Loan *L) {
-    return L->getKind() == Kind::Placeholder;
-  }
+  const Expr *getIssuingExpr() const { return IssuingExpr; }
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// Manages the creation, storage and retrieval of loans.
@@ -148,15 +130,9 @@ class LoanManager {
 public:
   LoanManager() = default;
 
-  template <typename LoanType, typename... Args>
-  LoanType *createLoan(Args &&...args) {
-    static_assert(
-        std::is_same_v<LoanType, PathLoan> ||
-            std::is_same_v<LoanType, PlaceholderLoan>,
-        "createLoan can only be used with PathLoan or PlaceholderLoan");
-    void *Mem = LoanAllocator.Allocate<LoanType>();
-    auto *NewLoan =
-        new (Mem) LoanType(getNextLoanID(), std::forward<Args>(args)...);
+  Loan *createLoan(AccessPath Path, const Expr *IssueExpr) {
+    void *Mem = LoanAllocator.Allocate<Loan>();
+    auto *NewLoan = new (Mem) Loan(getNextLoanID(), Path, IssueExpr);
     AllLoans.push_back(NewLoan);
     return NewLoan;
   }
@@ -165,6 +141,7 @@ public:
     assert(ID.Value < AllLoans.size());
     return AllLoans[ID.Value];
   }
+
   llvm::ArrayRef<const Loan *> getLoans() const { return AllLoans; }
 
 private:

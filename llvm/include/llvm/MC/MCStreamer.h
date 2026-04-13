@@ -62,6 +62,7 @@ struct DefRangeRegisterRelHeader;
 struct DefRangeSubfieldRegisterHeader;
 struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
+struct DefRangeRegisterRelIndirHeader;
 }
 
 using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
@@ -468,7 +469,7 @@ public:
   void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
-  virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
+  virtual void initSections(const MCSubtargetInfo &STI);
 
   MCSymbol *endSection(MCSection *Section);
 
@@ -977,6 +978,10 @@ public:
   virtual void emitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr);
+
+  virtual void emitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelIndirHeader DRHdr);
 
   /// This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void emitCVStringTableDirective() {}

@@ -20,8 +20,8 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   One.Name = "Namespace";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  One.Children.Namespaces.emplace_back(NonEmptySID, "ChildNamespace",
-                                       InfoType::IT_namespace);
+  Reference RA(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
+  One.Children.Namespaces.push_back(RA);
   One.Children.Records.emplace_back(NonEmptySID, "ChildStruct",
                                     InfoType::IT_record);
   One.Children.Functions.emplace_back();
@@ -35,8 +35,8 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   Two.Name = "Namespace";
   Two.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Two.Children.Namespaces.emplace_back(EmptySID, "OtherChildNamespace",
-                                       InfoType::IT_namespace);
+  Reference RB(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
+  Two.Children.Namespaces.push_back(RB);
   Two.Children.Records.emplace_back(EmptySID, "OtherChildStruct",
                                     InfoType::IT_record);
   Two.Children.Functions.emplace_back();
@@ -52,12 +52,12 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   Expected->Name = "Namespace";
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Expected->Children.Namespaces.emplace_back(NonEmptySID, "ChildNamespace",
-                                             InfoType::IT_namespace);
+  Reference RC(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
+  Expected->Children.Namespaces.push_back(RC);
   Expected->Children.Records.emplace_back(NonEmptySID, "ChildStruct",
                                           InfoType::IT_record);
-  Expected->Children.Namespaces.emplace_back(EmptySID, "OtherChildNamespace",
-                                             InfoType::IT_namespace);
+  Reference RD(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
+  Expected->Children.Namespaces.push_back(RD);
   Expected->Children.Records.emplace_back(EmptySID, "OtherChildStruct",
                                           InfoType::IT_record);
   Expected->Children.Functions.emplace_back();

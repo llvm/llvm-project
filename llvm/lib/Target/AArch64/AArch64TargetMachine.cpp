@@ -244,23 +244,23 @@ LLVMInitializeAArch64Target() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeAArch64A53Fix835769LegacyPass(PR);
-  initializeAArch64A57FPLoadBalancingPass(PR);
+  initializeAArch64A57FPLoadBalancingLegacyPass(PR);
   initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsLegacyPass(PR);
-  initializeAArch64CollectLOHPass(PR);
-  initializeAArch64CompressJumpTablesPass(PR);
+  initializeAArch64CollectLOHLegacyPass(PR);
+  initializeAArch64CompressJumpTablesLegacyPass(PR);
   initializeAArch64ConditionalComparesPass(PR);
-  initializeAArch64ConditionOptimizerPass(PR);
-  initializeAArch64DeadRegisterDefinitionsPass(PR);
-  initializeAArch64ExpandPseudoPass(PR);
+  initializeAArch64ConditionOptimizerLegacyPass(PR);
+  initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
+  initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
-  initializeAArch64MIPeepholeOptPass(PR);
+  initializeAArch64MIPeepholeOptLegacyPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
-  initializeAArch64O0PreLegalizerCombinerPass(PR);
-  initializeAArch64PreLegalizerCombinerPass(PR);
-  initializeAArch64PointerAuthPass(PR);
-  initializeAArch64PostCoalescerPass(PR);
+  initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
+  initializeAArch64PreLegalizerCombinerLegacyPass(PR);
+  initializeAArch64PointerAuthLegacyPass(PR);
+  initializeAArch64PostCoalescerLegacyPass(PR);
   initializeAArch64PostLegalizerCombinerPass(PR);
   initializeAArch64PostLegalizerLoweringPass(PR);
   initializeAArch64PostSelectOptimizePass(PR);
@@ -812,12 +812,12 @@ void AArch64PassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64MIPeepholeOptPass());
+    addPass(createAArch64MIPeepholeOptLegacyPass());
 }
 
 bool AArch64PassConfig::addILPOpts() {
   if (EnableCondOpt)
-    addPass(createAArch64ConditionOptimizerPass());
+    addPass(createAArch64ConditionOptimizerLegacyPass());
   if (EnableCCMP)
     addPass(createAArch64ConditionalCompares());
   if (EnableMCR)
@@ -867,7 +867,7 @@ void AArch64PassConfig::addPostRegAlloc() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && usingDefaultRegAlloc())
     // Improve performance for some FP/SIMD code for A57.
-    addPass(createAArch64A57FPLoadBalancing());
+    addPass(createAArch64A57FPLoadBalancingLegacyPass());
 }
 
 void AArch64PassConfig::addPreSched2() {
@@ -875,7 +875,7 @@ void AArch64PassConfig::addPreSched2() {
   if (EnableHomogeneousPrologEpilog)
     addPass(createAArch64LowerHomogeneousPrologEpilogPass());
   // Expand some pseudo instructions to allow proper scheduling.
-  addPass(createAArch64ExpandPseudoPass());
+  addPass(createAArch64ExpandPseudoLegacyPass());
   // Use load/store pair instructions when possible.
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoadStoreOpt)
@@ -939,9 +939,12 @@ void AArch64PassConfig::addPostBBSections() {
 }
 
 void AArch64PassConfig::addPreEmitPass2() {
+  // Insert pseudo probe annotation for callsite profiling
+  addPass(createPseudoProbeInserter());
+
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
-  addPass(createUnpackMachineBundles(nullptr));
+  addPass(createUnpackMachineBundlesLegacy(nullptr));
 }
 
 bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {

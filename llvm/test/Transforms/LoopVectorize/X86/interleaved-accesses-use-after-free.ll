@@ -48,7 +48,7 @@ target triple = "x86_64-redhat-linux-gnu"
 ;   store ptr null, ptr %phi5, align 8
 ;   store ptr %load7, ptr %getelementptr, align 8
 ;   store ptr %load12, ptr %getelementptr11, align 8
-define void @test(ptr %arg, ptr %arg1) local_unnamed_addr #0 {
+define void @test(ptr %arg, ptr %arg1) #0 {
 bb:
   br label %bb2
 
@@ -87,10 +87,10 @@ bb4:                                              ; preds = %bb4, %bb2
 }
 
 ; Function Attrs: memory(readwrite, inaccessiblemem: none)
-declare void @foo() local_unnamed_addr #0
+declare void @foo() #0
 
 ; Function Attrs: memory(argmem: readwrite)
-declare void @pluto() local_unnamed_addr #1
+declare void @pluto() #1
 
 attributes #0 = { memory(readwrite, inaccessiblemem: none) }
 attributes #1 = { memory(argmem: readwrite) }
