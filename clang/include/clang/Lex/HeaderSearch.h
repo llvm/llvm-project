@@ -410,6 +410,12 @@ class HeaderSearch {
                            StringRef PathPrefix,
                            ModuleMapDirectoryState &MMState);
 
+  /// Check if a relative path would be covered by the module map index.
+  /// Returns the module names that would cover this path.
+  SmallVector<StringRef, 1>
+  findMatchingModulesInIndex(StringRef RelativePath,
+                             const ModuleMapDirectoryState &MMState) const;
+
 public:
   HeaderSearch(const HeaderSearchOptions &HSOpts, SourceManager &SourceMgr,
                DiagnosticsEngine &Diags, const LangOptions &LangOpts,
@@ -843,6 +849,11 @@ private:
   /// Load all of the module maps within the immediate subdirectories
   /// of the given search directory.
   void loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir);
+
+  /// Diagnose headers that are a symlink and not covered by a module map.
+  void diagnoseUncoveredSymlink(FileEntryRef File,
+                                ModuleMap::KnownHeader &Module,
+                                const DirectoryEntry *Root);
 
   /// Find and suggest a usable module for the given file.
   ///

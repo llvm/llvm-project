@@ -964,8 +964,6 @@ end:
 
 
 declare i64 @foo(i64)
-declare double @llvm.fmuladd.f64(double, double, double)
-declare double @llvm.exp.f64(double)
 
 ; fixed-width variants of exp
 declare <2 x double> @exp_fixed(<2 x double>)

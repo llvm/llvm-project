@@ -1022,17 +1022,18 @@ LogicalResult spirv::Deserializer::processName(ArrayRef<uint32_t> operands) {
   if (operands.size() < 2) {
     return emitError(unknownLoc, "OpName needs at least 2 operands");
   }
-  if (!nameMap.lookup(operands[0]).empty()) {
-    return emitError(unknownLoc, "duplicate name found for result <id> ")
-           << operands[0];
-  }
+
   unsigned wordIndex = 1;
   StringRef name = decodeStringLiteral(operands, wordIndex);
   if (wordIndex != operands.size()) {
     return emitError(unknownLoc,
                      "unexpected trailing words in OpName instruction");
   }
-  nameMap[operands[0]] = name;
+
+  // In SPIRV it's valid for multiple OpName instructions to refer to the same
+  // <id>. Use a "last one wins" approach to resolve such cases.
+  nameMap.emplace_or_assign(operands[0], name);
+
   return success();
 }
 

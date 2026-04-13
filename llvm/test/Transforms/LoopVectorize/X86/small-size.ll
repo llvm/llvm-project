@@ -45,7 +45,7 @@ define void @example1() optsize {
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv
   %3 = load i32, ptr %2, align 4
@@ -59,7 +59,7 @@ define void @example1() optsize {
   %exitcond = icmp eq i32 %lftr.wideiv, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -207,16 +207,16 @@ define void @example2(i32 %n, i32 %x) optsize {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph5, label %.preheader
 
-..preheader_crit_edge:                            ; preds = %.lr.ph5
+..preheader_crit_edge:
   %phitmp = sext i32 %n to i64
   br label %.preheader
 
-.preheader:                                       ; preds = %..preheader_crit_edge, %0
+.preheader:
   %i.0.lcssa = phi i64 [ %phitmp, %..preheader_crit_edge ], [ 0, %0 ]
   %2 = icmp eq i32 %n, 0
   br i1 %2, label %._crit_edge, label %.lr.ph
 
-.lr.ph5:                                          ; preds = %0, %.lr.ph5
+.lr.ph5:
   %indvars.iv6 = phi i64 [ %indvars.iv.next7, %.lr.ph5 ], [ 0, %0 ]
   %3 = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 %indvars.iv6
   store i32 %x, ptr %3, align 4
@@ -225,7 +225,7 @@ define void @example2(i32 %n, i32 %x) optsize {
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %..preheader_crit_edge, label %.lr.ph5
 
-.lr.ph:                                           ; preds = %.preheader, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ %i.0.lcssa, %.preheader ]
   %.02 = phi i32 [ %4, %.lr.ph ], [ %n, %.preheader ]
   %4 = add nsw i32 %.02, -1
@@ -240,7 +240,7 @@ define void @example2(i32 %n, i32 %x) optsize {
   %11 = icmp eq i32 %4, 0
   br i1 %11, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %.preheader
+._crit_edge:
   ret void
 }
 
@@ -325,7 +325,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %1 = icmp eq i32 %n, 0
   br i1 %1, label %._crit_edge, label %.lr.ph
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %.05 = phi i32 [ %2, %.lr.ph ], [ %n, %0 ]
   %.014 = phi ptr [ %5, %.lr.ph ], [ %p, %0 ]
   %.023 = phi ptr [ %3, %.lr.ph ], [ %q, %0 ]
@@ -337,7 +337,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
   %6 = icmp eq i32 %2, 0
   br i1 %6, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   ret void
 }
 
@@ -363,7 +363,7 @@ define void @example23(ptr nocapture %src, ptr nocapture %dst) optsize {
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i32 [ 0, %0 ], [ %7, %1 ]
@@ -377,7 +377,7 @@ define void @example23(ptr nocapture %src, ptr nocapture %dst) optsize {
   %exitcond = icmp eq i32 %7, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -408,7 +408,7 @@ define void @example23b(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i32 [ 0, %0 ], [ %7, %1 ]
@@ -422,7 +422,7 @@ define void @example23b(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
   %exitcond = icmp eq i32 %7, 256
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -502,7 +502,7 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i64 [ 0, %0 ], [ %7, %1 ]
@@ -516,7 +516,7 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
   %exitcond = icmp eq i64 %7, 257
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret void
 }
 
@@ -594,7 +594,7 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ;
   br label %1
 
-; <label>:1                                       ; preds = %1, %0
+; <label>:
   %.04 = phi ptr [ %src, %0 ], [ %2, %1 ]
   %.013 = phi ptr [ %dst, %0 ], [ %6, %1 ]
   %i.02 = phi i64 [ 0, %0 ], [ %7, %1 ]
@@ -608,6 +608,6 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
   %exitcond = icmp eq i64 %7, 257
   br i1 %exitcond, label %8, label %1
 
-; <label>:8                                       ; preds = %1
+; <label>:
   ret i64 %7
 }

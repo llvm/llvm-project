@@ -329,11 +329,30 @@ struct LogicalConstantVistor : public evaluate::Traverse<LogicalConstantVistor,
       }
     }
   }
+
+  template <typename T>
+  Result operator()(const evaluate::ConditionalExpr<T> &) const {
+    // A conditional expression is not treated as a constant logical value.
+    return std::nullopt;
+  }
 };
 } // namespace
 
 std::optional<bool> GetLogicalValue(const SomeExpr &expr) {
   return LogicalConstantVistor{}(expr);
+}
+
+std::optional<int64_t> GetIntValueFromExpr(
+    const parser::Expr &parserExpr, SemanticsContext *semaCtx) {
+  if (auto value{GetIntValue(parserExpr)}) {
+    return value;
+  }
+  if (semaCtx) {
+    if (auto expr{evaluate::ExpressionAnalyzer{*semaCtx}.Analyze(parserExpr)}) {
+      return evaluate::ToInt64(expr);
+    }
+  }
+  return std::nullopt;
 }
 
 namespace {
@@ -685,10 +704,10 @@ static SymbolVector SelectUsedSymbols(
 
 WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version) {
+    unsigned version, SemanticsContext *semaCtx) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
     if (auto *expr{parser::Unwrap<parser::Expr>(clause->u)}) {
-      if (auto value{GetIntValue(*expr)}) {
+      if (auto value{GetIntValueFromExpr(*expr, semaCtx)}) {
         std::string name{GetUpperName(clauseId, version)};
         Reason reason;
         reason.Say(clause->source,
@@ -717,7 +736,7 @@ static WithReason<int64_t> GetNumArgumentsWithReasonForType(
 
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version) {
+    unsigned version, SemanticsContext *semaCtx) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
     std::string name{GetUpperName(clauseId, version)};
     // Try the types used for list items.
@@ -738,7 +757,8 @@ WithReason<int64_t> GetNumArgumentsWithReason(
 }
 
 WithReason<int64_t> GetHeightWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version) {
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx) {
   bool isFullUnroll{IsFullUnroll(spec)};
 
   if (!isFullUnroll && !IsTransformableLoop(spec)) {
@@ -750,7 +770,7 @@ WithReason<int64_t> GetHeightWithReason(
   switch (spec.DirName().v) {
   case llvm::omp::Directive::OMPD_flatten:
     if (auto &&value{GetArgumentValueWithReason(
-            spec, llvm::omp::Clause::OMPC_depth, version)}) {
+            spec, llvm::omp::Clause::OMPC_depth, version, semaCtx)}) {
       // FLATTEN DEPTH(n) replaces n loops with 1.
       return {int64_t(1) - *value.value, std::move(value.reason)};
     } else {
@@ -769,7 +789,7 @@ WithReason<int64_t> GetHeightWithReason(
   case llvm::omp::Directive::OMPD_stripe:
   case llvm::omp::Directive::OMPD_tile:
     return GetNumArgumentsWithReason(
-        spec, llvm::omp::Clause::OMPC_sizes, version);
+        spec, llvm::omp::Clause::OMPC_sizes, version, semaCtx);
   case llvm::omp::Directive::OMPD_unroll:
     if (isFullUnroll) {
       Reason reason;
@@ -946,10 +966,11 @@ WithReason<T> operator+(T a, const WithReason<T> &b) {
   return WithReason<T>{a, Reason()} + b;
 }
 
-// Return the depth of the affected nests:
-//   {affected-depth, must-be-perfect-nest}.
+/// Return the depth of the affected nest(s):
+///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version) {
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
   bool allowsCollapse{llvm::omp::isAllowedClauseForDirective(
       dir, llvm::omp::Clause::OMPC_collapse, version)};
@@ -958,9 +979,9 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
 
   if (allowsCollapse || allowsOrdered) {
     auto [ccount, creason]{GetArgumentValueWithReason(
-        spec, llvm::omp::Clause::OMPC_collapse, version)};
+        spec, llvm::omp::Clause::OMPC_collapse, version, semaCtx)};
     auto [ocount, oreason]{GetArgumentValueWithReason(
-        spec, llvm::omp::Clause::OMPC_ordered, version)};
+        spec, llvm::omp::Clause::OMPC_ordered, version, semaCtx)};
     // Ignore invalid arguments.
     if (ccount <= 0) {
       ccount = std::nullopt;
@@ -983,7 +1004,7 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
       // Get the length of the argument list to PERMUTATION.
       if (parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_permutation)) {
         auto [num, reason]{GetNumArgumentsWithReason(
-            spec, llvm::omp::Clause::OMPC_permutation, version)};
+            spec, llvm::omp::Clause::OMPC_permutation, version, semaCtx)};
         return {{num, std::move(reason)}, true};
       }
       // PERMUTATION not specified, assume PERMUTATION(2, 1).
@@ -998,14 +1019,14 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
     case llvm::omp::Directive::OMPD_tile: {
       // Get the length of the argument list to SIZES.
       auto [num, reason]{GetNumArgumentsWithReason(
-          spec, llvm::omp::Clause::OMPC_sizes, version)};
+          spec, llvm::omp::Clause::OMPC_sizes, version, semaCtx)};
       return {{num, std::move(reason)}, true};
     }
     case llvm::omp::Directive::OMPD_fuse: {
       // Get the value from the argument to DEPTH.
       if (parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_depth)) {
         auto [count, reason]{GetArgumentValueWithReason(
-            spec, llvm::omp::Clause::OMPC_depth, version)};
+            spec, llvm::omp::Clause::OMPC_depth, version, semaCtx)};
         return {{count, std::move(reason)}, true};
       }
       std::string name{GetUpperName(llvm::omp::Clause::OMPC_depth, version)};
@@ -1026,10 +1047,11 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
   return {{}, false};
 }
 
-// Return the range of the affected nests in the sequence:
-//   {first, count, std::move(reason)}.
+/// Return the range of the affected nests in the sequence:
+///   {first, count}
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version) {
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
 
   if (dir == llvm::omp::Directive::OMPD_fuse) {
@@ -1037,8 +1059,10 @@ WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
     if (auto *clause{
             parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_looprange)}) {
       auto &range{DEREF(parser::Unwrap<parser::OmpLooprangeClause>(clause->u))};
-      std::optional<int64_t> first{GetIntValue(std::get<0>(range.t))};
-      std::optional<int64_t> count{GetIntValue(std::get<1>(range.t))};
+      std::optional<int64_t> first{
+          GetIntValueFromExpr(std::get<0>(range.t), semaCtx)};
+      std::optional<int64_t> count{
+          GetIntValueFromExpr(std::get<1>(range.t), semaCtx)};
       if (!first || !count || *first <= 0 || *count <= 0) {
         return {};
       }
@@ -1065,8 +1089,9 @@ WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
 }
 
 WithReason<int64_t> GetRectangularNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version) {
-  auto [depth, _]{GetAffectedNestDepthWithReason(spec, version)};
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx) {
+  auto [depth, _]{GetAffectedNestDepthWithReason(spec, version, semaCtx)};
   if (!depth) {
     return {};
   }
@@ -1114,7 +1139,7 @@ WithReason<int64_t> GetRectangularNestDepthWithReason(
   return {0, Reason()};
 }
 
-std::optional<int64_t> GetRequiredCount(
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<int64_t> first, std::optional<int64_t> count) {
   if (first && count && *first > 0) {
     if (*count > 0) {
@@ -1126,12 +1151,12 @@ std::optional<int64_t> GetRequiredCount(
   return std::nullopt;
 }
 
-std::optional<int64_t> GetRequiredCount(
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<std::pair<int64_t, int64_t>> range) {
   if (range) {
-    return GetRequiredCount(range->first, range->second);
+    return GetMinimumSequenceCount(range->first, range->second);
   }
-  return GetRequiredCount(std::nullopt, std::nullopt);
+  return GetMinimumSequenceCount(std::nullopt, std::nullopt);
 }
 
 #ifdef EXPENSIVE_CHECKS
@@ -1189,8 +1214,8 @@ static_assert(HasSourceT<parser::ExecutionPartConstruct>::value);
 #endif // EXPENSIVE_CHECKS
 
 LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
-    unsigned version, bool allowAllLoops)
-    : version_(version), allowAllLoops_(allowAllLoops) {
+    unsigned version, bool allowAllLoops, SemanticsContext *semaCtx)
+    : version_(version), allowAllLoops_(allowAllLoops), semaCtx_(semaCtx) {
   entry_ = createConstructEntry(root);
   assert(entry_ && "Expecting loop like code");
 
@@ -1198,10 +1223,10 @@ LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
   precalculate();
 }
 
-LoopSequence::LoopSequence(
-    std::unique_ptr<Construct> entry, unsigned version, bool allowAllLoops)
+LoopSequence::LoopSequence(std::unique_ptr<Construct> entry, unsigned version,
+    bool allowAllLoops, SemanticsContext *semaCtx)
     : version_(version), allowAllLoops_(allowAllLoops),
-      entry_(std::move(entry)) {
+      entry_(std::move(entry)), semaCtx_(semaCtx) {
   createChildrenFromRange(entry_->location);
   precalculate();
 }
@@ -1234,7 +1259,7 @@ void LoopSequence::createChildrenFromRange(
   for (auto &code : BlockRange(begin, end, BlockRange::Step::Over)) {
     if (auto entry{createConstructEntry(code)}) {
       children_.push_back(
-          LoopSequence(std::move(entry), version_, allowAllLoops_));
+          LoopSequence(std::move(entry), version_, allowAllLoops_, semaCtx_));
       // Even when DO WHILE et al are allowed to have entries, still treat
       // them as invalid intervening code.
       // Give it priority over other kinds of invalid interveninig code.
@@ -1251,6 +1276,25 @@ void LoopSequence::createChildrenFromRange(
       }
     }
   }
+}
+
+const LoopSequence *LoopSequence::getNestedDoConcurrent() const {
+  // DO CONCURRENT loops are considered invalid code, even though they
+  // can be allowed in some circumstances.
+  if (!invalidIC_) {
+    return nullptr;
+  }
+  // The invalidIC_ will point to the DO CONCURRENT if that's the only
+  // invalid loop construct, but it may also point to DO WHILE.
+  for (auto &sequence : children()) {
+    auto &owner{DEREF(sequence.entry_->owner)};
+    if (auto *loop{parser::Unwrap<parser::DoConstruct>(owner)}) {
+      if (loop->IsDoConcurrent()) {
+        return &sequence;
+      }
+    }
+  }
+  return nullptr;
 }
 
 std::vector<LoopControl> LoopSequence::getLoopControls() const {
@@ -1321,7 +1365,8 @@ WithReason<int64_t> LoopSequence::calculateLength() const {
     }
 
     auto *loopRange{parser::Unwrap<parser::OmpLooprangeClause>(*clause)};
-    std::optional<int64_t> count{GetIntValue(std::get<1>(loopRange->t))};
+    std::optional<int64_t> count{
+        GetIntValueFromExpr(std::get<1>(loopRange->t), semaCtx_)};
     if (!count || *count <= 0) {
       return {};
     }
@@ -1431,12 +1476,13 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
     if (auto *clause{parser::omp::FindClause(
             beginSpec, llvm::omp::Clause::OMPC_depth)}) {
       auto &expr{parser::UnwrapRef<parser::Expr>(clause->u)};
-      auto value{GetIntValue(expr)};
+      auto value{GetIntValueFromExpr(expr, semaCtx_)};
       // The result is a perfect nest only if all loop in the sequence
       // are fused.
       if (value && nestedLength.value) {
-        auto range{GetAffectedLoopRangeWithReason(beginSpec, version_)};
-        if (auto required{GetRequiredCount(range.value)}) {
+        auto range{
+            GetAffectedLoopRangeWithReason(beginSpec, version_, semaCtx_)};
+        if (auto required{GetMinimumSequenceCount(range.value)}) {
           if (*required == -1 || *required == *nestedLength.value) {
             return Depth{value, value};
           }
@@ -1483,7 +1529,7 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
             beginSpec, llvm::omp::Clause::OMPC_partial)}) {
       std::optional<int64_t> factor;
       if (auto *expr{parser::Unwrap<parser::Expr>(clause->u)}) {
-        factor = GetIntValue(*expr);
+        factor = GetIntValueFromExpr(*expr, semaCtx_);
       }
       // If it's a partial unroll, and the unroll count is 1, then this
       // construct is a no-op.
@@ -1530,7 +1576,7 @@ WithReason<int64_t> LoopSequence::calculateHeight() const {
   if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner)}) {
     const parser::OmpDirectiveSpecification &beginSpec{omp->BeginDir()};
     if (IsLoopTransforming(beginSpec.DirId())) {
-      return GetHeightWithReason(beginSpec, version_);
+      return GetHeightWithReason(beginSpec, version_, semaCtx_);
     }
     return {0, Reason()};
   }
@@ -1591,7 +1637,7 @@ WithReason<bool> LoopSequence::isWellFormedSequence() const {
 WithReason<bool> LoopSequence::isWellFormedNest() const {
   // DO CONCURRENT is allowed at the top level in OpenMP 6.0+.
   if (invalidIC_) {
-    if (version_ < 60 || !IsDoConcurrent(*invalidIC_)) {
+    if (!IsDoConcurrentLegal(version_) || !IsDoConcurrent(*invalidIC_)) {
       return {false, WhyNotWellFormed(*invalidIC_, false)};
     }
   }

@@ -61,6 +61,7 @@ add_fp_unittest(
     libc.src.__support.math.canonicalizef16
     libc.src.__support.math.canonicalizel
     libc.src.__support.math.cbrt
+    libc.src.__support.math.cbrtbf16
     libc.src.__support.math.cbrtf
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16

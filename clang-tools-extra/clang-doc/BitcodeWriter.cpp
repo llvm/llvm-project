@@ -563,7 +563,7 @@ void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
   for (const auto &A : I.Args)
     emitRecord(A, COMMENT_ARG);
   for (const auto &C : I.Children)
-    emitBlock(*C);
+    emitBlock(C);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {

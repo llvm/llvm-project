@@ -166,6 +166,8 @@ struct LineTable {
   dwarf::DwarfFormat Format;
   std::optional<uint64_t> Length;
   uint16_t Version;
+  uint8_t AddressSize;
+  uint8_t SegmentSelectorSize;
   std::optional<uint64_t> PrologueLength;
   uint8_t MinInstLength;
   uint8_t MaxOpsPerInst;
