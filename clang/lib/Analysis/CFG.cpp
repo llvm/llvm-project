@@ -1824,29 +1824,31 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   if (!BuildOpts.AddInitializers)
     return Block;
 
-  bool HasTemporaries = false;
-
   // Destructors of temporaries in initialization expression should be called
   // after initialization finishes.
   Expr *Init = I->getInit();
   if (Init) {
-    HasTemporaries = isa<ExprWithCleanups>(Init);
+    Expr *ActualInit = Init;
+    if (BuildOpts.AddCXXDefaultInitExprInCtors) {
+      if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init))
+        ActualInit = DIE->getExpr();
+    }
+
+    bool HasTemporaries = isa<ExprWithCleanups>(ActualInit);
 
     if (HasTemporaries &&
         (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
-      VisitForTemporaries(cast<ExprWithCleanups>(Init)->getSubExpr(),
+      VisitForTemporaries(cast<ExprWithCleanups>(ActualInit)->getSubExpr(),
                           /*ExternallyDestructed=*/false, Context);
 
       addFullExprCleanupMarker(Context);
     }
-  }
 
-  autoCreateBlock();
-  appendInitializer(Block, I);
+    autoCreateBlock();
+    appendInitializer(Block, I);
 
-  if (Init) {
     // If the initializer is an ArrayInitLoopExpr, we want to extract the
     // initializer, that's used for each element.
     auto *AILEInit = extractElementInitializerFromNestedAILE(
@@ -1856,11 +1858,6 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
         ConstructionContextLayer::create(cfg->getBumpVectorContext(), I),
         AILEInit ? AILEInit : Init);
 
-    if (HasTemporaries) {
-      // For expression with temporaries go directly to subexpression to omit
-      // generating destructors for the second time.
-      return Visit(cast<ExprWithCleanups>(Init)->getSubExpr());
-    }
     if (BuildOpts.AddCXXDefaultInitExprInCtors) {
       if (CXXDefaultInitExpr *Default = dyn_cast<CXXDefaultInitExpr>(Init)) {
         // In general, appending the expression wrapped by a CXXDefaultInitExpr
@@ -1868,11 +1865,20 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
         // here is safe because there's only one initializer per field.
         autoCreateBlock();
         appendStmt(Block, Default);
-        if (Stmt *Child = Default->getExpr())
+        if (Stmt *Child = Default->getExpr()) {
+          if (HasTemporaries)
+            Child = cast<ExprWithCleanups>(Child)->getSubExpr();
           if (CFGBlock *R = Visit(Child))
             Block = R;
+        }
         return Block;
       }
+    }
+
+    if (HasTemporaries) {
+      // For expression with temporaries go directly to subexpression to omit
+      // generating destructors for the second time.
+      return Visit(cast<ExprWithCleanups>(Init)->getSubExpr());
     }
     return Visit(Init);
   }
