@@ -345,6 +345,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    AssumptionCache *AC,
                                    const TargetTransformInfo *TTI,
+                                   ArrayRef<BasicBlock *> Blocks,
                                    AAResults *AA) {
   using namespace llvm::PatternMatch;
 
@@ -374,15 +375,15 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
-  const DataLayout &DL = L->getHeader()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
-  for (BasicBlock *BB : L->getBlocks()) {
+  for (BasicBlock *BB : Blocks) {
     // Remove repeated debug instructions after loop unrolling.
     if (BB->getParent()->getSubprogram())
       RemoveRedundantDbgInstrs(BB);
 
     for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
-      if (Value *V = simplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
+      if (Value *V = simplifyInstruction(
+              &Inst, {BB->getDataLayout(), nullptr, DT, AC}))
         if (LI->replacementPreservesLCSSAForm(&Inst, V))
           Inst.replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(&Inst))
@@ -1123,21 +1124,26 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(!UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
+  Loop *OuterL = L->getParentLoop();
+  std::vector<BasicBlock *> Blocks;
+  // Update LoopInfo if the loop is completely removed.
+  if (CompletelyUnroll) {
+    Blocks = L->getBlocks();
+    LI->erase(L);
+    // We shouldn't try to use `L` anymore.
+    L = nullptr;
+  }
+
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.
-  simplifyLoopAfterUnroll(L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC,
-                          TTI, AA);
+  simplifyLoopAfterUnroll(
+      L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC, TTI,
+      CompletelyUnroll ? ArrayRef<BasicBlock *>(Blocks) : L->getBlocks(), AA);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;
 
-  Loop *OuterL = L->getParentLoop();
-  // Update LoopInfo if the loop is completely removed.
-  if (CompletelyUnroll) {
-    LI->erase(L);
-    // We shouldn't try to use `L` anymore.
-    L = nullptr;
-  } else {
+  if (!CompletelyUnroll) {
     // Update metadata for the loop's branch weights and estimated trip count:
     // - If ULO.Runtime, UnrollRuntimeLoopRemainder sets the guard branch
     //   weights, latch branch weights, and estimated trip count of the

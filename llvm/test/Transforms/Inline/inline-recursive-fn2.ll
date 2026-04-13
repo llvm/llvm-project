@@ -14,7 +14,7 @@
 ; CHECK:      Size after inlining: 17
 ; CHECK:      NOT Inlining (cost=never): noinline function attribute, Call:   %call_test = tail call float @test(float %fneg, float %common.ret18.op.i)
 ; CHECK:      NOT Inlining (cost=never): noinline function attribute, Call:   %call_test.i = tail call float @test(float %x, float %call.i)
-; CHECK:  Skipping inlining due to history: inline_rec_true_successor -> inline_rec_true_successor
+; CHECK:      NOT Inlining (cost=never): recursive, Call: %call.i = tail call float @inline_rec_true_successor(float %x, float %scale)
 ; CHECK:  Updated inlining SCC: (test, inline_rec_true_successor)
 
 ; CHECK:  Inlining calls in: test

@@ -783,20 +783,14 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   {
     RunCleanupsScope scope(*this);
 
-    // Evaluate the constructor and its arguments in a regular
-    // partial-destroy cleanup.
-    if (getLangOpts().Exceptions &&
-        !ctor->getParent()->hasTrivialDestructor()) {
-      cgm.errorNYI(e->getSourceRange(), "partial array cleanups");
-    }
+    bool needsPartialArrayCleanup =
+        getLangOpts().Exceptions && !ctor->getParent()->hasTrivialDestructor();
 
     auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
       mlir::BlockArgument arg =
           b.getInsertionBlock()->addArgument(ptrToElmType, l);
       Address curAddr = Address(arg, elementType, eltAlignment);
       assert(!cir::MissingFeatures::sanitizers());
-      // Match CGClass::EmitCXXAggrConstructorCall: zero-initialize each element
-      // in the array-ctor loop before invoking the constructor for that slot.
       if (zeroInitialize)
         emitNullInitialization(l, curAddr, type);
       auto currAVS = AggValueSlot::forAddr(
@@ -809,16 +803,30 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
       cir::YieldOp::create(b, l);
     };
 
-    // Emit the per-element initialization.
+    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+        emitPartialDtorBody = nullptr;
+    auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
+      mlir::BlockArgument arg =
+          b.getInsertionBlock()->addArgument(ptrToElmType, l);
+      Address curAddr = Address(arg, elementType, eltAlignment);
+      emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
+                            /*forVirtualBase=*/false,
+                            /*delegating=*/false, curAddr, type);
+      cir::YieldOp::create(b, l);
+    };
+    if (needsPartialArrayCleanup)
+      emitPartialDtorBody = partialDtorBuilder;
+
     if (useDynamicArrayCtor) {
       cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
-                             emitCtorBody);
+                             emitCtorBody, emitPartialDtorBody);
     } else {
       cir::ArrayType arrayTy =
           cir::ArrayType::get(elementType, constElementCount);
       mlir::Value arrayOp =
           builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-      cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody);
+      cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
+                             emitPartialDtorBody);
     }
   }
 }

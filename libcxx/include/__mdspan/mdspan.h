@@ -30,6 +30,7 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_object.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/rank.h>
@@ -66,6 +67,9 @@ class mdspan {
 private:
   static_assert(__mdspan_detail::__is_extents_v<_Extents>,
                 "mdspan: Extents template parameter must be a specialization of extents.");
+  static_assert(
+      is_object_v<_ElementType> && requires { sizeof(_ElementType); },
+      "mdspan: ElementType template parameter must be a complete object type");
   static_assert(!is_array_v<_ElementType>, "mdspan: ElementType template parameter may not be an array type");
   static_assert(!is_abstract_v<_ElementType>, "mdspan: ElementType template parameter may not be an abstract class");
   static_assert(is_same_v<_ElementType, typename _AccessorPolicy::element_type>,
@@ -78,14 +82,14 @@ public:
   using extents_type     = _Extents;
   using layout_type      = _LayoutPolicy;
   using accessor_type    = _AccessorPolicy;
-  using mapping_type     = typename layout_type::template mapping<extents_type>;
+  using mapping_type     = layout_type::template mapping<extents_type>;
   using element_type     = _ElementType;
   using value_type       = remove_cv_t<element_type>;
-  using index_type       = typename extents_type::index_type;
-  using size_type        = typename extents_type::size_type;
-  using rank_type        = typename extents_type::rank_type;
-  using data_handle_type = typename accessor_type::data_handle_type;
-  using reference        = typename accessor_type::reference;
+  using index_type       = extents_type::index_type;
+  using size_type        = extents_type::size_type;
+  using rank_type        = extents_type::rank_type;
+  using data_handle_type = accessor_type::data_handle_type;
+  using reference        = accessor_type::reference;
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return extents_type::rank(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept {

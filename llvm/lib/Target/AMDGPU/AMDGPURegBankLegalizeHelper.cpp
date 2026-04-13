@@ -1171,10 +1171,13 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     }));
     B.setInstrAndDebugLoc(MI);
     for (unsigned i = MI.getNumDefs(); i < MI.getNumOperands(); ++i) {
-      Register Reg = MI.getOperand(i).getReg();
+      MachineOperand &Op = MI.getOperand(i);
+      if (!Op.isReg())
+        continue;
+      Register Reg = Op.getReg();
       if (MRI.getRegBank(Reg) != VgprRB) {
         auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
-        MI.getOperand(i).setReg(Copy.getReg(0));
+        Op.setReg(Copy.getReg(0));
       }
     }
     return true;

@@ -186,73 +186,47 @@ public:
   LoopBlocksDFS::RPOIterator end() const { return DFS.endRPO(); }
 };
 
-/// Specialize po_iterator_storage to record postorder numbers.
-template<> class po_iterator_storage<LoopBlocksTraversal, true> {
-  LoopBlocksTraversal &LBT;
-public:
-  po_iterator_storage(LoopBlocksTraversal &lbs) : LBT(lbs) {}
-  // These functions are defined below.
-  bool insertEdge(std::optional<BasicBlock *> From, BasicBlock *To);
-  void finishPostorder(BasicBlock *BB);
-};
-
 /// Traverse the blocks in a loop using a depth-first search.
-class LoopBlocksTraversal {
-public:
-  /// Graph traversal iterator.
-  typedef po_iterator<BasicBlock*, LoopBlocksTraversal, true> POTIterator;
-
-private:
+class LoopBlocksTraversal
+    : public PostOrderTraversalBase<LoopBlocksTraversal,
+                                    GraphTraits<Function *>> {
   LoopBlocksDFS &DFS;
   const LoopInfo *LI;
 
 public:
-  LoopBlocksTraversal(LoopBlocksDFS &Storage, const LoopInfo *LInfo) :
-    DFS(Storage), LI(LInfo) {}
+  LoopBlocksTraversal(LoopBlocksDFS &Storage, const LoopInfo *LInfo)
+      : DFS(Storage), LI(LInfo) {}
 
   /// Postorder traversal over the graph. This only needs to be done once.
-  /// po_iterator "automatically" calls back to visitPreorder and
+  /// PostOrderTraversalBase "automatically" calls back to insertEdge and
   /// finishPostorder to record the DFS result.
-  POTIterator begin() {
+  iterator begin() {
     assert(DFS.PostBlocks.empty() && "Need clear DFS result before traversing");
-    assert(DFS.L->getNumBlocks() && "po_iterator cannot handle an empty graph");
-    return po_ext_begin(DFS.L->getHeader(), *this);
+    assert(DFS.L->getNumBlocks() && "cannot handle an empty graph");
+    init(DFS.L->getHeader());
+    return PostOrderTraversalBase::begin();
   }
-  POTIterator end() {
-    // po_ext_end interface requires a basic block, but ignores its value.
-    return po_ext_end(DFS.L->getHeader(), *this);
-  }
+  iterator end() { return PostOrderTraversalBase::end(); }
 
-  /// Called by po_iterator upon reaching a block via a CFG edge. If this block
-  /// is contained in the loop and has not been visited, then mark it preorder
-  /// visited and return true.
+  /// Called upon reaching a block via a CFG edge. If this block is contained
+  /// in the loop and has not been visited, then mark it preorder visited and
+  /// return true (i.e., traverse the edge).
   ///
   /// TODO: If anyone is interested, we could record preorder numbers here.
-  bool visitPreorder(BasicBlock *BB) {
+  bool insertEdge(std::optional<BasicBlock *> /*From*/, BasicBlock *BB) {
     if (!DFS.L->contains(LI->getLoopFor(BB)))
       return false;
 
     return DFS.PostNumbers.insert(std::make_pair(BB, 0)).second;
   }
 
-  /// Called by po_iterator each time it advances, indicating a block's
-  /// postorder.
+  /// Called each time the iterator advances, indicating a block's postorder.
   void finishPostorder(BasicBlock *BB) {
     assert(DFS.PostNumbers.count(BB) && "Loop DFS skipped preorder");
     DFS.PostBlocks.push_back(BB);
     DFS.PostNumbers[BB] = DFS.PostBlocks.size();
   }
 };
-
-inline bool po_iterator_storage<LoopBlocksTraversal, true>::insertEdge(
-    std::optional<BasicBlock *> From, BasicBlock *To) {
-  return LBT.visitPreorder(To);
-}
-
-inline void po_iterator_storage<LoopBlocksTraversal, true>::
-finishPostorder(BasicBlock *BB) {
-  LBT.finishPostorder(BB);
-}
 
 } // End namespace llvm
 
