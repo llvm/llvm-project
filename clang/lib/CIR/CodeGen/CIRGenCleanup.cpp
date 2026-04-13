@@ -107,8 +107,7 @@ void CIRGenFunction::enterFullExprCleanupScope(const Expr *subExpr) {
   }
 
   fullExprCleanupScopes.push_back(
-      {scope, deferredConditionalCleanupStack.size(),
-       ehStack.stable_begin()});
+      {scope, deferredConditionalCleanupStack.size(), ehStack.stable_begin()});
 }
 
 void CIRGenFunction::exitFullExprCleanupScope(

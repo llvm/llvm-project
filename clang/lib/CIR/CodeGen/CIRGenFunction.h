@@ -1050,8 +1050,7 @@ public:
   /// still inside the body region, then reloaded after the scope is closed.
   /// This handles the SSA dominance problem: values defined inside the body
   /// cannot be referenced after the region is sealed.
-  void exitFullExprCleanupScope(
-      ArrayRef<mlir::Value *> valuesToReload = {});
+  void exitFullExprCleanupScope(ArrayRef<mlir::Value *> valuesToReload = {});
 
   /// Promote a single pending cleanup entry onto the EH scope stack. If the
   /// entry has a valid activeFlag, the cleanup is configured as conditional.
