@@ -55,8 +55,8 @@ auto x = []() {
 int f() { return x()(); }
 }
 
-// CHECK-LABEL: define internal noundef i32 @"_ZZNK14pr18020_lambda3$_0clEvENKUlvE_clEv"
-// CHECK: load i32, ptr @"_ZZNK14pr18020_lambda3$_0clEvE2l1"
+// CHECK-LABEL: define internal noundef i32 @_ZZNK14pr18020_lambdaUlvE_clEvENKUlvE_clEv
+// CHECK: load i32, ptr @_ZZNK14pr18020_lambdaUlvE_clEvE2l1
 
 namespace pr18020_constexpr {
 // Taking the address of l1 in a constant expression used to crash.

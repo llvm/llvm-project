@@ -271,6 +271,13 @@ public:
     else
       LambdaId = getLambdaIdForDebugInfo(Lambda);
 
+    // TODO: Internal-linkage lambdas were previously 0-based (via getLambdaId),
+    // but Sema-assigned mangling numbers are 1-based. Adjust to preserve
+    // existing numbering. Since these are internal-linkage, the exact number
+    // doesn't matter for ABI, so this adjustment could be removed.
+    if (Lambda->hasKnownLambdaInternalLinkage() && LambdaId > 0)
+      LambdaId -= 1;
+
     Name += llvm::utostr(LambdaId);
     Name += ">";
     return Name;
@@ -1260,6 +1267,14 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
             LambdaId = LambdaManglingNumber;
           else
             LambdaId = Context.getLambdaId(Record);
+
+          // TODO: Internal-linkage lambdas were previously 0-based (via
+          // getLambdaId), but Sema-assigned mangling numbers are 1-based.
+          // Adjust to preserve existing numbering. Since these are
+          // internal-linkage, the exact number doesn't matter for ABI, so
+          // this adjustment could be removed.
+          if (Record->hasKnownLambdaInternalLinkage() && LambdaId > 0)
+            LambdaId -= 1;
 
           Name += llvm::utostr(LambdaId);
           Name += ">";

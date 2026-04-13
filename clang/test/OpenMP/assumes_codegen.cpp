@@ -134,9 +134,9 @@ int lambda_outer() {
 // CHECK-SAME: [[attr5:#[0-9]]]
 // CHECK: define{{.*}} i32 @_Z12lambda_outerv()
 // CHECK-SAME: [[attr6:#[0-9]]]
-// CHECK: call{{.*}} @"_ZZ12lambda_outervENK3$_0clEv"
+// CHECK: call{{.*}} @_ZZ12lambda_outervENKUlvE_clEv
 // CHECK-SAME: [[attr10:#[0-9]]]
-// CHECK: define{{.*}} i32 @"_ZZ12lambda_outervENK3$_0clEv"(ptr{{.*}} %this)
+// CHECK: define{{.*}} i32 @_ZZ12lambda_outervENKUlvE_clEv(ptr{{.*}} %this)
 // CHECK-SAME: [[attr7:#[0-9]]]
 
 // CHECK:     attributes [[attr0]]

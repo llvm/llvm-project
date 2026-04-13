@@ -521,7 +521,7 @@ folly::coro::Task<int> go1_lambda() {
   co_return co_await task;
 }
 
-// CIR: cir.func coroutine {{.*}} @_ZZ10go1_lambdavENK3$_0clEv{{.*}} ![[IntTask]]
+// CIR: cir.func coroutine {{.*}} @_ZZ10go1_lambdavENKUlvE_clEv{{.*}} ![[IntTask]]
 // CIR: cir.await(init, ready : {
 // CIR: }, suspend : {
 // CIR: }, resume : {
@@ -550,7 +550,7 @@ folly::coro::Task<int> go4() {
   co_return co_await std::move(task);
 }
 
-// CIR: cir.func coroutine{{.*}} @_ZZ3go4vENK3$_0clERKi(
+// CIR: cir.func coroutine{{.*}} @_ZZ3go4vENKUlvE_clERKi(
 // CIR: cir.await(init, ready : {
 // CIR: }, suspend : {
 // CIR: }, resume : {
@@ -568,7 +568,7 @@ folly::coro::Task<int> go4() {
 // CIR: },)
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CIR: %[[INVOKER:.*]] = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%{{.*}}) nothrow : {{.*}} -> (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>> {llvm.noundef})
+// CIR: %[[INVOKER:.*]] = cir.call @_ZZ3go4vENKUlvE_cvPFN5folly4coro4TaskIiEERKiEEv(%{{.*}}) nothrow : {{.*}} -> (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>> {llvm.noundef})
 // CIR: %[[PLUS:.*]] = cir.unary(plus, %[[INVOKER]]) : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
 // CIR: cir.store{{.*}} %[[PLUS]], %[[FN_ADDR:.*]] : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>>
 // CIR: cir.scope {

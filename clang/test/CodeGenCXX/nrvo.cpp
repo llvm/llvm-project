@@ -1915,7 +1915,7 @@ X test15(bool b) { // http://wg21.link/p2025r2#ex-15
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[CLASS_ANON]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-EH-11-NEXT:    store ptr [[X]], ptr [[TMP0]], align 4
-// CHECK-EH-11-NEXT:    invoke void @"_ZZ6test16vENK3$_0clEv"(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
+// CHECK-EH-11-NEXT:    invoke void @_ZZ6test16vENKUlvE_clEv(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
 // CHECK-EH-11-NEXT:    invoke void @_Z8ConsumeX1X(ptr noundef [[AGG_TMP]])
@@ -2530,7 +2530,7 @@ X test18(int i) { // http://wg21.link/p2025r2#ex-11
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-EH-11-NEXT:    store ptr [[AGG_RESULT]], ptr [[TMP0]], align 4
-// CHECK-EH-11-NEXT:    invoke void @"_ZZ6test19vENK3$_0clEv"(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[L]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
+// CHECK-EH-11-NEXT:    invoke void @_ZZ6test19vENKUlvE_clEv(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[L]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
 // CHECK-EH-11-NEXT:    store i1 true, ptr [[NRVO]], align 1

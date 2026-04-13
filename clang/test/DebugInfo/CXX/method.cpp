@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -std=c++11 -debug-info-kind=limited %s -o - | FileCheck %s
 // CHECK: !DIDerivedType(tag: DW_TAG_ptr_to_member_type
-// CHECK: ![[A:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "A",{{.*}} identifier: "_ZTS1A")
-// CHECK: !DISubprogram(name: "foo", linkageName: "_ZN1A3fooEiS_3$_0"
+// CHECK: ![[A:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "A",{{.*}} identifier: _ZTS1A)
+// CHECK: !DISubprogram(name: "foo", linkageName: _ZN1A3fooEiS_UlvE_
 // CHECK-SAME:          DIFlagProtected
 // CHECK: ![[THISTYPE:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[A]]
 // CHECK-SAME:                                  DIFlagArtificial

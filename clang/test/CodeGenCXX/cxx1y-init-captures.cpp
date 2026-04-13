@@ -12,10 +12,10 @@ void f() {
 
 // CHECK-LABEL: define{{.*}} void @_Z1fv(
 // CHECK: call void @_ZN1SC1Ev(
-// CHECK: call void @"_ZZ1fvEN3$_0D1Ev"(
+// CHECK: call void @_ZZ1fvENUlvE_D1Ev(
 
-// CHECK-LABEL: define internal void @"_ZZ1fvEN3$_0D1Ev"(
-// CHECK: @"_ZZ1fvEN3$_0D2Ev"(
+// CHECK-LABEL: define internal void @_ZZ1fvENUlvE_D1Ev(
+// CHECK: @_ZZ1fvENUlvE_D2Ev(
 
 // D2 at end of file.
 
@@ -28,9 +28,9 @@ void g() {
 // CHECK: store i32 1, ptr
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 1
 // CHECK: store i32 2, ptr
-// CHECK: call noundef i32 @"_ZZ1gvENK3$_0clEv"(
+// CHECK: call noundef i32 @_ZZ1gvENKUlvE_clEv(
 
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1gvENK3$_0clEv"(
+// CHECK-LABEL: define internal noundef i32 @_ZZ1gvENKUlvE_clEv(
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 0
 // CHECK: load i32, ptr
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 1
@@ -66,9 +66,9 @@ int h(int a) {
   // CHECK: load i32, ptr %[[A_ADDR]],
   // CHECK: store i32
   //
-  // CHECK: call noundef i32 @"_ZZ1hiENK3$_0clEv"(ptr {{[^,]*}} %[[OUTER]])
+  // CHECK: call noundef i32 @_ZZ1hiENKUlvE_clEv(ptr {{[^,]*}} %[[OUTER]])
   return [&b(a), c(a)] {
-    // CHECK-LABEL: define internal noundef i32 @"_ZZ1hiENK3$_0clEv"(
+    // CHECK-LABEL: define internal noundef i32 @_ZZ1hiENKUlvE_clEv(
     // CHECK: %[[OUTER_ADDR:.*]] = alloca
     // CHECK: %[[INNER:.*]] = alloca
     // CHECK: store {{.*}}, ptr %[[OUTER_ADDR]],
@@ -86,12 +86,12 @@ int h(int a) {
     // CHECK-NEXT: load i32, ptr %
     // CHECK-NEXT: store i32
     //
-    // CHECK: call noundef i32 @"_ZZZ1hiENK3$_0clEvENKUlvE_clEv"(ptr {{[^,]*}} %[[INNER]])
+    // CHECK: call noundef i32 @_ZZZ1hiENKUlvE_clEvENKUlvE_clEv(ptr {{[^,]*}} %[[INNER]])
     return [=, &c] {
-      // CHECK-LABEL: define internal void @"_ZZ1fvEN3$_0D2Ev"(
+      // CHECK-LABEL: define internal void @_ZZ1fvENUlvE_D2Ev(
       // CHECK: call void @_ZN1SD1Ev(
 
-      // CHECK-LABEL: define internal noundef i32 @"_ZZZ1hiENK3$_0clEvENKUlvE_clEv"(
+      // CHECK-LABEL: define internal noundef i32 @_ZZZ1hiENKUlvE_clEvENKUlvE_clEv(
       // CHECK: %[[INNER_ADDR:.*]] = alloca
       // CHECK: store {{.*}}, ptr %[[INNER_ADDR]],
       // CHECK: %[[INNER:.*]] = load ptr, ptr %[[INNER_ADDR]]

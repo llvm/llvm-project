@@ -20,9 +20,9 @@ void Lambdas(char *ptr) {
   gi = L2(ptr);
 }
 
-// CHECK-DAG: define internal noundef i64 @"_ZZN7lambdas7LambdasEPcENK3$_0clEPvU17pass_object_size0"
+// CHECK-DAG: define internal noundef i64 @_ZZN7lambdas7LambdasEPcENKUlPvE_clES1_U17pass_object_size0
 // CHECK-NOT: call noundef i64 @llvm.objectsize
-// CHECK-DAG: define internal noundef i64 @"_ZZN7lambdas7LambdasEPcENK3$_1clEPvU17pass_object_size0"
+// CHECK-DAG: define internal noundef i64 @_ZZN7lambdas7LambdasEPcENKUlPvE0_clES1_U17pass_object_size0
 // CHECK-NOT: call noundef i64 @llvm.objectsize
 }
 

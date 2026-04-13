@@ -31,15 +31,15 @@ void test_lambda() {
 //CHECK: define dso_local void @{{.*}}test_lambda{{.*}}() #0 {
 //CHECK: entry:
 //CHECK:  %agg.tmp = alloca %class.anon, align 1
-//CHECK:  %call = call noundef i32 @"_ZZ11test_lambdavENH3$_0clIS_EEiT_"()
+//CHECK:  %call = call noundef i32 @_ZZ11test_lambdavENHUlvE_clIS_EEiT_()
 //CHECK:  ret void
 //CHECK: }
 
-//CHECK: define internal noundef i32 @"_ZZ11test_lambdavENH3$_0clIS_EEiT_"() #0 align 2 {
+//CHECK: define internal noundef i32 @_ZZ11test_lambdavENHUlvE_clIS_EEiT_() #0 align 2 {
 //CHECK: entry:
 //CHECK:   %This = alloca %class.anon, align 1
 //CHECK:   %agg.tmp = alloca %class.anon, align 1
-//CHECK:   %call = call noundef i32 @"_ZZ11test_lambdavENH3$_0clIS_EEiT_"()
+//CHECK:   %call = call noundef i32 @_ZZ11test_lambdavENHUlvE_clIS_EEiT_()
 //CHECK:   ret i32 %call
 //CHECK: }
 
@@ -55,11 +55,11 @@ void test_lambda_ref() {
 // CHECK:   %[[This_address:.]] = alloca %class.anon{{.*}}, align 4
 // CHECK:   %[[i_addr:.*]] = getelementptr inbounds nuw %class.anon{{.*}}, ptr %[[This_address]], i32 0, i32 0
 // CHECK:   store i32 42, ptr %[[i_addr]], align 4
-// CHECK:   %call = call noundef i32 @"_ZZ15test_lambda_refvENH3$_0clIS_EEiRT_i"{{.*}}
+// CHECK:   %call = call noundef i32 @_ZZ15test_lambda_refvENHUlvE_clIS_EEiRT_i{{.*}}
 // CHECK:   ret void
 // CHECK: }
 
-// CHECK: define internal noundef i32 @"_ZZ15test_lambda_refvENH3$_0clIS_EEiRT_i"{{.*}}
+// CHECK: define internal noundef i32 @_ZZ15test_lambda_refvENHUlvE_clIS_EEiRT_i{{.*}}
 // CHECK: entry:
 // CHECK:  %This.addr = alloca ptr, align 8
 // CHECK:  %j.addr = alloca i32, align 4
@@ -67,7 +67,7 @@ void test_lambda_ref() {
 // CHECK:  store i32 %j, ptr %j.addr, align 4
 // CHECK:  %[[this_addr:.*]] = load ptr, ptr %This.addr, align 8
 // CHECK:  %[[j_addr:.*]] = load i32, ptr %j.addr, align 4
-// CHECK:  %call = call noundef i32 @"_ZZ15test_lambda_refvENH3$_0clIS_EEiRT_i"(ptr noundef nonnull align 4 dereferenceable(4) %[[this_addr]], i32 noundef %[[j_addr]])
+// CHECK:  %call = call noundef i32 @_ZZ15test_lambda_refvENHUlvE_clIS_EEiRT_i(ptr noundef nonnull align 4 dereferenceable(4) %[[this_addr]], i32 noundef %[[j_addr]])
 // CHECK:  ret i32 %call
 // CHECK: }
 
@@ -195,11 +195,11 @@ Overloaded(Ts...) -> Overloaded<Ts...>;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X:%.*]] = alloca i32
 // CHECK-NEXT:    [[Over:%.*]] = alloca %"{{.*}}Overloaded"
-// CHECK:         call noundef ptr @"_ZZN7GH872101fEvENH3$_0clINS_10OverloadedIJS0_EEEEEDaRT_"(ptr {{.*}} [[Over]])
+// CHECK:         call noundef ptr @_ZZN7GH872101fEvENHUlvE_clINS_10OverloadedIJS0_EEEEEDaRT_(ptr {{.*}} [[Over]])
 void f() {
   int x;
   Overloaded o {
-    // CHECK: define internal noundef ptr @"_ZZN7GH872101fEvENH3$_0clINS_10OverloadedIJS0_EEEEEDaRT_"(ptr {{.*}} [[Self:%.*]])
+    // CHECK: define internal noundef ptr @_ZZN7GH872101fEvENHUlvE_clINS_10OverloadedIJS0_EEEEEDaRT_(ptr {{.*}} [[Self:%.*]])
     // CHECK-NEXT:  entry:
     // CHECK-NEXT:    [[SelfAddr:%.*]] = alloca ptr
     // CHECK-NEXT:    store ptr [[Self]], ptr [[SelfAddr]]

@@ -10,7 +10,7 @@ void test() {
   A a;
   a.member();
 
-// CHECK: define{{.*}} m68k_rtdcc void @"_ZZ4testvENK3$_0clEi"
+// CHECK: define{{.*}} m68k_rtdcc void @_ZZ4testvENKUlvE_clEi
   auto f = [](int b) __attribute__((m68k_rtd)) {};
   f(87);
 };

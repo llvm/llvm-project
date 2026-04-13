@@ -2429,7 +2429,7 @@ int main() {
 // CHECK5-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[REF_TMP:%.*]] = alloca [[CLASS_ANON:%.*]], align 1
 // CHECK5-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK5-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
+// CHECK5-NEXT:    call void @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK5-NEXT:    ret i32 0
 //
 //
@@ -2617,7 +2617,7 @@ int main() {
 // CHECK5-NEXT:    store ptr [[TMP13]], ptr [[TMP12]], align 8
 // CHECK5-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
 // CHECK5-NEXT:    store ptr [[SIVAR_ADDR]], ptr [[TMP14]], align 8
-// CHECK5-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
+// CHECK5-NEXT:    call void @_ZZZ4mainENKUlvE_clEvENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
 // CHECK5-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK5:       omp.body.continue:
 // CHECK5-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -4256,7 +4256,7 @@ int main() {
 // CHECK17-NEXT:    store ptr [[TMP13]], ptr [[TMP12]], align 8
 // CHECK17-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[CLASS_ANON]], ptr [[REF_TMP]], i32 0, i32 2
 // CHECK17-NEXT:    store ptr [[SIVAR_ADDR]], ptr [[TMP14]], align 8
-// CHECK17-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
+// CHECK17-NEXT:    call void @_ZZZ4mainENKUlvE_clEvENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
 // CHECK17-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK17:       omp.body.continue:
 // CHECK17-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]

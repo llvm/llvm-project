@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++14 | FileCheck --check-prefixes=CHECK,CXX14 %s
 
 // CHECK-LABEL: define{{.*}} void @_ZN19non_inline_function3fooEv()
-// CHECK-LABEL: define internal void @"_ZZN19non_inline_function3fooEvENK3$_0clEi"(ptr
-// CHECK-LABEL: define internal noundef signext i8 @"_ZZZN19non_inline_function3fooEvENK3$_0clEiENKUlcE_clEc"(ptr
+// CHECK-LABEL: define internal void @_ZZN19non_inline_function3fooEvENKUlvE_clEi(ptr
+// CHECK-LABEL: define internal noundef signext i8 @_ZZZN19non_inline_function3fooEvENKUlvE_clEiENKUlcE_clEc(ptr
 namespace non_inline_function {
 void foo() {
   auto L = [](int a) {
@@ -62,7 +62,7 @@ int use = foo();
 }
 
 #if __cplusplus >= 201402L
-// CXX14-LABEL: define internal void @"_ZZZN32lambda_capture_in_generic_lambda3fooIiEEDavENKUlT_E_clIZNS_L1fEvE3$_0EEDaS1_ENKUlvE_clEv"
+// CXX14-LABEL: define internal void @_ZZZN32lambda_capture_in_generic_lambda3fooIiEEDavENKUlT_E_clIZNS_L1fEvEUlvE_EEDaS1_ENKUlvE_clEv
 namespace lambda_capture_in_generic_lambda {
 template <typename T> auto foo() {
   return [](auto func) {

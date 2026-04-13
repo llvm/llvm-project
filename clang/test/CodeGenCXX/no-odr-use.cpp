@@ -11,7 +11,7 @@ int f(int i) {
   // CHECK: call void {{.*}}memcpy{{.*}}({{.*}}, {{.*}} @__const._Z1fi.a
   constexpr A a = {1, 2, 3, 4, 5, 6};
 
-  // CHECK-LABEL: define {{.*}}@"_ZZ1fiENK3$_0clEiM1Ai"(
+  // CHECK-LABEL: define {{.*}}@_ZZ1fiENKUliM1AiE_clEiS0_(
   return [] (int n, int A::*p) {
     // CHECK: br i1
     return (n >= 0

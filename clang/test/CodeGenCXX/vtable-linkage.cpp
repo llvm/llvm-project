@@ -158,9 +158,9 @@ void use_F() {
 
 // The anonymous struct for e has no linkage, so the vtable should have
 // internal linkage.
-// CHECK-DAG: @"_ZTV3$_0" = internal unnamed_addr constant
-// CHECK-DAG: @"_ZTS3$_0" = internal constant
-// CHECK-DAG: @"_ZTI3$_0" = internal constant
+// CHECK-DAG: @_ZTVUlvE_ = internal unnamed_addr constant
+// CHECK-DAG: @_ZTSUlvE_ = internal constant
+// CHECK-DAG: @_ZTIUlvE_ = internal constant
 
 // The A vtable should have internal linkage since it is inside an anonymous 
 // namespace.

@@ -239,9 +239,9 @@ float test_overload(float x) { return overloadedfn(x); }
 
 // CHECK-LABEL: @_Z11test_lambdai(
 // CHECK-SAME: #[[NORMAL_DEF]]
-// CHECK: call noundef i32 @"_ZZ11test_lambdaiENK3$_0clEi"({{.*}}) #[[SM_ENABLED_CALL]]
+// CHECK: call noundef i32 @_ZZ11test_lambdaiENKUlvE_clEi({{.*}}) #[[SM_ENABLED_CALL]]
 //
-// CHECK: @"_ZZ11test_lambdaiENK3$_0clEi"(
+// CHECK: @_ZZ11test_lambdaiENKUlvE_clEi(
 // CHECK-SAME: #[[SM_ENABLED]]
 int test_lambda(int x) {
   auto F = [](int x)  __arm_streaming { return x; };

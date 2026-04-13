@@ -33,7 +33,7 @@ void hasLambda(Copyable x) {
   takesBlock([x] () { });
 }
 // CHECK: define internal void @[[COPY_HELPER0]]
-// CHECK: call void @"_ZZ9hasLambda8CopyableEN3$_0C1ERKS0_"
+// CHECK: call void @_ZZ9hasLambda8CopyableENUlvE_C1ERKS0_
 // CHECK: define internal void @[[COPY_HELPER1]]
 
 // CHECK: define{{.*}} void @_Z17testHelperMerging8Copyable(
@@ -52,7 +52,7 @@ void hasLambda(Copyable x) {
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON_2]] }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESC3]], ptr %[[BLOCK_DESCRIPTOR]], align 8
 
-// CHECK-LABEL: define internal void @"_ZZ9hasLambda8CopyableEN3$_0C2ERKS0_"
+// CHECK-LABEL: define internal void @_ZZ9hasLambda8CopyableENUlvE_C2ERKS0_
 // CHECK: call void @_ZN8CopyableC1ERKS_
 
 // CHECK: define internal void @[[COPY_HELPER2]]

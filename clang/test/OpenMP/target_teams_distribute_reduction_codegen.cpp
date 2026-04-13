@@ -7928,7 +7928,7 @@ int main() {
 // CHECK9-NEXT:    [[REF_TMP8:%.*]] = alloca [[CLASS_ANON_14:%.*]], align 1
 // CHECK9-NEXT:    [[REF_TMP9:%.*]] = alloca [[CLASS_ANON_16:%.*]], align 1
 // CHECK9-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK9-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
+// CHECK9-NEXT:    call void @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK9-NEXT:    call void @"_ZZ4mainENK3$_1clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP1]])
 // CHECK9-NEXT:    call void @"_ZZ4mainENK3$_2clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP2]])
 // CHECK9-NEXT:    call void @"_ZZ4mainENK3$_3clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP3]])
@@ -8009,7 +8009,7 @@ int main() {
 // CHECK9-NEXT:    store i32 [[ADD3]], ptr [[SIVAR1]], align 4
 // CHECK9-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_18]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK9-NEXT:    store ptr [[SIVAR1]], ptr [[TMP11]], align 8
-// CHECK9-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(ptr noundef nonnull align 8 dereferenceable(8) [[REF_TMP]])
+// CHECK9-NEXT:    call void @_ZZZ4mainENKUlvE_clEvENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(8) [[REF_TMP]])
 // CHECK9-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK9:       omp.body.continue:
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]

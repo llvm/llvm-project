@@ -35,7 +35,7 @@ void use(id);
 // reference.
 
 // CHECK-LABEL: define{{.*}} void @_ZN18CaptureByReference5test0Ev(
-// CHECK-LABEL: define internal void @"_ZZN18CaptureByReference5test0EvENK3$_0clEv"(
+// CHECK-LABEL: define internal void @_ZZN18CaptureByReference5test0EvENKUlvE_clEv(
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @"__block_descriptor_40_e5_v8\01?0ls32l8", ptr %[[BLOCK_DESCRIPTOR]], align 8
 
@@ -48,7 +48,7 @@ void test0() {
 // is captured by reference.
 
 // CHECK-LABEL: define{{.*}} void @_ZN18CaptureByReference5test1Ev(
-// CHECK-LABEL: define internal void @"_ZZN18CaptureByReference5test1EvENK3$_0clEv"(
+// CHECK-LABEL: define internal void @_ZZN18CaptureByReference5test1EvENKUlvE_clEv(
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @"__block_descriptor_56_8_32s40s_e5_v8\01?0l", ptr %[[BLOCK_DESCRIPTOR]], align 8
 
@@ -69,7 +69,7 @@ struct S {
 
 S getS();
 
-// CHECK: define internal noundef i32 @"_ZZN18CaptureByReference5test2EvENK3$_0clIiEEDaT_"(ptr {{[^,]*}} %{{.*}}, i32 noundef %{{.*}})
+// CHECK: define internal noundef i32 @_ZZN18CaptureByReference5test2EvENKUlvE_clIiEEDaT_(ptr {{[^,]*}} %{{.*}}, i32 noundef %{{.*}})
 // CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, {{.*}}, ptr }>, align 8
 // CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, {{.*}}, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK: %[[V0:.*]] = getelementptr inbounds nuw %[[CLASS_ANON_2]], ptr %{{.*}}, i32 0, i32 0
@@ -86,7 +86,7 @@ int test2() {
   return fn(123);
 }
 
-// CHECK: define internal noundef i32 @"_ZZN18CaptureByReference5test3EvENK3$_0clIiEEDaT_"(ptr {{[^,]*}} %{{.*}}, i32 noundef %{{.*}})
+// CHECK: define internal noundef i32 @_ZZN18CaptureByReference5test3EvENKUlvE_clIiEEDaT_(ptr {{[^,]*}} %{{.*}}, i32 noundef %{{.*}})
 // CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, %[[S]] }>, align 8
 // CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, %[[S]] }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK: %[[V0:.*]] = getelementptr inbounds nuw %[[CLASS_ANON_3]], ptr %{{.*}}, i32 0, i32 0

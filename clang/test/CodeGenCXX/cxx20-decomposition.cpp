@@ -34,7 +34,7 @@ int f() {
 // CHECK: store i32 %[[J_COPY]], ptr %[[LAMBDA_CAP_INT]]
 
 // Ensure the captures are properly extracted in operator().
-// CHECK: define{{.*}} i32 @"_ZZ1fvENK3$_0clEv"
+// CHECK: define{{.*}} i32 @_ZZ1fvENKUlvE_clEv
 // CHECK: %[[THIS_ADDR:.+]] = alloca ptr
 // CHECK: %[[THIS_PTR:.+]] = load ptr, ptr %[[THIS_ADDR]]
 

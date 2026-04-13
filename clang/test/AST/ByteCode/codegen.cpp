@@ -115,7 +115,7 @@ int notdead() {
   };
   return l();
 }
-// CHECK: _ZZ7notdeadvEN3$_0clEv
+// CHECK: _ZZ7notdeadvENUlvE_clEv
 // CHECK: ret i32 %cond
 
 /// The conmparison of those two parameters should NOT work.

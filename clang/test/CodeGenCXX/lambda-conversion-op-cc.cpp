@@ -31,19 +31,19 @@ void usage() {
 // LIN64: define{{.*}} void @_Z5usagev()
 // VECCALL: define{{.*}} void @_Z5usagev()
 // WIN32: define dso_local void @"?usage@@YAXXZ"()
-// CHECK: call noundef ptr @"_ZZ5usagevENK3$_0cvPFdifdEEv"
+// CHECK: call noundef ptr @_ZZ5usagevENKUlvE_cvPFdifdEEv
 // WIN32: call x86_thiscallcc noundef ptr @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6A?A?<auto>@@HMN@ZXZ"
 // WIN32: call x86_thiscallcc noundef ptr @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6E?A?<auto>@@HMN@ZXZ"
 // WIN32: call x86_thiscallcc noundef ptr @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6G?A?<auto>@@HMN@ZXZ"
 // WIN32: call x86_thiscallcc noundef ptr @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6I?A?<auto>@@HMN@ZXZ"
 // WIN32: call x86_thiscallcc noundef ptr @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6Q?A?<auto>@@HMN@ZXZ"
 // Operator+ calls 'default' calling convention.
-// CHECK: call noundef ptr @"_ZZ5usagevENK3$_0cvPFdifdEEv"
+// CHECK: call noundef ptr @_ZZ5usagevENKUlvE_cvPFdifdEEv
 // WIN32: call x86_thiscallcc noundef ptr @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6A?A?<auto>@@HMN@ZXZ"
 //
 // Conversion operator, returns __invoke.
-// CHECK: define internal noundef ptr @"_ZZ5usagevENK3$_0cvPFdifdEEv"
-// CHECK: ret ptr @"_ZZ5usagevEN3$_08__invokeEifd"
+// CHECK: define internal noundef ptr @_ZZ5usagevENKUlvE_cvPFdifdEEv
+// CHECK: ret ptr @_ZZ5usagevENUlvE_8__invokeEifd
 // WIN32: define internal x86_thiscallcc noundef ptr @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6A?A?<auto>@@HMN@ZXZ"
 // WIN32: ret ptr @"?__invoke@<lambda_0>@?0??usage@@YAXXZ@CA?A?<auto>@@HMN@Z"
 // WIN32: define internal x86_thiscallcc noundef ptr @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6E?A?<auto>@@HMN@ZXZ"
@@ -56,10 +56,10 @@ void usage() {
 // WIN32: ret ptr @"?__invoke@<lambda_0>@?0??usage@@YAXXZ@CQ?A?<auto>@@HMN@Z"
 //
 // __invoke function, calls operator(). Win32 should call both.
-// LIN64: define internal noundef double @"_ZZ5usagevEN3$_08__invokeEifd"
-// LIN64: call noundef double @"_ZZ5usagevENK3$_0clEifd"
-// VECCALL: define internal x86_vectorcallcc noundef double @"_ZZ5usagevEN3$_08__invokeEifd"
-// VECCALL: call x86_vectorcallcc noundef double @"_ZZ5usagevENK3$_0clEifd"
+// LIN64: define internal noundef double @_ZZ5usagevENUlvE_8__invokeEifd
+// LIN64: call noundef double @_ZZ5usagevENKUlvE_clEifd
+// VECCALL: define internal x86_vectorcallcc noundef double @_ZZ5usagevENUlvE_8__invokeEifd
+// VECCALL: call x86_vectorcallcc noundef double @_ZZ5usagevENKUlvE_clEifd
 // WIN32: define internal noundef double @"?__invoke@<lambda_0>@?0??usage@@YAXXZ@CA?A?<auto>@@HMN@Z"
 // WIN32: call x86_thiscallcc noundef double @"??R<lambda_0>@?0??usage@@YAXXZ@QBE?A?<auto>@@HMN@Z"
 // WIN32: define internal x86_thiscallcc noundef double @"?__invoke@<lambda_0>@?0??usage@@YAXXZ@CE?A?<auto>@@HMN@Z"

@@ -56,7 +56,7 @@ void test() {
   A a;
   a.test_member();
 
-// ALL: define internal void @"_ZZ{{.*}}testvENK3$_0clEi"
+// ALL: define internal void @_ZZ{{.*}}testvENKUliE_clEi
   auto f = [](int b) {};
   f(87);
 }

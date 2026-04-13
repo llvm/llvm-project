@@ -213,7 +213,7 @@ int TestNonCapturingLambda() {
   [[clang::musttail]] return (+lambda)();
 }
 
-// CHECK: %call = call noundef ptr @"_ZZ22TestNonCapturingLambdavENK3$_0cvPFivEEv"(ptr noundef nonnull align 1 dereferenceable(1) %lambda)
+// CHECK: %call = call noundef ptr @_ZZ22TestNonCapturingLambdavENKUlvE_cvPFivEEv(ptr noundef nonnull align 1 dereferenceable(1) %lambda)
 // CHECK: musttail call noundef i32 %call()
 
 class TestVirtual {

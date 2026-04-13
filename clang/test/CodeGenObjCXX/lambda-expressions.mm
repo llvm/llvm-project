@@ -9,17 +9,17 @@ fp f() { auto x = []{ return 3; }; return x; }
 // MRC: @OBJC_METH_VAR_NAME{{.*}} = private unnamed_addr constant [5 x i8] c"copy\00"
 // MRC: @OBJC_METH_VAR_NAME{{.*}} = private unnamed_addr constant [12 x i8] c"autorelease\00"
 // MRC-LABEL: define{{.*}} ptr @_Z1fv(
-// MRC-LABEL: define internal noundef ptr @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
+// MRC-LABEL: define internal noundef ptr @_ZZ1fvENKUlvE_cvU13block_pointerFivEEv
 // MRC: store ptr @_NSConcreteStackBlock
-// MRC: store ptr @"___ZZ1fvENK3$_0cvU13block_pointerFivEEv_block_invoke"
+// MRC: store ptr @"___ZZ1fvENKUlvE_cvU13block_pointerFivEEv_block_invoke"
 // MRC: call noundef ptr @objc_msgSend
 // MRC: call noundef ptr @objc_msgSend
 // MRC: ret ptr
 
 // ARC-LABEL: define{{.*}} ptr @_Z1fv(
-// ARC-LABEL: define internal noundef ptr @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
+// ARC-LABEL: define internal noundef ptr @_ZZ1fvENKUlvE_cvU13block_pointerFivEEv
 // ARC: store ptr @_NSConcreteStackBlock
-// ARC: store ptr @"___ZZ1fvENK3$_0cvU13block_pointerFivEEv_block_invoke"
+// ARC: store ptr @"___ZZ1fvENKUlvE_cvU13block_pointerFivEEv_block_invoke"
 // ARC: call ptr @llvm.objc.retainBlock
 // ARC: call ptr @llvm.objc.autoreleaseReturnValue
 
@@ -38,7 +38,7 @@ void f2() { global = []{ return 3; }; }
 // ARC: call ptr @llvm.objc.retainBlock
 // ARC: call void @llvm.objc.release
 // ARC-LABEL: define internal noundef i32 @___Z2f2v_block_invoke
-// ARC: call noundef i32 @"_ZZ2f2vENK3$_0clEv
+// ARC: call noundef i32 @"_ZZ2f2vENKUlvE_clEv
 
 template <class T> void take_lambda(T &&lambda) { lambda(); }
 void take_block(void (^block)()) { block(); }
@@ -65,7 +65,7 @@ void take_block(void (^block)()) { block(); }
 // ARC:   %[[CAPTURE0:.*]] = getelementptr inbounds nuw %[[LAMBDACLASS]], ptr %{{.*}}, i32 0, i32 0
 // ARC:   store i32 %{{.*}}, ptr %[[CAPTURE0]]
 
-// ARC: define internal void @"_ZZN13LambdaCapture4foo1ERiENK3$_0clEv"(ptr {{[^,]*}} %{{.*}})
+// ARC: define internal void @_ZZN13LambdaCapture4foo1ERiENKUlvE_clEv(ptr {{[^,]*}} %{{.*}})
 // ARC:   %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, i32 }>
 // ARC:   %[[CAPTURE1:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %[[BLOCK]], i32 0, i32 5
 // ARC:   store i32 %{{.*}}, ptr %[[CAPTURE1]]
@@ -74,11 +74,11 @@ void take_block(void (^block)()) { block(); }
 // ARC-NOT: @llvm.objc.storeStrong(
 // ARC: ret void
 
-// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_0clEv_block_invoke"
+// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENKUlvE_clEv_block_invoke"
 // ARC:   %[[CAPTURE2:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %{{.*}}, i32 0, i32 5
 // ARC:   store i32 %{{.*}}, ptr %[[CAPTURE2]]
 
-// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_0clEv_block_invoke_2"(ptr noundef %{{.*}})
+// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENKUlvE_clEv_block_invoke_2"(ptr noundef %{{.*}})
 // ARC:   %[[CAPTURE3:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr %{{.*}}, i32 0, i32 5
 // ARC:   %[[V1:.*]] = load i32, ptr %[[CAPTURE3]]
 // ARC:   store i32 %[[V1]], ptr @_ZN13LambdaCapture1iE
@@ -140,11 +140,11 @@ namespace BlockInLambda {
 // Check that the delegating invoke function doesn't destruct the Weak object
 // that is passed.
 
-// ARC-LABEL: define internal void @"_ZZN14LambdaDelegate4testEvEN3$_08__invokeENS_4WeakE"(
-// ARC: call void @"_ZZN14LambdaDelegate4testEvENK3$_0clENS_4WeakE"(
+// ARC-LABEL: define internal void @_ZZN14LambdaDelegate4testEvENUlvE_8__invokeENS_4WeakE(
+// ARC: call void @_ZZN14LambdaDelegate4testEvENKUlvE_clENS_4WeakE(
 // ARC-NEXT: ret void
 
-// ARC-LABEL: define internal void @"_ZZN14LambdaDelegate4testEvENK3$_0clENS_4WeakE"(
+// ARC-LABEL: define internal void @_ZZN14LambdaDelegate4testEvENKUlvE_clENS_4WeakE(
 // ARC: call void @_ZN14LambdaDelegate4WeakD1Ev(
 
 #ifdef WEAK_SUPPORTED

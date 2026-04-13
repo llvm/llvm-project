@@ -26,15 +26,15 @@
 // In OGCG, f1() is emitted before the lambda.
 // OGCG-LABEL: define{{.*}} i32 @_Z1fi(
 // OGCG:         call void {{.*}}memcpy{{.*}}({{.*}}, {{.*}} @__const._Z1fi.a
-// OGCG:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}}, i32 {{.*}}, i64 0)
+// OGCG:         call{{.*}} i32 @_ZZ1fiENKUlvE_clEiM1Ai(ptr {{.*}}, i32 {{.*}}, i64 0)
 
 struct A { int x, y[2]; int arr[3]; };
 int f(int i) {
   constexpr A a = {1, 2, 3, 4, 5, 6};
 
-  // CIR-LABEL: cir.func {{.*}}@_ZZ1fiENK3$_0clEiM1Ai(
-  // LLVM-LABEL: define {{.*}}@"_ZZ1fiENK3$_0clEiM1Ai"(
-  // OGCG-LABEL: define {{.*}}@"_ZZ1fiENK3$_0clEiM1Ai"(
+  // CIR-LABEL: cir.func {{.*}}@_ZZ1fiENKUlvE_clEiM1Ai(
+  // LLVM-LABEL: define {{.*}}@_ZZ1fiENKUlvE_clEiM1Ai(
+  // OGCG-LABEL: define {{.*}}@_ZZ1fiENKUlvE_clEiM1Ai(
     return [] (int n, int A::*p) {
     // CIR:  cir.ternary
     // LLVM: br i1
@@ -83,11 +83,11 @@ int f(int i) {
 // CIR:         %[[A_INIT:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
 // CIR:         cir.copy %[[A_INIT]] to %[[A_ADDR]]
 // CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CIR:         cir.call @_ZZ1fiENK3$_0clEiM1Ai({{.*}}, {{.*}}, %[[ZERO]])
+// CIR:         cir.call @_ZZ1fiENKUlvE_clEiM1Ai({{.*}}, {{.*}}, %[[ZERO]])
 
 // LLVM-LABEL: define{{.*}} i32 @_Z1fi(
 // LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr @[[F_A]]
-// LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
+// LLVM:         call{{.*}} i32 @_ZZ1fiENKUlvE_clEiM1Ai(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
 
 namespace PR42276 {
   class State {

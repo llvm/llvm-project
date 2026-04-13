@@ -25,7 +25,7 @@ void foo(int i) {
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
 // CHECK: call void @_Z1fbb({{.*}}) #[[NOINLINEATTR]]
   [[clang::noinline]] [] { bar(); bar(); }(); // noinline only applies to the anonymous function call
-// CHECK: call void @"_ZZ3fooiENK3$_0clEv"(ptr {{[^,]*}} %ref.tmp) #[[NOINLINEATTR]]
+// CHECK: call void @_ZZ3fooiENKUlvE_clEv(ptr {{[^,]*}} %ref.tmp) #[[NOINLINEATTR]]
   [[clang::noinline]] for (bar(); bar(); bar()) {}
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
@@ -54,7 +54,7 @@ void ms_noi_check(int i) {
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
 // CHECK: call void @_Z1fbb({{.*}}) #[[NOINLINEATTR]]
   [[msvc::noinline]] [] { bar(); bar(); }(); // noinline only applies to the anonymous function call
-// CHECK: call void @"_ZZ12ms_noi_checkiENK3$_0clEv"(ptr {{[^,]*}} %ref.tmp) #[[NOINLINEATTR]]
+// CHECK: call void @_ZZ12ms_noi_checkiENKUlvE_clEv(ptr {{[^,]*}} %ref.tmp) #[[NOINLINEATTR]]
   [[msvc::noinline]] for (bar(); bar(); bar()) {}
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]

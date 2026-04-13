@@ -14,7 +14,7 @@ namespace PR12746 {
   }
 
   // CHECK: define internal noundef zeroext i1 @___ZN7PR127462f1EPi_block_invoke
-  // CHECK: call noundef zeroext i1 @"_ZZZN7PR127462f1EPiEUb_ENK3$_0clEv"
+  // CHECK: call noundef zeroext i1 @_ZZZN7PR127462f1EPiEUb_ENKUlvE_clEv
 
   bool f2(int *x) {
     auto outer = [&]() -> bool {

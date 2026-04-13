@@ -43,5 +43,5 @@ void f()
 void test() {
     f<42>();
 }
-// CHECK-LABEL:define {{.*}} void @"_ZN8GH1476501fILi42EEEvvQrqXLNS_3$_0EEE"()
+// CHECK-LABEL:define {{.*}} void @_ZN8GH1476501fILi42EEEvvQrqXLNS_UlvE_EEE()
 }

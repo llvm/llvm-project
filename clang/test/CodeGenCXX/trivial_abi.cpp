@@ -281,10 +281,10 @@ static_assert(sizeof(S) == 8 && sizeof(S2) == 8, "");
 
 // PR42961
 
-// CHECK: define{{.*}} @"_ZN3$_08__invokeEv"()
+// CHECK: define{{.*}} @_ZNUlvE_8__invokeEv()
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_SMALL]], align 8
-// CHECK: %[[CALL:.*]] = call{{.*}} @"_ZNK3$_0clEv"
+// CHECK: %[[CALL:.*]] = call{{.*}} @_ZNKUlvE_clEv
 // CHECK: %[[COERCEDIVE:.*]] = getelementptr{{.*}} %[[COERCE]]
 // CHECK: %[[COERCEVALIP:.*]] = inttoptr{{.*}} %[[CALL]]
 // CHECK: call {{.*}}memcpy{{.*}} %[[RETVAL]]{{.*}} %[[COERCE]]

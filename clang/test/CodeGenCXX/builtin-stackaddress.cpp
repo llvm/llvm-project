@@ -11,9 +11,9 @@ void *S::a() {
 }
 
 // CHECK-LABEL: define {{[^@]+}} @two()
-// CHECK: call {{[^@]+}} @"two()::$_0::operator()() const"
+// CHECK: call {{[^@]+}} @two()::'lambda'()::operator()() const
 //
-// CHECK-LABEL: define {{[^@]+}} @"two()::$_0::operator()() const"
+// CHECK-LABEL: define {{[^@]+}} @two()::'lambda'()::operator()() const
 // CHECK: [[PTR:%.*]] = call ptr @llvm.stackaddress.p0()
 // CHECK: ret ptr [[PTR]]
 void *two() {

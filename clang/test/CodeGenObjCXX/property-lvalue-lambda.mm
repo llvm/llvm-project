@@ -19,7 +19,7 @@ void t1(X *x) {
   // Check that we call lambda.operator blk_t(), and that we send that result to
   // the setter.
 
-  // CHECK: [[CALL:%.*]] = call ptr @"_ZZ2t1P1XENK3$_0cvU13block_pointerFvvEEv"
+  // CHECK: [[CALL:%.*]] = call ptr @_ZZ2t1P1XENKUlvE_cvU13block_pointerFvvEEv
   // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} ptr [[CALL]])
   x.blk = [] {};
 
@@ -36,7 +36,7 @@ void t2(X *x) {
   // [x setBlk: operator+([x blk], [] {})]
 
   // CHECK: call ptr{{.*}}@objc_msgSend{{.*}}
-  // CHECK: [[PLUS:%.*]] = call ptr @"_ZplIZ2t2P1XE3$_0EU13block_pointerFvvES4_T_"
+  // CHECK: [[PLUS:%.*]] = call ptr @_ZplIZ2t2P1XEUlvE_EU13block_pointerFvvES4_T_
   // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} [[PLUS]])
   x.blk += [] {};
 

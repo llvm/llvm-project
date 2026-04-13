@@ -27,6 +27,6 @@ void z() {
 auto i() { return [] {}; }
 // CHECK: define {{.*}} @_Z1jv
 auto j() {
-  // CHECK: call {{.*}} @"_Z1hIZ1ivE3$_0EDcT_"()
+  // CHECK: call {{.*}} @_Z1hIZ1ivEUlvE_EDcT_()
   h(i());
 }

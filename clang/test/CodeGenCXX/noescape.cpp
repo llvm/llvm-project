@@ -51,8 +51,8 @@ void *test1(void *p0) {
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z5test2PiS_(
-// CHECK: call void @"_ZZ5test2PiS_ENK3$_0clES_S_"({{.*}}, {{.*}}, {{.*}} captures(none) {{.*}})
-// CHECK: define internal void @"_ZZ5test2PiS_ENK3$_0clES_S_"({{.*}}, {{.*}}, {{.*}} noundef captures(none) {{%.*}})
+// CHECK: call void @_ZZ5test2PiS_ENKUlS_S_E_clES_S_({{.*}}, {{.*}}, {{.*}} captures(none) {{.*}})
+// CHECK: define internal void @_ZZ5test2PiS_ENKUlS_S_E_clES_S_({{.*}}, {{.*}}, {{.*}} noundef captures(none) {{%.*}})
 void test2(int *p0, int *p1) {
   auto t = [](int *, int * __attribute__((noescape))){};
   t(p0, p1);

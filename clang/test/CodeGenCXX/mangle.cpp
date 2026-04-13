@@ -880,7 +880,7 @@ namespace test38 {
 }
 
 namespace test39 {
-  // CHECK-LABEL: define internal void @"_ZN6test394funcINS_3$_03$_1EEEvT_"
+  // CHECK-LABEL: define internal void @"_ZN6test394funcINS_UlvE_3$_1EEEvT_"
   typedef struct {
     struct {} a;
   } *foo;

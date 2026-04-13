@@ -9,20 +9,20 @@
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-EXTERN
 
 int foo(void) {
-  // CHECK: @"_ZZ3foovENK3$_0clEv"({{.*}}) [[NOATTR:#[0-9]+]]
+  // CHECK: @_ZZ3foovENKUlvE_clEv({{.*}}) [[NOATTR:#[0-9]+]]
   return []() {
     return 42;
   }();
 }
 int bar(void) {
-  // CHECK: @"_ZZ3barvENK3$_0clEv"({{.*}}) [[EXTERN:#[0-9]+]]
+  // CHECK: @_ZZ3barvENKUlvE_clEv({{.*}}) [[EXTERN:#[0-9]+]]
   return []() __attribute__((function_return("thunk-extern"))) {
     return 42;
   }
   ();
 }
 int baz(void) {
-  // CHECK: @"_ZZ3bazvENK3$_0clEv"({{.*}}) [[KEEP:#[0-9]+]]
+  // CHECK: @_ZZ3bazvENKUlvE_clEv({{.*}}) [[KEEP:#[0-9]+]]
   return []() __attribute__((function_return("keep"))) {
     return 42;
   }

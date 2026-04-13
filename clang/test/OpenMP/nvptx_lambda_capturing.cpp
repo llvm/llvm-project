@@ -398,7 +398,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store i32 [[TMP8]], ptr [[C7]], align 4
 // CHECK1-NEXT:    store ptr [[C7]], ptr [[_TMP8]], align 8
 // CHECK1-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[_TMP4]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 8 dereferenceable(40) [[TMP9]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call noundef i64 @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(40) [[TMP9]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -490,7 +490,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP3]], align 4
 // CHECK1-NEXT:    store i32 [[TMP11]], ptr [[A10]], align 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP4]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 8 dereferenceable(40) [[TMP12]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call noundef i64 @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(40) [[TMP12]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -981,7 +981,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_1]], ptr [[TMP10]], i32 0, i32 4
 // CHECK2-NEXT:    store ptr [[TMP2]], ptr [[TMP17]], align 8
 // CHECK2-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[_TMP4]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 8 dereferenceable(40) [[TMP18]]) #[[ATTR7]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i64 @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(40) [[TMP18]]) #[[ATTR7]]
 // CHECK2-NEXT:    call void @__kmpc_target_deinit()
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -1112,7 +1112,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_1]], ptr [[TMP12]], i32 0, i32 4
 // CHECK2-NEXT:    store ptr [[A10]], ptr [[TMP19]], align 8
 // CHECK2-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[_TMP4]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR7]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i64 @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1332,7 +1332,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_1]], ptr [[TMP10]], i32 0, i32 4
 // CHECK3-NEXT:    store ptr [[TMP2]], ptr [[TMP17]], align 8
 // CHECK3-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[_TMP4]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 8 dereferenceable(40) [[TMP18]]) #[[ATTR7]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i64 @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(40) [[TMP18]]) #[[ATTR7]]
 // CHECK3-NEXT:    call void @__kmpc_target_deinit()
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -1463,7 +1463,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_1]], ptr [[TMP12]], i32 0, i32 4
 // CHECK3-NEXT:    store ptr [[A10]], ptr [[TMP19]], align 8
 // CHECK3-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[_TMP4]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR7]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i64 @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //

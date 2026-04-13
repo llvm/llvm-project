@@ -8,7 +8,7 @@ _Pragma("clang optimize off")
 void foo(int p) {
   auto lambda = [&p]() { ++p; };
   lambda();
-  // CHECK: define {{.*}} @"_ZZ3fooiENK3$_0clEv"({{.*}}) #[[LAMBDA_ATR:[0-9]+]]
+  // CHECK: define {{.*}} @_ZZ3fooiENKUlvE_clEv({{.*}}) #[[LAMBDA_ATR:[0-9]+]]
 }
 
 _Pragma("clang optimize on")

@@ -1017,7 +1017,7 @@ void array_func(int n, float a[n], St s[2]) {
 // LAMBDA-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // LAMBDA-NEXT:    [[REF_TMP:%.*]] = alloca [[CLASS_ANON:%.*]], align 1
 // LAMBDA-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// LAMBDA-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
+// LAMBDA-NEXT:    call void @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // LAMBDA-NEXT:    ret i32 0
 //
 //
@@ -1120,7 +1120,7 @@ void array_func(int n, float a[n], St s[2]) {
 // LAMBDA-NEXT:    store ptr [[TMP22]], ptr [[REF_TMP_I]], align 8, !noalias [[META17]], !llvm.access.group [[ACC_GRP18]]
 // LAMBDA-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP_I]], i32 0, i32 1
 // LAMBDA-NEXT:    store ptr [[TMP23]], ptr [[TMP28]], align 8, !noalias [[META17]], !llvm.access.group [[ACC_GRP18]]
-// LAMBDA-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(ptr noundef nonnull align 8 dereferenceable(16) [[REF_TMP_I]]), !llvm.access.group [[ACC_GRP18]]
+// LAMBDA-NEXT:    call void @_ZZZ4mainENKUlvE_clEvENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(16) [[REF_TMP_I]]), !llvm.access.group [[ACC_GRP18]]
 // LAMBDA-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTOMP_IV_I]], align 4, !noalias [[META17]], !llvm.access.group [[ACC_GRP18]]
 // LAMBDA-NEXT:    [[ADD3_I:%.*]] = add nsw i32 [[TMP29]], 1
 // LAMBDA-NEXT:    store i32 [[ADD3_I]], ptr [[DOTOMP_IV_I]], align 4, !noalias [[META17]], !llvm.access.group [[ACC_GRP18]]
@@ -2217,7 +2217,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY2-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // SIMD-ONLY2-NEXT:    [[REF_TMP:%.*]] = alloca [[CLASS_ANON:%.*]], align 1
 // SIMD-ONLY2-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// SIMD-ONLY2-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
+// SIMD-ONLY2-NEXT:    call void @_ZZ4mainENKUlvE_clEv(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // SIMD-ONLY2-NEXT:    ret i32 0
 //
 //

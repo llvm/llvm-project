@@ -127,7 +127,7 @@ template struct templated_struct<int>;
 // CXX-NONE-SAME: ) #[[ATTR1]]
 int func_with_lambda(int x) {
 
-// CXX-LABEL: define internal noundef i32 @"_ZZ16func_with_lambdaiENK3$_0clEv"(
+// CXX-LABEL: define internal noundef i32 @_ZZ16func_with_lambdaiENKUlvE_clEv(
 // CXX-SAME: ) #[[ATTR1]]
   auto lambda = [x] ATTR () -> int {
     return x;

@@ -17,13 +17,13 @@ auto FunctionWithLocalType() {
 // CHECK-DAG: "?ValueFromFunctionWithLocalType@@3ULocalType@?1??FunctionWithLocalType@@YA?A?<auto>@@XZ@A"
 auto ValueFromFunctionWithLocalType = FunctionWithLocalType();
 
-// CHECK-DAG: "??R<lambda_0>@@QBE?A?<auto>@@XZ"
+// CHECK-DAG: "??R<lambda_1>@@QBE?A?<auto>@@XZ"
 auto LambdaWithLocalType = [] {
   struct LocalType {};
   return LocalType{};
 };
 
-// CHECK-DAG: "?ValueFromLambdaWithLocalType@@3ULocalType@?1???R<lambda_0>@@QBE?A?<auto>@@XZ@A"
+// CHECK-DAG: "?ValueFromLambdaWithLocalType@@3ULocalType@?1???R<lambda_1>@@QBE?A?<auto>@@XZ@A"
 auto ValueFromLambdaWithLocalType = LambdaWithLocalType();
 
 template <typename T>

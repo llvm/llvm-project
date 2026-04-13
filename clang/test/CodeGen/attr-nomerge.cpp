@@ -73,7 +73,7 @@ void something_else_again() {
 // CHECK: call void @_Z1fbb({{.*}}) #[[ATTR0]]
 // CHECK: %[[FPTR:.*]] = load ptr, ptr @fptr
 // CHECK-NEXT: call void %[[FPTR]]() #[[ATTR0]]
-// CHECK: call void @"_ZZ3fooiP1AP1BENK3$_0clEv"{{.*}} #[[ATTR0]]
+// CHECK: call void @_ZZ3fooiP1AP1BENKUlvE_clEv{{.*}} #[[ATTR0]]
 // CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
 // CHECK-LABEL: for.cond:
 // CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]

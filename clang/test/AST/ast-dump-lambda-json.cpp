@@ -200,7 +200,7 @@ void Test() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Test",
-// CHECK-NEXT:    "mangledName": "_Z4Testv",
+// CHECK-NEXT:    "mangledName": _Z4Testv,
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "void ()"
 // CHECK-NEXT:    },
@@ -519,7 +519,7 @@ void Test() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "name": "operator()",
-// CHECK-NEXT:            "mangledName": "_ZZ4TestvENK3$_0clEv",
+// CHECK-NEXT:            "mangledName": _ZZ4TestvENKUlvE_clEv,
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "void () const"
 // CHECK-NEXT:            },
@@ -566,7 +566,7 @@ void Test() {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "isImplicit": true,
 // CHECK-NEXT:            "name": "operator void (*)()",
-// CHECK-NEXT:            "mangledName": "_ZZ4TestvENK3$_0cvPFvvEEv",
+// CHECK-NEXT:            "mangledName": _ZZ4TestvENKUlvE_cvPFvvEEv,
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "void (*() const noexcept)()"
 // CHECK-NEXT:            },
@@ -595,7 +595,7 @@ void Test() {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "isImplicit": true,
 // CHECK-NEXT:            "name": "__invoke",
-// CHECK-NEXT:            "mangledName": "_ZZ4TestvEN3$_08__invokeEv",
+// CHECK-NEXT:            "mangledName": _ZZ4TestvENUlvE_8__invokeEv,
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "void ()"
 // CHECK-NEXT:            },
@@ -625,7 +625,7 @@ void Test() {
 // CHECK-NEXT:            "isImplicit": true,
 // CHECK-NEXT:            "isReferenced": true,
 // CHECK-NEXT:            "name": "~(lambda at {{.*}}:8:3)",
-// CHECK-NEXT:            "mangledName": "_ZZ4TestvEN3$_0D1Ev",
+// CHECK-NEXT:            "mangledName": _ZZ4TestvENUlvE_D1Ev,
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "void () noexcept"
 // CHECK-NEXT:            },
@@ -2628,7 +2628,7 @@ void Test() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "name": "f",
-// CHECK-NEXT:            "mangledName": "_ZZ4TestvEN1S1fEv",
+// CHECK-NEXT:            "mangledName": _ZZ4TestvEN1S1fEv,
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "void ()"
 // CHECK-NEXT:            },
@@ -2754,7 +2754,7 @@ void Test() {
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                    },
 // CHECK-NEXT:                    "name": "operator()",
-// CHECK-NEXT:                    "mangledName": "_ZZZ4TestvEN1S1fEvENKUlvE_clEv",
+// CHECK-NEXT:                    "mangledName": _ZZZ4TestvEN1S1fEvENKUlvE_clEv,
 // CHECK-NEXT:                    "type": {
 // CHECK-NEXT:                     "qualType": "auto () const -> void"
 // CHECK-NEXT:                    },
@@ -2827,7 +2827,7 @@ void Test() {
 // CHECK-NEXT:                    "isImplicit": true,
 // CHECK-NEXT:                    "isReferenced": true,
 // CHECK-NEXT:                    "name": "~(lambda at {{.*}}:17:7)",
-// CHECK-NEXT:                    "mangledName": "_ZZZ4TestvEN1S1fEvENUlvE_D1Ev",
+// CHECK-NEXT:                    "mangledName": _ZZZ4TestvEN1S1fEvENUlvE_D1Ev,
 // CHECK-NEXT:                    "type": {
 // CHECK-NEXT:                     "qualType": "void () noexcept"
 // CHECK-NEXT:                    },
@@ -2978,7 +2978,7 @@ void Test() {
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                    },
 // CHECK-NEXT:                    "name": "operator()",
-// CHECK-NEXT:                    "mangledName": "_ZZZ4TestvEN1S1fEvENKUlvE0_clEv",
+// CHECK-NEXT:                    "mangledName": _ZZZ4TestvEN1S1fEvENKUlvE0_clEv,
 // CHECK-NEXT:                    "type": {
 // CHECK-NEXT:                     "qualType": "void () const"
 // CHECK-NEXT:                    },
@@ -3051,7 +3051,7 @@ void Test() {
 // CHECK-NEXT:                    "isImplicit": true,
 // CHECK-NEXT:                    "isReferenced": true,
 // CHECK-NEXT:                    "name": "~(lambda at {{.*}}:18:7)",
-// CHECK-NEXT:                    "mangledName": "_ZZZ4TestvEN1S1fEvENUlvE0_D1Ev",
+// CHECK-NEXT:                    "mangledName": _ZZZ4TestvEN1S1fEvENUlvE0_D1Ev,
 // CHECK-NEXT:                    "type": {
 // CHECK-NEXT:                     "qualType": "void () noexcept"
 // CHECK-NEXT:                    },

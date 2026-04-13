@@ -97,7 +97,7 @@ namespace test_block_in_lambda {
     };
     lambda(); // make sure we emit the invocation function
   }
-  // CHECK-LABEL:    define internal void @"_ZZN20test_block_in_lambda4testENS_1AEENK3$_0clEv"(
+  // CHECK-LABEL:    define internal void @_ZZN20test_block_in_lambda4testENS_1AEENKUlvE_clEv(
   // CHECK:      [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]], align 8
   // CHECK:      [[THIS:%.*]] = load ptr, ptr
   // CHECK:      [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5

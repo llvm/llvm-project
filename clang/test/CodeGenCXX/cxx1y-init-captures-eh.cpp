@@ -20,7 +20,7 @@ void f() {
   // for the capture.
   // CHECK: landingpad
   // CHECK-NOT: _ZN1SD
-  // CHECK: call void @"_ZZ1fvEN3$_0D1Ev"(
+  // CHECK: call void @_ZZ1fvENUlvE_D1Ev(
   // CHECK-NOT: _ZN1SD
   // CHECK: resume
   [s = S()] {}, throw 0;
@@ -36,9 +36,9 @@ void g() {
   // Ensure we call the lambda destructor here, and do not call the destructor
   // for the capture.
   // CHECK: landingpad
-  // CHECK-NOT: @"_ZZ1gvEN3$_0D1Ev"(
+  // CHECK-NOT: @_ZZ1gvENUlvE_D1Ev(
   // CHECK: call void @_ZN1SD1Ev(
-  // CHECK-NOT: @"_ZZ1gvEN3$_0D1Ev"(
+  // CHECK-NOT: @_ZZ1gvENUlvE_D1Ev(
   // CHECK: resume
   [s = S(), t = (throw 0, 1)] {};
 
@@ -73,19 +73,19 @@ void h(bool b1, bool b2) {
 
   // end of full-expression
   // CHECK: call void @_Z1xv(
-  // CHECK: call void @"_ZZ1hbbEN3$_0D1Ev"(
+  // CHECK: call void @_ZZ1hbbENUlvE_D1Ev(
   // CHECK: call void @_ZN1TD1Ev(
   // CHECK: call void @_Z1yv(
   // CHECK: ret void
 
   // cleanups for throw 1
   // CHECK: landingpad
-  // CHECK-NOT: @"_ZZ1hbbEN3$_0D1Ev"(
+  // CHECK-NOT: @_ZZ1hbbENUlvE_D1Ev(
   // CHECK: br
 
   // cleanups for throw 2
   // CHECK: landingpad
-  // CHECK: call void @"_ZZ1hbbEN3$_0D1Ev"(
+  // CHECK: call void @_ZZ1hbbENUlvE_D1Ev(
   // CHECK: br
 
   // common cleanup code
