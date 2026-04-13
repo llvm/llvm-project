@@ -2704,4 +2704,9 @@ function_ref function_ref_from_non_capturing_lambda() {
                   // expected-note {{returned here}}
 }
 
+void assign_non_capturing_to_function_ref(function_ref &r) {
+  r = []() {};
+  (void)r;
+}
+
 } // namespace callable_wrappers
