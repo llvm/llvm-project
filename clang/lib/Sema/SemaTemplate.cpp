@@ -8083,6 +8083,15 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
   return E;
 }
 
+/// Construct a new reflect expression that refers to the given
+/// entity with the given source-location of the reflection operator.
+static ExprResult BuildExpressionFromReflection(Sema &S, const APValue &RV,
+                                                SourceLocation CaretCaretLoc) {
+  return CXXReflectExpr::Create(
+      S.Context, CaretCaretLoc,
+      static_cast<const TypeSourceInfo *>((RV.getReflectionOpaqueOperand())));
+}
+
 static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     Sema &S, QualType T, const APValue &Val, SourceLocation Loc) {
   auto MakeInitList = [&](ArrayRef<Expr *> Elts) -> Expr * {
@@ -8147,7 +8156,7 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
   case APValue::Indeterminate:
     llvm_unreachable("Unexpected APValue kind.");
   case APValue::LValue:
-  case APValue::MemberPointer:
+  case APValue::MemberPointer: {
     // There isn't necessarily a valid equivalent source-level syntax for
     // these; in particular, a naive lowering might violate access control.
     // So for now we lower to a ConstantExpr holding the value, wrapped around
@@ -8160,6 +8169,9 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     }
     auto *OVE = new (S.Context) OpaqueValueExpr(Loc, T, VK);
     return ConstantExpr::Create(S.Context, OVE, Val);
+  }
+  case APValue::Reflection:
+    return BuildExpressionFromReflection(S, Val, Loc).get();
   }
   llvm_unreachable("Unhandled APValue::ValueKind enum");
 }
