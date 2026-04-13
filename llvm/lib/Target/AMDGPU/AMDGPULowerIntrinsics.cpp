@@ -105,7 +105,8 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
     // The default cluster barrier expects one signal per workgroup. So we need
     // a workgroup barrier first.
     if (IsSingleWaveWG) {
-      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_wave_barrier, {});
+      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_wave_barrier, {})
+          ->copyMetadata(I);
     } else {
       Value *BarrierID_32 = B.getInt32(AMDGPU::Barrier::WORKGROUP);
       Value *BarrierID_16 = B.getInt16(AMDGPU::Barrier::WORKGROUP);
@@ -155,7 +156,8 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
     // Down-grade waits, remove split signals.
     if (I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier ||
         I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_wait) {
-      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_wave_barrier, {});
+      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_wave_barrier, {})
+          ->copyMetadata(I);
     } else if (I.getIntrinsicID() ==
                Intrinsic::amdgcn_s_barrier_signal_isfirst) {
       // If we're the only wave of the workgroup, we're always first.
