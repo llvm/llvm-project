@@ -1202,17 +1202,18 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 enum class OOBFlagValue {
-  Strict = 0,
+  Any = 0,
   Relaxed = 1,
+  Strict = 2,
 };
 
-/// Returns the OOB relaxation mode encoded by a module flag.
-/// An absent flag defaults to Strict.
-static OOBFlagValue getOOBRelaxedFlag(const Module &M, StringRef FlagName) {
+/// Returns the OOB mode encoded by a module flag.
+/// An absent flag defaults to Any.
+static OOBFlagValue getOOBFlagValue(const Module &M, StringRef FlagName) {
   const auto *Flag =
       mdconst::dyn_extract_or_null<ConstantInt>(M.getModuleFlag(FlagName));
   if (!Flag)
-    return OOBFlagValue::Strict;
+    return OOBFlagValue::Any;
   return static_cast<OOBFlagValue>(Flag->getZExtValue());
 }
 
@@ -1222,8 +1223,8 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef FS = getFeatureString(F);
 
   const Module &M = *F.getParent();
-  OOBFlagValue BufOOB = getOOBRelaxedFlag(M, AMDGPUOOBMode::BufferFlag);
-  OOBFlagValue TBufOOB = getOOBRelaxedFlag(M, AMDGPUOOBMode::TBufferFlag);
+  OOBFlagValue BufOOB = getOOBFlagValue(M, AMDGPUOOBMode::BufferFlag);
+  OOBFlagValue TBufOOB = getOOBFlagValue(M, AMDGPUOOBMode::TBufferFlag);
   bool BufRelaxed = BufOOB == OOBFlagValue::Relaxed;
   bool TBufRelaxed = TBufOOB == OOBFlagValue::Relaxed;
   SmallString<128> SubtargetKey(GPU);

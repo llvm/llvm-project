@@ -2,7 +2,7 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s \
 ; RUN:   | FileCheck --check-prefixes=CHECK,CHECK-OOB-STRICT %s
 ; RUN: cp %s %t.relaxed.ll
-; RUN: printf '\n!llvm.module.flags = !{!0}\n!0 = !{i32 8, !"amdgpu.buffer.oob.relaxed", i32 1}\n' >> %t.relaxed.ll
+; RUN: printf '\n!llvm.module.flags = !{!0}\n!0 = !{i32 7, !"amdgpu.buffer.oob.mode", i32 1}\n' >> %t.relaxed.ll
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %t.relaxed.ll \
 ; RUN:   | FileCheck --check-prefixes=CHECK,CHECK-OOB-RELAXED %s
 

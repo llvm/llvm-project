@@ -831,33 +831,35 @@ consumed by the AMDGPU backend during code generation.
      - Type
      - Merge
      - Description
-   * - ``amdgpu.buffer.oob.relaxed``
+   * - ``amdgpu.buffer.oob.mode``
      - ``i32``
-     - Min
-     - Controls relaxation of out-of-bounds (OOB) semantics for untyped
-       buffer instructions (``buffer_load`` / ``buffer_store``).
+     - Max
+     - Controls out-of-bounds semantics for untyped buffer
+       instructions (``buffer_load`` / ``buffer_store``).
 
-       - ``0`` (or absent): **strict** (default). The backend preserves
-         per-byte OOB guarantees by preventing merging of misaligned buffer
-         accesses that could straddle an OOB boundary (e.g. as required by
-         Vulkan ``robustBufferAccess2``).
-       - ``1``: **relaxed**. The backend may merge such accesses for
-         performance.
+       - ``0`` (or absent): **any**. The module does not care about OOB
+         semantics.  The backend may treat this the same as
+         **strict**, but this behavior is not guaranteed.
+       - ``1``: **relaxed**. The backend may merge misaligned buffer
+         accesses for performance, even if that changes OOB behaviour.
+       - ``2``: **strict**. The backend preserves per-byte OOB guarantees
+         by preventing merging of misaligned buffer accesses that could
+         straddle an OOB boundary (e.g. as required by Vulkan
+         ``robustBufferAccess2``).
 
-       ``Min`` merge means the strictest (smallest) value wins at link time
-       when both modules define the flag.
-   * - ``amdgpu.tbuffer.oob.relaxed``
+   * - ``amdgpu.tbuffer.oob.mode``
      - ``i32``
-     - Min
+     - Max
      - Same as above, but for typed buffer instructions (``tbuffer_load`` /
        ``tbuffer_store``).
 
 .. note::
 
    Frontends that require misaligned-access merging for performance should
-   set both flags to ``1``.  Frontends that require strict per-byte OOB
-   guarantees (e.g. Vulkan ``robustBufferAccess2``) should leave the flags
-   absent or set to ``0``.
+   set both flags to ``1`` (relaxed).  Frontends that require strict
+   per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
+   Modules that do not use buffer operations or are indifferent to OOB semantics
+   (e.g. device libraries) should leave the flags absent.
 
 .. _amdgpu-target-id:
 

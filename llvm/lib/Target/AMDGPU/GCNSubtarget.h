@@ -30,13 +30,14 @@ namespace llvm {
 
 class GCNTargetMachine;
 
-/// Module flag names controlling relaxation of out-of-bounds (OOB) buffer
-/// access semantics. Each flag is an i32 with Module::Min merge behaviour:
-/// 0 = strict, 1 = relaxed. In a single module, an absent flag is treated as
-/// strict by default.
+/// Module flag names controlling out-of-bounds buffer access semantics.
+/// Each flag is an i32 with Module::Max merge behaviour and tri-state values:
+///   0 = any (absent/default - backend currently treats as strict)
+///   1 = relaxed
+///   2 = strict
 namespace AMDGPUOOBMode {
-inline constexpr StringLiteral BufferFlag("amdgpu.buffer.oob.relaxed");
-inline constexpr StringLiteral TBufferFlag("amdgpu.tbuffer.oob.relaxed");
+inline constexpr StringLiteral BufferFlag("amdgpu.buffer.oob.mode");
+inline constexpr StringLiteral TBufferFlag("amdgpu.tbuffer.oob.mode");
 } // namespace AMDGPUOOBMode
 
 class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
