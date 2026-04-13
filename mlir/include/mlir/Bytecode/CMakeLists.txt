@@ -1,1 +1,5 @@
 add_mlir_interface(BytecodeOpInterface)
+
+set(LLVM_TARGET_DEFINITIONS BytecodeDialectInterface.td)
+mlir_tablegen(BytecodeDialectInterface.h.inc -gen-dialect-interface-decls)
+add_mlir_generic_tablegen_target(MLIRBytecodeDialectInterfaceIncGen)

@@ -47,15 +47,17 @@
 
 #define PTHREAD_RWLOCK_INITIALIZER                                             \
   {                                                                            \
-      /* .__is_pshared = */ 0,                                                 \
-      /* .__preference = */ 0,                                                 \
-      /* .__state = */ 0,                                                      \
+      /* .__raw = */ {                                                         \
+          /* .__is_pshared = */ 0,                                             \
+          /* .__preference = */ 0,                                             \
+          /* .__state = */ 0,                                                  \
+          /* .__wait_queue_mutex = */ {0},                                     \
+          /* .__pending_readers = */ {0},                                      \
+          /* .__pending_writers = */ {0},                                      \
+          /* .__reader_serialization = */ {0},                                 \
+          /* .__writer_serialization = */ {0},                                 \
+      },                                                                       \
       /* .__write_tid = */ 0,                                                  \
-      /* .__wait_queue_mutex = */ {0},                                         \
-      /* .__pending_readers = */ {0},                                          \
-      /* .__pending_writers = */ {0},                                          \
-      /* .__reader_serialization = */ {0},                                     \
-      /* .__writer_serialization = */ {0},                                     \
   }
 
 // glibc extensions

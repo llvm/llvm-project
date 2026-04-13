@@ -12,6 +12,9 @@
 
 #if defined(__cplusplus)
 extern "C" {
+#else
+_Pragma("push_macro(\"bool\")");
+#define bool _Bool
 #endif
 
 #define _CLC_OVERLOAD [[clang::overloadable]]
@@ -138,5 +141,7 @@ _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_trunc(double);
 
 #if defined(__cplusplus)
 } // extern "C"
+#else
+_Pragma("pop_macro(\"bool\")");
 #endif
 #endif // __CLANG_SPIRV_LIBDEVICE_DECLARES_H__

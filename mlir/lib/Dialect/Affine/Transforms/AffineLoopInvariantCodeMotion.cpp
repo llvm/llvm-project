@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -31,7 +32,6 @@ using namespace mlir::affine;
 namespace {
 
 /// Affine loop invariant code motion (LICM) pass.
-/// TODO: The pass is missing zero tripcount tests.
 /// TODO: When compared to the other standard LICM pass, this pass
 /// has some special handling for affine read/write ops but such handling
 /// requires aliasing to be sound, and as such this pass is unsound. In
@@ -174,6 +174,13 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   SmallVector<Operation *, 8> opsToMove;
   SmallPtrSet<Operation *, 8> opsWithUsers;
 
+  // Only hoist side-effectful ops when the loop is statically known to execute
+  // at least once. For unknown (dynamic) or zero trip counts we cannot prove
+  // the body executes, so hoisting a side-effectful op would change observable
+  // program semantics. Pure (side-effect-free) ops may always be hoisted.
+  auto tripCount = getConstantTripCount(forOp);
+  bool guaranteedToExecute = tripCount.has_value() && *tripCount > 0;
+
   for (Operation &op : *forOp.getBody()) {
     // Register op in the set of ops that have users. This set is used
     // to prevent hoisting ops that depend on these ops that are
@@ -181,6 +188,10 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
     if (!op.use_empty())
       opsWithUsers.insert(&op);
     if (!isa<AffineYieldOp>(op)) {
+      // Do not hoist ops with side effects unless the loop is guaranteed to
+      // execute at least once.
+      if (!guaranteedToExecute && !isPure(&op))
+        continue;
       if (isOpLoopInvariant(op, forOp, opsWithUsers, opsToHoist)) {
         opsToMove.push_back(&op);
       }

@@ -293,6 +293,14 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
     SPIRVTypeInst PtrType = deduceTypeFromSingleOperand(I, MIB, GR, 1);
     return PtrType ? GR->getPointeeType(PtrType) : nullptr;
   }
+  case TargetOpcode::G_PHI: {
+    for (unsigned Idx = 1; Idx < I->getNumOperands(); Idx += 2) {
+      Register OpReg = I->getOperand(Idx).getReg();
+      if (SPIRVTypeInst OpType = GR->getSPIRVTypeForVReg(OpReg))
+        return OpType;
+    }
+    return nullptr;
+  }
   default:
     if (I->getNumDefs() == 1 && I->getNumOperands() > 1 &&
         I->getOperand(1).isReg())
@@ -369,12 +377,7 @@ static bool deduceAndAssignSpirvType(MachineInstr *I, MachineFunction &MF,
     return false;
 
   LLVM_DEBUG(dbgs() << "Assigned type to " << *I << ": " << *ResType);
-  GR->assignSPIRVTypeToVReg(ResType, ResVReg, MF);
-
-  if (!MRI.getRegClassOrNull(ResVReg)) {
-    LLVM_DEBUG(dbgs() << "Updating the register class.\n");
-    setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
-  }
+  setRegClassType(ResVReg, ResType, GR, &MRI, MF);
   return true;
 }
 

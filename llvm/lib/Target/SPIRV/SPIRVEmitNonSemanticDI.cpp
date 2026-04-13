@@ -106,6 +106,13 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
     if (!DbgCu)
       return false;
+    // NonSemantic.Shader.DebugInfo.100 requires SPV_KHR_non_semantic_info.
+    // Bail out if the extension is not available for this target. Targets that
+    // do not enable this extension by default should enable it explicitly with
+    // --spirv-ext=+SPV_KHR_non_semantic_info.
+    if (!TM->getSubtargetImpl()->canUseExtension(
+            SPIRV::Extension::SPV_KHR_non_semantic_info))
+      return false;
     for (const auto *Op : DbgCu->operands()) {
       if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
         DIFile *File = CompileUnit->getFile();

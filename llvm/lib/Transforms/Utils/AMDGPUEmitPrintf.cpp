@@ -100,7 +100,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   //  Strictly speaking, the zero does not matter since
   // __ockl_printf_append_string_n ignores the length if the pointer is null.
   BasicBlock *Join = nullptr;
-  if (Prev->getTerminator()) {
+  if (Prev->hasTerminator()) {
     Join = Prev->splitBasicBlock(Builder.GetInsertPoint(),
                                  "strlen.join");
     Prev->getTerminator()->eraseFromParent();

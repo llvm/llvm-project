@@ -142,6 +142,15 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+class GPUBallotConversion final : public OpConversionPattern<gpu::BallotOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(gpu::BallotOp ballotOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 class GPUPrintfConversion final : public OpConversionPattern<gpu::PrintfOp> {
 public:
   using Base::Base;
@@ -580,6 +589,50 @@ LogicalResult GPUSubgroupBroadcastConversion::matchAndRewrite(
   return success();
 }
 
+LogicalResult GPUBallotConversion::matchAndRewrite(
+    gpu::BallotOp ballotOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = ballotOp.getLoc();
+  auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  auto int32Type = rewriter.getI32Type();
+  auto vec4i32Type = VectorType::get({4}, int32Type);
+
+  // SPIR-V ballot returns vector<4xi32> to support subgroups up to 128 lanes.
+  Value ballot = spirv::GroupNonUniformBallotOp::create(
+      rewriter, loc, vec4i32Type, scope, adaptor.getPredicate());
+
+  auto intType = cast<IntegerType>(ballotOp.getType());
+  unsigned width = intType.getWidth();
+
+  if (width == 32) {
+    Value result =
+        spirv::CompositeExtractOp::create(rewriter, loc, ballot, {0});
+    rewriter.replaceOp(ballotOp, result);
+  } else if (width == 64) {
+    // Combine first two vector elements: low 32 bits + (high 32 bits << 32).
+    Value low = spirv::CompositeExtractOp::create(rewriter, loc, ballot, {0});
+    Value high = spirv::CompositeExtractOp::create(rewriter, loc, ballot, {1});
+
+    auto int64Type = rewriter.getI64Type();
+    Value lowExt = spirv::UConvertOp::create(rewriter, loc, int64Type, low);
+    Value highExt = spirv::UConvertOp::create(rewriter, loc, int64Type, high);
+
+    Value shift32 = spirv::ConstantOp::create(
+        rewriter, loc, int64Type, rewriter.getIntegerAttr(int64Type, 32));
+    Value highShifted =
+        spirv::ShiftLeftLogicalOp::create(rewriter, loc, highExt, shift32);
+
+    Value result =
+        spirv::BitwiseOrOp::create(rewriter, loc, lowExt, highShifted);
+    rewriter.replaceOp(ballotOp, result);
+  } else {
+    return rewriter.notifyMatchFailure(
+        ballotOp, "only i32 and i64 result types are supported for SPIR-V");
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Group ops
 //===----------------------------------------------------------------------===//
@@ -868,9 +921,9 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
 void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
-      GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
-      GPUReturnOpConversion, GPUShuffleConversion, GPURotateConversion,
-      GPUSubgroupBroadcastConversion,
+      GPUBarrierConversion, GPUBallotConversion, GPUFuncOpConversion,
+      GPUModuleConversion, GPUReturnOpConversion, GPUShuffleConversion,
+      GPURotateConversion, GPUSubgroupBroadcastConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,

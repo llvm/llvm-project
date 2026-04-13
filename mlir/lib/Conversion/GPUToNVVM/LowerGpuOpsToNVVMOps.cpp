@@ -236,6 +236,40 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   }
 };
 
+struct GPUBallotOpToNVVM : public ConvertOpToLLVMPattern<gpu::BallotOp> {
+  using ConvertOpToLLVMPattern<gpu::BallotOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::BallotOp op, gpu::BallotOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto int32Type = IntegerType::get(rewriter.getContext(), 32);
+    auto intType = cast<IntegerType>(op.getType());
+    unsigned width = intType.getWidth();
+
+    // NVVM ballot natively returns i32. For i64 results, zero-extend since
+    // NVIDIA warps have exactly 32 threads, so upper 32 bits are always zero.
+    if (width != 32 && width != 64)
+      return rewriter.notifyMatchFailure(
+          op, "nvvm.vote.sync ballot only supports i32 and i64 result types");
+
+    // Use full mask (-1) so all 32 lanes participate in the ballot.
+    Value mask = LLVM::ConstantOp::create(rewriter, loc, int32Type,
+                                          rewriter.getI32IntegerAttr(-1));
+
+    auto voteKind = NVVM::VoteSyncKindAttr::get(rewriter.getContext(),
+                                                NVVM::VoteSyncKind::ballot);
+    Value result = NVVM::VoteSyncOp::create(rewriter, loc, int32Type, mask,
+                                            adaptor.getPredicate(), voteKind);
+
+    if (width == 64)
+      result = LLVM::ZExtOp::create(rewriter, loc, op.getType(), result);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 /// Lowering of cf.assert into a conditional __assertfail.
 struct AssertOpToAssertfailLowering
     : public ConvertOpToLLVMPattern<cf::AssertOp> {
@@ -504,8 +538,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
       converter, IndexKind::Grid, IntrType::Dim, benefit);
-  patterns.add<GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
-      converter, benefit);
+  patterns.add<GPULaneIdOpToNVVM, GPUBallotOpToNVVM, GPUShuffleOpLowering,
+               GPUReturnOpLowering>(converter, benefit);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
       converter, NVVM::kSharedMemoryAlignmentBit, benefit);

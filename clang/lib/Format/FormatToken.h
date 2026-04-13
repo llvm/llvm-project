@@ -78,6 +78,7 @@ namespace format {
   TYPE(ElseRBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
+  TYPE(EnumUnderlyingTypeColon)                                                \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
@@ -544,6 +545,10 @@ public:
   /// The indent level of this token. Copied from the surrounding line.
   unsigned IndentLevel = 0;
 
+  /// Block + continuation indent level, applied by the WhitespaceManager to
+  /// this token.
+  mutable unsigned AppliedIndentLevel = 0;
+
   /// Penalty for inserting a line break before this token.
   unsigned SplitPenalty = 0;
 
@@ -859,6 +864,21 @@ public:
                               /*CPlusPlus11=*/true);
   }
 
+  template <typename T> [[nodiscard]] FormatToken *getPrevious(T A1) const {
+    FormatToken *Tok = Previous;
+    while (Tok && Tok->isNot(A1))
+      Tok = Tok->Previous;
+    return Tok;
+  }
+
+  template <typename... Ts>
+  [[nodiscard]] FormatToken *getPreviousOneOf(Ts... Ks) const {
+    FormatToken *Tok = Previous;
+    while (Tok && (Tok->isNot(Ks) && ...))
+      Tok = Tok->Previous;
+    return Tok;
+  }
+
   /// Returns the previous token ignoring comments.
   [[nodiscard]] FormatToken *getPreviousNonComment() const {
     FormatToken *Tok = Previous;
@@ -873,6 +893,33 @@ public:
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Next;
     return Tok;
+  }
+
+  /// Returns \c true if this token likely names an object-like macro.
+  ///
+  /// If \p AllowFollowingColonColon is \c true, a following \c :: does not
+  /// disqualify the token from being considered macro-like.
+  bool isPossibleMacro(bool AllowFollowingColonColon = false) const {
+    if (isNot(tok::identifier))
+      return false;
+
+    assert(!TokenText.empty());
+
+    // T, K, U, V likely could be template arguments.
+    if (TokenText.size() == 1)
+      return false;
+
+    // It's unlikely that qualified names are object-like macros.
+    const auto *Prev = getPreviousNonComment();
+    if (Prev && Prev->is(tok::coloncolon))
+      return false;
+    if (!AllowFollowingColonColon) {
+      const auto *Next = getNextNonComment();
+      if (Next && Next->is(tok::coloncolon))
+        return false;
+    }
+
+    return TokenText == TokenText.upper();
   }
 
   /// Returns \c true if this token ends a block indented initializer list.
