@@ -25,8 +25,13 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(poll)
   add_subdirectory(pthread)
   add_subdirectory(sched)
+  add_subdirectory(semaphore)
   add_subdirectory(sys)
   add_subdirectory(termios)
+endif()
+
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  add_subdirectory(mathvec)
 endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)

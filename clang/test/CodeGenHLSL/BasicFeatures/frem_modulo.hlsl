@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
-// RUN:  -fnative-half-type -emit-llvm -disable-llvm-passes -o - | \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute %s \
-// RUN:  -fnative-half-type -emit-llvm -disable-llvm-passes -o - | \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s
 
  half2 half_vec_mod_by_int(half2 p1) {

@@ -6,8 +6,6 @@
 ; RUN:   -mattr=+zvfh -mattr=+xsfmm32a32f -mattr=+xsfmm64a64f \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare void @llvm.riscv.sf.mm.f.f.iXLen.nxv32f16(iXLen, <vscale x 32 x half>, <vscale x 32 x half>, iXLen, iXLen, iXLen, iXLen)
-
 define void @test_sf_mm_f_f_w2_f16m8(iXLen %mtd, <vscale x 32 x half> %v1, <vscale x 32 x half> %v2, iXLen %tm, iXLen %tn, iXLen %tk) {
 ; CHECK-LABEL: test_sf_mm_f_f_w2_f16m8:
 ; CHECK:       # %bb.0: # %entry
@@ -21,8 +19,6 @@ define void @test_sf_mm_f_f_w2_f16m8(iXLen %mtd, <vscale x 32 x half> %v1, <vsca
     ret void
 }
 
-declare void @llvm.riscv.sf.mm.f.f.iXLen.nxv16f32(iXLen, <vscale x 16 x float>, <vscale x 16 x float>, iXLen, iXLen, iXLen, iXLen)
-
 define void @test_sf_mm_f_f_w1_f32m8(iXLen %mtd, <vscale x 16 x float> %v1, <vscale x 16 x float> %v2, iXLen %tm, iXLen %tn, iXLen %tk) {
 ; CHECK-LABEL: test_sf_mm_f_f_w1_f32m8:
 ; CHECK:       # %bb.0: # %entry
@@ -35,8 +31,6 @@ define void @test_sf_mm_f_f_w1_f32m8(iXLen %mtd, <vscale x 16 x float> %v1, <vsc
     call void @llvm.riscv.sf.mm.f.f.iXLen.nxv16f32(iXLen 0, <vscale x 16 x float> %v1, <vscale x 16 x float> %v2, iXLen %tm, iXLen %tn, iXLen %tk, iXLen 1)
     ret void
 }
-
-declare void @llvm.riscv.sf.mm.f.f.iXLen.nxv8f64(iXLen, <vscale x 8 x double>, <vscale x 8 x double>, iXLen, iXLen, iXLen, iXLen)
 
 define void @test_sf_mm_f_f_w1_f64m8(iXLen %mtd, <vscale x 8 x double> %v1, <vscale x 8 x double> %v2, iXLen %tm, iXLen %tn, iXLen %tk) {
 ; CHECK-LABEL: test_sf_mm_f_f_w1_f64m8:

@@ -33,7 +33,7 @@ public:
                       GetModelRunner,
                   std::function<bool(CallBase &)> GetDefaultAdvice);
 
-  virtual ~MLInlineAdvisor() = default;
+  ~MLInlineAdvisor() override = default;
 
   void onPassEntry(LazyCallGraph::SCC *SCC) override;
   void onPassExit(LazyCallGraph::SCC *SCC) override;
@@ -105,7 +105,7 @@ class MLInlineAdvice : public InlineAdvice {
 public:
   MLInlineAdvice(MLInlineAdvisor *Advisor, CallBase &CB,
                  OptimizationRemarkEmitter &ORE, bool Recommendation);
-  virtual ~MLInlineAdvice() = default;
+  ~MLInlineAdvice() override = default;
 
   void recordInliningImpl() override;
   void recordInliningWithCalleeDeletedImpl() override;

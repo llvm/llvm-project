@@ -42,7 +42,7 @@ define void @test(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP_1_LATCH5]], label [[LOOP_2_HEADER1]]
 ; CHECK:       vector.latch:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -108,7 +108,7 @@ loop.1.latch:
   %ec.1 = icmp eq i64 %iv.1.next, %n
   br i1 %ec.1, label %exit, label %loop.1.header, !llvm.loop !0
 
-exit:                                             ; preds = %loop.1.latch
+exit:
   ret void
 
 ; uselistorder directives

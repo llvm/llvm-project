@@ -111,8 +111,6 @@ define i64 @xnor_i64(i64 %a, i64 %b) nounwind {
   ret i64 %xor
 }
 
-declare i32 @llvm.fshl.i32(i32, i32, i32)
-
 define i32 @rol_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: rol_i32:
 ; RV32I:       # %bb.0:
@@ -132,8 +130,6 @@ define i32 @rol_i32(i32 %a, i32 %b) nounwind {
 
 ; This test is presented here in case future expansions of the Bitmanip
 ; extensions introduce instructions suitable for this pattern.
-
-declare i64 @llvm.fshl.i64(i64, i64, i64)
 
 define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: rol_i64:
@@ -187,8 +183,6 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
-declare i32 @llvm.fshr.i32(i32, i32, i32)
-
 define i32 @ror_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: ror_i32:
 ; RV32I:       # %bb.0:
@@ -208,8 +202,6 @@ define i32 @ror_i32(i32 %a, i32 %b) nounwind {
 
 ; This test is presented here in case future expansions of the Bitmanip
 ; extensions introduce instructions suitable for this pattern.
-
-declare i64 @llvm.fshr.i64(i64, i64, i64)
 
 define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: ror_i64:
@@ -396,4 +388,61 @@ define i16 @srai_i16(i16 %a) nounwind {
 ; RV32ZBKB-NEXT:    ret
   %1 = ashr i16 %a, 9
   ret i16 %1
+}
+
+define i32 @binop_neg_and(i32 %a, i32 %b, i32 %c) {
+; RV32I-LABEL: binop_neg_and:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: binop_neg_and:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    add a1, a1, a2
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %not_b = xor i32 %b, -1
+  %sub = sub i32 %not_b, %c
+  %and = and i32 %a, %sub
+  ret i32 %and
+}
+
+define i32 @binop_neg_or(i32 %a, i32 %b, i32 %c) {
+; RV32I-LABEL: binop_neg_or:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: binop_neg_or:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    add a1, a1, a2
+; RV32ZBB-ZBKB-NEXT:    orn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %not_b = xor i32 %b, -1
+  %sub = sub i32 %not_b, %c
+  %or = or i32 %a, %sub
+  ret i32 %or
+}
+
+define i32 @binop_neg_xor(i32 %a, i32 %b, i32 %c) {
+; RV32I-LABEL: binop_neg_xor:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: binop_neg_xor:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    add a1, a1, a2
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV32ZBB-ZBKB-NEXT:    ret
+  %not_b = xor i32 %b, -1
+  %sub = sub i32 %not_b, %c
+  %xor = xor i32 %a, %sub
+  ret i32 %xor
 }

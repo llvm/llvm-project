@@ -24,6 +24,9 @@ bool GenericOptionalSummaryProvider(ValueObject &valobj, Stream &stream,
 lldb::ValueObjectSP GetDesugaredSmartPointerValue(ValueObject &ptr,
                                                   ValueObject &container);
 
+SyntheticChildrenFrontEnd *
+GenericInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                               lldb::ValueObjectSP valobj_sp);
 } // namespace formatters
 } // namespace lldb_private
 

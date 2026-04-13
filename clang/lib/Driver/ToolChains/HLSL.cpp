@@ -327,6 +327,13 @@ void tools::hlsl::MetalConverter::ConstructJob(
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  StringRef Reflection = Args.getLastArgValue(options::OPT_dxc_Fre);
+  if (!Reflection.empty()) {
+    const char *ReflectionStr =
+        Args.MakeArgString(StringRef("--output-reflection-file=") + Reflection);
+    CmdArgs.push_back(ReflectionStr);
+  }
+
   const char *Exec = Args.MakeArgString(MSCPath);
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Input));
@@ -412,7 +419,17 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   const OptTable &Opts = getDriver().getOpts();
 
+  if (Args.hasArg(options::OPT_dxc_col_major) &&
+      Args.hasArg(options::OPT_dxc_row_major))
+    getDriver().Diag(diag::err_drv_dxc_invalid_matrix_layout);
+
   for (Arg *A : Args) {
+    if (A->getOption().getID() == options::OPT_dxc_all_resources_bound) {
+      DAL->AddFlagArg(nullptr,
+                      Opts.getOption(options::OPT_hlsl_all_resources_bound));
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
@@ -498,6 +515,44 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       continue;
     }
 
+    if (A->getOption().getID() == options::OPT_enable_16bit_types) {
+      // Translate -enable-16bit-types into -fnative-half-type and
+      // -fnative-int16-type
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_half_type));
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_int16_type));
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_col_major) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "column-major");
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_row_major) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "row-major");
+      A->claim();
+      continue;
+    }
+
+    // This is a temporary check until we support reflection generation for
+    // other targets.
+    if (A->getOption().getID() == options::OPT_dxc_Fre) {
+      if (Args.hasArg(options::OPT_metal)) {
+        if (!Args.hasArg(options::OPT_dxc_Fo))
+          getDriver().Diag(diag::err_drv_dxc_Fre_requires_Fo_metal);
+      } else
+        getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+            << "-Fre" << getTriple().getArchName();
+      A->claim();
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_dxc_Fre),
+                          A->getValue());
+      continue;
+    }
+
     DAL->append(A);
   }
 
@@ -557,4 +612,10 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
   // No translation, validation, or objcopy are required, so this action must
   // output to the result file.
   return true;
+}
+
+void HLSLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wconversion");
+  CC1Args.push_back("-Wvector-conversion");
+  CC1Args.push_back("-Wmatrix-conversion");
 }

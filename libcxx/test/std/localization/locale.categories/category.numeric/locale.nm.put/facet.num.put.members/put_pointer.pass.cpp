@@ -12,11 +12,14 @@
 
 // iter_type put(iter_type s, ios_base& iob, char_type fill, void* v) const;
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cassert>
 #include <ios>
 #include <locale>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 typedef std::num_put<char, cpp17_output_iterator<char*> > F;
 

@@ -194,7 +194,7 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // Do not emit anything if it's an internal service function.
-  if (MBB.empty())
+  if (MBB.empty() || isHidden())
     return;
 
   // If it's the first MBB in MF, it has OpFunction and OpFunctionParameter, so
@@ -449,7 +449,7 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
       if (ConstantInt *Const = dyn_cast<ConstantInt>(C)) {
         Inst.addOperand(MCOperand::createImm(Const->getZExtValue()));
       } else if (auto *CE = dyn_cast<Function>(C)) {
-        MCRegister FuncReg = MAI->getFuncReg(CE);
+        MCRegister FuncReg = MAI->getGlobalObjReg(CE);
         assert(FuncReg.isValid());
         Inst.addOperand(MCOperand::createReg(FuncReg));
       }
@@ -543,7 +543,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     // <Entry Point> operands of OpExecutionMode
     if (F.isDeclaration() || !isEntryPoint(F))
       continue;
-    MCRegister FReg = MAI->getFuncReg(&F);
+    MCRegister FReg = MAI->getGlobalObjReg(&F);
     assert(FReg.isValid());
 
     if (Attribute Attr = F.getFnAttribute("hlsl.shader"); Attr.isValid()) {
@@ -577,6 +577,11 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     if (MDNode *Node = F.getMetadata("intel_reqd_sub_group_size"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::SubgroupSize, 0, 0);
+    if (MDNode *Node = F.getMetadata("max_work_group_size")) {
+      if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_kernel_attributes))
+        outputExecutionModeFromMDNode(
+            FReg, Node, SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, 3, 1);
+    }
     if (MDNode *Node = F.getMetadata("vec_type_hint")) {
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
@@ -607,13 +612,10 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
         // Collect the SPIRVTypes for fp16, fp32, and fp64 and the constant of
         // type int32 with 0 value to represent the FP Fast Math Mode.
         std::vector<const MachineInstr *> SPIRVFloatTypes;
-        const MachineInstr *ConstZero = nullptr;
+        const MachineInstr *ConstZeroInt32 = nullptr;
         for (const MachineInstr *MI :
              MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
-          // Skip if the instruction is not OpTypeFloat or OpConstant.
           unsigned OpCode = MI->getOpcode();
-          if (OpCode != SPIRV::OpTypeFloat && OpCode != SPIRV::OpConstantNull)
-            continue;
 
           // Collect the SPIRV type if it's a float.
           if (OpCode == SPIRV::OpTypeFloat) {
@@ -624,14 +626,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
               continue;
             }
             SPIRVFloatTypes.push_back(MI);
-          } else {
+            continue;
+          }
+
+          if (OpCode == SPIRV::OpConstantNull) {
             // Check if the constant is int32, if not skip it.
             const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
             MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
-            if (!TypeMI || TypeMI->getOperand(1).getImm() != 32)
-              continue;
-
-            ConstZero = MI;
+            bool IsInt32Ty = TypeMI &&
+                             TypeMI->getOpcode() == SPIRV::OpTypeInt &&
+                             TypeMI->getOperand(1).getImm() == 32;
+            if (IsInt32Ty)
+              ConstZeroInt32 = MI;
           }
         }
 
@@ -652,9 +658,9 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
           MCRegister TypeReg =
               MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
           Inst.addOperand(MCOperand::createReg(TypeReg));
-          assert(ConstZero && "There should be a constant zero.");
+          assert(ConstZeroInt32 && "There should be a constant zero.");
           MCRegister ConstReg = MAI->getRegisterAlias(
-              ConstZero->getMF(), ConstZero->getOperand(0).getReg());
+              ConstZeroInt32->getMF(), ConstZeroInt32->getOperand(0).getReg());
           Inst.addOperand(MCOperand::createReg(ConstReg));
           outputMCInst(Inst);
         }
@@ -684,15 +690,13 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
       // The first field of the struct contains a pointer to
       // the annotated variable.
       Value *AnnotatedVar = CS->getOperand(0)->stripPointerCasts();
-      if (!isa<Function>(AnnotatedVar))
-        report_fatal_error("Unsupported value in llvm.global.annotations");
-      Function *Func = cast<Function>(AnnotatedVar);
-      MCRegister Reg = MAI->getFuncReg(Func);
+      auto *GO = dyn_cast<GlobalObject>(AnnotatedVar);
+      MCRegister Reg = GO ? MAI->getGlobalObjReg(GO) : MCRegister();
       if (!Reg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);
         AnnotatedVar->print(OS);
-        DiagMsg = "Unknown function in llvm.global.annotations: " + DiagMsg;
+        DiagMsg = "Unsupported value in llvm.global.annotations: " + DiagMsg;
         report_fatal_error(DiagMsg.c_str());
       }
 
@@ -765,7 +769,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
              "Mismatched float type size");
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionModeId);
-      MCRegister FuncReg = MAI->getFuncReg(Func);
+      MCRegister FuncReg = MAI->getGlobalObjReg(Func);
       assert(FuncReg.isValid());
       Inst.addOperand(MCOperand::createReg(FuncReg));
       Inst.addOperand(
@@ -815,7 +819,7 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // Get the global subtarget to output module-level info.
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
   TII = ST->getInstrInfo();
-  MAI = &SPIRVModuleAnalysis::MAI;
+  MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension

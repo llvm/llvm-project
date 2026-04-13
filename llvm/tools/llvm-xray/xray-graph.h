@@ -86,7 +86,7 @@ public:
   };
 
   GraphT G;
-  using VertexIdentifier = typename decltype(G)::VertexIdentifier;
+  using VertexIdentifier = decltype(G)::VertexIdentifier;
   using EdgeIdentifier = decltype(G)::EdgeIdentifier;
 
   /// Use a Map to store the Function stack for each thread whilst building the

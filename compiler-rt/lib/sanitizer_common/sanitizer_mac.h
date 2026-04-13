@@ -58,8 +58,13 @@ struct DarwinKernelVersion : VersionBase<DarwinKernelVersion> {
   DarwinKernelVersion(u16 major, u16 minor) : VersionBase(major, minor) {}
 };
 
+struct ReservedRange {
+  uptr beg, end;
+};
+
 MacosVersion GetMacosAlignedVersion();
 DarwinKernelVersion GetDarwinKernelVersion();
+void GetAppReservedRanges(InternalMmapVector<ReservedRange>& ranges);
 
 char **GetEnviron();
 
@@ -75,8 +80,6 @@ struct ThreadEventCallbacks {
 };
 
 void InstallPthreadIntrospectionHook(const ThreadEventCallbacks &callbacks);
-
-bool IsAddressInMappedRegion(uptr addr);
 
 }  // namespace __sanitizer
 

@@ -46,16 +46,17 @@ void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
           hasArgument(0, mapAnyOf(declRefExpr, cxxMemberCallExpr).bind("arg")))
           .bind("rhs");
 
-  Finder->addMatcher(
-      stmt(anyOf(ifStmt(CondExprOrCondVar), forStmt(CondExprOrCondVar),
-                 whileStmt(CondExprOrCondVar), doStmt(CondExpr),
-                 binaryOperator(unless(isExpansionInFileMatching(
-                                    "llvm/include/llvm/Support/Casting.h")),
-                                hasOperatorName("&&"),
-                                hasLHS(implicitCastExpr().bind("lhs")),
-                                hasRHS(ignoringImpCasts(CallWithBindedArg)))
-                     .bind("and"))),
-      this);
+  Finder->addMatcher(ifStmt(CondExprOrCondVar), this);
+  Finder->addMatcher(forStmt(CondExprOrCondVar), this);
+  Finder->addMatcher(whileStmt(CondExprOrCondVar), this);
+  Finder->addMatcher(doStmt(CondExpr), this);
+  Finder->addMatcher(binaryOperator(hasRHS(ignoringImpCasts(CallWithBindedArg)),
+                                    hasLHS(implicitCastExpr().bind("lhs")),
+                                    hasOperatorName("&&"),
+                                    unless(isExpansionInFileMatching(
+                                        "llvm/include/llvm/Support/Casting.h")))
+                         .bind("and"),
+                     this);
 }
 
 void PreferIsaOrDynCastInConditionalsCheck::check(
@@ -68,8 +69,8 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
   //   llvm::cast<T>(x)
   //         ^  ^
   //  StartLoc  EndLoc
-  SourceLocation StartLoc = Callee->getLocation();
-  SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
+  const SourceLocation StartLoc = Callee->getLocation();
+  const SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
 
   if (Result.Nodes.getNodeAs<VarDecl>("var")) {
     diag(StartLoc,

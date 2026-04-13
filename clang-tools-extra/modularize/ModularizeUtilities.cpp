@@ -12,17 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ModularizeUtilities.h"
+#include "CoverageChecker.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "CoverageChecker.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "ModularizeUtilities.h"
 
 using namespace clang;
 using namespace llvm;
@@ -287,7 +287,8 @@ std::error_code ModularizeUtilities::loadModuleMap(
     Target.get(), *HeaderInfo));
 
   // Parse module.modulemap file into module map.
-  if (ModMap->parseAndLoadModuleMapFile(ModuleMapEntry, false, Dir)) {
+  if (ModMap->parseAndLoadModuleMapFile(ModuleMapEntry, /*IsSystem=*/false,
+                                        /*ImplicitlyDiscovered=*/false, Dir)) {
     return std::error_code(1, std::generic_category());
   }
 

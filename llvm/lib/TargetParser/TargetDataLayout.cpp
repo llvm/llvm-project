@@ -208,7 +208,7 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
   return Ret;
 }
 
-static std::string computePowerDataLayout(const Triple &T) {
+static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
   bool is64Bit = T.isPPC64();
   std::string Ret;
 
@@ -228,7 +228,8 @@ static std::string computePowerDataLayout(const Triple &T) {
   // If the target ABI uses function descriptors, then the alignment of function
   // pointers depends on the alignment used to emit the descriptor. Otherwise,
   // function pointers are aligned to 32 bits because the instructions must be.
-  if ((T.getArch() == Triple::ppc64 && !T.isPPC64ELFv2ABI())) {
+  if ((T.getArch() == Triple::ppc64 &&
+       (!T.isPPC64ELFv2ABI() && ABIName != "elfv2"))) {
     Ret += "-Fi64";
   } else if (T.isOSAIX()) {
     Ret += is64Bit ? "-Fi64" : "-Fi32";
@@ -245,6 +246,10 @@ static std::string computePowerDataLayout(const Triple &T) {
     Ret += "-i128:128-n32:64";
   else
     Ret += "-n32";
+
+  // The ABI alignment for doubles on AIX is 4 bytes.
+  if (T.isOSAIX())
+    Ret += "-f64:32:64";
 
   // Specify the vector alignment explicitly. For v256i1 and v512i1, the
   // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
@@ -275,6 +280,13 @@ static std::string computeAMDDataLayout(const Triple &TT) {
 }
 
 static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
+  if (TT.isOSBinFormatMachO()) {
+    assert(TT.isLittleEndian() && "Invalid endianness");
+    assert(TT.isArch32Bit() && "Invalid triple");
+    assert((ABIName != "ilp32e") && "Invalid ABI.");
+    return "e-m:o-p:32:32-i64:64-n32-S128";
+  }
+
   std::string Ret;
 
   if (TT.isLittleEndian())
@@ -344,6 +356,9 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
 
   // Big endian.
   Ret += "E";
+
+  // The natural stack alignment is 64 bits.
+  Ret += "-S64";
 
   // Data mangling.
   Ret += getManglingComponent(TT);
@@ -458,8 +473,7 @@ static std::string computeSPIRVDataLayout(const Triple &TT) {
     return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
            "v256:256-v512:512-v1024:1024-n8:16:32:64-G1";
   if (Arch == Triple::spirv)
-    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
-           "v512:512-v1024:1024-n8:16:32:64-G10";
+    return "e-ve-i64:64-n8:16:32:64-G10";
   if (TT.getVendor() == Triple::VendorType::AMD &&
       TT.getOS() == Triple::OSType::AMDHSA)
     return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
@@ -548,11 +562,8 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::csky:
     return computeCSKYDataLayout(*this);
   case Triple::dxil:
-    // TODO: We need to align vectors on the element size generally, but for now
-    // we hard code this for 3-element 32- and 64-bit vectors as a workaround.
-    // See https://github.com/llvm/llvm-project/issues/123968
-    return "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
-           "f32:32-f64:64-n8:16:32:64-v48:16:16-v96:32:32-v192:64:64";
+    return "e-m:e-ve-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
+           "f32:32-f64:64-n8:16:32:64";
   case Triple::hexagon:
     return "e-m:e-p:32:32:32-a:0-n16:32-"
            "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
@@ -573,7 +584,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::ppcle:
   case Triple::ppc64:
   case Triple::ppc64le:
-    return computePowerDataLayout(*this);
+    return computePowerDataLayout(*this, ABIName);
   case Triple::r600:
   case Triple::amdgcn:
     return computeAMDDataLayout(*this);
@@ -594,6 +605,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::x86_64:
     return computeX86DataLayout(*this);
   case Triple::xcore:
+    return "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:32-f64:32-a:0:32-n32";
   case Triple::xtensa:
     return "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32";
   case Triple::nvptx:

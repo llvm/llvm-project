@@ -36,6 +36,19 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
                                              mlir::Value arrayPtr,
                                              mlir::Type eltTy, mlir::Value idx,
                                              bool shouldDecay) {
+  auto arrayPtrTy = mlir::dyn_cast<cir::PointerType>(arrayPtr.getType());
+  assert(arrayPtrTy && "expected pointer type");
+  // If the array pointer is not decayed, emit a GetElementOp.
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
+
+  if (shouldDecay && arrayTy && arrayTy == eltTy) {
+    auto eltPtrTy =
+        getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
+    return cir::GetElementOp::create(*this, arrayLocEnd, eltPtrTy, arrayPtr,
+                                     idx);
+  }
+
+  // If we don't have sufficient type information, emit a PtrStrideOp.
   mlir::Value basePtr = arrayPtr;
   if (shouldDecay)
     basePtr = maybeBuildArrayDecay(arrayLocBegin, arrayPtr, eltTy);
@@ -53,8 +66,9 @@ cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
-                                             llvm::APInt intVal) {
-  return getConstInt(loc, llvm::APSInt(intVal));
+                                             llvm::APInt intVal,
+                                             bool isUnsigned) {
+  return getConstInt(loc, llvm::APSInt(intVal, isUnsigned));
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
@@ -131,6 +145,28 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
 
   assert(subType);
   computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
+}
+
+uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
+    const cir::CIRDataLayout &layout, mlir::Type ty,
+    llvm::ArrayRef<int64_t> indices) {
+  int64_t offset = 0;
+  for (int64_t idx : indices) {
+    if (auto recordTy = dyn_cast<cir::RecordType>(ty)) {
+      offset += recordTy.getElementOffset(layout.layout, idx);
+      const llvm::Align tyAlign = llvm::Align(
+          recordTy.getPacked() ? 1 : layout.layout.getTypeABIAlignment(ty));
+      offset = llvm::alignTo(offset, tyAlign);
+      assert(idx < (int64_t)recordTy.getMembers().size());
+      ty = recordTy.getMembers()[idx];
+    } else if (auto arrayTy = dyn_cast<cir::ArrayType>(ty)) {
+      ty = arrayTy.getElementType();
+      offset += layout.getTypeAllocSize(ty) * idx;
+    } else {
+      llvm_unreachable("unexpected type");
+    }
+  }
+  return offset;
 }
 
 cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(

@@ -66,6 +66,7 @@ add_clang_library(clangAST
   ExternalASTMerger.cpp
   ExternalASTSource.cpp
   FormatString.cpp
+  InferAlloc.cpp
   InheritViz.cpp
   ByteCode/BitcastBuffer.cpp
   ByteCode/ByteCodeEmitter.cpp
@@ -75,12 +76,12 @@ add_clang_library(clangAST
   ByteCode/Disasm.cpp
   ByteCode/EvalEmitter.cpp
   ByteCode/Function.cpp
-  ByteCode/FunctionPointer.cpp
   ByteCode/InterpBuiltin.cpp
   ByteCode/InterpBuiltinBitCast.cpp
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp
+  ByteCode/InitMap.cpp
   ByteCode/Interp.cpp
   ByteCode/InterpBlock.cpp
   ByteCode/InterpFrame.cpp
@@ -94,6 +95,7 @@ add_clang_library(clangAST
   ByteCode/State.cpp
   ByteCode/MemberPointer.cpp
   ByteCode/InterpShared.cpp
+  HLSLResource.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
   JSONNodeDumper.cpp
@@ -133,6 +135,9 @@ add_clang_library(clangAST
   TypePrinter.cpp
   VTableBuilder.cpp
   VTTBuilder.cpp
+
+  PRECOMPILE_HEADERS
+  [["clang/AST/pch.h"]]
 
   LINK_LIBS
   clangBasic

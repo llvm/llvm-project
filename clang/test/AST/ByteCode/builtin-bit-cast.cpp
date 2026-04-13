@@ -527,7 +527,7 @@ constexpr unsigned short bad_bool9_to_short = __builtin_bit_cast(unsigned short,
 constexpr const intptr_t &returns_local() { return 0L; }
 
 // both-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
-// both-note@+1 {{read of temporary whose lifetime has ended}}
+// both-note@+1 {{read of object outside its lifetime}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
 
 #ifdef __SIZEOF_INT128__
@@ -589,4 +589,13 @@ namespace ToPrimPtrs {
   constexpr auto cmemptr = __builtin_bit_cast(int S::*, ((__INTPTR_TYPE__) 0)); // both-error {{must be initialized by a constant expression}} \
                                                                                 // both-note {{bit_cast to a member pointer type is not allowed in a constant expression}}
 #endif
+}
+
+namespace NonNumbers {
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+  constexpr intptr_t fn(void) {
+    return __builtin_bit_cast(intptr_t, fold((intptr_t)&fn)); // ref-note {{constexpr bit cast involving type}}
+  }
+  static_assert(fn() == 1); // both-error {{not an integral constant expression}} \
+                            // ref-note {{in call to}}
 }

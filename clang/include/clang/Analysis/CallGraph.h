@@ -26,6 +26,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
 namespace clang {
@@ -61,6 +62,7 @@ public:
   ///
   /// Recursively walks the declaration to find all the dependent Decls as well.
   void addToCallGraph(Decl *D) {
+    llvm::TimeTraceScope TimeProfile("AddToCallGraph");
     TraverseDecl(D);
   }
 

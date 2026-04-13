@@ -31,10 +31,10 @@
 ; GFX1200-MESA: .long 45100
 ; GFX1200-MESA-NEXT: .long 1024
 
-; GFX1250-PAL: '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x200
+; GFX1250-PAL: '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x100
 
 ; GFX1250-MESA: .long 45100
-; GFX1250-MESA-NEXT: .long 512
+; GFX1250-MESA-NEXT: .long 256
 
 @lds = internal addrspace(3) global [4096 x i8] poison
 

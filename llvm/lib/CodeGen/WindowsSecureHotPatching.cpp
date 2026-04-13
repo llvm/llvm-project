@@ -177,9 +177,7 @@ class WindowsSecureHotPatching : public ModulePass {
 public:
   static char ID;
 
-  WindowsSecureHotPatching() : ModulePass(ID) {
-    initializeWindowsSecureHotPatchingPass(*PassRegistry::getPassRegistry());
-  }
+  WindowsSecureHotPatching() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -460,8 +458,6 @@ static Value *rewriteGlobalVariablesInConstant(
 static bool searchConstantExprForGlobalVariables(
     Value *V, SmallDenseMap<GlobalVariable *, Value *> &GVLoadMap,
     SmallVector<GlobalVariableUse> &GVUses) {
-
-  SmallVector<Value *, 8> ReplacedOperands;
 
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V)) {
     if (globalVariableNeedsRedirect(GV)) {

@@ -736,3 +736,40 @@ exit:
   ret void
 }
 
+; Test INLINEASM defines CC.
+@wait_fence = global i32 0, align 4
+@bit_cc = global i32 0, align 4
+define void @test_inlineasm_define_cc() {
+; CHECK-LABEL: test_inlineasm_define_cc:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lgrl %r1, wait_fence@GOT
+; CHECK-NEXT:    chsi 0(%r1), 0
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB29_1: # %while.body.lr.ph
+; CHECK-NEXT:    lgrl %r1, bit_cc@GOT
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    srl %r0, 28
+; CHECK-NEXT:    st %r0, 0(%r1)
+; CHECK-NEXT:  .LBB29_2: # %while.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    j .LBB29_2
+entry:
+  %0 = load i32, ptr @wait_fence, align 4
+  %tobool.not = icmp eq i32 %0, 0
+  br i1 %tobool.not, label %while.end, label %while.body.lr.ph
+
+while.body.lr.ph:
+  %1 = tail call i32 asm "", "={@cc}"()
+  %2 = icmp ult i32 %1, 4
+  tail call void @llvm.assume(i1 %2)
+  store i32 %1, ptr @bit_cc, align 4
+  br label %while.body
+
+while.body:
+  br label %while.body
+
+while.end:
+  ret void
+}

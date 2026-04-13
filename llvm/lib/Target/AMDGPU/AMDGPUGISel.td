@@ -51,6 +51,18 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
+def gi_vop3pnomodsdot :
+    GIComplexOperandMatcher<s32, "selectVOP3PNoModsDOT">,
+    GIComplexPatternEquiv<VOP3PNoModsDOT>;
+
+def gi_vop3pmodsf32 :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsF32">,
+    GIComplexPatternEquiv<VOP3PModsF32>;
+
+def gi_vop3pnomodsf32 :
+    GIComplexOperandMatcher<s32, "selectVOP3PNoModsF32">,
+    GIComplexPatternEquiv<VOP3PNoModsF32>;
+
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -288,6 +300,8 @@ def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT_D16, SItbuffer_store_d16>;
 // FIXME: Check MMO is atomic
 def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap_glue>;
 def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap_glue>;
+def : GINodeEquiv<G_ATOMICRMW_USUB_COND, atomic_load_usub_cond_glue>;
+def : GINodeEquiv<G_ATOMICRMW_USUB_SAT, atomic_load_usub_sat_glue>;
 def : GINodeEquiv<G_ATOMICRMW_FMIN, atomic_load_fmin_glue>;
 def : GINodeEquiv<G_ATOMICRMW_FMAX, atomic_load_fmax_glue>;
 
@@ -308,6 +322,7 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMIN, SIbuffer_atomic_fmin>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMAX, SIbuffer_atomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32, SIbuffer_atomic_cond_sub_u32>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SUB_CLAMP_U32, SIbuffer_atomic_csub>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD, SIsbuffer_load>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SBYTE, SIsbuffer_load_byte>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_UBYTE, SIsbuffer_load_ubyte>;
@@ -325,6 +340,12 @@ def : GINodeEquiv<G_AMDGPU_LOAD_D16_HI_I8, SIload_d16_hi_i8>;
 def : GINodeEquiv<G_AMDGPU_WHOLE_WAVE_FUNC_SETUP, AMDGPUwhole_wave_setup>;
 // G_AMDGPU_WHOLE_WAVE_FUNC_RETURN is simpler than AMDGPUwhole_wave_return,
 // so we don't mark it as equivalent.
+
+def : GINodeEquiv<G_AMDGPU_SPONENTRY, sponentry>;
+
+def : GINodeEquiv<G_AMDGPU_FLAT_LOAD_MONITOR, AMDGPUflat_load_monitor>;
+def : GINodeEquiv<G_AMDGPU_GLOBAL_LOAD_MONITOR, AMDGPUglobal_load_monitor>;
+
 
 class GISelSop2Pat <
   SDPatternOperator node,
@@ -432,8 +453,8 @@ def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastFPImm32">,
 def gi_bitcast_fpimm_to_i64 : GICustomOperandRenderer<"renderBitcastFPImm64">,
   GISDNodeXFormEquiv<bitcast_fpimm_to_i64>;
 
-def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
-  GISDNodeXFormEquiv<IMMPopCount>;
+def gi_IMMCountTrailingOnes : GICustomOperandRenderer<"renderCountTrailingOnesImm">,
+  GISDNodeXFormEquiv<IMMCountTrailingOnes>;
 
 def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
   GISDNodeXFormEquiv<extract_cpol>;

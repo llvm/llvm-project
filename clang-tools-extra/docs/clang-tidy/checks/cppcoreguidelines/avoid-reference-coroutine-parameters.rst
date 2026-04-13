@@ -3,8 +3,9 @@
 cppcoreguidelines-avoid-reference-coroutine-parameters
 ======================================================
 
-Warns when a coroutine accepts reference parameters. After a coroutine suspend point,
-references could be dangling and no longer valid. Instead, pass parameters as values.
+Warns when a coroutine accepts reference parameters. After a coroutine suspend
+point, references could be dangling and no longer valid. Instead, pass
+parameters as values.
 
 Examples:
 
@@ -17,5 +18,5 @@ Examples:
   }
 
 This check implements `CP.53
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-reference-parameters>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rcoro-reference-parameters>`_
 from the C++ Core Guidelines.

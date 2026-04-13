@@ -2687,10 +2687,7 @@ define i1 @icmp_nsw_false_2(i32 %V) {
 
 define i1 @icmp_nsw_false_3(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_false_3(
-; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[V]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD6]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add5 = add nsw i32 %V, 5
   %add6 = add i32 %V, 5
@@ -2721,6 +2718,45 @@ define i1 @icmp_nsw_false_5(i8 %V) {
   %add = add i8 %V, 121
   %addnsw = add nsw i8 %V, -104
   %cmp = icmp slt i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_6(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_6(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], 6
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, 6
+  %addnsw = add nsw i8 %V, -1
+  %cmp = icmp sgt i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_7(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_7(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], -1
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, -1
+  %addnsw = add nsw i8 %V, 3
+  %cmp = icmp sle i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_8(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_8(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], -15
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, -15
+  %addnsw = add nsw i8 %V, 42
+  %cmp = icmp sge i8 %add, %addnsw
   ret i1 %cmp
 }
 
@@ -2766,10 +2802,7 @@ define <4 x i1> @icmp_nsw_vec(<4 x i32> %V) {
 
 define i1 @icmp_nsw_3(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_3(
-; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD5_2:%.*]] = add nsw i32 [[V]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD5_2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add5 = add i32 %V, 5
   %add5_2 = add nsw i32 %V, 5
@@ -2844,10 +2877,7 @@ define i1 @icmp_nsw_9(i32 %V1, i32 %V2) {
 
 define i1 @icmp_nsw_10(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_10(
-; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[V]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD6]], [[ADD5]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %add5 = add i32 %V, 5
   %add6 = add nsw i32 %V, 6
@@ -2865,6 +2895,36 @@ define i1 @icmp_nsw_11(i32 %V) {
   %add5 = add i32 %V, -125
   %add6 = add nsw i32 %V, -99
   %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_12(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_12(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, 2
+  %add6 = add nsw i32 %V, 3
+  %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_13(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_13(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, 7
+  %add6 = add nsw i32 %V, 10
+  %cmp = icmp sle i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_14(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_14(
+; CHECK-NEXT:    ret i1 false
+;
+  %add5 = add i32 %V, 7
+  %add6 = add nsw i32 %V, 10
+  %cmp = icmp sge i32 %add5, %add6
   ret i1 %cmp
 }
 
@@ -2887,6 +2947,36 @@ define i1 @icmp_nsw_nonpos2(i32 %V) {
   %add5 = add i32 %V, 1
   %add6 = add nsw i32 %V, 0
   %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos3(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos3(
+; CHECK-NEXT:    ret i1 false
+;
+  %add5 = add i32 %V, -2
+  %add6 = add nsw i32 %V, -5
+  %cmp = icmp sle i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos4(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos4(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, -10
+  %add6 = add nsw i32 %V, -30
+  %cmp = icmp sgt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos5(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos5(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, -15
+  %add6 = add nsw i32 %V, -100
+  %cmp = icmp sge i32 %add5, %add6
   ret i1 %cmp
 }
 

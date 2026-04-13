@@ -4,8 +4,7 @@
 // RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
 // RUN:     }}'
 
-#undef NULL
-#define NULL 0L
+#include <stddef.h>
 
 void functionTakingBool(bool);
 void functionTakingInt(int);
@@ -75,20 +74,8 @@ void implicitConversionFromBoolInComplexBoolExpressions() {
   bool anotherBoolean = false;
 
   int integer = boolean && anotherBoolean;
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-MESSAGES: :[[@LINE-2]]:28: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-FIXES: int integer = (int)boolean && (int)anotherBoolean;
-
   float floating = (boolean || anotherBoolean) * 0.3f;
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-MESSAGES: :[[@LINE-2]]:32: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-FIXES: float floating = ((int)boolean || (int)anotherBoolean) * 0.3f;
-
   double doubleFloating = (boolean && (anotherBoolean || boolean)) * 0.3;
-  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-MESSAGES: :[[@LINE-2]]:40: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-MESSAGES: :[[@LINE-3]]:58: warning: implicit conversion 'bool' -> 'int'
-  // CHECK-FIXES: double doubleFloating = ((int)boolean && ((int)anotherBoolean || (int)boolean)) * 0.3;
 }
 
 void implicitConversionFromBoolLiterals() {
@@ -370,4 +357,30 @@ int keepCompactReturnInC_PR71848() {
   return( foo );
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: implicit conversion 'bool' -> 'int' [readability-implicit-bool-conversion]
 // CHECK-FIXES: return(int)( foo );
+}
+
+bool returns_bool(void) { return true; }
+
+void implicitConversionFromBoolInLogicalOps(int len) {
+  while (returns_bool()) {}
+  while ((len > 0) && returns_bool()) {}
+  while (returns_bool() && (len > 0)) {}
+  while ((len > 0) || returns_bool()) {}
+  while (returns_bool() || (len > 0)) {}
+}
+
+void checkResultAssignment(void) {
+  int a = returns_bool() || returns_bool();
+  bool b = returns_bool() && returns_bool();
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> 'bool'
+  // CHECK-FIXES: bool b = (returns_bool() && returns_bool()) != 0;
+}
+
+void checkNestedLogic(void) {
+  bool a = true;
+  bool b = false;
+  bool c = true;
+
+  if ((a && b) || c) {}
+  if (c && (a || b)) {}
 }

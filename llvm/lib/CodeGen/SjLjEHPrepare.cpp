@@ -139,7 +139,7 @@ void SjLjEHPrepareImpl::insertCallSiteStore(Instruction *I, int Number) {
       Builder.CreateGEP(FunctionContextTy, FuncCtx, Idxs, "call_site");
 
   // Insert a store of the call-site number
-  ConstantInt *CallSiteNoC = ConstantInt::get(DataTy, Number);
+  ConstantInt *CallSiteNoC = ConstantInt::getSigned(DataTy, Number);
   Builder.CreateStore(CallSiteNoC, CallSite, true /*volatile*/);
 }
 
@@ -385,7 +385,7 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
       if (Function *Callee = II->getCalledFunction())
         if (Callee->getIntrinsicID() == Intrinsic::donothing) {
           // Remove the NOP invoke.
-          BranchInst::Create(II->getNormalDest(), II->getIterator());
+          UncondBrInst::Create(II->getNormalDest(), II->getIterator());
           II->eraseFromParent();
           continue;
         }

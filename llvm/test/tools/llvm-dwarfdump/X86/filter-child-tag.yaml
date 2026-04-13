@@ -1,0 +1,136 @@
+## Tests the --filter-child-tag (-t) option.
+
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: llvm-dwarfdump %t.o --filter-child-tag=DW_TAG_structure_type | FileCheck %s --check-prefix=ONLY_STRUCT
+
+# ONLY_STRUCT: DW_TAG_compile_unit
+# ONLY_STRUCT-NOT: DW_TAG_namespace
+# ONLY_STRUCT-NOT: DW_TAG_structure_type
+
+# RUN: llvm-dwarfdump %t.o -t DW_TAG_structure_type -t DW_TAG_namespace | \
+# RUN:     FileCheck %s --check-prefix=STRUCT_AND_NS --implicit-check-not=DW_TAG_subprogram --implicit-check-not=DW_TAG_member
+
+# STRUCT_AND_NS: DW_TAG_compile_unit
+# STRUCT_AND_NS: DW_TAG_namespace
+# STRUCT_AND_NS: DW_TAG_structure_type
+# STRUCT_AND_NS: DW_TAG_structure_type
+
+# RUN: llvm-dwarfdump %t.o -c --name=Foo -t DW_TAG_member | \
+# RUN:     FileCheck %s --check-prefix=FOO_MEM --implicit-check-not=DW_TAG_compile_unit --implicit-check-not=DW_TAG_subprogram --implicit-check-not=DW_TAG_namespace
+
+# FOO_MEM: DW_TAG_structure_type
+# FOO_MEM: DW_TAG_member
+# FOO_MEM: DW_TAG_member
+# FOO_MEM: DW_TAG_member
+# FOO_MEM-NOT: DW_TAG_structure_type
+# FOO_MEM-NOT: DW_TAG_member
+
+# RUN: llvm-dwarfdump %t.o -c --name=Foo -t not_a_tag -t DW_TAG_member | \
+# RUN:     FileCheck %s --check-prefix=SINGLE_INVALID_TAG --implicit-check-not=DW_TAG_compile_unit --implicit-check-not=DW_TAG_subprogram --implicit-check-not=DW_TAG_namespace
+
+# SINGLE_INVALID_TAG: DW_TAG_structure_type
+# SINGLE_INVALID_TAG: DW_TAG_member
+# SINGLE_INVALID_TAG: DW_TAG_member
+# SINGLE_INVALID_TAG: DW_TAG_member
+# SINGLE_INVALID_TAG-NOT: DW_TAG_structure_type
+# SINGLE_INVALID_TAG-NOT: DW_TAG_member
+
+# RUN: llvm-dwarfdump %t.o -c --name=Foo -t not_a_tag | \
+# RUN:     FileCheck %s --check-prefix=ONLY_INVALID_TAGS --implicit-check-not=DW_TAG_compile_unit --implicit-check-not=DW_TAG_subprogram --implicit-check-not=DW_TAG_namespace --implicit-check-not=DW_TAG_member
+
+# ONLY_INVALID_TAGS: DW_TAG_structure_type
+# ONLY_INVALID_TAGS-NOT: DW_TAG_structure_type
+
+# RUN: llvm-dwarfdump %t.o -c -p --name=Foo -t DW_TAG_member | \
+# RUN:     FileCheck %s --check-prefix=FOO_MEM_WITH_PARENT --implicit-check-not=DW_TAG_subprogram
+
+# FOO_MEM_WITH_PARENT: DW_TAG_compile_unit
+# FOO_MEM_WITH_PARENT: DW_TAG_namespace
+# FOO_MEM_WITH_PARENT: DW_TAG_structure_type
+# FOO_MEM_WITH_PARENT: DW_TAG_member
+# FOO_MEM_WITH_PARENT: DW_TAG_member
+# FOO_MEM_WITH_PARENT: DW_TAG_member
+# FOO_MEM_WITH_PARENT-NOT: DW_TAG_structure_type
+# FOO_MEM_WITH_PARENT-NOT: DW_TAG_member
+
+## Not specifying --show-children ignores the --filter-child-tag option.
+# RUN: llvm-dwarfdump %t.o --name=Foo -t DW_TAG_member 2>&1 | FileCheck %s --check-prefix=NO_SHOW_CHILDREN
+
+# NO_SHOW_CHILDREN: DW_TAG_structure_type
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version: 5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: handwritten
+        - AbbrCode: 2
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+          - CStr: Foo
+        - AbbrCode: 4
+          Values:
+            - CStr: mem1
+        - AbbrCode: 4
+          Values:
+            - CStr: mem2
+        - AbbrCode: 4
+          Values:
+            - CStr: mem3
+        - AbbrCode: 3
+          Values:
+            - CStr: NestedInFoo
+        - AbbrCode: 4
+          Values:
+            - CStr: NestedMem1
+        - AbbrCode: 4
+          Values:
+            - CStr: NestedMem2
+        - AbbrCode: 5
+          Values:
+            - CStr: NestedFunc
+        - AbbrCode: 0x0
+        - AbbrCode: 5
+          Values:
+            - CStr: FooFunc
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0

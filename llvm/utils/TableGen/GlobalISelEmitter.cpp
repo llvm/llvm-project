@@ -282,7 +282,7 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
   // While we allow more than one output (both implicit and explicit defs)
   // below, we only expect one explicit def here.
   assert(Dst.getOperator()->isSubClassOf("Instruction"));
-  CodeGenInstruction &InstInfo = Target.getInstruction(Dst.getOperator());
+  const CodeGenInstruction &InstInfo = Target.getInstruction(Dst.getOperator());
   if (!InstInfo.Operands.NumDefs)
     return failedImport("Dst pattern child needs a def");
 
@@ -1034,8 +1034,8 @@ Error GlobalISelEmitter::importChildMatcher(
     if (ChildRec->isSubClassOf("ValueType") && !SrcChild.hasName()) {
       // An unnamed ValueType as in (sext_inreg GPR:$foo, i8). GISel represents
       // this as a literal constant with the scalar size.
-      MVT::SimpleValueType VT = llvm::getValueType(ChildRec);
-      OM.addPredicate<LiteralIntOperandMatcher>(MVT(VT).getScalarSizeInBits());
+      MVT VT = llvm::getValueType(ChildRec);
+      OM.addPredicate<LiteralIntOperandMatcher>(VT.getScalarSizeInBits());
       return Error::success();
     }
   }
@@ -1513,7 +1513,7 @@ GlobalISelEmitter::createInstructionRenderer(action_iterator InsertPt,
           "Pattern operator isn't an instruction (it's a ValueType)");
     return failedImport("Pattern operator isn't an instruction");
   }
-  CodeGenInstruction *DstI = &Target.getInstruction(DstOp);
+  const CodeGenInstruction *DstI = &Target.getInstruction(DstOp);
 
   // COPY_TO_REGCLASS is just a copy with a ConstrainOperandToRegClassAction
   // attached. Similarly for EXTRACT_SUBREG except that's a subregister copy.
@@ -1597,7 +1597,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
     const TreePatternNode &Dst) const {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
-  CodeGenInstruction *OrigDstI = &Target.getInstruction(Dst.getOperator());
+  const CodeGenInstruction *OrigDstI =
+      &Target.getInstruction(Dst.getOperator());
 
   StringRef Name = OrigDstI->getName();
   unsigned ExpectedDstINumUses = Dst.getNumChildren();
@@ -1848,19 +1849,19 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     // an explicitly given register class, we'll use that. Otherwise, we will
     // fail.
     const CodeGenRegisterClass *SubClass =
-        inferRegClassFromPattern(Dst.getChild(1));
+        inferRegClassFromPattern(Dst.getChild(0));
     if (!SubClass)
       return failedImport(
-          "Cannot infer register class from SUBREG_TO_REG child #1");
+          "Cannot infer register class from SUBREG_TO_REG child #0");
     // We don't have a child to look at that might have a super register node.
     const CodeGenRegisterClass *SuperClass =
-        inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(2));
+        inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(1));
     if (!SuperClass)
       return failedImport(
           "Cannot infer register class for SUBREG_TO_REG operand #0");
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
                                                      *SuperClass);
-    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 2,
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
                                                      *SubClass);
   } else if (DstIName == "REG_SEQUENCE") {
     const CodeGenRegisterClass *SuperClass =
@@ -2003,10 +2004,10 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
   }
 
   if (InstName == "SUBREG_TO_REG") {
-    // (outs $super_dst), (ins $super_src, $sub_src, $sub_idx)
+    // (outs $super_dst), (ins $sub_src, $sub_idx)
     // Find a register class that supports both the specified sub-register
     // index and the type of the instruction's result.
-    return inferSuperRegisterClass(N.getExtType(0), N.getChild(2));
+    return inferSuperRegisterClass(N.getExtType(0), N.getChild(1));
   }
 
   // Handle destination record types that we can safely infer a register class
@@ -2140,7 +2141,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       // We need to replace the def and all its uses with the specified
       // operand. However, we must also insert COPY's wherever needed.
       // For now, emit a copy and let the register allocator clean up.
-      auto &DstI = Target.getInstruction(RK.getDef("COPY"));
+      const CodeGenInstruction &DstI = Target.getInstruction(RK.getDef("COPY"));
       const auto &DstIOperand = DstI.Operands[0];
 
       OperandMatcher &OM0 = InsnMatcher.getOperand(0);
@@ -2411,11 +2412,9 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
 
 bool hasBFloatType(const TreePatternNode &Node) {
   for (unsigned I = 0, E = Node.getNumTypes(); I < E; I++) {
-    auto Ty = Node.getType(I);
-    for (auto T : Ty)
-      if (T.second == MVT::bf16 ||
-          (T.second.isVector() && T.second.getScalarType() == MVT::bf16))
-        return true;
+    MVT VT = Node.getSimpleType(I);
+    if (VT.getScalarType() == MVT::bf16)
+      return true;
   }
   for (const TreePatternNode &C : Node.children())
     if (hasBFloatType(C))

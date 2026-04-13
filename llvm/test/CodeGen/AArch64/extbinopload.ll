@@ -263,16 +263,14 @@ define <16 x i16> @load_v16i8(ptr %p) {
 define <2 x i16> @std_v2i8_v2i16(ptr %p) {
 ; CHECK-LABEL: std_v2i8_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0, #2]
-; CHECK-NEXT:    ldrb w9, [x0, #3]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    mov v1.s[1], w9
+; CHECK-NEXT:    ldr h0, [x0, #2]
+; CHECK-NEXT:    ldr h1, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #3
-; CHECK-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %l1 = load <2 x i8>, ptr %p
   %q = getelementptr i8, ptr %p, i32 2
@@ -1394,12 +1392,12 @@ define <4 x i32> @volatile(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ldr s1, [x0, #4]
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    ldr s0, [x0, #4]
+; CHECK-NEXT:    ldr s1, [x0]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #3
-; CHECK-NEXT:    uaddw v0.4s, v1.4s, v0.4h
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #3
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %l1b = load volatile float, ptr %p

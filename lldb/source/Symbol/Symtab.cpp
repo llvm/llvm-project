@@ -668,7 +668,8 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (getAsUnsignedInteger(name, /*Radix=*/16, file_address))
     return 0; // Failed to extract the user ID as an integer
 
-  Symbol *symbol = FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
+  const Symbol *symbol =
+      FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
   if (symbol == nullptr)
     return 0;
   const uint32_t symbol_idx = GetIndexForSymbol(symbol);
@@ -722,15 +723,11 @@ Symtab::AppendSymbolIndexesWithNameAndType(ConstString symbol_name,
                                            std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  if (AppendSymbolIndexesWithName(symbol_name, indexes) > 0) {
-    std::vector<uint32_t>::iterator pos = indexes.begin();
-    while (pos != indexes.end()) {
-      if (symbol_type == eSymbolTypeAny ||
-          m_symbols[*pos].GetType() == symbol_type)
-        ++pos;
-      else
-        pos = indexes.erase(pos);
-    }
+  if (AppendSymbolIndexesWithName(symbol_name, indexes) > 0 &&
+      symbol_type != eSymbolTypeAny) {
+    llvm::erase_if(indexes, [this, symbol_type](uint32_t index) {
+      return m_symbols[index].GetType() != symbol_type;
+    });
   }
   return indexes.size();
 }
@@ -742,15 +739,11 @@ uint32_t Symtab::AppendSymbolIndexesWithNameAndType(
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   if (AppendSymbolIndexesWithName(symbol_name, symbol_debug_type,
-                                  symbol_visibility, indexes) > 0) {
-    std::vector<uint32_t>::iterator pos = indexes.begin();
-    while (pos != indexes.end()) {
-      if (symbol_type == eSymbolTypeAny ||
-          m_symbols[*pos].GetType() == symbol_type)
-        ++pos;
-      else
-        pos = indexes.erase(pos);
-    }
+                                  symbol_visibility, indexes) > 0 &&
+      symbol_type != eSymbolTypeAny) {
+    llvm::erase_if(indexes, [this, symbol_type](uint32_t index) {
+      return m_symbols[index].GetType() != symbol_type;
+    });
   }
   return indexes.size();
 }
@@ -767,7 +760,7 @@ uint32_t Symtab::AppendSymbolIndexesMatchingRegExAndType(
     if (symbol_type == eSymbolTypeAny ||
         m_symbols[i].GetType() == symbol_type) {
       const char *name =
-          m_symbols[i].GetMangled().GetName(name_preference).AsCString();
+          m_symbols[i].GetMangled().GetName(name_preference).AsCString(nullptr);
       if (name) {
         if (regexp.Execute(name))
           indexes.push_back(i);
@@ -793,7 +786,7 @@ uint32_t Symtab::AppendSymbolIndexesMatchingRegExAndType(
         continue;
 
       const char *name =
-          m_symbols[i].GetMangled().GetName(name_preference).AsCString();
+          m_symbols[i].GetMangled().GetName(name_preference).AsCString(nullptr);
       if (name) {
         if (regexp.Execute(name))
           indexes.push_back(i);

@@ -308,6 +308,13 @@ struct Struct2 {
   // expected-error@+2{{variable referenced by 'link' clause not in global or namespace scope must be marked 'extern'}}
   // expected-error@+1{{variable referenced by 'link' clause not in global or namespace scope must be marked 'extern'}}
 #pragma acc declare link(I, Local, ExternLocal)
+
+    int Local2[5];
+    int Local3[5];
+  // expected-error@+3{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-warning@+2{{sub-array as a variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{variable referenced by 'link' clause not in global or namespace scope must be marked 'extern'}}
+#pragma acc declare link(Local2[1], Local3[1:1])
 }
 };
 

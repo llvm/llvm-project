@@ -94,7 +94,7 @@ const char *ScriptedThread::GetName() {
   std::optional<std::string> thread_name = GetInterface()->GetName();
   if (!thread_name)
     return nullptr;
-  return ConstString(thread_name->c_str()).AsCString();
+  return ConstString(thread_name->c_str()).AsCString(nullptr);
 }
 
 const char *ScriptedThread::GetQueueName() {
@@ -102,7 +102,7 @@ const char *ScriptedThread::GetQueueName() {
   std::optional<std::string> queue_name = GetInterface()->GetQueue();
   if (!queue_name)
     return nullptr;
-  return ConstString(queue_name->c_str()).AsCString();
+  return ConstString(queue_name->c_str()).AsCString(nullptr);
 }
 
 void ScriptedThread::WillResume(StateType resume_state) {}
@@ -210,7 +210,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
     SymbolContext sc;
     symbol_addr.CalculateSymbolContext(&sc);
 
-    return std::make_shared<StackFrame>(this->shared_from_this(), idx, idx, cfa,
+    return std::make_shared<StackFrame>(shared_from_this(), idx, idx, cfa,
                                         cfa_is_valid, pc,
                                         StackFrame::Kind::Synthetic, artificial,
                                         behaves_like_zeroth_frame, &sc);
@@ -231,8 +231,8 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       return error.ToError();
     }
 
-    auto frame_or_error =
-        ScriptedFrame::Create(*this, nullptr, object_sp->GetAsGeneric());
+    auto frame_or_error = ScriptedFrame::Create(
+        shared_from_this(), GetInterface(), nullptr, object_sp->GetAsGeneric());
 
     if (!frame_or_error) {
       ScriptedInterface::ErrorWithMessage<bool>(

@@ -19,14 +19,17 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineModuleSlotTracker.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -39,6 +42,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -69,6 +73,12 @@ static cl::opt<bool> SimplifyMIR(
 
 static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
                                     cl::desc("Print MIR debug-locations"));
+
+// TODO: Remove once the transition to the symbolic form is over.
+static cl::opt<bool>
+    PrintSymbolicInlineAsmOps("print-symbolic-inline-asm-ops", cl::Hidden,
+                              cl::init(false),
+                              cl::desc("Print inline asm operands as names"));
 
 namespace {
 
@@ -101,8 +111,8 @@ struct MFPrintState {
   /// Synchronization scope names registered with LLVMContext.
   SmallVector<StringRef, 8> SSNs;
 
-  MFPrintState(const MachineModuleInfo &MMI, const MachineFunction &MF)
-      : MST(MMI, &MF) {}
+  MFPrintState(MFGetterFnT Fn, const MachineFunction &MF)
+      : MST(std::move(Fn), &MF) {}
 };
 
 } // end anonymous namespace
@@ -167,10 +177,13 @@ static void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
 static void convertCalledGlobals(yaml::MachineFunction &YMF,
                                  const MachineFunction &MF,
                                  MachineModuleSlotTracker &MST);
+static void convertPrefetchTargets(yaml::MachineFunction &YMF,
+                                   const MachineFunction &MF);
 
-static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
+static void printMF(raw_ostream &OS, MFGetterFnT Fn,
                     const MachineFunction &MF) {
-  MFPrintState State(MMI, MF);
+  MFPrintState State(std::move(Fn), MF);
+
   State.RegisterMaskIds = initRegisterMaskIds(MF);
 
   yaml::MachineFunction YamlMF;
@@ -237,6 +250,8 @@ static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
   convertMachineMetadataNodes(YamlMF, MF, MST);
 
   convertCalledGlobals(YamlMF, MF, MST);
+
+  convertPrefetchTargets(YamlMF, MF);
 
   yaml::Output Out(OS);
   if (!SimplifyMIR)
@@ -537,7 +552,7 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
         std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
 
-    auto [ArgRegPairs, CalleeTypeIds] = CallSiteInfo;
+    auto [ArgRegPairs, CalleeTypeIds, _] = CallSiteInfo;
     // Construct call arguments and theirs forwarding register info.
     for (auto ArgReg : ArgRegPairs) {
       yaml::CallSiteInfo::ArgRegPair YmlArgReg;
@@ -593,6 +608,19 @@ static void convertCalledGlobals(yaml::MachineFunction &YMF,
                return std::tie(A.CallSite.BlockNum, A.CallSite.Offset) <
                       std::tie(B.CallSite.BlockNum, B.CallSite.Offset);
              });
+}
+
+static void convertPrefetchTargets(yaml::MachineFunction &YMF,
+                                   const MachineFunction &MF) {
+  for (const auto &[BBID, CallsiteIndexes] : MF.getPrefetchTargets()) {
+    for (auto CallsiteIndex : CallsiteIndexes) {
+      std::string Str;
+      raw_string_ostream StrOS(Str);
+      StrOS << "bb_id " << BBID.BaseID << ", " << BBID.CloneID << ", "
+            << CallsiteIndex;
+      YMF.PrefetchTargets.push_back(yaml::FlowStringValue(Str));
+    }
+  }
 }
 
 static void convertMCP(yaml::MachineFunction &MF,
@@ -895,6 +923,10 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
   }
   if (uint32_t CFIType = MI.getCFIType())
     OS << LS << "cfi-type " << CFIType;
+  if (Value *DS = MI.getDeactivationSymbol()) {
+    OS << LS << "deactivation-symbol ";
+    MIRFormatter::printIRValue(OS, *DS, State.MST);
+  }
 
   if (auto Num = MI.peekDebugInstrNum())
     OS << LS << "debug-instr-number " << Num;
@@ -942,6 +974,35 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
       MachineOperand::printSubRegIdx(OS, Op.getImm(), TRI);
       break;
     }
+    if (PrintSymbolicInlineAsmOps && MI.isInlineAsm()) {
+      if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+        unsigned ExtraInfo = Op.getImm();
+        interleave(InlineAsm::getExtraInfoNames(ExtraInfo), OS, " ");
+        break;
+      }
+
+      int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
+      if (FlagIdx >= 0 && (unsigned)FlagIdx == OpIdx) {
+        InlineAsm::Flag F(Op.getImm());
+        OS << F.getKindName();
+
+        unsigned RCID;
+        if ((F.isRegDefKind() || F.isRegUseKind() ||
+             F.isRegDefEarlyClobberKind()) &&
+            F.hasRegClassConstraint(RCID))
+          OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
+
+        if (F.isMemKind()) {
+          InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
+          OS << ':' << InlineAsm::getMemConstraintName(MCID);
+        }
+
+        unsigned TiedTo;
+        if (F.isUseOperandTiedToDef(TiedTo))
+          OS << " tiedto:$" << TiedTo;
+        break;
+      }
+    }
     [[fallthrough]];
   case MachineOperand::MO_Register:
   case MachineOperand::MO_CImmediate:
@@ -960,7 +1021,8 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
   case MachineOperand::MO_Predicate:
   case MachineOperand::MO_BlockAddress:
   case MachineOperand::MO_DbgInstrRef:
-  case MachineOperand::MO_ShuffleMask: {
+  case MachineOperand::MO_ShuffleMask:
+  case MachineOperand::MO_LaneMask: {
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
@@ -1014,5 +1076,17 @@ void llvm::printMIR(raw_ostream &OS, const Module &M) {
 
 void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
                     const MachineFunction &MF) {
-  printMF(OS, MMI, MF);
+  printMF(OS, [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
+}
+
+void llvm::printMIR(raw_ostream &OS, FunctionAnalysisManager &FAM,
+                    const MachineFunction &MF) {
+  printMF(
+      OS,
+      [&](const Function &F) {
+        return &FAM.getResult<MachineFunctionAnalysis>(
+                       const_cast<Function &>(F))
+                    .getMF();
+      },
+      MF);
 }

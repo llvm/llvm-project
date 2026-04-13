@@ -8,7 +8,7 @@ program p
    !$omp declare mapper(xx : t1 :: nn) map(to: nn, nn%x)
    !$omp declare mapper(t1 :: nn) map(from: nn)
 
-   !CHECK-LABEL: omp.declare_mapper @_QQFt1.omp.default.mapper : !fir.type<_QFTt1{x:!fir.array<256xi32>}>
+   !CHECK-LABEL: omp.declare_mapper @_QQFt1_omp_default_mapper : !fir.type<_QFTt1{x:!fir.array<256xi32>}>
    !CHECK-LABEL: omp.declare_mapper @_QQFxx : !fir.type<_QFTt1{x:!fir.array<256xi32>}>
 
    type(t1) :: a, b
@@ -20,7 +20,7 @@ program p
    end do
    !$omp end target
 
-   !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) mapper(@_QQFt1.omp.default.mapper) -> {{.*}} {name = "b"}
+   !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) mapper(@_QQFt1_omp_default_mapper) -> {{.*}} {name = "b"}
    !CHECK: omp.target map_entries(%[[MAP_B]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
    !$omp target map(mapper(default) : b)
    do i = 1, n

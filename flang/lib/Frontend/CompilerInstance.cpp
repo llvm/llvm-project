@@ -28,6 +28,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -288,25 +289,16 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
                                           const llvm::Triple triple) {
   llvm::StringRef cpu = targetOpts.cpu;
   llvm::StringMap<bool> implicitFeaturesMap;
-  std::string errorMsg;
-  bool ptxVer = false;
 
   // Add target features specified by the user
   for (auto &userFeature : targetOpts.featuresAsWritten) {
     llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
     implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
-    // Check if the user provided a PTX version
-    if (userKeyString.starts_with("ptx"))
-      ptxVer = true;
   }
 
-  // Set the default PTX version to `ptx61` if none was provided.
-  // TODO: set the default PTX version based on the chip.
-  if (!ptxVer)
-    implicitFeaturesMap["ptx61"] = true;
-
-  // Set the compute capability.
-  implicitFeaturesMap[cpu.str()] = true;
+  // Set the compute capability (only if one was explicitly provided).
+  if (!cpu.empty())
+    implicitFeaturesMap[cpu.str()] = true;
 
   llvm::SmallVector<std::string> featuresVec;
   for (auto &implicitFeatureItem : implicitFeaturesMap) {
@@ -314,6 +306,29 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
                            implicitFeatureItem.first().str())
                               .str());
   }
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
+static std::string getExplicitAndImplicitPPCTargetFeatures(
+    clang::DiagnosticsEngine &diags, const TargetOptions &targetOpts,
+    const llvm::Triple triple, const CodeGenOptions &CGOpts) {
+  std::vector<std::string> featuresVec;
+  std::optional<llvm::StringMap<bool>> FeaturesOpt =
+      llvm::PPC::getPPCDefaultTargetFeatures(triple, targetOpts.cpu);
+  if (FeaturesOpt) {
+    for (auto &I : FeaturesOpt.value()) {
+      featuresVec.push_back(
+          (llvm::Twine(I.second ? "+" : "-") + I.first().str()).str());
+    }
+  }
+
+  // Include others set by ppc::getPPCTargetFeatures() and specified by users
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
+    featuresVec.push_back(userFeature[0] + userKeyString.str());
+  }
+
   llvm::sort(featuresVec);
   return llvm::join(featuresVec, ",");
 }
@@ -334,6 +349,9 @@ std::string CompilerInstance::getTargetFeatures() {
   } else if (triple.isNVPTX()) {
     return getExplicitAndImplicitNVPTXTargetFeatures(getDiagnostics(),
                                                      targetOpts, triple);
+  } else if (triple.isPPC()) {
+    return getExplicitAndImplicitPPCTargetFeatures(
+        getDiagnostics(), targetOpts, triple, getInvocation().getCodeGenOpts());
   }
   return llvm::join(targetOpts.featuresAsWritten.begin(),
                     targetOpts.featuresAsWritten.end(), ",");
@@ -364,6 +382,7 @@ bool CompilerInstance::setUpTargetMachine() {
 
   llvm::TargetOptions tOpts = llvm::TargetOptions();
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
+  tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
 
   targetMachine.reset(theTarget->createTargetMachine(
       triple, /*CPU=*/targetOpts.cpu,

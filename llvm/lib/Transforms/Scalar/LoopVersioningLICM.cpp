@@ -413,7 +413,7 @@ bool LoopVersioningLICM::legalLoopInstructions() {
     LLVM_DEBUG(dbgs() << "    Found a read-only loop!\n");
     return false;
   }
-  // Profitablity check:
+  // Profitability check:
   // Check invariant threshold, should be in limit.
   if (InvariantCounter * 100 < InvariantThreshold * LoadAndStoreCounter) {
     LLVM_DEBUG(

@@ -2,45 +2,85 @@
 The LLVM C Library
 ==================
 
-.. warning::
-  LLVM-libc is not yet ABI stable; currently only static linking is supported.
-  LLVM-libc developers retain the right to modify the ABI of types used
-  throughout the library. Another libc should be preferred if ABI stability is
-  a requirement.
+LLVM-libc is a from-scratch implementation of the C standard library, built as
+part of the LLVM project.  It is designed to be **modular** (any piece can be
+used independently), **multiplatform** (Linux, GPU, baremetal embedded, UEFI,
+macOS, Windows), and written in modern C++ for correctness, performance, and
+safety.
 
-.. note::
-  LLVM-libc is not fully complete right now. Some programs may fail to build due
-  to missing functions. If you would like to help us finish LLVM-libc, check
-  out "`Contributing to the libc project <contributing.html>`__" in the sidebar
-  or ask on `discord <https://discord.com/channels/636084430946959380/636732994891284500>`__
-  (`invite link <https://discord.gg/xS7Z362>`__).
+What Works Today
+================
 
-Introduction
+LLVM-libc is **actively used in production** for a targeted set of use cases,
+though coverage is still growing and many programs that depend on the full C
+standard library (regex, locale, wide-character I/O, etc.) will not yet compile
+against it:
+
+* **Static-linked Linux servers and containers** — used in production at Google
+  (servers and Pixel Buds) on x86-64 and AArch64.
+* **GPU compute (AMDGPU, NVPTX)** — libc functions available in GPU kernels
+  via LLVM's offloading runtime.  :doc:`GPU docs <gpu/index>`
+* **Baremetal embedded (ARM, RISC-V, AArch64)** — minimal footprint builds
+  for microcontrollers and custom hardware.
+* **UEFI applications** — experimental support for firmware development.
+  :doc:`UEFI docs <uefi/index>`
+* **LLVM ecosystem internals** — libc++ and the offloading runtime consume
+  LLVM-libc directly via :doc:`Hand-in-Hand <hand_in_hand>`.
+* **Toolchain integrations** — pieces of LLVM-libc are used in Android Bionic,
+  Fuchsia, Emscripten, and the ARM embedded toolchain.
+
+Coverage is still growing.  See the :doc:`implementation status <headers/index>`
+pages for per-header detail, and the
+:doc:`platform support <platform_support>` page for OS/architecture coverage.
+
+Getting Started
+===============
+
+If you are new to LLVM-libc, :doc:`getting_started` is the right first stop.
+It covers cloning, building, testing, and verifying your installation in one
+place.
+
+Want to use LLVM-libc *alongside* your system libc instead of replacing it?
+See :doc:`overlay_mode`.
+
+Get Involved
 ============
 
-LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
+LLVM-libc is an active project and welcomes contributors of all experience
+levels.  See :doc:`contributing` to learn how to help.
 
-- Fully compliant with current C23 and POSIX.1-2024 standards.
-- Easily decomposed and embedded: Supplement or replace system C library
-  functionality easily.  This is useful to get consistent math precision across
-  systems, or updated memory operations for newer microarchitectures.  These
-  pieces will work on Linux, MacOS, Windows, and Fuchsia.
-- The creation of fully static binaries without license implications.
-- Increase whole program optimization opportunities for static binaries through
-  ability to inline math and memory operations.
-- Reduce coding errors by coding in modern C++ through the use of lightweight
-  containers during coding that can be optimized away at runtime.
-- Permit fuzzing and sanitizer instrumentation of user binaries including the
-  libc functions.
-- A complete testsuite that tests both the public interface and internal
-  algorithms.
-- `Fuzzing <https://github.com/llvm/llvm-project/tree/main/libc/fuzzing>`__
-
+* `Source code <https://github.com/llvm/llvm-project/tree/main/libc>`__
+* `Bug reports <https://github.com/llvm/llvm-project/labels/libc>`__
+* `Discourse <https://discourse.llvm.org/c/runtimes/libc>`__
+* `Discord <https://discord.com/channels/636084430946959380/636732994891284500>`__
+  (`invite <https://discord.gg/xS7Z362>`__)
+* `Buildbot <https://lab.llvm.org/buildbot/#/builders?tags=libc>`__
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Status & Support
+   :caption: Using LLVM-libc
+
+   getting_started
+   build_concepts
+   overlay_mode
+   full_host_build
+   full_cross_build
+   configure
+   hand_in_hand
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Platforms
+
+   gpu/index.rst
+   uefi/index.rst
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Implementation Status
 
    headers/index.rst
    arch_support
@@ -50,37 +90,18 @@ LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Simple Usage
-
-   getting_started
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Advanced Usage
-
-   full_host_build
-   full_cross_build
-   overlay_mode
-   gpu/index.rst
-   uefi/index.rst
-   configure
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
    :caption: Development
 
-   Maintainers
+   contributing
    build_and_test
    dev/index.rst
    porting
-   contributing
+   Maintainers
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Useful Links
+   :caption: Links
 
    talks
    Source Code <https://github.com/llvm/llvm-project/tree/main/libc>

@@ -46,6 +46,9 @@ inline constexpr AllocTokenMode DefaultAllocTokenMode =
 LLVM_ABI std::optional<AllocTokenMode>
 getAllocTokenModeFromString(StringRef Name);
 
+/// Returns the canonical string name for the given AllocTokenMode.
+LLVM_ABI StringRef getAllocTokenModeAsString(AllocTokenMode Mode);
+
 /// Metadata about an allocation used to generate a token ID.
 struct AllocTokenMetadata {
   SmallString<64> TypeName;

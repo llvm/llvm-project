@@ -193,7 +193,7 @@ Values live across a suspend point need to be stored in the coroutine frame to
 be available in the continuation function. This frame is stored as a tail to the
 `async context`.
 
-Every suspend point takes an `context projection function` argument which
+Every suspend point takes a `context projection function` argument which
 describes how-to obtain the continuations `async context` and every suspend
 point has an associated `resume function` denoted by the
 `llvm.coro.async.resume` intrinsic. The coroutine is resumed by calling this
@@ -221,7 +221,7 @@ a parameter to the `llvm.coro.suspend.async` intrinsic.
                                               ptr %resume_func_ptr,
                                               ptr %context_projection_function
 
-The frontend should provide a `async function pointer` struct associated with
+The frontend should provide an `async function pointer` struct associated with
 each async coroutine by `llvm.coro.id.async`'s argument. The initial size and
 alignment of the `async context` must be provided as arguments to the
 `llvm.coro.id.async` intrinsic. Lowering will update the size entry with the
@@ -314,7 +314,7 @@ coroutine handle. The second parameter of `coro.begin` is given a block of memor
 to be used if the coroutine frame needs to be allocated dynamically.
 
 The `coro.id`_ intrinsic serves as coroutine identity useful in cases when the
-`coro.begin`_ intrinsic get duplicated by optimization passes such as
+`coro.begin`_ intrinsic gets duplicated by optimization passes such as
 jump-threading.
 
 The `cleanup` block destroys the coroutine frame. The `coro.free`_ intrinsic,
@@ -873,6 +873,8 @@ the coroutine destroy function. Otherwise it is replaced with an indirect call
 based on the function pointer for the destroy function stored in the coroutine
 frame. Destroying a coroutine that is not suspended leads to undefined behavior.
 
+This intrinsic implies `coro.dead`.
+
 .. _coro.resume:
 
 'llvm.coro.resume' Intrinsic
@@ -1167,6 +1169,48 @@ Example (standard deallocation functions):
   cleanup:
     %mem = call ptr @llvm.coro.free(token %id, ptr %frame)
     call void @free(ptr %mem)
+    ret void
+
+.. _coro.dead:
+
+'llvm.coro.dead' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare void @llvm.coro.dead(ptr <frame>)
+
+Overview:
+"""""""""
+
+The 'llvm.coro.dead' intrinsic is an optimization hint to help Heap Allocation eLision Optimization (HALO)
+mark the end of lifetime of the coroutine frame.
+
+Arguments:
+""""""""""
+
+The argument is a pointer to the coroutine frame. This should be the same
+pointer that was returned by prior `coro.begin` call.
+
+Semantics:
+""""""""""
+
+A frontend can delegate this intrinsic to indicate that the coroutine frame is dead, allowing
+coroutines that are not explicitly destroyed via `coro.destroy` to be elided.
+
+Example:
+"""""""""""""""""""""""""""""""""""""""
+
+.. code-block:: llvm
+
+  cleanup:
+    %mem = call ptr @llvm.coro.free(token %id, ptr %frame)
+    %mem_not_null = icmp ne ptr %mem, null
+    br i1 %mem_not_null, label %if.then, label %if.end
+  if.then:
+    call void @CustomFree(ptr %mem)
+    br label %if.end
+  if.end:
+    call void @llvm.coro.dead(ptr %frame)
     ret void
 
 .. _coro.alloc:
@@ -2149,7 +2193,7 @@ CoroEarly
 The CoroEarly pass ensures later middle end passes correctly interpret coroutine 
 semantics and lowers coroutine intrinsics that not needed to be preserved to 
 help later coroutine passes. This pass lowers `coro.promise`_, `coro.frame`_ and 
-`coro.done`_ intrinsics. Afterwards, it replace uses of promise alloca with 
+`coro.done`_ intrinsics. Afterwards, it replaces uses of promise alloca with 
 `coro.promise`_ intrinsic.
 
 .. _CoroSplit:
@@ -2188,7 +2232,7 @@ Attributes
 coro_only_destroy_when_complete
 -------------------------------
 
-When the coroutine are marked with coro_only_destroy_when_complete, it indicates
+When the coroutine is marked with coro_only_destroy_when_complete, it indicates
 the coroutine must reach the final suspend point when it get destroyed.
 
 This attribute only works for switched-resume coroutines now.
@@ -2199,7 +2243,7 @@ coro_elide_safe
 When a Call or Invoke instruction to switch ABI coroutine `f` is marked with
 `coro_elide_safe`, CoroSplitPass generates a `f.noalloc` ramp function.
 `f.noalloc` has one more argument than its original ramp function `f`, which is
-the pointer to the allocated frame. `f.noalloc` also suppressed any allocations
+the pointer to the allocated frame. `f.noalloc` also suppresses any allocations
 or deallocations that may be guarded by `@llvm.coro.alloc` and `@llvm.coro.free`.
 
 CoroAnnotationElidePass performs the heap elision when possible. Note that for
@@ -2251,5 +2295,8 @@ Areas Requiring Attention
 
 #. Make required changes to make sure that coroutine optimizations work with
    LTO.
+
+#. In Windows EH, exception objects must be allocated on the stack (see :ref:wineh for details).
+   We identify an exception object as an alloca that has `catchpad` users.
 
 #. More tests, more tests, more tests

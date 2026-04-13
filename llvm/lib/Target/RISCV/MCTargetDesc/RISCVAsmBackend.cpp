@@ -14,6 +14,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
@@ -195,6 +196,10 @@ static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
     return RISCV::PseudoLongBEQ;
   case RISCV::BNE:
     return RISCV::PseudoLongBNE;
+  case RISCV::BEQI:
+    return RISCV::PseudoLongBEQI;
+  case RISCV::BNEI:
+    return RISCV::PseudoLongBNEI;
   case RISCV::BLT:
     return RISCV::PseudoLongBLT;
   case RISCV::BGE:
@@ -284,6 +289,8 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   }
   case RISCV::BEQ:
   case RISCV::BNE:
+  case RISCV::BEQI:
+  case RISCV::BNEI:
   case RISCV::BLT:
   case RISCV::BGE:
   case RISCV::BLTU:
@@ -674,8 +681,8 @@ bool RISCVAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
 //
 // \returns nullptr if this isn't a S_PCREL_LO pointing to a known PC-relative
 // HI fixup.
-static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
-                                      const MCFragment **DFOut) {
+const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
+                               const MCFragment **DFOut) {
   MCValue AUIPCLoc;
   if (!Expr.getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
     return nullptr;
@@ -822,8 +829,10 @@ static bool relaxableFixupNeedsRelocation(const MCFixupKind Kind) {
   default:
     break;
   case RISCV::fixup_riscv_rvc_jump:
+  case RISCV::fixup_riscv_branch:
   case RISCV::fixup_riscv_rvc_branch:
-  case RISCV::fixup_riscv_jal:
+  case RISCV::fixup_riscv_qc_e_branch:
+  case RISCV::fixup_riscv_rvc_imm:
     return false;
   }
   return true;
@@ -954,12 +963,64 @@ RISCVAsmBackend::createObjectTargetWriter() const {
   return createRISCVELFObjectWriter(OSABI, Is64Bit);
 }
 
+class DarwinRISCVAsmBackend : public RISCVAsmBackend {
+public:
+  DarwinRISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
+                        bool IsLittleEndian, const MCTargetOptions &Options)
+      : RISCVAsmBackend(STI, OSABI, Is64Bit, IsLittleEndian, Options) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    const Triple &TT = STI.getTargetTriple();
+    uint32_t CPUType = cantFail(MachO::getCPUType(TT));
+    uint32_t CPUSubType = cantFail(MachO::getCPUSubType(TT));
+    return createRISCVMachObjectWriter(CPUType, CPUSubType);
+  }
+
+  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
+                uint64_t &FixedValue, bool IsResolved) override;
+
+  std::optional<bool> evaluateFixup(const MCFragment &F, MCFixup &Fixup,
+                                    MCValue &Target, uint64_t &Value) override {
+    const MCFixup *AUIPCFixup;
+    const MCFragment *AUIPCDF;
+    const MCFixupKind FKind = Fixup.getKind();
+    if ((FKind == RISCV::fixup_riscv_pcrel_lo12_i) ||
+        (FKind == RISCV::fixup_riscv_pcrel_lo12_s)) {
+      AUIPCFixup =
+          getPCRelHiFixup(cast<MCSpecifierExpr>(*Fixup.getValue()), &AUIPCDF);
+      if (!AUIPCFixup) {
+        getContext().reportError(Fixup.getLoc(),
+                                 "could not find corresponding %pcrel_hi");
+        return true;
+      }
+
+      return false;
+    }
+
+    // Use default handling for all other cases.
+    return {};
+  }
+};
+
 MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+  if (TT.isOSBinFormatMachO())
+    return new DarwinRISCVAsmBackend(STI, OSABI, TT.isArch64Bit(),
+                                     TT.isLittleEndian(), Options);
+
   return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), TT.isLittleEndian(),
                              Options);
+}
+
+bool DarwinRISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+                                     const MCValue &Target,
+                                     uint64_t &FixedValue, bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+  return IsResolved;
 }

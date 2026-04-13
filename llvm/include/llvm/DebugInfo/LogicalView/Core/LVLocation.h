@@ -100,7 +100,7 @@ public:
   LVLocation() : LVObject() { setIsLocation(); }
   LVLocation(const LVLocation &) = delete;
   LVLocation &operator=(const LVLocation &) = delete;
-  virtual ~LVLocation() = default;
+  ~LVLocation() override = default;
 
   PROPERTY(Property, IsAddressRange);
   PROPERTY(Property, IsBaseClassOffset);
@@ -171,7 +171,7 @@ public:
   LVLocationSymbol() : LVLocation() {}
   LVLocationSymbol(const LVLocationSymbol &) = delete;
   LVLocationSymbol &operator=(const LVLocationSymbol &) = delete;
-  ~LVLocationSymbol() = default;
+  ~LVLocationSymbol() override = default;
 
   void addObject(LVAddress LowPC, LVAddress HighPC, LVUnsigned SectionOffset,
                  uint64_t LocDescOffset) override;

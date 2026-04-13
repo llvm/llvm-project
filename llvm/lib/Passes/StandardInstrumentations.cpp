@@ -537,7 +537,7 @@ void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
   Out << "*** IR Dump After " << PassID << " on " << Name << " ***\n" << After;
 }
 
-IRChangedTester::~IRChangedTester() {}
+IRChangedTester::~IRChangedTester() = default;
 
 void IRChangedTester::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   if (TestChanged != "")
@@ -1566,7 +1566,7 @@ void InLineChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     TextChangeReporter<IRDataT<EmptyData>>::registerRequiredCallbacks(PIC);
 }
 
-TimeProfilingPassesHandler::TimeProfilingPassesHandler() {}
+TimeProfilingPassesHandler::TimeProfilingPassesHandler() = default;
 
 void TimeProfilingPassesHandler::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
@@ -2192,14 +2192,10 @@ namespace llvm {
 DCData::DCData(const BasicBlock &B) {
   // Build up transition labels.
   const Instruction *Term = B.getTerminator();
-  if (const BranchInst *Br = dyn_cast<const BranchInst>(Term))
-    if (Br->isUnconditional())
-      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "");
-    else {
-      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
-      addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
-    }
-  else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
+  if (const CondBrInst *Br = dyn_cast<const CondBrInst>(Term)) {
+    addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
+    addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
+  } else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
     addSuccessorLabel(Sw->case_default()->getCaseSuccessor()->getName().str(),
                       "default");
     for (auto &C : Sw->cases()) {
@@ -2499,7 +2495,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
       [&PIC, this](StringRef PassID, Any IR) {
         SavedIR.clear();
         raw_string_ostream OS(SavedIR);
-        OS << formatv("*** Dump of {0}IR Before Last Pass {1}",
+        OS << formatv("; *** Dump of {0}IR Before Last Pass {1}",
                       llvm::forcePrintModuleIR() ? "Module " : "", PassID);
         if (!isInteresting(IR, PassID, PIC.getPassNameForClassName(PassID))) {
           OS << " Filtered Out ***\n";

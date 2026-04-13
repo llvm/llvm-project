@@ -11,13 +11,13 @@ define hidden void @_ZTv0_n24_N2C6D1Ev(ptr %this) minsize sspreq "target-feature
 ; CHECK-LABEL: _ZTv0_n24_N2C6D1Ev:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b _ZN2C6D1Ev
@@ -39,13 +39,13 @@ define hidden void @_ZTv0_n24_N2C6D0Ev(ptr %this) minsize sspreq "target-feature
 ; CHECK-LABEL: _ZTv0_n24_N2C6D0Ev:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %entry
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b _ZN2C6D0Ev
@@ -66,13 +66,13 @@ define hidden void @_ZTv0_n24_N3C10D1Ev(ptr %this) minsize sspreq "target-featur
 ; CHECK-LABEL: _ZTv0_n24_N3C10D1Ev:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    b.ne .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %entry
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b _ZN3C10D1Ev
@@ -93,13 +93,13 @@ define hidden void @_ZTv0_n24_N3C10D0Ev(ptr %this) minsize sspreq "target-featur
 ; CHECK-LABEL: _ZTv0_n24_N3C10D0Ev:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    b.ne .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %entry
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b _ZN3C10D0Ev

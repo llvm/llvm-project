@@ -150,6 +150,7 @@ enum class TentativeCXXTypeIdContext {
   AsTemplateArgument,
   InTrailingReturnType,
   AsGenericSelectionArgument,
+  AsReflectionOperand
 };
 
 /// The kind of attribute specifier we have found.
@@ -353,9 +354,20 @@ public:
   /// Note that this routine emits an error if you call it with ::new or
   /// ::delete as the current tokens, so only call it in contexts where these
   /// are invalid.
+  ///
+  /// \param IsAddressOfOperand A hint indicating whether the current token
+  /// sequence is likely part of an address-of operation. Used by code
+  /// completion to filter results; may not be set by all callers.
   bool
   TryAnnotateTypeOrScopeToken(ImplicitTypenameContext AllowImplicitTypename =
-                                  ImplicitTypenameContext::No);
+                                  ImplicitTypenameContext::No,
+                              bool IsAddressOfOperand = false);
+
+  bool TryAnnotateTypeOrScopeToken(bool IsAddressOfOperand) {
+    return TryAnnotateTypeOrScopeToken(
+        /*AllowImplicitTypename=*/ImplicitTypenameContext::No,
+        /*IsAddressOfOperand=*/IsAddressOfOperand);
+  }
 
   /// Try to annotate a type or scope token, having already parsed an
   /// optional scope specifier. \p IsNewScope should be \c true unless the scope
@@ -565,10 +577,6 @@ private:
 
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
-
-  // C++2a contextual keywords.
-  mutable IdentifierInfo *Ident_import;
-  mutable IdentifierInfo *Ident_module;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -1081,6 +1089,9 @@ private:
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
+  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
+  void DiagnoseInvalidCXXModuleImport();
+
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
   void CodeCompleteDirective(bool InConditional) override;
@@ -1091,6 +1102,8 @@ private:
                                  unsigned ArgumentIndex) override;
   void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) override;
   void CodeCompleteNaturalLanguage() override;
+  void CodeCompleteModuleImport(SourceLocation ImportLoc,
+                                ModuleIdPath Path) override;
 
   ///@}
 
@@ -2016,7 +2029,7 @@ private:
 
   /// isTypeSpecifierQualifier - Return true if the current token could be the
   /// start of a specifier-qualifier-list.
-  bool isTypeSpecifierQualifier();
+  bool isTypeSpecifierQualifier(const Token &Tok);
 
   /// isKnownToBeTypeSpecifier - Return true if we know that the specified token
   /// is definitely a type-specifier.  Return false if it isn't part of a type
@@ -2117,10 +2130,14 @@ private:
 
   ExprResult ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName);
 
-  bool
-  ParseAttributeArgumentList(const clang::IdentifierInfo &AttrName,
-                             SmallVectorImpl<Expr *> &Exprs,
-                             ParsedAttributeArgumentsProperties ArgsProperties);
+  /// Parses a comma-delimited list of arguments of an attribute \p AttrName,
+  /// filling \p Exprs. \p ArgsProperties specifies which of the arguments
+  /// should be parsed as unevaluated string literals. \p Arg is the number
+  /// of arguments parsed before calling / this function (the index of the
+  /// argument to be parsed next).
+  bool ParseAttributeArgumentList(
+      const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
+      ParsedAttributeArgumentsProperties ArgsProperties, unsigned Arg);
 
   /// Parses syntax-generic attribute arguments for attributes which are
   /// known to the implementation, and adds them to the given ParsedAttributes
@@ -2834,8 +2851,6 @@ private:
   mutable IdentifierInfo *Ident_final;
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
-  mutable IdentifierInfo *Ident_trivially_relocatable_if_eligible;
-  mutable IdentifierInfo *Ident_replaceable_if_eligible;
 
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
@@ -3129,7 +3144,7 @@ private:
 
   /// isClassCompatibleKeyword - Determine whether the next token is a C++11
   /// 'final', a C++26 'trivially_relocatable_if_eligible',
-  /// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+  /// or Microsoft 'sealed' or 'abstract' contextual
   /// keyword.
   bool isClassCompatibleKeyword() const;
 
@@ -3599,16 +3614,8 @@ private:
   /// \endverbatim
   AccessSpecifier getAccessSpecifierIfPresent() const;
 
-  bool isCXX2CTriviallyRelocatableKeyword(Token Tok) const;
-  bool isCXX2CTriviallyRelocatableKeyword() const;
-  void ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS);
-
-  bool isCXX2CReplaceableKeyword(Token Tok) const;
-  bool isCXX2CReplaceableKeyword() const;
-  void ParseCXX2CReplaceableSpecifier(SourceLocation &MRS);
-
   /// 'final', a C++26 'trivially_relocatable_if_eligible',
-  /// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+  /// or Microsoft 'sealed' or 'abstract' contextual
   /// keyword.
   bool isClassCompatibleKeyword(Token Tok) const;
 
@@ -3853,6 +3860,9 @@ private:
   /// of address-of gets special treatment due to member pointers. NotCastExpr
   /// is set to true if the token is not the start of a cast-expression, and no
   /// diagnostic is emitted in this case and no tokens are consumed.
+  /// In addition, isAddressOfOperand is propagated to SemaCodeCompletion
+  /// as a heuristic for function completions (to provide different behavior
+  /// when the user is likely taking the address of a function vs. calling it).
   ///
   /// \verbatim
   ///       cast-expression: [C99 6.5.4]
@@ -4340,7 +4350,7 @@ private:
       return isCXXTypeId(TentativeCXXTypeIdContext::AsGenericSelectionArgument,
                          isAmbiguous);
     }
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
 
   /// Checks if the current tokens form type-id or expression.
@@ -4351,7 +4361,7 @@ private:
       bool isAmbiguous;
       return isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous, isAmbiguous);
     }
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
 
   /// ParseBlockId - Parse a block-id, which roughly looks like int (int x).
@@ -4565,6 +4575,14 @@ private:
   ///
   /// \param OnlyNamespace If true, only considers namespaces in lookup.
   ///
+  /// \param IsAddressOfOperand A hint indicating the expression is part of
+  /// an address-of operation (e.g. '&'). Used by code completion to filter
+  /// results; may not be set by all callers.
+  ///
+  /// \param IsInDeclarationContext A hint indicating whether the current
+  /// context is likely a declaration. Used by code completion to filter
+  /// results; may not be set by all callers.
+  ///
   ///
   /// \returns true if there was an error parsing a scope specifier
   bool ParseOptionalCXXScopeSpecifier(
@@ -4572,7 +4590,23 @@ private:
       bool EnteringContext, bool *MayBePseudoDestructor = nullptr,
       bool IsTypename = false, const IdentifierInfo **LastII = nullptr,
       bool OnlyNamespace = false, bool InUsingDeclaration = false,
-      bool Disambiguation = false);
+      bool Disambiguation = false, bool IsAddressOfOperand = false,
+      bool IsInDeclarationContext = false);
+
+  bool ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS, ParsedType ObjectType,
+                                      bool ObjectHasErrors,
+                                      bool EnteringContext,
+                                      bool IsAddressOfOperand) {
+    return ParseOptionalCXXScopeSpecifier(
+        SS, ObjectType, ObjectHasErrors, EnteringContext,
+        /*MayBePseudoDestructor=*/nullptr,
+        /*IsTypename=*/false,
+        /*LastII=*/nullptr,
+        /*OnlyNamespace=*/false,
+        /*InUsingDeclaration=*/false,
+        /*Disambiguation=*/false,
+        /*IsAddressOfOperand=*/IsAddressOfOperand);
+  }
 
   //===--------------------------------------------------------------------===//
   // C++11 5.1.2: Lambda expressions
@@ -5020,7 +5054,7 @@ private:
     if (getLangOpts().CPlusPlus)
       return isCXXTypeId(TentativeCXXTypeIdContext::InParens, isAmbiguous);
     isAmbiguous = false;
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
   bool isTypeIdInParens() {
     bool isAmbiguous;
@@ -5157,6 +5191,15 @@ private:
 
   ///@}
 
+  //===--------------------------------------------------------------------===//
+  // Reflection parsing
+
+  /// ParseCXXReflectExpression - parses the operand of reflection operator.
+  ///
+  /// \returns on success, an expression holding the constructed CXXReflectExpr;
+  ///          on failure, an ExprError.
+  ExprResult ParseCXXReflectExpression();
+
   //
   //
   // -------------------------------------------------------------------------
@@ -5223,11 +5266,7 @@ private:
   ///         assignment-expression
   ///         '{' ...
   /// \endverbatim
-  ExprResult ParseInitializer() {
-    if (Tok.isNot(tok::l_brace))
-      return ParseAssignmentExpression();
-    return ParseBraceInitializer();
-  }
+  ExprResult ParseInitializer(Decl *DeclForInitializer = nullptr);
 
   /// MayBeDesignationStart - Return true if the current token might be the
   /// start of a designator.  If we can tell it is impossible that it is a
@@ -6773,6 +6812,9 @@ private:
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
 
+  /// Parses the 'counts' clause of a '#pragma omp split' directive.
+  OMPClause *ParseOpenMPCountsClause();
+
   /// Parses the 'permutation' clause of a '#pragma omp interchange' directive.
   OMPClause *ParseOpenMPPermutationClause();
 
@@ -7050,6 +7092,7 @@ private:
   std::unique_ptr<PragmaHandler> AttributePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
+  std::unique_ptr<PragmaHandler> ExportHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
 
   /// Initialize all pragma handlers.
@@ -7170,6 +7213,12 @@ private:
       SourceLocation &AnyLoc, SourceLocation &LastMatchRuleEndLoc);
 
   void HandlePragmaAttribute();
+
+  void zOSHandlePragmaHelper(tok::TokenKind);
+
+  /// Handle the annotation token produced for
+  /// #pragma export ...
+  void HandlePragmaExport();
 
   ///@}
 
@@ -7504,6 +7553,16 @@ public:
 
   StmtResult ParseBreakOrContinueStatement(bool IsContinue);
 
+  /// ParseDeferStatement
+  /// \verbatim
+  ///       defer-statement:
+  ///         '_Defer' deferred-block
+  ///
+  ///       deferred-block:
+  ///         unlabeled-statement
+  /// \endverbatim
+  StmtResult ParseDeferStatement(SourceLocation *TrailingElseLoc);
+
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs,
@@ -7677,7 +7736,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

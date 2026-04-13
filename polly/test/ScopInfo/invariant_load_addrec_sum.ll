@@ -1,10 +1,10 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Region: %entry.split---%if.end
 ; CHECK:     Invariant Accesses: {
 ; CHECK:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK:                 [y, p_1_loaded_from_j] -> { Stmt_for_body[i0] -> MemRef_j[0] };
-; CHECK:             Execution Context: [y, p_1_loaded_from_j] -> {  :  }
+; CHECK:             Execution Context: [y, p_1_loaded_from_j] -> { : y < 0 or y >= 0 }
 ; CHECK:     }
 
 ; CHECK:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]

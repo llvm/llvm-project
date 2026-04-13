@@ -44,8 +44,8 @@
 namespace llvm {
 namespace exegesis {
 
-static constexpr const char ModuleID[] = "ExegesisInfoTest";
-static constexpr const char FunctionID[] = "foo";
+static constexpr char ModuleID[] = "ExegesisInfoTest";
+static constexpr char FunctionID[] = "foo";
 static const Align kFunctionAlignment(4096);
 
 // Fills the given basic block with register setup code, and returns true if
@@ -162,7 +162,7 @@ void BasicBlockFiller::addInstruction(const MCInst &Inst, const DebugLoc &DL) {
     const MCOperand &Op = Inst.getOperand(OpIndex);
     if (Op.isReg()) {
       const bool IsDef = OpIndex < MCID.getNumDefs();
-      unsigned Flags = 0;
+      RegState Flags = {};
       const MCOperandInfo &OpInfo = MCID.operands().begin()[OpIndex];
       if (IsDef && !OpInfo.isOptionalDef())
         Flags |= RegState::Define;
@@ -381,7 +381,8 @@ Expected<ExecutableFunction> ExecutableFunction::create(
          "Cannot find the symbol for FunctionID");
   uintptr_t CodeSize = SymbolIt->second;
 
-  auto EJITOrErr = orc::LLJITBuilder().create();
+  auto EJITOrErr =
+      orc::LLJITBuilder().setDataLayout(TM->createDataLayout()).create();
   if (!EJITOrErr)
     return EJITOrErr.takeError();
 

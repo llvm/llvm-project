@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STDFIX_BITSHK_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h" // short accum
-#include "include/llvm-libc-types/stdfix-types.h"   // int_hk_t
+#include "include/llvm-libc-types/int_hk_t.h"       // int_hk_t
 #include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {

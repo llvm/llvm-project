@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
@@ -66,7 +67,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
 #include <numeric>
-#include <type_traits>
 #include <vector>
 
 namespace llvm {
@@ -345,6 +345,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    AssumptionCache *AC,
                                    const TargetTransformInfo *TTI,
+                                   ArrayRef<BasicBlock *> Blocks,
                                    AAResults *AA) {
   using namespace llvm::PatternMatch;
 
@@ -374,15 +375,15 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
-  const DataLayout &DL = L->getHeader()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
-  for (BasicBlock *BB : L->getBlocks()) {
+  for (BasicBlock *BB : Blocks) {
     // Remove repeated debug instructions after loop unrolling.
     if (BB->getParent()->getSubprogram())
       RemoveRedundantDbgInstrs(BB);
 
     for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
-      if (Value *V = simplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
+      if (Value *V = simplifyInstruction(
+              &Inst, {BB->getDataLayout(), nullptr, DT, AC}))
         if (LI->replacementPreservesLCSSAForm(&Inst, V))
           Inst.replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(&Inst))
@@ -499,9 +500,9 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
-  unsigned EstimatedLoopInvocationWeight = 0;
   std::optional<unsigned> OriginalTripCount =
-      llvm::getLoopEstimatedTripCount(L, &EstimatedLoopInvocationWeight);
+      llvm::getLoopEstimatedTripCount(L);
+  BranchProbability OriginalLoopProb = llvm::getLoopProbability(L);
 
   // Effectively "DCE" unrolled iterations that are beyond the max tripcount
   // and will never be executed.
@@ -516,13 +517,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     BasicBlock *FirstExitingBlock = nullptr;
     SmallVector<BasicBlock *> ExitingBlocks;
   };
-  DenseMap<BasicBlock *, ExitInfo> ExitInfos;
+  MapVector<BasicBlock *, ExitInfo> ExitInfos;
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   for (auto *ExitingBlock : ExitingBlocks) {
     // The folding code is not prepared to deal with non-branch instructions
     // right now.
-    auto *BI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBlock->getTerminator());
     if (!BI)
       continue;
 
@@ -573,12 +574,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // (2b) latch is conditional and is an exiting block
   // FIXME: The implementation can be extended to work with more complicated
   // cases, e.g. loops with multiple latches.
-  BranchInst *LatchBI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
+  Instruction *LatchTerm = LatchBlock->getTerminator();
 
   // A conditional branch which exits the loop, which can be optimized to an
   // unconditional branch in the unrolled loop in some cases.
   bool LatchIsExiting = L->isLoopExiting(LatchBlock);
-  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
+  if (!isa<UncondBrInst>(LatchTerm) &&
+      !(isa<CondBrInst>(LatchTerm) && LatchIsExiting)) {
     LLVM_DEBUG(
         dbgs() << "Can't unroll; a conditional latch must exit the loop");
     return LoopUnrollResult::Unmodified;
@@ -592,11 +594,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                               : isEpilogProfitable(L);
 
   if (ULO.Runtime &&
-      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
-                                  EpilogProfitability, ULO.UnrollRemainder,
-                                  ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
-                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
+      !UnrollRuntimeLoopRemainder(
+          L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
+          ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+          PreserveLCSSA, ULO.SCEVExpansionBudget, ULO.RuntimeUnrollMultiExit,
+          RemainderLoop, OriginalTripCount, OriginalLoopProb)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -919,6 +921,12 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     Latches[i]->getTerminator()->replaceSuccessorWith(Headers[i], Headers[j]);
   }
 
+  // Remove loop metadata copied from the original loop latch to branches that
+  // are no longer latches.
+  for (unsigned I = 0, E = Latches.size() - (CompletelyUnroll ? 0 : 1); I < E;
+       ++I)
+    Latches[I]->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
+
   // Update dominators of blocks we might reach through exits.
   // Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can now reach it from the copied
@@ -947,7 +955,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   SmallVector<DominatorTree::UpdateType> DTUpdates;
   auto SetDest = [&](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
-    auto *Term = cast<BranchInst>(Src->getTerminator());
+    auto *Term = cast<CondBrInst>(Src->getTerminator());
     const unsigned Idx = ExitOnTrue ^ WillExit;
     BasicBlock *Dest = Term->getSuccessor(Idx);
     BasicBlock *DeadSucc = Term->getSuccessor(1-Idx);
@@ -956,7 +964,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
     // Replace the conditional branch with an unconditional one.
-    auto *BI = BranchInst::Create(Dest, Term->getIterator());
+    auto *BI = UncondBrInst::Create(Dest, Term->getIterator());
     BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
@@ -1059,13 +1067,12 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Merge adjacent basic blocks, if possible.
   for (BasicBlock *Latch : Latches) {
-    BranchInst *Term = dyn_cast<BranchInst>(Latch->getTerminator());
-    assert((Term ||
+    assert((isa<UncondBrInst, CondBrInst>(Latch->getTerminator()) ||
             (CompletelyUnroll && !LatchIsExiting && Latch == Latches.back())) &&
            "Need a branch as terminator, except when fully unrolling with "
            "unconditional latch");
-    if (Term && Term->isUnconditional()) {
-      BasicBlock *Dest = Term->getSuccessor(0);
+    if (auto *Term = dyn_cast<UncondBrInst>(Latch->getTerminator())) {
+      BasicBlock *Dest = Term->getSuccessor();
       BasicBlock *Fold = Dest->getUniquePredecessor();
       if (MergeBlockIntoPredecessor(Dest, /*DTU=*/DTUToUse, LI,
                                     /*MSSAU=*/nullptr, /*MemDep=*/nullptr,
@@ -1094,6 +1101,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       if (!RdxResult) {
         RdxResult = PartialReductions.front();
         IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
+        Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
           RdxResult = Builder.CreateBinOp(
@@ -1116,25 +1124,65 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(!UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
+  Loop *OuterL = L->getParentLoop();
+  std::vector<BasicBlock *> Blocks;
+  // Update LoopInfo if the loop is completely removed.
+  if (CompletelyUnroll) {
+    Blocks = L->getBlocks();
+    LI->erase(L);
+    // We shouldn't try to use `L` anymore.
+    L = nullptr;
+  }
+
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.
-  simplifyLoopAfterUnroll(L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC,
-                          TTI, AA);
+  simplifyLoopAfterUnroll(
+      L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC, TTI,
+      CompletelyUnroll ? ArrayRef<BasicBlock *>(Blocks) : L->getBlocks(), AA);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;
 
-  Loop *OuterL = L->getParentLoop();
-  // Update LoopInfo if the loop is completely removed.
-  if (CompletelyUnroll) {
-    LI->erase(L);
-    // We shouldn't try to use `L` anymore.
-    L = nullptr;
-  } else if (OriginalTripCount) {
-    // Update the trip count. Note that the remainder has already logic
-    // computing it in `UnrollRuntimeLoopRemainder`.
-    setLoopEstimatedTripCount(L, *OriginalTripCount / ULO.Count,
-                              EstimatedLoopInvocationWeight);
+  if (!CompletelyUnroll) {
+    // Update metadata for the loop's branch weights and estimated trip count:
+    // - If ULO.Runtime, UnrollRuntimeLoopRemainder sets the guard branch
+    //   weights, latch branch weights, and estimated trip count of the
+    //   remainder loop it creates.  It also sets the branch weights for the
+    //   unrolled loop guard it creates.  The branch weights for the unrolled
+    //   loop latch are adjusted below.  FIXME: Handle prologue loops.
+    // - Otherwise, if unrolled loop iteration latches become unconditional,
+    //   branch weights are adjusted above.  FIXME: Actually handle such
+    //   unconditional latches.
+    // - Otherwise, the original loop's branch weights are correct for the
+    //   unrolled loop, so do not adjust them.
+    // - In all cases, the unrolled loop's estimated trip count is set below.
+    //
+    // As an example of the last case, consider what happens if the unroll count
+    // is 4 for a loop with an estimated trip count of 10 when we do not create
+    // a remainder loop and all iterations' latches remain conditional.  Each
+    // unrolled iteration's latch still has the same probability of exiting the
+    // loop as it did when in the original loop, and thus it should still have
+    // the same branch weights.  Each unrolled iteration's non-zero probability
+    // of exiting already appropriately reduces the probability of reaching the
+    // remaining iterations just as it did in the original loop.  Trying to also
+    // adjust the branch weights of the final unrolled iteration's latch (i.e.,
+    // the backedge for the unrolled loop as a whole) to reflect its new trip
+    // count of 3 will erroneously further reduce its block frequencies.
+    // However, in case an analysis later needs to estimate the trip count of
+    // the unrolled loop as a whole without considering the branch weights for
+    // each unrolled iteration's latch within it, we store the new trip count as
+    // separate metadata.
+    if (!OriginalLoopProb.isUnknown() && ULO.Runtime && EpilogProfitability) {
+      // Where p is always the probability of executing at least 1 more
+      // iteration, the probability for at least n more iterations is p^n.
+      setLoopProbability(L, OriginalLoopProb.pow(ULO.Count));
+    }
+    if (OriginalTripCount) {
+      unsigned NewTripCount = *OriginalTripCount / ULO.Count;
+      if (!ULO.Runtime && *OriginalTripCount % ULO.Count)
+        ++NewTripCount;
+      setLoopEstimatedTripCount(L, NewTripCount);
+    }
   }
 
   // LoopInfo should not be valid, confirm that.
@@ -1211,6 +1259,15 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   return nullptr;
 }
 
+// Returns the loop hint metadata node with the given name (for example,
+// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
+// returned.
+MDNode *llvm::getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+  if (MDNode *LoopID = L->getLoopID())
+    return GetUnrollMetadata(LoopID, Name);
+  return nullptr;
+}
+
 std::optional<RecurrenceDescriptor>
 llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
                                            ScalarEvolution *SE) {
@@ -1219,14 +1276,18 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
                                             /*DemandedBits=*/nullptr,
                                             /*AC=*/nullptr, /*DT=*/nullptr, SE))
     return std::nullopt;
+  if (RdxDesc.hasUsesOutsideReductionChain())
+    return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
   // TODO: Handle additional reductions, including FP and min-max
   // reductions.
-  if (!RecurrenceDescriptor::isIntegerRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
+  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
       RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+    return std::nullopt;
+
+  if (RdxDesc.hasExactFPMath())
     return std::nullopt;
 
   if (RdxDesc.IntermediateStore)

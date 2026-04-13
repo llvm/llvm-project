@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -145,7 +146,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   ASSERT_TRUE(Invocation2);
   CompilerInstance Instance2(std::move(Invocation2),
                              Instance.getPCHContainerOperations(),
-                             &Instance.getModuleCache());
+                             Instance.getModuleCachePtr());
   Instance2.setVirtualFileSystem(CIOpts.VFS);
   Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;
@@ -191,7 +192,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   ASSERT_TRUE(Invocation2);
   CompilerInstance Instance2(std::move(Invocation2),
                              Instance.getPCHContainerOperations(),
-                             &Instance.getModuleCache());
+                             Instance.getModuleCachePtr());
   Instance2.setVirtualFileSystem(CIOpts.VFS);
   Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;

@@ -109,6 +109,97 @@ DocNode &DocNode::operator=(double Val) {
   return *this;
 }
 
+// Equality operator. Compares recursively by value, supporting all node types
+// including Array and Map. Works correctly for nodes from different Documents.
+// This relies on operator< comparing scalar keys by value (not by document
+// identity), so that Map::find works across document boundaries.
+bool llvm::msgpack::operator==(const DocNode &Lhs, const DocNode &Rhs) {
+  if (Lhs.isEmpty() && Rhs.isEmpty())
+    return true;
+  if (Lhs.isEmpty() || Rhs.isEmpty())
+    return false;
+  if (Lhs.getKind() != Rhs.getKind())
+    return false;
+  switch (Lhs.getKind()) {
+  case Type::Nil:
+    return true;
+  case Type::Int:
+    return Lhs.Int == Rhs.Int;
+  case Type::UInt:
+    return Lhs.UInt == Rhs.UInt;
+  case Type::Boolean:
+    return Lhs.Bool == Rhs.Bool;
+  case Type::Float:
+    return Lhs.Float == Rhs.Float;
+  case Type::String:
+  case Type::Binary:
+    return Lhs.Raw == Rhs.Raw;
+  case Type::Array: {
+    if (Lhs.Array->size() != Rhs.Array->size())
+      return false;
+    for (size_t I = 0, E = Lhs.Array->size(); I != E; ++I)
+      if ((*Lhs.Array)[I] != (*Rhs.Array)[I])
+        return false;
+    return true;
+  }
+  case Type::Map: {
+    if (Lhs.Map->size() != Rhs.Map->size())
+      return false;
+    for (auto &Entry : *Lhs.Map) {
+      auto It = Rhs.Map->find(Entry.first);
+      if (It == Rhs.Map->end())
+        return false;
+      if (Entry.second != It->second)
+        return false;
+    }
+    return true;
+  }
+  default:
+    assert(false && "unhandled DocNode type in operator==");
+    return false;
+  }
+}
+
+/// Deep copy a DocNode from any Document into this Document.
+DocNode Document::copyNode(DocNode Src) {
+  if (Src.isEmpty())
+    return getEmptyNode();
+  switch (Src.getKind()) {
+  case Type::Nil:
+    return getNode();
+  case Type::Int:
+    return getNode(Src.getInt());
+  case Type::UInt:
+    return getNode(Src.getUInt());
+  case Type::Boolean:
+    return getNode(Src.getBool());
+  case Type::Float:
+    return getNode(Src.getFloat());
+  case Type::String:
+    // TODO: Restructure string interning so that no-copy strings from the
+    // source Document become no-copy strings in the destination Document,
+    // avoiding duplicate copies when the caller retains the source.
+    return getNode(Src.getString(), /*Copy=*/true);
+  case Type::Binary:
+    return getNode(Src.getBinary(), /*Copy=*/true);
+  case Type::Map: {
+    auto NewMap = getMapNode();
+    for (auto &Entry : Src.getMap())
+      NewMap[copyNode(Entry.first)] = copyNode(Entry.second);
+    return NewMap;
+  }
+  case Type::Array: {
+    auto NewArray = getArrayNode();
+    for (auto &Elem : Src.getArray())
+      NewArray.push_back(copyNode(Elem));
+    return NewArray;
+  }
+  default:
+    assert(false && "unhandled DocNode type in copyNode");
+    return getEmptyNode();
+  }
+}
+
 // A level in the document reading stack.
 struct StackLevel {
   StackLevel(DocNode Node, size_t StartIndex, size_t Length,

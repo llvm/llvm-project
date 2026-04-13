@@ -521,7 +521,7 @@ define fp128 @test_atomicrmw_fadd_fp128_seq_cst_align16(ptr %ptr, fp128 %value) 
 ; NOLSE-NEXT:    ldr q1, [x0]
 ; NOLSE-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; NOLSE-NEXT:    mov x19, x0
-; NOLSE-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; NOLSE-NEXT:    str q0, [sp] // 16-byte Spill
 ; NOLSE-NEXT:    b .LBB6_2
 ; NOLSE-NEXT:  .LBB6_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB6_2 Depth=1
@@ -534,11 +534,11 @@ define fp128 @test_atomicrmw_fadd_fp128_seq_cst_align16(ptr %ptr, fp128 %value) 
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB6_3 Depth 2
 ; NOLSE-NEXT:    mov v0.16b, v1.16b
-; NOLSE-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
-; NOLSE-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; NOLSE-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; NOLSE-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; NOLSE-NEXT:    bl __addtf3
 ; NOLSE-NEXT:    str q0, [sp, #48]
-; NOLSE-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; NOLSE-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; NOLSE-NEXT:    ldp x9, x8, [sp, #48]
 ; NOLSE-NEXT:    str q0, [sp, #64]
 ; NOLSE-NEXT:    ldp x11, x10, [sp, #64]
@@ -573,15 +573,15 @@ define fp128 @test_atomicrmw_fadd_fp128_seq_cst_align16(ptr %ptr, fp128 %value) 
 ; LSE-NEXT:    ldr q1, [x0]
 ; LSE-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; LSE-NEXT:    mov x19, x0
-; LSE-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; LSE-NEXT:    str q0, [sp] // 16-byte Spill
 ; LSE-NEXT:  .LBB6_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; LSE-NEXT:    mov v0.16b, v1.16b
-; LSE-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
-; LSE-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; LSE-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; LSE-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; LSE-NEXT:    bl __addtf3
 ; LSE-NEXT:    str q0, [sp, #48]
-; LSE-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; LSE-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; LSE-NEXT:    ldp x0, x1, [sp, #48]
 ; LSE-NEXT:    str q0, [sp, #64]
 ; LSE-NEXT:    ldp x2, x3, [sp, #64]

@@ -10,7 +10,6 @@
 #include "../clang-tidy/ClangTidyCheck.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "../clang-tidy/ClangTidyModule.h"
-#include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "AST.h"
 #include "CollectMacros.h"
@@ -586,11 +585,6 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
     ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
-      if (Cfg.Diagnostics.SuppressAll ||
-          isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
-                                 Clang->getLangOpts()))
-        return DiagnosticsEngine::Ignored;
-
       auto It = OverriddenSeverity.find(Info.getID());
       if (It != OverriddenSeverity.end())
         DiagLevel = It->second;

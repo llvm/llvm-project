@@ -55,9 +55,6 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFCOMMON-LABEL: @test_widen_exp_v2(
 ; TFCOMMON-NEXT:  entry:
 ; TFCOMMON-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0:%.*]], 1
-; TFCOMMON-NEXT:    [[TMP1:%.*]] = sub i64 [[N_RND_UP]], 2
-; TFCOMMON-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[N_RND_UP]], 2
-; TFCOMMON-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 0
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 0, i64 [[N_RND_UP]])
 ; TFCOMMON-NEXT:    br label [[LOOP:%.*]]
 ; TFCOMMON:       vector.body:
@@ -65,10 +62,11 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; TFCOMMON-NEXT:    [[LD:%.*]] = load double, ptr [[P2:%.*]], align 8
 ; TFCOMMON-NEXT:    [[TMP5:%.*]] = tail call double @llvm.exp.f64(double [[LD]]) #[[ATTR3:[0-9]+]]
-; TFCOMMON-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
-; TFCOMMON-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[TMP5]], i32 1
+; TFCOMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
+; TFCOMMON-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP9:%.*]] = fcmp ogt <2 x double> [[TMP8]], zeroinitializer
-; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
+; TFCOMMON-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
+; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP7]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFCOMMON-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; TFCOMMON-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; TFCOMMON:       pred.store.if:
@@ -84,7 +82,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFCOMMON-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; TFCOMMON:       pred.store.continue2:
 ; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[TMP3]])
+; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 [[N_RND_UP]])
 ; TFCOMMON-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; TFCOMMON-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP15]], true
 ; TFCOMMON-NEXT:    br i1 [[TMP17]], label [[END:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -94,9 +92,6 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-LABEL: @test_widen_exp_v2(
 ; TFA_INTERLEAVE-NEXT:  entry:
 ; TFA_INTERLEAVE-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0:%.*]], 1
-; TFA_INTERLEAVE-NEXT:    [[TMP1:%.*]] = sub i64 [[N_RND_UP]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[N_RND_UP]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 0
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 0, i64 [[N_RND_UP]])
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 2, i64 [[N_RND_UP]])
 ; TFA_INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -105,11 +100,12 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_STORE_CONTINUE9]] ]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY1]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT10:%.*]], [[PRED_STORE_CONTINUE9]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = load double, ptr [[P2:%.*]], align 8
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR3:[0-9]+]]
-; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[TMP9]], i32 0
-; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> [[TMP11]], double [[TMP9]], i32 1
+; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR3:[0-9]+]]
+; TFA_INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
+; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = fcmp ogt <2 x double> [[TMP12]], zeroinitializer
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP14]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
+; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP14]], i32 0
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI3:%.*]] = select i1 [[TMP7]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFA_INTERLEAVE-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; TFA_INTERLEAVE:       pred.store.if:
@@ -139,9 +135,9 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE9]]
 ; TFA_INTERLEAVE:       pred.store.continue8:
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; TFA_INTERLEAVE-NEXT:    [[TMP27:%.*]] = add i64 [[INDEX]], 2
-; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[TMP3]])
-; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT10]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[TMP27]], i64 [[TMP3]])
+; TFA_INTERLEAVE-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX_NEXT]], 2
+; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 [[N_RND_UP]])
+; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT10]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[TMP13]], i64 [[N_RND_UP]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; TFA_INTERLEAVE-NEXT:    [[TMP28:%.*]] = xor i1 [[TMP26]], true
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP28]], label [[END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -173,7 +169,6 @@ end:
 }
 
 
-declare double @llvm.exp.f64(double)
 
 ; fixed-width variant of exp
 declare <2 x double> @exp_fixed(<2 x double>)

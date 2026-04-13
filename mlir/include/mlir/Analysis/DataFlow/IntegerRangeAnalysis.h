@@ -48,7 +48,7 @@ class IntegerRangeAnalysis
 public:
   using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
-  /// At an entry point, we cannot reason about interger value ranges.
+  /// At an entry point, we cannot reason about integer value ranges.
   void setToEntryState(IntegerValueRangeLattice *lattice) override {
     propagateIfChanged(lattice, lattice->join(IntegerValueRange::getMaxRange(
                                     lattice->getAnchor())));
@@ -66,10 +66,10 @@ public:
   /// function calls `InferIntRangeInterface` to provide values for block
   /// arguments or tries to reduce the range on loop induction variables with
   /// known bounds.
-  void
-  visitNonControlFlowArguments(Operation *op, const RegionSuccessor &successor,
-                               ArrayRef<IntegerValueRangeLattice *> argLattices,
-                               unsigned firstIndex) override;
+  void visitNonControlFlowArguments(
+      Operation *op, const RegionSuccessor &successor,
+      ValueRange nonSuccessorInputs,
+      ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices) override;
 };
 
 /// Succeeds if an op can be converted to its unsigned equivalent without

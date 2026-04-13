@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-dynamic-static-initializers %t -- -- -fno-threadsafe-statics
+// RUN: %check_clang_tidy %s bugprone-dynamic-static-initializers %t -- -- -fno-threadsafe-statics -fno-delayed-template-parsing
 
 int fact(int n) {
   return (n == 0) ? 1 : n * fact(n - 1);
@@ -42,3 +42,27 @@ int foo3() {
   static int p = 7 + 83; // no warning
   return p;
 }
+
+namespace std {
+  template <typename T>
+  struct numeric_limits {
+    static constexpr T min() { return 0; }
+    static constexpr T max() { return 1000; }
+  };
+}
+
+template <typename T>
+void template_func() {
+  static constexpr T local_kMin{std::numeric_limits<T>::min()}; // no warning
+}
+
+template <int n>
+struct TemplateStruct {
+  static constexpr int xn{n}; // no warning
+};
+
+template <typename T>
+constexpr T kGlobalMin{std::numeric_limits<T>::min()}; // no warning
+
+extern const int late_constexpr;
+constexpr int late_constexpr = 42; // no warning

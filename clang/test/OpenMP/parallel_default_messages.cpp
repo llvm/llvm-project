@@ -64,6 +64,11 @@ int main(int argc, char **argv) {
     ++x;
     ++y;
   }
+#pragma omp parallel default(private: allocatable) private(x,y) // expected-error {{wrong variable category specified with modifier private in the default clause}}
+  {
+    ++x;
+    ++y;
+  }
 #endif
   return 0;
 }

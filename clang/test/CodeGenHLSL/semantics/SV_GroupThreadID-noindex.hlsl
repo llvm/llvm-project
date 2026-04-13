@@ -4,5 +4,5 @@
 [shader("compute")]
 [numthreads(8,8,1)]
 void foo(uint Idx : SV_GroupThreadID1) {
-  // expected-error@-1 {{semantic SV_GroupThreadID does not allow indexing}}
+  // expected-error@-1 {{semantic 'SV_GroupThreadID' does not allow indexing}}
 }

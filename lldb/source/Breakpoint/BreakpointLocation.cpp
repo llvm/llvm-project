@@ -34,11 +34,9 @@ using namespace lldb_private;
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        const Address &addr, lldb::tid_t tid,
                                        bool check_for_resolver)
-    : m_should_resolve_indirect_functions(false), m_is_reexported(false),
-      m_is_indirect(false), m_address(addr), m_owner(owner),
-      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+    : m_address(addr), m_owner(owner), m_loc_id(loc_id) {
   if (check_for_resolver) {
-    Symbol *symbol = m_address.CalculateSymbolContextSymbol();
+    const Symbol *symbol = m_address.CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
       SetShouldResolveIndirectFunctions(true);
     }
@@ -48,9 +46,7 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
 }
 
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner)
-    : m_should_resolve_indirect_functions(false), m_is_reexported(false),
-      m_is_indirect(false), m_address(LLDB_INVALID_ADDRESS), m_owner(owner),
-      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+    : m_owner(owner), m_loc_id(loc_id) {
   SetThreadIDInternal(LLDB_INVALID_THREAD_ID);
 }
 
@@ -251,7 +247,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     }
 
     m_user_expression_sp.reset(GetTarget().GetUserExpressionForLanguage(
-        condition.GetText(), llvm::StringRef(), language,
+        condition.GetText(), llvm::StringRef(), SourceLanguage{language},
         Expression::eResultTypeAny, EvaluateExpressionOptions(), nullptr,
         error));
     if (error.Fail()) {
@@ -622,7 +618,7 @@ void BreakpointLocation::GetDescription(Stream *s,
                   sc.function->GetMangled().GetMangledName()) {
             s->EOL();
             s->Indent("mangled function = ");
-            s->PutCString(mangled_name.AsCString());
+            s->PutCString(mangled_name);
           }
         }
 
@@ -677,7 +673,8 @@ void BreakpointLocation::GetDescription(Stream *s,
     if (IsIndirect() && m_bp_site_sp) {
       Address resolved_address;
       resolved_address.SetLoadAddress(m_bp_site_sp->GetLoadAddress(), target);
-      Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
+      const Symbol *resolved_symbol =
+          resolved_address.CalculateSymbolContextSymbol();
       if (resolved_symbol) {
         if (level == eDescriptionLevelFull || level == eDescriptionLevelInitial)
           s->Printf(", ");
@@ -749,13 +746,11 @@ void BreakpointLocation::Dump(Stream *s) const {
 
 void BreakpointLocation::SendBreakpointLocationChangedEvent(
     lldb::BreakpointEventType eventKind) {
-  if (!m_owner.IsInternal() && m_owner.GetTarget().EventTypeHasListeners(
-                                   Target::eBroadcastBitBreakpointChanged)) {
+  if (!m_owner.IsInternal()) {
     auto data_sp = std::make_shared<Breakpoint::BreakpointEventData>(
         eventKind, m_owner.shared_from_this());
     data_sp->GetBreakpointLocationCollection().Add(shared_from_this());
-    m_owner.GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                                       data_sp);
+    m_owner.GetTarget().NotifyBreakpointChanged(m_owner, data_sp);
   }
 }
 

@@ -246,5 +246,82 @@ exit:
   ret i32 0
 }
 
+define i8 @cyclesInPaths1(i1 %call12, i1 %cmp18) {
+; CHECK-LABEL: DFA Jump threading: cyclesInPaths1
+; CHECK-NOT: <{{.*}}> [{{.*}}]
+
+entry:
+  br label %switchPhiDef.for.body
+
+switchPhiDef.for.body:                                         ; preds = %detBB2, %entry
+  %switchPhi.curState = phi i32 [ %curState.1, %detBB2 ], [ 0, %entry ]
+  br i1 %call12, label %detBB1, label %if.else
+
+if.else:                                          ; preds = %switchPhiDef.for.body
+  br label %detBB1
+
+detBB1:                                         ; preds = %if.else, %switchPhiDef.for.body
+  %newState.02 = phi i32 [ 2, %switchPhiDef.for.body ], [ 4, %if.else ]
+  br i1 %cmp18, label %detBB2, label %if.end20
+
+if.end20:                                         ; preds = %detBB1
+  br i1 %call12, label %if.end23, label %switchBB
+
+switchBB:                                        ; preds = %if.end20
+  switch i32 %switchPhi.curState, label %if.end23 [
+    i32 4, label %ret1
+    i32 0, label %ret2
+  ]
+
+ret1:                                       ; preds = %switchBB
+  ret i8 1
+
+ret2:                                       ; preds = %switchBB
+  ret i8 2
+
+if.end23:                                         ; preds = %switchBB, %if.end20
+  br label %detBB2
+
+detBB2:                                          ; preds = %if.end23, %detBB1
+  %curState.1 = phi i32 [ %newState.02, %if.end23 ], [ 0, %detBB1 ]
+  br label %switchPhiDef.for.body
+}
+
+define void @cyclesInPaths2(i1 %tobool5.not.i) {
+; CHECK-LABEL: DFA Jump threading: cyclesInPaths2
+; CHECK: < sw.bb.i, bb.exit, if.end5, if.end.i > [ 1, bb.exit ]
+; CHECK-NEXT: < bb.exit, if.end5, if.end.i > [ 0, bb.exit ]
+
+entry:
+  br label %if.end5
+
+if.end5:                                          ; preds = %bb.exit, %entry
+  %P.sroa.8.051 = phi i16 [ %retval.sroa.6.0.i, %bb.exit ], [ 0, %entry ]
+  call void @foo3()
+  br i1 %tobool5.not.i, label %if.end.i, label %bb.exit
+
+if.end.i:                                         ; preds = %if.end5
+  switch i16 %P.sroa.8.051, label %sw.default.i [
+    i16 1, label %sw.bb.i
+    i16 0, label %bb.exit
+  ]
+
+sw.bb.i:                                          ; preds = %if.end.i
+  call void @foo1()
+  br label %bb.exit
+
+sw.default.i:                                     ; preds = %if.end.i
+  unreachable
+
+bb.exit: ; preds = %sw.bb.i, %if.end.i, %if.end5
+  %retval.sroa.6.0.i = phi i16 [ 1, %sw.bb.i ], [ 0, %if.end5 ], [ 0, %if.end.i ]
+  call void @foo2()
+  br label %if.end5
+}
+
+declare void @foo1()
+declare void @foo2()
+declare void @foo3()
+
 !0 = !{!"function_entry_count", i32 10}
 !1 = !{!"branch_weights", i32 3, i32 5}

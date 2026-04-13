@@ -110,7 +110,7 @@ class LLVM_ABI RawMemProfReader final : public MemProfReader {
 public:
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
-  virtual ~RawMemProfReader() override;
+  ~RawMemProfReader() override;
 
   // Prints the contents of the profile in YAML format.
   void printYAML(raw_ostream &OS);

@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/JITLink/XCOFF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Support/raw_ostream.h"
@@ -479,6 +480,8 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointer;
+  case Triple::systemz:
+    return systemz::createAnonymousPointer;
   default:
     return nullptr;
   }
@@ -495,6 +498,8 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointerJumpStub;
+  case Triple::systemz:
+    return systemz::createAnonymousPointerJumpStub;
   default:
     return nullptr;
   }

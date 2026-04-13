@@ -33,9 +33,9 @@ psrari.h ra, sp, 100 # CHECK: :[[@LINE]]:18: error: immediate must be an integer
 psrari.w ra, sp, 100 # CHECK: :[[@LINE]]:18: error: immediate must be an integer in the range [0, 31]
 srari ra, sp, 100 # CHECK: :[[@LINE]]:15: error: immediate must be an integer in the range [0, 63]
 
-psati.h ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 15]
-psati.w ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 31]
-sati ra, sp, 100 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 63]
+psati.h ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [1, 16]
+psati.w ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [1, 32]
+sati ra, sp, 100 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [1, 64]
 
 sadd t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
 aadd t1, a7, a0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set

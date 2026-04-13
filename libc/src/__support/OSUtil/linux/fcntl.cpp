@@ -66,7 +66,7 @@ ErrorOr<int> fcntl(int fd, int cmd, void *arg) {
         LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, cmd, &flk64);
     // On failure, return
     if (ret < 0)
-      return Error(-1);
+      return Error(-ret);
     // Check for overflow, i.e. the offsets are not the same when cast
     // to off_t from off64_t.
     if (static_cast<off_t>(flk64.l_len) != flk64.l_len ||
@@ -113,28 +113,6 @@ ErrorOr<int> fcntl(int fd, int cmd, void *arg) {
                                               reinterpret_cast<void *>(arg));
   if (ret < 0)
     return Error(-ret);
-  return ret;
-}
-
-ErrorOr<int> open(const char *path, int flags, mode_t mode_flags) {
-#ifdef SYS_open
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, flags, mode_flags);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path, flags,
-                                             mode_flags);
-#endif
-  if (fd < 0)
-    return Error(-fd);
-
-  return fd;
-}
-
-ErrorOr<int> close(int fd) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, fd);
-
-  if (ret < 0)
-    return Error(-ret);
-
   return ret;
 }
 

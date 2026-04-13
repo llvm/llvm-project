@@ -135,4 +135,57 @@ branches as follows:
   push:
     branches:
       - main
-      - releases/*
+      - release/*
+
+Make Workflows Run on Updates to the Workflow Definition
+--------------------------------------------------------
+
+Whenever possible, workflows should also run whenever the workflow definition
+is updated. This enables easily testing the workflow whenever modifying it. For
+example, if we have a workflow with a definition in ``.github/workflows/foo.yaml``,
+we should have at least the following event within the workflow:
+
+.. code-block:: yaml
+
+  pull_request:
+    paths:
+     - .github/workflows/foo.yaml
+
+Note that it is not always possible to enable this (e.g., issues that use a
+``workflow_run`` trigger). But when possible, this makes testing the workflow
+much simpler.
+
+Disable Credential Persistance
+------------------------------
+
+Github's ``actions/checkout`` action will by default leave credentials from
+the default Github token inside the git checkout it creates. This can present
+a security risk as someone might be able to exfiltrate the token if they are
+able to read any files within the git repository. This should be disabled by
+default as follows:
+
+.. code-block:: yaml
+
+  uses: actions/checkout@<commit SHA> # <version number>
+  with:
+    persist-credentials: false
+
+It is acceptable to leave credential persistence enabled if necessary, but one
+should be extra cautious when doing so.
+
+Container Best Practices
+========================
+
+This section contains best practices/guidelines when working with containers
+for LLVM infrastructure.
+
+Using Fully Qualified Container Names
+-------------------------------------
+
+When referencing container images from a registry, such as in GitHub Actions
+workflows, or in ``Dockerfile`` files used for building images, prefer fully
+qualified names (i.e., including the registry domain) over just the image.
+For example, prefer ``docker.io/ubuntu:24.04`` over ``ubuntu:24.04``. This
+ensures portability across systems where a different default registry might
+be specified and also prevents attackers from changing the default registry
+to pull in a malicious image instead of the intended one.

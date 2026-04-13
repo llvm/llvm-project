@@ -588,15 +588,19 @@ func.func @omp_ordered(%arg0 : index) -> () {
 func.func @omp_taskloop(%arg0: index, %arg1 : memref<i32>) {
   // CHECK: omp.parallel {
   omp.parallel {
-    // CHECK: omp.taskloop allocate(%{{.*}} : !llvm.struct<(ptr, ptr, i64)> -> %{{.*}} : !llvm.struct<(ptr, ptr, i64)>) {
-    omp.taskloop allocate(%arg1 : memref<i32> -> %arg1 : memref<i32>) {
-      // CHECK: omp.loop_nest (%[[IV:.*]]) : i64 = (%[[ARG0]]) to (%[[ARG0]]) step (%[[ARG0]]) {
-      omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
-        // CHECK-DAG: %[[CAST_IV:.*]] = builtin.unrealized_conversion_cast %[[IV]] : i64 to index
-        // CHECK: "test.payload"(%[[CAST_IV]]) : (index) -> ()
-        "test.payload"(%iv) : (index) -> ()
-        omp.yield
+    // CHECK: omp.taskloop.context allocate(%{{.*}} : !llvm.struct<(ptr, ptr, i64)> -> %{{.*}} : !llvm.struct<(ptr, ptr, i64)>) {
+    omp.taskloop.context allocate(%arg1 : memref<i32> -> %arg1 : memref<i32>) {
+      // CHECK: omp.taskloop.wrapper {
+      omp.taskloop.wrapper {
+        // CHECK: omp.loop_nest (%[[IV:.*]]) : i64 = (%[[ARG0]]) to (%[[ARG0]]) step (%[[ARG0]]) {
+        omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
+          // CHECK-DAG: %[[CAST_IV:.*]] = builtin.unrealized_conversion_cast %[[IV]] : i64 to index
+          // CHECK: "test.payload"(%[[CAST_IV]]) : (index) -> ()
+          "test.payload"(%iv) : (index) -> ()
+          omp.yield
+        }
       }
+    omp.terminator
     }
     omp.terminator
   }
@@ -614,4 +618,23 @@ omp.declare_mapper @my_mapper : !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>
   %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) -> !llvm.ptr {name = "var", partial_map = true}
   // CHECK: omp.declare_mapper.info map_entries(%{{.*}}, %{{.*}} : !llvm.ptr, !llvm.ptr)
   omp.declare_mapper.info map_entries(%3, %2 : !llvm.ptr, !llvm.ptr)
+}
+
+// CHECK-LABEL: llvm.func @omp_dist_schedule(%arg0: i32) {
+func.func @omp_dist_schedule(%arg0: i32) {
+  %c1_i32 = arith.constant 1 : i32
+  // CHECK: %1 = llvm.mlir.constant(1024 : i32) : i32
+  %c1024_i32 = arith.constant 1024 : i32
+  %c16_i32 = arith.constant 16 : i32
+  %c8_i32 = arith.constant 8 : i32
+  omp.teams num_teams( to %c8_i32 : i32) thread_limit(%c16_i32 : i32) {
+    // CHECK: omp.distribute dist_schedule_static dist_schedule_chunk_size(%1 : i32) {
+    omp.distribute dist_schedule_static dist_schedule_chunk_size(%c1024_i32 : i32) {
+      omp.loop_nest (%arg1) : i32 = (%c1_i32) to (%arg0) inclusive step (%c1_i32) {
+        omp.terminator
+      }
+    }
+    omp.terminator
+  }
+  return
 }

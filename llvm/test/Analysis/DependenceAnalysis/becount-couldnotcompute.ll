@@ -7,7 +7,7 @@
 define void @test(i64 %conv, ptr %a) {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Src: %ld = load i32, ptr %arrayidx12, align 4 --> Dst: %ld = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [*]!
 ;
 entry:
   %sub = add i64 %conv, 1

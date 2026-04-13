@@ -92,7 +92,7 @@ CSKYSubtarget::CSKYSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                              StringRef FS, const TargetMachine &TM)
     : CSKYGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       FrameLowering(initializeSubtargetDependencies(TT, CPU, TuneCPU, FS)),
-      InstrInfo(*this), RegInfo(), TLInfo(TM, *this) {
+      InstrInfo(*this, RegInfo), TLInfo(TM, *this) {
   TSInfo = std::make_unique<CSKYSelectionDAGInfo>();
 }
 

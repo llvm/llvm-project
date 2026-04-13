@@ -13,13 +13,22 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Support/PatternMatchHelpers.h"
+
+using namespace llvm::PatternMatchHelpers;
 
 namespace llvm {
 namespace SCEVPatternMatch {
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
+}
+
+template <typename SCEVPtrT, typename Pattern>
+bool match(const SCEVUseT<SCEVPtrT> U, const Pattern &P) {
+  return P.match(U.getPointer());
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
@@ -56,17 +65,9 @@ inline cst_pred_ty<is_all_ones> m_scev_AllOnes() {
   return cst_pred_ty<is_all_ones>();
 }
 
-template <typename Class> struct class_match {
-  template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
-};
-
-inline class_match<const SCEV> m_SCEV() { return class_match<const SCEV>(); }
-inline class_match<const SCEVConstant> m_SCEVConstant() {
-  return class_match<const SCEVConstant>();
-}
-inline class_match<const SCEVVScale> m_SCEVVScale() {
-  return class_match<const SCEVVScale>();
-}
+inline auto m_SCEV() { return m_Isa<const SCEV>(); }
+inline auto m_SCEVConstant() { return m_Isa<const SCEVConstant>(); }
+inline auto m_SCEVVScale() { return m_Isa<const SCEVVScale>(); }
 
 template <typename Class> struct bind_ty {
   Class *&VR;
@@ -82,8 +83,24 @@ template <typename Class> struct bind_ty {
   }
 };
 
+template <typename SCEVPtrT> struct bind_ty<SCEVUseT<SCEVPtrT>> {
+  SCEVUseT<SCEVPtrT> &VR;
+
+  bind_ty(SCEVUseT<SCEVPtrT> &V) : VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    VR = V;
+    return true;
+  }
+};
+
 /// Match a SCEV, capturing it if we match.
 inline bind_ty<const SCEV> m_SCEV(const SCEV *&V) { return V; }
+
+template <typename SCEVPtrT>
+inline bind_ty<SCEVUseT<SCEVPtrT>> m_SCEV(SCEVUseT<SCEVPtrT> &V) {
+  return V;
+}
 inline bind_ty<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
   return V;
 }
@@ -159,7 +176,8 @@ template <typename SCEVTy, typename Op0_t> struct SCEVUnaryExpr_match {
 
   bool match(const SCEV *S) const {
     auto *E = dyn_cast<SCEVTy>(S);
-    return E && E->getNumOperands() == 1 && Op0.match(E->getOperand(0));
+    return E && E->getNumOperands() == 1 &&
+           Op0.match(E->getOperand(0).getPointer());
   }
 };
 
@@ -187,6 +205,12 @@ m_scev_PtrToInt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>
+m_scev_PtrToAddr(const Op0_t &Op0) {
+  return SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVTruncateExpr, Op0_t>
 m_scev_Trunc(const Op0_t &Op0) {
   return m_scev_Unary<SCEVTruncateExpr>(Op0);
@@ -209,9 +233,10 @@ struct SCEVBinaryExpr_match {
 
     auto *E = dyn_cast<SCEVTy>(S);
     return E && E->getNumOperands() == 2 &&
-           ((Op0.match(E->getOperand(0)) && Op1.match(E->getOperand(1))) ||
-            (Commutable && Op0.match(E->getOperand(1)) &&
-             Op1.match(E->getOperand(0))));
+           ((Op0.match(E->getOperand(0).getPointer()) &&
+             Op1.match(E->getOperand(1).getPointer())) ||
+            (Commutable && Op0.match(E->getOperand(1).getPointer()) &&
+             Op1.match(E->getOperand(0).getPointer())));
   }
 };
 
@@ -338,7 +363,7 @@ inline SCEVURem_match<Op0_t, Op1_t> m_scev_URem(Op0_t LHS, Op1_t RHS,
   return SCEVURem_match<Op0_t, Op1_t>(LHS, RHS, SE);
 }
 
-inline class_match<const Loop> m_Loop() { return class_match<const Loop>(); }
+inline auto m_Loop() { return m_Isa<const Loop>(); }
 
 /// Match an affine SCEVAddRecExpr.
 template <typename Op0_t, typename Op1_t, typename Loop_t>
@@ -368,16 +393,29 @@ inline specificloop_ty m_SpecificLoop(const Loop *L) { return L; }
 inline bind_ty<const Loop> m_Loop(const Loop *&L) { return L; }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVAffineAddRec_match<Op0_t, Op1_t, class_match<const Loop>>
+inline SCEVAffineAddRec_match<Op0_t, Op1_t, match_isa<const Loop>>
 m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1) {
-  return SCEVAffineAddRec_match<Op0_t, Op1_t, class_match<const Loop>>(
-      Op0, Op1, m_Loop());
+  return SCEVAffineAddRec_match<Op0_t, Op1_t, match_isa<const Loop>>(Op0, Op1,
+                                                                     m_Loop());
 }
 
 template <typename Op0_t, typename Op1_t, typename Loop_t>
 inline SCEVAffineAddRec_match<Op0_t, Op1_t, Loop_t>
 m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1, const Loop_t &L) {
   return SCEVAffineAddRec_match<Op0_t, Op1_t, Loop_t>(Op0, Op1, L);
+}
+
+struct is_undef_or_poison {
+  bool match(const SCEV *S) const {
+    const SCEVUnknown *Unknown;
+    return SCEVPatternMatch::match(S, m_SCEVUnknown(Unknown)) &&
+           isa<UndefValue>(Unknown->getValue());
+  }
+};
+
+/// Match an SCEVUnknown wrapping undef or poison.
+inline is_undef_or_poison m_scev_UndefOrPoison() {
+  return is_undef_or_poison();
 }
 
 } // namespace SCEVPatternMatch

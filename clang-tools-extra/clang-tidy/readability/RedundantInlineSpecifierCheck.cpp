@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantInlineSpecifierCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -16,9 +17,8 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
-
-#include "../utils/LexerUtils.h"
 
 using namespace clang::ast_matchers;
 
@@ -52,7 +52,7 @@ AST_POLYMORPHIC_MATCHER_P(isInternalLinkage,
 static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
                                              const SourceManager &Sources,
                                              const LangOptions &LangOpts) {
-  SourceLocation Loc = RangeLocation.getBegin();
+  const SourceLocation Loc = RangeLocation.getBegin();
   if (Loc.isMacroID())
     return {};
 
@@ -65,8 +65,8 @@ static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
         CurrentToken->getRawIdentifier() == "inline")
       return CurrentToken->getLocation();
 
-    CurrentToken =
-        Lexer::findNextToken(CurrentToken->getLocation(), Sources, LangOpts);
+    CurrentToken = utils::lexer::findNextTokenSkippingComments(
+        CurrentToken->getLocation(), Sources, LangOpts);
   }
   return {};
 }
@@ -106,7 +106,7 @@ template <typename T>
 void RedundantInlineSpecifierCheck::handleMatchedDecl(
     const T *MatchedDecl, const SourceManager &Sources,
     const MatchFinder::MatchResult &Result, StringRef Message) {
-  SourceLocation Loc = getInlineTokenLocation(
+  const SourceLocation Loc = getInlineTokenLocation(
       MatchedDecl->getSourceRange(), Sources, Result.Context->getLangOpts());
   if (Loc.isValid())
     diag(Loc, Message) << MatchedDecl << FixItHint::CreateRemoval(Loc);

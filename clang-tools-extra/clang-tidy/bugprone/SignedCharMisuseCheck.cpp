@@ -32,8 +32,8 @@ void SignedCharMisuseCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 // Create a matcher for char -> integer cast.
-BindableMatcher<clang::Stmt> SignedCharMisuseCheck::charCastExpression(
-    bool IsSigned, const Matcher<clang::QualType> &IntegerType,
+BindableMatcher<Stmt> SignedCharMisuseCheck::charCastExpression(
+    bool IsSigned, const Matcher<QualType> &IntegerType,
     const std::string &CastBindName) const {
   // We can ignore typedefs which are some kind of integer types
   // (e.g. typedef char sal_Int8). In this case, we don't need to
@@ -140,7 +140,7 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
   if (!SignedCastExpression->isValueDependent() &&
       SignedCastExpression->getSubExpr()->EvaluateAsInt(EVResult,
                                                         *Result.Context)) {
-    llvm::APSInt Value = EVResult.Val.getInt();
+    const llvm::APSInt Value = EVResult.Val.getInt();
     if (Value.isNonNegative())
       return;
   }
@@ -154,7 +154,7 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
     if (!UnSignedCastExpression->isValueDependent() &&
         UnSignedCastExpression->getSubExpr()->EvaluateAsInt(EVResult,
                                                             *Result.Context)) {
-      llvm::APSInt Value = EVResult.Val.getInt();
+      const llvm::APSInt Value = EVResult.Val.getInt();
       if (Value <= UnsignedASCIIUpperBound)
         return;
     }

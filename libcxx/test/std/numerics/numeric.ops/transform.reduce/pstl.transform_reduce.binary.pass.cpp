@@ -29,6 +29,7 @@
 //                      BinaryOperation1 binary_op1,
 //                      BinaryOperation2 binary_op2);
 
+#include <cassert>
 #include <numeric>
 #include <vector>
 

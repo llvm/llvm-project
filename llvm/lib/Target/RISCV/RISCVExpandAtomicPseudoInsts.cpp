@@ -373,6 +373,26 @@ static void doAtomicBinOpExpansion(const RISCVInstrInfo *TII, MachineInstr &MI,
         .addReg(ScratchReg)
         .addImm(-1);
     break;
+  case AtomicRMWInst::Max:
+    BuildMI(LoopMBB, DL, TII->get(RISCV::MAX), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::Min:
+    BuildMI(LoopMBB, DL, TII->get(RISCV::MIN), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::UMax:
+    BuildMI(LoopMBB, DL, TII->get(RISCV::MAXU), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::UMin:
+    BuildMI(LoopMBB, DL, TII->get(RISCV::MINU), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
   }
   BuildMI(LoopMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)), ScratchReg)
       .addReg(ScratchReg)
@@ -682,6 +702,9 @@ bool RISCVExpandAtomicPseudo::expandAtomicMinMaxOp(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
     MachineBasicBlock::iterator &NextMBBI) {
+  // Using MIN(U)/MAX(U) is preferrable if permitted
+  if (STI->hasPermissiveZalrsc() && STI->hasStdExtZbb() && !IsMasked)
+    return expandAtomicBinOp(MBB, MBBI, BinOp, IsMasked, Width, NextMBBI);
 
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();

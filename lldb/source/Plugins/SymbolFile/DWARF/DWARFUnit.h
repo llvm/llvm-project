@@ -164,7 +164,8 @@ public:
                                           const lldb::offset_t data_offset,
                                           const uint8_t op) const override;
 
-  virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+  virtual bool ParseVendorDWARFOpcode(uint8_t op,
+                                      const llvm::DataExtractor &opcodes,
                                       lldb::offset_t &offset,
                                       RegisterContext *reg_ctx,
                                       lldb::RegisterKind reg_kind,
@@ -364,6 +365,7 @@ protected:
   dw_offset_t m_line_table_offset = DW_INVALID_OFFSET;
 
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
+  dw_offset_t m_str_offset_size = 4;  // Size in bytes of a string offset.
 
   std::optional<llvm::DWARFDebugRnglistTable> m_rnglist_table;
   bool m_rnglist_table_done = false;

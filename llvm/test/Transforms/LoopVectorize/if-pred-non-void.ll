@@ -302,10 +302,10 @@ define void @test(ptr nocapture %asd, ptr nocapture %aud,
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %if.end
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %if.end, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end ]
   %isd = getelementptr inbounds i32, ptr %asd, i64 %indvars.iv
   %iud = getelementptr inbounds i32, ptr %aud, i64 %indvars.iv
@@ -322,14 +322,14 @@ for.body:                                         ; preds = %if.end, %entry
   %cmp1 = icmp slt i32 %lsd, 100
   br i1 %cmp1, label %if.then, label %if.end
 
-if.then:                                          ; preds = %for.body
+if.then:
   %rsd = sdiv i32 %psd, %lsd
   %rud = udiv i32 %pud, %lud
   %rsr = srem i32 %psr, %lsr
   %rur = urem i32 %pur, %lur
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %for.body
+if.end:
   %ysd.0 = phi i32 [ %rsd, %if.then ], [ %psd, %for.body ]
   %yud.0 = phi i32 [ %rud, %if.then ], [ %pud, %for.body ]
   %ysr.0 = phi i32 [ %rsr, %if.then ], [ %psr, %for.body ]
@@ -488,11 +488,11 @@ define void @test_scalar2scalar(ptr nocapture %asd, ptr nocapture %bsd) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %if.end
+for.cond.cleanup:
   ret void
 
 
-for.body:                                         ; preds = %if.end, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end ]
   %isd = getelementptr inbounds i32, ptr %asd, i64 %indvars.iv
   %lsd = load i32, ptr %isd, align 4
@@ -502,12 +502,12 @@ for.body:                                         ; preds = %if.end, %entry
   %cmp1 = icmp slt i32 %lsd, 100
   br i1 %cmp1, label %if.then, label %if.end
 
-if.then:                                          ; preds = %for.body
+if.then:
   %sd1 = sdiv i32 %psd, %lsd
   %rsd = sdiv i32 %lsd.b, %sd1
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %for.body
+if.end:
   %ysd.0 = phi i32 [ %rsd, %if.then ], [ %psd, %for.body ]
   store i32 %ysd.0, ptr %isd, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -677,10 +677,10 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %if.end
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %if.end, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end ]
   %isd = getelementptr inbounds i32, ptr %asd, i64 %indvars.iv
   %lsd = load i32, ptr %isd, align 4
@@ -690,16 +690,16 @@ for.body:                                         ; preds = %if.end, %entry
   %cmp1 = icmp slt i32 %lsd, 100
   br i1 %cmp1, label %if.then, label %checkbb, !dbg !7
 
-checkbb:                                            ; preds = %for.body
+checkbb:
   %cmp2 = icmp sge i32 %lsd, 200
   br i1 %cmp2, label %if.then, label %if.end, !dbg !8
 
-if.then:                                          ; preds = %checkbb, %for.body
+if.then:
   %sd1 = sdiv i32 %psd, %lsd
   %rsd = sdiv i32 %lsd.b, %sd1
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %checkbb
+if.end:
   %ysd.0 = phi i32 [ %rsd, %if.then ], [ %psd, %checkbb ]
   store i32 %ysd.0, ptr %isd, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -716,15 +716,13 @@ define i32 @predicated_udiv_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE2:%.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[PRED_UDIV_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP4]], [[X:%.*]]
@@ -744,7 +742,7 @@ define i32 @predicated_udiv_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
 ; CHECK:       pred.udiv.continue2:
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x i32> [ [[TMP9]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP15]], [[PRED_UDIV_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP16]], <2 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x i32> [[TMP16]], <2 x i32> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP18]] = add <2 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

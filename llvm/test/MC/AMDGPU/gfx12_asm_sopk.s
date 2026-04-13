@@ -258,3 +258,12 @@ s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_LO)
 
 s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_HI)
 // GFX12: encoding: [0x1e,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SCHED_MODE)
+// GFX12: encoding: [0x1a,0xf8,0x80,0xb8]
+
+s_setreg_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), s2
+// GFX12: encoding: [0x1a,0x08,0x02,0xb9]
+
+s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE), 0x2
+// GFX12: encoding: [0x1a,0xf8,0x80,0xb9,0x02,0x00,0x00,0x00]

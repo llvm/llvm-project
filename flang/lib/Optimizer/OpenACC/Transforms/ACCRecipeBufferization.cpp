@@ -87,30 +87,26 @@ static void bufferizeRegionArgsAndYields(mlir::Region &region,
   }
 }
 
-static void updateRecipeUse(mlir::ArrayAttr recipes, mlir::ValueRange operands,
+template <typename OpTy>
+static void updateRecipeUse(mlir::ValueRange operands,
                             llvm::StringRef recipeSymName,
                             mlir::Operation *computeOp) {
-  if (!recipes)
-    return;
-  for (auto [recipeSym, oldRes] : llvm::zip(recipes, operands)) {
-    if (llvm::cast<mlir::SymbolRefAttr>(recipeSym).getLeafReference() !=
-        recipeSymName)
+  for (auto operand : operands) {
+    auto op = operand.getDefiningOp<OpTy>();
+    if (!op || !op.getRecipe().has_value() ||
+        op.getRecipeAttr().getLeafReference() != recipeSymName)
       continue;
 
-    mlir::Operation *dataOp = oldRes.getDefiningOp();
-    assert(dataOp && "dataOp must be paired with computeOp");
-    mlir::Location loc = dataOp->getLoc();
-    mlir::OpBuilder builder(dataOp);
-    llvm::TypeSwitch<mlir::Operation *, void>(dataOp)
-        .Case<mlir::acc::PrivateOp, mlir::acc::FirstprivateOp,
-              mlir::acc::ReductionOp>([&](auto privateOp) {
-          builder.setInsertionPointAfterValue(privateOp.getVar());
-          mlir::Value alloca = BufferizeInterface::placeInMemory(
-              builder, loc, privateOp.getVar());
-          privateOp.getVarMutable().assign(alloca);
-          privateOp.getAccVar().setType(alloca.getType());
-        });
+    mlir::Location loc = op->getLoc();
 
+    mlir::OpBuilder builder(op);
+    builder.setInsertionPointAfterValue(op.getVar());
+    mlir::Value alloca =
+        BufferizeInterface::placeInMemory(builder, loc, op.getVar());
+    op.getVarMutable().assign(alloca);
+    op.getAccVar().setType(alloca.getType());
+
+    mlir::Value oldRes = op.getAccVar();
     llvm::SmallVector<mlir::Operation *> users(oldRes.getUsers().begin(),
                                                oldRes.getUsers().end());
     for (mlir::Operation *useOp : users) {
@@ -166,18 +162,15 @@ public:
           .Case<mlir::acc::LoopOp, mlir::acc::ParallelOp, mlir::acc::SerialOp>(
               [&](auto computeOp) {
                 for (llvm::StringRef recipeName : recipeNames) {
-                  if (computeOp.getPrivatizationRecipes())
-                    updateRecipeUse(computeOp.getPrivatizationRecipesAttr(),
-                                    computeOp.getPrivateOperands(), recipeName,
-                                    op);
-                  if (computeOp.getFirstprivatizationRecipes())
-                    updateRecipeUse(
-                        computeOp.getFirstprivatizationRecipesAttr(),
+                  if (!computeOp.getPrivateOperands().empty())
+                    updateRecipeUse<mlir::acc::PrivateOp>(
+                        computeOp.getPrivateOperands(), recipeName, op);
+                  if (!computeOp.getFirstprivateOperands().empty())
+                    updateRecipeUse<mlir::acc::FirstprivateOp>(
                         computeOp.getFirstprivateOperands(), recipeName, op);
-                  if (computeOp.getReductionRecipes())
-                    updateRecipeUse(computeOp.getReductionRecipesAttr(),
-                                    computeOp.getReductionOperands(),
-                                    recipeName, op);
+                  if (!computeOp.getReductionOperands().empty())
+                    updateRecipeUse<mlir::acc::ReductionOp>(
+                        computeOp.getReductionOperands(), recipeName, op);
                 }
               });
     });

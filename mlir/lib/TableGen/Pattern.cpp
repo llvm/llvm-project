@@ -18,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -771,15 +772,27 @@ int Pattern::getBenefit() const {
   return initBenefit + dyn_cast<IntInit>(delta->getArg(0))->getValue();
 }
 
-std::vector<Pattern::IdentifierLine> Pattern::getLocation() const {
+std::vector<Pattern::IdentifierLine>
+Pattern::getLocation(bool forSourceOutput) const {
   std::vector<std::pair<StringRef, unsigned>> result;
   result.reserve(def.getLoc().size());
   for (auto loc : def.getLoc()) {
     unsigned buf = llvm::SrcMgr.FindBufferContainingLoc(loc);
     assert(buf && "invalid source location");
-    result.emplace_back(
-        llvm::SrcMgr.getBufferInfo(buf).Buffer->getBufferIdentifier(),
-        llvm::SrcMgr.getLineAndColumn(loc, buf).first);
+
+    StringRef bufferName =
+        llvm::SrcMgr.getBufferInfo(buf).Buffer->getBufferIdentifier();
+    // If we're emitting a generated file, we'd like to have some indication of
+    // where our patterns came from. However, LLVM's build rules use absolute
+    // paths as arguments to TableGen, and naively echoing such paths makes the
+    // contents of the generated source file depend on the build location,
+    // making MLIR builds substantially less reproducable. As a compromise, we
+    // trim absolute paths back to only the filename component.
+    if (forSourceOutput && llvm::sys::path::is_absolute(bufferName))
+      bufferName = llvm::sys::path::filename(bufferName);
+
+    result.emplace_back(bufferName,
+                        llvm::SrcMgr.getLineAndColumn(loc, buf).first);
   }
   return result;
 }

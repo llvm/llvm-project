@@ -18,7 +18,7 @@ print *,r
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> attributes {byref_element_type = i32} alloc {
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
 ! CHECK:           omp.yield(%[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK-LABEL:   } init {

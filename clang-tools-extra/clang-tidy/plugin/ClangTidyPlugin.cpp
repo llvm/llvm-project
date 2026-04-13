@@ -1,4 +1,4 @@
-//===- ClangTidyPlugin.cpp - clang-tidy as a clang plugin -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 
 namespace clang::tidy {
+namespace {
 
 /// The core clang tidy plugin action. This just provides the AST consumer and
 /// command line flag parsing for using clang-tidy as a clang plugin.
@@ -55,13 +56,13 @@ public:
 
   bool ParseArgs(const CompilerInstance &,
                  const std::vector<std::string> &Args) override {
-    ClangTidyGlobalOptions GlobalOptions;
-    ClangTidyOptions DefaultOptions;
+    const ClangTidyGlobalOptions GlobalOptions;
+    const ClangTidyOptions DefaultOptions;
     ClangTidyOptions OverrideOptions;
 
     // Parse the extra command line args.
     // FIXME: This is very limited at the moment.
-    for (StringRef Arg : Args)
+    for (const StringRef Arg : Args)
       if (Arg.starts_with("-checks="))
         OverrideOptions.Checks = std::string(Arg.substr(strlen("-checks=")));
 
@@ -74,6 +75,8 @@ public:
 private:
   std::unique_ptr<ClangTidyContext> Context;
 };
+
+} // namespace
 } // namespace clang::tidy
 
 // This anchor is used to force the linker to link in the generated object file

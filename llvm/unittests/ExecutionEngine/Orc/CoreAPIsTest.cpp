@@ -15,7 +15,6 @@
 #include "llvm/Testing/Support/Error.h"
 
 #include <deque>
-#include <set>
 #include <thread>
 
 using namespace llvm;
@@ -1503,6 +1502,15 @@ TEST_F(CoreAPIsStandardTest, FailAfterPartialResolution) {
   EXPECT_TRUE(QueryHandlerRun) << "Query handler never ran";
 }
 
+TEST_F(CoreAPIsStandardTest, FailDefineDueToDefunctJITDylib) {
+  JITDylibSP FooJD(&ES.createBareJITDylib("FooJD"));
+
+  cantFail(ES.removeJITDylib(*FooJD));
+
+  EXPECT_THAT_ERROR(FooJD->define(absoluteSymbols({{Foo, FooSym}})),
+                    Failed<JITDylibDefunct>());
+}
+
 TEST_F(CoreAPIsStandardTest, FailDefineMaterializingDueToDefunctTracker) {
   // Check that a defunct resource tracker causes defineMaterializing to error
   // immediately.
@@ -1719,7 +1727,7 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // form a tree.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1761,7 +1769,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // contain a diamond.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1785,7 +1793,7 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // contain a cycle.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1894,6 +1902,69 @@ TEST(CoreAPIsExtraTest, SessionTeardownByFailedToMaterialize) {
   // Make sure that we can log errors, even though the session has been
   // destroyed.
   logAllUnhandledErrors(std::move(Err), nulls(), "");
+}
+
+TEST(BootstrapJITDylibTest, BootstrapSymbolsAvailableViaLookup) {
+  // Check that bootstrap symbols provided by the ExecutorProcessControl object
+  // are available via lookup on the bootstrap JITDylib.
+
+  // Create an EPC with some bootstrap symbols pre-populated.
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto EPC =
+      std::make_unique<UnsupportedExecutorProcessControl>(std::move(SSP));
+
+  // Access the protected BootstrapSymbols map via the public
+  // getBootstrapSymbolsMap accessor... we can't. Instead, use a subclass.
+  class EPCWithBootstrapSymbols : public UnsupportedExecutorProcessControl {
+  public:
+    EPCWithBootstrapSymbols(std::shared_ptr<SymbolStringPool> SSP,
+                            StringMap<ExecutorAddr> BS)
+        : UnsupportedExecutorProcessControl(std::move(SSP)) {
+      this->BootstrapSymbols = std::move(BS);
+    }
+  };
+
+  constexpr ExecutorAddr Addr1(1);
+  constexpr ExecutorAddr Addr2(2);
+
+  StringMap<ExecutorAddr> BootstrapSyms;
+  BootstrapSyms["__orc_rt_run_program"] = Addr1;
+  BootstrapSyms["__orc_rt_log"] = Addr2;
+
+  auto SSP2 = std::make_shared<SymbolStringPool>();
+  auto EPC2 =
+      std::make_unique<EPCWithBootstrapSymbols>(SSP2, std::move(BootstrapSyms));
+  ExecutionSession ES(std::move(EPC2));
+
+  auto &BootstrapJD = ES.getBootstrapJITDylib();
+  EXPECT_EQ(BootstrapJD.getName(), "<bootstrap>");
+
+  // Look up the bootstrap symbols.
+  auto Result =
+      cantFail(ES.lookup(makeJITDylibSearchOrder(&BootstrapJD),
+                         SymbolLookupSet({ES.intern("__orc_rt_run_program"),
+                                          ES.intern("__orc_rt_log")})));
+
+  EXPECT_EQ(Result.size(), 2U);
+  EXPECT_EQ(Result[ES.intern("__orc_rt_run_program")].getAddress(), Addr1);
+  EXPECT_EQ(Result[ES.intern("__orc_rt_log")].getAddress(), Addr2);
+
+  cantFail(ES.endSession());
+}
+
+TEST(BootstrapJITDylibTest, EmptyBootstrapSymbols) {
+  // Check that the bootstrap JITDylib is created even when there are no
+  // bootstrap symbols.
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto EPC =
+      std::make_unique<UnsupportedExecutorProcessControl>(std::move(SSP));
+
+  ExecutionSession ES(std::move(EPC));
+
+  auto &BootstrapJD = ES.getBootstrapJITDylib();
+  EXPECT_EQ(BootstrapJD.getName(), "<bootstrap>");
+
+  cantFail(ES.endSession());
 }
 
 } // namespace

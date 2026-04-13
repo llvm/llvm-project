@@ -13,9 +13,12 @@
 
 #include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Target/StackID.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
+
+struct StoppedExecutionContext;
 
 //===----------------------------------------------------------------------===//
 /// Execution context objects refer to objects in the execution of the program
@@ -268,7 +271,13 @@ public:
     m_tid = LLDB_INVALID_THREAD_ID;
   }
 
-  void ClearFrame() { m_stack_id.Clear(); }
+  void ClearFrame() {
+    m_stack_id.Clear();
+    m_frame_list_id.reset();
+  }
+
+  friend llvm::Expected<StoppedExecutionContext>
+  GetStoppedExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr);
 
 protected:
   // Member variables
@@ -279,7 +288,11 @@ protected:
                                               ///< object refers to in case the
                                               /// backing object changes
   StackID m_stack_id; ///< The stack ID that this object refers to in case the
-                      ///backing object changes
+                      ///< backing object changes
+  /// A map of identifiers to scripted frame providers used in this thread.
+  mutable std::optional<
+      std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>>
+      m_frame_list_id;
 };
 
 /// \class ExecutionContext ExecutionContext.h

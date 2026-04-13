@@ -398,16 +398,15 @@ define dso_local signext i32 @array1() local_unnamed_addr #0 {
 ; AIX32:       # %bb.0: # %entry
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -96(r1)
-; AIX32-NEXT:    lwz r5, L..C0(r2) # @_MergedGlobals
-; AIX32-NEXT:    li r6, 308
-; AIX32-NEXT:    li r4, 12
-; AIX32-NEXT:    addi r3, r1, 64
+; AIX32-NEXT:    lwz r3, L..C0(r2) # @_MergedGlobals
+; AIX32-NEXT:    li r4, 308
 ; AIX32-NEXT:    stw r0, 104(r1)
-; AIX32-NEXT:    rlwimi r4, r3, 0, 30, 27
-; AIX32-NEXT:    lxvw4x vs0, r5, r6
+; AIX32-NEXT:    lxvw4x vs0, r3, r4
+; AIX32-NEXT:    addi r4, r1, 76
 ; AIX32-NEXT:    stxvw4x vs0, 0, r4
 ; AIX32-NEXT:    li r4, 296
-; AIX32-NEXT:    lxvw4x vs0, r5, r4
+; AIX32-NEXT:    lxvw4x vs0, r3, r4
+; AIX32-NEXT:    addi r3, r1, 64
 ; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop
@@ -861,15 +860,14 @@ define dso_local signext i32 @mixed2() local_unnamed_addr #0 {
 ; AIX32-NEXT:    stw r0, 120(r1)
 ; AIX32-NEXT:    stw r30, 104(r1) # 4-byte Folded Spill
 ; AIX32-NEXT:    lwz r30, L..C0(r2) # @_MergedGlobals
-; AIX32-NEXT:    li r5, 308
-; AIX32-NEXT:    li r4, 12
-; AIX32-NEXT:    addi r3, r1, 64
+; AIX32-NEXT:    li r3, 308
 ; AIX32-NEXT:    stw r31, 108(r1) # 4-byte Folded Spill
-; AIX32-NEXT:    rlwimi r4, r3, 0, 30, 27
-; AIX32-NEXT:    lxvw4x vs0, r30, r5
-; AIX32-NEXT:    stxvw4x vs0, 0, r4
-; AIX32-NEXT:    li r4, 296
-; AIX32-NEXT:    lxvw4x vs0, r30, r4
+; AIX32-NEXT:    lxvw4x vs0, r30, r3
+; AIX32-NEXT:    addi r3, r1, 76
+; AIX32-NEXT:    stxvw4x vs0, 0, r3
+; AIX32-NEXT:    li r3, 296
+; AIX32-NEXT:    lxvw4x vs0, r30, r3
+; AIX32-NEXT:    addi r3, r1, 64
 ; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop

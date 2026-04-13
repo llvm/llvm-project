@@ -43,6 +43,9 @@ void test_builtin_elementwise_abs(int i, double d, float4 v, int3 iv, unsigned u
 
   uv = __builtin_elementwise_abs(uv);
   // expected-error@-1 {{1st argument must be a scalar or vector of signed integer or floating-point types (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+
+  i = __builtin_elementwise_abs(&i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of signed integer or floating-point types (was 'int *')}}
 }
 
 void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
@@ -235,6 +238,14 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
   _Complex float c1, c2;
   c1 = __builtin_elementwise_max(c1, c2);
   // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was '_Complex float')}}
+
+  double dr;
+  dr = __builtin_elementwise_max(d, 0.0);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
+
+  float4 vr;
+  vr = __builtin_elementwise_max(v, v);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
 }
 
 void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
@@ -295,6 +306,14 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
   _Complex float c1, c2;
   c1 = __builtin_elementwise_min(c1, c2);
   // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was '_Complex float')}}
+
+  double dr;
+  dr = __builtin_elementwise_min(d, 0.0);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
+
+  float4 vr;
+  vr = __builtin_elementwise_min(v, v);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
 }
 
 void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
@@ -642,6 +661,42 @@ void test_builtin_elementwise_exp10(int i, float f, double d, float4 v, int3 iv,
   // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned int')}}
 
   uv = __builtin_elementwise_exp10(uv);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
+void test_builtin_elementwise_ldexp(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_ldexp(f, i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  f = __builtin_elementwise_ldexp();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  f = __builtin_elementwise_ldexp(f);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  f = __builtin_elementwise_ldexp(f, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  f = __builtin_elementwise_ldexp(i, i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
+
+  f = __builtin_elementwise_ldexp(f, f);
+  // expected-error@-1 {{2nd argument must be a scalar or vector of integer types (was 'float')}}
+
+  f = __builtin_elementwise_ldexp(v, iv);
+  // expected-error@-1 {{vector operands do not have the same number of elements ('float4' (vector of 4 'float' values) and 'int3' (vector of 3 'int' values))}}
+
+  v = __builtin_elementwise_ldexp(v, i);
+  // expected-error@-1 {{vector operands do not have the same number of elements ('float4' (vector of 4 'float' values) and 'int')}}
+
+  v = __builtin_elementwise_ldexp(f, iv);
+  // expected-error@-1 {{vector operands do not have the same number of elements ('float' and 'int3' (vector of 3 'int' values))}}
+
+  f = __builtin_elementwise_ldexp(u, i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned int')}}
+
+  f = __builtin_elementwise_ldexp(uv, i);
   // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
@@ -1340,6 +1395,7 @@ typedef struct {
 
 float3 foo(float3 a,const struct_float3* hi) {
   float3 b = __builtin_elementwise_max((float3)(0.0f), a);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
   return __builtin_elementwise_pow(b, hi->b.yyy);
 }
 

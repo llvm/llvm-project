@@ -504,7 +504,7 @@ define void @rdiv9(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - consistent input [S S]!
+; CHECK-NEXT:    da analyze - input [S S]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -556,11 +556,11 @@ define void @rdiv10(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [=> *|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - consistent input [S S]!
+; CHECK-NEXT:    da analyze - input [S S]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -615,7 +615,7 @@ define void @rdiv11(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - consistent input [S S]!
+; CHECK-NEXT:    da analyze - input [S S]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -666,11 +666,11 @@ define void @rdiv12(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    da analyze - flow [=> *|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - consistent input [S S]!
+; CHECK-NEXT:    da analyze - input [S S]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4

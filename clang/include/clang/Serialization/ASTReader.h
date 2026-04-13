@@ -185,8 +185,7 @@ public:
   /// otherwise.
   virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                        StringRef ModuleFilename,
-                                       StringRef SpecificModuleCachePath,
-                                       bool Complain) {
+                                       StringRef ContextHash, bool Complain) {
     return false;
   }
 
@@ -220,12 +219,13 @@ public:
   }
 
   /// Receives __COUNTER__ value.
-  virtual void ReadCounter(const serialization::ModuleFile &M,
-                           unsigned Value) {}
+  virtual void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) {
+  }
 
   /// This is called for each AST file loaded.
-  virtual void visitModuleFile(StringRef Filename,
-                               serialization::ModuleKind Kind) {}
+  virtual void visitModuleFile(ModuleFileName Filename,
+                               serialization::ModuleKind Kind,
+                               bool DirectlyImported) {}
 
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// input files of the AST file via \c visitInputFile, false otherwise.
@@ -254,7 +254,7 @@ public:
   /// \returns true to continue receiving the next input file, false to stop.
   virtual bool visitInputFileAsRequested(StringRef FilenameAsRequested,
                                          StringRef Filename, bool isSystem,
-                                         bool isOverridden,
+                                         bool isOverridden, time_t StoredTime,
                                          bool isExplicitModule) {
     return true;
   }
@@ -304,19 +304,18 @@ public:
                              bool Complain) override;
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                StringRef ModuleFilename, bool ReadMacros,
                                bool Complain,
                                std::string &SuggestedPredefines) override;
 
-  void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
+  void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
-  void visitModuleFile(StringRef Filename,
-                       serialization::ModuleKind Kind) override;
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override;
   bool visitInputFile(StringRef Filename, bool isSystem,
                       bool isOverridden, bool isExplicitModule) override;
   void readModuleFileExtension(
@@ -349,10 +348,9 @@ public:
                                bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override;
-  void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
+  void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
 };
 
 /// ASTReaderListenter implementation to set SuggestedPredefines of
@@ -800,14 +798,6 @@ private:
   /// files.
   llvm::DenseSet<LoadedMacroInfo> LoadedUndefs;
 
-  using GlobalMacroMapType =
-      ContinuousRangeMap<serialization::MacroID, ModuleFile *, 4>;
-
-  /// Mapping from global macro IDs to the module in which the
-  /// macro resides along with the offset that should be added to the
-  /// global macro ID to produce a local ID.
-  GlobalMacroMapType GlobalMacroMap;
-
   /// A vector containing submodules that have already been loaded.
   ///
   /// This vector is indexed by the Submodule ID (-1). NULL submodule entries
@@ -976,8 +966,14 @@ private:
   SmallVector<serialization::SelectorID, 64> ReferencedSelectorsData;
 
   /// A snapshot of Sema's weak undeclared identifier tracking, for
-  /// generating warnings.
+  /// generating warnings. Note that this vector has 3n entries, being triplets
+  /// of the form C name, alias if any, and source location.
   SmallVector<serialization::IdentifierID, 64> WeakUndeclaredIdentifiers;
+
+  /// A snapshot of Sema's #redefine_extname'd undeclared identifier tracking,
+  /// for generating warnings. Note that this vector has 3n entries, being
+  /// triplets in the order of C name, asm name, and source location.
+  SmallVector<serialization::IdentifierID, 64> ExtnameUndeclaredIdentifiers;
 
   /// The IDs of type aliases for ext_vectors that exist in the chain.
   ///
@@ -1013,7 +1009,7 @@ private:
   ///
   /// The AST context tracks a few important decls, currently cudaConfigureCall,
   /// directly.
-  SmallVector<GlobalDeclID, 2> CUDASpecialDeclRefs;
+  SmallVector<GlobalDeclID, 4> CUDASpecialDeclRefs;
 
   /// The floating point pragma option settings.
   SmallVector<uint64_t, 1> FPPragmaOptions;
@@ -1086,6 +1082,9 @@ private:
 
   /// The IDs of all decls with function effects to be checked.
   SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
+
+  /// The RISC-V intrinsic pragma(including RVV, SiFive and Andes).
+  SmallVector<bool, 3> RISCVVecIntrinsicPragma;
 
 private:
   struct ImportedSubmodule {
@@ -1546,7 +1545,6 @@ public:
   /// If we have any unloaded specialization for \p D
   bool haveUnloadedSpecializations(const Decl *D) const;
 
-private:
   struct ImportedModule {
     ModuleFile *Mod;
     ModuleFile *ImportedBy;
@@ -1558,12 +1556,14 @@ private:
         : Mod(Mod), ImportedBy(ImportedBy), ImportLoc(ImportLoc) {}
   };
 
-  ASTReadResult ReadASTCore(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadASTCore(ModuleFileName FileName, ModuleKind Type,
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             SmallVectorImpl<ImportedModule> &Loaded,
                             off_t ExpectedSize, time_t ExpectedModTime,
                             ASTFileSignature ExpectedSignature,
                             unsigned ClientLoadCapabilities);
+
+private:
   ASTReadResult ReadControlBlock(ModuleFile &F,
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
@@ -1594,6 +1594,21 @@ private:
   void ParseLineTable(ModuleFile &F, const RecordData &Record);
   llvm::Error ReadSourceManagerBlock(ModuleFile &F);
   SourceLocation getImportLocation(ModuleFile *F);
+
+  /// The first element is `std::nullopt` if relocation check should be skipped.
+  /// Otherwise, the optional holds a pointer to the discovered module.
+  /// The pointer can be `nullptr` if the discovery was unsuccessful.
+  /// The second element determines whether to emit related errors.
+  using RelocationResult = std::pair<std::optional<Module *>, bool>;
+
+  /// Determine whether a relocation check for a module should be performed
+  /// by attempting to resolve the same module via lookup.
+  /// If so, also determine whether to emit errors for the relocation.
+  /// A relocated module is defined as a module that is either no longer
+  /// resolvable from the modulemap or search path it originally compiled it's
+  /// definition from.
+  RelocationResult getModuleForRelocationChecks(ModuleFile &F,
+                                                bool DirectoryCheck = false);
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
@@ -1655,8 +1670,7 @@ private:
 
   /// Returns the first preprocessed entity ID that begins or ends after
   /// \arg Loc.
-  serialization::PreprocessedEntityID
-  findPreprocessedEntity(SourceLocation Loc, bool EndsAfter) const;
+  unsigned findPreprocessedEntity(SourceLocation Loc, bool EndsAfter) const;
 
   /// Find the next module that contains entities and return the ID
   /// of the first entry.
@@ -1664,9 +1678,8 @@ private:
   /// \param SLocMapI points at a chunk of a module that contains no
   /// preprocessed entities or the entities it contains are not the
   /// ones we are looking for.
-  serialization::PreprocessedEntityID
-    findNextPreprocessedEntity(
-                        GlobalSLocOffsetMapType::const_iterator SLocMapI) const;
+  unsigned findNextPreprocessedEntity(
+      GlobalSLocOffsetMapType::const_iterator SLocMapI) const;
 
   /// Returns (ModuleFile, Local index) pair for \p GlobalIndex of a
   /// preprocessed entity.
@@ -1747,6 +1760,14 @@ private:
   /// array and the corresponding module file.
   std::pair<ModuleFile *, unsigned>
   translateIdentifierIDToIndex(serialization::IdentifierID ID) const;
+
+  /// Translate an \param MacroID ID to the index of MacrosLoaded
+  /// array and the corresponding module file.
+  std::pair<ModuleFile *, unsigned>
+  translateMacroIDToIndex(serialization::MacroID ID) const;
+
+  unsigned translatePreprocessedEntityIDToIndex(
+      serialization::PreprocessedEntityID ID) const;
 
   /// Translate an \param TypeID ID to the index of TypesLoaded
   /// array and the corresponding module file.
@@ -1871,7 +1892,7 @@ public:
   /// NewLoadedModuleFile would refer to the address of the new loaded top level
   /// module. The state of NewLoadedModuleFile is unspecified if the AST file
   /// isn't loaded successfully.
-  ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
+  ASTReadResult ReadAST(ModuleFileName FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
                         unsigned ClientLoadCapabilities,
                         ModuleFile **NewLoadedModuleFile = nullptr);
@@ -2023,7 +2044,8 @@ public:
       StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
       const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
       const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
-      const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
+      const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+      StringRef SpecificModuleCachePath,
       bool RequireStrictOptionMatches = false);
 
   /// Returns the suggested contents of the predefines buffer,
@@ -2162,6 +2184,14 @@ public:
   /// module file.
   LocalDeclID mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
                                               GlobalDeclID GlobalID);
+
+  /// Reads a macro ID from the given position in a record in the
+  /// given module.
+  ///
+  /// \returns The declaration ID read from the record, adjusted to a global
+  /// Macro ID.
+  serialization::MacroID
+  ReadMacroID(ModuleFile &F, const RecordDataImpl &Record, unsigned &Idx);
 
   /// Reads a declaration ID from the given position in a record in the
   /// given module.
@@ -2333,6 +2363,10 @@ public:
   void ReadWeakUndeclaredIdentifiers(
       SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WeakIDs) override;
 
+  void ReadExtnameUndeclaredIdentifiers(
+      SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &ExtnameIDs)
+      override;
+
   void ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) override;
 
   void ReadPendingInstantiations(
@@ -2388,7 +2422,8 @@ public:
 
   /// Retrieve the global macro ID corresponding to the given local
   /// ID within the given module file.
-  serialization::MacroID getGlobalMacroID(ModuleFile &M, unsigned LocalID);
+  serialization::MacroID getGlobalMacroID(ModuleFile &M,
+                                          serialization::MacroID LocalID);
 
   /// Read the source location entry with index ID.
   bool ReadSLocEntry(int ID) override;
@@ -2572,8 +2607,8 @@ public:
 
   /// Determine the global preprocessed entity ID that corresponds to
   /// the given local ID within the given module.
-  serialization::PreprocessedEntityID
-  getGlobalPreprocessedEntityID(ModuleFile &M, unsigned LocalID) const;
+  serialization::PreprocessedEntityID getGlobalPreprocessedEntityID(
+      ModuleFile &M, serialization::PreprocessedEntityID LocalID) const;
 
   /// Add a macro to deserialize its macro directive history.
   ///

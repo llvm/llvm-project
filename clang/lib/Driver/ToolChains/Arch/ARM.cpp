@@ -8,7 +8,7 @@
 
 #include "ARM.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -74,7 +74,7 @@ bool arm::isARMEABIBareMetal(const llvm::Triple &Triple) {
 // Get Arch/CPU from args.
 void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
                                 llvm::StringRef &CPU, bool FromAs) {
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
     CPU = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
     Arch = A->getValue();
@@ -517,7 +517,8 @@ arm::FloatABI arm::getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
     else
       ABI = FloatABI::Soft;
 
-    if (Triple.getOS() != llvm::Triple::UnknownOS ||
+    if (((Triple.getOS() != llvm::Triple::UnknownOS) &&
+         !Triple.isOSFirmware()) ||
         !Triple.isOSBinFormatMachO())
       D.Diag(diag::warn_drv_assuming_mfloat_abi_is) << "soft";
   }

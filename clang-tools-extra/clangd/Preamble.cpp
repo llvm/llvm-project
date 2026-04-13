@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Preamble.h"
+#include "AST.h"
 #include "CollectMacros.h"
 #include "Compiler.h"
 #include "Config.h"
@@ -164,27 +165,6 @@ public:
     return std::make_unique<PPChainedCallbacks>(
         std::make_unique<CollectMainFileMacros>(*PP, Macros),
         collectPragmaMarksCallback(*SourceMgr, Marks));
-  }
-
-  static bool isLikelyForwardingFunction(FunctionTemplateDecl *FT) {
-    const auto *FD = FT->getTemplatedDecl();
-    const auto NumParams = FD->getNumParams();
-    // Check whether its last parameter is a parameter pack...
-    if (NumParams > 0) {
-      const auto *LastParam = FD->getParamDecl(NumParams - 1);
-      if (const auto *PET = dyn_cast<PackExpansionType>(LastParam->getType())) {
-        // ... of the type T&&... or T...
-        const auto BaseType = PET->getPattern().getNonReferenceType();
-        if (const auto *TTPT =
-                dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
-          // ... whose template parameter comes from the function directly
-          if (FT->getTemplateParameters()->getDepth() == TTPT->getDepth()) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
   }
 
   bool shouldSkipFunctionBody(Decl *D) override {
@@ -618,13 +598,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       CompilerInstance::createDiagnostics(*VFS, CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics,
                                           /*ShouldOwnClient=*/false);
-  const Config &Cfg = Config::current();
   PreambleDiagnostics.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
-    if (Cfg.Diagnostics.SuppressAll ||
-        isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
-                               CI.getLangOpts()))
-      return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
       // If the preamble doesn't span the whole file, drop the no newline at
@@ -709,7 +684,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
-    Result->StatCache = StatCache;
+    Result->StatCache = std::move(StatCache);
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
     // Move the options instead of copying them. The invocation doesn't need
     // them anymore.

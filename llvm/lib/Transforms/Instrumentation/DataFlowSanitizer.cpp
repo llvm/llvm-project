@@ -318,6 +318,14 @@ const MemoryMapParams Linux_LoongArch64_MemoryMapParams = {
     0x100000000000, // OriginBase
 };
 
+// s390x Linux
+const MemoryMapParams Linux_S390X_MemoryMapParams = {
+    0xC00000000000, // AndMask
+    0,              // XorMask (not used)
+    0x080000000000, // ShadowBase
+    0x1C0000000000, // OriginBase
+};
+
 namespace {
 
 class DFSanABIList {
@@ -828,7 +836,7 @@ public:
   void visitSelectInst(SelectInst &I);
   void visitMemSetInst(MemSetInst &I);
   void visitMemTransferInst(MemTransferInst &I);
-  void visitBranchInst(BranchInst &BR);
+  void visitCondBrInst(CondBrInst &BR);
   void visitSwitchInst(SwitchInst &SW);
 
 private:
@@ -1145,6 +1153,9 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
     break;
   case Triple::loongarch64:
     MapParams = &Linux_LoongArch64_MemoryMapParams;
+    break;
+  case Triple::systemz:
+    MapParams = &Linux_S390X_MemoryMapParams;
     break;
   default:
     report_fatal_error("unsupported architecture");
@@ -1779,7 +1790,7 @@ bool DataFlowSanitizer::runImpl(
         Value *PrimitiveShadow = DFSF.collapseToPrimitiveShadow(V, Pos);
         Value *Ne =
             IRB.CreateICmpNE(PrimitiveShadow, DFSF.DFS.ZeroPrimitiveShadow);
-        BranchInst *BI = cast<BranchInst>(SplitBlockAndInsertIfThen(
+        UncondBrInst *BI = cast<UncondBrInst>(SplitBlockAndInsertIfThen(
             Ne, Pos, /*Unreachable=*/false, ColdCallWeights));
         IRBuilder<> ThenIRB(BI);
         ThenIRB.CreateCall(DFSF.DFS.DFSanNonzeroLabelFn, {});
@@ -1957,8 +1968,12 @@ Value *DataFlowSanitizer::getShadowAddress(Value *Addr,
 Value *DataFlowSanitizer::getShadowAddress(Value *Addr,
                                            BasicBlock::iterator Pos) {
   IRBuilder<> IRB(Pos->getParent(), Pos);
-  Value *ShadowOffset = getShadowOffset(Addr, IRB);
-  return getShadowAddress(Addr, Pos, ShadowOffset);
+  Value *ShadowAddr = getShadowOffset(Addr, IRB);
+  uint64_t ShadowBase = MapParams->ShadowBase;
+  if (ShadowBase != 0)
+    ShadowAddr =
+        IRB.CreateAdd(ShadowAddr, ConstantInt::get(IntptrTy, ShadowBase));
+  return getShadowAddress(Addr, Pos, ShadowAddr);
 }
 
 Value *DFSanFunction::combineShadowsThenConvert(Type *T, Value *V1, Value *V2,
@@ -2187,8 +2202,16 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
       // and then the entire shadow for the second origin pointer (which will be
       // chosen by combineOrigins() iff the least-significant half of the wide
       // shadow was empty but the other half was not).
-      Value *WideShadowLo = IRB.CreateShl(
-          WideShadow, ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2));
+      Value *WideShadowLo =
+          F->getParent()->getDataLayout().isLittleEndian()
+              ? IRB.CreateShl(
+                    WideShadow,
+                    ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2))
+              : IRB.CreateAnd(
+                    WideShadow,
+                    ConstantInt::get(WideShadowTy,
+                                     (1 - (1 << (WideShadowBitWidth / 2)))
+                                         << (WideShadowBitWidth / 2)));
       Shadows.push_back(WideShadow);
       Origins.push_back(DFS.loadNextOrigin(Pos, OriginAlign, &OriginAddr));
 
@@ -2340,7 +2363,7 @@ DFSanFunction::loadShadowOrigin(Value *Addr, uint64_t Size, Align InstAlignment,
     if (ClTrackOrigins == 2) {
       IRBuilder<> IRB(Pos->getParent(), Pos);
       auto *ConstantShadow = dyn_cast<Constant>(PrimitiveShadow);
-      if (!ConstantShadow || !ConstantShadow->isZeroValue())
+      if (!ConstantShadow || !ConstantShadow->isNullValue())
         Origin = updateOriginIfTainted(PrimitiveShadow, Origin, IRB);
     }
   }
@@ -2529,7 +2552,7 @@ void DFSanFunction::storeOrigin(BasicBlock::iterator Pos, Value *Addr,
   Value *CollapsedShadow = collapseToPrimitiveShadow(Shadow, Pos);
   IRBuilder<> IRB(Pos->getParent(), Pos);
   if (auto *ConstantShadow = dyn_cast<Constant>(CollapsedShadow)) {
-    if (!ConstantShadow->isZeroValue())
+    if (!ConstantShadow->isNullValue())
       paintOrigin(IRB, updateOrigin(Origin, IRB), StoreOriginAddr, Size,
                   OriginAlignment);
     return;
@@ -2953,10 +2976,7 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   }
 }
 
-void DFSanVisitor::visitBranchInst(BranchInst &BR) {
-  if (!BR.isConditional())
-    return;
-
+void DFSanVisitor::visitCondBrInst(CondBrInst &BR) {
   DFSF.addConditionalCallbacksIfEnabled(BR, BR.getCondition());
 }
 

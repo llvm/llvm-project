@@ -157,6 +157,10 @@ public:
   /// perform WidenScalar action on the target.
   bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
 
+  /// \return true if \p Query is legal on the target, or if \p Query will
+  /// perform a FewerElements action on the target.
+  bool isLegalOrHasFewerElements(const LegalityQuery &Query) const;
+
   /// \return true if the combine is running prior to legalization, or if \p Ty
   /// is a legal integer constant type on the target.
   bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
@@ -276,7 +280,6 @@ public:
                                  SmallVector<Register> &Ops) const;
 
   /// Replace \p MI with a build_vector.
-  bool matchCombineShuffleToBuildVector(MachineInstr &MI) const;
   void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
@@ -294,9 +297,7 @@ public:
                                  SmallVectorImpl<Register> &Ops) const;
   /// Replace \p MI with a concat_vectors with \p Ops.
   void applyCombineShuffleVector(MachineInstr &MI,
-                                 const ArrayRef<Register> Ops) const;
-  bool matchShuffleToExtract(MachineInstr &MI) const;
-  void applyShuffleToExtract(MachineInstr &MI) const;
+                                 ArrayRef<Register> Ops) const;
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
@@ -521,9 +522,6 @@ public:
   /// Optimize (x op x) -> x
   bool matchBinOpSameVal(MachineInstr &MI) const;
 
-  /// Check if operand \p OpIdx is zero.
-  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) const;
-
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
@@ -539,6 +537,9 @@ public:
                              std::tuple<Register, Register> &MatchInfo) const;
   void applySimplifyAddToSub(MachineInstr &MI,
                              std::tuple<Register, Register> &MatchInfo) const;
+
+  /// Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+  bool matchBinopWithNeg(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Match (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
   bool matchHoistLogicOpWithSameOpcodeHands(
@@ -643,11 +644,18 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
-  bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  bool matchOrShiftToFunnelShift(MachineInstr &MI, bool AllowScalarConstants,
+                                 BuildFnTy &MatchInfo) const;
   bool matchFunnelShiftToRotate(MachineInstr &MI) const;
   void applyFunnelShiftToRotate(MachineInstr &MI) const;
   bool matchRotateOutOfRange(MachineInstr &MI) const;
   void applyRotateOutOfRange(MachineInstr &MI) const;
+
+  bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                Register &UnmergeSrc) const;
+  void applyCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B,
+                                Register &UnmergeSrc) const;
 
   bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
   void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
@@ -1042,9 +1050,18 @@ public:
   bool matchRedundantSextInReg(MachineInstr &Root, MachineInstr &Other,
                                BuildFnTy &MatchInfo) const;
 
+  // (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1) or
+  // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+  bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
+
+  /// Helper function for matchBinopWithNeg: tries to match one commuted form
+  /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.
+  bool matchBinopWithNegInner(Register MInner, Register Other, unsigned RootOpc,
+                              Register Dst, LLT Ty, BuildFnTy &MatchInfo) const;
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///

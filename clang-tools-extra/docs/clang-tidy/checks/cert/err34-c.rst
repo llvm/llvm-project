@@ -6,5 +6,6 @@ cert-err34-c
 ============
 
 The cert-err34-c check is an alias, please see
-`bugprone-unchecked-string-to-number-conversion <../bugprone/unchecked-string-to-number-conversion.html>`_
+:doc:`bugprone-unchecked-string-to-number-conversion
+<../bugprone/unchecked-string-to-number-conversion>`
 for more information.

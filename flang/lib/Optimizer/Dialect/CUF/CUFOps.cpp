@@ -274,6 +274,32 @@ llvm::LogicalResult cuf::KernelOp::verify() {
   return checkStreamType(*this);
 }
 
+bool cuf::KernelOp::canMoveFromDescendant(mlir::Operation *descendant,
+                                          mlir::Operation *candidate) {
+  // Moving operations out of loops inside cuf.kernel is always legal.
+  return true;
+}
+
+bool cuf::KernelOp::canMoveOutOf(mlir::Operation *candidate) {
+  // In general, some movement of operations out of cuf.kernel is allowed.
+  if (!candidate)
+    return true;
+
+  // Operations that have !fir.ref operands cannot be moved
+  // out of cuf.kernel, because this may break implicit data mapping
+  // passes that may run after LICM.
+  return !llvm::any_of(candidate->getOperands(),
+                       [&](mlir::Value candidateOperand) {
+                         return fir::isa_ref_type(candidateOperand.getType());
+                       }) &&
+         // Same is true for symbol operands (this has to be revisited,
+         // because this may indicate an issue in ordering between
+         // CUFDeviceGlobal and OffloadLiveInValueCanonicalization passes).
+         !llvm::any_of(candidate->getAttrs(), [&](mlir::NamedAttribute attr) {
+           return mlir::isa_and_present<mlir::SymbolRefAttr>(attr.getValue());
+         });
+}
+
 //===----------------------------------------------------------------------===//
 // RegisterKernelOp
 //===----------------------------------------------------------------------===//
@@ -333,7 +359,8 @@ void cuf::SharedMemoryOp::build(
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType),
         mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
-        /*offset=*/mlir::Value{});
+        /*offset=*/mlir::Value{}, /*alignment=*/mlir::IntegerAttr{},
+        /*isStatic=*/nullptr);
   result.addAttributes(attributes);
 }
 
