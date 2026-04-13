@@ -1824,17 +1824,18 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   if (!BuildOpts.AddInitializers)
     return Block;
 
+  bool HasTemporaries = false;
+
   // Destructors of temporaries in initialization expression should be called
   // after initialization finishes.
   Expr *Init = I->getInit();
   if (Init) {
     Expr *ActualInit = Init;
-    if (BuildOpts.AddCXXDefaultInitExprInCtors) {
+    if (BuildOpts.AddCXXDefaultInitExprInCtors)
       if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init))
         ActualInit = DIE->getExpr();
-    }
 
-    bool HasTemporaries = isa<ExprWithCleanups>(ActualInit);
+    HasTemporaries = isa<ExprWithCleanups>(ActualInit);
 
     if (HasTemporaries &&
         (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
@@ -1845,10 +1846,12 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
 
       addFullExprCleanupMarker(Context);
     }
+  }
 
-    autoCreateBlock();
-    appendInitializer(Block, I);
+  autoCreateBlock();
+  appendInitializer(Block, I);
 
+  if (Init) {
     // If the initializer is an ArrayInitLoopExpr, we want to extract the
     // initializer, that's used for each element.
     auto *AILEInit = extractElementInitializerFromNestedAILE(
