@@ -8291,11 +8291,11 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 
 // Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
 // Patterns include:
-//    fptrunc(x) <  C                -->  x <  ext(C)
-//    fptrunc(x) <= C                -->  x <= ext(C)
-//    fptrunc(x) >  C                -->  x >  ext(C)
-//    fptrunc(x) >= C                -->  x >= ext(C)
-//    fptrunc(x) ord/uno C           -->  x ord/uno 0
+//    fptrunc(x) <  C       -->  x <  ext(C)
+//    fptrunc(x) <= C       -->  x <= ext(C)
+//    fptrunc(x) >  C       -->  x >  ext(C)
+//    fptrunc(x) >= C       -->  x >= ext(C)
+//    fptrunc(x) ord/uno C  -->  x ord/uno 0
 // where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
 // due to precision loss.
 static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
