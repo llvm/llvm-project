@@ -2578,12 +2578,13 @@ void foo() {
 }
 
 struct S2 : S {
+  void bar2();
   void foo2() {
     {
       int num;
-      this->p_ = &num; // does not warn
-    }
-    bar();
+      this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
+    }                  // expected-note {{destroyed here}}
+    bar();             // expected-note {{later used here}}
     this->p_ = &GLOBAL_INT;
   }
 };

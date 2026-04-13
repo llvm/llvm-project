@@ -736,7 +736,8 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   if (!MemberCall)
     return;
 
-  if (!isa_and_present<CXXThisExpr>(MemberCall->getImplicitObjectArgument()))
+  if (!isa_and_present<CXXThisExpr>(
+          MemberCall->getImplicitObjectArgument()->IgnoreImpCasts()))
     return;
 
   const auto *ClassDecl = MD->getParent()->getDefinition();
