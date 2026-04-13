@@ -74,6 +74,8 @@ private:
 
   void handleExitBlock();
 
+  /// Mark all fields of the implicit object as used for an instance method
+  /// call, since the callee may access any part of the object.
   void handleImplicitObjectFieldUses(const Expr *Call, const FunctionDecl *FD);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
