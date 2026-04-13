@@ -769,14 +769,11 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 // [range.access.general]
 #  if _LIBCPP_STD_VER >= 20
 #    include <__ranges/access.h>
+#    include <__ranges/const_access.h>
 #    include <__ranges/empty.h>
 #    include <__ranges/rbegin.h>
 #    include <__ranges/rend.h>
 #    include <__ranges/size.h>
-#  endif
-
-#  if _LIBCPP_STD_VER >= 23
-#    include <__ranges/const_access.h>
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
