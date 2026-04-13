@@ -498,9 +498,6 @@ struct WgToSgVectorBroadcastOp
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
-    if (!xegpu::XeGPUDialect::isEvenlyDistributable(wgShape, layout))
-      return failure();
-
     SmallVector<Value> newBroadcastOps;
     auto distSource = adaptor.getOperands().front();
     int numDistributions = count / distSource.size();

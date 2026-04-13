@@ -1101,17 +1101,6 @@ LogicalResult ConvertLayoutOp::verify() {
     return emitOpError("expected input layout and target layout be WgLayout or "
                        "SgLayout at the same time.");
 
-  // Type srcType = getSource().getType();
-  // if (llvm::isa<VectorType>(srcType)) {
-  //   auto shape = llvm::cast<VectorType>(srcType).getShape();
-  //   if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
-  //     return emitOpError(
-  //         "invalid input layout, data cannot be evenly distributed.");
-
-  //   if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
-  //     return emitOpError(
-  //         "invalid target layout, data cannot be evenly distributed.");
-  // }
   return mlir::success();
 }
 
