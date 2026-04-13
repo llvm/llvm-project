@@ -2963,16 +2963,9 @@ void ASTDeclMerger::mergeExplicitInstantiationDecl(ExplicitInstantiationDecl *D,
   if (auto *Existing = Redecl.getKnownMergeTarget())
     mergeRedeclarable(D, cast<ExplicitInstantiationDecl>(Existing), Redecl);
 
-  auto *Spec = D->getSpecialization();
-  if (!Spec)
-    return;
-
-  auto *CanonSpec = Spec->getCanonicalDecl();
-  auto &Slot = Reader.ExplicitInstantiationDeclsForMerging[CanonSpec];
-  if (Slot)
-    mergeRedeclarable(D, Slot, Redecl);
-  else
-    Slot = D;
+  if (auto *Spec = D->getSpecialization())
+    if (auto *Existing = Reader.getContext().getExplicitInstantiationDecl(Spec))
+      mergeRedeclarable(D, Existing, Redecl);
 }
 
 void ASTDeclReader::mergeRedeclarableTemplate(RedeclarableTemplateDecl *D,
