@@ -11,7 +11,7 @@
 // RUN: --verify-against=%t/System/Library/Frameworks/Hidden.framework/Hidden \
 // RUN: --verify-mode=Pedantic -o %t/output.tbd 2>&1 | FileCheck %s 
 
-// CHECK-NOT: error
+// CHECK-NOT: error:
 // CHECK:  warning: use of __private_extern__ 
 
 // RUN: llvm-readtapi --compare %t/output.tbd %t/expected.tbd 

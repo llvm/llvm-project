@@ -274,15 +274,16 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       // issue that this flag is not accepted by other linkers.
       ExtraOpts.push_back("--no-rosegment");
     }
-    if (!Triple.isAndroidVersionLT(28)) {
-      // Android supports relr packing starting with API 28 and had its own
-      // flavor (--pack-dyn-relocs=android) starting in API 23.
-      // TODO: It's possible to use both with --pack-dyn-relocs=android+relr,
-      // but we need to gather some data on the impact of that form before we
-      // can know if it's a good default.
-      // On the other hand, relr should always be an improvement.
+    // SHT_RELR relocations are only supported at API level >= 30.
+    // ANDROID_RELR relocations were supported at API level >= 28.
+    // Relocation packer was supported at API level >= 23.
+    if (!Triple.isAndroidVersionLT(30)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
+    } else if (!Triple.isAndroidVersionLT(28)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
       ExtraOpts.push_back("--use-android-relr-tags");
-      ExtraOpts.push_back("--pack-dyn-relocs=relr");
+    } else if (!Triple.isAndroidVersionLT(23)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android");
     }
   }
 

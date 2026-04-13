@@ -10,13 +10,13 @@ RWStructuredBuffer<float> Out;
 // with range 12 and dynamically calculated index
 
 // CHECK: define internal void @main(unsigned int vector[3])(<3 x i32> noundef %GI)
-// CHECK: %[[GI_alloca:.*]] = alloca <3 x i32>, align 16
+// CHECK: %[[GI_alloca:.*]] = alloca <3 x i32>, align 4
 // CHECK: %[[Tmp0:.*]] = alloca %"class.hlsl::RWBuffer
 // CHECK: store <3 x i32> %GI, ptr %[[GI_alloca]]
 
-// CHECK: %[[GI:.*]] = load <3 x i32>, ptr %[[GI_alloca]], align 16
+// CHECK: %[[GI:.*]] = load <3 x i32>, ptr %[[GI_alloca]], align 4
 // CHECK: %[[GI_y:.*]] = extractelement <3 x i32> %[[GI]], i32 1
-// CHECK: %[[GI:.*]] = load <3 x i32>, ptr %[[GI_alloca]], align 16
+// CHECK: %[[GI:.*]] = load <3 x i32>, ptr %[[GI_alloca]], align 4
 // CHECK: %[[GI_x:.*]] = extractelement <3 x i32> %[[GI]], i32 0
 // CHECK: %[[Tmp1:.*]] = mul i32 %[[GI_x]], 3
 // CHECK: %[[Index:.*]] = add i32 %[[GI_y]], %[[Tmp1]]

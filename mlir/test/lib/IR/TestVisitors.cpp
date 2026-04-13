@@ -77,34 +77,36 @@ static void testPureCallbacks(Operation *op) {
                << "\n";
   op->walk<WalkOrder::PostOrder, ReverseIterator>(regionPure);
 
-  // This test case tests "NoGraphRegions = true", so start the walk with
+  // This test case tests "SkipGraphRegion = true", so start the walk with
   // functions.
   op->walk([&](FunctionOpInterface funcOp) {
     llvm::outs() << "Op forward dominance post-order visits"
                  << "\n";
     funcOp->walk<WalkOrder::PostOrder,
-                 ForwardDominanceIterator</*NoGraphRegions=*/true>>(opPure);
+                 ForwardDominanceIterator</*SkipGraphRegion=*/true>>(opPure);
     llvm::outs() << "Block forward dominance post-order visits"
                  << "\n";
     funcOp->walk<WalkOrder::PostOrder,
-                 ForwardDominanceIterator</*NoGraphRegions=*/true>>(blockPure);
+                 ForwardDominanceIterator</*SkipGraphRegion=*/true>>(blockPure);
     llvm::outs() << "Region forward dominance post-order visits"
                  << "\n";
     funcOp->walk<WalkOrder::PostOrder,
-                 ForwardDominanceIterator</*NoGraphRegions=*/true>>(regionPure);
+                 ForwardDominanceIterator</*SkipGraphRegion=*/true>>(
+        regionPure);
 
     llvm::outs() << "Op reverse dominance post-order visits"
                  << "\n";
     funcOp->walk<WalkOrder::PostOrder,
-                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(opPure);
+                 ReverseDominanceIterator</*SkipGraphRegion=*/true>>(opPure);
     llvm::outs() << "Block reverse dominance post-order visits"
                  << "\n";
     funcOp->walk<WalkOrder::PostOrder,
-                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(blockPure);
+                 ReverseDominanceIterator</*SkipGraphRegion=*/true>>(blockPure);
     llvm::outs() << "Region reverse dominance post-order visits"
                  << "\n";
     funcOp->walk<WalkOrder::PostOrder,
-                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(regionPure);
+                 ReverseDominanceIterator</*SkipGraphRegion=*/true>>(
+        regionPure);
   });
 }
 
@@ -192,10 +194,21 @@ static void testNoSkipErasureCallbacks(Operation *op) {
       // it, because this means that the use's region holding op is a child of
       // the region holding op containing the current block and was expected to
       // be visited and erased first - we should correctly fail here.
-      Region *blockParentRegion = block->front().getParentRegion();
+      Region *blockParentRegion = block->getParent();
       for (Operation &op : *block) {
         for (OpOperand &use : llvm::make_early_inc_range(op.getUses())) {
           // Early continue if the parent regions are not same.
+          if (blockParentRegion != use.getOwner()->getParentRegion())
+            continue;
+          use.drop();
+        }
+      }
+
+      // Also drop uses of block arguments that are consumed within the same
+      // region. This handles cases like function entry blocks whose arguments
+      // are used by ops in sibling blocks.
+      for (BlockArgument arg : block->getArguments()) {
+        for (OpOperand &use : llvm::make_early_inc_range(arg.getUses())) {
           if (blockParentRegion != use.getOwner()->getParentRegion())
             continue;
           use.drop();

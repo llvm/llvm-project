@@ -138,7 +138,7 @@ class Builder:
         cc_type = cc_name
         # A triple prefix of compiler name: <armv7-none-linux-gnu->gcc
         cc_prefix = ""
-        if not "clang-cl" in cc_name and not "llvm-gcc" in cc_name:
+        if "clang-cl" not in cc_name:
             cc_name_parts = cc_name.split("-")
             cc_type = cc_name_parts[-1]
             if len(cc_name_parts) > 1:
@@ -147,12 +147,16 @@ class Builder:
         # A kind of C++ compiler.
         cxx_types = {
             "icc": "icpc",
-            "llvm-gcc": "llvm-g++",
             "gcc": "g++",
             "cc": "c++",
             "clang": "clang++",
+            "xcrun clang": "xcrun clang++",
         }
-        cxx_type = cxx_types.get(cc_type, cc_type)
+        # Determine the C++ compiler based on the given compiler path/command.
+        cxx_type = cxx_types.get(compiler)
+        if cxx_type is None:
+            # If that did not work, then use the inferred cc_type.
+            cxx_type = cxx_types.get(cc_type, cxx_type)
 
         cc_dir = cc_path.parent
 

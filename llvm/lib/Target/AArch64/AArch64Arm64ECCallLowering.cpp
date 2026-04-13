@@ -593,6 +593,11 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
 
   Value *RetVal = Call;
   if (TransformDirectToSRet) {
+    // The x64 side returns this value indirectly via a hidden pointer (sret).
+    // Mark the thunk's pointer arg with sret so that ISel saves it and copies
+    // it into x8 (RAX) on return, matching the x64 calling convention.
+    Thunk->addParamAttr(
+        1, Attribute::getWithStructRetType(M->getContext(), RetTy));
     IRB.CreateStore(RetVal, Thunk->getArg(1));
   } else if (X64RetType != RetTy) {
     Value *CastAlloca = IRB.CreateAlloca(X64RetType);

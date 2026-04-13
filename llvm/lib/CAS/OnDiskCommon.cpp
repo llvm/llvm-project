@@ -230,7 +230,7 @@ cas::ondisk::UniqueTempFile::createAndCopyFrom(StringRef ParentPath,
   sys::path::append(Model, "%%%%%%%.tmp");
   if (std::error_code EC = sys::fs::createUniqueFile(Model, UniqueTmpPath))
     return createFileError(Model, EC);
-  TmpPath = UniqueTmpPath;
+  TmpPath = std::move(UniqueTmpPath);
   TmpPath += ".tmp"; // modify so that there's no file at that path.
   // \c copy_file will use \c clonefile when applicable.
   if (std::error_code EC = sys::fs::copy_file(CopyFromPath, TmpPath))

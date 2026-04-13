@@ -182,6 +182,7 @@ private:
   bool showMatchError(SMLoc Loc, unsigned ErrCode, uint64_t ErrorInfo,
                       OperandVector &Operands);
 
+  bool parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E);
   bool parseDataExpr(const MCExpr *&Res) override;
   bool parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc);
 
@@ -4091,11 +4092,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = TLBI->NeedsReg;
-    bool hasTLBID = getSTI().hasFeature(AArch64::FeatureTLBID);
-    if (hasAll || hasTLBID) {
-      OptionalRegister = TLBI->OptionalReg;
-    }
+    ExpectRegister = TLBI->RegUse == REG_REQUIRED;
+    if (hasAll || hasTLBID)
+      OptionalRegister = TLBI->RegUse == REG_OPTIONAL;
     createSysAlias(TLBI->Encoding, Operands, S);
   } else if (Mnemonic == "mlbi") {
     const AArch64MLBI::MLBI *MLBI = AArch64MLBI::lookupMLBIByName(Op);
@@ -4139,10 +4138,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(PLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = PLBI->NeedsReg;
-    if (hasAll || hasTLBID) {
-      OptionalRegister = PLBI->OptionalReg;
-    }
+    ExpectRegister = PLBI->RegUse == REG_REQUIRED;
+    if (hasAll || hasTLBID)
+      OptionalRegister = PLBI->RegUse == REG_OPTIONAL;
     createSysAlias(PLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
              Mnemonic == "cosp") {
@@ -4263,12 +4261,10 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
     const AArch64TLBIP::TLBIP *TLBIP = AArch64TLBIP::lookupTLBIPByName(Op);
     if (!TLBIP)
       return TokError("invalid operand for TLBIP instruction");
-    if (!getSTI().hasFeature(AArch64::FeatureD128) &&
-        !getSTI().hasFeature(AArch64::FeatureAll))
-      return TokError("instruction requires: d128");
+
     if (!TLBIP->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str("instruction requires: ");
-      setRequiredFeatureString(TLBIP->getRequiredFeatures(), Str);
+      Str += TLBIP->AllowWithTLBID ? "tlbid or d128" : "d128";
       return TokError(Str);
     }
     createSysAlias(TLBIP->Encoding, Operands, S);
@@ -4658,6 +4654,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("prel_g1_nc", AArch64::S_PREL_G1_NC)
                   .Case("prel_g0", AArch64::S_PREL_G0)
                   .Case("prel_g0_nc", AArch64::S_PREL_G0_NC)
+                  .Case("dtprel", AArch64::S_DTPREL)
                   .Case("dtprel_g2", AArch64::S_DTPREL_G2)
                   .Case("dtprel_g1", AArch64::S_DTPREL_G1)
                   .Case("dtprel_g1_nc", AArch64::S_DTPREL_G1_NC)
@@ -8452,8 +8449,31 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   return false;
 }
 
+bool AArch64AsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
+  SMLoc Loc = getLoc();
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return TokError("expected '%' relocation specifier");
+  StringRef Identifier = getParser().getTok().getIdentifier();
+  auto Spec = AArch64::parsePercentSpecifierName(Identifier);
+  if (!Spec)
+    return TokError("invalid relocation specifier");
+
+  getParser().Lex(); // Eat the identifier
+  if (parseToken(AsmToken::LParen, "expected '('"))
+    return true;
+
+  const MCExpr *SubExpr;
+  if (getParser().parseParenExpression(SubExpr, E))
+    return true;
+
+  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), Loc);
+  return false;
+}
+
 bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
   SMLoc EndLoc;
+  if (parseOptionalToken(AsmToken::Percent))
+    return parseExprWithSpecifier(Res, EndLoc);
 
   if (getParser().parseExpression(Res))
     return true;
@@ -8473,14 +8493,6 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
   if (STI->getTargetTriple().isOSBinFormatMachO()) {
     if (Identifier == "got")
       Spec = AArch64::S_MACHO_GOT;
-  } else {
-    // Unofficial, experimental syntax that will be changed.
-    if (Identifier == "gotpcrel")
-      Spec = AArch64::S_GOTPCREL;
-    else if (Identifier == "plt")
-      Spec = AArch64::S_PLT;
-    else if (Identifier == "funcinit")
-      Spec = AArch64::S_FUNCINIT;
   }
   if (Spec == AArch64::S_None)
     return Error(Loc, "invalid relocation specifier");

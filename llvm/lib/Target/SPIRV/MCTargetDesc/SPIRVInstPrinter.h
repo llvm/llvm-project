@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
-#define LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H
+#define LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -22,7 +22,9 @@ namespace llvm {
 class SPIRVInstPrinter : public MCInstPrinter {
 private:
   SmallDenseMap<MCRegister, SPIRV::InstructionSet::InstructionSet> ExtInstSetIDs;
+  SmallDenseMap<MCRegister, unsigned> IntTypeBitwidths;
   void recordOpExtInstImport(const MCInst *MI);
+  void recordIntType(const MCInst *MI);
 
 public:
   using MCInstPrinter::MCInstPrinter;
@@ -54,4 +56,4 @@ public:
 };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
+#endif // LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H

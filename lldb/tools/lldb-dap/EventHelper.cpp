@@ -627,7 +627,7 @@ static void HandleDiagnosticEvent(const lldb::SBEvent &event, Log &log) {
     std::string type = GetStringValue(data.GetValueForKey("type"));
     std::string message = GetStringValue(data.GetValueForKey("message"));
     dap_instance->SendOutput(OutputType::Important,
-                             llvm::formatv("{0}: {1}", type, message).str());
+                             llvm::formatv("{0}: {1}\n", type, message).str());
   }
 }
 

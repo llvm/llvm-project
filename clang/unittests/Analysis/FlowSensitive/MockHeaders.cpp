@@ -607,10 +607,25 @@ struct __optional_destruct_base {
 template <class _Tp>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
   constexpr bool has_value() const noexcept;
+
+  const _Tp& operator*() const&;
+  _Tp& operator*() &;
+  const _Tp&& operator*() const&&;
+  _Tp&& operator*() &&;
+
+  const _Tp* operator->() const;
+  _Tp* operator->();
+
+  const _Tp& value() const&;
+  _Tp& value() &;
+  const _Tp&& value() const&&;
+  _Tp&& value() &&;
 };
 
+// Note: the inheritance may or may not be private:
+// https://github.com/llvm/llvm-project/issues/187788
 template <typename _Tp>
-class optional : private __optional_storage_base<_Tp> {
+class optional : public __optional_storage_base<_Tp> {
   using __base = __optional_storage_base<_Tp>;
 
  public:
@@ -744,19 +759,6 @@ class optional : private __optional_storage_base<_Tp> {
                                      template __enable_assign<_Up>(),
                                  int> = 0>
   constexpr optional& operator=(optional<_Up>&& __v);
-
-  const _Tp& operator*() const&;
-  _Tp& operator*() &;
-  const _Tp&& operator*() const&&;
-  _Tp&& operator*() &&;
-
-  const _Tp* operator->() const;
-  _Tp* operator->();
-
-  const _Tp& value() const&;
-  _Tp& value() &;
-  const _Tp&& value() const&&;
-  _Tp&& value() &&;
 
   template <typename U>
   constexpr _Tp value_or(U&& v) const&;
@@ -2424,6 +2426,24 @@ namespace std {
 }
 )cc";
 
+constexpr const char TaskHeader[] = R"cc(
+#include "std_coroutine.h"
+
+  template<typename T>
+  struct Task {
+    struct promise_type {
+        Task get_return_object();
+        std::suspend_never initial_suspend() noexcept;
+        std::suspend_always final_suspend() noexcept;
+        void return_value(T v);
+        void unhandled_exception();
+    };
+    bool await_ready() const noexcept;
+    T await_resume() noexcept;
+    void await_suspend(std::coroutine_handle<> handle) noexcept;
+  };
+)cc";
+
 std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
   Headers.emplace_back("cstddef.h", CStdDefHeader);
@@ -2443,6 +2463,8 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("absl_log.h", AbslLogHeader);
   Headers.emplace_back("testing_defs.h", TestingDefsHeader);
   Headers.emplace_back("std_unique_ptr.h", StdUniquePtrHeader);
+  Headers.emplace_back("task.h", TaskHeader);
+
   return Headers;
 }
 

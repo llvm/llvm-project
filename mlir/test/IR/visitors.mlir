@@ -385,7 +385,7 @@ func.func @unordered_cfg_with_loop() {
 
 // -----
 
-// The following test should not crash while visiting the intra-op blocks (inside the top level 
+// The following test should not crash while visiting the intra-op blocks (inside the top level
 // function in this case). We are testing that the intra-block ops are erased after dropping their
 // uses from ops with same parent region.
 // CHECK-LABEL: func.func @test_no_skip_block_erasure
@@ -397,5 +397,50 @@ func.func @test_no_skip_block_erasure() {
   %cond = arith.cmpi eq, %c0, %c3 : index
   cf.br ^bb4
 ^bb4:
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/182996:
+// Block erasure must also drop uses of block arguments (e.g. function args)
+// from sibling blocks in the same region before destroying the block.
+// CHECK-LABEL: func.func @test_no_skip_block_erasure_block_args
+func.func @test_no_skip_block_erasure_block_args(%arg0: i32, %arg1: i32) -> i32 {
+  cf.br ^bb1
+^bb1:
+  %0 = arith.addi %arg0, %arg1 : i32
+  return %0 : i32
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/183511:
+// testNoSkipErasureCallbacks should not crash when visiting an empty block.
+// The module body block has no ops, so block->front() would previously dereference
+// the ilist sentinel, causing an assertion failure.
+module {}
+// CHECK-LABEL: Block post-order erasures (no skip)
+// CHECK-NEXT:  Erasing block ^bb0 from region 0 from operation 'builtin.module'
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/116370:
+// ForwardDominanceIterator<SkipGraphRegion=true> should skip graph regions
+// (such as scf.forall.in_parallel's body) instead of asserting.
+// CHECK-LABEL: Op forward dominance post-order visits
+// CHECK: Visiting op 'scf.forall'
+// CHECK-NOT: Visiting op 'tensor.parallel_insert_slice'
+// CHECK: Op reverse dominance post-order visits
+func.func @graph_region_skip(%fill: tensor<2xf32>, %output: tensor<2xf32>) {
+  %c0 = arith.constant 0.0 : f32
+  %0 = linalg.fill ins(%c0 : f32) outs(%fill : tensor<2xf32>) -> tensor<2xf32>
+  %1 = scf.forall (%i) in (2) shared_outs(%arg1 = %output) -> (tensor<2xf32>) {
+    %2 = tensor.extract_slice %0[%i][1][1] : tensor<2xf32> to tensor<1xf32>
+    %3 = tensor.extract_slice %arg1[%i][1][1] : tensor<2xf32> to tensor<1xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %3 into %arg1[%i][1][1] : tensor<1xf32> into tensor<2xf32>
+    }
+  }
   return
 }

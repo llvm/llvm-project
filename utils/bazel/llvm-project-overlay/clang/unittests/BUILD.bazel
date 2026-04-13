@@ -779,3 +779,31 @@ cc_test(
         "//third-party/unittest:gtest_main",
     ],
 )
+
+cc_test(
+    name = "scalable_static_analysis_tests",
+    size = "small",
+    srcs = glob([
+        "ScalableStaticAnalysisFramework/**/*.cpp",
+        "ScalableStaticAnalysisFramework/**/*.h",
+    ]),
+    features = ["-layering_check"],  # #include "../../lib/ScalableStaticAnalysisFramework/Core/ModelStringConversions.h"
+    includes = ["ScalableStaticAnalysisFramework"],
+    deps = [
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:scalable_static_analysis_analyses",
+        "//clang:scalable_static_analysis_core",
+        "//clang:scalable_static_analysis_frontend",
+        "//clang:support",
+        "//clang:tooling",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

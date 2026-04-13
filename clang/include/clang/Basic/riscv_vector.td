@@ -2080,11 +2080,19 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
     defm vaesz   : RVVOutBuiltinSetZvk<HasVV=0>;
   }
 
-  // zvknha and zvknhb has duplicated intrinsic but they don't imply each other,
-  // so we need to handle it manually in SemaRISCV.cpp.
-  defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
-  defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
-  defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;
+  // zvknha
+  let RequiredFeatures = ["zvknha"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"i">;
+  }
+
+  // zvknhb
+  let RequiredFeatures = ["zvknhb"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"l">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"l">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"l">;
+  }
 
   // zvksed
   let RequiredFeatures = ["zvksed"] in {
@@ -2101,24 +2109,27 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   }
 }
 
-// Zvqdotq
-multiclass RVVVQDOTQBuiltinSet<list<list<string>> suffixes_prototypes> {
+// Zvdot4a8i
+multiclass RVVVDOTA4QBuiltinSet<list<list<string>> suffixes_prototypes> {
   let UnMaskedPolicyScheme = HasPolicyOperand,
       HasMaskedOffOperand = false,
       OverloadedName = NAME,
       Log2LMUL = [-1, 0, 1, 2, 3] in {
-    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "i", suffixes_prototypes>;
+    defm NAME : RVVOutOp2BuiltinSet<NAME, "i", suffixes_prototypes>;
   }
 }
 
-// Only SEW=32 is defined for zvqdotq so far, and since inputs are in fact four
-// 8-bit integer bundles, we use unsigned type to represent all of them
-let RequiredFeatures = ["zvqdotq"] in {
-  defm vqdot : RVVVQDOTQBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)v"],
-                                    ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
-  defm vqdotu : RVVVQDOTQBuiltinSet<[["vv", "Uv", "UvUv(FixedSEW:8)Uv(FixedSEW:8)Uv"],
-                                     ["vx", "Uv", "UvUv(FixedSEW:8)UvUe"]]>;
-  defm vqdotsu : RVVVQDOTQBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)Uv"],
-                                      ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
-  defm vqdotus : RVVVQDOTQBuiltinSet<[["vx", "v", "vv(FixedSEW:8)UvUe"]]>;
+// Only SEW=32 is defined for zvdot4a8i so far, and since inputs are in fact
+// four 8-bit integer bundles, we use unsigned type to represent all of them
+let RequiredFeatures = ["zvdot4a8i"] in {
+  defm vdota4
+      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vvUvUv"],
+                              ["vx", "v", "vvUvUe"]]>;
+  defm vdota4u
+      : RVVVDOTA4QBuiltinSet<[["vv", "Uv", "UvUvUvUv"],
+                              ["vx", "Uv", "UvUvUvUe"]]>;
+  defm vdota4su
+      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vvUvUv"],
+                              ["vx", "v", "vvUvUe"]]>;
+  defm vdota4us : RVVVDOTA4QBuiltinSet<[["vx", "v", "vvUvUe"]]>;
 }

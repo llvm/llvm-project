@@ -163,6 +163,7 @@ private:
                                                    bool IsCanonicalizing = true,
                                                    bool AllowAbs = true,
                                                    bool OpSel = false) const;
+  std::pair<Register, unsigned> selectVOP3PModsF32Impl(Register Src) const;
 
   Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
                                  MachineOperand Root, MachineInstr *InsertPt,
@@ -200,6 +201,12 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsDOT(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PNoModsDOT(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsF32(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PNoModsF32(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
@@ -400,8 +407,8 @@ private:
     renderBitcastFPImm(MIB, MI, OpIdx);
   }
 
-  void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                       int OpIdx) const;
+  void renderCountTrailingOnesImm(MachineInstrBuilder &MIB,
+                                  const MachineInstr &MI, int OpIdx) const;
   void renderExtractCPol(MachineInstrBuilder &MIB, const MachineInstr &MI,
                          int OpIdx) const;
   void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,

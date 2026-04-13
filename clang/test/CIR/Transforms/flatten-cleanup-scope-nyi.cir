@@ -2,36 +2,8 @@
 
 !s32i = !cir.int<s, 32>
 !rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-
-// Test that we issue a diagnostic for EH-only cleanup scopes.
-cir.func @test_eh_only_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
-  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  // expected-error @below {{EH cleanup flattening is not yet implemented}}
-  cir.cleanup.scope {
-    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  } cleanup eh {
-    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  }
-  cir.return
-}
-
-// Test that we issue a diagnostic for Normal+EH cleanup scopes.
-cir.func @test_all_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
-  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-  // expected-error @below {{EH cleanup flattening is not yet implemented}}
-  cir.cleanup.scope {
-    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  } cleanup all {
-    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    cir.yield
-  }
-  cir.return
-}
+!u8i = !cir.int<u, 8>
+!void = !cir.void
 
 // Test that we issue a diagnostic for a single goto out of a cleanup scope.
 // Strictly speaking, we could handle this case, but it's left unimplemented

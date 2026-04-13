@@ -13,6 +13,7 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -1267,9 +1268,8 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 
 CompilerType TypeSystemClang::CreateRecordType(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    AccessType access_type, llvm::StringRef name, int kind,
-    LanguageType language, std::optional<ClangASTMetadata> metadata,
-    bool exports_symbols) {
+    llvm::StringRef name, int kind, LanguageType language,
+    std::optional<ClangASTMetadata> metadata, bool exports_symbols) {
   ASTContext &ast = getASTContext();
 
   if (decl_ctx == nullptr)
@@ -1327,8 +1327,7 @@ CompilerType TypeSystemClang::CreateRecordType(
   if (metadata)
     SetMetadata(decl, *metadata);
 
-  if (access_type != eAccessNone)
-    decl->setAccess(ConvertAccessTypeToAccessSpecifier(access_type));
+  decl->setAccess(AS_public);
 
   if (decl_ctx)
     decl_ctx->addDecl(decl);
@@ -1348,29 +1347,6 @@ QualType GetValueParamType(const clang::TemplateArgument &argument) {
     return argument.getStructuralValueType();
   default:
     return {};
-  }
-}
-
-void AddAccessSpecifierDecl(clang::CXXRecordDecl *cxx_record_decl,
-                            ASTContext &ct,
-                            clang::AccessSpecifier previous_access,
-                            clang::AccessSpecifier access_specifier) {
-  if (!cxx_record_decl->isClass() && !cxx_record_decl->isStruct())
-    return;
-  if (previous_access != access_specifier) {
-    // For struct, don't add AS_public if it's the first AccessSpecDecl.
-    // For class, don't add AS_private if it's the first AccessSpecDecl.
-    if ((cxx_record_decl->isStruct() &&
-         previous_access == clang::AccessSpecifier::AS_none &&
-         access_specifier == clang::AccessSpecifier::AS_public) ||
-        (cxx_record_decl->isClass() &&
-         previous_access == clang::AccessSpecifier::AS_none &&
-         access_specifier == clang::AccessSpecifier::AS_private)) {
-      return;
-    }
-    cxx_record_decl->addDecl(
-        AccessSpecDecl::Create(ct, access_specifier, cxx_record_decl,
-                               SourceLocation(), SourceLocation()));
   }
 }
 } // namespace
@@ -1462,11 +1438,7 @@ clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     // TODO: verify which decl context we should put template_param_decls into..
     template_param_decls[i]->setDeclContext(func_decl);
   }
-  // Function templates inside a record need to have an access specifier.
-  // It doesn't matter what access specifier we give the template as LLDB
-  // anyway allows accessing everything inside a record.
-  if (decl_ctx->isRecord())
-    func_tmpl_decl->setAccess(clang::AccessSpecifier::AS_public);
+  func_tmpl_decl->setAccess(clang::AccessSpecifier::AS_public);
 
   return func_tmpl_decl;
 }
@@ -1579,7 +1551,7 @@ static bool ClassTemplateAllowsToInstantiationArgs(
 
 ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    lldb::AccessType access_type, llvm::StringRef class_name, int kind,
+    llvm::StringRef class_name, int kind,
     const TemplateParameterInfos &template_param_infos) {
   ASTContext &ast = getASTContext();
 
@@ -1641,9 +1613,7 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   template_cxx_decl->setDescribedClassTemplate(class_template_decl);
   SetOwningModule(class_template_decl, owning_module);
 
-  if (access_type != eAccessNone)
-    class_template_decl->setAccess(
-        ConvertAccessTypeToAccessSpecifier(access_type));
+  class_template_decl->setAccess(AS_public);
 
   decl_ctx->addDecl(class_template_decl);
 
@@ -1774,20 +1744,6 @@ bool TypeSystemClang::CheckOverloadedOperatorKindParameterCount(
     break;
   }
   return false;
-}
-
-clang::AccessSpecifier
-TypeSystemClang::UnifyAccessSpecifiers(clang::AccessSpecifier lhs,
-                                       clang::AccessSpecifier rhs) {
-  // Make the access equal to the stricter of the field and the nested field's
-  // access
-  if (lhs == AS_none || rhs == AS_none)
-    return AS_none;
-  if (lhs == AS_private || rhs == AS_private)
-    return AS_private;
-  if (lhs == AS_protected || rhs == AS_protected)
-    return AS_protected;
-  return AS_public;
 }
 
 bool TypeSystemClang::FieldIsBitfield(FieldDecl *field,
@@ -2329,13 +2285,12 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
     return type;
   }
 
-  type = CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, type_name,
-      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
+  type = CreateRecordType(nullptr, OptionalClangModuleID(), type_name,
+                          llvm::to_underlying(clang::TagTypeKind::Struct),
+                          lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
-    AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,
-                         0);
+    AddFieldToRecordType(type, field.first, field.second, 0);
   if (packed)
     SetIsPacked(type);
   CompleteTagDeclarationDefinition(type);
@@ -2387,7 +2342,7 @@ CompilerType TypeSystemClang::CreateEnumerationType(
   // TODO: check if we should be setting the promotion type too?
   enum_decl->setIntegerType(ClangUtil::GetQualType(integer_clang_type));
 
-  enum_decl->setAccess(AS_public); // TODO respect what's in the debug info
+  enum_decl->setAccess(AS_public);
 
   return GetType(ast.getCanonicalTagType(enum_decl));
 }
@@ -2445,6 +2400,16 @@ CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
 
   return GetIntTypeFromBitSize(
       getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
+}
+
+CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  if (is_signed)
+    return GetType(getASTContext().getPointerDiffType());
+  return GetType(getASTContext().getUnsignedPointerDiffType());
 }
 
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
@@ -2564,22 +2529,6 @@ TypeSystemClang::GetMetadata(const clang::Type *object) {
   return std::nullopt;
 }
 
-void TypeSystemClang::SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
-                                             clang::AccessSpecifier access) {
-  if (access == clang::AccessSpecifier::AS_none)
-    m_cxx_record_decl_access.erase(object);
-  else
-    m_cxx_record_decl_access[object] = access;
-}
-
-clang::AccessSpecifier
-TypeSystemClang::GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object) {
-  auto It = m_cxx_record_decl_access.find(object);
-  if (It != m_cxx_record_decl_access.end())
-    return It->second;
-  return clang::AccessSpecifier::AS_none;
-}
-
 clang::DeclContext *
 TypeSystemClang::GetDeclContextForType(const CompilerType &type) {
   return GetDeclContextForType(ClangUtil::GetQualType(type));
@@ -2657,7 +2606,7 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::RecordType *
-GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
+GetCompleteRecordType(const clang::ASTContext *ast, clang::QualType qual_type) {
   assert(qual_type->isRecordType());
 
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
@@ -2698,7 +2647,7 @@ GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
+static const clang::EnumType *GetCompleteEnumType(const clang::ASTContext *ast,
                                                   clang::QualType qual_type) {
   assert(qual_type->isEnumeralType());
   assert(ast);
@@ -2731,7 +2680,7 @@ static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::ObjCObjectType *
-GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
+GetCompleteObjCObjectType(const clang::ASTContext *ast, QualType qual_type) {
   assert(qual_type->isObjCObjectType());
   assert(ast);
 
@@ -2762,7 +2711,7 @@ GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
   return objc_class_type;
 }
 
-static bool GetCompleteQualType(clang::ASTContext *ast,
+static bool GetCompleteQualType(const clang::ASTContext *ast,
                                 clang::QualType qual_type) {
   qual_type = RemoveWrappingTypes(qual_type);
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -2818,23 +2767,6 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
   }
 
   return true;
-}
-
-static clang::ObjCIvarDecl::AccessControl
-ConvertAccessTypeToObjCIvarAccessControl(AccessType access) {
-  switch (access) {
-  case eAccessNone:
-    return clang::ObjCIvarDecl::None;
-  case eAccessPublic:
-    return clang::ObjCIvarDecl::Public;
-  case eAccessPrivate:
-    return clang::ObjCIvarDecl::Private;
-  case eAccessProtected:
-    return clang::ObjCIvarDecl::Protected;
-  case eAccessPackage:
-    return clang::ObjCIvarDecl::Package;
-  }
-  return clang::ObjCIvarDecl::None;
 }
 
 // Tests
@@ -3236,6 +3168,15 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   };
 
   return IsTypeImpl(type, isMemberFunctionPointerType);
+}
+
+bool TypeSystemClang::IsMemberDataPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberDataPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberDataPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberDataPointerType);
 }
 
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
@@ -3701,6 +3642,13 @@ bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
   return GetCanonicalQualType(type)->isVoidType();
+}
+
+bool TypeSystemClang::HasPointerAuthQualifier(
+    lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+  return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
@@ -4690,7 +4638,7 @@ CompilerType TypeSystemClang::CreateTypedef(
     if (tdecl && !tdecl->getIdentifier() && !tdecl->getTypedefNameForAnonDecl())
       tdecl->setTypedefNameForAnonDecl(decl);
 
-    decl->setAccess(clang::AS_public); // TODO respect proper access specifier
+    decl->setAccess(clang::AS_public);
 
     // Get a uniqued clang::QualType for the typedef decl type
     NestedNameSpecifier Qualifier =
@@ -6407,8 +6355,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (omit_empty_base_classes) {
         CompilerType base_class_clang_type = GetType(
             getASTContext().getObjCInterfaceType(superclass_interface_decl));
-        if (llvm::expectedToStdOptional(base_class_clang_type.GetNumChildren(
-                                            omit_empty_base_classes, exe_ctx))
+        if (llvm::expectedToOptional(base_class_clang_type.GetNumChildren(
+                                         omit_empty_base_classes, exe_ctx))
                 .value_or(0) > 0) {
           if (idx == 0) {
             clang::QualType ivar_qual_type(getASTContext().getObjCInterfaceType(
@@ -7073,8 +7021,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 CompilerType
@@ -7320,98 +7267,16 @@ CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
 
 bool TypeSystemClang::IsPromotableIntegerType(
     lldb::opaque_compiler_type_t type) {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  bool is_signed = false;
-  bool isUnscopedEnumerationType =
-      IsEnumerationType(type, is_signed) && !IsScopedEnumerationType(type);
-  if (isUnscopedEnumerationType)
-    return true;
-
-  switch (GetBasicTypeEnumeration(type)) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  return getASTContext().isPromotableIntegerType(qual_type);
 }
 
-llvm::Expected<CompilerType>
-TypeSystemClang::DoIntegralPromotion(CompilerType from,
-                                     ExecutionContextScope *exe_scope) {
-  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
-    return from;
-
-  if (!from.IsPromotableIntegerType())
-    return from;
-
-  if (from.IsUnscopedEnumerationType()) {
-    EnumDecl *enum_decl = GetAsEnumDecl(from);
-    CompilerType promotion_type = GetType(enum_decl->getPromotionType());
-    return DoIntegralPromotion(promotion_type, exe_scope);
-  }
-
-  lldb::BasicType builtin_type =
-      from.GetCanonicalType().GetBasicTypeEnumeration();
-  uint64_t from_size = 0;
-  if (builtin_type == lldb::eBasicTypeWChar ||
-      builtin_type == lldb::eBasicTypeSignedWChar ||
-      builtin_type == lldb::eBasicTypeUnsignedWChar ||
-      builtin_type == lldb::eBasicTypeChar16 ||
-      builtin_type == lldb::eBasicTypeChar32) {
-    // Find the type that can hold the entire range of values for our type.
-    bool is_signed = from.IsSigned();
-    llvm::Expected<uint64_t> from_size = from.GetByteSize(exe_scope);
-    if (!from_size)
-      return from_size.takeError();
-    CompilerType promote_types[] = {
-        GetBasicTypeFromAST(lldb::eBasicTypeInt),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt),
-        GetBasicTypeFromAST(lldb::eBasicTypeLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeLongLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLongLong),
-    };
-    for (CompilerType &type : promote_types) {
-      llvm::Expected<uint64_t> byte_size = type.GetByteSize(exe_scope);
-      if (!byte_size)
-        return byte_size.takeError();
-      if (*from_size < *byte_size ||
-          (*from_size == *byte_size && is_signed == type.IsSigned())) {
-        return type;
-      }
-    }
-    llvm_unreachable("char type should fit into long long");
-  }
-
-  // Here we can promote only to "int" or "unsigned int".
-  CompilerType int_type = GetBasicTypeFromAST(lldb::eBasicTypeInt);
-  llvm::Expected<uint64_t> int_byte_size = int_type.GetByteSize(exe_scope);
-  if (!int_byte_size)
-    return int_byte_size.takeError();
-
-  // Signed integer types can be safely promoted to "int".
-  if (from.IsSigned()) {
-    return int_type;
-  }
-  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
-  // their entire value range.
-  return (from_size == *int_byte_size)
-             ? GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt)
-             : int_type;
+CompilerType
+TypeSystemClang::GetPromotedIntegerType(lldb::opaque_compiler_type_t type) {
+  if (!IsPromotableIntegerType(type))
+    return CompilerType();
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  return GetType(getASTContext().getPromotedIntegerType(qual_type));
 }
 
 clang::EnumDecl *TypeSystemClang::GetAsEnumDecl(const CompilerType &type) {
@@ -7460,8 +7325,7 @@ TypeSystemClang::GetAsObjCInterfaceDecl(const CompilerType &type) {
 
 clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     const CompilerType &type, llvm::StringRef name,
-    const CompilerType &field_clang_type, AccessType access,
-    uint32_t bitfield_bit_size) {
+    const CompilerType &field_clang_type, uint32_t bitfield_bit_size) {
   if (!type.IsValid() || !field_clang_type.IsValid())
     return nullptr;
   auto ast = type.GetTypeSystem<TypeSystemClang>();
@@ -7517,17 +7381,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     }
 
     if (field) {
-      clang::AccessSpecifier access_specifier =
-          TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access);
-      field->setAccess(access_specifier);
+      field->setAccess(AS_public);
 
-      if (clang::CXXRecordDecl *cxx_record_decl =
-              llvm::dyn_cast<CXXRecordDecl>(record_decl)) {
-        AddAccessSpecifierDecl(cxx_record_decl, ast->getASTContext(),
-                               ast->GetCXXRecordDeclAccess(cxx_record_decl),
-                               access_specifier);
-        ast->SetCXXRecordDeclAccess(cxx_record_decl, access_specifier);
-      }
       record_decl->addDecl(field);
 
       VerifyDecl(field);
@@ -7546,7 +7401,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
       ivar->setDeclContext(class_interface_decl);
       ivar->setDeclName(ident);
       ivar->setType(ClangUtil::GetQualType(field_clang_type));
-      ivar->setAccessControl(ConvertAccessTypeToObjCIvarAccessControl(access));
+      ivar->setAccessControl(ObjCIvarDecl::AccessControl::Public);
       if (bit_width)
         ivar->setBitWidth(bit_width);
       ivar->setSynthesize(is_synthesized);
@@ -7618,8 +7473,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
 
           indirect_field->setImplicit();
 
-          indirect_field->setAccess(TypeSystemClang::UnifyAccessSpecifiers(
-              field_pos->getAccess(), nested_field_decl->getAccess()));
+          indirect_field->setAccess(AS_public);
 
           indirect_fields.push_back(indirect_field);
         } else if (clang::IndirectFieldDecl *nested_indirect_field_decl =
@@ -7649,8 +7503,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
 
           indirect_field->setImplicit();
 
-          indirect_field->setAccess(TypeSystemClang::UnifyAccessSpecifiers(
-              field_pos->getAccess(), nested_indirect_field_decl->getAccess()));
+          indirect_field->setAccess(AS_public);
 
           indirect_fields.push_back(indirect_field);
         }
@@ -7687,9 +7540,10 @@ void TypeSystemClang::SetIsPacked(const CompilerType &type) {
   }
 }
 
-clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
-    const CompilerType &type, llvm::StringRef name,
-    const CompilerType &var_type, AccessType access) {
+clang::VarDecl *
+TypeSystemClang::AddVariableToRecordType(const CompilerType &type,
+                                         llvm::StringRef name,
+                                         const CompilerType &var_type) {
   if (!type.IsValid() || !var_type.IsValid())
     return nullptr;
 
@@ -7716,8 +7570,7 @@ clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
   if (!var_decl)
     return nullptr;
 
-  var_decl->setAccess(
-      TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access));
+  var_decl->setAccess(AS_public);
   record_decl->addDecl(var_decl);
 
   VerifyDecl(var_decl);
@@ -7790,8 +7643,8 @@ TypeSystemClang::CreateParameterDeclarations(
 clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     llvm::StringRef asm_label, const CompilerType &method_clang_type,
-    lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-    bool is_explicit, bool is_attr_used, bool is_artificial) {
+    bool is_virtual, bool is_static, bool is_inline, bool is_explicit,
+    bool is_attr_used, bool is_artificial) {
   if (!type || !method_clang_type.IsValid() || name.empty())
     return nullptr;
 
@@ -7913,10 +7766,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   }
   SetMemberOwningModule(cxx_method_decl, cxx_record_decl);
 
-  clang::AccessSpecifier access_specifier =
-      TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access);
-
-  cxx_method_decl->setAccess(access_specifier);
+  cxx_method_decl->setAccess(AS_public);
   cxx_method_decl->setVirtualAsWritten(is_virtual);
 
   if (is_attr_used)
@@ -7930,11 +7780,6 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   // have names, so we omit them when creating the ParmVarDecls.
   cxx_method_decl->setParams(CreateParameterDeclarations(
       cxx_method_decl, *method_function_prototype, /*parameter_names=*/{}));
-
-  AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
-                         GetCXXRecordDeclAccess(cxx_record_decl),
-                         access_specifier);
-  SetCXXRecordDeclAccess(cxx_record_decl, access_specifier);
 
   cxx_record_decl->addDecl(cxx_method_decl);
 
@@ -8494,8 +8339,6 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
       cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
       cxx_record_decl->setHasExternalLexicalStorage(false);
       cxx_record_decl->setHasExternalVisibleStorage(false);
-      lldb_ast->SetCXXRecordDeclAccess(cxx_record_decl,
-                                       clang::AccessSpecifier::AS_none);
       return true;
     }
   }
@@ -8677,7 +8520,7 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
       if (symbol_name != type->GetName().GetStringRef())
         continue;
 
-    s << type->GetName().AsCString() << "\n";
+    s << type->GetName() << "\n";
 
     CompilerType full_type = type->GetFullCompilerType();
     if (clang::TagDecl *tag_decl = GetAsTagDecl(full_type)) {
@@ -9085,7 +8928,7 @@ void TypeSystemClang::DumpTypeName(const CompilerType &type) {
 
 clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    lldb::AccessType access_type, const char *parent_name, int tag_decl_kind,
+    const char *parent_name, int tag_decl_kind,
     const TypeSystemClang::TemplateParameterInfos &template_param_infos) {
   if (template_param_infos.IsValid()) {
     std::string template_basename(parent_name);
@@ -9093,7 +8936,7 @@ clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
     if (auto i = template_basename.find('<'); i != std::string::npos)
       template_basename.erase(i);
 
-    return CreateClassTemplateDecl(decl_ctx, owning_module, access_type,
+    return CreateClassTemplateDecl(decl_ctx, owning_module,
                                    template_basename.c_str(), tag_decl_kind,
                                    template_param_infos);
   }

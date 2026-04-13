@@ -34,7 +34,7 @@ public:
   using value_type = sandboxir::Use;
   using pointer = value_type *;
   using reference = value_type &;
-  using iterator_category = std::input_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
 
   OperandUseIterator() = default;
   LLVM_ABI value_type operator*() const;

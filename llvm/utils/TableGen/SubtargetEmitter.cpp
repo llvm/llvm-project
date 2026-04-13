@@ -1897,13 +1897,18 @@ void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
   // End emitting for getHwModeSet().
 
   auto HandlePerMode = [&](std::string ModeType, unsigned ModeInBitSet) {
-    OS << "  case HwMode_" << ModeType << ":\n"
-       << "    Modes &= " << ModeInBitSet << ";\n"
-       << "    if (!Modes)\n      return Modes;\n"
-       << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
-       << "      llvm_unreachable(\"Two or more HwModes for " << ModeType
-       << " were found!\");\n"
-       << "    return llvm::countr_zero(Modes) + 1;\n";
+    OS << "  case HwMode_" << ModeType << ":\n";
+    if (ModeInBitSet == 0) {
+      OS << "    // No HwMode for " << ModeType << ".\n"
+         << "    return 0;\n";
+    } else {
+      OS << "    Modes &= " << ModeInBitSet << ";\n"
+         << "    if (!Modes)\n      return Modes;\n"
+         << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
+         << "      llvm_unreachable(\"Two or more HwModes for " << ModeType
+         << " were found!\");\n"
+         << "    return llvm::countr_zero(Modes) + 1;\n";
+    }
   };
 
   // Start emitting for getHwMode().

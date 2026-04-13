@@ -4,11 +4,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
+from ._mlir_libs._mlir.ir import _OperationBase
 from ._mlir_libs._mlir import (
     register_type_caster,
     register_value_caster,
@@ -21,8 +22,56 @@ from ._mlir_libs import (
 )
 
 
+def get_parent_of_type(op: OpView | Operation, op_class: type[OpView]) -> OpView | None:
+    """Return the closest enclosing parent operation of the given type.
+
+    Walks the parent chain of *op* and returns the first ancestor that is an instance of *op_class*.
+    Returns ``None`` if no matching parent is found.
+
+    Args:
+      op: The starting operation.
+      op_class: The OpView subclass to search for (e.g. ``func.FuncOp``).
+
+    """
+    if not (isinstance(op_class, type) and issubclass(op_class, OpView)):
+        raise TypeError(f"op_class must be an OpView subclass, got {op_class!r}")
+    try:
+        parent = op.parent
+    except ValueError:
+        return None  # No parent chain.
+    while parent is not None:
+        if isinstance(parent.opview, op_class):
+            return parent.opview
+        parent = parent.parent
+    return None
+
+
+def get_ops_of_type(
+    root: OpView | Operation | Module, op_class: type[OpView] | None = None
+) -> list[OpView]:
+    """Return all operations of the given type in the operation tree.
+
+    Args:
+      root: The operation or module to start traversing from.
+      op_class: The OpView subclass to filter by (e.g. func.FuncOp). If None,
+        collects all operations in the tree.
+
+    Returns:
+      A list of operations of the given type.
+    """
+    op = root.operation if isinstance(root, Module) else root
+    ops = []
+
+    def collect_ops(op: Operation):
+        ops.append(op.opview)
+        return WalkResult.ADVANCE
+
+    op.walk(collect_ops, op_class=op_class)
+    return ops
+
+
 @contextmanager
-def loc_tracebacks(*, max_depth: int | None = None) -> Iterable[None]:
+def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None, None, None]:
     """Enables automatic traceback-based locations for MLIR operations.
 
     Operations created within this context will have their location
@@ -47,9 +96,9 @@ def loc_tracebacks(*, max_depth: int | None = None) -> Iterable[None]:
 
 
 # Convenience decorator for registering user-friendly Attribute builders.
-def register_attribute_builder(kind, replace=False):
+def register_attribute_builder(kind, replace=False, allow_existing=False):
     def decorator_builder(func):
-        AttrBuilder.insert(kind, func, replace=replace)
+        AttrBuilder.insert(kind, func, replace=replace, allow_existing=allow_existing)
         return func
 
     return decorator_builder

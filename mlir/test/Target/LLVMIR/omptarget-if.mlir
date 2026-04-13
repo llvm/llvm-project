@@ -19,14 +19,14 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   // CHECK-NEXT: br i1 %[[OFFLOAD_SUCCESS]], label %[[OFFLOAD_FAIL_LABEL:.*]], label %[[OFFLOAD_CONT_LABEL:.*]]
 
   // CHECK: [[OFFLOAD_FAIL_LABEL]]:
-  // CHECK-NEXT: call void @[[FALLBACK_FN:__omp_offloading_.*_.*_target_if_variable_l.*]]()
+  // CHECK-NEXT: call void @[[FALLBACK_FN:__omp_offloading_.*_.*_target_if_variable_l.*]](ptr null)
   // CHECK-NEXT: br label %[[OFFLOAD_CONT_LABEL]]
 
   // CHECK: [[OFFLOAD_CONT_LABEL]]:
   // CHECK-NEXT: br label %[[END_LABEL:.*]]
 
   // CHECK: [[ELSE_LABEL]]:
-  // CHECK-NEXT: call void @[[FALLBACK_FN]]()
+  // CHECK-NEXT: call void @[[FALLBACK_FN]](ptr null)
   // CHECK-NEXT: br label %[[END_LABEL]]
 
   llvm.func @target_if_true() {
@@ -48,7 +48,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   // CHECK-NEXT: br i1 %[[OFFLOAD_SUCCESS]], label %[[OFFLOAD_FAIL_LABEL:.*]], label %[[OFFLOAD_CONT_LABEL:.*]]
 
   // CHECK: [[OFFLOAD_FAIL_LABEL]]:
-  // CHECK-NEXT: call void @[[FALLBACK_FN:.*]]()
+  // CHECK-NEXT: call void @[[FALLBACK_FN:.*]](ptr null)
   // CHECK-NEXT: br label %[[OFFLOAD_CONT_LABEL]]
 
   llvm.func @target_if_false() {
@@ -63,6 +63,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   // CHECK-NEXT: br label %[[ENTRY:.*]]
 
   // CHECK: [[ENTRY]]:
-  // CHECK-NEXT: call void @__omp_offloading_{{.*}}_{{.*}}_target_if_false_l{{.*}}()
+  // CHECK-NEXT: call void @__omp_offloading_{{.*}}_{{.*}}_target_if_false_l{{.*}}(ptr null)
 }
 

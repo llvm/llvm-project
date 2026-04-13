@@ -165,12 +165,10 @@ bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
 }
 
 bool SpeculativeExecutionPass::runOnBasicBlock(BasicBlock &B) {
-  BranchInst *BI = dyn_cast<BranchInst>(B.getTerminator());
-  if (BI == nullptr)
+  CondBrInst *BI = dyn_cast<CondBrInst>(B.getTerminator());
+  if (!BI)
     return false;
 
-  if (BI->getNumSuccessors() != 2)
-    return false;
   BasicBlock &Succ0 = *BI->getSuccessor(0);
   BasicBlock &Succ1 = *BI->getSuccessor(1);
 
