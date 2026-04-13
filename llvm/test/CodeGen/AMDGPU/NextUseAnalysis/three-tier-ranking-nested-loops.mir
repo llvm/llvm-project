@@ -3,7 +3,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=graphics \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-GX-JSON %s
 
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
@@ -11,7 +11,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
@@ -19,7 +19,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 
 ---
@@ -523,6 +523,18 @@ body:             |
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ]
 # CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    "distance-from-def-to-closest-use": {
+# CHECK-GX-JSON-DAG:       "%0": 6,
+# CHECK-GX-JSON-DAG:       "%1": 12,
+# CHECK-GX-JSON-DAG:       "%2": 3,
+# CHECK-GX-JSON-DAG:       "%3": 514,
+# CHECK-GX-JSON-DAG:       "%4": 1,
+# CHECK-GX-JSON-DAG:       "%6": 2,
+# CHECK-GX-JSON-DAG:       "%7": 2,
+# CHECK-GX-JSON-DAG:       "%8": "<unreachable>",
+# CHECK-GX-JSON-DAG:       "%5": "<unreachable>",
+# CHECK-GX-JSON-DAG:       "%9": "<unreachable>"
+# CHECK-GX-JSON:         },
 # CHECK-GX-JSON-NEXT:    "paths": [
 # CHECK-GX-JSON:         ],
 # CHECK-GX-JSON-NEXT:    "metrics": {
@@ -1023,6 +1035,18 @@ body:             |
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ]
 # CHECK-CP-JSON-NEXT:    },
+# CHECK-CP-JSON-NEXT:    "distance-from-def-to-closest-use": {
+# CHECK-CP-JSON-DAG:       "%0": 4,
+# CHECK-CP-JSON-DAG:       "%1": 3,
+# CHECK-CP-JSON-DAG:       "%2": 2,
+# CHECK-CP-JSON-DAG:       "%3": 5,
+# CHECK-CP-JSON-DAG:       "%4": 0,
+# CHECK-CP-JSON-DAG:       "%6": 1,
+# CHECK-CP-JSON-DAG:       "%7": 1,
+# CHECK-CP-JSON-DAG:       "%8": 2,
+# CHECK-CP-JSON-DAG:       "%5": 1,
+# CHECK-CP-JSON-DAG:       "%9": "<unreachable>"
+# CHECK-CP-JSON:         },
 # CHECK-CP-JSON-NEXT:    "paths": [
 # CHECK-CP-JSON:         ],
 # CHECK-CP-JSON-NEXT:    "metrics": {

@@ -3,7 +3,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=graphics \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-GX-JSON %s
 
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
@@ -11,7 +11,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
@@ -19,7 +19,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 
 --- |
@@ -673,6 +673,28 @@ body:             |
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ]
 # CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    "distance-from-def-to-closest-use": {
+# CHECK-GX-JSON-DAG:       "%0": 18,
+# CHECK-GX-JSON-DAG:       "%1": 4,
+# CHECK-GX-JSON-DAG:       "%2": 4,
+# CHECK-GX-JSON-DAG:       "%3": 1,
+# CHECK-GX-JSON-DAG:       "%4": 15,
+# CHECK-GX-JSON-DAG:       "%6": 3,
+# CHECK-GX-JSON-DAG:       "%8": 2306,
+# CHECK-GX-JSON-DAG:       "%10": 8,
+# CHECK-GX-JSON-DAG:       "%12": 4,
+# CHECK-GX-JSON-DAG:       "%13": 3,
+# CHECK-GX-JSON-DAG:       "%14": 3,
+# CHECK-GX-JSON-DAG:       "%15": 2,
+# CHECK-GX-JSON-DAG:       "%16": 2,
+# CHECK-GX-JSON-DAG:       "%17": 1,
+# CHECK-GX-JSON-DAG:       "%18": 1,
+# CHECK-GX-JSON-DAG:       "%9": "<unreachable>",
+# CHECK-GX-JSON-DAG:       "%11": 2,
+# CHECK-GX-JSON-DAG:       "%7": "<unreachable>",
+# CHECK-GX-JSON-DAG:       "%19": 1,
+# CHECK-GX-JSON-DAG:       "%5": 1
+# CHECK-GX-JSON:         },
 # CHECK-GX-JSON-NEXT:    "paths": [
 # CHECK-GX-JSON:         ],
 # CHECK-GX-JSON-NEXT:    "metrics": {
@@ -1306,6 +1328,28 @@ body:             |
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ]
 # CHECK-CP-JSON-NEXT:    },
+# CHECK-CP-JSON-NEXT:    "distance-from-def-to-closest-use": {
+# CHECK-CP-JSON-DAG:       "%0": 3,
+# CHECK-CP-JSON-DAG:       "%1": 2,
+# CHECK-CP-JSON-DAG:       "%2": 1,
+# CHECK-CP-JSON-DAG:       "%3": 0,
+# CHECK-CP-JSON-DAG:       "%4": 11,
+# CHECK-CP-JSON-DAG:       "%6": 0,
+# CHECK-CP-JSON-DAG:       "%8": 1794,
+# CHECK-CP-JSON-DAG:       "%10": 7,
+# CHECK-CP-JSON-DAG:       "%12": 4,
+# CHECK-CP-JSON-DAG:       "%13": 3,
+# CHECK-CP-JSON-DAG:       "%14": 3,
+# CHECK-CP-JSON-DAG:       "%15": 2,
+# CHECK-CP-JSON-DAG:       "%16": 2,
+# CHECK-CP-JSON-DAG:       "%17": 1,
+# CHECK-CP-JSON-DAG:       "%18": 1,
+# CHECK-CP-JSON-DAG:       "%9": 6,
+# CHECK-CP-JSON-DAG:       "%11": 2,
+# CHECK-CP-JSON-DAG:       "%7": 4,
+# CHECK-CP-JSON-DAG:       "%19": 1,
+# CHECK-CP-JSON-DAG:       "%5": 1
+# CHECK-CP-JSON:         },
 # CHECK-CP-JSON-NEXT:    "paths": [
 # CHECK-CP-JSON:         ],
 # CHECK-CP-JSON-NEXT:    "metrics": {

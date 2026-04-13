@@ -4,7 +4,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=graphics \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-GX-JSON %s
 
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
@@ -12,7 +12,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
@@ -20,7 +20,7 @@
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
+# RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 # 
 # MIR CFG:
@@ -2870,6 +2870,80 @@ body:             |
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ]
 # CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    "distance-from-def-to-closest-use": {
+# CHECK-GX-JSON-DAG:       "%0": 59,
+# CHECK-GX-JSON-DAG:       "%1": 41,
+# CHECK-GX-JSON-DAG:       "%2": 10,
+# CHECK-GX-JSON-DAG:       "%3": 6,
+# CHECK-GX-JSON-DAG:       "%4": 5,
+# CHECK-GX-JSON-DAG:       "%5": 5,
+# CHECK-GX-JSON-DAG:       "%6": 4,
+# CHECK-GX-JSON-DAG:       "%7": 4,
+# CHECK-GX-JSON-DAG:       "%8": 3,
+# CHECK-GX-JSON-DAG:       "%9": 30,
+# CHECK-GX-JSON-DAG:       "%10": 27,
+# CHECK-GX-JSON-DAG:       "%11": 3,
+# CHECK-GX-JSON-DAG:       "%12": 1,
+# CHECK-GX-JSON-DAG:       "%13": 22,
+# CHECK-GX-JSON-DAG:       "%14": 2,
+# CHECK-GX-JSON-DAG:       "%15": 1,
+# CHECK-GX-JSON-DAG:       "%16": 4,
+# CHECK-GX-JSON-DAG:       "%17": 2,
+# CHECK-GX-JSON-DAG:       "%18": 1,
+# CHECK-GX-JSON-DAG:       "%19": 1,
+# CHECK-GX-JSON-DAG:       "%20": 1,
+# CHECK-GX-JSON-DAG:       "%21": 31,
+# CHECK-GX-JSON-DAG:       "%22": 10,
+# CHECK-GX-JSON-DAG:       "%23": 8,
+# CHECK-GX-JSON-DAG:       "%24": 4,
+# CHECK-GX-JSON-DAG:       "%25": 5,
+# CHECK-GX-JSON-DAG:       "%26": 8,
+# CHECK-GX-JSON-DAG:       "%30": 6,
+# CHECK-GX-JSON-DAG:       "%34": 0,
+# CHECK-GX-JSON-DAG:       "%36": 17,
+# CHECK-GX-JSON-DAG:       "%38": 11,
+# CHECK-GX-JSON-DAG:       "%40": 9,
+# CHECK-GX-JSON-DAG:       "%43": 4866,
+# CHECK-GX-JSON-DAG:       "%46": 5,
+# CHECK-GX-JSON-DAG:       "%47": 3,
+# CHECK-GX-JSON-DAG:       "%48": 10,
+# CHECK-GX-JSON-DAG:       "%28": 13,
+# CHECK-GX-JSON-DAG:       "%32": 8,
+# CHECK-GX-JSON-DAG:       "%51": 15,
+# CHECK-GX-JSON-DAG:       "%54": 13,
+# CHECK-GX-JSON-DAG:       "%56": 11,
+# CHECK-GX-JSON-DAG:       "%44": "<unreachable>",
+# CHECK-GX-JSON-DAG:       "%41": "<unreachable>",
+# CHECK-GX-JSON-DAG:       "%39": "<unreachable>",
+# CHECK-GX-JSON-DAG:       "%37": 1,
+# CHECK-GX-JSON-DAG:       "%61": 5,
+# CHECK-GX-JSON-DAG:       "%62": 4,
+# CHECK-GX-JSON-DAG:       "%63": 2,
+# CHECK-GX-JSON-DAG:       "%57": 1,
+# CHECK-GX-JSON-DAG:       "%53": 1,
+# CHECK-GX-JSON-DAG:       "%55": 14,
+# CHECK-GX-JSON-DAG:       "%60": 1,
+# CHECK-GX-JSON-DAG:       "%64": 4,
+# CHECK-GX-JSON-DAG:       "%59": 14,
+# CHECK-GX-JSON-DAG:       "%58": 12,
+# CHECK-GX-JSON-DAG:       "%65": 2,
+# CHECK-GX-JSON-DAG:       "%66": 1,
+# CHECK-GX-JSON-DAG:       "%50": 5,
+# CHECK-GX-JSON-DAG:       "%67": 1,
+# CHECK-GX-JSON-DAG:       "%49": 2,
+# CHECK-GX-JSON-DAG:       "%68": 5,
+# CHECK-GX-JSON-DAG:       "%69": 4867,
+# CHECK-GX-JSON-DAG:       "%70": 4868,
+# CHECK-GX-JSON-DAG:       "%42": 1,
+# CHECK-GX-JSON-DAG:       "%71": 1,
+# CHECK-GX-JSON-DAG:       "%72": 1,
+# CHECK-GX-JSON-DAG:       "%35": 2,
+# CHECK-GX-JSON-DAG:       "%45": "<unreachable>",
+# CHECK-GX-JSON-DAG:       "%73": 1,
+# CHECK-GX-JSON-DAG:       "%74": 1,
+# CHECK-GX-JSON-DAG:       "%75": 1,
+# CHECK-GX-JSON-DAG:       "%76": 1
+# CHECK-GX-JSON:         },
 # CHECK-GX-JSON-NEXT:    "paths": [
 # CHECK-GX-JSON:         ],
 # CHECK-GX-JSON-NEXT:    "metrics": {
@@ -5906,6 +5980,80 @@ body:             |
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ]
 # CHECK-CP-JSON-NEXT:    },
+# CHECK-CP-JSON-NEXT:    "distance-from-def-to-closest-use": {
+# CHECK-CP-JSON-DAG:       "%0": 25,
+# CHECK-CP-JSON-DAG:       "%1": 24,
+# CHECK-CP-JSON-DAG:       "%2": 10,
+# CHECK-CP-JSON-DAG:       "%3": 6,
+# CHECK-CP-JSON-DAG:       "%4": 5,
+# CHECK-CP-JSON-DAG:       "%5": 5,
+# CHECK-CP-JSON-DAG:       "%6": 4,
+# CHECK-CP-JSON-DAG:       "%7": 4,
+# CHECK-CP-JSON-DAG:       "%8": 3,
+# CHECK-CP-JSON-DAG:       "%9": 16,
+# CHECK-CP-JSON-DAG:       "%10": 15,
+# CHECK-CP-JSON-DAG:       "%11": 3,
+# CHECK-CP-JSON-DAG:       "%12": 1,
+# CHECK-CP-JSON-DAG:       "%13": 12,
+# CHECK-CP-JSON-DAG:       "%14": 2,
+# CHECK-CP-JSON-DAG:       "%15": 1,
+# CHECK-CP-JSON-DAG:       "%16": 4,
+# CHECK-CP-JSON-DAG:       "%17": 2,
+# CHECK-CP-JSON-DAG:       "%18": 1,
+# CHECK-CP-JSON-DAG:       "%19": 1,
+# CHECK-CP-JSON-DAG:       "%20": 1,
+# CHECK-CP-JSON-DAG:       "%21": 4,
+# CHECK-CP-JSON-DAG:       "%22": 3,
+# CHECK-CP-JSON-DAG:       "%23": 2,
+# CHECK-CP-JSON-DAG:       "%24": 1,
+# CHECK-CP-JSON-DAG:       "%25": 0,
+# CHECK-CP-JSON-DAG:       "%26": 1,
+# CHECK-CP-JSON-DAG:       "%30": 0,
+# CHECK-CP-JSON-DAG:       "%34": 7,
+# CHECK-CP-JSON-DAG:       "%36": 5,
+# CHECK-CP-JSON-DAG:       "%38": 8,
+# CHECK-CP-JSON-DAG:       "%40": 7,
+# CHECK-CP-JSON-DAG:       "%43": 2562,
+# CHECK-CP-JSON-DAG:       "%46": 3,
+# CHECK-CP-JSON-DAG:       "%47": 2,
+# CHECK-CP-JSON-DAG:       "%48": 2,
+# CHECK-CP-JSON-DAG:       "%28": 3,
+# CHECK-CP-JSON-DAG:       "%32": 1,
+# CHECK-CP-JSON-DAG:       "%51": 6,
+# CHECK-CP-JSON-DAG:       "%54": 6,
+# CHECK-CP-JSON-DAG:       "%56": 6,
+# CHECK-CP-JSON-DAG:       "%44": 3,
+# CHECK-CP-JSON-DAG:       "%41": 3,
+# CHECK-CP-JSON-DAG:       "%39": 3,
+# CHECK-CP-JSON-DAG:       "%37": 1,
+# CHECK-CP-JSON-DAG:       "%61": 2,
+# CHECK-CP-JSON-DAG:       "%62": 2,
+# CHECK-CP-JSON-DAG:       "%63": 1,
+# CHECK-CP-JSON-DAG:       "%57": 1,
+# CHECK-CP-JSON-DAG:       "%53": 1,
+# CHECK-CP-JSON-DAG:       "%55": 10,
+# CHECK-CP-JSON-DAG:       "%60": 1,
+# CHECK-CP-JSON-DAG:       "%64": 4,
+# CHECK-CP-JSON-DAG:       "%59": 7,
+# CHECK-CP-JSON-DAG:       "%58": 6,
+# CHECK-CP-JSON-DAG:       "%65": 2,
+# CHECK-CP-JSON-DAG:       "%66": 1,
+# CHECK-CP-JSON-DAG:       "%50": 3,
+# CHECK-CP-JSON-DAG:       "%67": 1,
+# CHECK-CP-JSON-DAG:       "%49": 1,
+# CHECK-CP-JSON-DAG:       "%68": 2,
+# CHECK-CP-JSON-DAG:       "%69": 2563,
+# CHECK-CP-JSON-DAG:       "%70": 2564,
+# CHECK-CP-JSON-DAG:       "%42": 1,
+# CHECK-CP-JSON-DAG:       "%71": 1,
+# CHECK-CP-JSON-DAG:       "%72": 1,
+# CHECK-CP-JSON-DAG:       "%35": 2,
+# CHECK-CP-JSON-DAG:       "%45": 2,
+# CHECK-CP-JSON-DAG:       "%73": 1,
+# CHECK-CP-JSON-DAG:       "%74": 1,
+# CHECK-CP-JSON-DAG:       "%75": 1,
+# CHECK-CP-JSON-DAG:       "%76": 1
+# CHECK-CP-JSON:         },
 # CHECK-CP-JSON-NEXT:    "paths": [
 # CHECK-CP-JSON:         ],
 # CHECK-CP-JSON-NEXT:    "metrics": {

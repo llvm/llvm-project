@@ -84,9 +84,6 @@ using namespace llvm;
 //==============================================================================
 namespace {
 
-cl::opt<bool> DumpNextUseDistance("amdgpu-next-use-analysis-dump-distance",
-                                  cl::init(false), cl::Hidden);
-
 cl::opt<bool>
     DistanceCacheEnabled("amdgpu-next-use-analysis-distance-cache",
                          cl::init(true), cl::Hidden,
@@ -95,6 +92,11 @@ cl::opt<bool>
 cl::opt<std::string>
     DumpNextUseDistanceAsJson("amdgpu-next-use-analysis-dump-distance-as-json",
                               cl::Hidden);
+
+cl::opt<bool> DumpNextUseDistanceDefToUse(
+    "amdgpu-next-use-analysis-dump-distance-def-to-use", cl::init(false),
+    cl::Hidden);
+
 cl::opt<bool>
     DumpNextUseDistanceVerbose("amdgpu-next-use-analysis-dump-distance-verbose",
                                cl::init(false), cl::Hidden);
@@ -171,16 +173,14 @@ struct LiveRegUse : public UseDistancePair {
     return X.getReg() < getReg();
   }
 
-  void print(raw_ostream &OS) const {
+  void print(raw_ostream &OS, const TargetRegisterInfo *TRI = nullptr,
+             const MachineRegisterInfo *MRI = nullptr) const {
     if (isUnset()) {
       OS << "<unset>";
       return;
     }
     Dist.print(OS);
-    OS << " [" << printReg(getReg());
-    if (getSubReg())
-      OS << ":" << getSubReg();
-    OS << "]";
+    OS << " [" << printReg(getReg(), TRI, getSubReg(), MRI) << "]";
   }
 
   LLVM_DUMP_METHOD void dump() const {
@@ -382,21 +382,33 @@ private:
   // Paths
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 private:
-  class Path
-      : public std::pair<const MachineBasicBlock *, const MachineBasicBlock *> {
-  public:
-    using Base =
+  class Path {
+    using StorageTy =
         std::pair<const MachineBasicBlock *, const MachineBasicBlock *>;
-    using Base::pair;
-    Path(const Base &Pair) : Base(Pair) {}
+    StorageTy P;
 
-    const MachineBasicBlock *src() const { return first; }
-    const MachineBasicBlock *dst() const { return second; }
+  public:
+    constexpr Path() : P(nullptr, nullptr) {}
+    constexpr Path(const MachineBasicBlock *Src, const MachineBasicBlock *Dst)
+        : P(Src, Dst) {}
+    Path(const StorageTy &Pair) : P(Pair) {}
 
-    using DenseMapInfo = llvm::DenseMapInfo<Base>;
+    constexpr operator const StorageTy &() const { return P; }
+    using DenseMapInfo = llvm::DenseMapInfo<StorageTy>;
+
+    const MachineBasicBlock *src() const { return P.first; }
+    const MachineBasicBlock *dst() const { return P.second; }
   };
 
-  enum EdgeKind { Back = -1, None = 0, Forward = 1 };
+  enum class EdgeKind { Back = -1, None = 0, Forward = 1 };
+  static constexpr StringRef toString(EdgeKind EK) {
+    if (EK == EdgeKind::Back)
+      return "back";
+    if (EK == EdgeKind::Forward)
+      return "fwd";
+    return "none";
+  }
+
   struct PathInfo {
     EdgeKind EK;
     bool Reachable;
@@ -407,7 +419,7 @@ private:
     InstrIdTy Size;
 
     PathInfo()
-        : EK(None), Reachable(false), ForwardReachable(-1),
+        : EK(EdgeKind::None), Reachable(false), ForwardReachable(-1),
           RelativeLoopDepth(0), Size(0) {}
 
     bool isBackedge() const { return EK == EdgeKind::Back; }
@@ -418,16 +430,15 @@ private:
     bool isNotForwardReachable() const { return ForwardReachable == 0; }
 
     void print(raw_ostream &OS) const {
-      const char *EKStr = EK == Back ? "back" : EK == Forward ? "fwd" : "none";
-      OS << "{ek=" << EKStr << " reach=" << Reachable
+      OS << "{ek=" << toString(EK) << " reach=" << Reachable
          << " fwd-reach=" << ForwardReachable
          << " loop-depth=" << RelativeLoopDepth << " size=" << Size;
       if (ShortestDistance) {
-        OS << " shdist=";
+        OS << " shortest-dist=";
         ShortestDistance->print(OS);
       }
       if (ShortestUnweightedDistance) {
-        OS << " shudist=";
+        OS << " shortest-unweighted-dist=";
         ShortestUnweightedDistance->print(OS);
       }
       OS << "}";
@@ -483,7 +494,7 @@ private:
                                bool Reachable) {
     Slot.EK = EK;
     Slot.Reachable = Reachable;
-    Slot.ForwardReachable = EK != EdgeKind::None ? (0 < EK) : -1;
+    Slot.ForwardReachable = EK == EdgeKind::None ? -1 : EK == EdgeKind::Forward;
     Slot.RelativeLoopDepth =
         Slot.Reachable ? calcRelativeLoopDepth(P.src(), P.dst()) : 0;
     Slot.Size = P.src() == P.dst() ? calcSize(P.src()) : 0;
@@ -543,11 +554,10 @@ private:
 private:
   void initializePaths(const SmallVector<Path> &ReachablePaths,
                        const SmallVector<Path> &UnreachablePaths) const {
-    for (bool R : {true, false}) {
-      const auto &ToInit = R ? ReachablePaths : UnreachablePaths;
-      for (const Path &P : ToInit)
-        initializePathInfo(P, EdgeKind::None, R);
-    }
+    for (const Path &P : ReachablePaths)
+      initializePathInfo(P, EdgeKind::None, true);
+    for (const Path &P : UnreachablePaths)
+      initializePathInfo(P, EdgeKind::None, false);
   }
 
   void
@@ -632,7 +642,7 @@ private:
   // depth of 'A' relative to it. Otherwise return nullptr and the loop depth of
   // 'A'.
   static std::pair<MachineLoop *, unsigned>
-  findCommonParent(MachineLoop *A, const MachineLoop *const B) {
+  findCommonParent(MachineLoop *A, const MachineLoop *B) {
     unsigned Depth = 0;
     for (; A != nullptr; A = A->getParentLoop(), ++Depth) {
       if (A->contains(B))
@@ -1323,11 +1333,10 @@ private:
     SmallVector<MachineBasicBlock *, 2> Latches;
     UseLoop->getLoopLatches(Latches);
 
-    auto Ops = UseMI->operands();
-    for (auto It = std::next(Ops.begin()), ItE = Ops.end(); It != ItE;
-         It = std::next(It, 2)) {
-      auto &RegMO = *It;
-      auto &MBBMO = *std::next(It);
+    const unsigned NumOps = UseMI->getNumOperands();
+    for (unsigned I = 1; I < NumOps; I += 2) {
+      const MachineOperand &RegMO = UseMI->getOperand(I - 1);
+      const MachineOperand &MBBMO = UseMI->getOperand(I);
       assert(RegMO.isReg() && "Expected register operand of PHI");
       assert(MBBMO.isMBB() && "Expected MBB operand of PHI");
       if (RegMO.getReg() == LiveReg &&
@@ -1646,16 +1655,15 @@ private:
         SortedDistances.emplace_back(Dist.Weighted, MBBPair(FromNum, ToNum));
       }
     }
-    std::sort(SortedDistances.begin(), SortedDistances.end(),
-              [](const auto &A, const auto &B) {
-                if (A.first != B.first)
-                  return A.first < B.first;
+    llvm::sort(SortedDistances, [](const auto &A, const auto &B) {
+      if (A.first != B.first)
+        return A.first < B.first;
 
-                if (A.second.first != B.second.first)
-                  return A.second.first < B.second.first;
+      if (A.second.first != B.second.first)
+        return A.second.first < B.second.first;
 
-                return A.second.second < B.second.second;
-              });
+      return A.second.second < B.second.second;
+    });
 
     OS << "\n--------- InterBlockDistances -------- {\n";
     for (const Elem &E : SortedDistances) {
@@ -1669,41 +1677,6 @@ private:
 
   LLVM_DUMP_METHOD void dumpInterBlockDistances() const {
     printInterBlockDistances(dbgs());
-  }
-
-  void printAllDistances() {
-    auto getRegNextUseDistance =
-        [this](Register DefReg) -> std::optional<NextUseDistance> {
-      const MachineInstr &DefMI = *MRI->def_instr_begin(DefReg);
-
-      SmallVector<const MachineOperand *> Uses;
-      for (MachineOperand &UseMO : MRI->use_nodbg_operands(DefReg))
-        Uses.push_back(&UseMO);
-
-      return getShortestDistance(DefReg, DefMI, Uses);
-    };
-
-    for (const MachineBasicBlock &MBB : *MF) {
-      for (const MachineInstr &MI : MBB) {
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isReg() || MO.isUse())
-            continue;
-
-          Register Reg = MO.getReg();
-          if (Reg.isPhysical() || TRI->isAGPR(*MRI, Reg))
-            continue;
-
-          std::optional<NextUseDistance> D = getRegNextUseDistance(Reg);
-          errs() << "Next-use distance of Register " << printReg(Reg, TRI)
-                 << " = ";
-          if (D)
-            errs() << D->fmt();
-          else
-            errs() << "null";
-          errs() << "\n";
-        }
-      }
-    }
   }
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1778,8 +1751,8 @@ private:
 
     // If CachedDistancesMI <= Use < MI we could have a problem since we don't
     // know if Use is still reachable.
-    return !(instrsAreInOrder(CachedDistancesMI, UseMI) &&
-             instrsAreInOrder(UseMI, &MI));
+    return !instrsAreInOrder(CachedDistancesMI, UseMI) ||
+           !instrsAreInOrder(UseMI, &MI);
   }
 
   std::pair<const LaneBitmaskToUseMap *, const LiveRegToUseMapElem *>
@@ -1837,16 +1810,14 @@ private:
     else
       OS << "<none>\n";
 
-    // Pre-format each register name so we can align the ':'.
-    SmallVector<std::pair<std::string, const LiveRegToUseMapElem *>> Rows;
-    size_t RegNameWidth = 0;
+    constexpr size_t RegNameWidth = 20;
     for (const auto &[Reg, ByMask] : CachedDistances) {
       const TargetRegisterClass *RC = MRI->getRegClass(Reg);
       LaneBitmask AllLanes = MRI->getMaxLaneMaskForVReg(Reg);
 
       for (const auto &[Mask, Elem] : ByMask) {
-        std::string Key;
-        raw_string_ostream KOS(Key);
+        std::string RegName;
+        raw_string_ostream KOS(RegName);
         if (Mask == AllLanes) {
           KOS << printReg(Reg);
         } else {
@@ -1857,14 +1828,10 @@ private:
           else
             KOS << printReg(Reg) << " mask=" << Mask.getAsInteger();
         }
-        RegNameWidth = std::max(RegNameWidth, Key.size());
-        Rows.emplace_back(std::move(Key), &Elem);
+        OS << "  " << left_justify(RegName, RegNameWidth) << " : ";
+        Elem.print(OS);
+        OS << '\n';
       }
-    }
-    for (const auto &[RegName, Elem] : Rows) {
-      OS << "  " << left_justify(RegName, RegNameWidth) << " : ";
-      Elem->print(OS);
-      OS << '\n';
     }
     OS << "  (hits=" << DistanceCacheHits << " misses=" << DistanceCacheMisses
        << ")\n";
@@ -2121,7 +2088,7 @@ public:
 
   void getReachableUses(Register LiveReg, LaneBitmask LaneMask,
                         const MachineInstr &MI,
-                        SmallVector<const MachineOperand *> &Uses);
+                        SmallVector<const MachineOperand *> &Uses) const;
 
   /// \Returns the shortest next-use distance for \p LiveReg.
   NextUseDistance
@@ -2129,11 +2096,11 @@ public:
                       const MachineInstr &FromMI,
                       const SmallVector<const MachineOperand *> &Uses,
                       const MachineOperand **ShortestUseOut, bool *MIDependent,
-                      SmallVector<CacheableNextUseDistance> *Distances);
+                      SmallVector<CacheableNextUseDistance> *Distances) const;
 
   NextUseDistance
   getShortestDistance(Register LiveReg, const MachineInstr &FromMI,
-                      const SmallVector<const MachineOperand *> &Uses) {
+                      const SmallVector<const MachineOperand *> &Uses) const {
     return getShortestDistance(LiveReg, LaneBitmask::getAll(), FromMI, Uses,
                                nullptr, nullptr, nullptr);
   }
@@ -2150,7 +2117,8 @@ AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
   TRI = &TII->getRegisterInfo();
   MRI = &MF->getRegInfo();
 
-  // TODO: Choose default preset based on subtarget.
+  // FIXME: Hopefully we will soon converge on a single way of calculating
+  // next-use distance and remove these presets.
   if (ConfigPresetOpt == "compute")
     Cfg = AMDGPUNextUseAnalysis::Config::Compute();
   else
@@ -2166,19 +2134,13 @@ AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
     Cfg.PromoteToPreheader = ConfigPromoteToPreheaderOpt;
 
   initializeTables();
-
-  if (DumpNextUseDistance) {
-    populatePathTable();
-    MF->print(errs());
-    printAllDistances();
-  }
 }
 
 NextUseDistance AMDGPUNextUseAnalysisImpl::getShortestDistance(
     Register LiveReg, LaneBitmask LaneMask, const MachineInstr &CurMI,
     const SmallVector<const MachineOperand *> &Uses,
     const MachineOperand **ShortestUseOut, bool *CurMIDependentOut,
-    SmallVector<CacheableNextUseDistance> *Distances) {
+    SmallVector<CacheableNextUseDistance> *Distances) const {
 
   assert(!LiveReg.isPhysical() && !TRI->isAGPR(*MRI, LiveReg) &&
          "Next-use distance is calculated for SGPRs and VGPRs");
@@ -2214,7 +2176,7 @@ NextUseDistance AMDGPUNextUseAnalysisImpl::getShortestDistance(
 
 void AMDGPUNextUseAnalysisImpl::getReachableUses(
     Register Reg, LaneBitmask LaneMask, const MachineInstr &MI,
-    SmallVector<const MachineOperand *> &Uses) {
+    SmallVector<const MachineOperand *> &Uses) const {
   const bool CheckMask = LaneMask != LaneBitmask::getAll() &&
                          LaneMask != MRI->getMaxLaneMaskForVReg(Reg);
   const MachineBasicBlock *MBB = MI.getParent();
@@ -2264,11 +2226,11 @@ AMDGPUNextUseAnalysis::Config AMDGPUNextUseAnalysis::getConfig() const {
 void AMDGPUNextUseAnalysis::setConfig(Config Cfg) { Impl->setConfig(Cfg); }
 
 /// \Returns the next-use distance for \p LiveReg.
-std::optional<NextUseDistance> AMDGPUNextUseAnalysis::getShortestDistance(
+NextUseDistance AMDGPUNextUseAnalysis::getShortestDistance(
     Register LiveReg, const MachineInstr &FromMI,
     const SmallVector<const MachineOperand *> &Uses,
     const MachineOperand **ShortestUseOut,
-    SmallVector<NextUseDistance> *DistancesOut) {
+    SmallVector<NextUseDistance> *DistancesOut) const {
 
   SmallVector<AMDGPUNextUseAnalysisImpl::CacheableNextUseDistance> Distances;
   auto Dist = Impl->getShortestDistance(LiveReg, LaneBitmask::getAll(), FromMI,
@@ -2297,7 +2259,7 @@ void AMDGPUNextUseAnalysis::getNextUseDistances(
 }
 void AMDGPUNextUseAnalysis::getReachableUses(
     Register LiveReg, LaneBitmask LaneMask, const MachineInstr &MI,
-    SmallVector<const MachineOperand *> &Uses) {
+    SmallVector<const MachineOperand *> &Uses) const {
   return Impl->getReachableUses(LiveReg, LaneMask, MI, Uses);
 }
 
@@ -2378,7 +2340,7 @@ void printDistances(
   SmallVector<const MachineOperand *> Keys;
   for (const MachineOperand *K : Uses.keys())
     Keys.push_back(K);
-  std::sort(Keys.begin(), Keys.end(), [](const auto &A, const auto &B) {
+  llvm::sort(Keys, [](const auto &A, const auto &B) {
     return A->getReg() < B->getReg() ||
            (A->getReg() == B->getReg() && A->getSubReg() < B->getSubReg());
   });
@@ -2412,6 +2374,39 @@ void printFurthestUse(json::OStream &J, const MachineRegisterInfo &MRI,
       printStringAttr(J, "use-mi", *F.Use->getParent(), MST);
     }
     J.attribute("distance", F.Dist.toJsonValue());
+  }
+
+  J.objectEnd();
+  J.attributeEnd();
+}
+
+void printDistanceFromDefToUse(json::OStream &J, const MachineFunction &MF,
+                               const AMDGPUNextUseAnalysis &NUA,
+                               const SIRegisterInfo &TRI,
+                               const MachineRegisterInfo &MRI) {
+  auto getRegNextUseDistance = [&](Register DefReg) {
+    const MachineInstr &DefMI = *MRI.def_instr_begin(DefReg);
+
+    SmallVector<const MachineOperand *> Uses;
+    NUA.getReachableUses(DefReg, LaneBitmask::getAll(), DefMI, Uses);
+    if (Uses.empty())
+      return NextUseDistance::unreachable();
+    return NUA.getShortestDistance(DefReg, DefMI, Uses);
+  };
+
+  J.attributeBegin("distance-from-def-to-closest-use");
+  J.objectBegin();
+
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      for (const MachineOperand &MO : MI.all_defs()) {
+        Register Reg = MO.getReg();
+        if (Reg.isPhysical())
+          continue;
+        NextUseDistance D = getRegNextUseDistance(Reg);
+        printAttr(J, printReg(Reg, &TRI, 0, &MRI), D.toJsonValue());
+      }
+    }
   }
 
   J.objectEnd();
@@ -2480,6 +2475,9 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
 
   J.objectEnd();
   J.attributeEnd();
+
+  if (DumpNextUseDistanceVerbose || DumpNextUseDistanceDefToUse)
+    printDistanceFromDefToUse(J, MF, NUA, TRI, MRI);
 
   if (DumpNextUseDistanceVerbose)
     NUAImpl.printPaths(J, MST);

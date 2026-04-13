@@ -288,14 +288,14 @@ public:
 
   void getReachableUses(Register LiveReg, LaneBitmask LaneMask,
                         const MachineInstr &MI,
-                        SmallVector<const MachineOperand *> &Uses);
+                        SmallVector<const MachineOperand *> &Uses) const;
 
   /// \Returns the shortest next-use distance from \p CurMI for \p LiveReg.
-  std::optional<NextUseDistance>
+  NextUseDistance
   getShortestDistance(Register LiveReg, const MachineInstr &CurMI,
                       const SmallVector<const MachineOperand *> &Uses,
                       const MachineOperand **ShortestUseOut = nullptr,
-                      SmallVector<NextUseDistance> *Distances = nullptr);
+                      SmallVector<NextUseDistance> *Distances = nullptr) const;
 
   struct UseDistancePair {
     const MachineOperand *Use = nullptr;
