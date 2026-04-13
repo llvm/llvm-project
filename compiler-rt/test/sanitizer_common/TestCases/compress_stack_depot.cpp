@@ -7,6 +7,8 @@
 
 // Ubsan does not store stacks.
 // UNSUPPORTED: ubsan
+// Tysan does not store stacks.
+// UNSUPPORTED: tysan
 
 // FIXME: Fails for unknown reason.
 // UNSUPPORTED: target=s390x{{.*}}
