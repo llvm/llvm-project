@@ -14288,37 +14288,36 @@ static SDValue performAndOrXorv2i32Combine(SDNode *N, SelectionDAG &DAG) {
       matchV2I32Patterns(RHS.getOpcode(), Opc))
     return SDValue();
 
+  bool foundi32LogicalOp = false;
   for (SDUse &use : N->uses()) {
     SDNode *user = use.getUser();
     if (user->getValueType(0) == MVT::v2i32 &&
         matchV2I32Patterns(Opc, user->getOpcode()))
       return SDValue();
-  }
 
-  // If the v2i32 op has a following i32 operation, break v2i32 into two i32 ops
-  // before instruction selection such that the broken i32 ops can be naturally
-  // optimized, e.g., into vop3 op
-  for (SDUse &use : N->uses()) {
-    SDNode *user = use.getUser();
     SDNode *peek = user->getOpcode() == ISD::EXTRACT_VECTOR_ELT
                        ? user->use_begin()->getUser()
                        : user;
     const unsigned peekOpc = peek->getOpcode();
-    EVT peekVT = peek->getValueType(0);
-    if (peekVT == MVT::i32 &&
-        (peekOpc == ISD::OR || peekOpc == ISD::AND || peekOpc == ISD::XOR)) {
-      SDLoc DL(N);
-      SmallVector<SDValue, 2> LhsValues;
-      SmallVector<SDValue, 2> RhsValues;
-      DAG.ExtractVectorElements(LHS, LhsValues, 0, 2, MVT::i32);
-      DAG.ExtractVectorElements(RHS, RhsValues, 0, 2, MVT::i32);
-      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, LhsValues[0], RhsValues[0]);
-      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, LhsValues[1], RhsValues[1]);
-      return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, Lo, Hi);
-    }
+    if (peek->getValueType(0) == MVT::i32 &&
+        (peekOpc == ISD::OR || peekOpc == ISD::AND || peekOpc == ISD::XOR))
+      foundi32LogicalOp = true;
   }
 
-  return SDValue();
+  if (!foundi32LogicalOp)
+    return SDValue();
+
+  // If the v2i32 op has a following i32 operation, break v2i32 into two i32
+  // ops before instruction selection such that the broken i32 ops can be
+  // naturally optimized, e.g., into vop3 op.
+  SDLoc DL(N);
+  SmallVector<SDValue, 2> LhsValues;
+  SmallVector<SDValue, 2> RhsValues;
+  DAG.ExtractVectorElements(LHS, LhsValues, 0, 2, MVT::i32);
+  DAG.ExtractVectorElements(RHS, RhsValues, 0, 2, MVT::i32);
+  SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, LhsValues[0], RhsValues[0]);
+  SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, LhsValues[1], RhsValues[1]);
+  return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, Lo, Hi);
 }
 
 SDValue SITargetLowering::performAndCombine(SDNode *N,
