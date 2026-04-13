@@ -74,6 +74,9 @@ void ThreadPlanStepInstruction::GetDescription(Stream *s,
     else
       s->Printf(" stepping into calls");
 
+    if (m_direction == eRunReverse)
+      s->Printf(" (direction = reverse)");
+
     PrintFailureIfAny();
   }
 }
