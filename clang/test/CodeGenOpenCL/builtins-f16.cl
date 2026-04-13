@@ -95,16 +95,14 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
 }
 
 // sin and cos are split into separate functions to avoid sincos combining.
-// CHECK-LABEL: define{{.*}} void @test_half_sin
+// CHECK-LABEL: define{{.*}} half @test_half_sin
 // CHECK: call half @llvm.sin.f16(half %h0)
-void test_half_sin(half h0) {
-  volatile half res;
-  res = __builtin_sinf16(h0);
+half test_half_sin(half h0) {
+  return __builtin_sinf16(h0);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_half_cos
+// CHECK-LABEL: define{{.*}} half @test_half_cos
 // CHECK: call half @llvm.cos.f16(half %h0)
-void test_half_cos(half h0) {
-  volatile half res;
-  res = __builtin_cosf16(h0);
+half test_half_cos(half h0) {
+  return __builtin_cosf16(h0);
 }

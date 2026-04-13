@@ -1923,9 +1923,20 @@ static Value *foldSinCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
 
   Function *SinCosFunc = Intrinsic::getOrInsertDeclaration(
       II->getModule(), Intrinsic::sincos, Arg->getType());
-  Value *SinCos = B.CreateCall(SinCosFunc, Arg, "sincos");
+  CallInst *SinCos = B.CreateCall(SinCosFunc, Arg, "sincos");
+  // Intersect fast-math flags from the two calls.
+  SinCos->setFastMathFlags(II->getFastMathFlags() & Match->getFastMathFlags());
   Value *Sin = B.CreateExtractValue(SinCos, 0, "sin");
   Value *Cos = B.CreateExtractValue(SinCos, 1, "cos");
+  // llvm.sincos returns a struct, so fpmath metadata cannot attach to the
+  // call itself. Propagate the most-generic fpmath metadata from the two
+  // original calls onto the per-component extractvalue instructions.
+  if (MDNode *MD = MDNode::getMostGenericFPMath(
+          II->getMetadata(LLVMContext::MD_fpmath),
+          Match->getMetadata(LLVMContext::MD_fpmath))) {
+    cast<Instruction>(Sin)->setMetadata(LLVMContext::MD_fpmath, MD);
+    cast<Instruction>(Cos)->setMetadata(LLVMContext::MD_fpmath, MD);
+  }
 
   // Replace the matching call and erase it.
   IC.replaceInstUsesWith(*Match, IsSin ? Cos : Sin);

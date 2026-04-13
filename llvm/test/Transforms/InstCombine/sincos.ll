@@ -286,4 +286,96 @@ define { float, float } @sincos_double_to_float_shrink(float %x) {
   ret { float, float } %r1
 }
 
+; FMF flags should be intersected when combining sin and cos.
+define float @sincos_fmf_intersect(float %x) {
+; CHECK-LABEL: @sincos_fmf_intersect(
+; CHECK-NEXT:    [[SINCOS:%.*]] = call nnan ninf { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_fmf_intersect(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call nnan ninf { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
+;
+  %s = call nnan ninf nsz float @llvm.sin.f32(float %x)
+  %c = call nnan ninf arcp float @llvm.cos.f32(float %x)
+  %res = fadd float %s, %c
+  ret float %res
+}
+
+; If one of the calls has no FMF, the combined call should have no FMF either.
+define float @sincos_fmf_one_unset(float %x) {
+; CHECK-LABEL: @sincos_fmf_one_unset(
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_fmf_one_unset(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
+;
+  %s = call fast float @llvm.sin.f32(float %x)
+  %c = call float @llvm.cos.f32(float %x)
+  %res = fadd float %s, %c
+  ret float %res
+}
+
+; fpmath metadata: combined call should use the most generic metadata (the
+; tighter accuracy bound -- getMostGenericFPMath picks the smaller ULP).
+define float @sincos_fpmath_metadata(float %x) {
+; CHECK-LABEL: @sincos_fpmath_metadata(
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0, !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1, !fpmath [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_fpmath_metadata(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0, !fpmath [[META0:![0-9]+]]
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1, !fpmath [[META0]]
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
+;
+  %s = call float @llvm.sin.f32(float %x), !fpmath !0
+  %c = call float @llvm.cos.f32(float %x), !fpmath !1
+  %res = fadd float %s, %c
+  ret float %res
+}
+
+; If only one of the calls has fpmath, the combined call should have no fpmath.
+define float @sincos_fpmath_one_unset(float %x) {
+; CHECK-LABEL: @sincos_fpmath_one_unset(
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_fpmath_one_unset(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
+;
+  %s = call float @llvm.sin.f32(float %x), !fpmath !0
+  %c = call float @llvm.cos.f32(float %x)
+  %res = fadd float %s, %c
+  ret float %res
+}
+
 attributes #0 = { nounwind memory(none) }
+
+!0 = !{float 2.5}
+!1 = !{float 4.0}
