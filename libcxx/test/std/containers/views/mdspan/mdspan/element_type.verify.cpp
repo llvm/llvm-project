@@ -18,13 +18,15 @@
 
 #include <mdspan>
 
+struct Incomplete;
+
 class AbstractClass {
 public:
   virtual void method() = 0;
 };
 
-struct BadAccessor {
-  using offset_policy    = BadAccessor;
+struct VoidAccessor {
+  using offset_policy    = VoidAccessor;
   using element_type     = void;
   using reference        = void;
   using data_handle_type = element_type*;
@@ -36,7 +38,6 @@ struct RefAccessor {
   using element_type     = int&;
   using reference        = int&;
   using data_handle_type = int*;
-
   reference access(data_handle_type p, std::size_t i) const { return p[i]; }
 };
 
@@ -48,9 +49,14 @@ struct FuncAccessor {
   reference access(data_handle_type, std::size_t) const;
 };
 
-void incomplete_type() {
+void incomplete_object_type() {
   // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter must be a complete object type}}
-  [[maybe_unused]] std::mdspan<void, std::dextents<std::size_t, 2>, std::layout_right, BadAccessor> m;
+  [[maybe_unused]] std::mdspan<Incomplete, std::dextents<std::size_t, 2>> m;
+}
+
+void void_type() {
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter must be a complete object type}}
+  [[maybe_unused]] std::mdspan<void, std::dextents<std::size_t, 2>, std::layout_right, VoidAccessor> m;
 }
 
 void reference_type() {
