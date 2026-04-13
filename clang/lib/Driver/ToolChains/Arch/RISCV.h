@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ARCH_RISCV_H
 
 #include "clang/Driver/Driver.h"
+#include "clang/Driver/Multilib.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include <string>
@@ -28,6 +29,9 @@ std::string getRISCVArch(const llvm::opt::ArgList &Args,
                          const llvm::Triple &Triple);
 std::string getRISCVTargetCPU(const llvm::opt::ArgList &Args,
                               const llvm::Triple &Triple);
+bool selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
+                         const Multilib::flags_list &Flags,
+                         llvm::SmallVectorImpl<Multilib> &SelectedMultilibs);
 } // end namespace riscv
 } // namespace tools
 } // end namespace driver

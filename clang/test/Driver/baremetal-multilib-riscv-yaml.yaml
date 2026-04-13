@@ -1,0 +1,146 @@
+# UNSUPPORTED: system-windows
+
+# Test YAML multilib configuration for RISC-V baremetal targets.
+# This YAML was generated from GCC --print-multi-lib output using
+# gen-riscv-multilib-yaml-from-gcc.py. The canonicalized march strings
+# are produced by clang and used directly without regex Mappings.
+
+# Test 1: Exact match - rv32imac selects rv32imac/ilp32
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o %t.out 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32imac -mabi=ilp32 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-RV32IMAC %s
+# CHECK-RV32IMAC:      "-cc1" "-triple" "riscv32-unknown-unknown-elf"
+# CHECK-RV32IMAC-SAME: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/rv32imac/ilp32/include"
+# CHECK-RV32IMAC:      "-L[[SYSROOT]]/bin/../lib/clang-runtimes/rv32imac/ilp32/lib"
+
+# Test 2: Exact match - rv64imafdc selects rv64imafdc/lp64d
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o %t.out 2>&1 \
+# RUN:     --target=riscv64-unknown-elf -march=rv64imafdc -mabi=lp64d --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-RV64IMAFDC %s
+# CHECK-RV64IMAFDC:      "-cc1" "-triple" "riscv64-unknown-unknown-elf"
+# CHECK-RV64IMAFDC-SAME: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/rv64imafdc/lp64d/include"
+# CHECK-RV64IMAFDC:      "-L[[SYSROOT]]/bin/../lib/clang-runtimes/rv64imafdc/lp64d/lib"
+
+# Test 3: print-multi-directory for each variant
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32i -mabi=ilp32 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-DIR-RV32I %s
+# CHECK-DIR-RV32I: rv32i/ilp32
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32im -mabi=ilp32 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-DIR-RV32IM %s
+# CHECK-DIR-RV32IM: rv32im/ilp32
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32iac -mabi=ilp32 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-DIR-RV32IAC %s
+# CHECK-DIR-RV32IAC: rv32iac/ilp32
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32imac -mabi=ilp32 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-DIR-RV32IMAC %s
+# CHECK-DIR-RV32IMAC: rv32imac/ilp32
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv64-unknown-elf -march=rv64imac -mabi=lp64 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-DIR-RV64IMAC %s
+# CHECK-DIR-RV64IMAC: rv64imac/lp64
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32imafc -mabi=ilp32f --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-DIR-RV32IMAFC %s
+# CHECK-DIR-RV32IMAFC: rv32imafc/ilp32f
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv64-unknown-elf -march=rv64imafdc -mabi=lp64d --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-DIR-RV64IMAFDC %s
+# CHECK-DIR-RV64IMAFDC: rv64imafdc/lp64d
+
+# Test 4: Multilib reuse via selectRISCVMultilib fallback
+# rv32ic has no exact match, but reuses rv32i/ilp32 (c is not in rv32i, but
+# rv32i is a valid subset - atomic mismatch is not an issue here)
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32ic -mabi=ilp32 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-REUSE-RV32IC %s
+# CHECK-REUSE-RV32IC: rv32i/ilp32
+
+# rv32imc reuses rv32im/ilp32 (c is not in rv32im, but m+i subset matches)
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32imc -mabi=ilp32 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-REUSE-RV32IMC %s
+# CHECK-REUSE-RV32IMC: rv32im/ilp32
+
+# rv32imafdc reuses rv32imafc/ilp32f (d is not in rv32imafc, but i+m+a+f+c matches)
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv32-unknown-elf -march=rv32imafdc -mabi=ilp32f --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-REUSE-RV32IMAFDC %s
+# CHECK-REUSE-RV32IMAFDC: rv32imafc/ilp32f
+
+# rv64gc (rv64imafdc) reuses rv64imafdc/lp64d (exact after canonicalization)
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv64-unknown-elf -march=rv64gc -mabi=lp64d --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-REUSE-RV64GC %s
+# CHECK-REUSE-RV64GC: rv64imafdc/lp64d
+
+# riscv64 target with rv32i march still matches rv32i/ilp32
+# (march determines the effective XLEN for multilib flag matching)
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv64-unknown-elf -march=rv32i -mabi=ilp32 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-RV64-WITH-RV32I %s
+# CHECK-RV64-WITH-RV32I: rv32i/ilp32
+
+# Test 5: No match - rv64imafdc with lp64f ABI has no matching multilib
+# (lp64d is available but lp64f is not)
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=riscv64-unknown-elf -march=rv64imafdc -mabi=lp64f --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-WRONG-ABI %s
+# CHECK-WRONG-ABI: warning: no multilib found matching flags:
+
+# Test 6: print-multi-lib lists all variants
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-lib 2>&1 \
+# RUN:     --target=riscv32-unknown-elf --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-LIB %s
+# CHECK-PRINT-MULTI-LIB: rv32i/ilp32;@-target=riscv32-unknown-unknown-elf@mabi=ilp32@march=rv32i2p1
+# CHECK-PRINT-MULTI-LIB: rv32im/ilp32;@-target=riscv32-unknown-unknown-elf@mabi=ilp32@march=rv32i2p1_m2p0_zmmul1p0
+# CHECK-PRINT-MULTI-LIB: rv32iac/ilp32;@-target=riscv32-unknown-unknown-elf@mabi=ilp32@march=rv32i2p1_a2p1_c2p0_zaamo1p0_zalrsc1p0_zca1p0
+# CHECK-PRINT-MULTI-LIB: rv32imac/ilp32;@-target=riscv32-unknown-unknown-elf@mabi=ilp32@march=rv32i2p1_m2p0_a2p1_c2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0
+# CHECK-PRINT-MULTI-LIB: rv32imafc/ilp32f;@-target=riscv32-unknown-unknown-elf@mabi=ilp32f@march=rv32i2p1_m2p0_a2p1_f2p2_c2p0_zicsr2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcf1p0
+
+---
+MultilibVersion: 1.0
+
+Groups:
+- Name: riscv-multilib
+  Type: Exclusive
+
+Variants:
+- Dir: rv32i/ilp32
+  Flags: [--target=riscv32-unknown-unknown-elf, -mabi=ilp32, -march=rv32i2p1]
+  Group: riscv-multilib
+
+- Dir: rv32im/ilp32
+  Flags: [--target=riscv32-unknown-unknown-elf, -mabi=ilp32, -march=rv32i2p1_m2p0_zmmul1p0]
+  Group: riscv-multilib
+
+- Dir: rv32iac/ilp32
+  Flags: [--target=riscv32-unknown-unknown-elf, -mabi=ilp32, -march=rv32i2p1_a2p1_c2p0_zaamo1p0_zalrsc1p0_zca1p0]
+  Group: riscv-multilib
+
+- Dir: rv32imac/ilp32
+  Flags: [--target=riscv32-unknown-unknown-elf, -mabi=ilp32, -march=rv32i2p1_m2p0_a2p1_c2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0]
+  Group: riscv-multilib
+
+- Dir: rv64imac/lp64
+  Flags: [--target=riscv64-unknown-unknown-elf, -mabi=lp64, -march=rv64i2p1_m2p0_a2p1_c2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0]
+  Group: riscv-multilib
+
+- Dir: rv32imafc/ilp32f
+  Flags: [--target=riscv32-unknown-unknown-elf, -mabi=ilp32f, -march=rv32i2p1_m2p0_a2p1_f2p2_c2p0_zicsr2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcf1p0]
+  Group: riscv-multilib
+
+- Dir: rv64imafdc/lp64d
+  Flags: [--target=riscv64-unknown-unknown-elf, -mabi=lp64d, -march=rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0]
+  Group: riscv-multilib
+
+...
