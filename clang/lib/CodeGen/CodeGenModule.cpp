@@ -804,6 +804,49 @@ void CodeGenModule::checkAliases() {
       continue;
     }
 
+    if (!IsIFunc) {
+      // Function declarations can only alias functions (including IFUNCs).
+      // Similarly, variable declarations can only alias variables.
+      if (isa<FunctionDecl>(D) !=
+          (isa<llvm::Function>(GV) || isa<llvm::GlobalIFunc>(GV))) {
+        GlobalDecl AliaseeGD = getMangledNameDecl(GV->getName());
+        assert(AliaseeGD);
+        Diags.Report(Location, diag::err_alias_between_function_and_variable)
+            << isa<FunctionDecl>(D);
+        Diags.Report(AliaseeGD.getDecl()->getLocation(),
+                     diag::note_aliasee_declaration);
+        Error = true;
+        continue;
+      }
+
+      auto shouldReportTypeMismatch = [&]() {
+        llvm::Type *AliasTy = Alias->getValueType();
+        llvm::Type *AliaseeTy = GV->getValueType();
+        // Same types, nothing to report.
+        if (AliasTy == AliaseeTy)
+          return false;
+        // Only report functions.
+        // Type mismatches for variables can be intentional.
+        auto *AliasFTy = dyn_cast<llvm::FunctionType>(AliasTy);
+        auto *AliaseeFTy = dyn_cast<llvm::FunctionType>(AliaseeTy);
+        if (!AliasFTy || !AliaseeFTy)
+          return false;
+        // Only report aliases with unspecified parameter lists if the return
+        // types do not match.
+        if (isa<FunctionNoProtoType>(D->getType().getTypePtr()))
+          return AliasFTy->getReturnType() != AliaseeFTy->getReturnType();
+        return true;
+      };
+      if (shouldReportTypeMismatch()) {
+        GlobalDecl AliaseeGD = getMangledNameDecl(GV->getName());
+        assert(AliaseeGD);
+        Diags.Report(Location, diag::warn_alias_type_mismatch)
+            << D->getType() << cast<ValueDecl>(AliaseeGD.getDecl())->getType();
+        Diags.Report(AliaseeGD.getDecl()->getLocation(),
+                     diag::note_aliasee_declaration);
+      }
+    }
+
     if (getContext().getTargetInfo().getTriple().isOSAIX())
       if (const llvm::GlobalVariable *GVar =
               dyn_cast<const llvm::GlobalVariable>(GV))
