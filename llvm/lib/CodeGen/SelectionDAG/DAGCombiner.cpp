@@ -11589,13 +11589,11 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       unsigned NumElts = BVVT.getVectorNumElements();
       if (N1C->getZExtValue() == (NumElts - 1) * EltSizeInBits) {
         SDValue LastElt = BV.getOperand(NumElts - 1);
-        if (!LastElt.isUndef()) {
-          EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
-          LastElt = DAG.getBitcast(LastElt.getValueType().changeTypeToInteger(),
-                                   LastElt);
-          return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT),
-                                    DL, VT);
-        }
+        EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
+        LastElt = DAG.getBitcast(LastElt.getValueType().changeTypeToInteger(),
+                                  LastElt);
+        return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT),
+                                  DL, VT);
       }
     }
   }
