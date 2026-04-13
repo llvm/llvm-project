@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -398,7 +399,7 @@ void GsymReader::dump(raw_ostream &OS) {
   OS << " (ADDRESS)\n";
   OS << "====== =============================== \n";
   for (uint32_t I = 0; I < Header.NumAddresses; ++I) {
-    OS << format("[%4u] ", I);
+    OS << formatv("[{0,4}] ", I);
     switch (Hdr->AddrOffSize) {
     case 1: OS << HEX8(getAddrOffsets<uint8_t>()[I]); break;
     case 2: OS << HEX16(getAddrOffsets<uint16_t>()[I]); break;
@@ -413,13 +414,13 @@ void GsymReader::dump(raw_ostream &OS) {
   OS << "INDEX  Offset\n";
   OS << "====== ==========\n";
   for (uint32_t I = 0; I < Header.NumAddresses; ++I)
-    OS << format("[%4u] ", I) << HEX32(AddrInfoOffsets[I]) << "\n";
+    OS << formatv("[{0,4}] ", I) << HEX32(AddrInfoOffsets[I]) << "\n";
   // Dump the file table.
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
   OS << "====== ========== ========== ==============================\n";
   for (uint32_t I = 0; I < Files.size(); ++I) {
-    OS << format("[%4u] ", I) << HEX32(Files[I].Dir) << ' '
+    OS << formatv("[{0,4}] ", I) << HEX32(Files[I].Dir) << ' '
        << HEX32(Files[I].Base) << ' ';
     dump(OS, getFile(I));
     OS << "\n";

@@ -3456,7 +3456,7 @@ void LVLogicalVisitor::printRecords(raw_ostream &OS) const {
         OS << "\n";
       }
     };
-    OS << format("%20s", Name.str().c_str());
+    OS << formatv("{0,20}", Name.str().c_str());
     NewLine();
   };
 
