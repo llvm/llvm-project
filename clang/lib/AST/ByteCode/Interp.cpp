@@ -1990,7 +1990,12 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
                           std::optional<uint64_t> ArraySize) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (Ptr.inUnion() && Ptr.getBase().getRecord()->isUnion())
+  auto directBaseIsUnion = [](const Pointer &Ptr) -> bool {
+    const Record *R = Ptr.getBase().getRecord();
+    return R && R->isUnion();
+  };
+
+  if (Ptr.inUnion() && directBaseIsUnion(Ptr))
     Ptr.activate();
 
   if (Ptr.isZero()) {
@@ -2071,7 +2076,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   }
 
   // Can't activate fields in a union, unless the direct base is the union.
-  if (Ptr.inUnion() && !Ptr.isActive() && !Ptr.getBase().getRecord()->isUnion())
+  if (Ptr.inUnion() && !Ptr.isActive() && !directBaseIsUnion(Ptr))
     return CheckActive(S, OpPC, Ptr, AK_Construct);
 
   return true;
