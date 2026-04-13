@@ -205,7 +205,7 @@ TEST(CodeExtractor, InputOutputReturnMonitoring) {
   ReturnInst *ExitReturn = dyn_cast<ReturnInst>(ExitTerm);
   EXPECT_TRUE(ExitReturn);
   Value *RetVal = ExitReturn->getReturnValue();
-  EXPECT_TRUE(ExitReturn);
+  EXPECT_TRUE(RetVal);
 
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
