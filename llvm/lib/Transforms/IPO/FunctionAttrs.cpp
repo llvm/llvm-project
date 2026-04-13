@@ -1742,6 +1742,10 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
                 !Attr.getRange().contains(
                     computeConstantRange(RetVal, /*ForSigned=*/false)))
               return false;
+
+            Attribute NoFP = Attrs.getRetAttr(Attribute::NoFPClass);
+            if (NoFP.hasAttribute(Attribute::NoFPClass))
+              return false;
           }
           return true;
         })) {
