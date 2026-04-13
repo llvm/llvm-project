@@ -825,12 +825,10 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
       }
     }
 
-    auto layoutPayload =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(0));
+    auto layoutPayload = storeScatterOp.getLayoutAttr();
     auto layoutOffsets =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(2));
-    auto layoutMask =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(3));
+        xegpu::inferMaskOffsetLayoutForScatterIO(layoutPayload, chunkSize);
+    auto layoutMask = layoutOffsets;
 
     FailureOr<VectorType> distStoreVecByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutPayload, storeVecTy);
@@ -1132,9 +1130,10 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
       }
     }
 
+    auto layoutPayload = loadGatherOp.getLayoutAttr();
     auto layoutOffsets =
-        xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(1));
-    auto layoutMask = xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(2));
+        xegpu::inferMaskOffsetLayoutForScatterIO(layoutPayload, chunkSize);
+    auto layoutMask = layoutOffsets;
 
     FailureOr<VectorType> distOffsetsByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutOffsets, offsetsTy);

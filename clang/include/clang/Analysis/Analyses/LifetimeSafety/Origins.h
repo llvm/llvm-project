@@ -144,6 +144,10 @@ public:
   /// \returns The OriginList, or nullptr for non-pointer rvalues.
   OriginList *getOrCreateList(const Expr *E);
 
+  /// Wraps an existing OriginID in a new single-element OriginList, so a fact
+  /// can refer to a single level of an existing OriginList.
+  OriginList *createSingleOriginList(OriginID OID);
+
   /// Returns the OriginList for the implicit 'this' parameter if the current
   /// declaration is an instance method.
   std::optional<OriginList *> getThisOrigins() const { return ThisOrigins; }

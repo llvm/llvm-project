@@ -259,12 +259,17 @@ namespace ElementReferences {
 
 void ReferenceToVectorElement() {
   std::vector<int> v = {1, 2, 3};
-  int& ref = v[0];
-  v.push_back(4);
-  // FIXME: Detect this as a use of 'ref'.
-  // https://github.com/llvm/llvm-project/issues/180187
-  ref = 10;
+  int& ref = v[0]; // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(4);  // expected-note {{invalidated here}}
+  ref = 10;        // expected-note {{later used here}}
   (void)ref;
+}
+
+void PointerRefToVectorElement() {
+  std::vector<int*> v = {nullptr, nullptr};
+  int*& ref = v[0];     // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(nullptr); // expected-note {{invalidated here}}
+  ref = nullptr;        // expected-note {{later used here}}
 }
 
 void PointerToVectorElement() {

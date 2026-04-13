@@ -13,6 +13,7 @@ Implementation Status
    dirent
    endian
    errno
+   fcntl
    fenv
    float
    glob

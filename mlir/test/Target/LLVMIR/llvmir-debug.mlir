@@ -770,3 +770,35 @@ llvm.func @fn_cu_imports() {
 // CHECK-DAG: ![[IE:[0-9]+]] = !DIImportedEntity(tag: DW_TAG_imported_module{{.*}}entity: ![[NS]]{{.*}})
 // CHECK-DAG: ![[IMP_LIST:[0-9]+]] = !{![[IE]]}
 // CHECK-DAG: !DICompileUnit({{.*}}imports: ![[IMP_LIST]])
+
+// -----
+
+#file = #llvm.di_file<"m.cpp" in "/">
+#ns = #llvm.di_namespace<name = "n", exportSymbols = false>
+#self = #llvm.di_compile_unit<
+  recId = distinct[0]<>, isRecSelf = true, sourceLanguage = DW_LANG_C
+>
+#ie = #llvm.di_imported_entity<
+  tag = DW_TAG_imported_module, scope = #self,
+  entity = #ns, file = #file
+>
+#cu = #llvm.di_compile_unit<
+  recId = distinct[0]<>, id = distinct[2]<>,
+  sourceLanguage = DW_LANG_C, file = #file,
+  producer = "p", isOptimized = false, emissionKind = Full,
+  importedEntities = #ie
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_import_cycle",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_import_cycle()
+llvm.func @fn_cu_import_cycle() {
+  llvm.return
+} loc(fused<#sp>["m.mlir":1:1])
+
+// CHECK-DAG: !DIImportedEntity(tag: DW_TAG_imported_module{{.*}})
+// CHECK-DAG: !DICompileUnit({{.*}}imports:

@@ -3551,6 +3551,12 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
             isKernel = *attrs == common::CUDASubprogramAttrs::Global ||
                 *attrs == common::CUDASubprogramAttrs::Grid_Global;
           }
+          // Implicitly set the CUDA subprogram attributes to GLOBAL for bind(c)
+          // subprograms that are not marked as kernel.
+          if (!isKernel && isBindC && !chevrons->empty()) {
+            const_cast<semantics::SubprogramDetails *>(subpDetails)
+                ->set_cudaSubprogramAttrs(common::CUDASubprogramAttrs::Global);
+          }
         } else if (const auto *procDetails{
                        ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
           isKernel = procDetails->isCUDAKernel();
