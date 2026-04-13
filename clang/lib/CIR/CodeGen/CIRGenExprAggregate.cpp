@@ -933,12 +933,11 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
 void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
   CIRGenFunction::SourceLocRAIIObject loc{cgf, cgf.getLoc(e->getSourceRange())};
   AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
-  [[maybe_unused]] LValue slotLV =
-      cgf.makeAddrLValue(slot.getAddress(), e->getType());
+  LValue slotLV = cgf.makeAddrLValue(slot.getAddress(), e->getType());
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception or contains branch out of the expressions.
-  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+  CIRGenFunction::CleanupDeactivationScope deactivationScope(cgf);
 
   for (auto [curField, capture, captureInit] : llvm::zip(
            e->getLambdaClass()->fields(), e->captures(), e->capture_inits())) {
@@ -965,9 +964,13 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
     emitInitializationToLValue(captureInit, lv);
 
     // Push a destructor if necessary.
-    if ([[maybe_unused]] QualType::DestructionKind DtorKind =
-            curField->getType().isDestructedType())
-      cgf.cgm.errorNYI(e->getSourceRange(), "lambda with destructed field");
+    if (QualType::DestructionKind dtorKind =
+            curField->getType().isDestructedType()) {
+      assert(lv.isSimple());
+      cgf.pushDestroyAndDeferDeactivation(NormalAndEHCleanup, lv.getAddress(),
+                                          curField->getType(),
+                                          cgf.getDestroyer(dtorKind), false);
+    }
   }
 }
 
