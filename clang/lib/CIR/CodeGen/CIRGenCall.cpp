@@ -1427,6 +1427,8 @@ void CIRGenFunction::emitCallArgs(
   }
 }
 
+// FIXME(cir): This is identical to the version from classic-codegen, we should
+// figure out how to move this to a common location.
 bool CIRGenTypes::inheritingCtorHasParams(const InheritedConstructor &inherited,
                                           CXXCtorType type) {
   // Parameters are unnecessary if we're constructing a base class subobject

@@ -1362,18 +1362,13 @@ static bool canEmitDelegateCallArgs(CIRGenModule &cgm, ASTContext &ctx,
     return false;
 
   if (ctx.getTargetInfo().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
-    // If the parameters are callee-cleanup, it's not safe to forward.
-    if (llvm::any_of(d->parameters(), [&ctx](const ParmVarDecl *param) {
-          return param->needsDestruction(ctx);
-        }))
-      return false;
-
     // FIXME(CIR): It isn't clear to me that this is the right answer here,
     // classic-codegen decides the answer is 'false' if there is an inalloca
-    // argument. What our default should be in this case, or what we want to do.
+    // argument or if there is a param that needs destruction.
     // When we get an understanding of what the the calling-convention code
     // needs here, we should be able to replace this with either a 'return
     // false' or 'return true'.
+    // Perhaps we should be checking isParamDestroyedInCallee? 
     cgm.errorNYI(d->getSourceRange(),
                  "canEmitDelegateCallArgs: args-destroyed-L-to-R in callee");
   }
@@ -1430,8 +1425,8 @@ void CIRGenFunction::emitInlinedInheritingCXXConstructorCall(
     bool forVirtualBase, bool delegating, CallArgList &args) {
   GlobalDecl gd(d, ctorType);
   assert(!cir::MissingFeatures::generateDebugInfo());
-  assert(!cir::MissingFeatures::runCleanupsScope());
   InlinedInheritingConstructorScope scope(*this, gd);
+  RunCleanupsScope RunCleanups(*this);
 
   // Save the arguments to be passed to the inherited constructor.
   cxxInheritedCtorInitExprArgs = args;
