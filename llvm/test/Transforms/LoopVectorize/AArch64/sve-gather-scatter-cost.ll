@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mcpu=neoverse-v1 -disable-output %s -debug \
-; RUN:   -prefer-tail-folding=prefer-epilogue 2>&1 | FileCheck %s
+; RUN:   -tail-folding-policy=prefer-epilogue 2>&1 | FileCheck %s
 
 target triple="aarch64--linux-gnu"
 

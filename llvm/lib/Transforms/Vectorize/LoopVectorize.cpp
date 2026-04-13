@@ -210,26 +210,26 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
 // will try to fold the tail-loop (epilogue) into the vector body and the
 // instructions accordingly. If tail-folding fails, there are different fallback
 // strategies depending on these values:
-namespace PreferTailFoldingTy {
+namespace TailFoldingPolicyTy {
 enum Option {
   PreferEpilogue = 0,
   FoldTailElseEpilogue,
   FoldTailOrDontVectorize
 };
-} // namespace PreferTailFoldingTy
+} // namespace TailFoldingPolicyTy
 
-static cl::opt<PreferTailFoldingTy::Option> PreferTailFolding(
-    "prefer-tail-folding", cl::init(PreferTailFoldingTy::PreferEpilogue),
+static cl::opt<TailFoldingPolicyTy::Option> TailFoldingPolicy(
+    "tail-folding-policy", cl::init(TailFoldingPolicyTy::PreferEpilogue),
     cl::Hidden,
     cl::desc("Tail-folding preferences over creating an epilogue loop."),
     cl::values(
-        clEnumValN(PreferTailFoldingTy::PreferEpilogue, "prefer-epilogue",
+        clEnumValN(TailFoldingPolicyTy::PreferEpilogue, "prefer-epilogue",
                    "Don't tail-fold loops, create an epilogue"),
-        clEnumValN(PreferTailFoldingTy::FoldTailElseEpilogue,
+        clEnumValN(TailFoldingPolicyTy::FoldTailElseEpilogue,
                    "fold-tail-else-epilogue",
                    "prefer tail-folding, create an epilogue if tail "
                    "folding fails."),
-        clEnumValN(PreferTailFoldingTy::FoldTailOrDontVectorize,
+        clEnumValN(TailFoldingPolicyTy::FoldTailOrDontVectorize,
                    "fold-tail-dont-vectorize",
                    "prefers tail-folding, don't attempt vectorization if "
                    "tail-folding fails.")));
@@ -8270,13 +8270,13 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
     return CM_EpilogueNotAllowedOptSize;
 
   // 2) If set, obey the directives
-  if (PreferTailFolding.getNumOccurrences()) {
-    switch (PreferTailFolding) {
-    case PreferTailFoldingTy::PreferEpilogue:
+  if (TailFoldingPolicy.getNumOccurrences()) {
+    switch (TailFoldingPolicy) {
+    case TailFoldingPolicyTy::PreferEpilogue:
       return CM_EpilogueAllowed;
-    case PreferTailFoldingTy::FoldTailElseEpilogue:
+    case TailFoldingPolicyTy::FoldTailElseEpilogue:
       return CM_EpilogueNotNeededFoldTail;
-    case PreferTailFoldingTy::FoldTailOrDontVectorize:
+    case TailFoldingPolicyTy::FoldTailOrDontVectorize:
       return CM_EpilogueNotAllowedFoldTail;
     };
   }

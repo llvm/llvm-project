@@ -1,5 +1,5 @@
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
-; RUN: -prefer-tail-folding=fold-tail-else-epilogue \
+; RUN: -tail-folding-policy=fold-tail-else-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefix=IF-EVL %s
 
 define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {

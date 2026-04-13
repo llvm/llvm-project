@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes=loop-vectorize -mattr=+sve -mtriple aarch64-linux-gnu \
-; RUN:   -prefer-tail-folding=prefer-epilogue < %s | FileCheck %s
+; RUN:   -tail-folding-policy=prefer-epilogue < %s | FileCheck %s
 
 define void @invariant_load(i64 %n, ptr noalias nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: @invariant_load

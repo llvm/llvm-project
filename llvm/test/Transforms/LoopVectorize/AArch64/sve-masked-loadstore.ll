@@ -1,5 +1,5 @@
 ; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
-; RUN:   -prefer-tail-folding=prefer-epilogue -S %s -o - | FileCheck %s
+; RUN:   -tail-folding-policy=prefer-epilogue -S %s -o - | FileCheck %s
 
 define void @mloadstore_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @mloadstore_f32

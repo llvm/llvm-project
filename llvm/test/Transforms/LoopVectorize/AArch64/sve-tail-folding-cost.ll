@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -passes=loop-vectorize -prefer-tail-folding=fold-tail-else-epilogue \
+; RUN: opt -S -passes=loop-vectorize -tail-folding-policy=fold-tail-else-epilogue \
 ; RUN:   -debug-only=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck --check-prefix=COST %s
 

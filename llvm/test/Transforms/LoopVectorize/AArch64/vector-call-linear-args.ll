@@ -2,9 +2,9 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -S | FileCheck %s --check-prefixes=NEON
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=2 -S | FileCheck %s --check-prefixes=NEON_INTERLEAVE
 ; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -S | FileCheck %s --check-prefixes=SVE_OR_NEON
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=2 -S -prefer-tail-folding=fold-tail-dont-vectorize | FileCheck %s --check-prefixes=SVE_OR_NEON_INTERLEAVE
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -S -prefer-tail-folding=fold-tail-dont-vectorize | FileCheck %s --check-prefixes=SVE_TF
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=2 -S -prefer-tail-folding=fold-tail-dont-vectorize | FileCheck %s --check-prefixes=SVE_TF_INTERLEAVE
+; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=2 -S -tail-folding-policy=fold-tail-dont-vectorize | FileCheck %s --check-prefixes=SVE_OR_NEON_INTERLEAVE
+; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -S -tail-folding-policy=fold-tail-dont-vectorize | FileCheck %s --check-prefixes=SVE_TF
+; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=2 -S -tail-folding-policy=fold-tail-dont-vectorize | FileCheck %s --check-prefixes=SVE_TF_INTERLEAVE
 
 target triple = "aarch64-unknown-linux-gnu"
 
