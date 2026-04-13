@@ -1388,13 +1388,12 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         Exp, ExpTy.isVector() ? DemandedElts : APInt(1, 1), Depth + 1);
 
     FPClassTest InterestedSrcs = fcNone;
-    if ((InterestedClasses & fcNan) != fcNone)
+    if (InterestedClasses & fcNan)
       InterestedSrcs |= fcNan;
     if (!ExponentKnownBits.isZero()) {
-      if ((InterestedClasses & fcInf) != fcNone)
+      if (InterestedClasses & fcInf)
         InterestedSrcs |= fcFinite | fcInf;
-      if ((InterestedClasses & fcNegative) != fcNone &&
-          !ExponentKnownBits.isEven())
+      if ((InterestedClasses & fcNegative) && !ExponentKnownBits.isEven())
         InterestedSrcs |= fcNegative;
     }
 
