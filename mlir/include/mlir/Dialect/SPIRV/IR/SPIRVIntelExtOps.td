@@ -303,12 +303,12 @@ def SPIRV_INTELMaskedGatherOp : SPIRV_IntelVendorOp<"MaskedGather",
   let arguments = (ins
     SPIRV_VectorOf<SPIRV_AnyPtr>:$ptr_vector,
     SPIRV_Int32:$alignment,
-    SPIRV_VectorOf<I1>:$mask,
-    SPIRV_Vector:$fill_empty
+    SPIRV_VectorOf<SPIRV_Bool>:$mask,
+    SPIRV_VectorOf<SPIRV_Numerical>:$fill_empty
   );
 
   let results = (outs
-    SPIRV_Vector:$result
+    SPIRV_VectorOf<SPIRV_Numerical>:$result
   );
 
   let assemblyFormat = [{
@@ -369,8 +369,8 @@ def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter",
   let arguments = (ins
     SPIRV_VectorOf<SPIRV_AnyPtr>:$ptr_vector,
     SPIRV_Int32:$alignment,
-    SPIRV_VectorOf<I1>:$mask,
-    SPIRV_Vector:$input_vector
+    SPIRV_VectorOf<SPIRV_Bool>:$mask,
+    SPIRV_VectorOf<SPIRV_Numerical>:$input_vector
   );
 
   let results = (outs);

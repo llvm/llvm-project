@@ -191,10 +191,24 @@ spirv.func @masked_gather_mask_not_bool(
     %alignment : i32,
     %mask : vector<4xi8>,
     %fill : vector<4xf32>) "None" {
-  // expected-error @+1 {{operand #2 must be fixed-length vector of 1-bit signless integer values of length 2/3/4/8/16 of ranks 1, but got 'vector<4xi8>'}}
+  // expected-error @+1 {{operand #2 must be fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got 'vector<4xi8>'}}
   %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
        : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
          vector<4xi8>, vector<4xf32> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @masked_gather_mask_count_mismatch(
+    %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<2xi1>,
+    %fill : vector<4xf32>) "None" {
+  // expected-error @+1 {{'spirv.INTEL.MaskedGather' op failed to verify that mask must be a vector of i1 matching result shape}}
+  %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+       : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+         vector<2xi1>, vector<4xf32> -> vector<4xf32>
   spirv.Return
 }
 
