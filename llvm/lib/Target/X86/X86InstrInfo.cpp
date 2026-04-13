@@ -7558,8 +7558,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
     // Bail out if dst has been assigned a physical register. Otherwise, we
     // cannot update LiveRegMatrix properly.
-    if (VRM && VRM->getPhys(MI.getOperand(0).getReg()) &&
-        MI.getOperand(0).getReg() != MI.getOperand(1).getReg())
+    Register Dst = MI.getOperand(0).getReg();
+    if (VRM && Dst != MI.getOperand(1).getReg() &&
+        (!Dst.isVirtual() || VRM->getPhys(Dst)))
       return nullptr;
   }
 
