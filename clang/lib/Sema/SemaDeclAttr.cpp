@@ -2404,7 +2404,7 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
           // If this new attr is an explicit platform attr, check if the old
           // attr is an existing anyAppleOS attr whose inferred attr is for this
           // platform. If so, the explicit attr wins: erase the old attr.
-          if (AvailabilityAttr *Inf = OldAA->getInferredAttr();
+          if (AvailabilityAttr *Inf = OldAA->getInferredAttrAs();
               Inf && Inf->getPlatform() == Platform) {
             Attrs.erase(Attrs.begin() + i);
             --e;

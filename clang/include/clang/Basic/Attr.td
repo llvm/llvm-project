@@ -341,7 +341,7 @@ class VariadicEnumArgument<string name, string type, bit is_string,
 }
 
 // Represents an attribute wrapped by another attribute.
-class WrappedAttr<string name, bit opt = 0, string type = "Attr"> : Argument<name, opt> {
+class WrappedAttr<string name, bit opt = 0, string type = ""> : Argument<name, opt> {
   // C++ class name for the wrapped attr (without the ' *' suffix).
   string AttrType = type;
 }
@@ -1250,7 +1250,7 @@ static llvm::Triple::OSType getOSType(llvm::StringRef Platform) {
 }
 
 const AvailabilityAttr *getEffectiveAttr() const {
-  if (auto *Inf = getInferredAttr())
+  if (auto *Inf = getInferredAttrAs())
     return Inf;
   return this;
 }

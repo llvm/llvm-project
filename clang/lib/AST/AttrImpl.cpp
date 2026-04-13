@@ -319,11 +319,9 @@ bool equalAttrArgs(T *A1_B, T *A1_E, T *A2_B, T *A2_E,
   return true;
 }
 
-// Handles Attr* and any subclass pointer. Optional WrappedAttr fields may be
-// null.
-template <class T>
-typename std::enable_if_t<std::is_base_of_v<Attr, T>, bool>
-equalAttrArgs(T *A1, T *A2, StructuralEquivalenceContext &Context) {
+template <>
+bool equalAttrArgs<Attr *>(Attr *A1, Attr *A2,
+                           StructuralEquivalenceContext &Context) {
   if (!A1 || !A2)
     return A1 == A2;
   return A1->isEquivalent(*A2, Context);

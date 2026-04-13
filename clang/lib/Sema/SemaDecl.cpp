@@ -2901,7 +2901,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   InheritableAttr *NewAttr = nullptr;
   if (const auto *AA = dyn_cast<AvailabilityAttr>(Attr)) {
     const IdentifierInfo *InferredPlatformII = nullptr;
-    if (AvailabilityAttr *Inf = AA->getInferredAttr())
+    if (AvailabilityAttr *Inf = AA->getInferredAttrAs())
       InferredPlatformII = Inf->getPlatform();
     NewAttr = S.mergeAndInferAvailabilityAttr(
         D, *AA, AA->getPlatform(), AA->isImplicit(), AA->getIntroduced(),

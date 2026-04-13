@@ -1473,22 +1473,29 @@ namespace {
 
   public:
     WrappedAttr(const Record &Arg, StringRef Attr)
-        : SimpleArgument(Arg, Attr,
-                         (Arg.getValueAsString("AttrType") + " *").str()),
+        : SimpleArgument(Arg, Attr, "Attr *"),
           AttrType(Arg.getValueAsString("AttrType")) {}
 
     void writeAccessors(raw_ostream &OS) const override {
-      OS << "  " << getType() << " get" << getUpperName() << "() const {\n";
+      OS << "  Attr *get" << getUpperName() << "() const {\n";
       OS << "    return " << getLowerName() << ";\n";
       OS << "  }\n";
-      OS << "  void set" << getUpperName() << "(" << getType() << " V) {\n";
+      OS << "  void set" << getUpperName() << "(Attr *V) {\n";
       OS << "    " << getLowerName() << " = V;\n";
       OS << "  }";
+      if (!AttrType.empty()) {
+        OS << "\n";
+        OS << "  " << AttrType << " *get" << getUpperName() << "As() const {\n";
+        OS << "    return llvm::cast_or_null<" << AttrType << ">(" << getLowerName() << ");\n";
+        OS << "  }\n";
+        OS << "  void set" << getUpperName() << "As(" << AttrType << " *V) {\n";
+        OS << "    " << getLowerName() << " = V;\n";
+        OS << "  }";
+      }
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    " << getType() << " " << getLowerName() << " = cast_or_null<"
-         << AttrType << ">(Record.readAttr());";
+      OS << "    Attr *" << getLowerName() << " = Record.readAttr();";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {

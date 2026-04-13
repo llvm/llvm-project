@@ -1071,7 +1071,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       };
 
       EmitAvailability(AA);
-      if (const AvailabilityAttr *Inf = AA->getInferredAttr())
+      if (const AvailabilityAttr *Inf = AA->getInferredAttrAs())
         EmitAvailability(Inf);
     }
   }
