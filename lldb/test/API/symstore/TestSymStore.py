@@ -26,6 +26,7 @@ class MockedSymStore:
         self._test = test
         self._exe = exe
         self._pdb = pdb
+        self.cache_dir = test.getBuildArtifact("cache")
 
     def get_key_pdb(self, exe):
         """
@@ -56,6 +57,9 @@ class MockedSymStore:
         shutil.move(
             self._test.getBuildArtifact(self._pdb),
             os.path.join(pdb_dir, self._pdb),
+        )
+        self._test.runCmd(
+            f"settings set plugin.symbol-locator.symstore.cache {self.cache_dir}"
         )
         return symstore_dir
 
@@ -196,12 +200,9 @@ class SymStoreTests(TestBase):
         _NT_SYMBOL_PATH, and that the PDB is not copied to the cache.
         """
         exe, sym = self.build_inferior()
-        cache_dir = self.getBuildArtifact("cache")
         symstore = MockedSymStore(self, exe, sym)
         with symstore as dir:
-            self.runCmd(
-                f"settings set plugin.symbol-locator.symstore.cache {cache_dir}"
-            )
+            # Symbol path with plain directory
             with NtSymbolPath(dir):
                 self.try_breakpoint(exe, should_have_loc=True)
             self.assertFalse(any(files for _, _, files in os.walk(cache_dir)))
@@ -212,12 +213,8 @@ class SymStoreTests(TestBase):
         _NT_SYMBOL_PATH using the srv* syntax, and that the PDB is cached.
         """
         exe, sym = self.build_inferior()
-        cache_dir = self.getBuildArtifact("cache")
         symstore = MockedSymStore(self, exe, sym)
         with symstore as dir:
-            self.runCmd(
-                f"settings set plugin.symbol-locator.symstore.cache {cache_dir}"
-            )
             with HTTPServer(dir) as url:
                 with NtSymbolPath(f"srv*{url}"):
                     self.try_breakpoint(exe, should_have_loc=True)
