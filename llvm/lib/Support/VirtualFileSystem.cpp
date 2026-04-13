@@ -1635,7 +1635,7 @@ class llvm::vfs::RedirectingFileSystemParser {
   // false on error
   bool parseScalarString(yaml::Node *N, StringRef &Result,
                          SmallVectorImpl<char> &Storage) {
-    const auto *S = dyn_cast<yaml::ScalarNode>(N);
+    const auto *S = dyn_cast_if_present<yaml::ScalarNode>(N);
 
     if (!S) {
       error(N, "expected string");
@@ -1880,7 +1880,7 @@ private:
           return nullptr;
         }
         ContentsField = CF_List;
-        auto *Contents = dyn_cast<yaml::SequenceNode>(I.getValue());
+        auto *Contents = dyn_cast_if_present<yaml::SequenceNode>(I.getValue());
         if (!Contents) {
           // FIXME: this is only for directories, what about files?
           error(I.getValue(), "expected array");
@@ -2082,7 +2082,7 @@ public:
         return false;
 
       if (Key == "roots") {
-        auto *Roots = dyn_cast<yaml::SequenceNode>(I.getValue());
+        auto *Roots = dyn_cast_if_present<yaml::SequenceNode>(I.getValue());
         if (!Roots) {
           error(I.getValue(), "expected array");
           return false;
