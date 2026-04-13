@@ -15,9 +15,9 @@ declare void @sink() cold
 ; CHECK: call {{.*}}@sideeffect(
 ; CHECK: call {{.*}}@realloc(
 ; CHECK-LABEL: codeRepl:
-; CHECK: call {{.*}}@realloc2.cold.1(i64 %size, ptr %ptr, ptr %retval.0.ce.loc)
+; CHECK: %2 = call {{.*}}@realloc2.cold.1(i64 %size, ptr %ptr)
 ; CHECK-LABEL: cleanup:
-; CHECK-NEXT: phi ptr [ null, %if.then ], [ %call, %if.end ], [ %retval.0.ce.reload, %codeRepl ]
+; CHECK-NEXT: phi ptr [ null, %if.then ], [ %call, %if.end ], [ %2, %codeRepl ]
 define ptr @realloc2(ptr %ptr, i64 %size) {
 entry:
   %0 = add i64 %size, -1

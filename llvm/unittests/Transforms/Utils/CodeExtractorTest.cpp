@@ -69,7 +69,8 @@ TEST(CodeExtractor, ExitStub) {
                                            getBlockByName(Func, "body1"),
                                            getBlockByName(Func, "body2") };
 
-  CodeExtractor CE(Candidates);
+  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -117,7 +118,8 @@ TEST(CodeExtractor, InputOutputMonitoring) {
                                           getBlockByName(Func, "body1"),
                                           getBlockByName(Func, "body2")};
 
-  CodeExtractor CE(Candidates);
+  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -141,6 +143,70 @@ TEST(CodeExtractor, InputOutputMonitoring) {
   // Ensure that there is a PHI in outlined function with 2 incoming values.
   EXPECT_TRUE(ExitSplit &&
               cast<PHINode>(ExitSplit->front()).getNumIncomingValues() == 2);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
+TEST(CodeExtractor, InputOutputReturnMonitoring) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+    define i32 @foo(i32 %x, i32 %y, i32 %z) {
+    header:
+      %0 = icmp ugt i32 %x, %y
+      br i1 %0, label %body1, label %body2
+
+    body1:
+      %1 = add i32 %z, 2
+      br label %notExtracted
+
+    body2:
+      %2 = mul i32 %z, 7
+      br label %notExtracted
+
+    notExtracted:
+      %3 = phi i32 [ %1, %body1 ], [ %2, %body2 ]
+      %4 = add i32 %3, %x
+      ret i32 %4
+    }
+  )invalid",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 3> Candidates{getBlockByName(Func, "header"),
+                                          getBlockByName(Func, "body1"),
+                                          getBlockByName(Func, "body2")};
+
+  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, false);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs;
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+
+  EXPECT_EQ(Inputs.size(), 3u);
+  EXPECT_EQ(Inputs[0], Func->getArg(2));
+  EXPECT_EQ(Inputs[1], Func->getArg(0));
+  EXPECT_EQ(Inputs[2], Func->getArg(1));
+  EXPECT_EQ(Outputs.size(), 0u);
+  BasicBlock *Exit = getBlockByName(Func, "notExtracted");
+  BasicBlock *ExitSplit = getBlockByName(Outlined, "notExtracted.split");
+  // Ensure that PHI in exit block has only one incoming value (from code
+  // replacer block).
+  EXPECT_TRUE(Exit && cast<PHINode>(Exit->front()).getNumIncomingValues() == 1);
+  // Ensure that there is a PHI in outlined function with 2 incoming values.
+  EXPECT_TRUE(ExitSplit &&
+              cast<PHINode>(ExitSplit->front()).getNumIncomingValues() == 2);
+
+  BasicBlock *ExitStub = getBlockByName(Outlined, "notExtracted.exitStub");
+  Instruction *ExitTerm = ExitStub->getTerminator();
+  ReturnInst *ExitReturn = dyn_cast<ReturnInst>(ExitTerm);
+  EXPECT_TRUE(ExitReturn);
+  Value *RetVal = ExitReturn->getReturnValue();
+  EXPECT_TRUE(ExitReturn);
+
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }
@@ -177,7 +243,8 @@ TEST(CodeExtractor, ExitBlockOrderingPhis) {
                                            getBlockByName(Func, "test1"),
                                            getBlockByName(Func, "test") };
 
-  CodeExtractor CE(Candidates);
+  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -234,7 +301,8 @@ TEST(CodeExtractor, ExitBlockOrdering) {
                                            getBlockByName(Func, "test1"),
                                            getBlockByName(Func, "test") };
 
-  CodeExtractor CE(Candidates);
+  CodeExtractor CE(Candidates, nullptr, false, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -293,7 +361,8 @@ TEST(CodeExtractor, ExitPHIOnePredFromRegion) {
     getBlockByName(Func, "extracted2")
   };
 
-  CodeExtractor CE(ExtractedBlocks);
+  CodeExtractor CE(ExtractedBlocks, nullptr, false, nullptr, nullptr, nullptr,
+                   false, false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -353,7 +422,7 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
     }
   )invalid", Err, Ctx));
 
-	if (!M) {
+  if (!M) {
     Err.print("unit", errs());
     exit(1);
   }
@@ -368,7 +437,8 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
     getBlockByName(Func, "lpad2")
   };
 
-  CodeExtractor CE(ExtractedBlocks);
+  CodeExtractor CE(ExtractedBlocks, nullptr, false, nullptr, nullptr, nullptr,
+                   false, false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -403,7 +473,8 @@ TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
   SmallVector<BasicBlock *, 1> Blocks{ getBlockByName(Func, "entry"),
                                        getBlockByName(Func, "lpad") };
 
-  CodeExtractor CE(Blocks);
+  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -455,7 +526,8 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
   Function *Func = M->getFunction("test");
   SmallVector<BasicBlock *, 1> Blocks{ getBlockByName(Func, "if.else") };
   AssumptionCache AC(*Func);
-  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, &AC);
+  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, &AC, false, false,
+                   nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -499,7 +571,8 @@ TEST(CodeExtractor, RemoveBitcastUsesFromOuterLifetimeMarkers) {
   Function *Func = M->getFunction("foo");
   SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
 
-  CodeExtractor CE(Blocks);
+  CodeExtractor CE(Blocks, nullptr, false, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -554,7 +627,8 @@ TEST(CodeExtractor, PartialAggregateArgs) {
 
   // Create the CodeExtractor with arguments aggregation enabled.
   CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
-                   /* AggregateArgs */ true);
+                   /* AggregateArgs */ true, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -602,7 +676,7 @@ TEST(CodeExtractor, AllocaBlock) {
 
   BasicBlock *AllocaBlock = getBlockByName(Func, "allocas");
   CodeExtractor CE(Candidates, nullptr, true, nullptr, nullptr, nullptr, false,
-                   false, AllocaBlock);
+                   false, AllocaBlock, "", false, true);
   CE.excludeArgFromAggregate(Func->getArg(0));
   CE.excludeArgFromAggregate(getInstByName(Func, "w"));
   EXPECT_TRUE(CE.isEligible());
@@ -656,7 +730,8 @@ TEST(CodeExtractor, PartialAggregateArgs2) {
 
   // Create the CodeExtractor with arguments aggregation enabled.
   CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
-                   /* AggregateArgs */ true);
+                   /* AggregateArgs */ true, nullptr, nullptr, nullptr, false,
+                   false, nullptr, "", false, true);
   EXPECT_TRUE(CE.isEligible());
 
   CodeExtractorAnalysisCache CEAC(*Func);
@@ -713,7 +788,8 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
                    /* AllowAlloca */ true,
                    /* AllocaBlock*/ &Func->getEntryBlock(),
                    /* Suffix */ ".outlined",
-                   /* ArgsInZeroAddressSpace */ true);
+                   /* ArgsInZeroAddressSpace */ true,
+                   /* VoidReturnWithSingleOutput */ true);
 
   EXPECT_TRUE(CE.isEligible());
 
@@ -779,7 +855,9 @@ TEST(CodeExtractor, ArgsDebugInfo) {
   SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
 
   auto TestExtracted = [&](bool AggregateArgs) {
-    CodeExtractor CE(Blocks, /* DominatorTree */ nullptr, AggregateArgs);
+    CodeExtractor CE(Blocks, /* DominatorTree */ nullptr, AggregateArgs,
+                     nullptr, nullptr, nullptr, false, false, nullptr, "",
+                     false, true);
     EXPECT_TRUE(CE.isEligible());
     CodeExtractorAnalysisCache CEAC(*Func);
     SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
