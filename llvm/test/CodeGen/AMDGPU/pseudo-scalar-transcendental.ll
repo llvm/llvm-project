@@ -447,3 +447,26 @@ define amdgpu_cs half @fdiv_f16_i16(half inreg %a, i16 inreg %b) {
   %result = fdiv afn half %a, %uint
   ret half %result
 }
+
+; Test that the fmul+select -> fldexp combine works for divergent values.
+define amdgpu_cs float @fmul_select_pow2_divergent_f32(float %x, i1 %cond) {
+; GFX12-SDAG-LABEL: fmul_select_pow2_divergent_f32:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 8, vcc_lo
+; GFX12-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: fmul_select_pow2_divergent_f32:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 3, v1
+; GFX12-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
+  %sel = select i1 %cond, float 256.0, float 1.0
+  %result = fmul float %x, %sel
+  ret float %result
+}
