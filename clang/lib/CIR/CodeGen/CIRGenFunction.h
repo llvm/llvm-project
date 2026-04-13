@@ -2249,6 +2249,7 @@ public:
   mlir::LogicalResult
   emitOMPGenericLoopDirective(const OMPGenericLoopDirective &s);
   mlir::LogicalResult emitOMPReverseDirective(const OMPReverseDirective &s);
+  mlir::LogicalResult emitOMPSplitDirective(const OMPSplitDirective &s);
   mlir::LogicalResult
   emitOMPInterchangeDirective(const OMPInterchangeDirective &s);
   mlir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);
