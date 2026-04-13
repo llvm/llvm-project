@@ -193,6 +193,7 @@
 #include "math/log2.h"
 #include "math/log2f.h"
 #include "math/log2f16.h"
+#include "math/log2p1f16.h"
 #include "math/log_bf16.h"
 #include "math/logb.h"
 #include "math/logbf.h"

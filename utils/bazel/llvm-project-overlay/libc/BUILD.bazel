@@ -5294,6 +5294,27 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_log2p1f16",
+    hdrs = ["src/__support/math/log2p1f16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_poly_eval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_expxf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_log2f",
     hdrs = ["src/__support/math/log2f.h"],
     deps = [
@@ -8014,6 +8035,13 @@ libc_math_function(
     name = "log2f16",
     additional_deps = [
         ":__support_math_log2f16",
+    ],
+)
+
+libc_math_function(
+    name = "log2p1f16",
+    additional_deps = [
+        ":__support_math_log2p1f16",
     ],
 )
 
