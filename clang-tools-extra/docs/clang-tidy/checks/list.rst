@@ -81,6 +81,7 @@ Clang-Tidy Checks
    :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes"
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
    :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,
+   :doc:`bugprone-assignment-in-selection-statement <bugprone/assignment-in-selection-statement>`,
    :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
@@ -251,6 +252,7 @@ Clang-Tidy Checks
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
+   :doc:`llvm-redundant-casting <llvm/redundant-casting>`, "Yes"
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
    :doc:`llvm-type-switch-case-types <llvm/type-switch-case-types>`, "Yes"
    :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"

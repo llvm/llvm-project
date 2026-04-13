@@ -48,6 +48,7 @@ enum class ExportSource {
   Directives,
   Export,
   ModuleDefinition,
+  ExportAll,
 };
 
 enum class EmitKind { Obj, LLVM, ASM };

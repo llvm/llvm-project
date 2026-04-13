@@ -188,7 +188,8 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
-      rewriter, op.getLoc(), rewriter.getI64Type(), op.getLength(layout));
+      rewriter, op.getLoc(), rewriter.getI64Type(),
+      op.getCopySizeInBytes(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile());
@@ -262,30 +263,9 @@ public:
                  const mlir::TypeConverter *converter)
       : parentOp(parentOp), rewriter(rewriter), converter(converter) {}
 
-  mlir::Value visit(mlir::Attribute attr) {
-    return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
-        .Case<cir::BoolAttr, cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
-              cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-              cir::ConstPtrAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
-              cir::UndefAttr, cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
-            [&](auto attrT) { return visitCirAttr(attrT); })
-        .Default([&](auto attrT) { return mlir::Value(); });
-  }
-
-  mlir::Value visitCirAttr(cir::BoolAttr boolAttr);
-  mlir::Value visitCirAttr(cir::IntAttr intAttr);
-  mlir::Value visitCirAttr(cir::FPAttr fltAttr);
-  mlir::Value visitCirAttr(cir::ConstComplexAttr complexAttr);
-  mlir::Value visitCirAttr(cir::ConstPtrAttr ptrAttr);
-  mlir::Value visitCirAttr(cir::ConstArrayAttr attr);
-  mlir::Value visitCirAttr(cir::ConstRecordAttr attr);
-  mlir::Value visitCirAttr(cir::ConstVectorAttr attr);
-  mlir::Value visitCirAttr(cir::GlobalViewAttr attr);
-  mlir::Value visitCirAttr(cir::TypeInfoAttr attr);
-  mlir::Value visitCirAttr(cir::UndefAttr attr);
-  mlir::Value visitCirAttr(cir::PoisonAttr attr);
-  mlir::Value visitCirAttr(cir::VTableAttr attr);
-  mlir::Value visitCirAttr(cir::ZeroAttr attr);
+#define GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS
 
 private:
   mlir::Operation *parentOp;
@@ -551,17 +531,21 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
   auto moduleOp = parentOp->getParentOfType<mlir::ModuleOp>();
   mlir::DataLayout dataLayout(moduleOp);
   mlir::Type sourceType;
-  assert(!cir::MissingFeatures::addressSpace());
+  unsigned sourceAddrSpace = 0;
   llvm::StringRef symName;
   mlir::Operation *sourceSymbol =
       mlir::SymbolTable::lookupSymbolIn(moduleOp, globalAttr.getSymbol());
   if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
     sourceType = llvmSymbol.getType();
     symName = llvmSymbol.getSymName();
+    sourceAddrSpace = llvmSymbol.getAddrSpace();
   } else if (auto cirSymbol = dyn_cast<cir::GlobalOp>(sourceSymbol)) {
     sourceType =
         convertTypeForMemory(*converter, dataLayout, cirSymbol.getSymType());
     symName = cirSymbol.getSymName();
+    if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+            cirSymbol.getAddrSpaceAttr()))
+      sourceAddrSpace = targetAS.getValue();
   } else if (auto llvmFun = dyn_cast<mlir::LLVM::LLVMFuncOp>(sourceSymbol)) {
     sourceType = llvmFun.getFunctionType();
     symName = llvmFun.getSymName();
@@ -577,7 +561,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
 
   mlir::Location loc = parentOp->getLoc();
   mlir::Value addrOp = mlir::LLVM::AddressOfOp::create(
-      rewriter, loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+      rewriter, loc,
+      mlir::LLVM::LLVMPointerType::get(rewriter.getContext(), sourceAddrSpace),
       symName);
 
   if (globalAttr.getIndices()) {
@@ -609,16 +594,32 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
   }
 
   if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(globalAttr.getType())) {
+    auto llvmDstTy = converter->convertType<mlir::LLVM::LLVMPointerType>(ptrTy);
+    unsigned dstAddrSpace = llvmDstTy.getAddressSpace();
+
+    if (sourceAddrSpace != dstAddrSpace)
+      addrOp = mlir::LLVM::AddrSpaceCastOp::create(rewriter, parentOp->getLoc(),
+                                                   llvmDstTy, addrOp);
+
     mlir::Type llvmEltTy =
         convertTypeForMemory(*converter, dataLayout, ptrTy.getPointee());
 
+    // No further cast needed if the pointee type already matches.
     if (llvmEltTy == sourceType)
       return addrOp;
 
-    mlir::Type llvmDstTy = converter->convertType(globalAttr.getType());
+    // With opaque pointers, the pointer type is already correct (either from
+    // the original AddressOfOp or after an addrspacecast) — skip the
+    // redundant bitcast.
+    if (addrOp.getType() == llvmDstTy)
+      return addrOp;
+
     return mlir::LLVM::BitcastOp::create(rewriter, parentOp->getLoc(),
                                          llvmDstTy, addrOp);
   }
+
+  if (mlir::isa<cir::VPtrType>(globalAttr.getType()))
+    return addrOp;
 
   llvm_unreachable("Expecting pointer or integer type for GlobalViewAttr");
 }

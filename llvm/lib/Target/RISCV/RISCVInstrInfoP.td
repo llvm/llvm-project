@@ -1952,6 +1952,32 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprGpr<avgfloors, AADD, i32>;
   def : PatGprGpr<avgflooru, AADDU, i32>;
 
+  // Halfword multiply patterns where one operand is a sext.h or zext.h and
+  // the other is a sext.h or zext.h or is known to be sign/zero-extended. We
+  // prefer plain mul when both operands are known to be sign/zero-extended.
+  def : Pat<(i32 (mul sexti16:$rs1, (sext_inreg GPR:$rs2, i16))),
+            (MUL_H00 sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul zexti16:$rs1, (and GPR:$rs2, 0xffff))),
+            (MULU_H00 zexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul sexti16:$rs1, (and GPR:$rs2, 0xffff))),
+            (MULSU_H00 sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul (sext_inreg GPR:$rs1, i16), zexti16:$rs2)),
+            (MULSU_H00 GPR:$rs1, zexti16:$rs2)>;
+
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, sexti16:$rs2))),
+            (MACC_H00 GPR:$rd, sexti16:$rs1, sexti16:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse zexti16:$rs1, zexti16:$rs2))),
+            (MACCU_H00 GPR:$rd, zexti16:$rs1, zexti16:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, zexti16:$rs2))),
+            (MACCSU_H00 GPR:$rd, sexti16:$rs1, zexti16:$rs2)>;
+
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhs> GPR:$rs1, GPR:$rs2))),
+            (MHACC GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhu> GPR:$rs1, GPR:$rs2))),
+            (MHACCU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (binop_oneuse<riscv_mulhsu> GPR:$rs1, GPR:$rs2))),
+            (MHACCSU GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
   def : Pat<(riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt),
@@ -2001,6 +2027,25 @@ let Predicates = [HasStdExtP, IsRV64] in {
             (SATI_RV64 GPR:$rs1, (IncImm timm:$imm))>;
   def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
             (USATI_RV64 GPR:$rs1, timm:$imm)>;
+
+  // Word multiply patterns where one operand is a sext.w or zext.w and
+  // the other is a sext.w or zext.w or is known to be sign/zero-extended. We
+  // prefer plain mul when both operands are known to be sign/zero-extended.
+  def : Pat<(i64 (mul sexti32:$rs1, (sext_inreg GPR:$rs2, i32))),
+            (MUL_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul zexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
+            (MULU_W00 zexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul sexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
+            (MULSU_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul (sext_inreg GPR:$rs1, i32), zexti32:$rs2)),
+            (MULSU_W00 GPR:$rs1, zexti32:$rs2)>;
+
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, sexti32:$rs2))),
+            (MACC_W00 GPR:$rd, sexti32:$rs1, sexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1, zexti32:$rs2))),
+            (MACCU_W00 GPR:$rd, zexti32:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, zexti32:$rs2))),
+            (MACCSU_W00 GPR:$rd, sexti32:$rs1, zexti32:$rs2)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value, and bits [63:32] being

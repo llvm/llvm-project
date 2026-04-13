@@ -27,7 +27,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %x, i32 %i.08
@@ -37,7 +37,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %r.0.lcssa
 }
@@ -91,7 +91,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -102,7 +102,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %r.0.lcssa
 }
@@ -156,7 +156,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.08
@@ -167,7 +167,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %r.0.lcssa
 }
@@ -221,7 +221,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.08
@@ -232,7 +232,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %r.0.lcssa
 }
@@ -266,7 +266,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -276,7 +276,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -312,7 +312,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.08
@@ -323,7 +323,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -359,7 +359,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.08
@@ -370,7 +370,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -404,7 +404,7 @@ entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.09 = phi i16 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.010
@@ -414,7 +414,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i16 [ 0, %entry ], [ %add, %for.body ]
   ret i16 %r.0.lcssa
 }
@@ -450,7 +450,7 @@ entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.09 = phi i16 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.010
@@ -461,7 +461,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i16 [ 0, %entry ], [ %add, %for.body ]
   ret i16 %r.0.lcssa
 }
@@ -495,7 +495,7 @@ entry:
   %cmp7 = icmp sgt i32 %n, 0
   br i1 %cmp7, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.08 = phi i8 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.09
@@ -505,7 +505,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i8 [ 0, %entry ], [ %add, %for.body ]
   ret i8 %r.0.lcssa
 }
@@ -536,7 +536,7 @@ entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.09 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %x, i32 %i.010
@@ -549,7 +549,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %r.0.lcssa
 }
@@ -609,7 +609,7 @@ entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.09 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.010
@@ -623,7 +623,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %r.0.lcssa
 }
@@ -686,7 +686,7 @@ entry:
   %cmp10 = icmp sgt i32 %n, 0
   br i1 %cmp10, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.011 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.012
@@ -702,7 +702,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %r.0.lcssa
 }
@@ -765,7 +765,7 @@ entry:
   %cmp10 = icmp sgt i32 %n, 0
   br i1 %cmp10, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.011 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.012
@@ -781,7 +781,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %r.0.lcssa
 }
@@ -819,7 +819,7 @@ entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.09 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.010
@@ -832,7 +832,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -872,7 +872,7 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.010 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.011
@@ -887,7 +887,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -927,7 +927,7 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.010 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.011
@@ -942,7 +942,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -980,7 +980,7 @@ entry:
   %cmp11 = icmp sgt i32 %n, 0
   br i1 %cmp11, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.013 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.012 = phi i16 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.013
@@ -993,7 +993,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i16 [ 0, %entry ], [ %add, %for.body ]
   ret i16 %r.0.lcssa
 }
@@ -1033,7 +1033,7 @@ entry:
   %cmp11 = icmp sgt i32 %n, 0
   br i1 %cmp11, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.013 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.012 = phi i16 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.013
@@ -1048,7 +1048,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i16 [ 0, %entry ], [ %add, %for.body ]
   ret i16 %r.0.lcssa
 }
@@ -1086,7 +1086,7 @@ entry:
   %cmp10 = icmp sgt i32 %n, 0
   br i1 %cmp10, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.011 = phi i8 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.012
@@ -1099,7 +1099,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i8 [ 0, %entry ], [ %add, %for.body ]
   ret i8 %r.0.lcssa
 }
@@ -1139,10 +1139,10 @@ entry:
   %cmp9.not = icmp eq i32 %n, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %s.010 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i32 %i.011
@@ -1157,11 +1157,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %s.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ]
   ret i32 %s.0.lcssa
 }
@@ -1224,10 +1224,10 @@ entry:
   %cmp9.not = icmp eq i32 %n, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %s.010 = phi i64 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i16, ptr %A, i32 %i.011
@@ -1243,11 +1243,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %add.lcssa = phi i64 [ %add, %for.body ]
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %s.0.lcssa = phi i64 [ 0, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ]
   ret i64 %s.0.lcssa
 }
@@ -1287,10 +1287,10 @@ entry:
   %cmp9.not = icmp eq i32 %n, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %s.010 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i32 %i.011
@@ -1305,11 +1305,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %s.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ]
   ret i32 %s.0.lcssa
 }
@@ -1373,7 +1373,7 @@ entry:
   %guard = icmp sgt i32 %n, 0
   br i1 %guard , label %for.body, label %exit
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %red.phi = phi i32 [ %red.2, %for.body ], [ 0, %entry ]
   %add = or disjoint i32 %iv, 1
@@ -1424,7 +1424,7 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.010 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %x, i32 %i.011
@@ -1436,7 +1436,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -1491,11 +1491,11 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %s.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %s.0.lcssa
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %s.010 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.011
@@ -1718,11 +1718,11 @@ entry:
   tail call void @llvm.assume(i1 %cmp11)
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   %div = sdiv i64 %add3, %add
   ret i64 %div
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %s.014 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %i.013 = phi i32 [ %add4, %for.body ], [ 0, %entry ]
   %t.012 = phi i64 [ %add3, %for.body ], [ 0, %entry ]
@@ -1818,11 +1818,11 @@ entry:
   %cmp23 = icmp sgt i32 %n, 0
   br i1 %cmp23, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %s.0.lcssa = phi i64 [ 0, %entry ], [ %add12, %for.body ]
   ret i64 %s.0.lcssa
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.025 = phi i32 [ %add13, %for.body ], [ 0, %entry ]
   %s.024 = phi i64 [ %add12, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.025

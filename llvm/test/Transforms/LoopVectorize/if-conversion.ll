@@ -202,7 +202,7 @@ entry:
   %cmp10 = icmp sgt i32 %n, 0
   br i1 %cmp10, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
   %sum.011 = phi i32 [ %sum.1, %for.inc ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
@@ -210,19 +210,19 @@ for.body:                                         ; preds = %entry, %for.inc
   %cmp1 = icmp sgt i32 %0, 30
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %add = add i32 %sum.011, 2
   %add4 = add i32 %add, %0
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %sum.1 = phi i32 [ %add4, %if.then ], [ %sum.011, %for.body ]
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %sum.1, %for.inc ]
   ret i32 %sum.0.lcssa
 }
@@ -280,19 +280,19 @@ define void @PR34523(ptr %p, i16 %val) {
 bb1:
   br label %bb2
 
-bb2:                                             ; preds = %bb4, %bb1
+bb2:
   %i = phi i16 [ %val, %bb1 ], [ %_tmp2, %bb4 ]
   br label %bb3
 
-bb3:                                             ; preds = %bb2
+bb3:
   %_tmp1 = phi ptr [ %p, %bb2 ]
   br label %bb4
 
-bb4:                                             ; preds = %bb3
+bb4:
   %_tmp2 = add i16 %i, 1
   %_tmp3 = icmp slt i16 %_tmp2, 2
   br i1 %_tmp3, label %bb2, label %bb5
 
-bb5:                                             ; preds = %bb4
+bb5:
   unreachable
 }

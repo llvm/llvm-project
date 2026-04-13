@@ -645,7 +645,7 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
   while (offset < segment.GetByteSize()) {
     ELFNote note = ELFNote();
     if (!note.Parse(segment, &offset))
-      return llvm::createStringError("Unable to parse note segment");
+      return llvm::createStringError("unable to parse note segment");
 
     size_t note_start = offset;
     size_t note_size = llvm::alignTo(note.n_descsz, 4);
