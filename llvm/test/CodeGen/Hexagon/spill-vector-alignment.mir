@@ -1,5 +1,9 @@
 # RUN: llc -mtriple=hexagon -run-pass prologepilog %s -o - | FileCheck %s
 
+# Check that a stale PS_aligna operand is updated when late HVX spill slots
+# increase the required stack alignment.
+# CHECK: $r16 = PS_aligna 128
+
 # Check that the spill of $q0 no longer uses unaligned store instruction.
 # CHECK: V6_vS32b_ai $r16, -256, killed $v0
 
@@ -12,6 +16,6 @@ stack:
 body: |
   bb.0:
     liveins: $q0
-    $r16 = PS_aligna 128, implicit $r30
+    $r16 = PS_aligna 64, implicit $r30
     PS_vstorerq_ai %stack.1, 0, $q0
 ...
