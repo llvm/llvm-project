@@ -32,3 +32,14 @@ define <vscale x 8 x half> @luti6_f16_x2(<vscale x 8 x half> %a, <vscale x 16 x 
   %res = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti6.lane.x2.f16(<vscale x 8 x half> %a, <vscale x 8 x half> %a, <vscale x 16 x i8> %b, i32 0)
   ret <vscale x 8 x half> %res
 }
+
+define <vscale x 8 x bfloat> @luti6_bf16_x2(<vscale x 8 x bfloat> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: luti6_bf16_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    luti6 z0.h, { z2.h, z3.h }, z1[1]
+; CHECK-NEXT:    ret
+  %res = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.luti6.lane.x2.bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %a, <vscale x 16 x i8> %b, i32 1)
+  ret <vscale x 8 x bfloat> %res
+}
