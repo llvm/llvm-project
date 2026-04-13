@@ -223,6 +223,25 @@ static mlir::Value emitNeonCall(CIRGenModule &cgm, CIRGenBuilderTy &builder,
       isConstrainedFPIntrinsic, shift, rightshift);
 }
 
+static cir::VectorType getVPaddlInputVectorType(cir::VectorType resType,
+                                                bool usgn) {
+  mlir::Type elemTy = resType.getElementType();
+  uint64_t resLanes = resType.getSize();
+  auto intTy = mlir::dyn_cast<cir::IntType>(elemTy);
+  assert(intTy && "vpaddl result type must be an integer vector");
+
+  unsigned resWidth = intTy.getWidth();
+  assert((resWidth == 16 || resWidth == 32 || resWidth == 64) &&
+         "unexpected vpaddl result element width");
+
+  unsigned argWidth = resWidth / 2;
+  unsigned argLanes = resLanes * 2;
+  mlir::Type argElemTy =
+      cir::IntType::get(resType.getContext(), argWidth, /* is_signed*/ !usgn);
+  cir::VectorType result = cir::VectorType::get(argElemTy, argLanes);
+  return result;
+}
+
 static mlir::Value emitCommonNeonSISDBuiltinExpr(
     CIRGenFunction &cgf, const ARMVectorIntrinsicInfo &info,
     llvm::SmallVectorImpl<mlir::Value> &ops, const CallExpr *expr) {
@@ -439,7 +458,6 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     CIRGenFunction &cgf, unsigned builtinID, unsigned llvmIntrinsic,
     unsigned altLLVMIntrinsic, const char *nameHint, unsigned modifier,
     const CallExpr *expr, llvm::SmallVectorImpl<mlir::Value> &ops) {
-
   mlir::Location loc = cgf.getLoc(expr->getExprLoc());
   clang::ASTContext &ctx = cgf.getContext();
 
@@ -663,8 +681,21 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vmull_v:
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v:
+    cgf.cgm.errorNYI(expr->getSourceRange(),
+                     std::string("unimplemented AArch64 builtin call: ") +
+                         ctx.BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vpaddl_v:
-  case NEON::BI__builtin_neon_vpaddlq_v:
+  case NEON::BI__builtin_neon_vpaddlq_v: {
+    llvm::StringRef llvmIntrName =
+        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
+            usgn ? llvmIntrinsic : altLLVMIntrinsic));
+    ops[0] = cgf.getBuilder().createBitcast(
+        ops[0], getVPaddlInputVectorType(vTy, usgn));
+    return emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
+                        /*argTypes=*/{ops[0].getType()}, ops, llvmIntrName,
+                        /*funcResTy=*/vTy, loc);
+  }
   case NEON::BI__builtin_neon_vqdmlal_v:
   case NEON::BI__builtin_neon_vqdmlsl_v:
   case NEON::BI__builtin_neon_vqdmulhq_lane_v:
