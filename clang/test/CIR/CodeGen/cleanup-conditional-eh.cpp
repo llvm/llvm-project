@@ -492,3 +492,180 @@ int test_false_positive_conditional(bool c) {
 // OGCG-NEXT:            cleanup
 // OGCG:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
 // OGCG:         resume { ptr, i32 }
+
+// Test nested ExprWithCleanups nodes, each containing a ternary operator.
+//
+// The outer ExprWithCleanups wraps the full-expression
+//   `S result = ({...}) ? (...) : S(5);`
+// The inner ExprWithCleanups wraps the variable initializer
+//   `S s = c1 ? S(1) : S(2);`
+// inside the statement expression, which is its own full-expression context.
+//
+// Both contain ConditionalOperators — exercising the save/restore of
+// fullExprCleanupScope state.
+
+struct T {
+  T();
+  T(int);
+  T(const T &);
+  ~T();
+  operator bool();
+};
+
+void test_nested_ewc(bool c1, bool c2) {
+  T result = ({ T s = c1 ? T(1) : T(2); s; }) ? (c2 ? T(3) : T(4))
+                                                : T(5);
+}
+
+// CIR-LABEL: @_Z15test_nested_ewcbb
+// CIR:   %[[RESULT:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["result", init]
+// CIR:   cir.scope {
+// CIR:     %[[REF_TMP:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["ref.tmp0"]
+// Inner cir.scope for the statement expression.
+// CIR:     cir.scope {
+// CIR:       %[[S:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["s", init]
+// Inner ternary: c1 ? T(1) : T(2) — no cleanup scope needed.
+// CIR:       cir.scope {
+// CIR:         %[[C1:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:         cir.if %[[C1]] {
+// CIR:           %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:           cir.call @_ZN1TC1Ei(%[[S]], %[[ONE]])
+// CIR:         } else {
+// CIR:           %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:           cir.call @_ZN1TC1Ei(%[[S]], %[[TWO]])
+// CIR:         }
+// CIR:       }
+// Copy s into ref.tmp; destroy s on all paths (normal + EH).
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.call @_ZN1TC1ERKS_(%[[REF_TMP]], %[[S]])
+// CIR:         cir.yield
+// CIR:       } cleanup all {
+// CIR:         cir.call @_ZN1TD1Ev(%[[S]])
+// CIR:         cir.yield
+// CIR:       }
+// CIR:     }
+// Outer cleanup scope: operator bool() + outer ternary + destroys ref.tmp.
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[BOOL:.*]] = cir.call @_ZN1TcvbEv(%[[REF_TMP]])
+// CIR:       cir.if %[[BOOL]] {
+// CIR:         %[[C2:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:         cir.if %[[C2]] {
+// CIR:           %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR:           cir.call @_ZN1TC1Ei(%[[RESULT]], %[[THREE]])
+// CIR:         } else {
+// CIR:           %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
+// CIR:           cir.call @_ZN1TC1Ei(%[[RESULT]], %[[FOUR]])
+// CIR:         }
+// CIR:       } else {
+// CIR:         %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
+// CIR:         cir.call @_ZN1TC1Ei(%[[RESULT]], %[[FIVE]])
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     } cleanup all {
+// CIR:       cir.call @_ZN1TD1Ev(%[[REF_TMP]])
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
+// result destructor.
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.yield
+// CIR:   } cleanup all {
+// CIR:     cir.call @_ZN1TD1Ev(%[[RESULT]])
+// CIR:     cir.yield
+// CIR:   }
+
+// LLVM-LABEL: define dso_local void @_Z15test_nested_ewcbb(
+// LLVM-SAME: personality ptr @__gxx_personality_v0
+// Inner ternary: c1 ? T(1) : T(2) — plain calls (no active cleanup yet).
+// LLVM:         br i1 %{{.*}}, label %[[T1:.*]], label %[[T2:.*]]
+// LLVM:       [[T1]]:
+// LLVM:         call void @_ZN1TC1Ei({{.*}} %[[S:.*]], i32 {{.*}} 1)
+// LLVM:         br label %[[INNER_MERGE:.*]]
+// LLVM:       [[T2]]:
+// LLVM:         call void @_ZN1TC1Ei({{.*}} %[[S]], i32 {{.*}} 2)
+// LLVM:         br label %[[INNER_MERGE]]
+// Copy construct: invoke (s destructor is active EH cleanup).
+// LLVM:       [[INNER_MERGE]]:
+// LLVM:         invoke void @_ZN1TC1ERKS_({{.*}} %[[REF_TMP:.*]], {{.*}} %[[S]])
+// LLVM-NEXT:            to label %[[COPY_CONT:.*]] unwind label %[[LPAD_S:.*]]
+// LLVM:       [[COPY_CONT]]:
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[S]])
+// EH cleanup for s: appears here in block order, before outer ternary.
+// LLVM:       [[LPAD_S]]:
+// LLVM:         landingpad { ptr, i32 }
+// LLVM-NEXT:            cleanup
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[S]])
+// LLVM:         resume { ptr, i32 }
+// Outer ternary: operator bool() is invoke (ref.tmp cleanup is active).
+// LLVM:         %[[BOOL:.*]] = invoke {{.*}} i1 @_ZN1TcvbEv({{.*}} %[[REF_TMP]])
+// LLVM-NEXT:            to label %[[BOOL_CONT:.*]] unwind label %[[LPAD_REF:.*]]
+// LLVM:       [[BOOL_CONT]]:
+// LLVM:         br i1 %[[BOOL]], label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVM:       [[TRUE]]:
+// LLVM:         br i1 %{{.*}}, label %[[T3:.*]], label %[[T4:.*]]
+// LLVM:       [[T3]]:
+// LLVM:         invoke void @_ZN1TC1Ei({{.*}} %[[RESULT:.*]], i32 {{.*}} 3)
+// LLVM-NEXT:            to label %{{.*}} unwind label %[[LPAD_REF]]
+// LLVM:       [[T4]]:
+// LLVM:         invoke void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 4)
+// LLVM-NEXT:            to label %{{.*}} unwind label %[[LPAD_REF]]
+// LLVM:       [[FALSE]]:
+// LLVM:         invoke void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 5)
+// LLVM-NEXT:            to label %{{.*}} unwind label %[[LPAD_REF]]
+// Normal cleanup: destroy ref.tmp.
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
+// EH cleanup for ref.tmp: landingpad + destroy ref.tmp + resume.
+// LLVM:       [[LPAD_REF]]:
+// LLVM:         landingpad { ptr, i32 }
+// LLVM-NEXT:            cleanup
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
+// LLVM:         resume { ptr, i32 }
+// Result destructor on normal path.
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])
+
+// OGCG-LABEL: define dso_local void @_Z15test_nested_ewcbb(
+// OGCG-SAME: personality ptr @__gxx_personality_v0
+// Inner ternary: c1 ? T(1) : T(2).
+// OGCG:         br i1 %{{.*}}, label %[[T1:.*]], label %[[T2:.*]]
+// OGCG:       [[T1]]:
+// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[S:.*]], i32 {{.*}} 1)
+// OGCG:         br label %[[INNER_MERGE:.*]]
+// OGCG:       [[T2]]:
+// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[S]], i32 {{.*}} 2)
+// OGCG:         br label %[[INNER_MERGE]]
+// Copy construct ref.tmp: invoke (s destructor is EH cleanup).
+// OGCG:       [[INNER_MERGE]]:
+// OGCG:         invoke void @_ZN1TC1ERKS_({{.*}} %[[REF_TMP:.*]], {{.*}} %[[S]])
+// OGCG-NEXT:            to label %[[COPY_CONT:.*]] unwind label %[[LPAD_S:.*]]
+// OGCG:       [[COPY_CONT]]:
+// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[S]])
+// Outer: operator bool() is invoke, then outer ternary branches.
+// OGCG:         %[[BOOL:.*]] = invoke {{.*}} i1 @_ZN1TcvbEv({{.*}} %[[REF_TMP]])
+// OGCG-NEXT:            to label %[[BOOL_CONT:.*]] unwind label %[[LPAD_REF:.*]]
+// OGCG:       [[BOOL_CONT]]:
+// OGCG:         br i1 %[[BOOL]], label %[[TRUE:.*]], label %[[FALSE:.*]]
+// OGCG:       [[TRUE]]:
+// OGCG:         br i1 %{{.*}}, label %[[T3:.*]], label %[[T4:.*]]
+// OGCG:       [[T3]]:
+// OGCG:         invoke void @_ZN1TC1Ei({{.*}} %[[RESULT:.*]], i32 {{.*}} 3)
+// OGCG-NEXT:            to label %{{.*}} unwind label %[[LPAD_REF]]
+// OGCG:       [[T4]]:
+// OGCG:         invoke void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 4)
+// OGCG-NEXT:            to label %{{.*}} unwind label %[[LPAD_REF]]
+// OGCG:       [[FALSE]]:
+// OGCG:         invoke void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 5)
+// OGCG-NEXT:            to label %{{.*}} unwind label %[[LPAD_REF]]
+// Normal cleanup: destroy ref.tmp, then result.
+// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
+// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])
+// EH cleanup for s: landingpad + destroy s.
+// OGCG:       [[LPAD_S]]:
+// OGCG:         landingpad { ptr, i32 }
+// OGCG-NEXT:            cleanup
+// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[S]])
+// EH cleanup for ref.tmp: landingpad + destroy ref.tmp.
+// OGCG:       [[LPAD_REF]]:
+// OGCG:         landingpad { ptr, i32 }
+// OGCG-NEXT:            cleanup
+// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
+// OGCG:         resume { ptr, i32 }

@@ -417,3 +417,154 @@ int test_false_positive_conditional(bool c) {
 // OGCG:         %[[SEL:.*]] = select i1 %[[CMP]], i32 1, i32 2
 // OGCG:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
 // OGCG:         ret i32 %[[SEL]]
+
+// Test nested ExprWithCleanups nodes, each containing a ternary operator.
+//
+// The outer ExprWithCleanups wraps the full-expression
+//   `S result = ({...}) ? (...) : S(5);`
+// The inner ExprWithCleanups wraps the variable initializer
+//   `S s = c1 ? S(1) : S(2);`
+// inside the statement expression, which is its own full-expression context.
+//
+// Both contain ConditionalOperators — exercising the save/restore of
+// fullExprCleanupScope state.
+
+struct T {
+  T();
+  T(int);
+  T(const T &);
+  ~T();
+  operator bool();
+};
+
+// CHECK-LABEL: @_Z15test_nested_ewcbb
+void test_nested_ewc(bool c1, bool c2) {
+  T result = ({ T s = c1 ? T(1) : T(2); s; }) ? (c2 ? T(3) : T(4))
+                                                : T(5);
+}
+
+// CIR-LABEL: @_Z15test_nested_ewcbb
+// CIR:   %[[RESULT:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["result", init]
+// Outer cir.scope wraps the entire expression including the statement expr.
+// CIR:   cir.scope {
+// CIR:     %[[REF_TMP:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["ref.tmp0"]
+// Inner cir.scope for the statement expression.
+// CIR:     cir.scope {
+// CIR:       %[[S:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["s", init]
+// Inner ternary: c1 ? T(1) : T(2) — no cleanup scope needed (no deferred dtors).
+// CIR:       cir.scope {
+// CIR:         %[[C1:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:         cir.if %[[C1]] {
+// CIR:           %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:           cir.call @_ZN1TC1Ei(%[[S]], %[[ONE]])
+// CIR:         } else {
+// CIR:           %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:           cir.call @_ZN1TC1Ei(%[[S]], %[[TWO]])
+// CIR:         }
+// CIR:       }
+// Statement expression result: copy s into ref.tmp, then destroy s.
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.call @_ZN1TC1ERKS_(%[[REF_TMP]], %[[S]])
+// CIR:         cir.yield
+// CIR:       } cleanup normal {
+// CIR:         cir.call @_ZN1TD1Ev(%[[S]])
+// CIR:         cir.yield
+// CIR:       }
+// CIR:     }
+// Outer cleanup scope: wraps operator bool() + outer ternary + destroys ref.tmp.
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[BOOL:.*]] = cir.call @_ZN1TcvbEv(%[[REF_TMP]])
+// CIR:       cir.if %[[BOOL]] {
+// CIR:         %[[C2:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:         cir.if %[[C2]] {
+// CIR:           %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR:           cir.call @_ZN1TC1Ei(%[[RESULT]], %[[THREE]])
+// CIR:         } else {
+// CIR:           %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
+// CIR:           cir.call @_ZN1TC1Ei(%[[RESULT]], %[[FOUR]])
+// CIR:         }
+// CIR:       } else {
+// CIR:         %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
+// CIR:         cir.call @_ZN1TC1Ei(%[[RESULT]], %[[FIVE]])
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN1TD1Ev(%[[REF_TMP]])
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
+// result destructor runs unconditionally after the outer scope.
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN1TD1Ev(%[[RESULT]])
+// CIR:     cir.yield
+// CIR:   }
+
+// LLVM-LABEL: define dso_local void @_Z15test_nested_ewcbb(
+// Inner ternary: c1 ? T(1) : T(2).
+// LLVM:         br i1 %{{.*}}, label %[[T1:.*]], label %[[T2:.*]]
+// LLVM:       [[T1]]:
+// LLVM:         call void @_ZN1TC1Ei({{.*}} %[[S:.*]], i32 {{.*}} 1)
+// LLVM:         br label %[[INNER_MERGE:.*]]
+// LLVM:       [[T2]]:
+// LLVM:         call void @_ZN1TC1Ei({{.*}} %[[S]], i32 {{.*}} 2)
+// LLVM:         br label %[[INNER_MERGE]]
+// Copy construct ref.tmp from s, then destroy s.
+// LLVM:       [[INNER_MERGE]]:
+// LLVM:         call void @_ZN1TC1ERKS_({{.*}} %[[REF_TMP:.*]], {{.*}} %[[S]])
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[S]])
+// Outer ternary: operator bool() on ref.tmp.
+// LLVM:         %[[BOOL:.*]] = call {{.*}} i1 @_ZN1TcvbEv({{.*}} %[[REF_TMP]])
+// LLVM:         br i1 %[[BOOL]], label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVM:       [[TRUE]]:
+// LLVM:         br i1 %{{.*}}, label %[[T3:.*]], label %[[T4:.*]]
+// LLVM:       [[T3]]:
+// LLVM:         call void @_ZN1TC1Ei({{.*}} %[[RESULT:.*]], i32 {{.*}} 3)
+// LLVM:         br label %[[OUTER_MERGE1:.*]]
+// LLVM:       [[T4]]:
+// LLVM:         call void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 4)
+// LLVM:         br label %[[OUTER_MERGE1]]
+// LLVM:       [[OUTER_MERGE1]]:
+// LLVM:         br label %[[OUTER_MERGE2:.*]]
+// LLVM:       [[FALSE]]:
+// LLVM:         call void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 5)
+// LLVM:         br label %[[OUTER_MERGE2]]
+// Cleanup: destroy ref.tmp, then result.
+// LLVM:       [[OUTER_MERGE2]]:
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])
+
+// OGCG-LABEL: define dso_local void @_Z15test_nested_ewcbb(
+// Inner ternary: c1 ? T(1) : T(2).
+// OGCG:         br i1 %{{.*}}, label %[[T1:.*]], label %[[T2:.*]]
+// OGCG:       [[T1]]:
+// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[S:.*]], i32 {{.*}} 1)
+// OGCG:         br label %[[INNER_MERGE:.*]]
+// OGCG:       [[T2]]:
+// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[S]], i32 {{.*}} 2)
+// OGCG:         br label %[[INNER_MERGE]]
+// Copy construct ref.tmp from s, then destroy s.
+// OGCG:       [[INNER_MERGE]]:
+// OGCG:         call void @_ZN1TC1ERKS_({{.*}} %[[REF_TMP:.*]], {{.*}} %[[S]])
+// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[S]])
+// Outer ternary: operator bool() + conditional construction of result.
+// OGCG:         %[[BOOL:.*]] = call {{.*}} i1 @_ZN1TcvbEv({{.*}} %[[REF_TMP]])
+// OGCG:         br i1 %[[BOOL]], label %[[TRUE:.*]], label %[[FALSE:.*]]
+// OGCG:       [[TRUE]]:
+// OGCG:         br i1 %{{.*}}, label %[[T3:.*]], label %[[T4:.*]]
+// OGCG:       [[T3]]:
+// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[RESULT:.*]], i32 {{.*}} 3)
+// OGCG:         br label %[[OUTER_MERGE1:.*]]
+// OGCG:       [[T4]]:
+// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 4)
+// OGCG:         br label %[[OUTER_MERGE1]]
+// OGCG:       [[OUTER_MERGE1]]:
+// OGCG:         br label %[[OUTER_MERGE2:.*]]
+// OGCG:       [[FALSE]]:
+// OGCG:         call void @_ZN1TC1Ei({{.*}} %[[RESULT]], i32 {{.*}} 5)
+// OGCG:         br label %[[OUTER_MERGE2]]
+// Cleanup: destroy ref.tmp, then result.
+// OGCG:       [[OUTER_MERGE2]]:
+// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
+// OGCG:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])

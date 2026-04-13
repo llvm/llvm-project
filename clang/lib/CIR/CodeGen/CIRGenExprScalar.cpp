@@ -1601,27 +1601,32 @@ mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
   cgf.enterFullExprCleanupScope(e->getSubExpr());
   mlir::Value v = Visit(e->getSubExpr());
 
-  bool hasDeferredCleanups = !cgf.deferredConditionalCleanupStack.empty();
-
-  // When deferred conditional cleanups exist, the expression result lives
-  // inside the cleanup scope body (an MLIR region). Spill it to a temporary
-  // (allocated in the function entry block) while the builder is still inside
-  // the body; we reload it after exitFullExprCleanupScope moves the builder
-  // outside the scope.
-  Address spill = Address::invalid();
-  if (v && hasDeferredCleanups) {
-    spill = cgf.createDefaultAlignTempAlloca(v.getType(), v.getLoc(),
-                                             "tmp.exprcleanup");
-    cgf.getBuilder().createStore(v.getLoc(), v, spill);
-  }
-
-  cgf.exitFullExprCleanupScope();
+  bool hasDeferredCleanups =
+      cgf.deferredConditionalCleanupStack.size() >
+      cgf.fullExprCleanupScopes.back().deferredCleanupStackSize;
 
   if (hasDeferredCleanups) {
+    // The expression result lives inside the cleanup scope body (an MLIR
+    // region that exitFullExprCleanupScope will close). Spill it while the
+    // builder is still inside the body; reload after the scope is closed.
+    // We can't use the forceCleanup valuesToReload mechanism here because
+    // that spill would happen after exitFullExprCleanupScope, at which point
+    // the value is trapped inside the closed region.
+    Address spill = Address::invalid();
+    if (v) {
+      spill = cgf.createDefaultAlignTempAlloca(v.getType(), v.getLoc(),
+                                               "tmp.exprcleanup");
+      cgf.getBuilder().createStore(v.getLoc(), v, spill);
+    }
+    cgf.exitFullExprCleanupScope();
     cleanups.forceCleanup({});
     if (spill.isValid())
       v = cgf.getBuilder().createLoad(v.getLoc(), spill);
   } else {
+    // No cleanup scope was created (or it will be inlined back), so the
+    // value stays in the parent block. Let forceCleanup handle the
+    // spill/reload around any EH cleanups.
+    cgf.exitFullExprCleanupScope();
     cleanups.forceCleanup({&v});
   }
   return v;

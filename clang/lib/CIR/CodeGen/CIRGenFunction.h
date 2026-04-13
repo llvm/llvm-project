@@ -112,18 +112,23 @@ public:
 
   llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
 
-  /// Deferred cleanup entries from conditional branches within the current
-  /// full-expression. Emitted into the cleanup region of fullExprCleanupScope
-  /// by exitFullExprCleanupScope.
+  /// Deferred cleanup entries from conditional branches within
+  /// full-expressions. Each fullExprCleanupScopes entry records its base
+  /// index into this stack; exitFullExprCleanupScope processes entries from
+  /// that index to the end, then truncates.
   llvm::SmallVector<PendingCleanupEntry> deferredConditionalCleanupStack;
 
-  /// True while between enterFullExprCleanupScope/exitFullExprCleanupScope.
-  bool inFullExprCleanupScope = false;
-
-  /// A lazily-created CleanupScopeOp for the current full-expression. Created
-  /// by createFullExprCleanupScope() when the first conditional cleanup is
-  /// deferred, so expressions without conditional cleanups pay no cost.
-  cir::CleanupScopeOp fullExprCleanupScope = nullptr;
+  /// Stack of full-expression cleanup scopes. Each entry is pushed by
+  /// enterFullExprCleanupScope and popped by exitFullExprCleanupScope. The
+  /// back entry is the current scope. The scope op is non-null only when the
+  /// expression contains a ternary conditional (detected by
+  /// ConditionalEvaluationFinder); otherwise it is nullptr and no
+  /// CleanupScopeOp is created.
+  struct FullExprCleanupScope {
+    cir::CleanupScopeOp scope;
+    size_t deferredCleanupStackSize;
+  };
+  llvm::SmallVector<FullExprCleanupScope, 4> fullExprCleanupScopes;
 
   GlobalDecl curSEHParent;
 
@@ -1029,15 +1034,14 @@ public:
   Address createCleanupActiveFlag();
 
   /// Enter a full-expression cleanup scope. If \p subExpr contains a
-  /// conditional (ternary, &&, ||), eagerly creates a CleanupScopeOp that
-  /// will wrap the entire expression. Otherwise defers scope creation.
+  /// conditional (ternary ?:), eagerly creates a CleanupScopeOp that wraps
+  /// the entire expression; otherwise pushes a null-scope entry. Pushes an
+  /// entry onto fullExprCleanupScopes either way.
   void enterFullExprCleanupScope(const Expr *subExpr);
 
-  /// Create the CleanupScopeOp for the current full-expression.
-  /// Called from enterFullExprCleanupScope when a conditional is detected.
-  void createFullExprCleanupScope();
-
-  /// Finalize the full-expression cleanup scope after the sub-expression.
+  /// Finalize the current full-expression cleanup scope. Emits any deferred
+  /// conditional cleanups into the scope's cleanup region, then pops the
+  /// entry from fullExprCleanupScopes.
   void exitFullExprCleanupScope();
 
   /// Promote a single pending cleanup entry onto the EH scope stack. If the
@@ -1057,7 +1061,8 @@ public:
     // the EH stack now because the ternary's inner LexicalScope would pop
     // it prematurely. The scope must have been eagerly created by
     // enterFullExprCleanupScope (which detected the conditional in the AST).
-    assert(fullExprCleanupScope &&
+    assert(!fullExprCleanupScopes.empty() &&
+           fullExprCleanupScopes.back().scope &&
            "conditional cleanup pushed but no full-expression scope created");
     Address activeFlag = createCleanupActiveFlag();
     deferredConditionalCleanupStack.push_back(

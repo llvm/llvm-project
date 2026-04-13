@@ -87,46 +87,44 @@ Address CIRGenFunction::createCleanupActiveFlag() {
 }
 
 void CIRGenFunction::enterFullExprCleanupScope(const Expr *subExpr) {
-  inFullExprCleanupScope = true;
-  // Eagerly create the CleanupScopeOp only when the expression contains a
-  // construct that will enter a ConditionalEvaluation. This ensures the scope
-  // structurally wraps the entire expression. For expressions without
-  // conditionals we skip it entirely so that values defined inside nested
-  // cleanup scopes remain directly accessible.
+  cir::CleanupScopeOp scope = nullptr;
+
+  assert(subExpr && "ExprWithCleanups always has a sub-expression");
   ConditionalEvaluationFinder finder;
   finder.TraverseStmt(const_cast<Expr *>(subExpr));
-  if (finder.found())
-    createFullExprCleanupScope();
-}
+  if (finder.found()) {
+    mlir::Location loc = builder.getUnknownLoc();
+    cir::CleanupKind cleanupKind = getLangOpts().Exceptions
+                                       ? cir::CleanupKind::All
+                                       : cir::CleanupKind::Normal;
+    scope = cir::CleanupScopeOp::create(
+        builder, loc, cleanupKind,
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {},
+        /*cleanupBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {});
+    builder.setInsertionPointToEnd(&scope.getBodyRegion().front());
+  }
 
-void CIRGenFunction::createFullExprCleanupScope() {
-  assert(inFullExprCleanupScope && "not in a full-expression cleanup scope");
-  assert(!fullExprCleanupScope && "scope already created");
-
-  mlir::Location loc = builder.getUnknownLoc();
-  cir::CleanupKind cleanupKind = getLangOpts().Exceptions
-                                     ? cir::CleanupKind::All
-                                     : cir::CleanupKind::Normal;
-  fullExprCleanupScope = cir::CleanupScopeOp::create(
-      builder, loc, cleanupKind,
-      /*bodyBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {},
-      /*cleanupBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {});
-
-  mlir::Block &bodyBlock = fullExprCleanupScope.getBodyRegion().front();
-  builder.setInsertionPointToEnd(&bodyBlock);
+  fullExprCleanupScopes.push_back(
+      {scope, deferredConditionalCleanupStack.size()});
 }
 
 void CIRGenFunction::exitFullExprCleanupScope() {
-  inFullExprCleanupScope = false;
+  assert(!fullExprCleanupScopes.empty() &&
+         "exitFullExprCleanupScope without matching enter");
 
-  if (!fullExprCleanupScope)
+  FullExprCleanupScope current = fullExprCleanupScopes.pop_back_val();
+  cir::CleanupScopeOp scope = current.scope;
+  size_t oldSize = current.deferredCleanupStackSize;
+  bool hasDeferredCleanups = deferredConditionalCleanupStack.size() > oldSize;
+
+  if (!scope) {
+    deferredConditionalCleanupStack.truncate(oldSize);
     return;
+  }
 
-  cir::CleanupScopeOp scope = fullExprCleanupScope;
-  fullExprCleanupScope = nullptr;
-  if (!deferredConditionalCleanupStack.empty()) {
+  if (hasDeferredCleanups) {
     // Terminate the body region.
     mlir::Block &bodyBlock = scope.getBodyRegion().front();
     {
@@ -145,8 +143,9 @@ void CIRGenFunction::exitFullExprCleanupScope() {
       mlir::Block &cleanupBlock = scope.getCleanupRegion().front();
       builder.setInsertionPointToEnd(&cleanupBlock);
 
-      for (const PendingCleanupEntry &entry :
-           llvm::reverse(deferredConditionalCleanupStack)) {
+      for (const PendingCleanupEntry &entry : llvm::reverse(llvm::make_range(
+               deferredConditionalCleanupStack.begin() + oldSize,
+               deferredConditionalCleanupStack.end()))) {
         if (entry.activeFlag.isValid()) {
           mlir::Value flag =
               builder.createLoad(scope.getLoc(), entry.activeFlag);
@@ -162,29 +161,45 @@ void CIRGenFunction::exitFullExprCleanupScope() {
       }
       builder.createYield(scope.getLoc());
     }
-    deferredConditionalCleanupStack.clear();
 
-    // Move the builder to after the scope in the parent block so that
-    // subsequent code (e.g. value reloads) lands outside the scope.
+    deferredConditionalCleanupStack.truncate(oldSize);
     builder.setInsertionPointAfter(scope);
-    return;
+  } else if (scope.getBodyRegion().hasOneBlock()) {
+    // The scope was created (because the AST contained a conditional) but no
+    // conditional cleanups were actually deferred. Inline the body back into
+    // the parent block and erase the empty scope.
+    mlir::Block *parentBlock = scope->getBlock();
+    mlir::Block &bodyBlock = scope.getBodyRegion().front();
+
+    if (!bodyBlock.empty() && mlir::isa<cir::YieldOp>(bodyBlock.back()))
+      bodyBlock.back().erase();
+
+    mlir::Block::iterator afterScope = std::next(scope->getIterator());
+    parentBlock->getOperations().splice(scope->getIterator(),
+                                        bodyBlock.getOperations());
+    scope->erase();
+    builder.setInsertionPoint(parentBlock, afterScope);
+  } else {
+    // Multi-block body (e.g. from throw splitting inside a ternary). Can't
+    // inline safely because block references would dangle. Terminate the last
+    // block and keep the scope for later passes.
+    mlir::Block &lastBodyBlock = scope.getBodyRegion().back();
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToEnd(&lastBodyBlock);
+      if (lastBodyBlock.empty() ||
+          !lastBodyBlock.back().hasTrait<mlir::OpTrait::IsTerminator>())
+        builder.createYield(scope.getLoc());
+    }
+    // Terminate the cleanup region too.
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      mlir::Block &cleanupBlock = scope.getCleanupRegion().front();
+      builder.setInsertionPointToEnd(&cleanupBlock);
+      builder.createYield(scope.getLoc());
+    }
+    builder.setInsertionPointAfter(scope);
   }
-
-  // The scope was created (because the AST contained a conditional) but no
-  // conditional cleanups were actually deferred. Inline the body back into
-  // the parent block and erase the empty scope.
-  mlir::Block *parentBlock = scope->getBlock();
-  mlir::Block &bodyBlock = scope.getBodyRegion().front();
-
-  if (!bodyBlock.empty() &&
-      bodyBlock.back().hasTrait<mlir::OpTrait::IsTerminator>())
-    bodyBlock.back().erase();
-
-  mlir::Block::iterator afterScope = std::next(scope->getIterator());
-  parentBlock->getOperations().splice(scope->getIterator(),
-                                      bodyBlock.getOperations());
-  scope->erase();
-  builder.setInsertionPoint(parentBlock, afterScope);
 }
 
 //===----------------------------------------------------------------------===//
