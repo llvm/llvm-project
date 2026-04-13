@@ -3413,15 +3413,6 @@ const Decl &adjustDeclToTemplate(const Decl &D);
 ///   template int ns::bar<int>;              // variable template
 ///   template void ns::S<int>::method(int);  // member function
 /// \endcode
-///
-/// Layout is optimised for size (24 bytes of own fields):
-///   - SpecAndTSK: PointerIntPair packing the specialization pointer and TSK.
-///   - TypeAndFlags: PointerIntPair packing TypeSourceInfo (always non-null)
-///     and two trailing-object presence bits.
-///   - For class templates / nested classes the TypeSourceInfo encodes the tag
-///     keyword, qualifier, name, and template-argument locations.
-///   - For function / variable templates the qualifier and template arguments
-///     are stored as trailing objects.
 class ExplicitInstantiationDecl final
     : public Decl,
       private llvm::TrailingObjects<ExplicitInstantiationDecl,
@@ -3463,6 +3454,13 @@ class ExplicitInstantiationDecl final
   /// Public getTypeAsWritten() returns null for those cases.
   TypeSourceInfo *getRawTypeSourceInfo() const {
     return TypeAndFlags.getPointer();
+  }
+
+  /// Returns the trailing ASTTemplateArgumentListInfo pointer, or null.
+  const ASTTemplateArgumentListInfo *getTrailingArgsInfo() const {
+    if (!hasTrailingArgsAsWritten())
+      return nullptr;
+    return *getTrailingObjects<const ASTTemplateArgumentListInfo *>();
   }
 
   ExplicitInstantiationDecl(

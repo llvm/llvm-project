@@ -1868,9 +1868,8 @@ TypeSourceInfo *ExplicitInstantiationDecl::getTypeAsWritten() const {
 }
 
 unsigned ExplicitInstantiationDecl::getNumTemplateArgs() const {
-  if (hasTrailingArgsAsWritten())
-    return (*getTrailingObjects<const ASTTemplateArgumentListInfo *>())
-        ->NumTemplateArgs;
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->NumTemplateArgs;
   if (auto *TSI = getRawTypeSourceInfo())
     if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       return TL.getNumArgs();
@@ -1879,16 +1878,15 @@ unsigned ExplicitInstantiationDecl::getNumTemplateArgs() const {
 
 TemplateArgumentLoc
 ExplicitInstantiationDecl::getTemplateArg(unsigned I) const {
-  if (hasTrailingArgsAsWritten())
-    return (**getTrailingObjects<const ASTTemplateArgumentListInfo *>())[I];
+  if (const auto *Args = getTrailingArgsInfo())
+    return (*Args)[I];
   auto *TSI = getRawTypeSourceInfo();
   return TSI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().getArgLoc(I);
 }
 
 SourceLocation ExplicitInstantiationDecl::getTemplateArgsLAngleLoc() const {
-  if (hasTrailingArgsAsWritten())
-    return (*getTrailingObjects<const ASTTemplateArgumentListInfo *>())
-        ->getLAngleLoc();
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->getLAngleLoc();
   if (auto *TSI = getRawTypeSourceInfo())
     if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       return TL.getLAngleLoc();
@@ -1896,9 +1894,8 @@ SourceLocation ExplicitInstantiationDecl::getTemplateArgsLAngleLoc() const {
 }
 
 SourceLocation ExplicitInstantiationDecl::getTemplateArgsRAngleLoc() const {
-  if (hasTrailingArgsAsWritten())
-    return (*getTrailingObjects<const ASTTemplateArgumentListInfo *>())
-        ->getRAngleLoc();
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->getRAngleLoc();
   if (auto *TSI = getRawTypeSourceInfo())
     if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       return TL.getRAngleLoc();

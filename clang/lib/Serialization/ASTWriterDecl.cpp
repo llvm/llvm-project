@@ -2208,11 +2208,9 @@ void ASTDeclWriter::VisitExplicitInstantiationDecl(
   Record.push_back(D->getTemplateSpecializationKind());
   // Trailing objects.
   if (D->hasTrailingQualifier())
-    Record.AddNestedNameSpecifierLoc(
-        *D->getTrailingObjects<NestedNameSpecifierLoc>());
-  if (D->hasTrailingArgsAsWritten())
-    Record.AddASTTemplateArgumentListInfo(
-        *D->getTrailingObjects<const ASTTemplateArgumentListInfo *>());
+    Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
+  if (const auto *Args = D->getTrailingArgsInfo())
+    Record.AddASTTemplateArgumentListInfo(Args);
   Code = serialization::DECL_EXPLICIT_INSTANTIATION;
 }
 
