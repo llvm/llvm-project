@@ -2699,14 +2699,10 @@ struct [[gsl::Pointer]] function_ref {
   void (*ref)();
 };
 
-function_ref function_ref_from_non_capturing_lambda() {
-  return []() {}; // expected-warning {{address of stack memory is returned later}} \
-                  // expected-note {{returned here}}
-}
-
 void assign_non_capturing_to_function_ref(function_ref &r) {
-  r = []() {};
-  (void)r;
+  r = []() {}; // expected-warning {{object whose reference is captured does not live long enough}} \
+               // expected-note {{destroyed here}}
+  (void)r; // expected-note {{later used here}}
 }
 
 } // namespace callable_wrappers
