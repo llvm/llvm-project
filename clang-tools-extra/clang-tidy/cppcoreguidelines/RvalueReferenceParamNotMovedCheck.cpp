@@ -54,7 +54,7 @@ void RvalueReferenceParamNotMovedCheck::registerMatchers(MatchFinder *Finder) {
                        hasAncestor(expr(hasUnevaluatedContext())))))
           .bind("move-call");
 
-  // P1825R0 (C++20): returning a named rvalue reference parameter by name
+  // P1825R0: returning a named rvalue reference parameter by name
   // performs an implicit move, which is equivalent to ``std::move(param)``
   const StatementMatcher ImplicitMoveReturnMatcher = traverse(
       TK_IgnoreUnlessSpelledInSource,
@@ -62,12 +62,9 @@ void RvalueReferenceParamNotMovedCheck::registerMatchers(MatchFinder *Finder) {
                      declRefExpr(to(equalsBoundNode("param"))).bind("ref"))))
           .bind("implicit-move-return"));
 
-  const bool EnableImplicitMove =
-      AllowImplicitMove && getLangOpts().CPlusPlus20;
-
   const StatementMatcher UsageMatcher = stmt(
-      anyOf(MoveCallMatcher, EnableImplicitMove ? ImplicitMoveReturnMatcher
-                                                : stmt(unless(anything()))));
+      anyOf(MoveCallMatcher, AllowImplicitMove ? ImplicitMoveReturnMatcher
+                                               : stmt(unless(anything()))));
 
   Finder->addMatcher(
       parmVarDecl(
