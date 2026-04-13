@@ -1,5 +1,4 @@
-; RUN: opt -passes='loop-vectorize' -debug -S < %s 2>&1 | FileCheck %s
-; REQUIRES: asserts
+; RUN: opt -passes='loop-vectorize' -force-vector-width=4 -S < %s | FileCheck %s
 
 ; This checks we don't crash when the inner loop we're trying to vectorize
 ; is a SCEV AddRec with respect to an outer loop.
@@ -32,8 +31,8 @@
 ; We can vectorize this loop because we are storing an invariant value into an
 ; invariant address.
 
-; CHECK: LV: We can vectorize this loop!
 ; CHECK-LABEL: @test
+; CHECK: vector.body
 define void @test() {
 entry:
   %a.promoted2 = load i32, ptr @a, align 1
