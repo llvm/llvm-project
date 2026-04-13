@@ -270,3 +270,11 @@ pncvth.b s7, s8
 # CHECK-S-OBJ-NOALIAS: pnsrli.h s9, s10, 16
 # CHECK-S-OBJ: pncvth.h s9, s10
 pncvth.h s9, s10
+
+# CHECK-S-OBJ-NOALIAS: pli.b s10, 17
+# CHECK-S-OBJ: pli.b s10, 17
+li s10, 0x11111111
+
+# CHECK-S-OBJ-NOALIAS: pli.h s11, 1
+# CHECK-S-OBJ: pli.h s11, 1
+li s11, 0x00010001
