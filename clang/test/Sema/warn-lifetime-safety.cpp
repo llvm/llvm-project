@@ -2533,9 +2533,8 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 } // namespace conditional_operator_control_flow
 
 namespace method_call_uses_field_origins {
-// https://github.com/llvm/llvm-project/issues/182945
-
 int val;
+std::string GLOBAL{"123"};
 
 struct S {
 public:
@@ -2559,9 +2558,16 @@ public:
     v = std::string("tmp"); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
     bar();                  // expected-note {{later used here}}
   }
+  void baz(){
+    std::vector<std::string> vec = {"42"};
+    v = vec[0];         // expected-warning {{object whose reference is captured is later invalidated}}
+    vec.push_back("1"); // expected-note {{invalidated here}}
+    bar();              // expected-note {{later used here}}
+    v = GLOBAL;
+  }
 };
 
-// FIXME: False-positive: the analysis tracks a, but not that it belongs to s1.
+// FIXME: False-negative: the analysis tracks `p_`, but not that it belongs to s1.
 void foo() {
   S s;
   {
