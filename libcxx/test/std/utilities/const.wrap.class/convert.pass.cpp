@@ -10,7 +10,7 @@
 
 // constant_wrapper
 
-// constexpr operator decltype(auto)() const noexcept { return value; }
+// constexpr operator decltype(value)() const noexcept { return value; }
 
 #include <cassert>
 #include <concepts>

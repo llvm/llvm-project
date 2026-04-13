@@ -173,7 +173,8 @@ struct __cw_operators {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
-  friend constexpr auto operator==(_Lp, _Rp) noexcept -> constant_wrapper<(_Lp::value == _Rp::value)> {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator==(_Lp, _Rp) noexcept
+      -> constant_wrapper<(_Lp::value == _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
@@ -311,7 +312,7 @@ public:
     return {};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr operator decltype(auto)() const noexcept { return value; }
+  _LIBCPP_HIDE_FROM_ABI constexpr operator decltype(value)() const noexcept { return value; }
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto

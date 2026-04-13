@@ -293,7 +293,7 @@
 "`LWG4457 <https://wg21.link/LWG4457>`__","freestanding for ``stable_sort``, ``stable_partition`` and ``inplace_merge``","2026-03 (Croydon)","","","`#189835 <https://github.com/llvm/llvm-project/issues/189835>`__",""
 "`LWG4460 <https://wg21.link/LWG4460>`__","Missing *Throws:* for last ``variant`` constructor","2026-03 (Croydon)","","","`#189836 <https://github.com/llvm/llvm-project/issues/189836>`__",""
 "`LWG4467 <https://wg21.link/LWG4467>`__","``hive::splice`` can throw ``bad_alloc``","2026-03 (Croydon)","","","`#189837 <https://github.com/llvm/llvm-project/issues/189837>`__",""
-"`LWG4468 <https://wg21.link/LWG4468>`__","§[const.wrap.class] ""``operator decltype(auto)``"" is ill-formed","2026-03 (Croydon)","","","`#189838 <https://github.com/llvm/llvm-project/issues/189838>`__",""
+"`LWG4468 <https://wg21.link/LWG4468>`__","§[const.wrap.class] ""``operator decltype(auto)``"" is ill-formed","2026-03 (Croydon)","|Complete|","23","`#189838 <https://github.com/llvm/llvm-project/issues/189838>`__",""
 "`LWG4469 <https://wg21.link/LWG4469>`__","Names of parameters of addressable function shall remain unspecified","2026-03 (Croydon)","","","`#189839 <https://github.com/llvm/llvm-project/issues/189839>`__",""
 "`LWG4472 <https://wg21.link/LWG4472>`__","``std::atomic_ref<const T>`` can be constructed from temporaries","2026-03 (Croydon)","","","`#189840 <https://github.com/llvm/llvm-project/issues/189840>`__",""
 "`LWG4474 <https://wg21.link/LWG4474>`__","""``round_to_nearest``"" rounding mode is unclear","2026-03 (Croydon)","","","`#189841 <https://github.com/llvm/llvm-project/issues/189841>`__",""
