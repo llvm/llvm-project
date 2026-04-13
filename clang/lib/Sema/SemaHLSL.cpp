@@ -5730,7 +5730,7 @@ class InitListTransformer {
 
     // If this is an aggregate type and a prvalue, create an xvalue temporary
     // so the member accesses will be xvalues. Wrap it in OpaqueExpr top make
-    // sure codegen will not generate duplicate copies. 
+    // sure codegen will not generate duplicate copies.
     if (E->isPRValue() && Ty->isAggregateType()) {
       ExprResult TmpExpr = S.TemporaryMaterializationConversion(E);
       if (TmpExpr.isInvalid())
