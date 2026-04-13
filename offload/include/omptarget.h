@@ -428,9 +428,11 @@ void __tgt_target_nowait_query(void **AsyncHandle);
 /// device memory.
 int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                                void *DeviceMemory, int64_t DeviceMemorySize,
-                               void **TgtArgs, ptrdiff_t *TgtOffsets,
-                               int32_t NumArgs, int32_t NumTeams,
-                               int32_t ThreadLimit, uint32_t SharedMemorySize,
+                               const llvm::offloading::EntryTy *Globals,
+                               int32_t NumGlobals, void **TgtArgs,
+                               ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                               int32_t NumTeams, int32_t ThreadLimit,
+                               uint32_t SharedMemorySize,
                                uint64_t LoopTripCount);
 
 void __tgt_set_info_flag(uint32_t);

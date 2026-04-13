@@ -511,13 +511,12 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 ///                    execution.
 /// \param LoopTripCount The pre-recorded value of the loop tripcount, if any.
 /// \return OMP_TGT_SUCCESS on success, OMP_TGT_FAIL on failure.
-EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
-                                      void *HostPtr, void *DeviceMemory,
-                                      int64_t DeviceMemorySize, void **TgtArgs,
-                                      ptrdiff_t *TgtOffsets, int32_t NumArgs,
-                                      int32_t NumTeams, int32_t ThreadLimit,
-                                      uint32_t SharedMemorySize,
-                                      uint64_t LoopTripCount) {
+EXTERN int __tgt_target_kernel_replay(
+    ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory,
+    int64_t DeviceMemorySize, const llvm::offloading::EntryTy *Globals,
+    int32_t NumGlobals, void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+    int32_t NumTeams, int32_t ThreadLimit, uint32_t SharedMemorySize,
+    uint64_t LoopTripCount) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (checkDevice(DeviceId, Loc)) {
@@ -536,8 +535,8 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
   AsyncInfoTy AsyncInfo(*DeviceOrErr);
   int Rc =
       target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory, DeviceMemorySize,
-                    TgtArgs, TgtOffsets, NumArgs, NumTeams, ThreadLimit,
-                    SharedMemorySize, LoopTripCount, AsyncInfo);
+                    Globals, NumGlobals, TgtArgs, TgtOffsets, NumArgs, NumTeams,
+                    ThreadLimit, SharedMemorySize, LoopTripCount, AsyncInfo);
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);

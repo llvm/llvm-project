@@ -199,33 +199,41 @@ Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
 }
 
 Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
-  int32_t Size = 0;
+  uint64_t TotalSize = 0;
+  uint32_t NumGlobals = 0;
 
   for (auto &OffloadEntry : GlobalEntries) {
     if (!OffloadEntry.Size)
       continue;
     // Get the total size of the string and entry including the null byte.
-    Size +=
-        OffloadEntry.Name.length() + 1 + sizeof(uint32_t) + OffloadEntry.Size;
+    TotalSize += OffloadEntry.Size + sizeof(uint32_t) + sizeof(uint64_t) +
+                 OffloadEntry.Name.length() + 1;
+    NumGlobals++;
   }
 
   ErrorOr<std::unique_ptr<WritableMemoryBuffer>> GlobalsMB =
-      WritableMemoryBuffer::getNewUninitMemBuffer(Size);
+      WritableMemoryBuffer::getNewUninitMemBuffer(TotalSize);
   if (!GlobalsMB)
     return Plugin::error(ErrorCode::UNKNOWN,
                          "creating MemoryBuffer for globals memory");
 
   void *BufferPtr = GlobalsMB.get()->getBufferStart();
+  *((uint32_t *)(BufferPtr)) = NumGlobals;
+  BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
+
   for (auto &OffloadEntry : GlobalEntries) {
     if (!OffloadEntry.Size)
       continue;
 
-    int32_t NameLength = OffloadEntry.Name.length() + 1;
+    uint32_t NameLength = OffloadEntry.Name.length() + 1;
+    *((uint32_t *)(BufferPtr)) = NameLength;
+    BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
+
+    *((uint64_t *)(BufferPtr)) = OffloadEntry.Size;
+    BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint64_t));
+
     memcpy(BufferPtr, OffloadEntry.Name.data(), NameLength);
     BufferPtr = utils::advancePtr(BufferPtr, NameLength);
-
-    *((uint32_t *)(BufferPtr)) = OffloadEntry.Size;
-    BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
     if (auto Err = Device.dataRetrieve(BufferPtr, OffloadEntry.Addr,
                                        OffloadEntry.Size, nullptr))
@@ -234,11 +242,11 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
   }
   assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
          "Buffer over/under-filled.");
-  assert(Size ==
+  assert(TotalSize ==
              utils::getPtrDiff(BufferPtr, GlobalsMB->get()->getBufferStart()) &&
          "Buffer size mismatch");
 
-  StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), Size);
+  StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), TotalSize);
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   OS << GlobalsMemory;

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Shared/Utils.h"
 #include "omptarget.h"
 
 #include "llvm/Frontend/Offloading/Utility.h"
@@ -81,6 +82,7 @@ int main(int argc, char **argv) {
   auto LoopTripCount =
       JsonKernelInfo->getAsObject()->getInteger("LoopTripCount");
   auto KernelFunc = JsonKernelInfo->getAsObject()->getString("Name");
+  std::string KernelName = KernelFunc.value().str();
 
   SmallVector<void *> TgtArgs;
   SmallVector<ptrdiff_t> TgtArgOffsets;
@@ -98,16 +100,50 @@ int main(int argc, char **argv) {
   uint64_t VAllocSize =
       JsonKernelInfo->getAsObject()->getInteger("VAllocSize").value();
 
-  llvm::offloading::EntryTy KernelEntry = {
-      0x0, 0x1,    object::OffloadKind::OFK_OpenMP, 0, nullptr, nullptr, 0,
-      0,   nullptr};
-  std::string KernelEntryName = KernelFunc.value().str();
-  KernelEntry.SymbolName = const_cast<char *>(KernelEntryName.c_str());
+  ErrorOr<std::unique_ptr<MemoryBuffer>> GlobalsMB =
+      MemoryBuffer::getFile(KernelName + ".globals", /*isText=*/false,
+                            /*RequiresNullTerminator=*/false);
+
+  if (!GlobalsMB)
+    reportFatalUsageError("Error reading the globals.");
+
+  // On AMD for currently unknown reasons we cannot copy memory mapped data to
+  // device. This is a work-around.
+  uint8_t *RecordedGlobals = new uint8_t[GlobalsMB.get()->getBufferSize()];
+  std::memcpy(RecordedGlobals,
+              const_cast<char *>(GlobalsMB.get()->getBuffer().data()),
+              GlobalsMB.get()->getBufferSize());
+
+  void *BufferPtr = (void *)RecordedGlobals;
+  uint32_t NumGlobals = *((uint32_t *)(BufferPtr));
+  BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
+
+  llvm::SmallVector<llvm::offloading::EntryTy> OffloadEntries(
+      NumGlobals + 1, {0x0, 0x1, object::OffloadKind::OFK_OpenMP, 0, nullptr,
+                       nullptr, 0, 0, nullptr});
+
+  OffloadEntries[0].SymbolName = const_cast<char *>(KernelName.c_str());
   // Anything non-zero works to uniquely identify the kernel.
-  KernelEntry.Address = (void *)0x1;
+  OffloadEntries[0].Address = (void *)0x1;
+
+  for (uint32_t I = 0; I < NumGlobals; ++I) {
+    auto &Global = OffloadEntries[I + 1];
+    uint32_t NameSize = *((uint32_t *)(BufferPtr));
+    BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
+    uint64_t Size = *((uint64_t *)(BufferPtr));
+    BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint64_t));
+    Global.Size = Size;
+    Global.SymbolName = (char *)BufferPtr;
+    BufferPtr = utils::advancePtr(BufferPtr, NameSize);
+    Global.AuxAddr = BufferPtr;
+    BufferPtr = utils::advancePtr(BufferPtr, Size);
+
+    // Use unique identifier.
+    Global.Address = static_cast<char *>(OffloadEntries[0].Address) + I + 1;
+  }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> ImageMB =
-      MemoryBuffer::getFile(KernelEntryName + ".image", /*isText=*/false,
+      MemoryBuffer::getFile(KernelName + ".image", /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
   if (!ImageMB)
     reportFatalUsageError("Error reading the kernel image.");
@@ -115,13 +151,13 @@ int main(int argc, char **argv) {
   __tgt_device_image DeviceImage;
   DeviceImage.ImageStart = const_cast<char *>(ImageMB.get()->getBufferStart());
   DeviceImage.ImageEnd = const_cast<char *>(ImageMB.get()->getBufferEnd());
-  DeviceImage.EntriesBegin = &KernelEntry;
-  DeviceImage.EntriesEnd = &KernelEntry + 1;
+  DeviceImage.EntriesBegin = &OffloadEntries[0];
+  DeviceImage.EntriesEnd = &OffloadEntries[OffloadEntries.size() - 1] + 1;
 
   __tgt_bin_desc Desc;
   Desc.NumDeviceImages = 1;
-  Desc.HostEntriesBegin = &KernelEntry;
-  Desc.HostEntriesEnd = &KernelEntry + 1;
+  Desc.HostEntriesBegin = &OffloadEntries[0];
+  Desc.HostEntriesEnd = &OffloadEntries[OffloadEntries.size() - 1] + 1;
   Desc.DeviceImages = &DeviceImage;
 
   auto DeviceIdJson = JsonKernelInfo->getAsObject()->getInteger("DeviceId");
@@ -141,7 +177,7 @@ int main(int argc, char **argv) {
   }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> DeviceMemoryMB =
-      MemoryBuffer::getFile(KernelEntryName + ".memory", /*isText=*/false,
+      MemoryBuffer::getFile(KernelName + ".memory", /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
 
   if (!DeviceMemoryMB)
@@ -155,14 +191,15 @@ int main(int argc, char **argv) {
               DeviceMemoryMB.get()->getBufferSize());
 
   __tgt_target_kernel_replay(
-      /*Loc=*/nullptr, DeviceId, KernelEntry.Address, (char *)RecordedData,
-      DeviceMemoryMB.get()->getBufferSize(), TgtArgs.data(),
+      /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
+      (char *)RecordedData, DeviceMemoryMB.get()->getBufferSize(),
+      NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       SharedMemorySize, LoopTripCount.value());
 
   if (VerifyOpt) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> OriginalOutputMB =
-        MemoryBuffer::getFile(KernelEntryName + ".original.output",
+        MemoryBuffer::getFile(KernelName + ".original.output",
                               /*isText=*/false,
                               /*RequiresNullTerminator=*/false);
     if (!OriginalOutputMB)
@@ -170,7 +207,7 @@ int main(int argc, char **argv) {
           "Error reading the kernel original output file, make sure "
           "LIBOMPTARGET_SAVE_OUTPUT is set when recording");
     ErrorOr<std::unique_ptr<MemoryBuffer>> ReplayOutputMB =
-        MemoryBuffer::getFile(KernelEntryName + ".replay.output",
+        MemoryBuffer::getFile(KernelName + ".replay.output",
                               /*isText=*/false,
                               /*RequiresNullTerminator=*/false);
     if (!ReplayOutputMB)
