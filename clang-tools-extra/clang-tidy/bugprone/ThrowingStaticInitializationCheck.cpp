@@ -7,12 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "ThrowingStaticInitializationCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
+
+ThrowingStaticInitializationCheck::ThrowingStaticInitializationCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoredTypes(
+          utils::options::parseStringList(Options.get("IgnoredTypes", ""))) {}
+
+void ThrowingStaticInitializationCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoredTypes",
+                utils::options::serializeStringList(IgnoredTypes));
+}
 
 void ThrowingStaticInitializationCheck::registerMatchers(MatchFinder *Finder) {
   // Match any static or thread_local variable declaration that has an
@@ -23,7 +37,9 @@ void ThrowingStaticInitializationCheck::registerMatchers(MatchFinder *Finder) {
           varDecl(
               anyOf(hasThreadStorageDuration(), hasStaticStorageDuration()),
               unless(anyOf(isConstexpr(), hasType(cxxRecordDecl(isLambda())),
-                           hasAncestor(functionDecl()))),
+                           hasAncestor(functionDecl()),
+                           hasType(tidy::matchers::matchesAnyListedTypeName(
+                               IgnoredTypes)))),
               anyOf(hasDescendant(cxxConstructExpr(hasDeclaration(
                         cxxConstructorDecl(unless(isNoThrow())).bind("func")))),
                     hasDescendant(cxxNewExpr(hasDeclaration(
