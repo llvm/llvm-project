@@ -49,12 +49,12 @@ void GsymReaderV2::dump(raw_ostream &OS) {
     assert(GDOrErr && "GlobalData::decode() should not fail");
     const GlobalData &GD = *GDOrErr;
 
+    OS << format("%-15s ", getNameForGlobalInfoType(GD.Type).data())
+       << HEX64(GD.FileOffset) << "  " << HEX64(GD.FileSize) << "\n";
+
+    // Stop printing after the end of list entry.
     if (GD.Type == GlobalInfoType::EndOfList)
       break;
-
-    OS << format("%-15s ", getNameForGlobalInfoType(GD.Type).data())
-       << HEX64(GlobalDataSections[GD.Type].FileOffset) << "  "
-       << HEX64(GlobalDataSections[GD.Type].FileSize) << "\n";
   }
   OS << "\n";
 
