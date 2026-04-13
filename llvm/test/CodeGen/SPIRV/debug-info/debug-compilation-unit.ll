@@ -18,7 +18,7 @@
 ; can be matched here as a DAG group together with the types.
 ; CHECK-SPIRV-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
 ; CHECK-SPIRV-DAG: [[type_i32:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG: [[debug_info_version:%[0-9]+]] = OpConstant [[type_i32]] 3
+; CHECK-SPIRV-DAG: [[debug_info_version:%[0-9]+]] = OpConstant [[type_i32]] 100
 ; CHECK-SPIRV-DAG: [[dwarf_version:%[0-9]+]] = OpConstant [[type_i32]] 5
 ; CHECK-SPIRV-DAG: [[source_language_sycl:%[0-9]+]] = OpConstant [[type_i32]] 7
 ; CHECK-SPIRV-DAG: [[source_language_cpp:%[0-9]+]] = OpConstant [[type_i32]] 4

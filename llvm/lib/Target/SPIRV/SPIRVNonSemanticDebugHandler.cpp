@@ -62,24 +62,25 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   for (const DICompileUnit *CU : M->debug_compile_units()) {
     const DIFile *File = CU->getFile();
     CompileUnitInfo Info;
-    sys::path::append(Info.FilePath, File->getDirectory(), File->getFilename());
+    if (sys::path::is_absolute(File->getFilename()))
+      Info.FilePath = File->getFilename();
+    else
+      sys::path::append(Info.FilePath, File->getDirectory(),
+                        File->getFilename());
     // getName() returns the language code regardless of whether the name is
     // versioned. getUnversionedName() would assert on versioned names.
     Info.SpirvSourceLanguage = toNSDISrcLang(CU->getSourceLanguage().getName());
     CompileUnits.push_back(std::move(Info));
   }
 
-  // Collect DWARF and debug-info version numbers from module flags.
+  // Collect DWARF version from module flags. For CodeView modules there is no
+  // "Dwarf Version" flag; DwarfVersion remains 0, which is the correct value
+  // for the DebugCompilationUnit DWARF Version operand in that case.
   if (const NamedMDNode *Flags = M->getNamedMetadata("llvm.module.flags")) {
     for (const auto *Op : Flags->operands()) {
       const MDOperand &NameOp = Op->getOperand(1);
       if (NameOp.equalsStr("Dwarf Version"))
         DwarfVersion =
-            cast<ConstantInt>(
-                cast<ConstantAsMetadata>(Op->getOperand(2))->getValue())
-                ->getSExtValue();
-      else if (NameOp.equalsStr("Debug Info Version"))
-        DebugInfoVersion =
             cast<ConstantInt>(
                 cast<ConstantAsMetadata>(Op->getOperand(2))->getValue())
                 ->getSExtValue();
@@ -285,8 +286,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   // so that the output order is: constants, then
   // DebugSource+DebugCompilationUnit pairs. This keeps OpConstant instructions
   // grouped before the OpExtInst instructions.
-  MCRegister DebugInfoVersionReg = emitOpConstantI32(
-      static_cast<uint32_t>(DebugInfoVersion), I32TypeReg, MAI);
+
+  // The Version operand of DebugCompilationUnit is the version of the
+  // NonSemantic.Shader.DebugInfo instruction set, which is 100 for
+  // "NonSemantic.Shader.DebugInfo.100" (NonSemanticShaderDebugInfo100Version).
+  MCRegister DebugInfoVersionReg = emitOpConstantI32(100, I32TypeReg, MAI);
   MCRegister DwarfVersionReg =
       emitOpConstantI32(static_cast<uint32_t>(DwarfVersion), I32TypeReg, MAI);
 

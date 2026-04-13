@@ -51,9 +51,12 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
     unsigned SpirvSourceLanguage = 0; // NonSemantic.Shader.DebugInfo.100 source
                                       // language code (section 4.3)
   };
+  // TODO: When per-function NSDI emission is implemented, augment
+  // CompileUnitInfo with the originating DICompileUnit pointer so that
+  // Parent operands on DebugFunction and similar instructions can resolve
+  // the compile unit's result register.
   SmallVector<CompileUnitInfo> CompileUnits;
   int64_t DwarfVersion = 0;
-  int64_t DebugInfoVersion = 0;
 
   // Types referenced by debug variable records, collected in beginModule().
   SetVector<const DIBasicType *> BasicTypes;

@@ -680,8 +680,8 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
                            NonSemantic_Shader_DebugInfo_100) {
           // TODO: This branch is dead. SPIRVNonSemanticDebugHandler emits NSDI
           // instructions directly as MCInsts at print time; no
-          // MachineInstructions with the NonSemantic_Shader_DebugInfo_100 ext
-          // set are created anymore. Remove this block and
+          // MachineInstructions with the NSDI ext set are created anymore.
+          // Remove this block and
           // MB_NonSemanticGlobalDI once per-function NSDI emission is confirmed
           // not to need MIR routing.
           MachineOperand Ins = MI.getOperand(3);
