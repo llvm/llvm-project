@@ -220,28 +220,25 @@ public:
   /// Return true if the number of elements that are safe to operate on
   /// simultaneously is not bounded.
   bool isSafeForAnyVectorWidth() const {
-    return MaxSafeVectorWidthInBits == UINT_MAX;
+    return MaxSafeNumElements == UINT_MAX;
   }
 
   /// Return the number of elements that are safe to operate on
-  /// simultaneously, multiplied by the size of the element in bits.
-  uint64_t getMaxSafeVectorWidthInBits() const {
-    return MaxSafeVectorWidthInBits;
-  }
+  /// simultaneously.
+  uint64_t getMaxSafeNumElements() const { return MaxSafeNumElements; }
 
   /// Return true if there are no store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
-    return MaxStoreLoadForwardSafeDistanceInBits ==
-           std::numeric_limits<uint64_t>::max();
+    return MaxStoreLoadForwardSafeNumElements == UINT_MAX;
   }
 
   /// Return safe power-of-2 number of elements, which do not prevent store-load
-  /// forwarding, multiplied by the size of the elements in bits.
-  uint64_t getStoreLoadForwardSafeDistanceInBits() const {
+  /// forwarding.
+  uint64_t getStoreLoadForwardSafeNumElements() const {
     assert(!isSafeForAnyStoreLoadForwardDistances() &&
            "Expected the distance, that prevent store-load forwarding, to be "
            "set.");
-    return MaxStoreLoadForwardSafeDistanceInBits;
+    return MaxStoreLoadForwardSafeNumElements;
   }
 
   /// In same cases when the dependency check fails we can still
@@ -339,16 +336,13 @@ private:
   /// simultaneously.
   uint64_t MinDepDistBytes = 0;
 
-  /// Number of elements (from consecutive iterations) that are safe to
-  /// operate on simultaneously, multiplied by the size of the element in bits.
-  /// The size of the element is taken from the memory access that is most
-  /// restrictive.
-  uint64_t MaxSafeVectorWidthInBits = -1U;
+  /// Number of elements (from consecutive iterations) that are safe to operate
+  /// on simultaneously.
+  uint64_t MaxSafeNumElements = -1U;
 
   /// Maximum power-of-2 number of elements, which do not prevent store-load
-  /// forwarding, multiplied by the size of the elements in bits.
-  uint64_t MaxStoreLoadForwardSafeDistanceInBits =
-      std::numeric_limits<uint64_t>::max();
+  /// forwarding.
+  uint64_t MaxStoreLoadForwardSafeNumElements = -1U;
 
   /// Whether we should try to vectorize the loop with runtime checks, if the
   /// dependencies are not safe.

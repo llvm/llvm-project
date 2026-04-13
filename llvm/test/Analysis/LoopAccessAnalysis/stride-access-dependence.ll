@@ -276,7 +276,7 @@ for.body:                                         ; preds = %entry, %for.body
 define void @vectorizable_Read_Write(ptr nocapture %A) {
 ; CHECK-LABEL: 'vectorizable_Read_Write'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits, with a maximum safe store-load forward width of 64 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 2, with a maximum safe store-load forward number of elements to operate on equal to 2
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %0 = load i32, ptr %arrayidx, align 4 ->
@@ -323,7 +323,7 @@ for.body:                                         ; preds = %entry, %for.body
 define i32 @vectorizable_Write_Read(ptr nocapture %A) {
 ; CHECK-LABEL: 'vectorizable_Write_Read'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 2
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            store i32 %0, ptr %arrayidx, align 4 ->
@@ -369,7 +369,7 @@ for.body:                                         ; preds = %entry, %for.body
 define void @vectorizable_Write_Write(ptr nocapture %A) {
 ; CHECK-LABEL: 'vectorizable_Write_Write'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 2
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            store i32 %0, ptr %arrayidx, align 4 ->
@@ -464,7 +464,7 @@ for.body:                                         ; preds = %entry, %for.body
 define i32 @vectorizable_unscaled_Write_Read(ptr nocapture %A) {
 ; CHECK-LABEL: 'vectorizable_unscaled_Write_Read'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 2
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            store i32 %0, ptr %arrayidx, align 4 ->

@@ -415,8 +415,8 @@ public:
            LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
   }
 
-  uint64_t getMaxSafeVectorWidthInBits() const {
-    return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
+  uint64_t getMaxSafeNumElements() const {
+    return LAI->getDepChecker().getMaxSafeNumElements();
   }
 
   /// Returns information about whether this loop contains at least one
@@ -447,8 +447,8 @@ public:
 
   /// Return safe power-of-2 number of elements, which do not prevent store-load
   /// forwarding and safe to operate simultaneously.
-  uint64_t getMaxStoreLoadForwardSafeDistanceInBits() const {
-    return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
+  uint64_t getMaxStoreLoadForwardSafeNumElements() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeNumElements();
   }
 
   /// Returns true if instruction \p I requires a mask for vectorization.
