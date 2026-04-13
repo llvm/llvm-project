@@ -92,6 +92,9 @@ public:
     HeaderOptions(Dylib D) : IDDylib(std::move(D)) {}
   };
 
+  /// Callback for generating HeaderOptions structs for new JITDylibs.
+  using HeaderOptionsBuilder = unique_function<HeaderOptions(JITDylib &JD)>;
+
   /// Used by setupJITDylib to create MachO header MaterializationUnits for
   /// JITDylibs.
   using MachOHeaderMUBuilder =
@@ -143,6 +146,7 @@ public:
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
          std::unique_ptr<DefinitionGenerator> OrcRuntime,
+         HeaderOptionsBuilder BuildHeaderOpts = defaultHeaderOpts,
          HeaderOptions PlatformJDOpts = {},
          MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
@@ -150,7 +154,9 @@ public:
   /// Construct using a path to the ORC runtime.
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
-         const char *OrcRuntimePath, HeaderOptions PlatformJDOpts = {},
+         const char *OrcRuntimePath,
+         HeaderOptionsBuilder BuildHeaderOpts = defaultHeaderOpts,
+         HeaderOptions PlatformJDOpts = {},
          MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
@@ -188,6 +194,8 @@ public:
   /// ORC runtime.
   static ArrayRef<std::pair<const char *, const char *>>
   standardLazyCompilationAliases();
+
+  static HeaderOptions defaultHeaderOpts(JITDylib &JD);
 
 private:
   using SymbolTableVector = SmallVector<
@@ -305,6 +313,7 @@ private:
 
   MachOPlatform(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                 std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
+                HeaderOptionsBuilder BuildHeaderOpts,
                 HeaderOptions PlatformJDOpts,
                 MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err);
 
@@ -334,6 +343,7 @@ private:
   ExecutionSession &ES;
   JITDylib &PlatformJD;
   ObjectLinkingLayer &ObjLinkingLayer;
+  HeaderOptionsBuilder BuildHeaderOpts;
   MachOHeaderMUBuilder BuildMachOHeaderMU;
 
   SymbolStringPtr MachOHeaderStartSymbol = ES.intern("___dso_handle");
