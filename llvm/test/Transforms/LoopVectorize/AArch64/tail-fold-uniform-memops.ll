@@ -38,7 +38,7 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %val = load i32, ptr %src, align 4
   %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %indvars.iv
@@ -47,7 +47,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -89,18 +89,18 @@ define void @cond_uniform_load(ptr noalias nocapture %dst, ptr nocapture readonl
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %if.end
+for.body:
   %index = phi i64 [ %index.next, %if.end ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %cond, i64 %index
   %0 = load i32, ptr %arrayidx, align 4
   %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %if.end, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %1 = load i32, ptr %src, align 4
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %for.body
+if.end:
   %val.0 = phi i32 [ %1, %if.then ], [ 0, %for.body ]
   %arrayidx1 = getelementptr inbounds i32, ptr %dst, i64 %index
   store i32 %val.0, ptr %arrayidx1, align 4
@@ -108,7 +108,7 @@ if.end:                                           ; preds = %if.then, %for.body
   %exitcond.not = icmp eq i64 %index.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   ret void
 }
 

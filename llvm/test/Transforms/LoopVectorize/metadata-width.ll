@@ -10,7 +10,7 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
   store i32 42, ptr %arrayidx, align 4
@@ -19,7 +19,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -31,7 +31,7 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
   store i32 42, ptr %arrayidx, align 4
@@ -40,7 +40,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !2
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -52,7 +52,7 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
   store i32 42, ptr %arrayidx, align 4
@@ -61,7 +61,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -76,7 +76,7 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
   store i32 42, ptr %arrayidx, align 4
@@ -85,7 +85,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !6
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
