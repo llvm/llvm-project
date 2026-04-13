@@ -1171,12 +1171,10 @@ Expected<Archive::Child> Archive::Symbol::getMember() const {
     // is needed here.
     Offset = read64le(Offsets + SymbolIndex * 16 + 8);
   } else if (Parent->kind() == K_ZOS) {
-    // The contents of the symbol table member in order are:
-    // 1. The number of symbols, NS (4 byte integer).
-    // 2. NS pairs of integers (the first in each pair of integers is the offset
-    //    to the header of the entry... the second being coded attributes).
-    //    Length is NS*(4+4) bytes.
-    // 3. NS null terminated strings of corresponding symbol names.
+    // Each entry in the offset array is 8 bytes long:
+    // A 4-byte offset followed by 4 bytes of coded attributes.
+    // We multiply the SymbolIndex by 8 to reach the correct entry,
+    // and read the first 4 bytes (the offset).
     Offset = read32be(Offsets + SymbolIndex * 8);
   } else {
     // Skip offsets.
@@ -1308,6 +1306,12 @@ Archive::symbol_iterator Archive::symbol_begin() const {
   } else if (kind() == K_AIXBIG) {
     buf = getStringTable().begin();
   } else if (kind() == K_ZOS) {
+    // The contents of the z/OS symbol table member are:
+    // 1. The number of symbols, NS (4-byte integer).
+    // 2. NS pairs of 4-byte integers (offset and attributes). Length is NS*8
+    // bytes.
+    // 3. NS null terminated strings of corresponding symbol names.
+    // Here we skip parts 1 and 2 to reach the start of the string table.
     uint32_t symbol_count = read32be(buf);
     buf += sizeof(uint32_t) + (symbol_count * (sizeof(uint64_t)));
   } else {
