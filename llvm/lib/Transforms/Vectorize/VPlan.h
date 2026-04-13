@@ -4959,12 +4959,12 @@ public:
            (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
   }
 
-  /// Returns true if the scalar tail may execute after the vector loop. Note
-  /// that this relies on unneeded branches to the scalar tail loop being
-  /// removed.
+  /// Returns true if the scalar tail may execute after the vector loop, i.e.
+  /// if the middle block is a predecessor of the scalar preheader. Note that
+  /// this relies on unneeded branches to the scalar tail loop being removed.
   bool hasScalarTail() const {
-    return !(!getScalarPreheader()->hasPredecessors() ||
-             getScalarPreheader()->getSinglePredecessor() == getEntry());
+    return is_contained(getScalarPreheader()->getPredecessors(),
+                        getMiddleBlock());
   }
 };
 
