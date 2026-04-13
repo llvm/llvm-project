@@ -238,6 +238,11 @@ eddyz87@gmail.com (email), [eddyz87](https://github.com/eddyz87) (GitHub)
 Zi Xuan Wu (Zeson) \
 zixuan.wu@linux.alibaba.com (email), [zixuan-wu](https://github.com/zixuan-wu) (GitHub)
 
+#### Connex backend
+
+Alex Susu \
+alex.susu@gmail.com (email), [alexsusu](https://github.com/alexsusu) (GitHub)
+
 #### DirectX backend
 
 Justin Bogner \

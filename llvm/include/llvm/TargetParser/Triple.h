@@ -58,6 +58,7 @@ public:
     avr,         // AVR: Atmel AVR microcontroller
     bpfel,       // eBPF or extended BPF or 64-bit BPF (little endian)
     bpfeb,       // eBPF or extended BPF or 64-bit BPF (big endian)
+    connex,      // Connex vector processor (SIMD array)
     csky,        // CSKY: csky
     dxil,        // DXIL 32-bit DirectX bytecode
     hexagon,     // Hexagon: hexagon
