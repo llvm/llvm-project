@@ -1368,7 +1368,7 @@ static bool canEmitDelegateCallArgs(CIRGenModule &cgm, ASTContext &ctx,
     // When we get an understanding of what the the calling-convention code
     // needs here, we should be able to replace this with either a 'return
     // false' or 'return true'.
-    // Perhaps we should be checking isParamDestroyedInCallee? 
+    // Perhaps we should be checking isParamDestroyedInCallee?
     cgm.errorNYI(d->getSourceRange(),
                  "canEmitDelegateCallArgs: args-destroyed-L-to-R in callee");
   }
