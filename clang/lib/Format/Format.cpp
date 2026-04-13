@@ -4428,11 +4428,11 @@ const char *StyleOptionHelpDescription =
     "   --style=\"{BasedOnStyle: llvm, IndentWidth: 8}\"";
 
 static FormatStyle::LanguageKind getLanguageByFileName(StringRef &FileName) {
-  constexpr std::array TemplateSuffixes{StringRef{".in"},
-                                        StringRef{".template"}};
+  constexpr std::array TemplateSuffixes{llvm::StringLiteral{".in"},
+                                        llvm::StringLiteral{".template"}};
   for (auto Suffix : TemplateSuffixes)
-    if (FileName.ends_with(Suffix))
-      FileName = FileName.drop_back(Suffix.size());
+    if (FileName.consume_back(Suffix))
+      break;
 
   if (FileName.ends_with(".c"))
     return FormatStyle::LK_C;
