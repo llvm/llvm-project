@@ -205,7 +205,11 @@ class SymStoreTests(TestBase):
             # Symbol path with plain directory
             with NtSymbolPath(dir):
                 self.try_breakpoint(exe, should_have_loc=True)
-            self.assertFalse(any(files for _, _, files in os.walk(cache_dir)))
+            # Symbol path with local directory in server notation
+            with NtSymbolPath(f"srv*{dir}"):
+                self.try_breakpoint(exe, should_have_loc=True)
+            cached_files = sum(len(f) for _, _, f in os.walk(symstore.cache_dir))
+            self.assertEqual(cached_files, 0)
 
     def test_nt_symbol_path_srv(self):
         """
@@ -219,4 +223,7 @@ class SymStoreTests(TestBase):
                 with NtSymbolPath(f"srv*{url}"):
                     self.try_breakpoint(exe, should_have_loc=True)
             key = symstore.get_key_pdb(exe)
-            self.assertTrue(os.path.isfile(os.path.join(cache_dir, sym, key, sym)))
+            cache_file = os.path.join(symstore.cache_dir, sym, key, sym)
+            self.assertTrue(os.path.isfile(cache_file))
+            cached_files = sum(len(f) for _, _, f in os.walk(symstore.cache_dir))
+            self.assertEqual(cached_files, 1)
