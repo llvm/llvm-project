@@ -760,10 +760,9 @@ void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
                                        cir::FuncOp callee) {
   // Forward all function arguments, replacing 'this' with the adjusted pointer.
   // The call is marked musttail so varargs are forwarded correctly.
-  auto thunkFn = cast<cir::FuncOp>(curFn);
-  mlir::Block &entryBlock = thunkFn.getBody().front();
+  mlir::Block *entryBlock = getCurFunctionEntryBlock();
   SmallVector<mlir::Value> args;
-  for (mlir::BlockArgument arg : entryBlock.getArguments())
+  for (mlir::BlockArgument arg : entryBlock->getArguments())
     args.push_back(arg);
 
   // Replace the 'this' argument (first arg) with the adjusted pointer.
@@ -772,7 +771,7 @@ void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
     adjustedThisPtr = builder.createBitcast(adjustedThisPtr, args[0].getType());
   args[0] = adjustedThisPtr;
 
-  mlir::Location loc = thunkFn.getLoc();
+  mlir::Location loc = curFn->getLoc();
   cir::FuncType calleeTy = callee.getFunctionType();
   mlir::Type retTy = calleeTy.getReturnType();
 
