@@ -16,6 +16,6 @@ __attribute__((target("branch-protection=bti,harden-pac-ret=load-return-address"
 void
 badvalue3(void) {}
 
-__attribute__((target("branch-protection=bti,harden-pac-ret=inexistent"))) // expected-error {{invalid or misplaced pac-ret hardening specification 'inexistent'}}
+__attribute__((target("branch-protection=bti,harden-pac-ret=inexistent"))) // expected-error {{invalid or misspelled pac-ret hardening specification 'inexistent'}}
 void
 badvalue4(void) {}

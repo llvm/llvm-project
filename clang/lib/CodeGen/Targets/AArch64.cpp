@@ -159,10 +159,17 @@ public:
         (void)CGM.getTarget().validateBranchProtection(
             Attr.BranchProtection, Attr.CPU, BPI, CGM.getLangOpts(), Error);
         assert(Error.empty());
+
+        // Hardening is only accepted in the target attribute if PAC-RET is also
+        // present there. Invalid combinations are handled in Sema.
+        if (BPI.SignReturnAddr !=
+            LangOptions::SignReturnAddressScopeKind::None) {
+          if (auto Hardening = CGM.getTarget().parseSignReturnAddressHardening(
+                  Attr.SignReturnAddrHardening)) {
+            BPI.SignReturnAddressHardening = *Hardening;
+          }
+        }
       }
-      if (!Attr.SignReturnAddrHardening.empty())
-        Fn->addFnAttr("sign-return-address-harden",
-                      Attr.SignReturnAddrHardening);
     }
     setBranchProtectionFnAttributes(BPI, *Fn);
     setPointerAuthFnAttributes(CGM.getCodeGenOpts().PointerAuth, *Fn);

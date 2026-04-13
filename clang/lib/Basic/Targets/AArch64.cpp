@@ -277,8 +277,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 }
 
 std::optional<LangOptions::SignReturnAddressHardeningKind>
-AArch64TargetInfo::validateSignReturnAddressHardening(StringRef Spec) const {
-  assert(!Spec.empty() && "Spec must not be empty");
+AArch64TargetInfo::parseSignReturnAddressHardening(StringRef Spec) const {
   return llvm::StringSwitch<
              std::optional<LangOptions::SignReturnAddressHardeningKind>>(Spec)
       .Case("load-return-address",

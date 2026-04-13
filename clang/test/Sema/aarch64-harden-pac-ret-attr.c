@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a %s -o - \
-// RUN: | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm -target-cpu generic -target-feature +v8.5a %s -o - | FileCheck %s
+
+// The following test that the function attributes take precedence over command-line options
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm -target-cpu generic -target-feature +v8.5a %s -msign-return-address=all -mharden-pac-ret=none -o - | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm -target-cpu generic -target-feature +v8.5a %s -msign-return-address=all -mharden-pac-ret=load-return-address -o - | FileCheck %s
 
 __attribute__ ((target("branch-protection=pac-ret,harden-pac-ret=none")))
 void f1() {}
@@ -33,11 +36,19 @@ __attribute__ ((target("branch-protection=pac-ret+leaf+b-key,harden-pac-ret=load
 void f8() {}
 // CHECK: define{{.*}} void @f8() #[[#F8:]]
 
-// CHECK-DAG: attributes #[[#F1]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-harden"="none"
-// CHECK-DAG: attributes #[[#F2]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address"
-// CHECK-DAG: attributes #[[#F3]] = { {{.*}} "sign-return-address"="all" "sign-return-address-harden"="none"
-// CHECK-DAG: attributes #[[#F4]] = { {{.*}} "sign-return-address"="all" "sign-return-address-harden"="load-return-address"
-// CHECK-DAG: attributes #[[#F5]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-harden"="none" "sign-return-address-key"="b_key"
-// CHECK-DAG: attributes #[[#F6]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key"
-// CHECK-DAG: attributes #[[#F7]] = { {{.*}} "sign-return-address"="all" "sign-return-address-harden"="none" "sign-return-address-key"="b_key"
-// CHECK-DAG: attributes #[[#F8]] = { {{.*}} "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key"
+// These check patterns rely on the fact that "sign-return-address-harden" appears after "sign-return-address"
+
+// CHECK:     attributes #[[#F1]] = { {{.*}} "sign-return-address"="non-leaf"
+// CHECK-NOT: "sign-return-address-harden"
+// CHECK:     attributes #[[#F2]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address"
+// CHECK:     attributes #[[#F3]] = { {{.*}} "sign-return-address"="all"
+// CHECK-NOT: "sign-return-address-harden"
+// CHECK:     attributes #[[#F4]] = { {{.*}} "sign-return-address"="all" "sign-return-address-harden"="load-return-address"
+// CHECK:     attributes #[[#F5]] = { {{.*}} "sign-return-address"="non-leaf"
+// CHECK-NOT: "sign-return-address-harden"
+// CHECK:     "sign-return-address-key"="b_key"
+// CHECK:     attributes #[[#F6]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key"
+// CHECK:     attributes #[[#F7]] = { {{.*}} "sign-return-address"="all"
+// CHECK-NOT: "sign-return-address-harden"
+// CHECK:     "sign-return-address-key"="b_key"
+// CHECK:     attributes #[[#F8]] = { {{.*}} "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key"

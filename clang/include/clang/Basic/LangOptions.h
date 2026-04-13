@@ -735,11 +735,6 @@ public:
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
 
-  bool hasSignReturnAddressHardening() const {
-    return getSignReturnAddressHardening() !=
-           SignReturnAddressHardeningKind::None;
-  }
-
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
 
   bool hasDefaultVisibilityExportMapping() const {

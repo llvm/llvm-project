@@ -148,7 +148,7 @@ public:
                                 const LangOptions &LO,
                                 StringRef &Err) const override;
   std::optional<LangOptions::SignReturnAddressHardeningKind>
-  validateSignReturnAddressHardening(StringRef Spec) const override;
+  parseSignReturnAddressHardening(StringRef Spec) const override;
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
