@@ -2537,9 +2537,4 @@ struct Holder {
   std::string_view view = std::string("temporary"); // expected-warning {{address of stack memory escapes to a field}} expected-note {{this field dangles}}
   Holder() {}
 };
-
-void test() {
-  Holder h;
-  (void)h;
-}
 } // namespace CXXDefaultInitExprTests
