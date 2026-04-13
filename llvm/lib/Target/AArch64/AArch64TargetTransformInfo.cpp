@@ -811,15 +811,20 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         {ISD::CTPOP, MVT::v2i32, 3},
         {ISD::CTPOP, MVT::v4i16, 2},
         {ISD::CTPOP, MVT::v8i8,  1},
-        {ISD::CTPOP, MVT::i32,   5},
+        {ISD::CTPOP, MVT::i32,   4},
     };
+    EVT VT = TLI->getValueType(DL, RetTy, true);
+    // i8 ctpop can avoid the uaddlv after cnt since only one byte is active,
+    // making it cheaper than the legalized i32 cost.
+    if (VT == MVT::i8)
+      return 4;
+
     auto LT = getTypeLegalizationCost(RetTy);
     MVT MTy = LT.second;
     if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP, MTy)) {
-      // Extra cost of +1 when illegal vector types are legalized by promoting
+      // Extra cost of +1 when illegal vector/scalar types are legalized by promoting
       // the integer type.
-      int ExtraCost = MTy.isVector() && MTy.getScalarSizeInBits() !=
-                                            RetTy->getScalarSizeInBits()
+      int ExtraCost = MTy.getScalarSizeInBits() != RetTy->getScalarSizeInBits()
                           ? 1
                           : 0;
       return LT.first * Entry->Cost + ExtraCost;
