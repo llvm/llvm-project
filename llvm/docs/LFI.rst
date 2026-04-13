@@ -323,7 +323,7 @@ Thread-local storage
 ~~~~~~~~~~~~~~~~~~~~
 
 TLS accesses are rewritten into loads/stores from the context register
-(``x25``), which holds the virtual thread pointer at offset 32 (see
+(``x25``), which holds the virtual thread pointer at offset 16 (see
 `Context Register`_).
 
 +----------------------+-------------------------+
@@ -331,12 +331,12 @@ TLS accesses are rewritten into loads/stores from the context register
 +----------------------+-------------------------+
 | .. code-block::      | .. code-block::         |
 |                      |                         |
-|    mrs xN, tpidr_el0 |    ldr xN, [x25, #32]   |
+|    mrs xN, tpidr_el0 |    ldr xN, [x25, #16]   |
 |                      |                         |
 +----------------------+-------------------------+
 | .. code-block::      | .. code-block::         |
 |                      |                         |
-|    msr tpidr_el0, xN |    str xN, [x25, #32]   |
+|    msr tpidr_el0, xN |    str xN, [x25, #16]   |
 |                      |                         |
 +----------------------+-------------------------+
 

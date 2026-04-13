@@ -33,6 +33,10 @@ static constexpr MCRegister LFICtxReg = AArch64::X25;
 // 64-bit loads), so a value of 2 means an actual byte offset of 16.
 static constexpr unsigned LFITPOffset = 2;
 
+// Byte offset from the sandbox base register where the syscall handler address
+// is stored (negative because it is below the sandbox base).
+static constexpr int LFISyscallOffset = -8;
+
 static bool isSyscall(const MCInst &Inst) {
   return Inst.getOpcode() == AArch64::SVC;
 }
@@ -123,7 +127,7 @@ void AArch64MCLFIRewriter::rewriteSyscall(const MCInst &, MCStreamer &Out,
   Load.setOpcode(AArch64::LDURXi);
   Load.addOperand(MCOperand::createReg(AArch64::LR));
   Load.addOperand(MCOperand::createReg(LFIBaseReg));
-  Load.addOperand(MCOperand::createImm(-8));
+  Load.addOperand(MCOperand::createImm(LFISyscallOffset));
   emitInst(Load, Out, STI);
 
   // Call the runtime.
