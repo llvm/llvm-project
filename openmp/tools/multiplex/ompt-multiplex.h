@@ -21,7 +21,9 @@
 #endif
 #include <dlfcn.h>
 #include <errno.h>
+#ifndef __HAIKU__
 #include <execinfo.h>
+#endif
 #include <inttypes.h>
 #include <omp-tools.h>
 #include <omp.h>

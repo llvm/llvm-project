@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/new.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
 #include "src/stdlib/rand.h"
 #include "src/stdlib/srand.h"
@@ -78,7 +79,7 @@ TEST(LlvmLibcHashTest, Avalanche) {
       }
       for (size_t i = 0; i < sz; ++i) {
         for (size_t j = 0; j < 8; ++j) {
-          uint8_t mask = 1 << j;
+          uint8_t mask = static_cast<uint8_t>(1 << j);
           mem.data[i] ^= mask;
           {
             LIBC_NAMESPACE::internal::HashState state{0xabcdef1234567890};

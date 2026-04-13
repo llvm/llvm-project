@@ -5,7 +5,7 @@ define double @testExp(double %val, i32 %a) {
 ; LINUX:    b ldexp{{$}}
 ; WINDOWS:  b.w ldexp{{$}}
 entry:
-  %call = tail call fast double @ldexp(double %val, i32 %a)
+  %call = tail call double @ldexp(double %val, i32 %a)
   ret double %call
 }
 
@@ -15,7 +15,7 @@ define double @testExpIntrinsic(double %val, i32 %a) {
 ; LINUX:    b ldexp{{$}}
 ; WINDOWS:  b.w ldexp{{$}}
 entry:
-  %call = tail call fast double @llvm.ldexp.f64(double %val, i32 %a)
+  %call = tail call double @llvm.ldexp.f64(double %val, i32 %a)
   ret double %call
 }
 
@@ -23,7 +23,7 @@ define float @testExpf(float %val, i32 %a) {
 ; LINUX:    b ldexpf
 ; WINDOWS:  b.w ldexpf
 entry:
-  %call = tail call fast float @ldexpf(float %val, i32 %a)
+  %call = tail call float @ldexpf(float %val, i32 %a)
   ret float %call
 }
 
@@ -31,7 +31,7 @@ define float @testExpfIntrinsic(float %val, i32 %a) {
 ; LINUX:    b ldexpf
 ; WINDOWS:  bl ldexp{{$}}
 entry:
-  %call = tail call fast float @llvm.ldexp.f32(float %val, i32 %a)
+  %call = tail call float @llvm.ldexp.f32(float %val, i32 %a)
   ret float %call
 }
 
@@ -41,7 +41,7 @@ define fp128 @testExpl(fp128 %val, i32 %a) {
 ; LINUX:    bl ldexpl
 ; WINDOWS:    b.w ldexpl
 entry:
-  %call = tail call fast fp128 @ldexpl(fp128 %val, i32 %a)
+  %call = tail call fp128 @ldexpl(fp128 %val, i32 %a)
   ret fp128 %call
 }
 
@@ -51,7 +51,7 @@ define half @testExpf16(half %val, i32 %a) {
 ; LINUX: bl ldexpf
 ; WINDOWS: bl ldexp{{$}}
 entry:
-  %0 = tail call fast half @llvm.ldexp.f16.i32(half %val, i32 %a)
+  %0 = tail call half @llvm.ldexp.f16.i32(half %val, i32 %a)
   ret half %0
 }
 

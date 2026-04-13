@@ -18,13 +18,13 @@
 # RUN: yaml2obj %t/test.yaml | llvm-dwarfdump --error-display=details --verify - | FileCheck %s
 # CHECK: No errors.
 
-# RUN: sed '0,/HighOffset: 0x6000/{s//HighOffset: 0x5999/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-RANGES
+# RUN: sed -e '1,/HighOffset: 0x6000/s/HighOffset: 0x6000/HighOffset: 0x5999/' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-RANGES
 # CHECK-RANGES: error: DIEs have overlapping address ranges
 
-# RUN: sed '0,/Value:  0x77/{s/Value:  0x77/Value:  0x66/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-HIGH-PC
+# RUN: sed -e '1,/Value:  0x77/s/Value:  0x77/Value:  0x66/' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-HIGH-PC
 # CHECK-HIGH-PC: error: DIEs have overlapping address ranges
 
-# RUN: sed '0,/LowOffset:  0x880111/{s//LowOffset:  0x880112/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-LEX-BLOCK
+# RUN: sed -e '1,/LowOffset:  0x880111/s/LowOffset:  0x880111/LowOffset:  0x880112/' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-LEX-BLOCK
 # CHECK-LEX-BLOCK: DIE has overlapping ranges in DW_AT_ranges attribute
 
 #--- test.yaml

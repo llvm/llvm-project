@@ -14,8 +14,8 @@ class CreateDuringInstructionStepTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessPlatform(["linux"])
-    @expectedFailureAndroid("llvm.org/pr24737", archs=["arm"])
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr24737")
+    @expectedFailureAndroid("llvm.org/pr24737", archs=["arm$"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"], bugnumber="llvm.org/pr24737")
     def test_step_inst(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

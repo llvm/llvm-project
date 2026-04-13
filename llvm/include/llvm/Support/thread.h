@@ -17,7 +17,10 @@
 #define LLVM_SUPPORT_THREAD_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
+#include <tuple>
+#include <utility>
 
 #ifdef _WIN32
 typedef unsigned long DWORD;
@@ -31,7 +34,7 @@ typedef PVOID HANDLE;
 
 namespace llvm {
 
-#if LLVM_ON_UNIX || _WIN32
+#if defined(LLVM_ON_UNIX) || defined(_WIN32)
 
 /// LLVM thread following std::thread interface with added constructor to
 /// specify stack size.
@@ -46,9 +49,13 @@ class thread {
   }
 
 public:
-#if LLVM_ON_UNIX
+#ifdef LLVM_ON_UNIX
   using native_handle_type = pthread_t;
+#ifdef __MVS__
+  using id = unsigned long long;
+#else
   using id = pthread_t;
+#endif
   using start_routine_type = void *(*)(void *);
 
   template <typename CalleeTuple> static void *ThreadProxy(void *Ptr) {
@@ -67,7 +74,7 @@ public:
   }
 #endif
 
-  static const std::optional<unsigned> DefaultStackSize;
+  LLVM_ABI static const std::optional<unsigned> DefaultStackSize;
 
   thread() : Thread(native_handle_type()) {}
   thread(thread &&Other) noexcept
@@ -94,7 +101,7 @@ public:
     return *this;
   }
 
-  bool joinable() const noexcept { return Thread != native_handle_type(); }
+  bool joinable() const noexcept { return get_id() != 0; }
 
   inline id get_id() const noexcept;
 
@@ -113,24 +120,24 @@ private:
   native_handle_type Thread;
 };
 
-thread::native_handle_type
+LLVM_ABI thread::native_handle_type
 llvm_execute_on_thread_impl(thread::start_routine_type ThreadFunc, void *Arg,
                             std::optional<unsigned> StackSizeInBytes);
-void llvm_thread_join_impl(thread::native_handle_type Thread);
-void llvm_thread_detach_impl(thread::native_handle_type Thread);
-thread::id llvm_thread_get_id_impl(thread::native_handle_type Thread);
-thread::id llvm_thread_get_current_id_impl();
+LLVM_ABI void llvm_thread_join_impl(thread::native_handle_type Thread);
+LLVM_ABI void llvm_thread_detach_impl(thread::native_handle_type Thread);
+LLVM_ABI thread::id llvm_thread_get_id_impl(thread::native_handle_type Thread);
+LLVM_ABI thread::id llvm_thread_get_current_id_impl();
 
 template <class Function, class... Args>
 thread::thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
                Args &&...args) {
-  typedef std::tuple<std::decay_t<Function>, std::decay_t<Args>...> CalleeTuple;
+  using CalleeTuple = std::tuple<std::decay_t<Function>, std::decay_t<Args>...>;
   std::unique_ptr<CalleeTuple> Callee(
       new CalleeTuple(std::forward<Function>(f), std::forward<Args>(args)...));
 
   Thread = llvm_execute_on_thread_impl(ThreadProxy<CalleeTuple>, Callee.get(),
                                        StackSizeInBytes);
-  if (Thread != native_handle_type())
+  if (joinable())
     Callee.release();
 }
 
@@ -202,8 +209,8 @@ private:
 };
 
 namespace this_thread {
-  inline thread::id get_id() { return std::this_thread::get_id(); }
-}
+inline thread::id get_id() { return std::this_thread::get_id(); }
+} // namespace this_thread
 
 #endif // LLVM_ON_UNIX || _WIN32
 
@@ -211,6 +218,7 @@ namespace this_thread {
 
 #else // !LLVM_ENABLE_THREADS
 
+#include "llvm/Support/ErrorHandling.h"
 #include <utility>
 
 namespace llvm {

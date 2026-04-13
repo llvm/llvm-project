@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void f(int *A) {
 ;      for (int i = 0; i < 128; i++)

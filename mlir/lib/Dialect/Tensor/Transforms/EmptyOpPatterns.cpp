@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -41,10 +40,14 @@ struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
         !llvm::hasSingleElement(resultShapes))
       return failure();
 
+    Attribute encoding;
+    if (auto tensorTy = dyn_cast<RankedTensorType>(reshapeOp.getResultType()))
+      encoding = tensorTy.getEncoding();
+
     // Create new tensor.empty op.
-    // TODO: Do not drop tensor type encoding.
-    Value emptyTensor = rewriter.create<EmptyOp>(
-        loc, resultShapes[0], reshapeOp.getResultType().getElementType());
+    Value emptyTensor =
+        EmptyOp::create(rewriter, loc, resultShapes[0],
+                        reshapeOp.getResultType().getElementType(), encoding);
     if (emptyTensor.getType() != reshapeOp.getResultType()) {
       rewriter.replaceOpWithNewOp<tensor::CastOp>(
           reshapeOp, reshapeOp.getResultType(), emptyTensor);
@@ -93,49 +96,6 @@ private:
   bool foldSingleUseOnly = false;
 };
 
-/// tensor.empty does not define any tensor contents, so an unpadded pack
-/// can be folded away.
-struct FoldEmptyTensorWithPackOp : public OpRewritePattern<PackOp> {
-  using OpRewritePattern<PackOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(PackOp packOp,
-                                PatternRewriter &rewriter) const override {
-    // Check for tensor.empty source.
-    auto emptyOp = packOp.getSource().getDefiningOp<EmptyOp>();
-    if (!emptyOp)
-      return failure();
-
-    // Check for padding.
-    // Packing with padding cannot be simply removed.
-    if (packOp.getPaddingValue())
-      return rewriter.notifyMatchFailure(packOp, "expects no padding value");
-
-    // Replace the pack directly with its destination.
-    rewriter.replaceOp(packOp, packOp.getDest());
-
-    return success();
-  }
-};
-
-/// tensor.empty does not define any tensor contents, so an unpack
-/// can be folded away.
-struct FoldEmptyTensorWithUnPackOp : public OpRewritePattern<UnPackOp> {
-  using OpRewritePattern<UnPackOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(UnPackOp unPackOp,
-                                PatternRewriter &rewriter) const override {
-    // Check for tensor.empty source.
-    auto emptyOp = unPackOp.getSource().getDefiningOp<EmptyOp>();
-    if (!emptyOp)
-      return failure();
-
-    // Replace the unpack directly with its destination.
-    rewriter.replaceOp(unPackOp, unPackOp.getDest());
-
-    return success();
-  }
-};
-
 // Fold concat operation where all the operands are empty.
 struct FoldConcatsOfEmpty : public OpRewritePattern<ConcatOp> {
   using OpRewritePattern<ConcatOp>::OpRewritePattern;
@@ -176,7 +136,6 @@ void mlir::tensor::populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
                FoldEmptyTensorWithReshapeOp<tensor::ExpandShapeOp>,
                FoldEmptyTensorWithReshapeOp<tensor::CollapseShapeOp>>(
       patterns.getContext(), /*benefit=*/1, foldSingleUseOnly);
-  patterns.add<FoldConcatsOfEmpty, FoldEmptyTensorWithPackOp,
-               FoldEmptyTensorWithUnPackOp>(patterns.getContext(),
-                                            /*benefit=*/1);
+  patterns.add<FoldConcatsOfEmpty>(patterns.getContext(),
+                                   /*benefit=*/1);
 }

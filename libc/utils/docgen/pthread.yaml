@@ -1,0 +1,262 @@
+functions:
+  pthread_atfork:
+    in-latest-posix: ''
+  pthread_attr_destroy:
+    in-latest-posix: ''
+  pthread_attr_getdetachstate:
+    in-latest-posix: ''
+  pthread_attr_getguardsize:
+    in-latest-posix: ''
+  pthread_attr_getinheritsched:
+    in-latest-posix: ''
+  pthread_attr_getschedparam:
+    in-latest-posix: ''
+  pthread_attr_getschedpolicy:
+    in-latest-posix: ''
+  pthread_attr_getscope:
+    in-latest-posix: ''
+  pthread_attr_getstack:
+    in-latest-posix: ''
+  pthread_attr_getstacksize:
+    in-latest-posix: ''
+  pthread_attr_init:
+    in-latest-posix: ''
+  pthread_attr_setdetachstate:
+    in-latest-posix: ''
+  pthread_attr_setguardsize:
+    in-latest-posix: ''
+  pthread_attr_setinheritsched:
+    in-latest-posix: ''
+  pthread_attr_setschedparam:
+    in-latest-posix: ''
+  pthread_attr_setschedpolicy:
+    in-latest-posix: ''
+  pthread_attr_setscope:
+    in-latest-posix: ''
+  pthread_attr_setstack:
+    in-latest-posix: ''
+  pthread_attr_setstacksize:
+    in-latest-posix: ''
+  pthread_barrier_destroy:
+    in-latest-posix: ''
+  pthread_barrier_init:
+    in-latest-posix: ''
+  pthread_barrier_wait:
+    in-latest-posix: ''
+  pthread_barrierattr_destroy:
+    in-latest-posix: ''
+  pthread_barrierattr_getpshared:
+    in-latest-posix: ''
+  pthread_barrierattr_init:
+    in-latest-posix: ''
+  pthread_barrierattr_setpshared:
+    in-latest-posix: ''
+  pthread_cancel:
+    in-latest-posix: ''
+  pthread_cleanup_pop:
+    in-latest-posix: ''
+  pthread_cleanup_push:
+    in-latest-posix: ''
+  pthread_cond_broadcast:
+    in-latest-posix: ''
+  pthread_cond_clockwait:
+    in-latest-posix: ''
+  pthread_cond_destroy:
+    in-latest-posix: ''
+  pthread_cond_init:
+    in-latest-posix: ''
+  pthread_cond_signal:
+    in-latest-posix: ''
+  pthread_cond_timedwait:
+    in-latest-posix: ''
+  pthread_cond_wait:
+    in-latest-posix: ''
+  pthread_condattr_destroy:
+    in-latest-posix: ''
+  pthread_condattr_getclock:
+    in-latest-posix: ''
+  pthread_condattr_getpshared:
+    in-latest-posix: ''
+  pthread_condattr_init:
+    in-latest-posix: ''
+  pthread_condattr_setclock:
+    in-latest-posix: ''
+  pthread_condattr_setpshared:
+    in-latest-posix: ''
+  pthread_create:
+    in-latest-posix: ''
+  pthread_detach:
+    in-latest-posix: ''
+  pthread_equal:
+    in-latest-posix: ''
+  pthread_exit:
+    in-latest-posix: ''
+  pthread_getcpuclockid:
+    in-latest-posix: ''
+  pthread_getschedparam:
+    in-latest-posix: ''
+  pthread_getspecific:
+    in-latest-posix: ''
+  pthread_join:
+    in-latest-posix: ''
+  pthread_key_create:
+    in-latest-posix: ''
+  pthread_key_delete:
+    in-latest-posix: ''
+  pthread_mutex_clocklock:
+    in-latest-posix: ''
+  pthread_mutex_consistent:
+    in-latest-posix: ''
+  pthread_mutex_destroy:
+    in-latest-posix: ''
+  pthread_mutex_getprioceiling:
+    in-latest-posix: ''
+  pthread_mutex_init:
+    in-latest-posix: ''
+  pthread_mutex_lock:
+    in-latest-posix: ''
+  pthread_mutex_setprioceiling:
+    in-latest-posix: ''
+  pthread_mutex_timedlock:
+    in-latest-posix: ''
+  pthread_mutex_trylock:
+    in-latest-posix: ''
+  pthread_mutex_unlock:
+    in-latest-posix: ''
+  pthread_mutexattr_destroy:
+    in-latest-posix: ''
+  pthread_mutexattr_getprioceiling:
+    in-latest-posix: ''
+  pthread_mutexattr_getprotocol:
+    in-latest-posix: ''
+  pthread_mutexattr_getpshared:
+    in-latest-posix: ''
+  pthread_mutexattr_getrobust:
+    in-latest-posix: ''
+  pthread_mutexattr_gettype:
+    in-latest-posix: ''
+  pthread_mutexattr_init:
+    in-latest-posix: ''
+  pthread_mutexattr_setprioceiling:
+    in-latest-posix: ''
+  pthread_mutexattr_setprotocol:
+    in-latest-posix: ''
+  pthread_mutexattr_setpshared:
+    in-latest-posix: ''
+  pthread_mutexattr_setrobust:
+    in-latest-posix: ''
+  pthread_mutexattr_settype:
+    in-latest-posix: ''
+  pthread_once:
+    in-latest-posix: ''
+  pthread_rwlock_clockrdlock:
+    in-latest-posix: ''
+  pthread_rwlock_clockwrlock:
+    in-latest-posix: ''
+  pthread_rwlock_destroy:
+    in-latest-posix: ''
+  pthread_rwlock_init:
+    in-latest-posix: ''
+  pthread_rwlock_rdlock:
+    in-latest-posix: ''
+  pthread_rwlock_timedrdlock:
+    in-latest-posix: ''
+  pthread_rwlock_timedwrlock:
+    in-latest-posix: ''
+  pthread_rwlock_tryrdlock:
+    in-latest-posix: ''
+  pthread_rwlock_trywrlock:
+    in-latest-posix: ''
+  pthread_rwlock_unlock:
+    in-latest-posix: ''
+  pthread_rwlock_wrlock:
+    in-latest-posix: ''
+  pthread_rwlockattr_destroy:
+    in-latest-posix: ''
+  pthread_rwlockattr_getpshared:
+    in-latest-posix: ''
+  pthread_rwlockattr_init:
+    in-latest-posix: ''
+  pthread_rwlockattr_setpshared:
+    in-latest-posix: ''
+  pthread_self:
+    in-latest-posix: ''
+  pthread_setcancelstate:
+    in-latest-posix: ''
+  pthread_setcanceltype:
+    in-latest-posix: ''
+  pthread_setschedparam:
+    in-latest-posix: ''
+  pthread_setschedprio:
+    in-latest-posix: ''
+  pthread_setspecific:
+    in-latest-posix: ''
+  pthread_spin_destroy:
+    in-latest-posix: ''
+  pthread_spin_init:
+    in-latest-posix: ''
+  pthread_spin_lock:
+    in-latest-posix: ''
+  pthread_spin_trylock:
+    in-latest-posix: ''
+  pthread_spin_unlock:
+    in-latest-posix: ''
+  pthread_testcancel:
+    in-latest-posix: ''
+macros:
+  PTHREAD_BARRIER_SERIAL_THREAD:
+    in-latest-posix: ''
+  PTHREAD_CANCELED:
+    in-latest-posix: ''
+  PTHREAD_CANCEL_ASYNCHRONOUS:
+    in-latest-posix: ''
+  PTHREAD_CANCEL_DEFERRED:
+    in-latest-posix: ''
+  PTHREAD_CANCEL_DISABLE:
+    in-latest-posix: ''
+  PTHREAD_CANCEL_ENABLE:
+    in-latest-posix: ''
+  PTHREAD_COND_INITIALIZER:
+    in-latest-posix: ''
+  PTHREAD_CREATE_DETACHED:
+    in-latest-posix: ''
+  PTHREAD_CREATE_JOINABLE:
+    in-latest-posix: ''
+  PTHREAD_EXPLICIT_SCHED:
+    in-latest-posix: ''
+  PTHREAD_INHERIT_SCHED:
+    in-latest-posix: ''
+  PTHREAD_MUTEX_DEFAULT:
+    in-latest-posix: ''
+  PTHREAD_MUTEX_ERRORCHECK:
+    in-latest-posix: ''
+  PTHREAD_MUTEX_INITIALIZER:
+    in-latest-posix: ''
+  PTHREAD_MUTEX_NORMAL:
+    in-latest-posix: ''
+  PTHREAD_MUTEX_RECURSIVE:
+    in-latest-posix: ''
+  PTHREAD_MUTEX_ROBUST:
+    in-latest-posix: ''
+  PTHREAD_MUTEX_STALLED:
+    in-latest-posix: ''
+  PTHREAD_NULL:
+    in-latest-posix: ''
+  PTHREAD_ONCE_INIT:
+    in-latest-posix: ''
+  PTHREAD_PRIO_INHERIT:
+    in-latest-posix: ''
+  PTHREAD_PRIO_NONE:
+    in-latest-posix: ''
+  PTHREAD_PRIO_PROTECT:
+    in-latest-posix: ''
+  PTHREAD_PROCESS_PRIVATE:
+    in-latest-posix: ''
+  PTHREAD_PROCESS_SHARED:
+    in-latest-posix: ''
+  PTHREAD_RWLOCK_INITIALIZER:
+    in-latest-posix: ''
+  PTHREAD_SCOPE_PROCESS:
+    in-latest-posix: ''
+  PTHREAD_SCOPE_SYSTEM:
+    in-latest-posix: ''

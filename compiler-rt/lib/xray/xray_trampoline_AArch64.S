@@ -37,7 +37,7 @@
 #endif
 .endm
 
-.text
+TEXT_SECTION
 .p2align 2
 .global ASM_SYMBOL(__xray_FunctionEntry)
 ASM_HIDDEN(__xray_FunctionEntry)

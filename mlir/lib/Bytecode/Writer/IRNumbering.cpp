@@ -50,6 +50,7 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
   }
   void writeOwnedBlob(ArrayRef<char> blob) override {}
   void writeOwnedBool(bool value) override {}
+  void writeUnownedBlob(ArrayRef<char> blob) override {}
 
   int64_t getBytecodeVersion() const override {
     return state.getDesiredBytecodeVersion();
@@ -308,7 +309,7 @@ void IRNumberingState::computeGlobalNumberingState(Operation *rootOp) {
 }
 
 void IRNumberingState::number(Attribute attr) {
-  auto it = attrs.insert({attr, nullptr});
+  auto it = attrs.try_emplace(attr);
   if (!it.second) {
     ++it.first->second->refCount;
     return;
@@ -475,7 +476,7 @@ void IRNumberingState::number(OperationName opName) {
 }
 
 void IRNumberingState::number(Type type) {
-  auto it = types.insert({type, nullptr});
+  auto it = types.try_emplace(type);
   if (!it.second) {
     ++it.first->second->refCount;
     return;

@@ -9,8 +9,8 @@ const reference.
 
 The check is only applied if it is safe to replace the copy by a const
 reference. This is the case when the variable is const qualified or when it is
-only used as a const, i.e. only const methods or operators are invoked on it, or
-it is used as const reference or value argument in constructors or function
+only used as a const, i.e. only const methods or operators are invoked on it,
+or it is used as const reference or value argument in constructors or function
 calls.
 
 Example:
@@ -42,11 +42,11 @@ Options
 .. option:: AllowedTypes
 
    A semicolon-separated list of names of types allowed to be initialized by
-   copying. Regular expressions are accepted, e.g. `[Rr]ef(erence)?$` matches
-   every type with suffix `Ref`, `ref`, `Reference` and `reference`. The default
-   is empty. If a name in the list contains the sequence `::` it is matched
-   against the qualified typename (i.e. `namespace::Type`, otherwise it is
-   matched against only the type name (i.e. `Type`).
+   copying. Regular expressions are accepted, e.g. ``[Rr]ef(erence)?$`` matches
+   every type with suffix ``Ref``, ``ref``, ``Reference`` and ``reference``.
+   The default is empty. If a name in the list contains the sequence `::`, it
+   is matched against the qualified type name (i.e. ``namespace::Type``),
+   otherwise it is matched against only the type name (i.e. ``Type``).
 
 .. option:: ExcludedContainerTypes
 
@@ -59,3 +59,22 @@ Options
    types that don't own the underlying data. Like for `AllowedTypes` above,
    regular expressions are accepted and the inclusion of `::` determines whether
    the qualified typename is matched or not.
+
+
+Limitations
+-----------
+
+This check does not perform lifetime analysis and may suggest replacing copies
+with const references that could become dangling. Be cautious when the
+referenced object might be invalidated by subsequent operations.
+
+.. code-block:: c++
+
+  void consume(const S&);
+
+  void func(std::vector<S> &Vec) {
+    const auto It = Vec.begin();
+    const S Value(*It); // The warning will suggest making this a const reference.
+    Vec.erase(It); // Container modifications could invalidate references.
+    consume(Value); // Safe with copy, dangling reference otherwise.
+  }

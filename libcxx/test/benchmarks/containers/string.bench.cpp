@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <new>
@@ -59,6 +60,45 @@ static void BM_StringFindMatch2(benchmark::State& state) {
 }
 BENCHMARK(BM_StringFindMatch2)->Range(1, MAX_STRING_LEN / 4);
 
+static void BM_StringFindStringLiteral(benchmark::State& state) {
+  std::string s;
+
+  for (int i = 0; i < state.range(0); i++)
+    s += 'a';
+
+  s += 'b';
+
+  benchmark::DoNotOptimize(s.data());
+  benchmark::ClobberMemory();
+  size_t pos;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(pos = s.find("b"));
+    benchmark::ClobberMemory();
+  }
+}
+
+BENCHMARK(BM_StringFindStringLiteral)->RangeMultiplier(2)->Range(8, 8 << 10);
+
+static void BM_StringFindCharLiteral(benchmark::State& state) {
+  std::string s;
+
+  for (int i = 0; i < state.range(0); i++)
+    s += 'a';
+
+  s += 'b';
+
+  benchmark::DoNotOptimize(s.data());
+  benchmark::ClobberMemory();
+  size_t pos;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(pos = s.find('b'));
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_StringFindCharLiteral)->RangeMultiplier(2)->Range(8, 8 << 10);
+
 static void BM_StringCtorDefault(benchmark::State& state) {
   for (auto _ : state) {
     std::string Default;
@@ -66,6 +106,21 @@ static void BM_StringCtorDefault(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_StringCtorDefault);
+
+static void BM_StringResizeAndOverwrite(benchmark::State& state) {
+  std::string str;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(str);
+    str.resize_and_overwrite(10, [](char* ptr, size_t n) {
+      std::fill_n(ptr, n, 'a');
+      return n;
+    });
+    benchmark::DoNotOptimize(str);
+    str.clear();
+  }
+}
+BENCHMARK(BM_StringResizeAndOverwrite);
 
 enum class Length { Empty, Small, Large, Huge };
 struct AllLengths : EnumValuesAsTuple<AllLengths, Length, 4> {
@@ -235,29 +290,6 @@ struct StringMove {
   }
 
   static std::string name() { return "BM_StringMove" + Length::name(); }
-};
-
-template <class Length, class Opaque>
-struct StringResizeDefaultInit {
-  static void run(benchmark::State& state) {
-    constexpr bool opaque     = Opaque{} == Opacity::Opaque;
-    constexpr int kNumStrings = 4 << 10;
-    size_t length             = makeString(Length()).size();
-    std::string strings[kNumStrings];
-    while (state.KeepRunningBatch(kNumStrings)) {
-      state.PauseTiming();
-      for (int i = 0; i < kNumStrings; ++i) {
-        std::string().swap(strings[i]);
-      }
-      benchmark::DoNotOptimize(strings);
-      state.ResumeTiming();
-      for (int i = 0; i < kNumStrings; ++i) {
-        strings[i].__resize_default_init(maybeOpaque(length, opaque));
-      }
-    }
-  }
-
-  static std::string name() { return "BM_StringResizeDefaultInit" + Length::name() + Opaque::name(); }
 };
 
 template <class Length, class Opaque>
@@ -509,10 +541,7 @@ struct StringRead {
 
   static bool skip() {
     // Huge does not give us anything that Large doesn't have. Skip it.
-    if (Length() == ::Length::Huge) {
-      return true;
-    }
-    return false;
+    return Length() == ::Length::Huge;
   }
 
   std::string name() const { return "BM_StringRead" + Temperature::name() + Depth::name() + Length::name(); }
@@ -553,14 +582,6 @@ void sanityCheckGeneratedStrings() {
   }
 }
 
-// Some small codegen thunks to easily see generated code.
-bool StringEqString(const std::string& a, const std::string& b) { return a == b; }
-bool StringEqCStr(const std::string& a, const char* b) { return a == b; }
-bool CStrEqString(const char* a, const std::string& b) { return a == b; }
-bool StringEqCStrLiteralEmpty(const std::string& a) { return a == ""; }
-bool StringEqCStrLiteralSmall(const std::string& a) { return a == SmallStringLiteral; }
-bool StringEqCStrLiteralLarge(const std::string& a) { return a == LargeStringLiteral; }
-
 int main(int argc, char** argv) {
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv))
@@ -577,23 +598,10 @@ int main(int argc, char** argv) {
   makeCartesianProductBenchmark<StringCopy, AllLengths>();
   makeCartesianProductBenchmark<StringMove, AllLengths>();
   makeCartesianProductBenchmark<StringDestroy, AllLengths>();
-  makeCartesianProductBenchmark<StringResizeDefaultInit, AllLengths, AllOpacity>();
   makeCartesianProductBenchmark<StringEraseToEnd, AllLengths, AllOpacity>();
   makeCartesianProductBenchmark<StringEraseWithMove, AllLengths, AllOpacity>();
   makeCartesianProductBenchmark<StringRelational, AllRelations, AllLengths, AllLengths, AllDiffTypes>();
   makeCartesianProductBenchmark<StringRelationalLiteral, AllRelations, AllLengths, AllLengths, AllDiffTypes>();
   makeCartesianProductBenchmark<StringRead, AllTemperatures, AllDepths, AllLengths>();
   benchmark::RunSpecifiedBenchmarks();
-
-  if (argc < 0) {
-    // ODR-use the functions to force them being generated in the binary.
-    auto functions = std::make_tuple(
-        StringEqString,
-        StringEqCStr,
-        CStrEqString,
-        StringEqCStrLiteralEmpty,
-        StringEqCStrLiteralSmall,
-        StringEqCStrLiteralLarge);
-    printf("%p", &functions);
-  }
 }

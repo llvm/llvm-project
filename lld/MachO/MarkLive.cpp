@@ -16,8 +16,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/TimeProfiler.h"
 
-#include "mach-o/compact_unwind_encoding.h"
-
 namespace lld::macho {
 
 using namespace llvm;
@@ -156,7 +154,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
       assert(isec->live && "We mark as live when pushing onto the worklist!");
 
       // Mark all symbols listed in the relocation table for this section.
-      for (const Reloc &r : isec->relocs) {
+      for (const Relocation &r : isec->relocs) {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s, entry);
         else
@@ -174,7 +172,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
       if (!(isec->getFlags() & S_ATTR_LIVE_SUPPORT) || isec->live)
         continue;
 
-      for (const Reloc &r : isec->relocs) {
+      for (const Relocation &r : isec->relocs) {
         if (auto *s = r.referent.dyn_cast<Symbol *>()) {
           if (s->isLive()) {
             InputSection *referentIsec = nullptr;

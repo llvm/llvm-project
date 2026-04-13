@@ -35,3 +35,31 @@ add_libc_unittest(
   DEPENDS
     libc.src.search.lfind
 )
+
+add_libc_unittest(
+  lsearch_test
+  SUITE
+    libc_search_unittests
+  SRCS
+    lsearch_test.cpp
+  DEPENDS
+    libc.src.search.lsearch
+)
+
+add_libc_unittest(
+  tsearch_test
+  SUITE
+    libc_search_unittests
+  SRCS
+    tsearch_test.cpp
+  DEPENDS
+    libc.src.search.tsearch
+    libc.src.search.tfind
+    libc.src.search.tdelete
+    libc.src.search.twalk
+    libc.src.search.twalk_r
+    libc.src.search.tdestroy
+    libc.src.string.strlen
+    libc.src.string.strcpy
+    libc.src.string.strcmp
+)

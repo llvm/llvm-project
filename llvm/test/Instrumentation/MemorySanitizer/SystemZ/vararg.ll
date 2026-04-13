@@ -7,10 +7,10 @@ target triple = "s390x-unknown-linux-gnu"
 
 define i64 @foo(i64 %guard, ...) {
   %vl = alloca %struct.__va_list, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.start.p0(ptr %vl)
   call void @llvm.va_start(ptr %vl)
   call void @llvm.va_end(ptr %vl)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.end.p0(ptr %vl)
   ret i64 0
 }
 
@@ -28,10 +28,10 @@ define i64 @foo(i64 %guard, ...) {
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{%.*}}, ptr align 8 {{%.*}}, i64 160, i1 false)
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{%.*}}, ptr align 8 {{%.*}}, i64 [[A]], i1 false)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 declare i32 @random_i32()
 declare i64 @random_i64()

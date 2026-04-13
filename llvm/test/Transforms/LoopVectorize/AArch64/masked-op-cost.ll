@@ -5,8 +5,8 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ; CHECK-COST: Checking a loop in 'fixed_width'
-; CHECK-COST: Cost of 10 for VF 2: WIDEN store vp<%6>, ir<2>, vp<%5>
-; CHECK-COST: Cost of 20 for VF 4: WIDEN store vp<%6>, ir<2>, vp<%5>
+; CHECK-COST: Cost of 10 for VF 2: WIDEN store vp<{{.+}}>, ir<2>, ir<{{.+}}>
+; CHECK-COST: Cost of 20 for VF 4: WIDEN store vp<{{.+}}>, ir<2>, ir<{{.+}}>
 ; CHECK-COST: Selecting VF: 1.
 
 ; We should decide this loop is not worth vectorising using fixed width vectors
@@ -17,28 +17,28 @@ entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.inc
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.inc
+for.body:
   %i.07 = phi i64 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %i.07
   %0 = load i32, ptr %arrayidx, align 4
   %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx1 = getelementptr inbounds i32, ptr %a, i64 %i.07
   store i32 2, ptr %arrayidx1, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !5
@@ -56,28 +56,28 @@ entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.inc
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.inc
+for.body:
   %i.07 = phi i64 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %i.07
   %0 = load i32, ptr %arrayidx, align 4
   %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %for.inc, label %if.then
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx1 = getelementptr inbounds i32, ptr %a, i64 %i.07
   store i32 2, ptr %arrayidx1, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !0

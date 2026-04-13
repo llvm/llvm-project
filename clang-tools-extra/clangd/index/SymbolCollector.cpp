@@ -25,6 +25,7 @@
 #include "index/SymbolLocation.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
@@ -44,7 +45,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <cassert>
 #include <memory>
@@ -325,7 +325,7 @@ private:
     if (R.second) {
       llvm::SmallString<256> AbsPath = Path;
       if (!llvm::sys::path::is_absolute(AbsPath) && !FallbackDir.empty())
-        llvm::sys::fs::make_absolute(FallbackDir, AbsPath);
+        llvm::sys::path::make_absolute(FallbackDir, AbsPath);
       assert(llvm::sys::path::is_absolute(AbsPath) &&
              "If the VFS can't make paths absolute, a FallbackDir must be "
              "provided");
@@ -576,6 +576,25 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
+SmallVector<const CXXConstructorDecl *, 1>
+SymbolCollector::findIndirectConstructors(const Decl *D) {
+  auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+  if (FD == nullptr || !FD->isTemplateInstantiation())
+    return {};
+  if (auto Entry = ForwardingToConstructorCache.find(FD);
+      Entry != ForwardingToConstructorCache.end())
+    return Entry->getSecond();
+  if (auto *PT = FD->getPrimaryTemplate();
+      PT == nullptr || !isLikelyForwardingFunction(PT))
+    return {};
+
+  SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
+      searchConstructorsInForwardingFunction(FD);
+  auto Iter = ForwardingToConstructorCache.try_emplace(
+      FD, std::move(FoundConstructors));
+  return Iter.first->getSecond();
+}
+
 // Always return true to continue indexing.
 bool SymbolCollector::handleDeclOccurrence(
     const Decl *D, index::SymbolRoleSet Roles,
@@ -639,10 +658,12 @@ bool SymbolCollector::handleDeclOccurrence(
   // ND is the canonical (i.e. first) declaration. If it's in the main file
   // (which is not a header), then no public declaration was visible, so assume
   // it's main-file only.
-  bool IsMainFileOnly =
-      SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc())) &&
-      !isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
-                    ASTCtx->getLangOpts());
+  auto CheckIsMainFileOnly = [&](const NamedDecl *Decl) {
+    return SM.isWrittenInMainFile(SM.getExpansionLoc(Decl->getBeginLoc())) &&
+           !isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
+                         ASTCtx->getLangOpts());
+  };
+  bool IsMainFileOnly = CheckIsMainFileOnly(ND);
   // In C, printf is a redecl of an implicit builtin! So check OrigD instead.
   if (ASTNode.OrigD->isImplicit() ||
       !shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
@@ -666,9 +687,20 @@ bool SymbolCollector::handleDeclOccurrence(
     auto FileLoc = SM.getFileLoc(Loc);
     auto FID = SM.getFileID(FileLoc);
     if (Opts.RefsInHeaders || FID == SM.getMainFileID()) {
+      auto *Container = getRefContainer(ASTNode.Parent, Opts);
       addRef(ID, SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
-                           getRefContainer(ASTNode.Parent, Opts),
-                           isSpelled(FileLoc, *ND)});
+                           Container, isSpelled(FileLoc, *ND)});
+      // Also collect indirect constructor calls like `make_unique`
+      for (auto *Constructor : findIndirectConstructors(ASTNode.OrigD)) {
+        if (!shouldCollectSymbol(*Constructor, *ASTCtx, Opts,
+                                 CheckIsMainFileOnly(Constructor)))
+          continue;
+        if (auto ConstructorID = getSymbolIDCached(Constructor))
+          addRef(ConstructorID,
+                 SymbolRef{FileLoc, FID, Roles,
+                           index::getSymbolInfo(Constructor).Kind, Container,
+                           false});
+      }
     }
   }
   // Don't continue indexing if this is a mere reference.
@@ -713,7 +745,8 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
   // Add macro references.
   for (const auto &IDToRefs : MacroRefsToIndex.MacroRefs) {
     for (const auto &MacroRef : IDToRefs.second) {
-      const auto &Range = MacroRef.toRange(SM);
+      const auto &SR = MacroRef.toSourceRange(SM);
+      auto Range = halfOpenToRange(SM, SR);
       bool IsDefinition = MacroRef.IsDefinition;
       Ref R;
       R.Location.Start.setLine(Range.start.line);
@@ -726,9 +759,7 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
       if (IsDefinition) {
         Symbol S;
         S.ID = IDToRefs.first;
-        auto StartLoc = cantFail(sourceLocationInMainFile(SM, Range.start));
-        auto EndLoc = cantFail(sourceLocationInMainFile(SM, Range.end));
-        S.Name = toSourceCode(SM, SourceRange(StartLoc, EndLoc));
+        S.Name = toSourceCode(SM, SR.getAsRange());
         S.SymInfo.Kind = index::SymbolKind::Macro;
         S.SymInfo.SubKind = index::SymbolSubKind::None;
         S.SymInfo.Properties = index::SymbolPropertySet();
@@ -888,7 +919,7 @@ void SymbolCollector::setIncludeLocation(const Symbol &S, SourceLocation DefLoc,
   // might run while parsing, rather than at the end of a translation unit.
   // Hence we see more and more redecls over time.
   SymbolProviders[S.ID] =
-      include_cleaner::headersForSymbol(Sym, SM, Opts.PragmaIncludes);
+      include_cleaner::headersForSymbol(Sym, *PP, Opts.PragmaIncludes);
 }
 
 llvm::StringRef getStdHeader(const Symbol *S, const LangOptions &LangOpts) {
@@ -1202,7 +1233,7 @@ void SymbolCollector::addRef(SymbolID ID, const SymbolRef &SR) {
 }
 
 SymbolID SymbolCollector::getSymbolIDCached(const Decl *D) {
-  auto It = DeclToIDCache.try_emplace(D, SymbolID{});
+  auto It = DeclToIDCache.try_emplace(D);
   if (It.second)
     It.first->second = getSymbolID(D);
   return It.first->second;
@@ -1211,7 +1242,7 @@ SymbolID SymbolCollector::getSymbolIDCached(const Decl *D) {
 SymbolID SymbolCollector::getSymbolIDCached(const llvm::StringRef MacroName,
                                             const MacroInfo *MI,
                                             const SourceManager &SM) {
-  auto It = MacroToIDCache.try_emplace(MI, SymbolID{});
+  auto It = MacroToIDCache.try_emplace(MI);
   if (It.second)
     It.first->second = getSymbolID(MacroName, MI, SM);
   return It.first->second;

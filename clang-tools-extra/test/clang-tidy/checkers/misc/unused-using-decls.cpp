@@ -82,13 +82,13 @@ T ff() { T t; return t; }
 using n::A; // A
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'A' is unused
 // CHECK-MESSAGES: :[[@LINE-2]]:10: note: remove the using
-// CHECK-FIXES: {{^}}// A
+// CHECK-FIXES: // A
 using n::B;
 using n::C;
 using n::D;
 using n::E; // E
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'E' is unused
-// CHECK-FIXES: {{^}}// E
+// CHECK-FIXES: // E
 using n::F;
 using n::G;
 using n::H;
@@ -103,10 +103,10 @@ using n::UsedFunc;
 using n::UsedTemplateFunc;
 using n::UnusedInstance; // UnusedInstance
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'UnusedInstance' is unused
-// CHECK-FIXES: {{^}}// UnusedInstance
+// CHECK-FIXES: // UnusedInstance
 using n::UnusedFunc; // UnusedFunc
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'UnusedFunc' is unused
-// CHECK-FIXES: {{^}}// UnusedFunc
+// CHECK-FIXES: // UnusedFunc
 using n::operator""_w;
 using n::cout;
 using n::endl;
@@ -120,7 +120,7 @@ template <typename T> void Callee() {
 
 using n::OverloadFunc; // OverloadFunc
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'OverloadFunc' is unused
-// CHECK-FIXES: {{^}}// OverloadFunc
+// CHECK-FIXES: // OverloadFunc
 
 #define DEFINE_INT(name)        \
   namespace INT {               \
@@ -222,3 +222,19 @@ using gh69714::StructGH69714_1;
 using gh69714::StructGH69714_2;
 struct StructGH69714_1 a;
 struct StructGH69714_2 *b;
+
+namespace gh53444 {
+namespace my_literals {
+  template <char... Ts>
+  int operator""_r() {
+    return {};
+  }
+}
+
+using my_literals::operator"" _r;
+
+int foo() {
+  auto x2 = 123_r;
+}
+
+}

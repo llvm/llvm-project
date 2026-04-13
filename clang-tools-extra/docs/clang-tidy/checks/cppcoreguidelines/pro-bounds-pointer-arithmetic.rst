@@ -11,5 +11,13 @@ and easy to get wrong. ``span<T>`` is a bounds-checked, safe type for accessing
 arrays of data.
 
 This rule is part of the `Bounds safety (Bounds 1)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-bounds-arithmetic>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-bounds-arithmetic>`_
 profile from the C++ Core Guidelines.
+
+Options
+-------
+
+.. option:: AllowIncrementDecrementOperators
+
+   When enabled, the check will allow using the prefix/postfix increment or
+   decrement operators on pointers. Default is ``false``.

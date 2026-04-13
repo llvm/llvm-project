@@ -1,4 +1,0 @@
-caller:0:0
- 2: sum:0
-  3: 0 __prefetch_nta_0:23456
-  3.1: 0 __prefetch_nta_0:8764 __prefetch_nta_1:64

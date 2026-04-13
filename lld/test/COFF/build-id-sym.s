@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple=x86_64-windows-msvc -filetype=obj -o %t.obj %s
-# RUN: lld-link -debug:symtab -entry:main %t.obj -build-id -Brepro -out:%t.exe
+# RUN: lld-link -debug:symtab -entry:main %t.obj -build-id -Brepro -out:%t.exe -guard:cf
 # RUN: llvm-objdump -s -t %t.exe | FileCheck %s
 
 # Check __buildid points to 0x14000203c which is after the signature RSDS.
@@ -21,3 +21,6 @@ main:
 .section .bss,"bw",discard,__buildid
 .global __buildid
 __buildid:
+
+.data
+.quad __buildid

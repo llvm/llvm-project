@@ -27,7 +27,7 @@ class SPIRV_LogicalBinaryOp<string mnemonic, Type operandsType,
                      TypesMatchWith<"type of result to correspond to the `i1` "
                                     "equivalent of the operand",
                                     "operand1", "result",
-                                    "getUnaryOpResultType($_self)"
+                                    "getMatchingBoolType($_self)"
                      >])> {
   let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
 }
@@ -41,7 +41,7 @@ class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
                      TypesMatchWith<"type of result to correspond to the `i1` "
                                     "equivalent of the operand",
                                     "operand", "result",
-                                    "getUnaryOpResultType($_self)"
+                                    "getMatchingBoolType($_self)"
                      >])> {
   let assemblyFormat = "$operand `:` type($operand) attr-dict";
 }
@@ -403,6 +403,28 @@ def SPIRV_INotEqualOp : SPIRV_LogicalBinaryOp<"INotEqual",
 
 // -----
 
+def SPIRV_IsFiniteOp : SPIRV_LogicalUnaryOp<"IsFinite", SPIRV_Float, []> {
+  let summary = "Result is true if x is an IEEE Finite, otherwise result is false";
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    x must be a scalar or vector of floating-point type.  It must have the
+    same number of components as Result Type.
+
+    Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.IsFinite %0: f32
+    %3 = spirv.IsFinite %1: vector<4xf32>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_IsInfOp : SPIRV_LogicalUnaryOp<"IsInf", SPIRV_Float, []> {
   let summary = "Result is true if x is an IEEE Inf, otherwise result is false";
 
@@ -418,7 +440,7 @@ def SPIRV_IsInfOp : SPIRV_LogicalUnaryOp<"IsInf", SPIRV_Float, []> {
 
     ```mlir
     %2 = spirv.IsInf %0: f32
-    %3 = spirv.IsInf %1: vector<4xi32>
+    %3 = spirv.IsInf %1: vector<4xf32>
     ```
   }];
 }
@@ -442,7 +464,7 @@ def SPIRV_IsNanOp : SPIRV_LogicalUnaryOp<"IsNan", SPIRV_Float, []> {
 
     ```mlir
     %2 = spirv.IsNan %0: f32
-    %3 = spirv.IsNan %1: vector<4xi32>
+    %3 = spirv.IsNan %1: vector<4xf32>
     ```
   }];
 }

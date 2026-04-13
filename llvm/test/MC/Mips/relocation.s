@@ -8,6 +8,9 @@
 // RUN:     | llvm-readobj --sections --section-data - \
 // RUN:     | FileCheck -check-prefix=DATA %s
 
+/// MCNullStreamer can handle directives like .tprelword .dtprelword
+// RUN: llvm-mc -triple mips -filetype=null %s
+
 // Test that we produce the correct relocation.
 // FIXME: move more relocation only tests here.
 

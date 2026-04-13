@@ -7,15 +7,14 @@ define amdgpu_ps i32 @if_else(i32 %0) {
 ; OPT-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP0]], 0
 ; OPT-NEXT:    br i1 [[C]], label %[[FALSE:.*]], label %[[FLOW:.*]], !prof [[PROF0:![0-9]+]]
 ; OPT:       [[FLOW]]:
-; OPT-NEXT:    [[TMP2:%.*]] = phi i32 [ 33, %[[FALSE]] ], [ undef, [[TMP1:%.*]] ]
-; OPT-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[FALSE]] ], [ true, [[TMP1]] ]
-; OPT-NEXT:    br i1 [[TMP3]], label %[[TRUE:.*]], label %[[EXIT:.*]]
+; OPT-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[FALSE]] ], [ true, [[TMP1:%.*]] ]
+; OPT-NEXT:    br i1 [[TMP2]], label %[[TRUE:.*]], label %[[EXIT:.*]]
 ; OPT:       [[TRUE]]:
 ; OPT-NEXT:    br label %[[EXIT]]
 ; OPT:       [[FALSE]]:
 ; OPT-NEXT:    br label %[[FLOW]]
 ; OPT:       [[EXIT]]:
-; OPT-NEXT:    [[RET:%.*]] = phi i32 [ [[TMP2]], %[[FLOW]] ], [ 42, %[[TRUE]] ]
+; OPT-NEXT:    [[RET:%.*]] = phi i32 [ 33, %[[FLOW]] ], [ 42, %[[TRUE]] ]
 ; OPT-NEXT:    ret i32 [[RET]]
 ;
   %c = icmp eq i32 %0, 0
@@ -45,7 +44,7 @@ define amdgpu_ps void @loop_if_break(i32 %n) {
 ; OPT-NEXT:    [[I_NEXT:%.*]] = sub i32 [[I]], 1
 ; OPT-NEXT:    br label %[[FLOW]]
 ; OPT:       [[FLOW]]:
-; OPT-NEXT:    [[TMP0]] = phi i32 [ [[I_NEXT]], %[[LOOP_BODY]] ], [ undef, %[[LOOP]] ]
+; OPT-NEXT:    [[TMP0]] = phi i32 [ [[I_NEXT]], %[[LOOP_BODY]] ], [ poison, %[[LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = phi i1 [ false, %[[LOOP_BODY]] ], [ true, %[[LOOP]] ]
 ; OPT-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP]]
 ; OPT:       [[EXIT]]:

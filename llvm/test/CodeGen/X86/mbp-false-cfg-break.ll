@@ -9,7 +9,7 @@ define void @test(i1 %cnd) !prof !{!"function_entry_count", i64 1024} {
 ; CHECK: # %rare
 ; CHECK: # %rare.1
 
-  br i1 undef, label %rare.1, label %preheader, !prof !{!"branch_weights", i32 0, i32 1000}
+  br i1 %cnd, label %rare.1, label %preheader, !prof !{!"branch_weights", i32 0, i32 1000}
 rare.1:
   call void @foo()
   br label %preheader

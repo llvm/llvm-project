@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-enable-exnref -exception-model=wasm -mattr=+exception-handling,bulk-memory | FileCheck %s
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-enable-exnref -exception-model=wasm -mattr=+exception-handling,bulk-memory
-; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -verify-machineinstrs -wasm-enable-eh -wasm-enable-exnref -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt | FileCheck %s --check-prefix=NOOPT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-enable-exnref -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-enable-exnref -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling,bulk-memory | FileCheck %s
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling,bulk-memory
+; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -verify-machineinstrs -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt | FileCheck %s --check-prefix=NOOPT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
 
 target triple = "wasm32-unknown-unknown"
 
@@ -709,7 +709,7 @@ try.cont:                                         ; preds = %catch.start0
   ret i32 0
 }
 
-; We have two call unwind unwind mismatches:
+; We have two call unwind mismatches:
 ; - A may-throw instruction unwinds to an incorrect EH pad after linearizing the
 ;   CFG, when it is supposed to unwind to another EH pad.
 ; - A may-throw instruction unwinds to an incorrect EH pad after linearizing the
@@ -857,6 +857,7 @@ invoke.cont:                                      ; preds = %entry
 ; NOSORT:         loop
 ; NOSORT:           call  foo
 ; NOSORT:         end_loop
+; NOSORT:         unreachable
 ; NOSORT:       end_block                                      # label[[L3]]:
 ; NOSORT:       throw_ref
 ; NOSORT:     end_try_table
@@ -1426,9 +1427,9 @@ unreachable:                                      ; preds = %rethrow, %rethrow6
 ; should make sure to take out (c)'s exception out of (a)'s exception too.
 define void @exception_grouping_2() personality ptr @__gxx_wasm_personality_v0 {
 entry:
-  %exception = call ptr @__cxa_allocate_exception(i32 4) #1
+  %exception = call ptr @__cxa_allocate_exception(i32 4) #0
   store i32 0, ptr %exception, align 16
-  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #3
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #1
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
@@ -1438,18 +1439,18 @@ catch.start:                                      ; preds = %catch.dispatch
   %1 = catchpad within %0 [ptr @_ZTIi]
   %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
   %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.start
-  %5 = call ptr @__cxa_begin_catch(ptr %2) #1 [ "funclet"(token %1) ]
+  %5 = call ptr @__cxa_begin_catch(ptr %2) #0 [ "funclet"(token %1) ]
   %6 = load i32, ptr %5, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %1) ]
+  call void @__cxa_end_catch() #0 [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont8
 
 rethrow:                                          ; preds = %catch.start
-  invoke void @llvm.wasm.rethrow() #3 [ "funclet"(token %1) ]
+  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %1) ]
           to label %unreachable unwind label %catch.dispatch1
 
 catch.dispatch1:                                  ; preds = %rethrow, %catch.dispatch
@@ -1459,18 +1460,18 @@ catch.start2:                                     ; preds = %catch.dispatch1
   %8 = catchpad within %7 [ptr @_ZTIi]
   %9 = call ptr @llvm.wasm.get.exception(token %8)
   %10 = call i32 @llvm.wasm.get.ehselector(token %8)
-  %11 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %11 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
   %matches3 = icmp eq i32 %10, %11
   br i1 %matches3, label %catch5, label %rethrow4
 
 catch5:                                           ; preds = %catch.start2
-  %12 = call ptr @__cxa_begin_catch(ptr %9) #1 [ "funclet"(token %8) ]
+  %12 = call ptr @__cxa_begin_catch(ptr %9) #0 [ "funclet"(token %8) ]
   %13 = load i32, ptr %12, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %8) ]
+  call void @__cxa_end_catch() #0 [ "funclet"(token %8) ]
   catchret from %8 to label %try.cont8
 
 rethrow4:                                         ; preds = %catch.start2
-  call void @llvm.wasm.rethrow() #3 [ "funclet"(token %8) ]
+  call void @llvm.wasm.rethrow() #1 [ "funclet"(token %8) ]
   unreachable
 
 try.cont8:                                        ; preds = %catch, %catch5
@@ -1484,18 +1485,18 @@ catch.start10:                                    ; preds = %catch.dispatch9
   %15 = catchpad within %14 [ptr @_ZTIi]
   %16 = call ptr @llvm.wasm.get.exception(token %15)
   %17 = call i32 @llvm.wasm.get.ehselector(token %15)
-  %18 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %18 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
   %matches11 = icmp eq i32 %17, %18
   br i1 %matches11, label %catch13, label %rethrow12
 
 catch13:                                          ; preds = %catch.start10
-  %19 = call ptr @__cxa_begin_catch(ptr %16) #1 [ "funclet"(token %15) ]
+  %19 = call ptr @__cxa_begin_catch(ptr %16) #0 [ "funclet"(token %15) ]
   %20 = load i32, ptr %19, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %15) ]
+  call void @__cxa_end_catch() #0 [ "funclet"(token %15) ]
   catchret from %15 to label %try.cont16
 
 rethrow12:                                        ; preds = %catch.start10
-  call void @llvm.wasm.rethrow() #3 [ "funclet"(token %15) ]
+  call void @llvm.wasm.rethrow() #1 [ "funclet"(token %15) ]
   unreachable
 
 try.cont16:                                       ; preds = %try.cont8, %catch13
@@ -1506,7 +1507,7 @@ unreachable:                                      ; preds = %rethrow, %entry
 }
 
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 23 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT: 25 wasm-cfg-stackify    - Number of call unwind mismatches found
 ; NOSORT:  4 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()

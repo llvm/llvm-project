@@ -21,23 +21,35 @@
 
 #include "test_macros.h"
 
-const int iArr2[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
+const int iArr2[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
 struct A {};
 
 void f() {
-  std::as_writable_bytes(std::span<const int>());            // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const long>());           // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const double>());         // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const A>());              // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const std::string>());    // expected-error {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const int>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const long>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const double>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const A>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const std::string>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
 
-  std::as_writable_bytes(std::span<const int, 0>());         // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const long, 0>());        // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const double, 0>());      // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const A, 0>());           // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const std::string, (std::size_t)0>()); // expected-error {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const int, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const long, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const double, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const A, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const std::string, (std::size_t)0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
 
-  std::as_writable_bytes(std::span<const int>   (iArr2, 1));     // expected-error {{no matching function for call to 'as_writable_bytes'}}
-  std::as_writable_bytes(std::span<const int, 1>(iArr2 + 5, 1)); // expected-error {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const int>(iArr2, 1));
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const int, 1>(iArr2 + 5, 1));
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
 }

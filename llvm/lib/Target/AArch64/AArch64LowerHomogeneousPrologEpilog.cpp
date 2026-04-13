@@ -32,7 +32,7 @@ using namespace llvm;
 #define AARCH64_LOWER_HOMOGENEOUS_PROLOG_EPILOG_NAME                           \
   "AArch64 homogeneous prolog/epilog lowering pass"
 
-cl::opt<int> FrameHelperSizeThreshold(
+static cl::opt<int> FrameHelperSizeThreshold(
     "frame-helper-size-threshold", cl::init(2), cl::Hidden,
     cl::desc("The minimum number of instructions that are outlined in a frame "
              "helper (default = 2)"));
@@ -73,10 +73,7 @@ class AArch64LowerHomogeneousPrologEpilog : public ModulePass {
 public:
   static char ID;
 
-  AArch64LowerHomogeneousPrologEpilog() : ModulePass(ID) {
-    initializeAArch64LowerHomogeneousPrologEpilogPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AArch64LowerHomogeneousPrologEpilog() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
@@ -176,9 +173,7 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
 
   MachineFunction &MF = MMI->getOrCreateMachineFunction(*F);
   // Remove unnecessary register liveness and set NoVRegs.
-  MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
-  MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
-  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().resetTracksLiveness().resetIsSSA().setNoVRegs();
   MF.getRegInfo().freezeReservedRegs();
 
   // Create entry block.
@@ -407,7 +402,7 @@ static bool shouldUseFrameHelper(MachineBasicBlock &MBB,
     InstCount--;
     break;
   case FrameHelperType::PrologFrame: {
-    // Effecitvely no change in InstCount since FpAdjusment is included.
+    // Effectively no change in InstCount since FpAdjustment is included.
     break;
   }
   case FrameHelperType::Epilog:
@@ -488,16 +483,17 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
   assert(MI.getOpcode() == AArch64::HOM_Epilog);
 
   auto Return = NextMBBI;
+  MachineInstr *HelperCall = nullptr;
   if (shouldUseFrameHelper(MBB, NextMBBI, Regs, FrameHelperType::EpilogTail)) {
     // When MBB ends with a return, emit a tail-call to the epilog helper
     auto *EpilogTailHelper =
         getOrCreateFrameHelper(M, MMI, Regs, FrameHelperType::EpilogTail);
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::TCRETURNdi))
-        .addGlobalAddress(EpilogTailHelper)
-        .addImm(0)
-        .setMIFlag(MachineInstr::FrameDestroy)
-        .copyImplicitOps(MI)
-        .copyImplicitOps(*Return);
+    HelperCall = BuildMI(MBB, MBBI, DL, TII->get(AArch64::TCRETURNdi))
+                     .addGlobalAddress(EpilogTailHelper)
+                     .addImm(0)
+                     .setMIFlag(MachineInstr::FrameDestroy)
+                     .copyImplicitOps(MI)
+                     .copyImplicitOps(*Return);
     NextMBBI = std::next(Return);
     Return->removeFromParent();
   } else if (shouldUseFrameHelper(MBB, NextMBBI, Regs,
@@ -505,10 +501,10 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
     // The default epilog helper case.
     auto *EpilogHelper =
         getOrCreateFrameHelper(M, MMI, Regs, FrameHelperType::Epilog);
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
-        .addGlobalAddress(EpilogHelper)
-        .setMIFlag(MachineInstr::FrameDestroy)
-        .copyImplicitOps(MI);
+    HelperCall = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
+                     .addGlobalAddress(EpilogHelper)
+                     .setMIFlag(MachineInstr::FrameDestroy)
+                     .copyImplicitOps(MI);
   } else {
     // Fall back to no-helper.
     for (int I = 0; I < Size - 2; I += 2)
@@ -517,6 +513,12 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
     emitLoad(MF, MBB, MBBI, *TII, Regs[Size - 2], Regs[Size - 1], Size, true);
   }
 
+  // Make sure all explicit definitions are preserved in the helper call;
+  // implicit ones are already handled by copyImplicitOps.
+  if (HelperCall)
+    for (auto &Def : MBBI->defs())
+      HelperCall->addRegisterDefined(Def.getReg(),
+                                     MF.getRegInfo().getTargetRegisterInfo());
   MBBI->removeFromParent();
   return true;
 }
@@ -654,7 +656,7 @@ bool AArch64LowerHomogeneousPE::runOnMBB(MachineBasicBlock &MBB) {
 }
 
 bool AArch64LowerHomogeneousPE::runOnMachineFunction(MachineFunction &MF) {
-  TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  TII = MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
 
   bool Modified = false;
   for (auto &MBB : MF)

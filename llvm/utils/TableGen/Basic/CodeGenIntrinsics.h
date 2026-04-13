@@ -30,9 +30,6 @@ class RecordKeeper;
 struct CodeGenIntrinsicContext {
   explicit CodeGenIntrinsicContext(const RecordKeeper &RC);
   std::vector<const Record *> DefaultProperties;
-
-  // Maximum number of values an intrinsic can return.
-  unsigned MaxNumReturn;
 };
 
 struct CodeGenIntrinsic {
@@ -117,6 +114,9 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as strictfp.
   bool isStrictFP = false;
 
+  // True if the intrinsic is marked as IntrNoCreateUndefOrPoison.
+  bool isNoCreateUndefOrPoison = false;
+
   enum ArgAttrKind {
     NoCapture,
     NoAlias,
@@ -128,24 +128,45 @@ struct CodeGenIntrinsic {
     ReadNone,
     ImmArg,
     Alignment,
-    Dereferenceable
+    Dereferenceable,
+    Range,
   };
 
   struct ArgAttribute {
     ArgAttrKind Kind;
     uint64_t Value;
+    uint64_t Value2;
 
-    ArgAttribute(ArgAttrKind K, uint64_t V) : Kind(K), Value(V) {}
+    ArgAttribute(ArgAttrKind K, uint64_t V, uint64_t V2)
+        : Kind(K), Value(V), Value2(V2) {}
 
     bool operator<(const ArgAttribute &Other) const {
-      return std::tie(Kind, Value) < std::tie(Other.Kind, Other.Value);
+      return std::tie(Kind, Value, Value2) <
+             std::tie(Other.Kind, Other.Value, Other.Value2);
     }
   };
 
   /// Vector of attributes for each argument.
   SmallVector<SmallVector<ArgAttribute, 0>> ArgumentAttributes;
 
-  void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0);
+  void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0,
+                       uint64_t V2 = 0);
+
+  /// Structure to store pretty print and argument information.
+  struct PrettyPrintArgInfo {
+    unsigned ArgIdx;
+    StringRef ArgName;
+    StringRef FuncName;
+
+    PrettyPrintArgInfo(unsigned Idx, StringRef Name, StringRef Func)
+        : ArgIdx(Idx), ArgName(Name), FuncName(Func) {}
+  };
+
+  /// Vector that stores ArgInfo (ArgIndex, ArgName, FunctionName).
+  SmallVector<PrettyPrintArgInfo> PrettyPrintFunctions;
+
+  void addPrettyPrintFunction(unsigned ArgIdx, StringRef ArgName,
+                              StringRef FuncName);
 
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
 
@@ -164,6 +185,8 @@ struct CodeGenIntrinsic {
   bool isParamAPointer(unsigned ParamIdx) const;
 
   bool isParamImmArg(unsigned ParamIdx) const;
+
+  llvm::IRMemLocation getValueAsIRMemLocation(const Record *R) const;
 
   CodeGenIntrinsic(const Record *R, const CodeGenIntrinsicContext &Ctx);
 };

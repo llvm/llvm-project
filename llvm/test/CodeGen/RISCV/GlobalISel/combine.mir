@@ -8,9 +8,8 @@ body:             |
 
     ; RV64-LABEL: name: nneg_zext
     ; RV64: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; RV64-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s32)
-    ; RV64-NEXT: $x10 = COPY [[SEXT]](s64)
+    ; RV64-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; RV64-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %2:_(s32) = G_TRUNC %0
@@ -18,3 +17,122 @@ body:             |
     $x10 = COPY %3(s64)
     PseudoRET implicit $x10
 ...
+
+---
+name:            binop_left_to_zero_shl
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: binop_left_to_zero_shl
+    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: $x10 = COPY [[C]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s64) = COPY $x10
+    %2:_(s64) = G_SHL %0, %1
+    $x10 = COPY %2(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            binop_left_to_zero_lshr
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: binop_left_to_zero_lshr
+    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: $x10 = COPY [[C]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s64) = COPY $x10
+    %2:_(s64) = G_LSHR %0, %1
+    $x10 = COPY %2(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            binop_left_to_zero_ashr
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: binop_left_to_zero_ashr
+    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: $x10 = COPY [[C]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s64) = COPY $x10
+    %2:_(s64) = G_ASHR %0, %1
+    $x10 = COPY %2(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            binop_left_to_zero_sdiv
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: binop_left_to_zero_sdiv
+    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: $x10 = COPY [[C]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s64) = COPY $x10
+    %2:_(s64) = G_SDIV %0, %1
+    $x10 = COPY %2(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            binop_left_to_zero_udiv
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: binop_left_to_zero_udiv
+    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: $x10 = COPY [[C]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s64) = COPY $x10
+    %2:_(s64) = G_UDIV %0, %1
+    $x10 = COPY %2(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            binop_left_to_zero_srem
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: binop_left_to_zero_srem
+    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: $x10 = COPY [[C]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s64) = COPY $x10
+    %2:_(s64) = G_SREM %0, %1
+    $x10 = COPY %2(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            binop_left_to_zero_urem
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: binop_left_to_zero_urem
+    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: $x10 = COPY [[C]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s64) = COPY $x10
+    %2:_(s64) = G_UREM %0, %1
+    $x10 = COPY %2(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            binop_left_to_zero_mul
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: binop_left_to_zero_mul
+    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64-NEXT: $x10 = COPY [[C]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s64) = COPY $x10
+    %2:_(s64) = G_MUL %0, %1
+    $x10 = COPY %2(s64)
+    PseudoRET implicit $x10

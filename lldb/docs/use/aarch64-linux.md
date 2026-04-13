@@ -229,3 +229,139 @@ bytes.
 
 `zt0`'s value and whether it is active or not will be saved prior to
 expression evaluation and restored afterwards.
+
+## SME Only Systems
+
+AArch64 systems may have both SVE and SME, or they can have only SME. If they
+only have SME, the system has the usual SVE state, but that state and SVE
+instructions may only be used while in streaming mode.
+
+The LLDB experience is very similar to SVE+SME systems, with a few changes.
+
+### Registers
+
+When in streaming mode, registers act as they would on an SVE+SME system.
+Outside of streaming mode LLDB will show the `Z` registers as zero extended copies
+of the `V` registers.
+
+Writes to `Z` registers are allowed, but these are converted to `V` register writes
+and so only the bottom 128-bits will be applied. The size of the value
+written to a `Z` register must match the current streaming vector length, even if
+the process is in non-streaming mode.
+
+For an SME only system, `lldb-server` describes the system as having `Z`
+registers with `V` registers as subsets of those registers. We do not change the
+representation each time the mode changes.
+
+A consequence of this is that if the user writes to a `V` register while in
+non-streaming mode, it will be sent to `lldb-server` as a `Z` register write
+of a zero extended value. `lldb-server` will convert that back into a `V`
+register write with the value truncated to 128-bits.
+
+In streaming mode, it will be zero extended, sent as a `Z` write and written
+to the real streaming SVE `Z` register without truncation.
+
+`P` registers will be shown as 0s in non-streaming mode. They cannot be
+written to in non-streaming mode.
+
+The `ffr` register will also be shown as 0s in non-streaming mode. In streaming
+mode, use of `ffr` is forbidden so it will also show as 0s. It cannot be written
+to in either state.
+
+(in the former state, LLDB generates the fake value, in the latter state, the
+kernel tells `lldb-server` that the value is 0, the result is the same)
+
+The `ZA` and `ZT0` registers act as they would for an SVE+SME system.
+
+Since there is no non-streaming SVE, there is no non-streaming vector length.
+Therefore even in non-streaming mode, the value shown in `vg` will be the
+streaming vector length, and it will be equal to the value of `svg`.
+
+### Expression Evaluation
+
+Some instructions are illegal to use in streaming mode, unless `FEAT_SMEFA64`
+is present.
+
+LLDB **will not** make any attempt to make expressions compatible with the
+current mode.
+
+If part of an expression is not compatible, it will
+result in a `SIGILL` that will be cleaned up as any other signal would be. All
+register, `ZA` and mode state will be restored as normal after expression
+evaluation.
+
+Note that to restore to a non-streaming state from a streaming state, LLDB uses
+a special part of the Linux Kernel's
+[SVE ABI](https://docs.kernel.org/arch/arm64/sve.html). FPSIMD format data is
+written to the non-existent non-streaming SVE register set, with the vector
+length set to 0 to cause the process to exit streaming mode and apply those
+FPSIMD values to the `V` registers.
+
+This feature was added in version 6.19 of the Linux kernel. On older versions,
+LLDB will attempt the restore and it will fail. This will result in the mode
+and some register state not being restored.
+
+This feature is only used for this purpose. Otherwise, in non-streaming mode FP
+registers are accessed using the FP register set, and in streaming mode using
+the streaming SVE register set.
+
+## Guarded Control Stack Extension (GCS)
+
+GCS support includes the following new registers:
+
+* `gcs_features_enabled`
+* `gcs_features_locked`
+* `gcspr_el0`
+
+These map to the registers ptrace provides. The first two have a `gcs_`
+prefix added as their names are too generic without it.
+
+When the GCS is enabled the kernel allocates a memory region for it. This region
+has a special attribute that LLDB will detect and presents like this:
+```
+  (lldb) memory region --all
+  <...>
+  [0x0000fffff7a00000-0x0000fffff7e00000) rw-
+  shadow stack: yes
+  [0x0000fffff7e00000-0x0000fffff7e10000) ---
+```
+
+`shadow stack` is a generic term used in the kernel for secure stack
+extensions like GCS.
+
+### Expression Evaluation
+
+To execute an expression when GCS is enabled, LLDB must push the return
+address of the expression wrapper (usually the entry point of the program)
+to the Guarded Control Stack. It does this by decrementing `gcspr_el0` and
+writing to the location now pointed to by `gcspr_el0` (instead of using the
+GCS push instructions).
+
+After an expression finishes, LLDB will restore the contents of all 3
+GCS registers, apart from the enable bit of `gcs_features_enabled`. This is
+because there are limits on how often and from where you can set this
+bit.
+
+GCS cannot be enabled from ptrace and it is expected that a process which
+has enabled and then disabled GCS, will not enable it again. The simplest
+choice was to not restore the enable bit at all. It is up to the user or
+program to manage that bit.
+
+The return address that LLDB pushed onto the Guarded Control Stack will be left
+in place. As will any values that were pushed to the stack by functions run
+during the expression.
+
+When the process resumes, `gcspr_el0` will be pointing to the original entry
+on the guarded control stack. So the other values will have no effect and
+likely be overwritten by future function calls.
+
+LLDB does not track and restore changes to general memory during expressions,
+so not restoring the GCS contents fits with the current behaviour.
+
+Note that if GCS is disabled and an expression enables it, LLDB will not
+be able to setup the return address and it is up to that expression to do that
+if it wants to return to LLDB correctly.
+
+If it does not do this, the expression will fail and although most process
+state will be restored, GCS will be left enabled. Which means that the program
+is very unlikely to be able to progress.

@@ -25,7 +25,7 @@ define ptr @test_simplify1() {
 define ptr @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) @a)
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr inbounds nuw i8, ptr @a, i32 [[STRLEN]]
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr inbounds i8, ptr @a, i32 [[STRLEN]]
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
   %ret = call ptr @stpcpy(ptr @a, ptr @a)

@@ -96,6 +96,25 @@ struct ErrorNewDeleteTypeMismatch : ErrorBase {
   void Print();
 };
 
+struct ErrorFreeSizeMismatch : ErrorBase {
+  const BufferedStackTrace* free_stack;
+  HeapAddressDescription addr_description;
+  uptr delete_size;
+  uptr delete_alignment;
+
+  ErrorFreeSizeMismatch() = default;  // (*)
+  ErrorFreeSizeMismatch(u32 tid, BufferedStackTrace* stack, uptr addr,
+                        uptr delete_size, uptr delete_alignment)
+      : ErrorBase(tid, 10, "free-size-mismatch"),
+        free_stack(stack),
+        delete_size(delete_size),
+        delete_alignment(delete_alignment) {
+    GetHeapAddressInformation(addr, 1, &addr_description);
+  }
+  void Print();
+  bool isFreeAlignedSized() const { return delete_alignment != 0; }
+};
+
 struct ErrorFreeNotMalloced : ErrorBase {
   const BufferedStackTrace *free_stack;
   AddressDescription addr_description;
@@ -362,7 +381,7 @@ struct ErrorBadParamsToCopyContiguousContainerAnnotations : ErrorBase {
       u32 tid, BufferedStackTrace *stack_, uptr old_storage_beg_,
       uptr old_storage_end_, uptr new_storage_beg_, uptr new_storage_end_)
       : ErrorBase(tid, 10,
-                  "bad-__sanitizer_annotate_double_ended_contiguous_container"),
+                  "bad-__sanitizer_copy_contiguous_container_annotations"),
         stack(stack_),
         old_storage_beg(old_storage_beg_),
         old_storage_end(old_storage_end_),
@@ -422,6 +441,7 @@ struct ErrorGeneric : ErrorBase {
   macro(DeadlySignal)                                      \
   macro(DoubleFree)                                        \
   macro(NewDeleteTypeMismatch)                             \
+  macro(FreeSizeMismatch)                                  \
   macro(FreeNotMalloced)                                   \
   macro(AllocTypeMismatch)                                 \
   macro(MallocUsableSizeNotOwned)                          \

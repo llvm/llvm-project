@@ -13,13 +13,8 @@ import subprocess
 import json
 import datetime
 import argparse
-
-try:
-    from urllib.parse import urlencode
-    from urllib.request import urlopen, Request
-except ImportError:
-    from urllib import urlencode
-    from urllib2 import urlopen, Request
+from urllib.parse import urlencode
+from urllib.request import urlopen, Request
 
 
 parser = argparse.ArgumentParser()

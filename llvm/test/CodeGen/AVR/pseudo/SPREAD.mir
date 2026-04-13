@@ -1,0 +1,28 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=attiny13 %s -o - \
+# RUN:     | FileCheck --check-prefix=NOSPH %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=atmega328 %s -o - \
+# RUN:     | FileCheck %s
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test
+    ; CHECK:       $r14 = INRdA 61
+    ; CHECK:       $r15 = INRdA 62
+
+    ; NOSPH-LABEL: test
+    ; NOSPH:       $r14 = INRdA 61
+    ; NOSPH:       $r15 = EORRdRr killed $r15, $r15, implicit-def dead $sreg
+
+     $r15r14 = SPREAD $sp, implicit $sp
+...

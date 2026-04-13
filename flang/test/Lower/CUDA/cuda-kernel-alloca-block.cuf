@@ -1,0 +1,29 @@
+! RUN: bbc -emit-fir -hlfir -fcuda %s -o - | FileCheck %s
+
+module char1
+
+character*1, dimension(:), allocatable, device :: da, db
+
+contains
+  attributes(device) logical function check_char( c1, c2 )
+    character*1, value :: c1, c2
+    check_char = .false.
+    if(c1 .eq. c2) check_char = .true.
+  end function
+end module
+
+program p
+  use char1
+  integer :: n, i
+  !$cuf kernel do(1)<<<*,*>>>
+  do i = 1, n
+    if (check_char(da(i),db(i))) then
+      print*,'same'
+    endif
+  enddo
+end program
+
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK: cuf.kernel
+! CHECK-COUNT-2: %{{.*}} = fir.alloca !fir.char<1> {bindc_name = ".tmp"}
+

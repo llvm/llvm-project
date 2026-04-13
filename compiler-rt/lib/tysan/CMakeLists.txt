@@ -3,11 +3,25 @@ include_directories(..)
 # Runtime library sources and build flags.
 set(TYSAN_SOURCES
   tysan.cpp
-  tysan_interceptors.cpp)
+  tysan_interceptors.cpp
+  )
+
+SET(TYSAN_HEADERS
+  tysan.h
+  tysan_flags.inc
+  tysan_platform.h
+  )
+
 set(TYSAN_COMMON_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF TYSAN_COMMON_CFLAGS)
 # Prevent clang from generating libc calls.
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding TYSAN_COMMON_CFLAGS)
+set(TYSAN_DYNAMIC_CFLAGS ${TYSAN_COMMON_CFLAGS})
+
+set(TYSAN_COMMON_DEFINITIONS "")
+set(TYSAN_DYNAMIC_DEFINITIONS ${TYSAN_COMMON_DEFINITIONS} TYSAN_DYNAMIC=1)
+
+# Compile TYSan sources into an object library.
 
 add_compiler_rt_object_libraries(RTTysan_dynamic
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
@@ -32,8 +46,10 @@ if(APPLE)
     OBJECT_LIBS RTTysan_dynamic
                 RTInterception
                 RTSanitizerCommon
+                RTSanitizerCommonCoverage
                 RTSanitizerCommonLibc
                 RTSanitizerCommonSymbolizer
+                RTUbsan
     CFLAGS ${TYSAN_DYNAMIC_CFLAGS}
     LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
     DEFS ${TYSAN_DYNAMIC_DEFINITIONS}
@@ -47,17 +63,20 @@ if(APPLE)
     DEFS ${TYSAN_COMMON_DEFINITIONS}
     PARENT_TARGET tysan)
 else()
+  set(TYSAN_CFLAGS ${TYSAN_COMMON_CFLAGS})
+  append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE TYSAN_CFLAGS)
+
   foreach(arch ${TYSAN_SUPPORTED_ARCH})
-    set(TYSAN_CFLAGS ${TYSAN_COMMON_CFLAGS})
-    append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE TYSAN_CFLAGS)
     add_compiler_rt_runtime(clang_rt.tysan
       STATIC
       ARCHS ${arch}
       SOURCES ${TYSAN_SOURCES}
-              $<TARGET_OBJECTS:RTInterception.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      OBJECT_LIBS RTInterception
+                  RTSanitizerCommon
+                  RTSanitizerCommonCoverage
+                  RTSanitizerCommonLibc
+                  RTSanitizerCommonSymbolizer
+                  RTUbsan
       CFLAGS ${TYSAN_CFLAGS}
       PARENT_TARGET tysan)
   endforeach()

@@ -14,7 +14,7 @@ struct __attribute__((capability("custom"))) CustomName {};
 int Test1 __attribute__((capability("test1")));  // expected-error {{'capability' attribute only applies to structs, unions, classes, and typedefs}}
 int Test2 __attribute__((shared_capability("test2"))); // expected-error {{'shared_capability' attribute only applies to structs, unions, classes, and typedefs}}
 int Test3 __attribute__((acquire_capability("test3")));  // expected-warning {{'acquire_capability' attribute only applies to functions}}
-int Test4 __attribute__((try_acquire_capability("test4"))); // expected-error {{'try_acquire_capability' attribute only applies to functions}}
+int Test4 __attribute__((try_acquire_capability("test4"))); // expected-warning {{'try_acquire_capability' attribute only applies to functions}}
 int Test5 __attribute__((release_capability("test5"))); // expected-warning {{'release_capability' attribute only applies to functions}}
 
 struct __attribute__((capability(12))) Test3 {}; // expected-error {{expected string literal as argument of 'capability' attribute}}

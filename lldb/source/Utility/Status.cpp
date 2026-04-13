@@ -125,8 +125,7 @@ static llvm::Error CloneError(const llvm::Error &error) {
       return llvm::Error(static_cast<const CloneableError &>(e).Clone());
     if (e.isA<llvm::ECError>())
       return llvm::errorCodeToError(e.convertToErrorCode());
-    return llvm::make_error<llvm::StringError>(e.message(),
-                                               e.convertToErrorCode(), true);
+    return llvm::createStringError(e.message(), e.convertToErrorCode());
   };
   llvm::visitErrors(error, [&](const llvm::ErrorInfoBase &e) {
     result = joinErrors(std::move(result), clone(e));
@@ -250,6 +249,30 @@ lldb::ErrorType MachKernelError::GetErrorType() const {
 
 lldb::ErrorType Win32Error::GetErrorType() const {
   return lldb::eErrorTypeWin32;
+}
+
+StructuredData::ObjectSP Status::GetAsStructuredData() const {
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
+  auto array_up = std::make_unique<StructuredData::Array>();
+  llvm::visitErrors(m_error, [&](const llvm::ErrorInfoBase &error) {
+    if (error.isA<CloneableError>())
+      array_up->AddItem(
+          static_cast<const CloneableError &>(error).GetAsStructuredData());
+    else
+      array_up->AddStringItem(error.message());
+  });
+  dict_up->AddIntegerItem("version", 1u);
+  dict_up->AddIntegerItem("type", (unsigned)GetType());
+  dict_up->AddItem("errors", std::move(array_up));
+  return dict_up;
+}
+
+StructuredData::ObjectSP CloneableECError::GetAsStructuredData() const {
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
+  dict_up->AddIntegerItem("version", 1u);
+  dict_up->AddIntegerItem("error_code", EC.value());
+  dict_up->AddStringItem("message", message());
+  return dict_up;
 }
 
 ErrorType Status::GetType() const {

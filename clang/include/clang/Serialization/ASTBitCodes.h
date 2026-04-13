@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 34;
+const unsigned VERSION_MAJOR = 37;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -151,14 +151,14 @@ struct UnsafeQualTypeDenseMapInfo {
 };
 
 /// An ID number that refers to a macro in an AST file.
-using MacroID = uint32_t;
+using MacroID = uint64_t;
 
 /// A global ID number that refers to a macro in an AST file.
-using GlobalMacroID = uint32_t;
+using GlobalMacroID = uint64_t;
 
 /// A local to a module ID number that refers to a macro in an
 /// AST file.
-using LocalMacroID = uint32_t;
+using LocalMacroID = uint64_t;
 
 /// The number of predefined macro IDs.
 const unsigned int NUM_PREDEF_MACRO_IDS = 1;
@@ -179,7 +179,7 @@ using CXXCtorInitializersID = uint32_t;
 
 /// An ID number that refers to an entity in the detailed
 /// preprocessing record.
-using PreprocessedEntityID = uint32_t;
+using PreprocessedEntityID = uint64_t;
 
 /// An ID number that refers to a submodule in a module file.
 using SubmoduleID = uint32_t;
@@ -399,6 +399,9 @@ enum OptionsRecordTypes {
 
   /// Record code for the preprocessor options table.
   PREPROCESSOR_OPTIONS,
+
+  /// Record code for the codegen options table.
+  CODEGEN_OPTIONS,
 };
 
 /// Record codes for the unhashed control block.
@@ -738,6 +741,16 @@ enum ASTRecordTypes {
   CXX_ADDED_TEMPLATE_SPECIALIZATION = 74,
 
   CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION = 75,
+
+  UPDATE_MODULE_LOCAL_VISIBLE = 76,
+
+  UPDATE_TU_LOCAL_VISIBLE = 77,
+
+  /// Record code for #pragma clang riscv intrinsic vector.
+  RISCV_VECTOR_INTRINSICS_PRAGMA = 78,
+
+  /// Record code for extname-redefined undeclared identifiers.
+  EXTNAME_UNDECLARED_IDENTIFIERS = 79,
 };
 
 /// Record types used within a source manager block.
@@ -1125,7 +1138,7 @@ enum PredefinedTypeIDs {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 // \brief SVE types with auto numeration
 #define SVE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 // \brief  PowerPC MMA types with auto numeration
 #define PPC_VECTOR_TYPE(Name, Id, Size) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/PPCTypes.def"
@@ -1153,7 +1166,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 513;
+const unsigned NUM_PREDEF_TYPE_IDS = 515;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1312,6 +1325,9 @@ enum DeclCode {
   /// A BlockDecl record.
   DECL_BLOCK,
 
+  /// A OutlinedFunctionDecl record.
+  DECL_OUTLINEDFUNCTION,
+
   /// A CapturedDecl record.
   DECL_CAPTURED,
 
@@ -1333,6 +1349,14 @@ enum DeclCode {
   /// IDs. This data is used when performing qualified name lookup
   /// into a DeclContext via DeclContext::lookup.
   DECL_CONTEXT_VISIBLE,
+
+  /// A record containing the set of declarations that are
+  /// only visible from DeclContext in the same module.
+  DECL_CONTEXT_MODULE_LOCAL_VISIBLE,
+
+  /// A record that stores the set of declarations that are only visible
+  /// to the TU.
+  DECL_CONTEXT_TU_LOCAL_VISIBLE,
 
   /// A LabelDecl record.
   DECL_LABEL,
@@ -1507,13 +1531,19 @@ enum DeclCode {
   /// An ImplicitConceptSpecializationDecl record.
   DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
 
-  // A decls specilization record.
+  // A decls specialization record.
   DECL_SPECIALIZATIONS,
 
-  // A decls specilization record.
+  // A decls specialization record.
   DECL_PARTIAL_SPECIALIZATIONS,
 
-  DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
+  // An OpenACCDeclareDecl record.
+  DECL_OPENACC_DECLARE,
+
+  // An OpenACCRoutineDecl record.
+  DECL_OPENACC_ROUTINE,
+
+  DECL_LAST = DECL_OPENACC_ROUTINE
 };
 
 /// Record codes for each kind of statement or expression.
@@ -1587,6 +1617,12 @@ enum StmtCode {
 
   /// A CapturedStmt record.
   STMT_CAPTURED,
+
+  /// A SYCLKernelCallStmt record.
+  STMT_SYCLKERNELCALL,
+
+  /// An UnresolvedSYCLKernelCallStmt record.
+  STMT_UNRESOLVED_SYCL_KERNEL_CALL,
 
   /// A GCC-style AsmStmt record.
   STMT_GCCASM,
@@ -1665,6 +1701,9 @@ enum StmtCode {
 
   /// An ExtVectorElementExpr record.
   EXPR_EXT_VECTOR_ELEMENT,
+
+  /// A MatrixElementExpr record.
+  EXPR_MATRIX_ELEMENT,
 
   /// An InitListExpr record.
   EXPR_INIT_LIST,
@@ -1898,6 +1937,9 @@ enum StmtCode {
   EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
   EXPR_REQUIRES,                          // RequiresExpr
 
+  // Reflection
+  EXPR_REFLECT,
+
   // CUDA
   EXPR_CUDA_KERNEL_CALL, // CUDAKernelCallExpr
 
@@ -1920,9 +1962,12 @@ enum StmtCode {
   STMT_OMP_PARALLEL_DIRECTIVE,
   STMT_OMP_SIMD_DIRECTIVE,
   STMT_OMP_TILE_DIRECTIVE,
+  STMP_OMP_STRIPE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
   STMT_OMP_REVERSE_DIRECTIVE,
+  STMT_OMP_SPLIT_DIRECTIVE,
   STMT_OMP_INTERCHANGE_DIRECTIVE,
+  STMT_OMP_FUSE_DIRECTIVE,
   STMT_OMP_FOR_DIRECTIVE,
   STMT_OMP_FOR_SIMD_DIRECTIVE,
   STMT_OMP_SECTIONS_DIRECTIVE,
@@ -2021,10 +2066,18 @@ enum StmtCode {
   STMT_OPENACC_ENTER_DATA_CONSTRUCT,
   STMT_OPENACC_EXIT_DATA_CONSTRUCT,
   STMT_OPENACC_HOST_DATA_CONSTRUCT,
+  STMT_OPENACC_WAIT_CONSTRUCT,
+  STMT_OPENACC_INIT_CONSTRUCT,
+  STMT_OPENACC_SHUTDOWN_CONSTRUCT,
+  STMT_OPENACC_SET_CONSTRUCT,
+  STMT_OPENACC_UPDATE_CONSTRUCT,
+  STMT_OPENACC_ATOMIC_CONSTRUCT,
+  STMT_OPENACC_CACHE_CONSTRUCT,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,
 
+  STMT_DEFER,
 };
 
 /// The kinds of designators that can occur in a

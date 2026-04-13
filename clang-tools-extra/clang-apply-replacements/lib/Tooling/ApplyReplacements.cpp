@@ -142,7 +142,7 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
     // build directories, make them absolute immediately.
     SmallString<128> Path = R.getFilePath();
     if (BuildDir)
-      llvm::sys::fs::make_absolute(*BuildDir, Path);
+      llvm::sys::path::make_absolute(*BuildDir, Path);
     else
       SM.getFileManager().makeAbsolutePath(Path);
 

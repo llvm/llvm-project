@@ -17,22 +17,23 @@
 
 */
 
-#if 0
-#else // 0
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
 #  include <__config>
+#endif
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
-#  ifdef __cplusplus
-#    include <cmath>
-#    include <complex>
-#  else
-#    if __has_include_next(<tgmath.h>)
-#      include_next <tgmath.h>
-#    endif
+#ifdef __cplusplus
+#  include <cmath>
+#  include <complex>
+#else
+#  if __has_include_next(<tgmath.h>)
+#    include_next <tgmath.h>
 #  endif
-#endif // 0
+#endif
 
 #endif // _LIBCPP_TGMATH_H

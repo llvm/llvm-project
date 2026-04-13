@@ -35,7 +35,7 @@ class ValueObjectDynamicValue : public ValueObject {
 public:
   ~ValueObjectDynamicValue() override = default;
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 

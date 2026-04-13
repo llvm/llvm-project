@@ -15,7 +15,7 @@
 #include "CSKYConstantPoolValue.h"
 #include "CSKYTargetMachine.h"
 #include "MCTargetDesc/CSKYInstPrinter.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "MCTargetDesc/CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -72,8 +72,8 @@ void CSKYAsmPrinter::expandTLSLA(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
 
   MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-      Twine(MAI->getPrivateGlobalPrefix()) + "PC" + Twine(getFunctionNumber()) +
-      "_" + Twine(MI->getOperand(3).getImm()));
+      Twine(MAI->getInternalSymbolPrefix()) + "PC" +
+      Twine(getFunctionNumber()) + "_" + Twine(MI->getOperand(3).getImm()));
 
   OutStreamer->emitLabel(PCLabel);
 
@@ -168,25 +168,24 @@ void CSKYAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 // Convert a CSKY-specific constant pool modifier into the associated
 // MCSymbolRefExpr variant kind.
-static CSKYMCExpr::VariantKind
-getModifierVariantKind(CSKYCP::CSKYCPModifier Modifier) {
+static CSKY::Specifier getModifierVariantKind(CSKYCP::CSKYCPModifier Modifier) {
   switch (Modifier) {
   case CSKYCP::NO_MOD:
-    return CSKYMCExpr::VK_CSKY_None;
+    return CSKY::S_None;
   case CSKYCP::ADDR:
-    return CSKYMCExpr::VK_CSKY_ADDR;
+    return CSKY::S_ADDR;
   case CSKYCP::GOT:
-    return CSKYMCExpr::VK_CSKY_GOT;
+    return CSKY::S_GOT;
   case CSKYCP::GOTOFF:
-    return CSKYMCExpr::VK_CSKY_GOTOFF;
+    return CSKY::S_GOTOFF;
   case CSKYCP::PLT:
-    return CSKYMCExpr::VK_CSKY_PLT;
+    return CSKY::S_PLT;
   case CSKYCP::TLSGD:
-    return CSKYMCExpr::VK_CSKY_TLSGD;
+    return CSKY::S_TLSGD;
   case CSKYCP::TLSLE:
-    return CSKYMCExpr::VK_CSKY_TLSLE;
+    return CSKY::S_TLSLE;
   case CSKYCP::TLSIE:
-    return CSKYMCExpr::VK_CSKY_TLSIE;
+    return CSKY::S_TLSIE;
   }
   llvm_unreachable("Invalid CSKYCPModifier!");
 }
@@ -219,13 +218,12 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
     MCSym = GetExternalSymbolSymbol(Sym);
   }
   // Create an MCSymbol for the reference.
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(MCSym, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, OutContext);
 
   if (CCPV->getPCAdjustment()) {
 
     MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-        Twine(MAI->getPrivateGlobalPrefix()) + "PC" +
+        Twine(MAI->getInternalSymbolPrefix()) + "PC" +
         Twine(getFunctionNumber()) + "_" + Twine(CCPV->getLabelID()));
 
     const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);
@@ -241,8 +239,8 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   }
 
   // Create an MCSymbol for the reference.
-  Expr = CSKYMCExpr::create(Expr, getModifierVariantKind(CCPV->getModifier()),
-                            OutContext);
+  Expr = MCSpecifierExpr::create(
+      Expr, getModifierVariantKind(CCPV->getModifier()), OutContext);
 
   OutStreamer->emitValue(Expr, Size);
 }

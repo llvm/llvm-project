@@ -228,6 +228,7 @@
 // CHECK-SPIRV32-DAG: #define __SPIRV__ 1
 // CHECK-SPIRV32-DAG: #define __SPIRV32__ 1
 // CHECK-SPIRV32-NOT: #define __SPIRV64__ 1
+// CHECK-SPIRV32-NOT: #define __spirv__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64
@@ -235,6 +236,7 @@
 // CHECK-SPIRV64-DAG: #define __SPIRV__ 1
 // CHECK-SPIRV64-DAG: #define __SPIRV64__ 1
 // CHECK-SPIRV64-NOT: #define __SPIRV32__ 1
+// CHECK-SPIRV64-NOT: #define __spirv__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-amd-amdhsa \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64-AMDGCN
@@ -245,6 +247,7 @@
 // CHECK-SPIRV64-AMDGCN-DAG: #define __AMDGCN__ 1
 // CHECK-SPIRV64-AMDGCN-DAG: #define __AMDGPU__ 1
 // CHECK-SPIRV64-AMDGCN-NOT: #define __SPIRV32__ 1
+// CHECK-SPIRV64-AMDGCN-NOT: #define __spirv__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP
@@ -304,11 +307,13 @@
 // RUN: %clang_cc1 %s -E -dM -o - -x hip --hipstdpar -triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIPSTDPAR
 // CHECK-HIPSTDPAR: #define __HIPSTDPAR__ 1
+// CHECK-HIPSTDPAR-NOT: #define __HIPSTDPAR_INTERPOSE_ALLOC_V1__ 1
 // CHECK-HIPSTDPAR-NOT: #define __HIPSTDPAR_INTERPOSE_ALLOC__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip --hipstdpar --hipstdpar-interpose-alloc \
 // RUN:  -triple x86_64-unknown-linux-gnu | FileCheck -match-full-lines %s \
 // RUN:  --check-prefix=CHECK-HIPSTDPAR-INTERPOSE
+// CHECK-HIPSTDPAR-INTERPOSE: #define __HIPSTDPAR_INTERPOSE_ALLOC_V1__ 1
 // CHECK-HIPSTDPAR-INTERPOSE: #define __HIPSTDPAR_INTERPOSE_ALLOC__ 1
 // CHECK-HIPSTDPAR-INTERPOSE: #define __HIPSTDPAR__ 1
 
@@ -316,4 +321,5 @@
 // RUN:  -triple amdgcn-amd-amdhsa -fcuda-is-device | FileCheck -match-full-lines \
 // RUN:  %s --check-prefix=CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG
 // CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG: #define __HIPSTDPAR__ 1
+// CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG-NOT: #define __HIPSTDPAR_INTERPOSE_ALLOC_V1__ 1
 // CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG-NOT: #define __HIPSTDPAR_INTERPOSE_ALLOC__ 1

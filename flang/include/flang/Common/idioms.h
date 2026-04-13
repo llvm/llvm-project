@@ -87,7 +87,10 @@ template <typename... LAMBDAS> visitors(LAMBDAS... x) -> visitors<LAMBDAS...>;
 // To disable, compile with '-DCHECK=(void)'
 #ifndef CHECK
 #define CHECK(x) ((x) || (DIE("CHECK(" #x ") failed"), false))
+#endif
+
 // Same as above, but with a custom error message.
+#ifndef CHECK_MSG
 #define CHECK_MSG(x, y) ((x) || (DIE("CHECK(" #x ") failed: " #y), false))
 #endif
 

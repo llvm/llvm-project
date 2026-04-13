@@ -1,6 +1,5 @@
 // Test X86-64 passing ABI of struct in registers for the simple case
 // where the struct has a single intrinsic component that is not a complex.
-// REQUIRES: x86-registered-target
 // RUN: fir-opt -target-rewrite="target=x86_64-unknown-linux-gnu" %s -o - | FileCheck %s
 
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {

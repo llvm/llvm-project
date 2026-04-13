@@ -1,0 +1,50 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+  Entry:           0x400510
+ProgramHeaders:
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.property
+    LastSec:         .note.gnu.property
+    VAddr:           0x400338
+    Align:           0x8
+  - Type:           PT_LOAD
+    Flags:          [ PF_R ]
+    VAddr:          0x0
+    Align:          0x10000
+    FileSize:       0xf8
+    MemSize:        0xf8
+    Offset:         0x0
+Sections:
+  - Name:           .text
+    Type:           SHT_PROGBITS
+    Flags:          [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:        0x2a0000
+    AddressAlign:   0x4
+    Content:        400580d2c0035fd6
+  - Name:            .note.gnu.property
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400338
+    AddressAlign:    0x8
+    Notes:
+      - Name:            GNU
+        Desc:            000000C0040000000200000000000000
+        Type:            NT_GNU_PROPERTY_TYPE_0
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .note.gnu.property
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+      - Name:            .text
+Symbols:
+  - Name:            .note.gnu.property
+    Type:            STT_SECTION
+    Section:         .note.gnu.property
+    Value:           0x400338
+...

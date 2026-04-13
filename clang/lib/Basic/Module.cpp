@@ -25,7 +25,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <string>
@@ -33,6 +32,25 @@
 #include <vector>
 
 using namespace clang;
+
+std::optional<ModuleFileKey>
+ModuleFileName::makeKey(FileManager &FileMgr) const {
+  if (ImplicitModuleSuffixLength) {
+    StringRef ModuleCachePath =
+        StringRef(Path).drop_back(ImplicitModuleSuffixLength);
+    StringRef ImplicitModuleSuffix =
+        StringRef(Path).take_back(ImplicitModuleSuffixLength);
+    if (auto ModuleCache = FileMgr.getOptionalDirectoryRef(
+            ModuleCachePath, /*CacheFailure=*/false))
+      return ModuleFileKey(*ModuleCache, ImplicitModuleSuffix);
+  } else {
+    if (auto ModuleFile = FileMgr.getOptionalFileRef(Path, /*OpenFile=*/true,
+                                                     /*CacheFailure=*/false))
+      return ModuleFileKey(*ModuleFile);
+  }
+
+  return std::nullopt;
+}
 
 Module::Module(ModuleConstructorTag, StringRef Name,
                SourceLocation DefinitionLoc, Module *Parent, bool IsFramework,
@@ -334,8 +352,7 @@ void Module::markUnavailable(bool Unimportable) {
   SmallVector<Module *, 2> Stack;
   Stack.push_back(this);
   while (!Stack.empty()) {
-    Module *Current = Stack.back();
-    Stack.pop_back();
+    Module *Current = Stack.pop_back_val();
 
     if (!needUpdate(Current))
       continue;
@@ -662,7 +679,8 @@ LLVM_DUMP_METHOD void Module::dump() const {
 }
 
 void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
-                                  VisibleCallback Vis, ConflictCallback Cb) {
+                                  bool IncludeExports, VisibleCallback Vis,
+                                  ConflictCallback Cb) {
   // We can't import a global module fragment so the location can be invalid.
   assert((M->isGlobalModule() || Loc.isValid()) &&
          "setVisible expects a valid import location");
@@ -688,12 +706,14 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     Vis(V.M);
 
     // Make any exported modules visible.
-    SmallVector<Module *, 16> Exports;
-    V.M->getExportedModules(Exports);
-    for (Module *E : Exports) {
-      // Don't import non-importable modules.
-      if (!E->isUnimportable())
-        VisitModule({E, &V});
+    if (IncludeExports) {
+      SmallVector<Module *, 16> Exports;
+      V.M->getExportedModules(Exports);
+      for (Module *E : Exports) {
+        // Don't import non-importable modules.
+        if (!E->isUnimportable())
+          VisitModule({E, &V});
+      }
     }
 
     for (auto &C : V.M->Conflicts) {

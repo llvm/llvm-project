@@ -24,8 +24,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 
-extern llvm::cl::opt<bool> WriteNewDbgInfoFormat;
-
 using namespace mlir;
 
 namespace {
@@ -70,8 +68,8 @@ LogicalResult TestDialectLLVMIRTranslationInterface::amendOperation(
 
               if (createSymbol) {
                 OpBuilder builder(op->getRegion(0));
-                builder.create<test::SymbolOp>(
-                    op->getLoc(),
+                test::SymbolOp::create(
+                    builder, op->getLoc(),
                     StringAttr::get(op->getContext(), "sym_from_attr"),
                     /*sym_visibility=*/nullptr);
               }
@@ -125,13 +123,7 @@ void registerTestToLLVMIR() {
         if (!llvmModule)
           return failure();
 
-        // When printing LLVM IR, we should convert the module to the debug info
-        // format that LLVM expects us to print.
-        // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-        llvm::ScopedDbgInfoFormatSetter formatSetter(*llvmModule,
-                                                     WriteNewDbgInfoFormat);
-        if (WriteNewDbgInfoFormat)
-          llvmModule->removeDebugIntrinsicDeclarations();
+        llvmModule->removeDebugIntrinsicDeclarations();
         llvmModule->print(output, nullptr);
         return success();
       },

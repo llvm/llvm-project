@@ -85,7 +85,7 @@ template <_RangeAdaptorClosure _Closure, _RangeAdaptorClosure _OtherClosure>
 #  if _LIBCPP_STD_VER >= 23
 template <class _Tp>
   requires is_class_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>>
-class range_adaptor_closure : public __range_adaptor_closure<_Tp> {};
+class _LIBCPP_NO_SPECIALIZATIONS range_adaptor_closure : public __range_adaptor_closure<_Tp> {};
 #  endif // _LIBCPP_STD_VER >= 23
 
 } // namespace ranges

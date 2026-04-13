@@ -67,23 +67,22 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ;
 ; VFP2-LABEL: test_signed_i1_f32:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    vmov s2, r0
 ; VFP2-NEXT:    vmov.f32 s0, #-1.000000e+00
-; VFP2-NEXT:    vcvt.s32.f32 s4, s2
-; VFP2-NEXT:    vcmp.f32 s2, s0
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r0, #-1
-; VFP2-NEXT:    vcmp.f32 s2, #0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movgt r0, #0
+; VFP2-NEXT:    vldr s4, .LCPI0_0
+; VFP2-NEXT:    vmov s2, r0
 ; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    bx lr
+; VFP2-NEXT:    .p2align 2
+; VFP2-NEXT:  @ %bb.1:
+; VFP2-NEXT:  .LCPI0_0:
+; VFP2-NEXT:    .long 0x00000000 @ float 0
 ;
 ; FP16-LABEL: test_signed_i1_f32:
 ; FP16:       @ %bb.0:
@@ -157,21 +156,15 @@ define i8 @test_signed_i8_f32(float %f) nounwind {
 ;
 ; VFP2-LABEL: test_signed_i8_f32:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI1_0
-; VFP2-NEXT:    vldr s6, .LCPI1_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
+; VFP2-NEXT:    vmov s2, r0
+; VFP2-NEXT:    vldr s0, .LCPI1_0
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vldr s4, .LCPI1_1
+; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    mvnlt r0, #127
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movgt r0, #127
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    bx lr
@@ -256,22 +249,15 @@ define i13 @test_signed_i13_f32(float %f) nounwind {
 ;
 ; VFP2-LABEL: test_signed_i13_f32:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI2_0
-; VFP2-NEXT:    vldr s6, .LCPI2_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
+; VFP2-NEXT:    vmov s2, r0
+; VFP2-NEXT:    vldr s0, .LCPI2_0
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vldr s4, .LCPI2_1
+; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    itt lt
-; VFP2-NEXT:    movwlt r0, #61440
-; VFP2-NEXT:    movtlt r0, #65535
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movwgt r0, #4095
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    bx lr
@@ -356,22 +342,15 @@ define i16 @test_signed_i16_f32(float %f) nounwind {
 ;
 ; VFP2-LABEL: test_signed_i16_f32:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI3_0
-; VFP2-NEXT:    vldr s6, .LCPI3_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
+; VFP2-NEXT:    vmov s2, r0
+; VFP2-NEXT:    vldr s0, .LCPI3_0
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vldr s4, .LCPI3_1
+; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    itt lt
-; VFP2-NEXT:    movwlt r0, #32768
-; VFP2-NEXT:    movtlt r0, #65535
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movwgt r0, #32767
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    bx lr
@@ -456,23 +435,15 @@ define i19 @test_signed_i19_f32(float %f) nounwind {
 ;
 ; VFP2-LABEL: test_signed_i19_f32:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI4_0
-; VFP2-NEXT:    vldr s6, .LCPI4_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
+; VFP2-NEXT:    vmov s2, r0
+; VFP2-NEXT:    vldr s0, .LCPI4_0
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vldr s4, .LCPI4_1
+; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    itt lt
-; VFP2-NEXT:    movlt r0, #0
-; VFP2-NEXT:    movtlt r0, #65532
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    itt gt
-; VFP2-NEXT:    movwgt r0, #65535
-; VFP2-NEXT:    movtgt r0, #3
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    bx lr
@@ -2492,23 +2463,22 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __aeabi_h2f
-; VFP2-NEXT:    vmov s2, r0
 ; VFP2-NEXT:    vmov.f32 s0, #-1.000000e+00
-; VFP2-NEXT:    vcvt.s32.f32 s4, s2
-; VFP2-NEXT:    vcmp.f32 s2, s0
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r0, #-1
-; VFP2-NEXT:    vcmp.f32 s2, #0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movgt r0, #0
+; VFP2-NEXT:    vldr s4, .LCPI20_0
+; VFP2-NEXT:    vmov s2, r0
 ; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    pop {r7, pc}
+; VFP2-NEXT:    .p2align 2
+; VFP2-NEXT:  @ %bb.1:
+; VFP2-NEXT:  .LCPI20_0:
+; VFP2-NEXT:    .long 0x00000000 @ float 0
 ;
 ; FP16-LABEL: test_signed_i1_f16:
 ; FP16:       @ %bb.0:
@@ -2588,21 +2558,15 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __aeabi_h2f
-; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI21_0
-; VFP2-NEXT:    vldr s6, .LCPI21_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
+; VFP2-NEXT:    vmov s2, r0
+; VFP2-NEXT:    vldr s0, .LCPI21_0
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vldr s4, .LCPI21_1
+; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    mvnlt r0, #127
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movgt r0, #127
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    pop {r7, pc}
@@ -2693,22 +2657,15 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __aeabi_h2f
-; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI22_0
-; VFP2-NEXT:    vldr s6, .LCPI22_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
+; VFP2-NEXT:    vmov s2, r0
+; VFP2-NEXT:    vldr s0, .LCPI22_0
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vldr s4, .LCPI22_1
+; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    itt lt
-; VFP2-NEXT:    movwlt r0, #61440
-; VFP2-NEXT:    movtlt r0, #65535
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movwgt r0, #4095
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    pop {r7, pc}
@@ -2799,22 +2756,15 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __aeabi_h2f
-; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI23_0
-; VFP2-NEXT:    vldr s6, .LCPI23_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
+; VFP2-NEXT:    vmov s2, r0
+; VFP2-NEXT:    vldr s0, .LCPI23_0
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vldr s4, .LCPI23_1
+; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    itt lt
-; VFP2-NEXT:    movwlt r0, #32768
-; VFP2-NEXT:    movtlt r0, #65535
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    it gt
-; VFP2-NEXT:    movwgt r0, #32767
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    pop {r7, pc}
@@ -2905,23 +2855,15 @@ define i19 @test_signed_i19_f16(half %f) nounwind {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __aeabi_h2f
-; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    vldr s2, .LCPI24_0
-; VFP2-NEXT:    vldr s6, .LCPI24_1
-; VFP2-NEXT:    vcvt.s32.f32 s4, s0
-; VFP2-NEXT:    vcmp.f32 s0, s2
+; VFP2-NEXT:    vmov s2, r0
+; VFP2-NEXT:    vldr s0, .LCPI24_0
+; VFP2-NEXT:    vmax.f32 d16, d1, d0
+; VFP2-NEXT:    vldr s4, .LCPI24_1
+; VFP2-NEXT:    vcmp.f32 s2, s2
 ; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s6
-; VFP2-NEXT:    vmov r0, s4
-; VFP2-NEXT:    itt lt
-; VFP2-NEXT:    movlt r0, #0
-; VFP2-NEXT:    movtlt r0, #65532
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP2-NEXT:    vcmp.f32 s0, s0
-; VFP2-NEXT:    itt gt
-; VFP2-NEXT:    movwgt r0, #65535
-; VFP2-NEXT:    movtgt r0, #3
-; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    vmin.f32 d0, d16, d2
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    it vs
 ; VFP2-NEXT:    movvs r0, #0
 ; VFP2-NEXT:    pop {r7, pc}

@@ -530,7 +530,7 @@ public:
     istream_iterator(); // constexpr since C++11
     constexpr istream_iterator(default_sentinel_t); // since C++20
     istream_iterator(istream_type& s);
-    istream_iterator(const istream_iterator& x);
+    constexpr istream_iterator(const istream_iterator& x) noexcept(see below);
     ~istream_iterator();
 
     const T& operator*() const;
@@ -679,8 +679,9 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/iterator>
+#else
 #  include <__config>
 #  include <__iterator/access.h>
 #  include <__iterator/advance.h>
@@ -736,6 +737,16 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #  include <compare>
 #  include <concepts>
 
+// [range.access.general]
+#  if _LIBCPP_STD_VER >= 20
+#    include <__ranges/access.h>
+#    include <__ranges/data.h>
+#    include <__ranges/empty.h>
+#    include <__ranges/rbegin.h>
+#    include <__ranges/rend.h>
+#    include <__ranges/size.h>
+#  endif
+
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
@@ -753,6 +764,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #    include <typeinfo>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_ITERATOR

@@ -7,12 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
 
 // clang-format off
 // LLDB Python header must be included first
@@ -82,6 +79,16 @@ OperatingSystemPythonInterface::GetRegisterContextForTID(lldb::tid_t tid) {
   return obj->GetAsString()->GetValue().str();
 }
 
+std::optional<bool> OperatingSystemPythonInterface::DoesPluginReportAllThreads() {
+  Status error;
+  StructuredData::ObjectSP obj = Dispatch("does_plugin_report_all_threads", error);
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
+    return {};
+
+  return obj->GetAsBoolean()->GetValue();
+}
+
 void OperatingSystemPythonInterface::Initialize() {
   const std::vector<llvm::StringRef> ci_usages = {
       "settings set target.process.python-os-plugin-path <script-path>",
@@ -95,5 +102,3 @@ void OperatingSystemPythonInterface::Initialize() {
 void OperatingSystemPythonInterface::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-#endif

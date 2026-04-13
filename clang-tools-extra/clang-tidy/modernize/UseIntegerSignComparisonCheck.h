@@ -1,4 +1,4 @@
-//===--- UseIntegerSignComparisonCheck.h - clang-tidy -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::modernize {
 /// C++20 ``std::cmp_*`` alternative, if available.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-integer-sign-comparison.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-integer-sign-comparison.html
 class UseIntegerSignComparisonCheck : public ClangTidyCheck {
 public:
   UseIntegerSignComparisonCheck(StringRef Name, ClangTidyContext *Context);
@@ -30,11 +30,12 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus20;
+    return LangOpts.CPlusPlus20 || (LangOpts.CPlusPlus17 && EnableQtSupport);
   }
 
 private:
   utils::IncludeInserter IncludeInserter;
+  const bool EnableQtSupport;
 };
 
 } // namespace clang::tidy::modernize

@@ -6,10 +6,13 @@
 // UNSUPPORTED: i386-linux
 
 // Do not intercept __tls_get_addr
-// UNSUPPORTED: hwasan, lsan, ubsan, android
+// UNSUPPORTED: hwasan, lsan, tysan, ubsan, android
 
 // FIXME: Investigate
 // UNSUPPORTED: target=powerpc64{{.*}}
+
+// Fails because AArch64 uses TLSDESC instead of __tls_get_addr.
+// UNSUPPORTED: aarch64-target-arch
 
 #include <string.h>
 

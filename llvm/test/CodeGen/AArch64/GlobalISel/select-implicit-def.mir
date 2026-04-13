@@ -20,8 +20,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: implicit_def
     ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[DEF]], [[DEF]]
-    ; CHECK: $w0 = COPY [[ADDWrr]]
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[DEF]], [[DEF]]
+    ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
     %0(s32) = G_IMPLICIT_DEF
     %1(s32) = G_ADD %0, %0
     $w0 = COPY %1(s32)
@@ -38,8 +38,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: implicit_def_copy
     ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY [[DEF]]
-    ; CHECK: $w0 = COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY [[DEF]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY]]
     %0(s32) = G_IMPLICIT_DEF
     %1(s32) = COPY %0(s32)
     $w0 = COPY %1(s32)

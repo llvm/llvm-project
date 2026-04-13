@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -359,7 +360,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
 
     // The diagnostic is not included in a group that is (transitively) in
     // -Wpedantic.  Include it in -Wpedantic directly.
-    if (auto *V = DiagsInPedantic.dyn_cast<RecordVec *>())
+    if (auto *V = dyn_cast<RecordVec *>(DiagsInPedantic))
       V->push_back(R);
     else
       cast<RecordSet *>(DiagsInPedantic)->insert(R);
@@ -386,7 +387,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (Parents.size() > 0 && AllParentsInPedantic)
       continue;
 
-    if (auto *V = GroupsInPedantic.dyn_cast<RecordVec *>())
+    if (auto *V = dyn_cast<RecordVec *>(GroupsInPedantic))
       V->push_back(Group);
     else
       cast<RecordSet *>(GroupsInPedantic)->insert(Group);
@@ -399,6 +400,7 @@ enum PieceKind {
   TextPieceClass,
   PlaceholderPieceClass,
   SelectPieceClass,
+  EnumSelectPieceClass,
   PluralPieceClass,
   DiffPieceClass,
   SubstitutionPieceClass,
@@ -408,6 +410,7 @@ enum ModifierType {
   MT_Unknown,
   MT_Placeholder,
   MT_Select,
+  MT_EnumSelect,
   MT_Sub,
   MT_Plural,
   MT_Diff,
@@ -417,10 +420,12 @@ enum ModifierType {
   MT_Q,
   MT_ObjCClass,
   MT_ObjCInstance,
+  MT_Quoted,
 };
 
 static StringRef getModifierName(ModifierType MT) {
   switch (MT) {
+  case MT_EnumSelect:
   case MT_Select:
     return "select";
   case MT_Sub:
@@ -443,6 +448,8 @@ static StringRef getModifierName(ModifierType MT) {
     return "objcclass";
   case MT_ObjCInstance:
     return "objcinstance";
+  case MT_Quoted:
+    return "quoted";
   case MT_Unknown:
     llvm_unreachable("invalid modifier type");
   }
@@ -512,8 +519,24 @@ public:
 
   static bool classof(const Piece *P) {
     return P->getPieceClass() == SelectPieceClass ||
+           P->getPieceClass() == EnumSelectPieceClass ||
            P->getPieceClass() == PluralPieceClass;
   }
+};
+
+struct EnumSelectPiece : SelectPiece {
+  EnumSelectPiece() : SelectPiece(EnumSelectPieceClass, MT_EnumSelect) {}
+
+  StringRef EnumName;
+  std::vector<StringRef> OptionEnumNames;
+
+  static bool classof(const Piece *P) {
+    return P->getPieceClass() == EnumSelectPieceClass;
+  }
+};
+
+struct EnumValuePiece : Piece {
+  ModifierType Kind;
 };
 
 struct PluralPiece : SelectPiece {
@@ -579,6 +602,9 @@ struct DiagnosticTextBuilder {
   std::vector<std::string> buildForDocumentation(StringRef Role,
                                                  const Record *R);
   std::string buildForDefinition(const Record *R);
+  llvm::SmallVector<std::pair<
+      std::string, llvm::SmallVector<std::pair<unsigned, std::string>>>>
+  buildForEnum(const Record *R);
 
   Piece *getSubstitution(SubstitutionPiece *S) const {
     auto It = Substitutions.find(S->Name);
@@ -707,6 +733,7 @@ public:
       CASE(Text);
       CASE(Placeholder);
       CASE(Select);
+      CASE(EnumSelect);
       CASE(Plural);
       CASE(Diff);
       CASE(Substitution);
@@ -886,6 +913,13 @@ struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
       makeRowSeparator(RST[I]);
   }
 
+  void VisitEnumSelect(EnumSelectPiece *P) {
+    // Document this as if it were a 'select', which properly prints all of the
+    // options correctly in a readable/reasonable manner. There isn't really
+    // anything valuable we could add to readers here.
+    VisitSelect(P);
+  }
+
   void VisitPlural(PluralPiece *P) { VisitSelect(P); }
 
   void VisitDiff(DiffPiece *P) {
@@ -910,6 +944,47 @@ struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
   std::vector<std::string> &RST;
 };
 
+struct DiagEnumPrinter : DiagTextVisitor<DiagEnumPrinter> {
+public:
+  using BaseTy = DiagTextVisitor<DiagEnumPrinter>;
+  using EnumeratorItem = std::pair<unsigned, std::string>;
+  using EnumeratorList = llvm::SmallVector<EnumeratorItem>;
+  using ResultTy = llvm::SmallVector<std::pair<std::string, EnumeratorList>>;
+
+  DiagEnumPrinter(DiagnosticTextBuilder &Builder, ResultTy &Result)
+      : BaseTy(Builder), Result(Result) {}
+
+  ResultTy &Result;
+
+  void VisitMulti(MultiPiece *P) {
+    for (auto *Child : P->Pieces)
+      Visit(Child);
+  }
+  void VisitText(TextPiece *P) {}
+  void VisitPlaceholder(PlaceholderPiece *P) {}
+  void VisitDiff(DiffPiece *P) {}
+  void VisitSelect(SelectPiece *P) {
+    for (auto *D : P->Options)
+      Visit(D);
+  }
+  void VisitPlural(PluralPiece *P) { VisitSelect(P); }
+  void VisitEnumSelect(EnumSelectPiece *P) {
+    assert(P->Options.size() == P->OptionEnumNames.size());
+
+    if (!P->EnumName.empty()) {
+      EnumeratorList List;
+
+      for (const auto &Tup : llvm::enumerate(P->OptionEnumNames))
+        if (!Tup.value().empty())
+          List.emplace_back(Tup.index(), Tup.value());
+
+      Result.emplace_back(P->EnumName, List);
+    }
+
+    VisitSelect(P);
+  }
+};
+
 struct DiagTextPrinter : DiagTextVisitor<DiagTextPrinter> {
 public:
   using BaseTy = DiagTextVisitor<DiagTextPrinter>;
@@ -929,7 +1004,7 @@ public:
   void VisitSelect(SelectPiece *P) {
     Result += "%";
     Result += getModifierName(P->ModKind);
-    if (P->ModKind == MT_Select) {
+    if (P->ModKind == MT_Select || P->ModKind == MT_EnumSelect) {
       Result += "{";
       for (auto *D : P->Options) {
         Visit(D);
@@ -956,6 +1031,13 @@ public:
       Result.erase(--Result.end());
     Result += '}';
     addInt(mapIndex(P->Index));
+  }
+
+  void VisitEnumSelect(EnumSelectPiece *P) {
+    // Print as if we are a 'select', which will result in the compiler just
+    // treating this like a normal select.  This way we don't have to do any
+    // special work for the compiler to consume these.
+    VisitSelect(P);
   }
 
   void VisitDiff(DiffPiece *P) {
@@ -1007,7 +1089,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
 
     if (End) {
       Parsed.push_back(New<TextPiece>(Text.slice(0, End), "diagtext"));
-      Text = Text.slice(End, StringRef::npos);
+      Text = Text.substr(End);
       if (Text.empty())
         break;
     }
@@ -1019,11 +1101,12 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     Text = Text.drop_front();
 
     // Extract the (optional) modifier.
-    size_t ModLength = Text.find_first_of("0123456789{");
+    size_t ModLength = Text.find_first_of("0123456789<{");
     StringRef Modifier = Text.slice(0, ModLength);
-    Text = Text.slice(ModLength, StringRef::npos);
+    Text = Text.substr(ModLength);
     ModifierType ModType = StringSwitch<ModifierType>{Modifier}
                                .Case("select", MT_Select)
+                               .Case("enum_select", MT_EnumSelect)
                                .Case("sub", MT_Sub)
                                .Case("diff", MT_Diff)
                                .Case("plural", MT_Plural)
@@ -1033,6 +1116,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
                                .Case("q", MT_Q)
                                .Case("objcclass", MT_ObjCClass)
                                .Case("objcinstance", MT_ObjCInstance)
+                               .Case("quoted", MT_Quoted)
                                .Case("", MT_Placeholder)
                                .Default(MT_Unknown);
 
@@ -1041,6 +1125,10 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
         Builder.PrintFatalError("expected '" + Prefix + "' while parsing %" +
                                 Modifier);
     };
+
+    if (ModType != MT_EnumSelect && Text[0] == '<')
+      Builder.PrintFatalError("modifier '<' syntax not valid with %" +
+                              Modifier);
 
     switch (ModType) {
     case MT_Unknown:
@@ -1058,6 +1146,55 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
       Parsed.push_back(Select);
       continue;
     }
+    case MT_EnumSelect: {
+      EnumSelectPiece *EnumSelect = New<EnumSelectPiece>();
+      if (Text[0] != '<')
+        Builder.PrintFatalError("expected '<' after " + Modifier);
+
+      Text = Text.drop_front(); // Drop '<'
+      size_t EnumNameLen = Text.find_first_of('>');
+      EnumSelect->EnumName = Text.slice(0, EnumNameLen);
+      Text = Text.substr(EnumNameLen);
+      ExpectAndConsume(">");
+
+      if (Text[0] != '{')
+        Builder.PrintFatalError("expected '{' after " + Modifier);
+
+      do {
+        Text = Text.drop_front(); // '{' or '|'
+
+        bool BracketsRequired = false;
+        if (Text[0] == '%') {
+          BracketsRequired = true;
+          Text = Text.drop_front(); // '%'
+          size_t OptionNameLen = Text.find_first_of("{");
+          EnumSelect->OptionEnumNames.push_back(Text.slice(0, OptionNameLen));
+          Text = Text.substr(OptionNameLen);
+        } else {
+          EnumSelect->OptionEnumNames.push_back({});
+        }
+
+        if (BracketsRequired)
+          ExpectAndConsume("{");
+        else if (Text.front() == '{') {
+          Text = Text.drop_front();
+          BracketsRequired = true;
+        }
+
+        EnumSelect->Options.push_back(
+            parseDiagText(Text, StopAt::PipeOrCloseBrace));
+
+        if (BracketsRequired)
+          ExpectAndConsume("}");
+
+        assert(!Text.empty() && "malformed %select");
+      } while (Text.front() == '|');
+
+      ExpectAndConsume("}");
+      EnumSelect->Index = parseModifier(Text);
+      Parsed.push_back(EnumSelect);
+      continue;
+    }
     case MT_Plural: {
       PluralPiece *Plural = New<PluralPiece>();
       do {
@@ -1069,7 +1206,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
         assert(!Text.empty());
         Plural->OptionPrefixes.push_back(
             New<TextPiece>(Text.slice(0, End), "diagtext"));
-        Text = Text.slice(End, StringRef::npos);
+        Text = Text.substr(End);
         Plural->Options.push_back(
             parseDiagText(Text, StopAt::PipeOrCloseBrace));
         assert(!Text.empty() && "malformed %plural");
@@ -1131,6 +1268,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     case MT_Placeholder:
     case MT_ObjCClass:
     case MT_ObjCInstance:
+    case MT_Quoted:
     case MT_Ordinal:
     case MT_Human: {
       Parsed.push_back(New<PlaceholderPiece>(ModType, parseModifier(Text)));
@@ -1160,6 +1298,15 @@ DiagnosticTextBuilder::buildForDocumentation(StringRef Severity,
   MP->Pieces.insert(MP->Pieces.begin(), Prefix);
   std::vector<std::string> Result;
   DiagTextDocPrinter{*this, Result}.Visit(D.Root);
+  return Result;
+}
+
+DiagEnumPrinter::ResultTy DiagnosticTextBuilder::buildForEnum(const Record *R) {
+  EvaluatingRecordGuard Guard(&EvaluatingRecord, R);
+  StringRef Text = R->getValueAsString("Summary");
+  DiagText D(*this, Text);
+  DiagEnumPrinter::ResultTy Result;
+  DiagEnumPrinter{*this, Result}.Visit(D.Root);
   return Result;
 }
 
@@ -1210,6 +1357,7 @@ static bool isExemptAtStart(StringRef Text) {
       .Case("Fuchsia", true)
       .Case("GNUstep", true)
       .Case("IBOutletCollection", true)
+      .Case("Itanium", true)
       .Case("Microsoft", true)
       .Case("Neon", true)
       .StartsWith("NSInvocation", true) // NSInvocation, NSInvocation's
@@ -1378,6 +1526,285 @@ static void verifyDiagnosticWording(const Record &Diag) {
   // #pragma clang, or --unwindlib=libgcc.
 }
 
+/// ClangDiagsCompatIDsEmitter - Emit a set of 'compatibility diagnostic ids'
+/// that map to a set of 2 regular diagnostic ids each and which are used to
+/// simplify emitting compatibility warnings.
+void clang::EmitClangDiagsCompatIDs(const llvm::RecordKeeper &Records,
+                                    llvm::raw_ostream &OS,
+                                    const std::string &Component) {
+  ArrayRef<const Record *> Ids =
+      Records.getAllDerivedDefinitions("CompatWarningId");
+
+  StringRef PrevComponent = "";
+  for (auto [I, R] : enumerate(make_pointee_range(Ids))) {
+    StringRef DiagComponent = R.getValueAsString("Component");
+    if (!Component.empty() && Component != DiagComponent)
+      continue;
+
+    StringRef CompatDiagName = R.getValueAsString("Name");
+    StringRef Diag = R.getValueAsString("Diag");
+    StringRef DiagPre = R.getValueAsString("DiagPre");
+    int64_t CXXStdVer = R.getValueAsInt("Std");
+
+    // We don't want to create empty enums since some compilers (including
+    // Clang) warn about that, so these macros are used to avoid having to
+    // unconditionally write 'enum {' and '};' in the headers.
+    if (PrevComponent != DiagComponent) {
+      if (!PrevComponent.empty())
+        OS << "DIAG_COMPAT_IDS_END()\n";
+      OS << "DIAG_COMPAT_IDS_BEGIN()\n";
+      PrevComponent = DiagComponent;
+    }
+
+    // FIXME: We sometimes define multiple compat diagnostics with the same
+    // name, e.g. 'constexpr_body_invalid_stmt' exists for C++14/20/23. It would
+    // be nice if we could combine all of them into a single compatibility diag
+    // id.
+    OS << "DIAG_COMPAT_ID(" << I << ",";
+    OS << CompatDiagName << "," << CXXStdVer << "," << Diag << "," << DiagPre;
+    OS << ")\n";
+  }
+
+  if (!PrevComponent.empty())
+    OS << "DIAG_COMPAT_IDS_END()\n";
+}
+
+/// ClangDiagsIntefaceEmitter - Emit the diagnostics interface header for
+/// a Clang component.
+void clang::EmitClangDiagsInterface(llvm::raw_ostream &OS,
+                                    const std::string &Component) {
+  if (Component.empty())
+    PrintFatalError("'-gen-clang-diags-iface' requires a component name");
+
+  std::string ComponentUpper = StringRef(Component).upper();
+  const char *Comp = Component.c_str();
+  const char *Upper = ComponentUpper.c_str();
+
+  OS << llvm::format(R"c++(
+namespace clang {
+namespace diag {
+enum {
+#define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS) \
+  ENUM,
+#define %sSTART
+#include "clang/Basic/Diagnostic%sKinds.inc"
+#undef DIAG
+  NUM_BUILTIN_%s_DIAGNOSTICS
+};
+
+#define DIAG_ENUM(ENUM_NAME)                                                   \
+  namespace ENUM_NAME {                                                        \
+  enum {
+#define DIAG_ENUM_ITEM(IDX, NAME) NAME = IDX,
+#define DIAG_ENUM_END()                                                        \
+  }                                                                            \
+  ;                                                                            \
+  }
+#include "clang/Basic/Diagnostic%sEnums.inc"
+#undef DIAG_ENUM_END
+#undef DIAG_ENUM_ITEM
+#undef DIAG_ENUM
+} // end namespace diag
+
+namespace diag_compat {
+#define DIAG_COMPAT_IDS_BEGIN() enum {
+#define DIAG_COMPAT_IDS_END()                                                  \
+  }                                                                            \
+  ;
+#define DIAG_COMPAT_ID(IDX, NAME, ...) NAME = IDX,
+#include "clang/Basic/Diagnostic%sCompatIDs.inc"
+#undef DIAG_COMPAT_ID
+#undef DIAG_COMPAT_IDS_BEGIN
+#undef DIAG_COMPAT_IDS_END
+} // end namespace diag_compat
+} // end namespace clang
+)c++",
+                     Upper, Comp, Upper, Comp, Comp);
+}
+
+/// ClangDiagsEnumsEmitter - The top-level class emits .def files containing
+/// declarations of Clang diagnostic enums for selects.
+void clang::EmitClangDiagsEnums(const RecordKeeper &Records, raw_ostream &OS,
+                                const std::string &Component) {
+  DiagnosticTextBuilder DiagTextBuilder(Records);
+  ArrayRef<const Record *> Diags =
+      Records.getAllDerivedDefinitions("Diagnostic");
+
+  llvm::SmallVector<std::pair<const Record *, std::string>> EnumerationNames;
+
+  for (const Record &R : make_pointee_range(Diags)) {
+    DiagEnumPrinter::ResultTy Enums = DiagTextBuilder.buildForEnum(&R);
+
+    for (auto &Enumeration : Enums) {
+      bool ShouldPrint =
+          Component.empty() || Component == R.getValueAsString("Component");
+
+      auto PreviousByName = llvm::find_if(EnumerationNames, [&](auto &Prev) {
+        return Prev.second == Enumeration.first;
+      });
+
+      if (PreviousByName != EnumerationNames.end()) {
+        PrintError(&R,
+                   "Duplicate enumeration name '" + Enumeration.first + "'");
+        PrintNote(PreviousByName->first->getLoc(),
+                  "Previous diagnostic is here");
+      }
+
+      EnumerationNames.emplace_back(&R, Enumeration.first);
+
+      if (ShouldPrint)
+        OS << "DIAG_ENUM(" << Enumeration.first << ")\n";
+
+      llvm::SmallVector<std::string> EnumeratorNames;
+      for (auto &Enumerator : Enumeration.second) {
+        if (llvm::is_contained(EnumeratorNames, Enumerator.second))
+          PrintError(&R,
+                     "Duplicate enumerator name '" + Enumerator.second + "'");
+        EnumeratorNames.push_back(Enumerator.second);
+
+        if (ShouldPrint)
+          OS << "DIAG_ENUM_ITEM(" << Enumerator.first << ", "
+             << Enumerator.second << ")\n";
+      }
+      if (ShouldPrint)
+        OS << "DIAG_ENUM_END()\n";
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Stable ID Tables generation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Holds the string table for all Stable IDs, plus the arrays of legacy Stable
+/// IDs for renamed diagnostics.
+class DiagStableIDsMap {
+  StringToOffsetTable StableIDs;
+  std::vector<uint32_t> LegacyStableIDs;
+  llvm::StringMap<uint32_t> LegacyStableIDsStartOffsets;
+
+public:
+  DiagStableIDsMap(const RecordKeeper &Records) {
+    LegacyStableIDs.push_back(0); // Empty array at offset 0
+
+    for (const Record *Diag : Records.getAllDerivedDefinitions("Diagnostic")) {
+      StringRef StableID = getStableID(*Diag);
+      // Memoize the Stable ID
+      StableIDs.GetOrAddStringOffset(StableID);
+
+      auto LegacyIDList = Diag->getValueAsListOfStrings("LegacyStableIds");
+      if (!LegacyIDList.empty()) {
+        // Memoize any Legacy Stable IDs, and list their offsets in an array.
+        size_t StartOffset = LegacyStableIDs.size();
+        LegacyStableIDsStartOffsets.insert(
+            std::make_pair(Diag->getName(), StartOffset));
+        for (const auto LegacyID : LegacyIDList) {
+          unsigned Offset = StableIDs.GetOrAddStringOffset(LegacyID);
+          LegacyStableIDs.push_back(Offset);
+        }
+        LegacyStableIDs.push_back(0); // Terminate the array.
+      }
+    }
+  }
+
+  /// Gets the string table offset of the Stable ID for the specified Diagnostic
+  /// record.
+  uint32_t getStableIDOffset(const Record &R) const {
+    return StableIDs.GetStringOffset(getStableID(R)).value();
+  }
+
+  /// Gets the offset in the DiagLegacyStableIDs array of the first element of
+  /// the diagnostic's list of legacy Stable IDs.
+  uint32_t getLegacyStableIDsStartOffset(StringRef Name) const {
+    // `lookup()` will return zero if not found, which is exactly what we want
+    // anyway.
+    return LegacyStableIDsStartOffsets.lookup(Name);
+  }
+
+  /// Emit diagnostic stable ID arrays and related data structures.
+  ///
+  /// This creates the table of stable IDs, plus the array of arrays of old
+  /// stable IDs.
+  ///
+  /// \code
+  ///  #ifdef GET_DIAG_STABLE_ID_ARRAYS
+  ///     static const int32_t DiagOldStableIds[];
+  ///     static constexpr llvm::StringTable DiagStableIds;
+  ///  #endif
+  /// \endcode
+  void emit(raw_ostream &OS) const {
+    OS << "\n#ifdef GET_DIAG_STABLE_ID_ARRAYS\n";
+    emitStableIDs(OS);
+    emitLegacyStableIDs(OS);
+    OS << "#endif // GET_DIAG_STABLE_ID_ARRAYS\n\n";
+  }
+
+private:
+  /// Gets the Stable ID for the specified Diagnostic record.
+  /// The Stable ID can be explicitly specified via the "StableId"
+  /// property. If not specified explicitly, the Stable ID defaults
+  /// to the name of the diagnostic.
+  static StringRef getStableID(const Record &R) {
+    StringRef StableID = R.getValueAsString("StableId");
+    return StableID.empty() ? R.getName() : StableID;
+  }
+
+  /// Emit a list of stable IDs, used by both the "StableId" and
+  /// "LegacyStableIds" properties.
+  ///
+  /// This creates an `llvm::StringTable` of all the stable ids in use.
+  void emitStableIDs(raw_ostream &OS) const {
+    StableIDs.EmitStringTableDef(OS, "DiagStableIDs");
+    OS << "\n";
+  }
+
+  /// Emit the array of legacy stable IDs for diagnostics.
+  ///
+  /// The array of stable IDs contains for each diagnostic a list of its legacy
+  /// stable IDs. The individual lists are separated by '0'. Diagnostics with
+  /// no legacy stable IDs are skipped.
+  ///
+  /// \code
+  ///   static const uint16_t DiagOldStableIds[] = {
+  ///     /* Empty */ 0,
+  ///     /* Diag0 */ 142, 0,
+  ///     /* Diag13 */ 265, 322, 399, 0
+  ///   }
+  /// \endcode
+  ///
+  void emitLegacyStableIDs(raw_ostream &OS) const {
+    OS << "static const uint32_t DiagLegacyStableIDs[] = {\n";
+
+    bool StartOfLine = true;
+    for (auto Offset : LegacyStableIDs) {
+      if (StartOfLine) {
+        OS << "  ";
+        StartOfLine = false;
+      }
+      OS << Offset << ",";
+      if (Offset > 0) {
+        OS << " ";
+      } else {
+        OS << "\n";
+        StartOfLine = true;
+      }
+    }
+    OS << "};\n\n";
+  }
+};
+} // namespace
+
+/// Emit the definitions of the Stable ID and old Stable ID tables.
+void clang::EmitClangDiagsStableIDs(const RecordKeeper &Records,
+                                    raw_ostream &OS) {
+  DiagStableIDsMap StableIDs(Records);
+  StableIDs.emit(OS);
+}
+
 /// ClangDiagsDefsEmitter - The top-level class emits .def files containing
 /// declarations of Clang diagnostics.
 void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
@@ -1405,6 +1832,7 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
 
   DiagCategoryIDMap CategoryIDs(Records);
   DiagGroupParentMap DGParentMap(Records);
+  DiagStableIDsMap StableIDs(Records);
 
   // Compute the set of diagnostics that are in -Wpedantic.
   RecordSet DiagsInPedantic;
@@ -1487,6 +1915,16 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
 
     // Category number.
     OS << ", " << CategoryIDs.getID(getDiagnosticCategory(&R, DGParentMap));
+
+    // Stable ID.
+    uint32_t StableIDOffset = StableIDs.getStableIDOffset(R);
+    OS << ", " << StableIDOffset;
+
+    // Previous Stable IDs.
+    uint32_t LegacyStableIDsStartOffset =
+        StableIDs.getLegacyStableIDsStartOffset(R.getName());
+    OS << ", " << LegacyStableIDsStartOffset;
+
     OS << ")\n";
   }
 }
@@ -1499,8 +1937,8 @@ static std::string getDiagCategoryEnum(StringRef name) {
   if (name.empty())
     return "DiagCat_None";
   SmallString<256> enumName = StringRef("DiagCat_");
-  for (StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
-    enumName += isalnum(*I) ? *I : '_';
+  for (char C : name)
+    enumName += isalnum(C) ? C : '_';
   return std::string(enumName);
 }
 
@@ -1591,19 +2029,11 @@ static void emitDiagArrays(DiagsInGroupTy &DiagsInGroup,
 
 /// Emit a list of group names.
 ///
-/// This creates a long string which by itself contains a list of pascal style
-/// strings, which consist of a length byte directly followed by the string.
-///
-/// \code
-///   static const char DiagGroupNames[] = {
-///     \000\020#pragma-messages\t#warnings\020CFString-literal"
-///   };
-/// \endcode
+/// This creates an `llvm::StringTable` of all the diagnostic group names.
 static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
                                raw_ostream &OS) {
-  OS << "static const char DiagGroupNames[] = {\n";
-  GroupNames.EmitString(OS);
-  OS << "};\n\n";
+  GroupNames.EmitStringTableDef(OS, "DiagGroupNames");
+  OS << "\n";
 }
 
 /// Emit diagnostic arrays and related data structures.
@@ -1615,7 +2045,7 @@ static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
 ///  #ifdef GET_DIAG_ARRAYS
 ///     static const int16_t DiagArrays[];
 ///     static const int16_t DiagSubGroups[];
-///     static const char DiagGroupNames[];
+///     static constexpr llvm::StringTable DiagGroupNames;
 ///  #endif
 ///  \endcode
 static void emitAllDiagArrays(DiagsInGroupTy &DiagsInGroup,
@@ -1667,9 +2097,7 @@ static void emitDiagTable(DiagsInGroupTy &DiagsInGroup,
                                "0123456789!@#$%^*-+=:?") != std::string::npos)
       PrintFatalError("Invalid character in diagnostic group '" + Name + "'");
     OS << Name << " */, ";
-    // Store a pascal-style length byte at the beginning of the string.
-    std::string PascalName = char(Name.size()) + Name.str();
-    OS << *GroupNames.GetStringOffset(PascalName) << ", ";
+    OS << *GroupNames.GetStringOffset(Name) << ", ";
 
     // Special handling for 'pedantic'.
     const bool IsPedantic = Name == "pedantic";
@@ -1758,9 +2186,7 @@ void clang::EmitClangDiagGroups(const RecordKeeper &Records, raw_ostream &OS) {
 
   StringToOffsetTable GroupNames;
   for (const auto &[Name, Group] : DiagsInGroup) {
-    // Store a pascal-style length byte at the beginning of the string.
-    std::string PascalName = char(Name.size()) + Name.str();
-    GroupNames.GetOrAddStringOffset(PascalName, false);
+    GroupNames.GetOrAddStringOffset(Name);
   }
 
   emitAllDiagArrays(DiagsInGroup, DiagsInPedantic, GroupsInPedantic, GroupNames,
@@ -1942,13 +2368,10 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
       else
         OS << "Also controls ";
 
-      bool First = true;
       sort(GroupInfo.SubGroups);
-      for (StringRef Name : GroupInfo.SubGroups) {
-        if (!First) OS << ", ";
-        OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
-        First = false;
-      }
+      ListSeparator LS;
+      for (StringRef Name : GroupInfo.SubGroups)
+        OS << LS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
       OS << ".\n\n";
     }
 

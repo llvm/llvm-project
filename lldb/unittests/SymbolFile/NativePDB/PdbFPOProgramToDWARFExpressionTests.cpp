@@ -16,7 +16,8 @@
 #include "lldb/Utility/StreamBuffer.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -29,7 +30,7 @@ CheckValidProgramTranslation(llvm::StringRef fpo_program,
                              llvm::StringRef target_register_name,
                              llvm::StringRef expected_dwarf_expression) {
   // program translation
-  StreamBuffer<32> stream(Stream::eBinary, 4, eByteOrderLittle);
+  StreamBuffer<32> stream(Stream::eBinary, eByteOrderLittle);
   ASSERT_TRUE(TranslateFPOProgramToDWARFExpression(
       fpo_program, target_register_name, llvm::Triple::x86, stream));
 
@@ -39,8 +40,8 @@ CheckValidProgramTranslation(llvm::StringRef fpo_program,
 
   std::string result;
   llvm::raw_string_ostream os(result);
-  llvm::DWARFExpression(extractor, /*AddressSize=*/4, llvm::dwarf::DWARF32)
-      .print(os, llvm::DIDumpOptions(), nullptr);
+  llvm::DWARFExpression E(extractor, /*AddressSize=*/4, llvm::dwarf::DWARF32);
+  llvm::printDwarfExpression(&E, os, llvm::DIDumpOptions(), nullptr);
 
   // actual check
   ASSERT_EQ(expected_dwarf_expression, result);
@@ -75,10 +76,9 @@ CheckInvalidProgramTranslation(llvm::StringRef fpo_program,
   ArchSpec arch_spec("i686-pc-windows");
   llvm::Triple::ArchType arch_type = arch_spec.GetMachine();
   ByteOrder byte_order = arch_spec.GetByteOrder();
-  uint32_t address_size = arch_spec.GetAddressByteSize();
 
   // program translation
-  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
+  StreamBuffer<32> stream(Stream::eBinary, byte_order);
   EXPECT_FALSE(TranslateFPOProgramToDWARFExpression(
       fpo_program, target_register_name, arch_type, stream));
   EXPECT_EQ((size_t)0, stream.GetSize());

@@ -30,19 +30,34 @@ using namespace llvm;
 
 #define DEBUG_TYPE "elim-avail-extern"
 
-cl::opt<bool> ConvertToLocal(
+static cl::opt<bool> ConvertToLocal(
     "avail-extern-to-local", cl::Hidden,
     cl::desc("Convert available_externally into locals, renaming them "
              "to avoid link-time clashes."));
 
+// This option was originally introduced to correctly support the lowering of
+// LDS variables for AMDGPU when ThinLTO is enabled. It can be utilized for
+// other purposes, but make sure it is safe to do so, as privatizing global
+// variables is generally not safe.
+static cl::opt<unsigned> ConvertGlobalVariableInAddrSpace(
+    "avail-extern-gv-in-addrspace-to-local", cl::Hidden,
+    cl::desc(
+        "Convert available_externally global variables into locals if they are "
+        "in specificed addrspace, renaming them to avoid link-time clashes."));
+
 STATISTIC(NumRemovals, "Number of functions removed");
-STATISTIC(NumConversions, "Number of functions converted");
+STATISTIC(NumFunctionsConverted, "Number of functions converted");
+STATISTIC(NumGlobalVariablesConverted, "Number of global variables converted");
 STATISTIC(NumVariables, "Number of global variables removed");
 
 void deleteFunction(Function &F) {
   // This will set the linkage to external
   F.deleteBody();
   ++NumRemovals;
+}
+
+static std::string getNewName(Module &M, const GlobalValue &GV) {
+  return GV.getName().str() + ".__uniq" + getUniqueModuleId(&M);
 }
 
 /// Create a copy of the thinlto import, mark it local, and redirect direct
@@ -68,7 +83,7 @@ static void convertToLocalCopy(Module &M, Function &F) {
   // functions with the same name, but that just creates more trouble than
   // necessary e.g. distinguishing profiles or debugging. Instead, we append the
   // module identifier.
-  auto NewName = OrigName + ".__uniq" + getUniqueModuleId(&M);
+  std::string NewName = getNewName(M, F);
   F.setName(NewName);
   if (auto *SP = F.getSubprogram())
     SP->replaceLinkageName(MDString::get(F.getParent()->getContext(), NewName));
@@ -85,16 +100,33 @@ static void convertToLocalCopy(Module &M, Function &F) {
                        F.getAddressSpace(), OrigName, F.getParent());
   F.replaceUsesWithIf(Decl,
                       [&](Use &U) { return !isa<CallBase>(U.getUser()); });
-  ++NumConversions;
+  ++NumFunctionsConverted;
+}
+
+/// Similar to the function above, this is to convert an externally available
+/// global variable to local.
+static void convertToLocalCopy(Module &M, GlobalVariable &GV) {
+  assert(GV.hasAvailableExternallyLinkage());
+  GV.setName(getNewName(M, GV));
+  GV.setLinkage(GlobalValue::InternalLinkage);
+  ++NumGlobalVariablesConverted;
 }
 
 static bool eliminateAvailableExternally(Module &M, bool Convert) {
   bool Changed = false;
 
-  // Drop initializers of available externally global variables.
+  // If a global variable is available externally and in the specified address
+  // space, convert it to local linkage; otherwise, drop its initializer.
   for (GlobalVariable &GV : M.globals()) {
     if (!GV.hasAvailableExternallyLinkage())
       continue;
+    if (ConvertGlobalVariableInAddrSpace.getNumOccurrences() &&
+        GV.getAddressSpace() == ConvertGlobalVariableInAddrSpace &&
+        !GV.use_empty()) {
+      convertToLocalCopy(M, GV);
+      Changed = true;
+      continue;
+    }
     if (GV.hasInitializer()) {
       Constant *Init = GV.getInitializer();
       GV.setInitializer(nullptr);
@@ -133,7 +165,8 @@ EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // that's imported, its optimizations will, thus, differ, and be specialized
   // for this contextual information. Eliding it in favor of the original would
   // undo these optimizations.
-  if (!eliminateAvailableExternally(M, /*Convert=*/(CtxProf && !!(*CtxProf))))
+  if (!eliminateAvailableExternally(
+          M, /*Convert=*/(CtxProf && CtxProf->isInSpecializedModule())))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

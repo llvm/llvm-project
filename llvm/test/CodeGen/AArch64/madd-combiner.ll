@@ -39,9 +39,8 @@ define void @mul_add_imm2() {
 ; CHECK-FAST-LABEL: mul_add_imm2:
 ; CHECK-FAST:       ; %bb.0: ; %entry
 ; CHECK-FAST-NEXT:    mov x8, #-3 ; =0xfffffffffffffffd
-; CHECK-FAST-NEXT:    mov x9, #-3 ; =0xfffffffffffffffd
-; CHECK-FAST-NEXT:    madd x8, x8, x8, x9
 ; CHECK-FAST-NEXT:    mov x9, #45968 ; =0xb390
+; CHECK-FAST-NEXT:    madd x8, x8, x8, x8
 ; CHECK-FAST-NEXT:    movk x9, #48484, lsl #16
 ; CHECK-FAST-NEXT:    movk x9, #323, lsl #32
 ; CHECK-FAST-NEXT:  LBB2_1: ; %for.body8
@@ -53,7 +52,7 @@ define void @mul_add_imm2() {
 entry:
   br label %for.body
 for.body:
-  br i1 undef, label %for.body, label %for.body8
+  br i1 poison, label %for.body, label %for.body8
 for.body8:
   %0 = mul i64 undef, -3
   %mul1971 = add i64 %0, -3

@@ -1,4 +1,4 @@
-; RUN: llc -O0 -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s
+; RUN: llc -O0 -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s
 
 define amdgpu_kernel void @test_long_add4() {
 entry:

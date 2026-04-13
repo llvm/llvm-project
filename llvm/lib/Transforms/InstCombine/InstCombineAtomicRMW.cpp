@@ -14,14 +14,14 @@
 #include "llvm/IR/Instructions.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
-namespace {
 /// Return true if and only if the given instruction does not modify the memory
 /// location referenced.  Note that an idemptent atomicrmw may still have
 /// ordering effects on nearby instructions, or be volatile.
 /// TODO: Common w/ the version in AtomicExpandPass, and change the term used.
 /// Idemptotent is confusing in this context.
-bool isIdempotentRMW(AtomicRMWInst& RMWI) {
+static bool isIdempotentRMW(AtomicRMWInst &RMWI) {
   if (auto CF = dyn_cast<ConstantFP>(RMWI.getValOperand()))
     switch(RMWI.getOperation()) {
     case AtomicRMWInst::FAdd: // -0.0
@@ -59,7 +59,7 @@ bool isIdempotentRMW(AtomicRMWInst& RMWI) {
 
 /// Return true if the given instruction always produces a value in memory
 /// equivalent to its value operand.
-bool isSaturating(AtomicRMWInst& RMWI) {
+static bool isSaturating(AtomicRMWInst &RMWI) {
   if (auto CF = dyn_cast<ConstantFP>(RMWI.getValOperand()))
     switch (RMWI.getOperation()) {
     case AtomicRMWInst::FMax:
@@ -98,7 +98,6 @@ bool isSaturating(AtomicRMWInst& RMWI) {
     return C->isMaxValue(false);
   };
 }
-} // namespace
 
 Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
 
@@ -119,6 +118,23 @@ Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   assert(RMWI.getOrdering() != AtomicOrdering::NotAtomic &&
          RMWI.getOrdering() != AtomicOrdering::Unordered &&
          "AtomicRMWs don't make sense with Unordered or NotAtomic");
+
+  // Canonicalize atomicrmw add(ptr, neg(X)) -> atomicrmw sub(ptr, X)
+  //              atomicrmw sub(ptr, neg(X)) -> atomicrmw add(ptr, X)
+  // old + (-X) == old - X and old - (-X) == old + X; the returned old value
+  // is identical in both cases. We match strictly on `sub 0, X` (negation) to
+  // avoid infinite loops: a general negation of `sub A, B` yields `sub B, A`,
+  // which would infinitely be negated back on the next iteration.
+  auto Op = RMWI.getOperation();
+  if (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub) {
+    Value *Val = RMWI.getValOperand();
+    Value *X;
+    if (match(Val, m_Neg(m_Value(X)))) {
+      RMWI.setOperation(Op == AtomicRMWInst::Add ? AtomicRMWInst::Sub
+                                                 : AtomicRMWInst::Add);
+      return replaceOperand(RMWI, 1, X);
+    }
+  }
 
   if (!isIdempotentRMW(RMWI))
     return nullptr;

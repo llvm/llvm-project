@@ -81,8 +81,9 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cstdlib>
+#else
 #  include <__config>
 #  include <__cstddef/size_t.h>
 
@@ -153,6 +154,6 @@ using ::aligned_alloc _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CSTDLIB

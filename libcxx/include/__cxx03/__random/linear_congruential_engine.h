@@ -42,11 +42,7 @@ template <unsigned long long __a,
           bool _Part        = (!_HasOverflow || __m - 1ull <= _Mp / __a),         // (a * x) % m works
           bool _Schrage     = (_HasOverflow && __m % __a <= __m / __a)>               // r <= q
 struct __lce_alg_picker {
-  static _LIBCPP_CONSTEXPR const __lce_alg_type __mode =
-      _Full      ? _LCE_Full
-      : _Part    ? _LCE_Part
-      : _Schrage ? _LCE_Schrage
-                 : _LCE_Promote;
+  static const __lce_alg_type __mode = _Full ? _LCE_Full : _Part ? _LCE_Part : _Schrage ? _LCE_Schrage : _LCE_Promote;
 
 #ifdef _LIBCPP_HAS_NO_INT128
   static_assert(_Mp != (unsigned long long)(-1) || _Full || _Part || _Schrage,
@@ -239,32 +235,27 @@ public:
 private:
   result_type __x_;
 
-  static _LIBCPP_CONSTEXPR const result_type _Mp = result_type(-1);
+  static const result_type _Mp = result_type(-1);
 
   static_assert(__m == 0 || __a < __m, "linear_congruential_engine invalid parameters");
   static_assert(__m == 0 || __c < __m, "linear_congruential_engine invalid parameters");
   static_assert(is_unsigned<_UIntType>::value, "_UIntType must be unsigned type");
 
 public:
-  static _LIBCPP_CONSTEXPR const result_type _Min = __c == 0u ? 1u : 0u;
-  static _LIBCPP_CONSTEXPR const result_type _Max = __m - _UIntType(1u);
+  static const result_type _Min = __c == 0u ? 1u : 0u;
+  static const result_type _Max = __m - _UIntType(1u);
   static_assert(_Min < _Max, "linear_congruential_engine invalid parameters");
 
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const result_type multiplier = __a;
-  static _LIBCPP_CONSTEXPR const result_type increment  = __c;
-  static _LIBCPP_CONSTEXPR const result_type modulus    = __m;
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
-  static _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
+  static const result_type multiplier = __a;
+  static const result_type increment  = __c;
+  static const result_type modulus    = __m;
+  _LIBCPP_HIDE_FROM_ABI static result_type min() { return _Min; }
+  _LIBCPP_HIDE_FROM_ABI static result_type max() { return _Max; }
+  static const result_type default_seed = 1u;
 
   // constructors and seeding functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI linear_congruential_engine() : linear_congruential_engine(default_seed) {}
-  _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(result_type __s) { seed(__s); }
-#else
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(result_type __s = default_seed) { seed(__s); }
-#endif
   template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(_Sseq& __q) {
     seed(__q);
@@ -319,19 +310,19 @@ private:
 };
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
+const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
     linear_congruential_engine<_UIntType, __a, __c, __m>::multiplier;
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
+const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
     linear_congruential_engine<_UIntType, __a, __c, __m>::increment;
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
+const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
     linear_congruential_engine<_UIntType, __a, __c, __m>::modulus;
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
+const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
     linear_congruential_engine<_UIntType, __a, __c, __m>::default_seed;
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>

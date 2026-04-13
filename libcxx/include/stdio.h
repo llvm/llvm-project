@@ -87,39 +87,35 @@ int ferror(FILE* stream);
 void perror(const char* s);
 */
 
-#if 0
-#else // 0
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
 #  include <__config>
+#endif
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
 // The inclusion of the system's <stdio.h> is intentionally done once outside of any include
 // guards because some code expects to be able to include the underlying system header multiple
 // times to get different definitions based on the macros that are set before inclusion.
-#  if __has_include_next(<stdio.h>)
-#    include_next <stdio.h>
-#  endif
+#if __has_include_next(<stdio.h>)
+#  include_next <stdio.h>
+#endif
 
-#  ifndef _LIBCPP_STDIO_H
-#    define _LIBCPP_STDIO_H
+#ifndef _LIBCPP_STDIO_H
+#  define _LIBCPP_STDIO_H
 
-#    if __has_include_next(<stdio.h>)
-#      include_next <stdio.h>
-#    endif
+#  ifdef __cplusplus
 
-#    ifdef __cplusplus
+#    undef getc
+#    undef putc
+#    undef clearerr
+#    undef feof
+#    undef ferror
+#    undef putchar
+#    undef getchar
 
-#      undef getc
-#      undef putc
-#      undef clearerr
-#      undef feof
-#      undef ferror
-#      undef putchar
-#      undef getchar
-
-#    endif
-#  endif // 0
-
-#endif // _LIBCPP_STDIO_H
+#  endif // __cplusplus
+#endif   // _LIBCPP_STDIO_H

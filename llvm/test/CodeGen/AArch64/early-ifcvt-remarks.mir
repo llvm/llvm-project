@@ -1,0 +1,45 @@
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-data-dependent \
+# RUN:   -pass-remarks-analysis='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s
+
+# Test that we emit an analysis remark when the branch condition is data-dependent
+# (derived from a memory load).
+
+# CHECK: remark: <unknown>:0:0: branch condition is data-dependent (from memory load), using higher CritLimit of {{[0-9]+}} cycles
+
+--- |
+  define i32 @data_dependent_branch(ptr %p, i32 %x, i32 %y) {
+    ret i32 0
+  }
+...
+---
+name:            data_dependent_branch
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+  - { reg: '$w2', virtual-reg: '%2' }
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $x0, $w1, $w2
+
+    %0:gpr64common = COPY $x0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %10:gpr32common = LDRWui %0, 0 :: (load (s32))
+    %11:gpr32 = SUBSWri %10, 100, 0, implicit-def $nzcv
+    Bcc 12, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+    %20:gpr32 = MADDWrrr %1, %2, $wzr
+
+  bb.2:
+    %100:gpr32 = PHI %1, %bb.0, %20, %bb.1
+    $w0 = COPY %100
+    RET_ReallyLR implicit $w0
+...

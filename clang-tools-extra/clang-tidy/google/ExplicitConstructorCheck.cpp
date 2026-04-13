@@ -1,4 +1,4 @@
-//===--- ExplicitConstructorCheck.cpp - clang-tidy ------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExplicitConstructorCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -29,32 +29,6 @@ void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
 
           .bind("conversion"),
       this);
-}
-
-// Looks for the token matching the predicate and returns the range of the found
-// token including trailing whitespace.
-static SourceRange findToken(const SourceManager &Sources,
-                             const LangOptions &LangOpts,
-                             SourceLocation StartLoc, SourceLocation EndLoc,
-                             bool (*Pred)(const Token &)) {
-  if (StartLoc.isMacroID() || EndLoc.isMacroID())
-    return {};
-  FileID File = Sources.getFileID(Sources.getSpellingLoc(StartLoc));
-  StringRef Buf = Sources.getBufferData(File);
-  const char *StartChar = Sources.getCharacterData(StartLoc);
-  Lexer Lex(StartLoc, LangOpts, StartChar, StartChar, Buf.end());
-  Lex.SetCommentRetentionState(true);
-  Token Tok;
-  do {
-    Lex.LexFromRawLexer(Tok);
-    if (Pred(Tok)) {
-      Token NextTok;
-      Lex.LexFromRawLexer(NextTok);
-      return {Tok.getLocation(), NextTok.getLocation()};
-    }
-  } while (Tok.isNot(tok::eof) && Tok.getLocation() < EndLoc);
-
-  return {};
 }
 
 static bool declIsStdInitializerList(const NamedDecl *D) {
@@ -85,10 +59,10 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
       "%0 explicit expression evaluates to 'false'";
 
   if (const auto *Conversion =
-      Result.Nodes.getNodeAs<CXXConversionDecl>("conversion")) {
+          Result.Nodes.getNodeAs<CXXConversionDecl>("conversion")) {
     if (Conversion->isOutOfLine())
       return;
-    SourceLocation Loc = Conversion->getLocation();
+    const SourceLocation Loc = Conversion->getLocation();
     // Ignore all macros until we learn to ignore specific ones (e.g. used in
     // gmock to define matchers).
     if (Loc.isMacroID())
@@ -105,7 +79,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
 
   const ExplicitSpecifier ExplicitSpec = Ctor->getExplicitSpecifier();
 
-  bool TakesInitializerList = isStdInitializerList(
+  const bool TakesInitializerList = isStdInitializerList(
       Ctor->getParamDecl(0)->getType().getNonReferenceType());
   if (ExplicitSpec.isExplicit() &&
       (Ctor->isCopyOrMoveConstructor() || TakesInitializerList)) {
@@ -113,9 +87,12 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
       return Tok.is(tok::raw_identifier) &&
              Tok.getRawIdentifier() == "explicit";
     };
-    SourceRange ExplicitTokenRange =
-        findToken(*Result.SourceManager, getLangOpts(),
-                  Ctor->getOuterLocStart(), Ctor->getEndLoc(), IsKwExplicit);
+    const CharSourceRange ConstructorRange = CharSourceRange::getTokenRange(
+        Ctor->getOuterLocStart(), Ctor->getEndLoc());
+    const CharSourceRange ExplicitTokenRange =
+        utils::lexer::findTokenTextInRange(ConstructorRange,
+                                           *Result.SourceManager, getLangOpts(),
+                                           IsKwExplicit);
     StringRef ConstructorDescription;
     if (Ctor->isMoveConstructor())
       ConstructorDescription = "move";
@@ -127,10 +104,8 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
     auto Diag = diag(Ctor->getLocation(),
                      "%0 constructor should not be declared explicit")
                 << ConstructorDescription;
-    if (ExplicitTokenRange.isValid()) {
-      Diag << FixItHint::CreateRemoval(
-          CharSourceRange::getCharRange(ExplicitTokenRange));
-    }
+    if (ExplicitTokenRange.isValid())
+      Diag << FixItHint::CreateRemoval(ExplicitTokenRange);
     return;
   }
 
@@ -149,7 +124,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
 
   const bool SingleArgument =
       Ctor->getNumParams() == 1 && !Ctor->getParamDecl(0)->isParameterPack();
-  SourceLocation Loc = Ctor->getLocation();
+  const SourceLocation Loc = Ctor->getLocation();
   auto Diag =
       diag(Loc, ExplicitExpr ? WithExpressionWarningMessage
                              : NoExpressionWarningMessage)

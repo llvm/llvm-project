@@ -1,0 +1,24 @@
+RUN: mkdir -p %t/Outputs
+
+# Run the convert script on lldb-types.h.
+RUN: %python %p/../../../../../scripts/convert-lldb-header-to-rpc-header.py %p/Inputs/lldb-types.h %t/Outputs/lldb-rpc-types.h
+
+# Check the output
+RUN: cat %t/Outputs/lldb-rpc-types.h | FileCheck %s
+
+# The include guards must change from LLDB_LLDB_TYPES_H to LLDB_RPC_TYPES_H.
+CHECK: #ifndef LLDB_RPC_TYPES_H
+CHECK: #define LLDB_RPC_TYPES_H
+
+# Includes of other lldb headers must begin with "lldb-rpc-".
+# Also, the includes for lldb-forward.h should be removed.
+CHECK: #include "lldb-rpc-enumerations.h"
+
+# Change the namespace to lldb_rpc.
+CHECK: namespace lldb_rpc
+
+# The comment that closes the namespace should match the namespace.
+CHECK: // namespace lldb_rpc
+
+# The comment that closes the include guard should match the guard.
+CHECK: #endif // LLDB_RPC_TYPES_H

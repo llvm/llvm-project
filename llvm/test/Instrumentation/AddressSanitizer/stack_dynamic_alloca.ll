@@ -19,15 +19,16 @@ entry:
 
 ; CHECK-RUNTIME: [[FAKE_STACK_BB:^[0-9]+]]:
 ; CHECK-RUNTIME: [[FAKE_STACK:%[0-9]+]] = phi i64 [ 0, %entry ], [ [[FAKE_STACK_RT]], %[[UAR_ENABLED_BB]] ]
+; CHECK-RUNTIME: [[FAKE_STACK_PTR:%[0-9]+]] = inttoptr i64 [[FAKE_STACK]] to ptr
+; CHECK-ALWAYS: [[FAKE_STACK_PTR:%[0-9]+]] = inttoptr i64 [[FAKE_STACK_RT]] to ptr
 ; CHECK-RUNTIME: icmp eq i64 [[FAKE_STACK]], 0
 ; CHECK-ALWAYS: icmp eq i64 [[FAKE_STACK_RT]], 0
 
 ; CHECK: [[NO_FAKE_STACK_BB:^[0-9]+]]:
 ; CHECK: %MyAlloca = alloca i8, i64
-; CHECK: [[ALLOCA:%[0-9]+]] = ptrtoint ptr %MyAlloca
 
-; CHECK-RUNTIME: phi i64 [ [[FAKE_STACK]], %[[FAKE_STACK_BB]] ], [ [[ALLOCA]], %[[NO_FAKE_STACK_BB]] ]
-; CHECK-ALWAYS: phi i64 [ [[FAKE_STACK_RT]], %entry ], [ [[ALLOCA]], %[[NO_FAKE_STACK_BB]] ]
+; CHECK-RUNTIME: phi ptr [ [[FAKE_STACK_PTR]], %[[FAKE_STACK_BB]] ], [ %MyAlloca, %[[NO_FAKE_STACK_BB]] ]
+; CHECK-ALWAYS: phi ptr [ [[FAKE_STACK_PTR]], %entry ], [ %MyAlloca, %[[NO_FAKE_STACK_BB]] ]
 
 ; CHECK: ret void
 

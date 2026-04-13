@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ScriptInterpreterLua_h_
-#define liblldb_ScriptInterpreterLua_h_
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
 
 #include <vector>
 
@@ -18,7 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
-class Lua;
+class LuaState;
 class ScriptInterpreterLua : public ScriptInterpreter {
 public:
   class CommandDataLua : public BreakpointOptions::CommandData {
@@ -47,7 +47,8 @@ public:
                            const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
-                           FileSpec extra_search_dir = {}) override;
+                           FileSpec extra_search_dir = {},
+                           lldb::TargetSP loaded_into_target_sp = {}) override;
 
   StructuredData::DictionarySP GetInterpreterInfo() override;
 
@@ -74,7 +75,7 @@ public:
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  Lua &GetLua();
+  LuaState &GetLuaState();
 
   llvm::Error EnterSession(lldb::user_id_t debugger_id);
   llvm::Error LeaveSession();
@@ -100,7 +101,7 @@ public:
       StructuredData::ObjectSP extra_args_sp) override;
 
 private:
-  std::unique_ptr<Lua> m_lua;
+  std::unique_ptr<LuaState> m_lua_state;
   bool m_session_is_active = false;
 
   Status RegisterBreakpointCallback(BreakpointOptions &bp_options,
@@ -114,4 +115,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ScriptInterpreterLua_h_
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H

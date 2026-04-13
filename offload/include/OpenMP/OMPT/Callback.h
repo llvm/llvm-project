@@ -56,7 +56,7 @@ FOREACH_OMPT_EMI_EVENT(declareOmptCallback)
 
 /// This function will call an OpenMP API function. Which in turn will lookup a
 /// given enum value of type \p ompt_callbacks_t and copy the address of the
-/// corresponding callback funtion into the provided pointer.
+/// corresponding callback function into the provided pointer.
 /// The pointer to the runtime function is passed during 'initializeLibrary'.
 /// \p which the enum value of the requested callback function
 /// \p callback the destination pointer where the address shall be copied

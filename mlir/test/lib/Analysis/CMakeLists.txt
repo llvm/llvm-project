@@ -17,16 +17,19 @@ add_mlir_library(MLIRTestAnalysis
   DataFlow/TestDenseForwardDataFlowAnalysis.cpp
   DataFlow/TestLivenessAnalysis.cpp
   DataFlow/TestSparseBackwardDataFlowAnalysis.cpp
+  DataFlow/TestStridedMetadataRangeAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
+  )
+mlir_target_link_libraries(MLIRTestAnalysis PUBLIC
   MLIRAffineDialect
   MLIRAnalysis
   MLIRFunctionInterfaces
   MLIRMemRefDialect
   MLIRPass
-  MLIRTestDialect
   )
 
 target_include_directories(MLIRTestAnalysis

@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(HAVE_DLFCN_H) && defined(HAVE_DLOPEN)
+#if defined(HAVE_DLOPEN)
 #include <dlfcn.h>
 
 DynamicLibrary::HandleSet::~HandleSet() {
   // Close the libraries in reverse order.
   for (void *Handle : llvm::reverse(Handles))
     ::dlclose(Handle);
-  if (Process)
+  if (Process != &Invalid)
     ::dlclose(Process);
 
   // llvm_shutdown called, Return to default

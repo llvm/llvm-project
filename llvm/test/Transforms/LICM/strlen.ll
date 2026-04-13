@@ -12,8 +12,8 @@ loop:
   br label %loop
 }
 
-; CHECK: declare i64 @strlen(ptr nocapture) #0
-; CHECK: attributes #0 = { mustprogress nofree nounwind willreturn memory(argmem: read) }
+; CHECK: declare i64 @strlen(ptr captures(none)) #0
+; CHECK: attributes #0 = { mustprogress nocallback nofree nounwind willreturn memory(argmem: read) }
 declare i64 @strlen(ptr)
 
 

@@ -18,11 +18,19 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::VE::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsVE.def"
-};
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsVE.def"
+});
 
 void VETargetInfo::getTargetDefines(const LangOptions &Opts,
                                     MacroBuilder &Builder) const {
@@ -39,7 +47,6 @@ void VETargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
-ArrayRef<Builtin::Info> VETargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::VE::LastTSBuiltin - Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard> VETargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }

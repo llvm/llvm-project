@@ -1,4 +1,4 @@
-//===--- GlobalVariableDeclarationCheck.cpp - clang-tidy-------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalVariableDeclarationCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,14 +21,16 @@ namespace {
 
 AST_MATCHER(VarDecl, isLocalVariable) { return Node.isLocalVarDecl(); }
 
-FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
+} // namespace
+
+static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
   if (IsConst && (Decl->getStorageClass() != SC_Static)) {
     // No fix available if it is not a static constant, since it is difficult
     // to determine the proper fix in this case.
     return {};
   }
 
-  char FC = Decl->getName()[0];
+  const char FC = Decl->getName()[0];
   if (!llvm::isAlpha(FC) || Decl->getName().size() == 1) {
     // No fix available if first character is not alphabetical character, or it
     // is a single-character variable, since it is difficult to determine the
@@ -37,7 +38,7 @@ FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
     // their own.
     return {};
   }
-  char SC = Decl->getName()[1];
+  const char SC = Decl->getName()[1];
   if ((FC == 'k' || FC == 'g') && !llvm::isAlpha(SC)) {
     // No fix available if the prefix is correct but the second character is
     // not alphabetical, since it is difficult to determine the proper fix in
@@ -45,15 +46,13 @@ FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
     return {};
   }
 
-  auto NewName = (IsConst ? "k" : "g") +
-                 llvm::StringRef(std::string(1, FC)).upper() +
+  auto NewName = (IsConst ? "k" : "g") + StringRef(std::string(1, FC)).upper() +
                  Decl->getName().substr(1).str();
 
   return FixItHint::CreateReplacement(
       CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
-      llvm::StringRef(NewName));
+      StringRef(NewName));
 }
-}  // namespace
 
 void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // need to add two matchers since we need to bind different ids to distinguish

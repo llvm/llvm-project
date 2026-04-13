@@ -75,7 +75,7 @@ const char *getEdgeKindName(Edge::Kind K) {
   case RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable:
     return "RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable";
   default:
-    return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
+    return getGenericEdgeKindName(K);
   }
 }
 
@@ -88,6 +88,26 @@ const char PointerJumpStubContent[6] = {
 const char ReentryTrampolineContent[5] = {
   static_cast<char>(0xe8), 0x00, 0x00, 0x00, 0x00
 };
+
+void GOTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : GOTSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "GOT block edge count != 1");
+    registerPreExistingEntry(EntrySym->getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
+void PLTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : StubsSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "PLT block edge count != 1");
+    auto &GOTSym = EntrySym->getBlock().edges().begin()->getTarget();
+    assert(GOTSym.getBlock().edges_size() == 1 && "GOT block edge count != 1");
+    registerPreExistingEntry(GOTSym.getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
 
 Error optimizeGOTAndStubAccesses(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");

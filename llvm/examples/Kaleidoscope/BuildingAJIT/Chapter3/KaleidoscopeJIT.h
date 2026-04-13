@@ -24,7 +24,9 @@
 #include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
@@ -42,6 +44,7 @@ class KaleidoscopeJIT {
 private:
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<EPCIndirectionUtils> EPCIU;
+  std::unique_ptr<MemoryAccess> MemAccess;
 
   DataLayout DL;
   MangleAndInterner Mangle;
@@ -62,11 +65,15 @@ private:
 public:
   KaleidoscopeJIT(std::unique_ptr<ExecutionSession> ES,
                   std::unique_ptr<EPCIndirectionUtils> EPCIU,
+                  std::unique_ptr<MemoryAccess> MemAccess,
                   JITTargetMachineBuilder JTMB, DataLayout DL)
-      : ES(std::move(ES)), EPCIU(std::move(EPCIU)), DL(std::move(DL)),
+      : ES(std::move(ES)), EPCIU(std::move(EPCIU)),
+        MemAccess(std::move(MemAccess)), DL(std::move(DL)),
         Mangle(*this->ES, this->DL),
         ObjectLayer(*this->ES,
-                    []() { return std::make_unique<SectionMemoryManager>(); }),
+                    [](const MemoryBuffer &) {
+                      return std::make_unique<SectionMemoryManager>();
+                    }),
         CompileLayer(*this->ES, ObjectLayer,
                      std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
         OptimizeLayer(*this->ES, CompileLayer, optimizeModule),
@@ -93,7 +100,13 @@ public:
 
     auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
 
-    auto EPCIU = EPCIndirectionUtils::Create(*ES);
+    auto MemAccess =
+        ES->getExecutorProcessControl().createDefaultMemoryAccess();
+    if (!MemAccess)
+      return MemAccess.takeError();
+
+    auto EPCIU = EPCIndirectionUtils::Create(ES->getExecutorProcessControl(),
+                                             **MemAccess);
     if (!EPCIU)
       return EPCIU.takeError();
 
@@ -111,6 +124,7 @@ public:
       return DL.takeError();
 
     return std::make_unique<KaleidoscopeJIT>(std::move(ES), std::move(*EPCIU),
+                                             std::move(*MemAccess),
                                              std::move(JTMB), std::move(*DL));
   }
 

@@ -119,11 +119,18 @@ bfmlalb v0.4s, v1.8h, v2.8h
 bfmlalb v0.4s, v0.8h, v1.8h
 # LLVM-MCA-END
 
-# LLVM-MCA-BEGIN crc32cb
+# LLVM-MCA-BEGIN crc32
 mul    w0, w0, w0
 crc32cb w0, w0, w1
 crc32cb w0, w0, w1
 crc32cb w0, w0, w0
+crc32b w0, w0, w15
+crc32h w0, w0, w21
+crc32w w0, w0, w24
+crc32x w0, w0, x25
+crc32ch w0, w0, w16
+crc32cw w0, w0, w23
+crc32cx w0, w0, x5
 # LLVM-MCA-END
 
 # LLVM-MCA-BEGIN Z sdot.s
@@ -231,7 +238,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      703
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.57
 # CHECK-NEXT: IPC:               0.57
 # CHECK-NEXT: Block RThroughput: 3.0
@@ -269,7 +276,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      703
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.57
 # CHECK-NEXT: IPC:               0.57
 # CHECK-NEXT: Block RThroughput: 3.0
@@ -307,7 +314,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1703
 # CHECK-NEXT: Total uOps:        600
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.35
 # CHECK-NEXT: IPC:               0.35
 # CHECK-NEXT: Block RThroughput: 1.5
@@ -324,10 +331,10 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,5]     D=============eeeeER.    .    .    ..   fmadd	d0, d0, d1, d2
 # CHECK-NEXT: [1,0]     D=================eeER   .    .    ..   fadd	d0, d0, d0
 # CHECK-NEXT: [1,1]     D===================eeeeER    .    ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [1,2]     D=======================eeeER .    ..   fmul	d0, d0, d0
-# CHECK-NEXT: [1,3]     D========================eeeeER    ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [1,4]     D==========================eeeeER  ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [1,5]     D==============================eeeeER   fmadd	d0, d0, d1, d2
+# CHECK-NEXT: [1,2]     .D======================eeeER .    ..   fmul	d0, d0, d0
+# CHECK-NEXT: [1,3]     .D=======================eeeeER    ..   fmadd	d0, d1, d2, d0
+# CHECK-NEXT: [1,4]     .D=========================eeeeER  ..   fmadd	d0, d1, d2, d0
+# CHECK-NEXT: [1,5]     .D=============================eeeeER   fmadd	d0, d0, d1, d2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -338,11 +345,11 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     9.5    0.5    0.0       fadd	d0, d0, d0
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       fmadd	d0, d1, d2, d0
-# CHECK-NEXT: 2.     2     15.5   0.0    0.0       fmul	d0, d0, d0
-# CHECK-NEXT: 3.     2     16.5   0.0    0.0       fmadd	d0, d1, d2, d0
-# CHECK-NEXT: 4.     2     18.5   0.0    0.0       fmadd	d0, d1, d2, d0
-# CHECK-NEXT: 5.     2     22.5   0.0    0.0       fmadd	d0, d0, d1, d2
-# CHECK-NEXT:        2     15.7   0.1    0.0       <total>
+# CHECK-NEXT: 2.     2     15.0   0.0    0.0       fmul	d0, d0, d0
+# CHECK-NEXT: 3.     2     16.0   0.0    0.0       fmadd	d0, d1, d2, d0
+# CHECK-NEXT: 4.     2     18.0   0.0    0.0       fmadd	d0, d1, d2, d0
+# CHECK-NEXT: 5.     2     22.0   0.0    0.0       fmadd	d0, d0, d1, d2
+# CHECK-NEXT:        2     15.3   0.1    0.0       <total>
 
 # CHECK:      [3] Code Region - saba
 
@@ -351,7 +358,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 1.5
@@ -389,7 +396,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 1.5
@@ -427,7 +434,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1103
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.36
 # CHECK-NEXT: IPC:               0.36
 # CHECK-NEXT: Block RThroughput: 0.8
@@ -465,7 +472,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1103
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.36
 # CHECK-NEXT: IPC:               0.36
 # CHECK-NEXT: Block RThroughput: 0.8
@@ -503,7 +510,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -541,7 +548,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -579,7 +586,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 1.5
@@ -617,7 +624,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 1.0
@@ -655,7 +662,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1703
 # CHECK-NEXT: Total uOps:        600
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.35
 # CHECK-NEXT: IPC:               0.35
 # CHECK-NEXT: Block RThroughput: 1.5
@@ -672,10 +679,10 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,5]     D=============eeeeER.    .    .    ..   fmla	v0.2d, v0.2d, v1.2d
 # CHECK-NEXT: [1,0]     D=================eeeER  .    .    ..   fmul	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT: [1,1]     D==================eeeeER.    .    ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [1,2]     D======================eeER   .    ..   fadd	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,3]     D========================eeeeER    ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [1,4]     D==========================eeeeER  ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [1,5]     D==============================eeeeER   fmla	v0.2d, v0.2d, v1.2d
+# CHECK-NEXT: [1,2]     .D=====================eeER   .    ..   fadd	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,3]     .D=======================eeeeER    ..   fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: [1,4]     .D=========================eeeeER  ..   fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: [1,5]     .D=============================eeeeER   fmla	v0.2d, v0.2d, v1.2d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -686,11 +693,11 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     9.5    0.5    0.0       fmul	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: 2.     2     14.5   0.0    0.0       fadd	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: 3.     2     16.5   0.0    0.0       fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: 4.     2     18.5   0.0    0.0       fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: 5.     2     22.5   0.0    0.0       fmla	v0.2d, v0.2d, v1.2d
-# CHECK-NEXT:        2     15.3   0.1    0.0       <total>
+# CHECK-NEXT: 2.     2     14.0   0.0    0.0       fadd	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: 3.     2     16.0   0.0    0.0       fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: 4.     2     18.0   0.0    0.0       fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: 5.     2     22.0   0.0    0.0       fmla	v0.2d, v0.2d, v1.2d
+# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
 
 # CHECK:      [12] Code Region - fmlal
 
@@ -699,7 +706,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      2203
 # CHECK-NEXT: Total uOps:        600
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.27
 # CHECK-NEXT: IPC:               0.27
 # CHECK-NEXT: Block RThroughput: 1.5
@@ -716,10 +723,10 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,5]     D=================eeeeeER.    .    .    .    ..   fmlal	v0.4s, v0.4h, v1.4h
 # CHECK-NEXT: [1,0]     D======================eeeER  .    .    .    ..   fmul	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT: [1,1]     D=========================eeeeeER  .    .    ..   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [1,2]     D==============================eeER.    .    ..   fadd	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,3]     D================================eeeeeER.    ..   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [1,4]     D==================================eeeeeER   ..   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [1,5]     D=======================================eeeeeER   fmlal	v0.4s, v0.4h, v1.4h
+# CHECK-NEXT: [1,2]     .D=============================eeER.    .    ..   fadd	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,3]     .D===============================eeeeeER.    ..   fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [1,4]     .D=================================eeeeeER   ..   fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [1,5]     .D======================================eeeeeER   fmlal	v0.4s, v0.4h, v1.4h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -730,11 +737,11 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     12.0   0.5    0.0       fmul	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT: 1.     2     15.0   0.0    0.0       fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: 2.     2     20.0   0.0    0.0       fadd	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: 3.     2     22.0   0.0    0.0       fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: 4.     2     24.0   0.0    0.0       fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: 5.     2     29.0   0.0    0.0       fmlal	v0.4s, v0.4h, v1.4h
-# CHECK-NEXT:        2     20.3   0.1    0.0       <total>
+# CHECK-NEXT: 2.     2     19.5   0.0    0.0       fadd	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: 3.     2     21.5   0.0    0.0       fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: 4.     2     23.5   0.0    0.0       fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: 5.     2     28.5   0.0    0.0       fmlal	v0.4s, v0.4h, v1.4h
+# CHECK-NEXT:        2     20.0   0.1    0.0       <total>
 
 # CHECK:      [13] Code Region - bfdot
 
@@ -743,7 +750,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 1.0
@@ -781,7 +788,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1603
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.25
 # CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 1.0
@@ -819,7 +826,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 1.0
@@ -850,30 +857,44 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       bfmlalb	v0.4s, v0.8h, v1.8h
 # CHECK-NEXT:        2     11.8   0.1    0.0       <total>
 
-# CHECK:      [16] Code Region - crc32cb
+# CHECK:      [16] Code Region - crc32
 
 # CHECK:      Iterations:        100
-# CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      703
-# CHECK-NEXT: Total uOps:        400
+# CHECK-NEXT: Instructions:      1100
+# CHECK-NEXT: Total Cycles:      1403
+# CHECK-NEXT: Total uOps:        1100
 
-# CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.57
-# CHECK-NEXT: Block RThroughput: 3.0
+# CHECK:      Dispatch Width:    8
+# CHECK-NEXT: uOps Per Cycle:    0.78
+# CHECK-NEXT: IPC:               0.78
+# CHECK-NEXT: Block RThroughput: 10.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: Index     0123456789          0123456789
 
-# CHECK:      [0,0]     DeeER.    .    ..   mul	w0, w0, w0
-# CHECK-NEXT: [0,1]     D==eeER   .    ..   crc32cb	w0, w0, w1
-# CHECK-NEXT: [0,2]     D===eeER  .    ..   crc32cb	w0, w0, w1
-# CHECK-NEXT: [0,3]     D=====eeER.    ..   crc32cb	w0, w0, w0
-# CHECK-NEXT: [1,0]     D=======eeER   ..   mul	w0, w0, w0
-# CHECK-NEXT: [1,1]     D=========eeER ..   crc32cb	w0, w0, w1
-# CHECK-NEXT: [1,2]     D==========eeER..   crc32cb	w0, w0, w1
-# CHECK-NEXT: [1,3]     D============eeER   crc32cb	w0, w0, w0
+# CHECK:      [0,0]     DeeER.    .    .    .    .    .   mul	w0, w0, w0
+# CHECK-NEXT: [0,1]     D==eeER   .    .    .    .    .   crc32cb	w0, w0, w1
+# CHECK-NEXT: [0,2]     D===eeER  .    .    .    .    .   crc32cb	w0, w0, w1
+# CHECK-NEXT: [0,3]     D=====eeER.    .    .    .    .   crc32cb	w0, w0, w0
+# CHECK-NEXT: [0,4]     D======eeER    .    .    .    .   crc32b	w0, w0, w15
+# CHECK-NEXT: [0,5]     D=======eeER   .    .    .    .   crc32h	w0, w0, w21
+# CHECK-NEXT: [0,6]     D========eeER  .    .    .    .   crc32w	w0, w0, w24
+# CHECK-NEXT: [0,7]     D=========eeER .    .    .    .   crc32x	w0, w0, x25
+# CHECK-NEXT: [0,8]     .D=========eeER.    .    .    .   crc32ch	w0, w0, w16
+# CHECK-NEXT: [0,9]     .D==========eeER    .    .    .   crc32cw	w0, w0, w23
+# CHECK-NEXT: [0,10]    .D===========eeER   .    .    .   crc32cx	w0, w0, x5
+# CHECK-NEXT: [1,0]     .D=============eeER .    .    .   mul	w0, w0, w0
+# CHECK-NEXT: [1,1]     .D===============eeER    .    .   crc32cb	w0, w0, w1
+# CHECK-NEXT: [1,2]     .D================eeER   .    .   crc32cb	w0, w0, w1
+# CHECK-NEXT: [1,3]     .D==================eeER .    .   crc32cb	w0, w0, w0
+# CHECK-NEXT: [1,4]     .D===================eeER.    .   crc32b	w0, w0, w15
+# CHECK-NEXT: [1,5]     . D===================eeER    .   crc32h	w0, w0, w21
+# CHECK-NEXT: [1,6]     . D====================eeER   .   crc32w	w0, w0, w24
+# CHECK-NEXT: [1,7]     . D=====================eeER  .   crc32x	w0, w0, x25
+# CHECK-NEXT: [1,8]     . D======================eeER .   crc32ch	w0, w0, w16
+# CHECK-NEXT: [1,9]     . D=======================eeER.   crc32cw	w0, w0, w23
+# CHECK-NEXT: [1,10]    . D========================eeER   crc32cx	w0, w0, x5
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -882,11 +903,18 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     4.5    0.5    0.0       mul	w0, w0, w0
-# CHECK-NEXT: 1.     2     6.5    0.0    0.0       crc32cb	w0, w0, w1
-# CHECK-NEXT: 2.     2     7.5    0.0    0.0       crc32cb	w0, w0, w1
-# CHECK-NEXT: 3.     2     9.5    0.0    0.0       crc32cb	w0, w0, w0
-# CHECK-NEXT:        2     7.0    0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     7.5    0.5    0.0       mul	w0, w0, w0
+# CHECK-NEXT: 1.     2     9.5    0.0    0.0       crc32cb	w0, w0, w1
+# CHECK-NEXT: 2.     2     10.5   0.0    0.0       crc32cb	w0, w0, w1
+# CHECK-NEXT: 3.     2     12.5   0.0    0.0       crc32cb	w0, w0, w0
+# CHECK-NEXT: 4.     2     13.5   0.0    0.0       crc32b	w0, w0, w15
+# CHECK-NEXT: 5.     2     14.0   0.0    0.0       crc32h	w0, w0, w21
+# CHECK-NEXT: 6.     2     15.0   0.0    0.0       crc32w	w0, w0, w24
+# CHECK-NEXT: 7.     2     16.0   0.0    0.0       crc32x	w0, w0, x25
+# CHECK-NEXT: 8.     2     16.5   0.0    0.0       crc32ch	w0, w0, w16
+# CHECK-NEXT: 9.     2     17.5   0.0    0.0       crc32cw	w0, w0, w23
+# CHECK-NEXT: 10.    2     18.5   0.0    0.0       crc32cx	w0, w0, x5
+# CHECK-NEXT:        2     13.7   0.0    0.0       <total>
 
 # CHECK:      [17] Code Region - Z sdot.s
 
@@ -895,7 +923,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1203
 # CHECK-NEXT: Total uOps:        500
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.42
 # CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -910,8 +938,8 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,3]     D=========eeeER.    .    ..   sdot	z0.s, z0.b, z1.b
 # CHECK-NEXT: [1,0]     D============eeeeeER.    ..   mul	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT: [1,1]     D=================eeeER  ..   sdot	z0.s, z1.b, z2.b
-# CHECK-NEXT: [1,2]     D==================eeeER ..   sdot	z0.s, z1.b, z2.b
-# CHECK-NEXT: [1,3]     D=====================eeeER   sdot	z0.s, z0.b, z1.b
+# CHECK-NEXT: [1,2]     .D=================eeeER ..   sdot	z0.s, z1.b, z2.b
+# CHECK-NEXT: [1,3]     .D====================eeeER   sdot	z0.s, z0.b, z1.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -922,9 +950,9 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     7.0    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       sdot	z0.s, z1.b, z2.b
-# CHECK-NEXT: 2.     2     13.0   0.0    0.0       sdot	z0.s, z1.b, z2.b
-# CHECK-NEXT: 3.     2     16.0   0.0    0.0       sdot	z0.s, z0.b, z1.b
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT: 2.     2     12.5   0.0    0.0       sdot	z0.s, z1.b, z2.b
+# CHECK-NEXT: 3.     2     15.5   0.0    0.0       sdot	z0.s, z0.b, z1.b
+# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
 
 # CHECK:      [18] Code Region - Z sudot
 
@@ -933,7 +961,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1203
 # CHECK-NEXT: Total uOps:        500
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.42
 # CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -948,8 +976,8 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,3]     D=========eeeER.    .    ..   sdot	z0.s, z0.b, z1.b[1]
 # CHECK-NEXT: [1,0]     D============eeeeeER.    ..   mul	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT: [1,1]     D=================eeeER  ..   sdot	z0.s, z1.b, z2.b[1]
-# CHECK-NEXT: [1,2]     D==================eeeER ..   sdot	z0.s, z1.b, z2.b[1]
-# CHECK-NEXT: [1,3]     D=====================eeeER   sdot	z0.s, z0.b, z1.b[1]
+# CHECK-NEXT: [1,2]     .D=================eeeER ..   sdot	z0.s, z1.b, z2.b[1]
+# CHECK-NEXT: [1,3]     .D====================eeeER   sdot	z0.s, z0.b, z1.b[1]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -960,9 +988,9 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     7.0    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       sdot	z0.s, z1.b, z2.b[1]
-# CHECK-NEXT: 2.     2     13.0   0.0    0.0       sdot	z0.s, z1.b, z2.b[1]
-# CHECK-NEXT: 3.     2     16.0   0.0    0.0       sdot	z0.s, z0.b, z1.b[1]
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT: 2.     2     12.5   0.0    0.0       sdot	z0.s, z1.b, z2.b[1]
+# CHECK-NEXT: 3.     2     15.5   0.0    0.0       sdot	z0.s, z0.b, z1.b[1]
+# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
 
 # CHECK:      [19] Code Region - Z sdot.d
 
@@ -971,7 +999,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1403
 # CHECK-NEXT: Total uOps:        500
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.36
 # CHECK-NEXT: IPC:               0.29
 # CHECK-NEXT: Block RThroughput: 5.0
@@ -986,8 +1014,8 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   sdot	z0.d, z0.h, z1.h
 # CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT: [1,1]     D===================eeeeER    .   sdot	z0.d, z1.h, z2.h
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   sdot	z0.d, z1.h, z2.h
-# CHECK-NEXT: [1,3]     D========================eeeeER   sdot	z0.d, z0.h, z1.h
+# CHECK-NEXT: [1,2]     .D===================eeeeER   .   sdot	z0.d, z1.h, z2.h
+# CHECK-NEXT: [1,3]     .D=======================eeeeER   sdot	z0.d, z0.h, z1.h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -998,9 +1026,9 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     8.0    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT: 1.     2     13.0   0.0    0.0       sdot	z0.d, z1.h, z2.h
-# CHECK-NEXT: 2.     2     14.0   0.0    0.0       sdot	z0.d, z1.h, z2.h
-# CHECK-NEXT: 3.     2     18.0   0.0    0.0       sdot	z0.d, z0.h, z1.h
-# CHECK-NEXT:        2     13.3   0.1    0.0       <total>
+# CHECK-NEXT: 2.     2     13.5   0.0    0.0       sdot	z0.d, z1.h, z2.h
+# CHECK-NEXT: 3.     2     17.5   0.0    0.0       sdot	z0.d, z0.h, z1.h
+# CHECK-NEXT:        2     13.0   0.1    0.0       <total>
 
 # CHECK:      [20] Code Region - Z smmla
 
@@ -1009,7 +1037,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1203
 # CHECK-NEXT: Total uOps:        500
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.42
 # CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -1024,8 +1052,8 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,3]     D=========eeeER.    .    ..   smmla	z0.s, z0.b, z1.b
 # CHECK-NEXT: [1,0]     D============eeeeeER.    ..   mul	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT: [1,1]     D=================eeeER  ..   smmla	z0.s, z1.b, z2.b
-# CHECK-NEXT: [1,2]     D==================eeeER ..   smmla	z0.s, z1.b, z2.b
-# CHECK-NEXT: [1,3]     D=====================eeeER   smmla	z0.s, z0.b, z1.b
+# CHECK-NEXT: [1,2]     .D=================eeeER ..   smmla	z0.s, z1.b, z2.b
+# CHECK-NEXT: [1,3]     .D====================eeeER   smmla	z0.s, z0.b, z1.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1036,9 +1064,9 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     7.0    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       smmla	z0.s, z1.b, z2.b
-# CHECK-NEXT: 2.     2     13.0   0.0    0.0       smmla	z0.s, z1.b, z2.b
-# CHECK-NEXT: 3.     2     16.0   0.0    0.0       smmla	z0.s, z0.b, z1.b
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT: 2.     2     12.5   0.0    0.0       smmla	z0.s, z1.b, z2.b
+# CHECK-NEXT: 3.     2     15.5   0.0    0.0       smmla	z0.s, z0.b, z1.b
+# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
 
 # CHECK:      [21] Code Region - Z mla.d
 
@@ -1047,7 +1075,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1703
 # CHECK-NEXT: Total uOps:        800
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.47
 # CHECK-NEXT: IPC:               0.23
 # CHECK-NEXT: Block RThroughput: 8.0
@@ -1060,9 +1088,9 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .    ..   mla	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [0,2]     D=======eeeeeER.    .    .    .    ..   mla	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [0,3]     D============eeeeeER.    .    .    ..   mla	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT: [1,0]     D=================eeeeeER.    .    ..   mul	z0.d, p0/m, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D======================eeeeeER.    ..   mla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [1,2]     D========================eeeeeER   ..   mla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,0]     .D================eeeeeER.    .    ..   mul	z0.d, p0/m, z0.d, z0.d
+# CHECK-NEXT: [1,1]     .D=====================eeeeeER.    ..   mla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,2]     .D=======================eeeeeER   ..   mla	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [1,3]     .D============================eeeeeER   mla	z0.d, p0/m, z0.d, z1.d
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -1072,11 +1100,11 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     9.5    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
-# CHECK-NEXT: 1.     2     14.5   0.0    0.0       mla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: 2.     2     16.5   0.0    0.0       mla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: 0.     2     9.0    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
+# CHECK-NEXT: 1.     2     14.0   0.0    0.0       mla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: 2.     2     16.0   0.0    0.0       mla	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 3.     2     21.0   0.0    0.0       mla	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT:        2     15.4   0.1    0.0       <total>
+# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
 
 # CHECK:      [22] Code Region - Z mad.d
 
@@ -1085,7 +1113,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1703
 # CHECK-NEXT: Total uOps:        800
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.47
 # CHECK-NEXT: IPC:               0.23
 # CHECK-NEXT: Block RThroughput: 8.0
@@ -1098,9 +1126,9 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .    ..   mad	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [0,2]     D=======eeeeeER.    .    .    .    ..   mad	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [0,3]     D============eeeeeER.    .    .    ..   mad	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT: [1,0]     D=================eeeeeER.    .    ..   mul	z0.d, p0/m, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D======================eeeeeER.    ..   mad	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [1,2]     D========================eeeeeER   ..   mad	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,0]     .D================eeeeeER.    .    ..   mul	z0.d, p0/m, z0.d, z0.d
+# CHECK-NEXT: [1,1]     .D=====================eeeeeER.    ..   mad	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,2]     .D=======================eeeeeER   ..   mad	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [1,3]     .D============================eeeeeER   mad	z0.d, p0/m, z0.d, z1.d
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -1110,11 +1138,11 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     9.5    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
-# CHECK-NEXT: 1.     2     14.5   0.0    0.0       mad	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: 2.     2     16.5   0.0    0.0       mad	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: 0.     2     9.0    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
+# CHECK-NEXT: 1.     2     14.0   0.0    0.0       mad	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: 2.     2     16.0   0.0    0.0       mad	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 3.     2     21.0   0.0    0.0       mad	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT:        2     15.4   0.1    0.0       <total>
+# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
 
 # CHECK:      [23] Code Region - Z msb.d
 
@@ -1123,7 +1151,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1703
 # CHECK-NEXT: Total uOps:        800
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.47
 # CHECK-NEXT: IPC:               0.23
 # CHECK-NEXT: Block RThroughput: 8.0
@@ -1136,9 +1164,9 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .    ..   msb	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [0,2]     D=======eeeeeER.    .    .    .    ..   msb	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [0,3]     D============eeeeeER.    .    .    ..   msb	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT: [1,0]     D=================eeeeeER.    .    ..   mul	z0.d, p0/m, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D======================eeeeeER.    ..   msb	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [1,2]     D========================eeeeeER   ..   msb	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,0]     .D================eeeeeER.    .    ..   mul	z0.d, p0/m, z0.d, z0.d
+# CHECK-NEXT: [1,1]     .D=====================eeeeeER.    ..   msb	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,2]     .D=======================eeeeeER   ..   msb	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: [1,3]     .D============================eeeeeER   msb	z0.d, p0/m, z0.d, z1.d
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -1148,11 +1176,11 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     9.5    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
-# CHECK-NEXT: 1.     2     14.5   0.0    0.0       msb	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: 2.     2     16.5   0.0    0.0       msb	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: 0.     2     9.0    0.5    0.0       mul	z0.d, p0/m, z0.d, z0.d
+# CHECK-NEXT: 1.     2     14.0   0.0    0.0       msb	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: 2.     2     16.0   0.0    0.0       msb	z0.d, p0/m, z1.d, z2.d
 # CHECK-NEXT: 3.     2     21.0   0.0    0.0       msb	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT:        2     15.4   0.1    0.0       <total>
+# CHECK-NEXT:        2     15.0   0.1    0.0       <total>
 
 # CHECK:      [24] Code Region - Z fcmla ZPmZZ
 
@@ -1161,7 +1189,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1503
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.27
 # CHECK-NEXT: IPC:               0.27
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -1199,7 +1227,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1503
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.27
 # CHECK-NEXT: IPC:               0.27
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -1237,7 +1265,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -1275,7 +1303,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -1313,7 +1341,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1303
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -1351,7 +1379,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1603
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.25
 # CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 2.0
@@ -1389,7 +1417,7 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Total Cycles:      1503
 # CHECK-NEXT: Total uOps:        400
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.27
 # CHECK-NEXT: IPC:               0.27
 # CHECK-NEXT: Block RThroughput: 2.0

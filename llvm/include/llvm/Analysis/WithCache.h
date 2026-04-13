@@ -16,13 +16,14 @@
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 #include <type_traits>
 
 namespace llvm {
 struct SimplifyQuery;
-KnownBits computeKnownBits(const Value *V, unsigned Depth,
-                           const SimplifyQuery &Q);
+LLVM_ABI KnownBits computeKnownBits(const Value *V, const SimplifyQuery &Q,
+                                    unsigned Depth);
 
 template <typename Arg> class WithCache {
   static_assert(std::is_pointer_v<Arg>, "WithCache requires a pointer type!");
@@ -44,7 +45,7 @@ template <typename Arg> class WithCache {
   mutable KnownBits Known;
 
   void calculateKnownBits(const SimplifyQuery &Q) const {
-    Known = computeKnownBits(Pointer.getPointer(), 0, Q);
+    Known = computeKnownBits(Pointer.getPointer(), Q, 0);
     Pointer.setInt(true);
   }
 

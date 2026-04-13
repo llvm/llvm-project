@@ -13,10 +13,7 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Config/config.h"
 #include <cstring>
-
-#if HAVE_ERRNO_H
 #include <errno.h>
-#endif
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system
@@ -26,11 +23,9 @@
 namespace llvm {
 namespace sys {
 
-#if HAVE_ERRNO_H
 std::string StrError() {
   return StrError(errno);
 }
-#endif  // HAVE_ERRNO_H
 
 std::string StrError(int errnum) {
   std::string str;

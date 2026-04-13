@@ -1,0 +1,37 @@
+SECTIONS {
+  . = 0x10000;
+
+  absolute_symbol = .;
+
+  .text : {
+    text_symbol = .;
+    *(.text)
+  }
+
+  pseudo_text : {
+    pseudo_text_symbol = .;
+    *(.pseudo_text)
+  }
+
+  .data : {
+    data_symbol = .;
+    *(.data)
+  }
+
+  pseudo_data : {
+    pseudo_data_symbol = .;
+    *(.pseudo_data)
+  }
+
+  .bss : {
+    bss_symbol = .;
+    *(.bss)
+  }
+
+  pseudo_bss : {
+    pseudo_bss_symbol = .;
+    *(.pseudo_bss)
+  }
+}
+
+ENTRY(text_func)

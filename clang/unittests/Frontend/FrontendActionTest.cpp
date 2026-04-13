@@ -18,6 +18,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -89,9 +90,9 @@ TEST(ASTFrontendAction, Sanity) {
       FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance compiler;
-  compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  CompilerInstance compiler(std::move(invocation));
+  compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action;
   ASSERT_TRUE(compiler.ExecuteAction(test_action));
@@ -109,9 +110,9 @@ TEST(ASTFrontendAction, IncrementalParsing) {
       FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance compiler;
-  compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  CompilerInstance compiler(std::move(invocation));
+  compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true);
   ASSERT_TRUE(compiler.ExecuteAction(test_action));
@@ -136,9 +137,9 @@ TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
       FrontendInputFile("test.cc", Language::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance compiler;
-  compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  CompilerInstance compiler(std::move(invocation));
+  compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true,
                                     /*actOnEndOfTranslationUnit=*/true);
@@ -182,9 +183,9 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
-  Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
 
   TestPPCallbacks *Callbacks = new TestPPCallbacks;
   TestPPCallbacksFrontendAction TestAction(Callbacks);
@@ -243,12 +244,12 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
-  Compiler.setInvocation(std::move(Invocation));
+  CompilerInstance Compiler(std::move(Invocation));
   auto *TDC = new TypoDiagnosticConsumer;
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem(), TDC,
-                             /*ShouldOwnClient=*/true);
-  Compiler.setExternalSemaSource(new TypoExternalSemaSource(Compiler));
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics(TDC, /*ShouldOwnClient=*/true);
+  Compiler.setExternalSemaSource(
+      llvm::makeIntrusiveRefCnt<TypoExternalSemaSource>(Compiler));
 
   SyntaxOnlyAction TestAction;
   ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
@@ -256,42 +257,6 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   EXPECT_EQ("use of undeclared identifier 'foo'; did you mean 'moo'?",
             std::string(TDC->Error));
   EXPECT_EQ("This is a note", std::string(TDC->Note));
-}
-
-TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
-  // Create a temporary file for writing out the PCH that will be cleaned up.
-  int PCHFD;
-  llvm::SmallString<128> PCHFilename;
-  ASSERT_FALSE(
-      llvm::sys::fs::createTemporaryFile("test.h", "pch", PCHFD, PCHFilename));
-  llvm::ToolOutputFile PCHFile(PCHFilename, PCHFD);
-
-  for (bool ShouldCache : {false, true}) {
-    auto Invocation = std::make_shared<CompilerInvocation>();
-    Invocation->getLangOpts().CacheGeneratedPCH = ShouldCache;
-    Invocation->getPreprocessorOpts().addRemappedFile(
-        "test.h",
-        MemoryBuffer::getMemBuffer("int foo(void) { return 1; }\n").release());
-    Invocation->getFrontendOpts().Inputs.push_back(
-        FrontendInputFile("test.h", Language::C));
-    Invocation->getFrontendOpts().OutputFile = PCHFilename.str().str();
-    Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
-    Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
-    CompilerInstance Compiler;
-    Compiler.setInvocation(std::move(Invocation));
-    Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
-
-    GeneratePCHAction TestAction;
-    ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
-
-    // Check whether the PCH was cached.
-    if (ShouldCache)
-      EXPECT_EQ(InMemoryModuleCache::Final,
-                Compiler.getModuleCache().getPCMState(PCHFilename));
-    else
-      EXPECT_EQ(InMemoryModuleCache::Unknown,
-                Compiler.getModuleCache().getPCMState(PCHFilename));
-  }
 }
 
 } // anonymous namespace

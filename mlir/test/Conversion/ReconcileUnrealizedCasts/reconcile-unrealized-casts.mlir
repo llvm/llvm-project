@@ -194,3 +194,53 @@ func.func @emptyCast() -> index {
     %0 = builtin.unrealized_conversion_cast to index
     return %0 : index
 }
+
+// -----
+
+// CHECK-LABEL: test.graph_region
+//  CHECK-NEXT:   "test.return"() : () -> ()
+test.graph_region {
+  %0 = builtin.unrealized_conversion_cast %2 : i32 to i64
+  %1 = builtin.unrealized_conversion_cast %0 : i64 to i16
+  %2 = builtin.unrealized_conversion_cast %1 : i16 to i32
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: test.graph_region
+//  CHECK-NEXT:   %[[cast0:.*]] = builtin.unrealized_conversion_cast %[[cast2:.*]] : i32 to i64
+//  CHECK-NEXT:   %[[cast1:.*]] = builtin.unrealized_conversion_cast %[[cast0]] : i64 to i16
+//  CHECK-NEXT:   %[[cast2]] = builtin.unrealized_conversion_cast %[[cast1]] : i16 to i32
+//  CHECK-NEXT:   "test.user"(%[[cast2]]) : (i32) -> ()
+//  CHECK-NEXT:   "test.return"() : () -> ()
+test.graph_region {
+  %0 = builtin.unrealized_conversion_cast %2 : i32 to i64
+  %1 = builtin.unrealized_conversion_cast %0 : i64 to i16
+  %2 = builtin.unrealized_conversion_cast %1 : i16 to i32
+  "test.user"(%2) : (i32) -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: test.graph_region
+//  CHECK-NEXT:   "test.return"() : () -> ()
+test.graph_region {
+  %0 = builtin.unrealized_conversion_cast %0 : i32 to i32
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: test.graph_region
+//  CHECK-NEXT:   %[[c0:.*]] = arith.constant
+//  CHECK-NEXT:   %[[cast:.*]]:2 = builtin.unrealized_conversion_cast %[[c0]], %[[cast]]#1 : i32, i32 to i32, i32
+//  CHECK-NEXT:   "test.user"(%[[cast]]#0) : (i32) -> ()
+//  CHECK-NEXT:   "test.return"() : () -> ()
+test.graph_region {
+  %cst = arith.constant 0 : i32
+  %0, %1 = builtin.unrealized_conversion_cast %cst, %1 : i32, i32 to i32, i32
+  "test.user"(%0) : (i32) -> ()
+  "test.return"() : () -> ()
+}

@@ -9,14 +9,14 @@ define void @inv_store_last_lane(ptr noalias nocapture %a, ptr noalias nocapture
 ; CHECK:  store <vscale x 4 x i32> %[[VEC_VAL:.*]], ptr
 ; CHECK: middle.block:
 ; CHECK: %[[VSCALE:.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT: %[[VSCALE2:.*]] = shl i32 %[[VSCALE]], 2
+; CHECK-NEXT: %[[VSCALE2:.*]] = shl nuw i32 %[[VSCALE]], 2
 ; CHECK-NEXT: %[[LAST_LANE:.*]] = add i32 %[[VSCALE2]], -1
 ; CHECK-NEXT: %{{.*}} = extractelement <vscale x 4 x i32> %[[VEC_VAL]], i32 %[[LAST_LANE]]
 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -27,7 +27,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !0
 
-exit:              ; preds = %for.body
+exit:
   %arrayidx5 = getelementptr inbounds i32, ptr %inv, i64 42
   store i32 %mul, ptr %arrayidx5, align 4
   ret void
@@ -39,14 +39,14 @@ define float @ret_last_lane(ptr noalias nocapture %a, ptr noalias nocapture read
 ; CHECK:  store <vscale x 4 x float> %[[VEC_VAL:.*]], ptr
 ; CHECK: middle.block:
 ; CHECK: %[[VSCALE:.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT: %[[VSCALE2:.*]] = shl i32 %[[VSCALE]], 2
+; CHECK-NEXT: %[[VSCALE2:.*]] = shl nuw i32 %[[VSCALE]], 2
 ; CHECK-NEXT: %[[LAST_LANE:.*]] = add i32 %[[VSCALE2]], -1
 ; CHECK-NEXT: %{{.*}} = extractelement <vscale x 4 x float> %[[VEC_VAL]], i32 %[[LAST_LANE]]
 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -57,7 +57,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !6
 
-exit:                                 ; preds = %for.body, %entry
+exit:
   ret float %mul
 }
 

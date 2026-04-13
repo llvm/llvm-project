@@ -27,7 +27,7 @@ thunk:
     .rva func
 
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadcfg.obj
-// RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64ec.s -o native-loadcfg.obj
+// RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o native-loadcfg.obj
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test-simple.s -o test-simple.obj
 // RUN: lld-link -machine:arm64ec -dll -noentry -out:out-simple.dll loadcfg.obj test-simple.obj
 // RUN: llvm-objdump -d out-simple.dll | FileCheck --check-prefix=DISASM %s

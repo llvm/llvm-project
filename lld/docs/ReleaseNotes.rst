@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -26,41 +29,32 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``-z nosectionheader`` has been implemented to omit the section header table.
-  The operation is similar to ``llvm-objcopy --strip-sections``.
-  (`#101286 <https://github.com/llvm/llvm-project/pull/101286>`_)
-* Section ``CLASS`` linker script syntax binds input sections to named classes,
-  which are referenced later one or more times. This provides access to the
-  automatic spilling mechanism of `--enable-non-contiguous-regions` without
-  globally changing the semantics of section matching. It also independently
-  increases the expressive power of linker scripts.
-  (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
-* Supported relocation types for x86-64 target:
-  * ``R_X86_64_CODE_4_GOTPCRELX`` (`#109783 <https://github.com/llvm/llvm-project/pull/109783>`_) (`#116737 <https://github.com/llvm/llvm-project/pull/116737>`_)
-  * ``R_X86_64_CODE_4_GOTTPOFF`` (`#116634 <https://github.com/llvm/llvm-project/pull/116634>`_)
-  * ``R_X86_64_CODE_4_GOTPC32_TLSDESC`` (`#116909 <https://github.com/llvm/llvm-project/pull/116909>`_)
-  * ``R_X86_64_CODE_6_GOTTPOFF``  (`#117675 <https://github.com/llvm/llvm-project/pull/117675>`_)
+* Added ``--bp-compression-sort-section=<glob>[=<layout_priority>[=<match_priority>]]``,
+  replacing the old coarse ``--bp-compression-sort`` modes with a way to split
+  input sections into multiple compression groups, run balanced partitioning
+  independently per group, and leave out sections that are poor candidates for
+  BP.
+  ``layout_priority`` controls group placement order (lower value = placed
+  first, default 0). ``match_priority`` resolves conflicts when multiple globs
+  match the same section (lower value = higher priority; explicit priority
+  beats positional last-match-wins; default: positional). In ELF, the glob
+  matches input section names (e.g. ``.text.unlikely.code1``).
 
 Breaking changes
 ----------------
 
-* Removed support for the (deprecated) `R_RISCV_RVC_LUI` relocation. This
-  was a binutils-internal relocation used during relaxation, and was not
-  emitted by compilers/assemblers.
-
 COFF Improvements
 -----------------
-* ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
-* ``/lldsavetemps`` allows saving select intermediate LTO compilation results (e.g. resolution, preopt, promote, internalize, import, opt, precodegen, prelink, combinedindex).
-* ``/machine:arm64ec`` support completed, enabling the linking of ARM64EC images.
-* COFF weak anti-dependency alias symbols are now supported.
 
 MinGW Improvements
 ------------------
-* ``--undefined-glob`` is now supported by translating into the ``/includeglob`` flag.
 
 MachO Improvements
 ------------------
+
+* ``--bp-compression-sort-section`` now accepts optional layout and match
+  priorities (same syntax as ELF). In Mach-O, the glob matches the
+  concatenated segment+section name (e.g. ``__TEXT__text``).
 
 WebAssembly Improvements
 ------------------------

@@ -1,6 +1,9 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 -terminal-rule=0 | FileCheck %s
 ;
 ; Note: Print verbose stackmaps using -debug-only=stackmaps.
+
+; FIXME: Test should be fixed to produce the correct sized spill with
+; -terminal-rule=0 flag removed
 
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
@@ -379,23 +382,23 @@ entry:
 ; CHECK-NEXT:   .short 6
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long
-define void @spillSubReg(i64 %arg) #0 {
+define void @spillSubReg(i64 %arg, i1 %arg2) #0 {
 bb:
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg2, label %bb1, label %bb2
 
 bb1:
   unreachable
 
 bb2:
   %tmp = load i64, ptr inttoptr (i64 140685446136880 to ptr)
-  br i1 undef, label %bb16, label %bb17
+  br i1 %arg2, label %bb16, label %bb17
 
 bb16:
   unreachable
 
 bb17:
   %tmp32 = trunc i64 %tmp to i32
-  br i1 undef, label %bb60, label %bb61
+  br i1 %arg2, label %bb60, label %bb61
 
 bb60:
   tail call void asm sideeffect "nop", "~{ax},~{bx},~{cx},~{dx},~{bp},~{si},~{di},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"() nounwind
@@ -546,8 +549,8 @@ define void @clobberScratch(i32 %a) {
   ret void
 }
 
-; A stack frame which needs to be realigned at runtime (to meet alignment 
-; criteria for values on the stack) does not have a fixed frame size. 
+; A stack frame which needs to be realigned at runtime (to meet alignment
+; criteria for values on the stack) does not have a fixed frame size.
 ; CHECK-LABEL:  .long L{{.*}}-_needsStackRealignment
 ; CHECK-NEXT:   .short 0
 ; 0 locations

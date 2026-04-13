@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "gtest/gtest.h"
 
 #define OPTTABLE_STR_TABLE_CODE
@@ -20,7 +21,7 @@ struct OptionWithMarshallingInfo {
   const char *ImpliedValue;
 
   llvm::StringRef getPrefixedName() const {
-    return &OptionStrTable[PrefixedNameOffset];
+    return OptionStrTable[PrefixedNameOffset];
   }
 };
 
@@ -28,8 +29,9 @@ static const OptionWithMarshallingInfo MarshallingTable[] = {
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS,      \
     FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
-    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
-    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
+    SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,   \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
   {PREFIXED_NAME_OFFSET, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
 #include "Opts.inc"
 #undef OPTION_WITH_MARSHALLING

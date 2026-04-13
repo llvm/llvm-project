@@ -79,3 +79,12 @@ func.func @tensor_2d_empty() -> () {
   %x = arith.constant dense<> : tensor<2x0xi32>
   return
 }
+
+// Tensors with more than UINT32_MAX elements cannnot fit in a spirv.array.
+// Test that they are not lowered.
+// CHECK-LABEL: func @very_large_tensor
+// CHECK-NEXT:    arith.constant dense<1>
+func.func @very_large_tensor() -> () {
+  %x = arith.constant dense<1> : tensor<4294967296xi32>
+  return
+}

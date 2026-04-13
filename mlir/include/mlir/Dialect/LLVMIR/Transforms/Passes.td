@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
 #define MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
 
+include "mlir/Dialect/LLVMIR/LLVMOps.td"
 include "mlir/Pass/PassBase.td"
 
 def LLVMAddComdats : Pass<"llvm-add-comdats", "::mlir::ModuleOp"> {
@@ -24,13 +25,16 @@ def LLVMAddComdats : Pass<"llvm-add-comdats", "::mlir::ModuleOp"> {
   }];
 }
 
-def LLVMLegalizeForExport : Pass<"llvm-legalize-for-export"> {
+def LLVMLegalizeForExportPass : Pass<"llvm-legalize-for-export"> {
   let summary = "Legalize LLVM dialect to be convertible to LLVM IR";
-  let constructor = "::mlir::LLVM::createLegalizeForExportPass()";
+  let description = [{
+    Creates a pass that legalizes the LLVM dialect operations so that they can
+    be translated to LLVM IR.
+  }];
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
-def LLVMRequestCWrappers
+def LLVMRequestCWrappersPass
     : Pass<"llvm-request-c-wrappers", "::mlir::func::FuncOp"> {
   let summary = "Request C wrapper emission for all functions";
   let description = [{
@@ -40,12 +44,28 @@ def LLVMRequestCWrappers
     conversion of builtin functions to LLVM to avoid the attribute being
     dropped by other passes.
   }];
-  let constructor = "::mlir::LLVM::createRequestCWrappersPass()";
 }
 
-def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
+def LLVMUseDefaultVisibilityPass
+    : Pass<"llvm-use-default-visibility", "::mlir::ModuleOp"> {
+  let summary =
+      "Update default visibility of all global values and function definitions";
+  let description = [{
+    Update the default visibility of all global values and function definitions
+    to `visibility`, as with -fvisibility=(hidden|protected).
+  }];
+  let options =
+      [Option<"useVisibility", "visibility", "::mlir::LLVM::Visibility",
+              /*default=*/"::mlir::LLVM::Visibility::Default",
+              "Visibility to use in place of default.", [{::llvm::cl::values(
+	     clEnumValN(::mlir::LLVM::Visibility::Hidden, "hidden", "Hidden"),
+	     clEnumValN(::mlir::LLVM::Visibility::Protected, "protected", "Protected")
+	   )}]>,
+  ];
+}
+
+def NVVMOptimizeForTargetPass : Pass<"llvm-optimize-for-nvvm-target"> {
   let summary = "Optimize NVVM IR";
-  let constructor = "::mlir::NVVM::createOptimizeForTargetPass()";
 }
 
 def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir::ModuleOp"> {
@@ -55,7 +75,7 @@ def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::m
     emitting line tables from MLIR FileLocCol locations.
 
     This is not intended to be a proper replacement for frontends to emit
-    complete debug informations, however it is a convenient way to get line
+    complete debug information, however it is a convenient way to get line
     tables for debugging purposes. This allow to step trough in a debugger
     line-by-line or get a backtrace with line numbers.
   }];

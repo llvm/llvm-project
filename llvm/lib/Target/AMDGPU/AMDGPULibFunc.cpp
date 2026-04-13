@@ -254,8 +254,11 @@ static constexpr ManglingRule manglingRules[] = {
 { "normalize"                       , {1},   {E_ANY}},
 { "popcount"                        , {1},   {E_ANY}},
 { "pow"                             , {1},   {E_ANY,E_COPY}},
+{ "__pow_fast"                      , {1},   {E_ANY,E_COPY}},
 { "pown"                            , {1},   {E_ANY,E_SETBASE_I32}},
+{ "__pown_fast"                     , {1},   {E_ANY,E_SETBASE_I32}},
 { "powr"                            , {1},   {E_ANY,E_COPY}},
+{ "__powr_fast"                     , {1},   {E_ANY,E_COPY}},
 { "prefetch"                        , {1},   {E_CONSTPTR_ANY,EX_SIZET}},
 { "radians"                         , {1},   {E_ANY}},
 { "recip"                           , {1},   {E_ANY}},
@@ -266,6 +269,7 @@ static constexpr ManglingRule manglingRules[] = {
 { "rhadd"                           , {1},   {E_ANY,E_COPY}},
 { "rint"                            , {1},   {E_ANY}},
 { "rootn"                           , {1},   {E_ANY,E_SETBASE_I32}},
+{ "__rootn_fast"                    , {1},   {E_ANY,E_SETBASE_I32}},
 { "rotate"                          , {1},   {E_ANY,E_COPY}},
 { "round"                           , {1},   {E_ANY}},
 { "rsqrt"                           , {1},   {E_ANY}},
@@ -929,23 +933,38 @@ AMDGPULibFuncBase::Param AMDGPULibFuncBase::Param::getFromTy(Type *Ty,
   return P;
 }
 
-static Type* getIntrinsicParamType(
-  LLVMContext& C,
-  const AMDGPULibFunc::Param& P,
-  bool useAddrSpace) {
-  Type* T = nullptr;
+static Type *getIntrinsicParamType(LLVMContext &C,
+                                   const AMDGPULibFunc::Param &P,
+                                   bool UseAddrSpace) {
+  Type *T = nullptr;
   switch (P.ArgType) {
+  default:
+    return nullptr;
   case AMDGPULibFunc::U8:
-  case AMDGPULibFunc::I8:   T = Type::getInt8Ty(C);   break;
+  case AMDGPULibFunc::I8:
+    T = Type::getInt8Ty(C);
+    break;
   case AMDGPULibFunc::U16:
-  case AMDGPULibFunc::I16:  T = Type::getInt16Ty(C);  break;
+  case AMDGPULibFunc::I16:
+    T = Type::getInt16Ty(C);
+    break;
   case AMDGPULibFunc::U32:
-  case AMDGPULibFunc::I32:  T = Type::getInt32Ty(C);  break;
+  case AMDGPULibFunc::I32:
+    T = Type::getInt32Ty(C);
+    break;
   case AMDGPULibFunc::U64:
-  case AMDGPULibFunc::I64:  T = Type::getInt64Ty(C);  break;
-  case AMDGPULibFunc::F16:  T = Type::getHalfTy(C);   break;
-  case AMDGPULibFunc::F32:  T = Type::getFloatTy(C);  break;
-  case AMDGPULibFunc::F64:  T = Type::getDoubleTy(C); break;
+  case AMDGPULibFunc::I64:
+    T = Type::getInt64Ty(C);
+    break;
+  case AMDGPULibFunc::F16:
+    T = Type::getHalfTy(C);
+    break;
+  case AMDGPULibFunc::F32:
+    T = Type::getFloatTy(C);
+    break;
+  case AMDGPULibFunc::F64:
+    T = Type::getDoubleTy(C);
+    break;
 
   case AMDGPULibFunc::IMG1DA:
   case AMDGPULibFunc::IMG1DB:
@@ -972,7 +991,7 @@ static Type* getIntrinsicParamType(
     T = FixedVectorType::get(T, P.VectorSize);
   if (P.PtrKind != AMDGPULibFunc::BYVALUE)
     T = PointerType::get(
-        C, useAddrSpace ? ((P.PtrKind & AMDGPULibFunc::ADDR_SPACE) - 1) : 0);
+        C, UseAddrSpace ? ((P.PtrKind & AMDGPULibFunc::ADDR_SPACE) - 1) : 0);
   return T;
 }
 
@@ -989,9 +1008,11 @@ FunctionType *AMDGPUMangledLibFunc::getFunctionType(const Module &M) const {
     Args.push_back(ParamTy);
   }
 
-  return FunctionType::get(
-    getIntrinsicParamType(C, getRetType(FuncId, Leads), true),
-    Args, false);
+  Type *RetTy = getIntrinsicParamType(C, getRetType(FuncId, Leads), true);
+  if (!RetTy)
+    return nullptr;
+
+  return FunctionType::get(RetTy, Args, false);
 }
 
 unsigned AMDGPUMangledLibFunc::getNumArgs() const {
@@ -1062,6 +1083,21 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   if (!fInfo.isCompatibleSignature(*M, F->getFunctionType()))
     return nullptr;
 
+  switch (fInfo.getId()) {
+  case AMDGPULibFunc::EI_POW_FAST:
+  case AMDGPULibFunc::EI_POWR_FAST:
+  case AMDGPULibFunc::EI_POWN_FAST:
+  case AMDGPULibFunc::EI_ROOTN_FAST:
+    // TODO: Remove this. This is not a real module flag used anywhere. This is
+    // a bringup hack so this transform is testable prior to the library
+    // functions existing.
+    if (!M->getModuleFlag("amdgpu-libcall-have-fast-pow"))
+      return nullptr;
+    break;
+  default:
+    break;
+  }
+
   return F;
 }
 
@@ -1080,6 +1116,7 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
   }
 
   FunctionType *FuncTy = fInfo.getFunctionType(*M);
+  assert(FuncTy);
 
   bool hasPtr = false;
   for (FunctionType::param_iterator
@@ -1139,6 +1176,8 @@ AMDGPULibFunc::AMDGPULibFunc(const AMDGPULibFunc &F) {
 AMDGPULibFunc &AMDGPULibFunc::operator=(const AMDGPULibFunc &F) {
   if (this == &F)
     return *this;
+
+  this->~AMDGPULibFunc();
   new (this) AMDGPULibFunc(F);
   return *this;
 }

@@ -27,7 +27,7 @@ define amdgpu_kernel void @test_kernel() sanitize_address {
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_TEST_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.test_kernel.md, i32 0, i32 2, i32 2), align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP18]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP17]], i64 [[TMP19]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP20]] to ptr addrspace(1)
@@ -70,7 +70,7 @@ define amdgpu_kernel void @test_kernel() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label [[FREE:%.*]], label [[END:%.*]]
 ; CHECK:       Free:
-; CHECK-NEXT:    [[TMP22:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP22:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[TMP22]] to i64
 ; CHECK-NEXT:    [[TMP24:%.*]] = ptrtoint ptr addrspace(1) [[TMP21]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP24]], i64 [[TMP23]])
@@ -109,4 +109,5 @@ ret void
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 1}
+; CHECK: [[META1:![0-9]+]] = !{i32 4, !"nosanitize_address", i32 1}
 ;.

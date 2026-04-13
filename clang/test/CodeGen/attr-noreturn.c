@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -std=c2x %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple %itanium_abi_triple -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-CXX
+// RUN: %clang_cc1 -Wno-error=return-type -emit-llvm -std=c2x %s -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=return-type -triple %itanium_abi_triple -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-CXX
 
 typedef void (*fptrs_t[4])(void);
 fptrs_t p __attribute__((noreturn));

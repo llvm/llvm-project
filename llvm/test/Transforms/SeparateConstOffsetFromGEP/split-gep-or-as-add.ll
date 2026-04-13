@@ -47,10 +47,8 @@ define void @testDisjointOrSplits(ptr %p) {
 ; CHECK-LABEL: define void @testDisjointOrSplits(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[VAR:%.*]] = tail call i64 @foo()
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[VAR]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 10
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[VAR]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 10
 ; CHECK-NEXT:    store i8 0, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    ret void
 ;

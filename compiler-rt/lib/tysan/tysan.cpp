@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -22,6 +23,7 @@
 
 #include "tysan/tysan.h"
 
+#include <stdint.h>
 #include <string.h>
 
 using namespace __sanitizer;
@@ -37,6 +39,30 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
   if (tysan_inited)
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
+}
+
+static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp,
+                          BufferedStackTrace *ST) {
+  uptr top = 0;
+  uptr bottom = 0;
+  if (fullStacktrace)
+    GetThreadStackTopAndBottom(false, &top, &bottom);
+  bool request_fast = StackTrace::WillUseFastUnwind(true);
+  ST->Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
+}
+
+namespace __tysan {
+void OnStackUnwind(const SignalContext &sig, const void *,
+                   BufferedStackTrace *stack) {
+  getStackTrace(true, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, stack);
+}
+} // namespace __tysan
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
+  GET_CURRENT_PC_BP;
+  UNINITIALIZED BufferedStackTrace stack;
+  getStackTrace(true, pc, bp, &stack);
+  stack.Print();
 }
 
 static const char *getDisplayName(const char *Name) {
@@ -102,20 +128,10 @@ static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
   return RootTD;
 }
 
-static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
-                              tysan_type_descriptor *TDB, int TDAOffset) {
-  // Walk up the tree starting with TDA to see if we reach TDB.
-  uptr OffsetA = 0, OffsetB = 0;
-  if (TDB->Tag == TYSAN_MEMBER_TD) {
-    OffsetB = TDB->Member.Offset;
-    TDB = TDB->Member.Base;
-  }
-
-  if (TDA->Tag == TYSAN_MEMBER_TD) {
-    OffsetA = TDA->Member.Offset - TDAOffset;
-    TDA = TDA->Member.Base;
-  }
-
+// Walk up TDA to see if it reaches TDB.
+static bool walkAliasTree(tysan_type_descriptor *TDA,
+                          tysan_type_descriptor *TDB, uptr OffsetA,
+                          uptr OffsetB) {
   do {
     if (TDA == TDB)
       return OffsetA == OffsetB;
@@ -131,6 +147,17 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
           break;
       }
 
+      // This offset can't be negative. Therefore we must be accessing something
+      // before the current type (not legal) or partially inside the last type.
+      // In the latter case, we adjust Idx.
+      if (TDA->Struct.Members[Idx].Offset > OffsetA) {
+        // Trying to access something before the current type.
+        if (!Idx)
+          return false;
+
+        Idx -= 1;
+      }
+
       OffsetA -= TDA->Struct.Members[Idx].Offset;
       TDA = TDA->Struct.Members[Idx].Type;
     } else {
@@ -142,8 +169,50 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
   return false;
 }
 
+// Walk up the tree starting with TDA to see if we reach TDB.
+static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
+                              tysan_type_descriptor *TDB) {
+  uptr OffsetA = 0, OffsetB = 0;
+  if (TDB->Tag == TYSAN_MEMBER_TD) {
+    OffsetB = TDB->Member.Offset;
+    TDB = TDB->Member.Base;
+  }
+
+  if (TDA->Tag == TYSAN_MEMBER_TD) {
+    OffsetA = TDA->Member.Offset;
+    TDA = TDA->Member.Base;
+  }
+
+  return walkAliasTree(TDA, TDB, OffsetA, OffsetB);
+}
+
+static bool isAliasingLegalWithOffset(tysan_type_descriptor *TDA,
+                                      tysan_type_descriptor *TDB,
+                                      uptr OffsetB) {
+  // This is handled by calls to isAliasingLegalUp.
+  if (OffsetB == 0)
+    return false;
+
+  // You can't have an offset into a member.
+  if (TDB->Tag == TYSAN_MEMBER_TD)
+    return false;
+
+  uptr OffsetA = 0;
+  if (TDA->Tag == TYSAN_MEMBER_TD) {
+    OffsetA = TDA->Member.Offset;
+    TDA = TDA->Member.Base;
+  }
+
+  // Since the access was partially inside TDB (the shadow), it can be assumed
+  // that we are accessing a member in an object. This means that rather than
+  // walk up the scalar access TDA to reach an object, we should walk up the
+  // object TBD to reach the scalar we are accessing it with. The offsets will
+  // still be checked at the end to make sure this alias is legal.
+  return walkAliasTree(TDB, TDA, OffsetB, OffsetA);
+}
+
 static bool isAliasingLegal(tysan_type_descriptor *TDA,
-                            tysan_type_descriptor *TDB, int TDAOffset = 0) {
+                            tysan_type_descriptor *TDB, uptr OffsetB = 0) {
   if (TDA == TDB || !TDB || !TDA)
     return true;
 
@@ -154,8 +223,8 @@ static bool isAliasingLegal(tysan_type_descriptor *TDA,
   // TDB may have been adjusted by offset TDAOffset in the caller to point to
   // the outer type. Check for aliasing with and without adjusting for this
   // offset.
-  return isAliasingLegalUp(TDA, TDB, 0) || isAliasingLegalUp(TDB, TDA, 0) ||
-         isAliasingLegalUp(TDA, TDB, TDAOffset);
+  return isAliasingLegalUp(TDA, TDB) || isAliasingLegalUp(TDB, TDA) ||
+         isAliasingLegalWithOffset(TDA, TDB, OffsetB);
 }
 
 namespace __tysan {
@@ -197,20 +266,81 @@ static void reportError(void *Addr, int Size, tysan_type_descriptor *TD,
     Printf("\n");
 
   if (pc) {
-
-    bool request_fast = StackTrace::WillUseFastUnwind(true);
     BufferedStackTrace ST;
-    ST.Unwind(kStackTraceMax, pc, bp, 0, 0, 0, request_fast);
+    getStackTrace(flags().print_stacktrace, pc, bp, &ST);
     ST.Print();
   } else {
     Printf("\n");
   }
+
+  if (flags().halt_on_error) {
+    Report("ABORTING\n");
+    Die();
+  }
+}
+
+ALWAYS_INLINE
+static void SetShadowType(tysan_type_descriptor *td,
+                          tysan_type_descriptor **shadowData,
+                          uint64_t AccessSize) {
+  *shadowData = td;
+  uint64_t shadowDataInt = (uint64_t)shadowData;
+
+  for (uint64_t i = 1; i < AccessSize; ++i) {
+    int64_t dataOffset = i << PtrShift();
+    int64_t *badShadowData = (int64_t *)(shadowDataInt + dataOffset);
+    int64_t badTD = int64_t(i) * -1;
+    *badShadowData = badTD;
+  }
+}
+
+ALWAYS_INLINE
+static bool GetNotAllBadTD(uint64_t ShadowDataInt, uint64_t AccessSize) {
+  bool notAllBadTD = false;
+  for (uint64_t i = 1; i < AccessSize; ++i) {
+    int64_t **unkShadowData = (int64_t **)(ShadowDataInt + (i << PtrShift()));
+    int64_t *ILdTD = *unkShadowData;
+    notAllBadTD = notAllBadTD || (ILdTD != nullptr);
+  }
+  return notAllBadTD;
+}
+
+ALWAYS_INLINE
+static bool GetNotAllUnkTD(uint64_t ShadowDataInt, uint64_t AccessSize) {
+  bool notAllBadTD = false;
+  for (uint64_t i = 1; i < AccessSize; ++i) {
+    int64_t *badShadowData = (int64_t *)(ShadowDataInt + (i << PtrShift()));
+    int64_t ILdTD = *badShadowData;
+    notAllBadTD = notAllBadTD || (ILdTD >= 0);
+  }
+  return notAllBadTD;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
-  GET_CALLER_PC_BP_SP;
+__tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
+                            bool needsMemMove) {
+  tysan_type_descriptor **destShadowDataPtr = shadow_for(dest);
 
+  if (!src) {
+    internal_memset((char *)destShadowDataPtr, 0, size << PtrShift());
+    return;
+  }
+
+  uint64_t srcInt = (uint64_t)src;
+  uint64_t srcShadowInt = ((srcInt & AppMask()) << PtrShift()) + ShadowAddr();
+  uint64_t *srcShadow = (uint64_t *)srcShadowInt;
+
+  if (needsMemMove) {
+    internal_memmove((char *)destShadowDataPtr, srcShadow, size << PtrShift());
+  } else {
+    internal_memcpy((char *)destShadowDataPtr, srcShadow, size << PtrShift());
+  }
+}
+
+ALWAYS_INLINE
+static void __tysan_check_internal(void *addr, int size,
+                                   tysan_type_descriptor *td, int flags,
+                                   uptr pc, uptr bp, uptr sp) {
   bool IsRead = flags & 1;
   bool IsWrite = flags & 2;
   const char *AccessStr;
@@ -251,6 +381,64 @@ __tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
       reportError(addr, size, td, OldTD, AccessStr,
                   "partially accesses an object", i, pc, bp, sp);
   }
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
+  GET_CALLER_PC_BP_SP;
+  __tysan_check_internal(addr, size, td, flags, pc, bp, sp);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__tysan_instrument_with_shadow_update(void *ptr, tysan_type_descriptor *td,
+                                      bool sanitizeFunction,
+                                      uint64_t accessSize, int flags) {
+  tysan_type_descriptor **shadowData = shadow_for(ptr);
+  tysan_type_descriptor *loadedTD = *shadowData;
+  bool shadowIsNull = loadedTD == nullptr;
+
+  // TODO, sanitizeFunction is known at compile time, so maybe this is split
+  // into two different functions
+  if (sanitizeFunction) {
+
+    if (td != loadedTD) {
+
+      // We now know that the types did not match (we're on the slow path). If
+      // the type is unknown, then set it.
+      if (shadowIsNull) {
+        // We're about to set the type. Make sure that all bytes in the value
+        // are also of unknown type.
+        bool isAllUnknownTD = GetNotAllUnkTD((uint64_t)shadowData, accessSize);
+        if (isAllUnknownTD) {
+          GET_CALLER_PC_BP_SP;
+          __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
+        }
+        SetShadowType(td, shadowData, accessSize);
+      } else {
+        GET_CALLER_PC_BP_SP;
+        __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
+      }
+    } else {
+      // We appear to have the right type. Make sure that all other bytes in
+      // the type are still marked as interior bytes. If not, call the runtime.
+      bool isNotAllBadTD = GetNotAllBadTD((uint64_t)shadowData, accessSize);
+      if (isNotAllBadTD) {
+        GET_CALLER_PC_BP_SP;
+        __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
+      }
+    }
+  } else if (shadowIsNull) {
+    SetShadowType(td, shadowData, accessSize);
+  }
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__tysan_set_shadow_type(void *ptr, tysan_type_descriptor *td,
+                        uint64_t accessSize) {
+  // In the mode where writes always set the type, for a write (which does
+  // not also read), we just set the type.
+  tysan_type_descriptor **shadow = shadow_for(ptr);
+  SetShadowType(td, shadow, accessSize);
 }
 
 Flags __tysan::flags_data;
@@ -296,6 +484,8 @@ static void InitializeFlags() {
     ReportUnrecognizedFlags();
   if (common_flags()->help)
     parser.PrintFlagDescriptions();
+
+  __sanitizer_set_report_path(common_flags()->log_path);
 }
 
 static void TySanInitializePlatformEarly() {
@@ -320,9 +510,13 @@ static void TySanInitializePlatformEarly() {
 namespace __tysan {
 bool tysan_inited = false;
 bool tysan_init_is_running;
+void InitializeDeadlySignals();
 } // namespace __tysan
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
+  SanitizerToolName = "TypeSanitizer";
+  CacheBinaryName();
+
   CHECK(!tysan_init_is_running);
   if (tysan_inited)
     return;
@@ -332,6 +526,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
   TySanInitializePlatformEarly();
 
   InitializeInterceptors();
+  InitializeDeadlySignals();
 
   if (!MmapFixedNoReserve(ShadowAddr(), AppAddr() - ShadowAddr()))
     Die();

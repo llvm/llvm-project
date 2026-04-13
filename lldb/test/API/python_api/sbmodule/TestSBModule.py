@@ -18,6 +18,55 @@ class SBModuleAPICase(TestBase):
         if self.background_pid:
             os.kill(self.background_pid, signal.SIGKILL)
 
+    @skipIfRemote
+    def test_GetObjectName(self):
+        """Test the SBModule::GetObjectName() method"""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        libfoo_path = self.getBuildArtifact("libfoo.a")
+        target_exe = self.dbg.CreateTarget(exe)
+        self.assertTrue(target_exe.IsValid(), "Target for a.out is valid")
+
+        # Test that the executable module has no object name (usually the first module in the target)
+        exe_module = target_exe.GetModuleAtIndex(0)
+        self.assertTrue(exe_module.IsValid(), "Executable module is valid")
+        self.assertIsNone(
+            exe_module.GetObjectName(), "a.out should have no object name"
+        )
+
+        # check archive member names
+        module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(libfoo_path)
+        self.assertGreater(
+            module_specs.GetSize(), 0, "Archive should have at least one module spec"
+        )
+        self.assertEqual(
+            module_specs[0].GetObjectName(),
+            module_specs.GetSpecAtIndex(0).GetObjectName(),
+            "subscript [0] matches GetSpecAtIndex(0)",
+        )
+        self.assertEqual(
+            module_specs[-1].GetObjectName(),
+            module_specs.GetSpecAtIndex(module_specs.GetSize() - 1).GetObjectName(),
+            "subscript [-1] matches last item",
+        )
+        found = set()
+        expected = {"a.o", "b.o"}
+        for i in range(module_specs.GetSize()):
+            spec = module_specs.GetSpecAtIndex(i)
+            obj_name = spec.GetObjectName()
+            self.assertIsInstance(obj_name, str)
+            self.assertIn(obj_name, expected, f"Unexpected object name: {obj_name}")
+            # create a module from the arhive using the sepc
+            module = lldb.SBModule(spec)
+            self.assertTrue(module.IsValid(), "Module is valid")
+            self.assertTrue(module.IsValid(), f"Module for {obj_name} is valid")
+            self.assertEqual(
+                module.GetObjectName(), obj_name, f"Object name for {obj_name} matches"
+            )
+            found.add(obj_name)
+
+        self.assertEqual(found, expected, "Did not find all expected archive members")
+
     @skipUnlessDarwin
     @skipIfRemote
     def test_module_is_file_backed(self):
@@ -60,4 +109,64 @@ class SBModuleAPICase(TestBase):
         error = process.Destroy()
         self.assertSuccess(
             error, "couldn't destroy process %s" % background_process.pid
+        )
+
+    @skipIfRemote
+    def test_module_spec_list_indexing(self):
+        """Test that SBModuleSpecList supports Pythonic indexing."""
+        self.build()
+        libfoo_path = self.getBuildArtifact("libfoo.a")
+        specs = lldb.SBModuleSpecList.GetModuleSpecifications(libfoo_path)
+        count = specs.GetSize()
+        self.assertGreater(count, 0, "Archive should have at least one module spec")
+
+        # Integer indexing: positive indices
+        for i in range(count):
+            self.assertEqual(
+                str(specs[i]),
+                str(specs.GetSpecAtIndex(i)),
+                "specs[%d] should match GetSpecAtIndex(%d)" % (i, i),
+            )
+
+        # Integer indexing: negative indices
+        self.assertEqual(
+            str(specs[-1]),
+            str(specs.GetSpecAtIndex(count - 1)),
+            "specs[-1] should match last element",
+        )
+        self.assertEqual(
+            str(specs[-count]),
+            str(specs.GetSpecAtIndex(0)),
+            "specs[-count] should match first element",
+        )
+
+        # Integer indexing: out of bounds raises IndexError
+        self.assertRaises(IndexError, lambda: specs[count])
+        self.assertRaises(IndexError, lambda: specs[-count - 1])
+
+        # Unsupported key type raises TypeError
+        self.assertRaises(TypeError, lambda: specs[1.5])
+
+        # String indexing: lookup by file basename
+        spec0 = specs.GetSpecAtIndex(0)
+        basename = spec0.GetFileSpec().GetFilename()
+        if basename:
+            found = specs[basename]
+            self.assertIsNotNone(found, "Should find spec by basename '%s'" % basename)
+            self.assertEqual(
+                found.GetFileSpec().GetFilename(),
+                basename,
+                "Found spec basename should match",
+            )
+
+        # String indexing: lookup by partial path (endswith matching)
+        fullpath = str(spec0.GetFileSpec())
+        if fullpath:
+            found = specs[fullpath]
+            self.assertIsNotNone(found, "Should find spec by full path '%s'" % fullpath)
+
+        # String indexing: missing basename returns None
+        self.assertIsNone(
+            specs["nonexistent_file.xyz"],
+            "Lookup of nonexistent basename should return None",
         )

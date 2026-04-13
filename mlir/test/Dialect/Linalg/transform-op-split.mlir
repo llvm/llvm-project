@@ -10,7 +10,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func private @elem(%arg0: f32, %arg1: index, %arg2: index) -> f32
 
-// CHECK: #[[$ADD_42_MAP:.+]] = affine_map<(d0) -> (d0 + 42)>
+// CHECK: #[[$ADD_42_MAP:.+]] = affine_map<()[s0] -> (s0 + 42)>
 
 // CHECK-LABEL: @one_d_static
 // CHECK-SAME:  %[[IN:.+]]: tensor<100xf32>, %[[OUT:.+]]: tensor<100xf32>
@@ -30,7 +30,7 @@ func.func @one_d_static(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tenso
   // CHECK:   ins(%[[IN_SLICE_HIGH]]
   // CHECK:   outs(%[[OUT_SLICE_HIGH]]
   // CHECK:   %[[IDX:.+]] = linalg.index 0
-  // CHECK:   affine.apply #[[$ADD_42_MAP]](%[[IDX]])
+  // CHECK:   affine.apply #[[$ADD_42_MAP]]()[%[[IDX]]]
   // CHECK:   func.call @elem
   // CHECK: %[[RES:.+]] = tensor.insert_slice %[[RES_SLICE_HIGH]] into %[[RES_PARTIAL]][42] [58] [1]
   %0 = linalg.generic {

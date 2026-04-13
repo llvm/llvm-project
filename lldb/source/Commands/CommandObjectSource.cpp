@@ -202,8 +202,8 @@ protected:
     uint32_t num_matches = 0;
     assert(module);
     if (cu) {
-      assert(file_spec.GetFilename().AsCString());
-      bool has_path = (file_spec.GetDirectory().AsCString() != nullptr);
+      assert(file_spec.GetFilename().AsCString(nullptr));
+      bool has_path = (file_spec.GetDirectory().AsCString(nullptr) != nullptr);
       const SupportFileList &cu_file_list = cu->GetSupportFiles();
       size_t file_idx = cu_file_list.FindFileIndex(0, file_spec, has_path);
       if (file_idx != UINT32_MAX) {
@@ -302,7 +302,7 @@ protected:
     size_t num_matches = 0;
     assert(module_list.GetSize() > 0);
     Target &target = GetTarget();
-    if (target.GetSectionLoadList().IsEmpty()) {
+    if (!target.HasLoadedSections()) {
       // The target isn't loaded yet, we need to lookup the file address in all
       // modules.  Note: the module list option does not apply to addresses.
       const size_t num_modules = module_list.GetSize();
@@ -328,7 +328,7 @@ protected:
     } else {
       // The target has some things loaded, resolve this address to a compile
       // unit + file + line and display
-      if (target.GetSectionLoadList().ResolveLoadAddress(addr, so_addr)) {
+      if (target.ResolveLoadAddress(addr, so_addr)) {
         ModuleSP module_sp(so_addr.GetModule());
         // Check to make sure this module is in our list.
         if (module_sp && module_list.GetIndexForModule(module_sp.get()) !=
@@ -428,30 +428,29 @@ protected:
           StreamString error_strm;
           if (!GetSymbolContextsForAddress(module_list, addr, sc_list_lines,
                                            error_strm))
-            result.AppendWarningWithFormat("in symbol '%s': %s",
-                                           sc.GetFunctionName().AsCString(),
-                                           error_strm.GetData());
+            result.AppendWarningWithFormatv("in symbol '{0}': {1}",
+                                            sc.GetFunctionName(),
+                                            error_strm.GetData());
           else
             context_found_for_symbol = true;
         }
       }
       if (!context_found_for_symbol)
-        result.AppendWarningWithFormat("Unable to find line information"
-                                       " for matching symbol '%s'.\n",
-                                       sc.GetFunctionName().AsCString());
+        result.AppendWarningWithFormatv("unable to find line information"
+                                        " for matching symbol '{0}'\n",
+                                        sc.GetFunctionName());
     }
     if (sc_list_lines.GetSize() == 0) {
-      result.AppendErrorWithFormat("No line information could be found"
-                                   " for any symbols matching '%s'.\n",
-                                   name.AsCString());
+      result.AppendErrorWithFormatv("No line information could be found"
+                                    " for any symbols matching '{0}'.\n",
+                                    name);
       return false;
     }
     FileSpec file_spec;
     if (!DumpLinesInSymbolContexts(result.GetOutputStream(), sc_list_lines,
                                    module_list, file_spec)) {
-      result.AppendErrorWithFormat(
-          "Unable to dump line information for symbol '%s'.\n",
-          name.AsCString());
+      result.AppendErrorWithFormatv(
+          "Unable to dump line information for symbol '{0}'.\n", name);
       return false;
     }
     return true;
@@ -513,7 +512,7 @@ protected:
           "No selected frame to use to find the default source.");
       return false;
     } else if (!cur_frame->HasDebugInformation()) {
-      result.AppendError("No debug info for the selected frame.");
+      result.AppendError("no debug info for the selected frame");
       return false;
     } else {
       const SymbolContext &sc =
@@ -535,10 +534,6 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
-
     // Collect the list of modules to search.
     m_module_list.Clear();
     if (!m_options.modules.empty()) {
@@ -548,16 +543,16 @@ protected:
           ModuleSpec module_spec(module_file_spec);
           target.GetImages().FindModules(module_spec, m_module_list);
           if (m_module_list.IsEmpty())
-            result.AppendWarningWithFormat("No module found for '%s'.\n",
-                                           m_options.modules[i].c_str());
+            result.AppendWarningWithFormatv("no module found for '{0}'",
+                                            m_options.modules[i]);
         }
       }
       if (!m_module_list.GetSize()) {
-        result.AppendError("No modules match the input.");
+        result.AppendError("no modules match the input");
         return;
       }
     } else if (target.GetImages().GetSize() == 0) {
-      result.AppendError("The target has no associated executable images.");
+      result.AppendError("the target has no associated executable images");
       return;
     }
 
@@ -777,21 +772,21 @@ protected:
     if (sc.function) {
       Target &target = GetTarget();
 
-      SupportFileSP start_file = std::make_shared<SupportFile>();
+      SupportFileNSP start_file = std::make_shared<SupportFile>();
       uint32_t start_line;
       uint32_t end_line;
       FileSpec end_file;
 
       if (sc.block == nullptr) {
         // Not an inlined function
-        sc.function->GetStartLineSourceInfo(start_file, start_line);
-        if (start_line == 0) {
-          result.AppendErrorWithFormat("Could not find line information for "
-                                       "start of function: \"%s\".\n",
-                                       source_info.function.GetCString());
+        auto expected_info = sc.function->GetSourceInfo();
+        if (!expected_info) {
+          result.AppendError(llvm::toString(expected_info.takeError()));
           return 0;
         }
-        sc.function->GetEndLineSourceInfo(end_file, end_line);
+        start_file = expected_info->first;
+        start_line = expected_info->second.GetRangeBase();
+        end_line = expected_info->second.GetRangeEnd();
       } else {
         // We have an inlined function
         start_file = source_info.line_entry.file_sp;
@@ -832,8 +827,8 @@ protected:
         target_search_filter.Search(m_breakpoint_locations);
       }
 
-      result.AppendMessageWithFormat(
-          "File: %s\n", start_file->GetSpecOnly().GetPath().c_str());
+      result.AppendMessageWithFormatv(
+          "File: {0}", start_file->GetSpecOnly().GetPath().c_str());
       // We don't care about the column here.
       const uint32_t column = 0;
       return target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
@@ -959,7 +954,7 @@ protected:
       StreamString error_strm;
       SymbolContextList sc_list;
 
-      if (target.GetSectionLoadList().IsEmpty()) {
+      if (!target.HasLoadedSections()) {
         // The target isn't loaded yet, we need to lookup the file address in
         // all modules
         const ModuleList &module_list = target.GetImages();
@@ -987,8 +982,7 @@ protected:
       } else {
         // The target has some things loaded, resolve this address to a compile
         // unit + file + line and display
-        if (target.GetSectionLoadList().ResolveLoadAddress(m_options.address,
-                                                           so_addr)) {
+        if (target.ResolveLoadAddress(m_options.address, so_addr)) {
           ModuleSP module_sp(so_addr.GetModule());
           if (module_sp) {
             SymbolContext sc;
@@ -1068,7 +1062,16 @@ protected:
                 &result.GetOutputStream(), m_options.num_lines,
                 m_options.reverse, GetBreakpointLocations())) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
+        } else {
+          if (target.GetSourceManager().AtLastLine(m_options.reverse)) {
+            result.AppendNoteWithFormatv(
+                "Reached {0} of the file, no more to page",
+                m_options.reverse ? "beginning" : "end");
+          } else {
+            result.AppendNote("No source available");
+          }
         }
+
       } else {
         if (m_options.num_lines == 0)
           m_options.num_lines = 10;
@@ -1100,9 +1103,15 @@ protected:
         }
       }
     } else {
-      const char *filename = m_options.file_name.c_str();
-
+      //      const char *filename = m_options.file_name.c_str();
+      FileSpec file_spec(m_options.file_name);
       bool check_inlines = false;
+      const InlineStrategy inline_strategy = target.GetInlineStrategy();
+      if (inline_strategy == eInlineBreakpointsAlways ||
+          (inline_strategy == eInlineBreakpointsHeaders &&
+           !file_spec.IsSourceImplementationFile()))
+        check_inlines = true;
+
       SymbolContextList sc_list;
       size_t num_matches = 0;
 
@@ -1114,17 +1123,20 @@ protected:
             ModuleSpec module_spec(module_file_spec);
             matching_modules.Clear();
             target.GetImages().FindModules(module_spec, matching_modules);
-            num_matches += matching_modules.ResolveSymbolContextForFilePath(
-                filename, 0, check_inlines,
+            num_matches += matching_modules.ResolveSymbolContextsForFileSpec(
+                file_spec, 1, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
-                                  eSymbolContextCompUnit),
+                                  eSymbolContextCompUnit |
+                                  eSymbolContextLineEntry),
                 sc_list);
           }
         }
       } else {
-        num_matches = target.GetImages().ResolveSymbolContextForFilePath(
-            filename, 0, check_inlines,
-            eSymbolContextModule | eSymbolContextCompUnit, sc_list);
+        num_matches = target.GetImages().ResolveSymbolContextsForFileSpec(
+            file_spec, 1, check_inlines,
+            eSymbolContextModule | eSymbolContextCompUnit |
+                eSymbolContextLineEntry,
+            sc_list);
       }
 
       if (num_matches == 0) {
@@ -1171,10 +1183,18 @@ protected:
           if (m_options.num_lines == 0)
             m_options.num_lines = 10;
           const uint32_t column = 0;
+
+          // Headers aren't always in the DWARF but if they have
+          // executable code (eg., inlined-functions) then the callsite's
+          // file(s) will be found and assigned to
+          // sc.comp_unit->GetPrimarySupportFile, which is NOT what we want to
+          // print. Instead, we want to print the one from the line entry.
+          SupportFileNSP found_file_sp = sc.line_entry.file_sp;
+
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimarySupportFile(),
-              m_options.start_line, column, 0, m_options.num_lines, "",
-              &result.GetOutputStream(), GetBreakpointLocations());
+              found_file_sp, m_options.start_line, column, 0,
+              m_options.num_lines, "", &result.GetOutputStream(),
+              GetBreakpointLocations());
 
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {

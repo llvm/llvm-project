@@ -11,13 +11,12 @@
 
 #include "InputSection.h"
 #include "OutputSection.h"
+#include "Symbols.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 
 namespace lld::macho {
-
-class Defined;
 
 // Linking multiple files will inevitably mean resolving sections in different
 // files that are labeled with the same segment and section name. This class
@@ -25,8 +24,9 @@ class Defined;
 // in the final binary.
 class ConcatOutputSection : public OutputSection {
 public:
-  explicit ConcatOutputSection(StringRef name)
-      : OutputSection(ConcatKind, name) {}
+  explicit ConcatOutputSection(StringRef name,
+                               OutputSection::Kind kind = ConcatKind)
+      : OutputSection(kind, name) {}
 
   const ConcatInputSection *firstSection() const { return inputs.front(); }
   const ConcatInputSection *lastSection() const { return inputs.back(); }
@@ -46,7 +46,7 @@ public:
   void writeTo(uint8_t *buf) const override;
 
   static bool classof(const OutputSection *sec) {
-    return sec->kind() == ConcatKind;
+    return sec->kind() == ConcatKind || sec->kind() == TextKind;
   }
 
   static ConcatOutputSection *getOrCreateForInput(const InputSection *);
@@ -66,14 +66,20 @@ private:
 // support thunk insertion.
 class TextOutputSection : public ConcatOutputSection {
 public:
-  explicit TextOutputSection(StringRef name) : ConcatOutputSection(name) {}
+  explicit TextOutputSection(StringRef name)
+      : ConcatOutputSection(name, TextKind) {}
   void finalizeContents() override {}
   void finalize() override;
   bool needsThunks() const;
+  ArrayRef<ConcatInputSection *> getThunks() const { return thunks; }
   void writeTo(uint8_t *buf) const override;
 
+  static bool classof(const OutputSection *sec) {
+    return sec->kind() == TextKind;
+  }
+
 private:
-  uint64_t estimateStubsInRangeVA(size_t callIdx) const;
+  uint64_t estimateBranchTargetThresholdVA(size_t callIdx) const;
 
   std::vector<ConcatInputSection *> thunks;
 };
@@ -106,7 +112,32 @@ NamePair maybeRenameSection(NamePair key);
 // of ConcatOutputSection, so must have deterministic iteration order.
 extern llvm::MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
 
-extern llvm::DenseMap<Symbol *, ThunkInfo> thunkMap;
+// After ICF, multiple Defined symbols may point to the same (isec, value) yet
+// remain as distinct Symbol pointers.  Using bare Symbol* as thunkMap keys
+// would create redundant thunks for the same target. This DenseMapInfo
+// canonicalizes Defined symbols by (isec, value) so that ICF-folded copies
+// share a single thunkMap entry.
+struct ThunkMapKeyInfo : llvm::DenseMapInfo<Symbol *> {
+  static unsigned getHashValue(const Symbol *sym) {
+    if (const auto *d = dyn_cast<Defined>(sym))
+      return llvm::hash_combine(d->isec(), d->value);
+    return llvm::DenseMapInfo<Symbol *>::getHashValue(sym);
+  }
+  static bool isEqual(const Symbol *lhs, const Symbol *rhs) {
+    if (lhs == rhs)
+      return true;
+    if (lhs == getEmptyKey() || lhs == getTombstoneKey() ||
+        rhs == getEmptyKey() || rhs == getTombstoneKey())
+      return false;
+    const auto *dl = dyn_cast<Defined>(lhs);
+    const auto *dr = dyn_cast<Defined>(rhs);
+    if (dl && dr)
+      return dl->isec() == dr->isec() && dl->value == dr->value;
+    return false;
+  }
+};
+
+extern llvm::DenseMap<Symbol *, ThunkInfo, ThunkMapKeyInfo> thunkMap;
 
 } // namespace lld::macho
 

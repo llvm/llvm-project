@@ -28,6 +28,12 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder);
 /// Populates `patterns` with expression-related patterns.
 void populateExpressionPatterns(RewritePatternSet &patterns);
 
+//===----------------------------------------------------------------------===//
+// The WrapFuncInClass pass.
+//===----------------------------------------------------------------------===//
+
+void populateWrapFuncInClass(RewritePatternSet &patterns, StringRef fName);
+
 } // namespace emitc
 } // namespace mlir
 

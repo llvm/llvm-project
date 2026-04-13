@@ -1,0 +1,23 @@
+; RUN: llvm-lib -machine:x86 -out:%t.lib -def:%s
+; RUN: llvm-readobj %t.lib | FileCheck %s
+
+; CHECK:      File: test.dll
+; CHECK-NEXT: Format: COFF-import-file-i386
+; CHECK-NEXT: Type: code
+; CHECK-NEXT: Name type: noprefix
+; CHECK-NEXT: Export name: func
+; CHECK-NEXT: Symbol: __imp__func
+; CHECK-NEXT: Symbol: _func
+; CHECK-EMPTY:
+; CHECK-NEXT: File: test.dll
+; CHECK-NEXT: Format: COFF-import-file-i386
+; CHECK-NEXT: Type: code
+; CHECK-NEXT: Name type: noprefix
+; CHECK-NEXT: Export name: test.func
+; CHECK-NEXT: Symbol: __imp__test.func
+; CHECK-NEXT: Symbol: _test.func
+
+LIBRARY test.dll
+EXPORTS
+        func
+        test.func

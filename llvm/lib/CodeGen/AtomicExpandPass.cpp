@@ -20,7 +20,6 @@
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/AtomicExpand.h"
-#include "llvm/CodeGen/AtomicExpandUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -38,6 +37,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -62,10 +62,34 @@ namespace {
 
 class AtomicExpandImpl {
   const TargetLowering *TLI = nullptr;
+  const LibcallLoweringInfo *LibcallLowering = nullptr;
   const DataLayout *DL = nullptr;
 
 private:
+  /// Callback type for emitting a cmpxchg instruction during RMW expansion.
+  /// Parameters: (Builder, Addr, Loaded, NewVal, AddrAlign, MemOpOrder,
+  ///              SSID, IsVolatile, /* OUT */ Success, /* OUT */ NewLoaded,
+  ///              MetadataSrc)
+  using CreateCmpXchgInstFun = function_ref<void(
+      IRBuilderBase &, Value *, Value *, Value *, Align, AtomicOrdering,
+      SyncScope::ID, Value *&, Value *&, Instruction *)>;
+
+  void handleFailure(Instruction &FailedInst, const Twine &Msg) const {
+    LLVMContext &Ctx = FailedInst.getContext();
+
+    // TODO: Do not use generic error type.
+    Ctx.emitError(&FailedInst, Msg);
+
+    if (!FailedInst.getType()->isVoidTy())
+      FailedInst.replaceAllUsesWith(PoisonValue::get(FailedInst.getType()));
+    FailedInst.eraseFromParent();
+  }
+
   bool bracketInstWithFences(Instruction *I, AtomicOrdering Order);
+  bool tryInsertTrailingSeqCstFence(Instruction *AtomicI);
+  template <typename AtomicInst>
+  bool tryInsertFencesForAtomic(AtomicInst *AtomicI, bool OrderingRequiresFence,
+                                AtomicOrdering NewOrdering);
   IntegerType *getCorrespondingIntegerType(Type *T, const DataLayout &DL);
   LoadInst *convertAtomicLoadToIntegerType(LoadInst *LI);
   bool tryExpandAtomicLoad(LoadInst *LI);
@@ -73,7 +97,7 @@ private:
   bool expandAtomicLoadToCmpXchg(LoadInst *LI);
   StoreInst *convertAtomicStoreToIntegerType(StoreInst *SI);
   bool tryExpandAtomicStore(StoreInst *SI);
-  void expandAtomicStore(StoreInst *SI);
+  void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
@@ -113,22 +137,26 @@ private:
   void expandAtomicRMWToLibcall(AtomicRMWInst *I);
   void expandAtomicCASToLibcall(AtomicCmpXchgInst *I);
 
-  friend bool
-  llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
-                                 CreateCmpXchgInstFun CreateCmpXchg);
+  bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
+                                CreateCmpXchgInstFun CreateCmpXchg);
 
   bool processAtomicInstr(Instruction *I);
 
 public:
-  bool run(Function &F, const TargetMachine *TM);
+  bool run(Function &F,
+           const LibcallLoweringModuleAnalysisResult &LibcallResult,
+           const TargetMachine *TM);
 };
 
 class AtomicExpandLegacy : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  AtomicExpandLegacy() : FunctionPass(ID) {
-    initializeAtomicExpandLegacyPass(*PassRegistry::getPassRegistry());
+  AtomicExpandLegacy() : FunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LibcallLoweringInfoWrapper>();
+    FunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnFunction(Function &F) override;
@@ -167,6 +195,7 @@ char &llvm::AtomicExpandID = AtomicExpandLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AtomicExpandLegacy, DEBUG_TYPE,
                       "Expand Atomic instructions", false, false)
+INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AtomicExpandLegacy, DEBUG_TYPE,
                     "Expand Atomic instructions", false, false)
@@ -236,16 +265,36 @@ static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
          Size <= TLI->getMaxAtomicSizeInBitsSupported() / 8;
 }
 
+bool AtomicExpandImpl::tryInsertTrailingSeqCstFence(Instruction *AtomicI) {
+  if (!TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(AtomicI))
+    return false;
+
+  IRBuilder Builder(AtomicI);
+  if (auto *TrailingFence = TLI->emitTrailingFence(
+          Builder, AtomicI, AtomicOrdering::SequentiallyConsistent)) {
+    TrailingFence->moveAfter(AtomicI);
+    return true;
+  }
+  return false;
+}
+
+template <typename AtomicInst>
+bool AtomicExpandImpl::tryInsertFencesForAtomic(AtomicInst *AtomicI,
+                                                bool OrderingRequiresFence,
+                                                AtomicOrdering NewOrdering) {
+  bool ShouldInsertFences = TLI->shouldInsertFencesForAtomic(AtomicI);
+  if (OrderingRequiresFence && ShouldInsertFences) {
+    AtomicOrdering FenceOrdering = AtomicI->getOrdering();
+    AtomicI->setOrdering(NewOrdering);
+    return bracketInstWithFences(AtomicI, FenceOrdering);
+  }
+  if (!ShouldInsertFences)
+    return tryInsertTrailingSeqCstFence(AtomicI);
+  return false;
+}
+
 bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
-  auto *LI = dyn_cast<LoadInst>(I);
-  auto *SI = dyn_cast<StoreInst>(I);
-  auto *RMWI = dyn_cast<AtomicRMWInst>(I);
-  auto *CASI = dyn_cast<AtomicCmpXchgInst>(I);
-
-  bool MadeChange = false;
-
-  // If the Size/Alignment is not supported, replace with a libcall.
-  if (LI) {
+  if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (!LI->isAtomic())
       return false;
 
@@ -254,12 +303,21 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       return true;
     }
 
+    bool MadeChange = false;
     if (TLI->shouldCastAtomicLoadInIR(LI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
-      I = LI = convertAtomicLoadToIntegerType(LI);
+      LI = convertAtomicLoadToIntegerType(LI);
       MadeChange = true;
     }
-  } else if (SI) {
+
+    MadeChange |= tryInsertFencesForAtomic(
+        LI, isAcquireOrStronger(LI->getOrdering()), AtomicOrdering::Monotonic);
+
+    MadeChange |= tryExpandAtomicLoad(LI);
+    return MadeChange;
+  }
+
+  if (auto *SI = dyn_cast<StoreInst>(I)) {
     if (!SI->isAtomic())
       return false;
 
@@ -268,23 +326,49 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       return true;
     }
 
+    bool MadeChange = false;
     if (TLI->shouldCastAtomicStoreInIR(SI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
-      I = SI = convertAtomicStoreToIntegerType(SI);
+      SI = convertAtomicStoreToIntegerType(SI);
       MadeChange = true;
     }
-  } else if (RMWI) {
+
+    MadeChange |= tryInsertFencesForAtomic(
+        SI, isReleaseOrStronger(SI->getOrdering()), AtomicOrdering::Monotonic);
+
+    MadeChange |= tryExpandAtomicStore(SI);
+    return MadeChange;
+  }
+
+  if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
     if (!atomicSizeSupported(TLI, RMWI)) {
       expandAtomicRMWToLibcall(RMWI);
       return true;
     }
 
+    bool MadeChange = false;
     if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
-      I = RMWI = convertAtomicXchgToIntegerType(RMWI);
+      RMWI = convertAtomicXchgToIntegerType(RMWI);
       MadeChange = true;
     }
-  } else if (CASI) {
+
+    MadeChange |= tryInsertFencesForAtomic(
+        RMWI,
+        isReleaseOrStronger(RMWI->getOrdering()) ||
+            isAcquireOrStronger(RMWI->getOrdering()),
+        TLI->atomicOperationOrderAfterFenceSplit(RMWI));
+
+    // There are two different ways of expanding RMW instructions:
+    // - into a load if it is idempotent
+    // - into a Cmpxchg/LL-SC loop otherwise
+    // we try them in that order.
+    MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
+                  tryExpandAtomicRMW(RMWI);
+    return MadeChange;
+  }
+
+  if (auto *CASI = dyn_cast<AtomicCmpXchgInst>(I)) {
     if (!atomicSizeSupported(TLI, CASI)) {
       expandAtomicCASToLibcall(CASI);
       return true;
@@ -292,92 +376,52 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
 
     // TODO: when we're ready to make the change at the IR level, we can
     // extend convertCmpXchgToInteger for floating point too.
+    bool MadeChange = false;
     if (CASI->getCompareOperand()->getType()->isPointerTy()) {
       // TODO: add a TLI hook to control this so that each target can
       // convert to lowering the original type one at a time.
-      I = CASI = convertCmpXchgToIntegerType(CASI);
+      CASI = convertCmpXchgToIntegerType(CASI);
       MadeChange = true;
     }
-  } else
-    return false;
 
-  if (TLI->shouldInsertFencesForAtomic(I)) {
-    auto FenceOrdering = AtomicOrdering::Monotonic;
-    if (LI && isAcquireOrStronger(LI->getOrdering())) {
-      FenceOrdering = LI->getOrdering();
-      LI->setOrdering(AtomicOrdering::Monotonic);
-    } else if (SI && isReleaseOrStronger(SI->getOrdering())) {
-      FenceOrdering = SI->getOrdering();
-      SI->setOrdering(AtomicOrdering::Monotonic);
-    } else if (RMWI && (isReleaseOrStronger(RMWI->getOrdering()) ||
-                        isAcquireOrStronger(RMWI->getOrdering()))) {
-      FenceOrdering = RMWI->getOrdering();
-      RMWI->setOrdering(AtomicOrdering::Monotonic);
-    } else if (CASI &&
-               TLI->shouldExpandAtomicCmpXchgInIR(CASI) ==
-                   TargetLoweringBase::AtomicExpansionKind::None &&
-               (isReleaseOrStronger(CASI->getSuccessOrdering()) ||
-                isAcquireOrStronger(CASI->getSuccessOrdering()) ||
-                isAcquireOrStronger(CASI->getFailureOrdering()))) {
-      // If a compare and swap is lowered to LL/SC, we can do smarter fence
-      // insertion, with a stronger one on the success path than on the
-      // failure path. As a result, fence insertion is directly done by
-      // expandAtomicCmpXchg in that case.
-      FenceOrdering = CASI->getMergedOrdering();
-      CASI->setSuccessOrdering(AtomicOrdering::Monotonic);
-      CASI->setFailureOrdering(AtomicOrdering::Monotonic);
+    auto CmpXchgExpansion = TLI->shouldExpandAtomicCmpXchgInIR(CASI);
+    if (TLI->shouldInsertFencesForAtomic(CASI)) {
+      if (CmpXchgExpansion == TargetLoweringBase::AtomicExpansionKind::None &&
+          (isReleaseOrStronger(CASI->getSuccessOrdering()) ||
+           isAcquireOrStronger(CASI->getSuccessOrdering()) ||
+           isAcquireOrStronger(CASI->getFailureOrdering()))) {
+        // If a compare and swap is lowered to LL/SC, we can do smarter fence
+        // insertion, with a stronger one on the success path than on the
+        // failure path. As a result, fence insertion is directly done by
+        // expandAtomicCmpXchg in that case.
+        AtomicOrdering FenceOrdering = CASI->getMergedOrdering();
+        AtomicOrdering CASOrdering =
+            TLI->atomicOperationOrderAfterFenceSplit(CASI);
+        CASI->setSuccessOrdering(CASOrdering);
+        CASI->setFailureOrdering(CASOrdering);
+        MadeChange |= bracketInstWithFences(CASI, FenceOrdering);
+      }
+    } else if (CmpXchgExpansion !=
+               TargetLoweringBase::AtomicExpansionKind::LLSC) {
+      // CmpXchg LLSC is handled in expandAtomicCmpXchg().
+      MadeChange |= tryInsertTrailingSeqCstFence(CASI);
     }
 
-    if (FenceOrdering != AtomicOrdering::Monotonic) {
-      MadeChange |= bracketInstWithFences(I, FenceOrdering);
-    }
-  } else if (I->hasAtomicStore() &&
-             TLI->shouldInsertTrailingFenceForAtomicStore(I)) {
-    auto FenceOrdering = AtomicOrdering::Monotonic;
-    if (SI)
-      FenceOrdering = SI->getOrdering();
-    else if (RMWI)
-      FenceOrdering = RMWI->getOrdering();
-    else if (CASI && TLI->shouldExpandAtomicCmpXchgInIR(CASI) !=
-                         TargetLoweringBase::AtomicExpansionKind::LLSC)
-      // LLSC is handled in expandAtomicCmpXchg().
-      FenceOrdering = CASI->getSuccessOrdering();
-
-    IRBuilder Builder(I);
-    if (auto TrailingFence =
-            TLI->emitTrailingFence(Builder, I, FenceOrdering)) {
-      TrailingFence->moveAfter(I);
-      MadeChange = true;
-    }
+    MadeChange |= tryExpandAtomicCmpXchg(CASI);
+    return MadeChange;
   }
 
-  if (LI)
-    MadeChange |= tryExpandAtomicLoad(LI);
-  else if (SI)
-    MadeChange |= tryExpandAtomicStore(SI);
-  else if (RMWI) {
-    // There are two different ways of expanding RMW instructions:
-    // - into a load if it is idempotent
-    // - into a Cmpxchg/LL-SC loop otherwise
-    // we try them in that order.
-
-    if (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) {
-      MadeChange = true;
-
-    } else {
-      MadeChange |= tryExpandAtomicRMW(RMWI);
-    }
-  } else if (CASI)
-    MadeChange |= tryExpandAtomicCmpXchg(CASI);
-
-  return MadeChange;
+  return false;
 }
 
-bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
+bool AtomicExpandImpl::run(
+    Function &F, const LibcallLoweringModuleAnalysisResult &LibcallResult,
+    const TargetMachine *TM) {
   const auto *Subtarget = TM->getSubtargetImpl(F);
   if (!Subtarget->enableAtomicExpand())
     return false;
   TLI = Subtarget->getTargetLowering();
+  LibcallLowering = &LibcallResult.getLibcallLowering(*Subtarget);
   DL = &F.getDataLayout();
 
   bool MadeChange = false;
@@ -410,8 +454,11 @@ bool AtomicExpandLegacy::runOnFunction(Function &F) {
   if (!TPC)
     return false;
   auto *TM = &TPC->getTM<TargetMachine>();
+
+  const LibcallLoweringModuleAnalysisResult &LibcallResult =
+      getAnalysis<LibcallLoweringInfoWrapper>().getResult(*F.getParent());
   AtomicExpandImpl AE;
-  return AE.run(F, TM);
+  return AE.run(F, LibcallResult, TM);
 }
 
 FunctionPass *llvm::createAtomicExpandLegacyPass() {
@@ -419,10 +466,21 @@ FunctionPass *llvm::createAtomicExpandLegacyPass() {
 }
 
 PreservedAnalyses AtomicExpandPass::run(Function &F,
-                                        FunctionAnalysisManager &AM) {
+                                        FunctionAnalysisManager &FAM) {
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+
+  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+      MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
+
+  if (!LibcallResult) {
+    F.getContext().emitError("'" + LibcallLoweringModuleAnalysis::name() +
+                             "' analysis required");
+    return PreservedAnalyses::all();
+  }
+
   AtomicExpandImpl AE;
 
-  bool Changed = AE.run(F, TM);
+  bool Changed = AE.run(F, *LibcallResult, TM);
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -524,6 +582,9 @@ bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     LI->setAtomic(AtomicOrdering::NotAtomic);
     return true;
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
+    TLI->emitExpandAtomicLoad(LI);
+    return true;
   default:
     llvm_unreachable("Unhandled case in tryExpandAtomicLoad");
   }
@@ -533,8 +594,11 @@ bool AtomicExpandImpl::tryExpandAtomicStore(StoreInst *SI) {
   switch (TLI->shouldExpandAtomicStoreInIR(SI)) {
   case TargetLoweringBase::AtomicExpansionKind::None:
     return false;
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
+    TLI->emitExpandAtomicStore(SI);
+    return true;
   case TargetLoweringBase::AtomicExpansionKind::Expand:
-    expandAtomicStore(SI);
+    expandAtomicStoreToXChg(SI);
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     SI->setAtomic(AtomicOrdering::NotAtomic);
@@ -607,7 +671,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   return NewSI;
 }
 
-void AtomicExpandImpl::expandAtomicStore(StoreInst *SI) {
+void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
   // This function is only called on atomic stores that are too large to be
   // atomic if implemented as a native store. So we replace them by an
   // atomic swap, that can be implemented for example as a ldrex/strex on ARM
@@ -728,7 +792,7 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
   }
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
-  case TargetLoweringBase::AtomicExpansionKind::Expand:
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
     TLI->emitExpandAtomicRMW(AI);
     return true;
   default:
@@ -751,7 +815,7 @@ struct PartwordMaskValues {
   Value *Inv_Mask = nullptr;
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &O, const PartwordMaskValues &PMV) {
   auto PrintObj = [&O](auto *V) {
     if (V)
@@ -833,8 +897,8 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   if (AddrAlign < MinWordSize) {
     PMV.AlignedAddr = Builder.CreateIntrinsic(
         Intrinsic::ptrmask, {PtrTy, IntTy},
-        {Addr, ConstantInt::get(IntTy, ~(uint64_t)(MinWordSize - 1))}, nullptr,
-        "AlignedAddr");
+        {Addr, ConstantInt::getSigned(IntTy, ~(uint64_t)(MinWordSize - 1))},
+        nullptr, "AlignedAddr");
 
     Value *AddrInt = Builder.CreatePtrToInt(Addr, IntTy);
     PtrLSB = Builder.CreateAnd(AddrInt, MinWordSize - 1, "PtrLSB");
@@ -929,6 +993,10 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -1238,8 +1306,7 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
   BasicBlock *BB = Builder.GetInsertBlock();
   Function *F = BB->getParent();
 
-  assert(AddrAlign >=
-             F->getDataLayout().getTypeStoreSize(ResultTy) &&
+  assert(AddrAlign >= F->getDataLayout().getTypeStoreSize(ResultTy) &&
          "Expected at least natural alignment at this point.");
 
   // Given: atomicrmw some_op iN* %addr, iN %incr ordering
@@ -1274,7 +1341,13 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
       TLI->emitStoreConditional(Builder, NewVal, Addr, MemOpOrder);
   Value *TryAgain = Builder.CreateICmpNE(
       StoreSuccess, ConstantInt::get(IntegerType::get(Ctx, 32), 0), "tryagain");
-  Builder.CreateCondBr(TryAgain, LoopBB, ExitBB);
+
+  Instruction *CondBr = Builder.CreateCondBr(TryAgain, LoopBB, ExitBB);
+
+  // Atomic RMW expands to a Load-linked / Store-Conditional loop, because it is
+  // hard to predict precise branch weigths we mark the branch as "unknown"
+  // (50/50) to prevent misleading optimizations.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return Loaded;
@@ -1439,7 +1512,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
   // If the cmpxchg doesn't actually need any ordering when it fails, we can
   // jump straight past that fence instruction (if it exists).
-  Builder.CreateCondBr(ShouldStore, ReleasingStoreBB, NoStoreBB);
+  Builder.CreateCondBr(ShouldStore, ReleasingStoreBB, NoStoreBB,
+                       MDBuilder(F->getContext()).createLikelyBranchWeights());
 
   Builder.SetInsertPoint(ReleasingStoreBB);
   if (ShouldInsertFencesForAtomic && !UseUnconditionalReleaseBarrier)
@@ -1458,7 +1532,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
       StoreSuccess, ConstantInt::get(Type::getInt32Ty(Ctx), 0), "success");
   BasicBlock *RetryBB = HasReleasedLoadBB ? ReleasedLoadBB : StartBB;
   Builder.CreateCondBr(StoreSuccess, SuccessBB,
-                       CI->isWeak() ? FailureBB : RetryBB);
+                       CI->isWeak() ? FailureBB : RetryBB,
+                       MDBuilder(F->getContext()).createLikelyBranchWeights());
 
   Builder.SetInsertPoint(ReleasedLoadBB);
   Value *SecondLoad;
@@ -1471,7 +1546,9 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
     // If the cmpxchg doesn't actually need any ordering when it fails, we can
     // jump straight past that fence instruction (if it exists).
-    Builder.CreateCondBr(ShouldStore, TryStoreBB, NoStoreBB);
+    Builder.CreateCondBr(
+        ShouldStore, TryStoreBB, NoStoreBB,
+        MDBuilder(F->getContext()).createLikelyBranchWeights());
     // Update PHI node in TryStoreBB.
     LoadedTryStore->addIncoming(SecondLoad, ReleasedLoadBB);
   } else
@@ -1481,7 +1558,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // necessary.
   Builder.SetInsertPoint(SuccessBB);
   if (ShouldInsertFencesForAtomic ||
-      TLI->shouldInsertTrailingFenceForAtomicStore(CI))
+      TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(CI))
     TLI->emitTrailingFence(Builder, CI, SuccessOrder);
   Builder.CreateBr(ExitBB);
 
@@ -1566,12 +1643,12 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)
     return false;
 
-  AtomicRMWInst::BinOp Op = RMWI->getOperation();
-  switch (Op) {
+  switch (RMWI->getOperation()) {
   case AtomicRMWInst::Add:
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Or:
@@ -1579,7 +1656,14 @@ bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
     return C->isZero();
   case AtomicRMWInst::And:
     return C->isMinusOne();
-  // FIXME: we could also treat Min/Max/UMin/UMax by the INT_MIN/INT_MAX/...
+  case AtomicRMWInst::Min:
+    return C->isMaxValue(true);
+  case AtomicRMWInst::Max:
+    return C->isMinValue(true);
+  case AtomicRMWInst::UMin:
+    return C->isMaxValue(false);
+  case AtomicRMWInst::UMax:
+    return C->isMinValue(false);
   default:
     return false;
   }
@@ -1627,6 +1711,9 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
   LoadInst *InitLoaded = Builder.CreateAlignedLoad(ResultTy, Addr, AddrAlign);
+  // TODO: The initial load must be atomic with the same synchronization scope
+  // to avoid a data race with concurrent stores. If the instruction being
+  // emulated is volatile, issue a volatile load.
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.
@@ -1648,7 +1735,12 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
 
   Loaded->addIncoming(NewLoaded, LoopBB);
 
-  Builder.CreateCondBr(Success, ExitBB, LoopBB);
+  Instruction *CondBr = Builder.CreateCondBr(Success, ExitBB, LoopBB);
+
+  // Atomic RMW expands to a cmpxchg loop, Since precise branch weights
+  // cannot be easily determined here, we mark the branch as "unknown" (50/50)
+  // to prevent misleading optimizations.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return NewLoaded;
@@ -1673,16 +1765,15 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicCmpXchgInst(CI);
-  case TargetLoweringBase::AtomicExpansionKind::Expand: {
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand: {
     TLI->emitExpandAtomicCmpXchg(CI);
     return true;
   }
   }
 }
 
-// Note: This function is exposed externally by AtomicExpandUtils.h
-bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
-                                    CreateCmpXchgInstFun CreateCmpXchg) {
+bool AtomicExpandImpl::expandAtomicRMWToCmpXchg(
+    AtomicRMWInst *AI, CreateCmpXchgInstFun CreateCmpXchg) {
   ReplacementIRBuilder Builder(AI, AI->getDataLayout());
   Builder.setIsFPConstrained(
       AI->getFunction()->hasFnAttribute(Attribute::StrictFP));
@@ -1733,7 +1824,7 @@ void AtomicExpandImpl::expandAtomicLoadToLibcall(LoadInst *I) {
       I, Size, I->getAlign(), I->getPointerOperand(), nullptr, nullptr,
       I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for Load");
+    handleFailure(*I, "unsupported atomic load");
 }
 
 void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I) {
@@ -1746,7 +1837,7 @@ void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I) {
       I, Size, I->getAlign(), I->getPointerOperand(), I->getValueOperand(),
       nullptr, I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for Store");
+    handleFailure(*I, "unsupported atomic store");
 }
 
 void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I) {
@@ -1761,7 +1852,7 @@ void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I) {
       I->getCompareOperand(), I->getSuccessOrdering(), I->getFailureOrdering(),
       Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for CAS");
+    handleFailure(*I, "unsupported cmpxchg");
 }
 
 static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
@@ -1817,6 +1908,10 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::UIncWrap:
@@ -1887,11 +1982,20 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
 
+  if (M->getTargetTriple().isOSWindows() && M->getTargetTriple().isX86_64() &&
+      Size == 16) {
+    // x86_64 Windows passes i128 as an XMM vector; on return, it is in
+    // XMM0, and as a parameter, it is passed indirectly. The generic lowering
+    // rules handles this correctly if we pass it as a v2i64 rather than
+    // i128. This is what Clang does in the frontend for such types as well
+    // (see WinX86_64ABIInfo::classify in Clang).
+    SizedIntTy = FixedVectorType::get(Type::getInt64Ty(Ctx), 2);
+  }
+
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 
   // TODO: the "order" argument type is "int", not int32. So
   // getInt32Ty may be wrong if the arch uses e.g. 16-bit ints.
-  ConstantInt *SizeVal64 = ConstantInt::get(Type::getInt64Ty(Ctx), Size);
   assert(Ordering != AtomicOrdering::NotAtomic && "expect atomic MO");
   Constant *OrderingVal =
       ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering));
@@ -1930,7 +2034,8 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     return false;
   }
 
-  if (!TLI->getLibcallName(RTLibType)) {
+  RTLIB::LibcallImpl LibcallImpl = LibcallLowering->getLibcallImpl(RTLibType);
+  if (LibcallImpl == RTLIB::Unsupported) {
     // This target does not implement the requested atomic libcall so give up.
     return false;
   }
@@ -1988,7 +2093,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (CASExpected) {
     AllocaCASExpected = AllocaBuilder.CreateAlloca(CASExpected->getType());
     AllocaCASExpected->setAlignment(AllocaAlignment);
-    Builder.CreateLifetimeStart(AllocaCASExpected, SizeVal64);
+    Builder.CreateLifetimeStart(AllocaCASExpected);
     Builder.CreateAlignedStore(CASExpected, AllocaCASExpected, AllocaAlignment);
     Args.push_back(AllocaCASExpected);
   }
@@ -2002,7 +2107,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
       AllocaValue->setAlignment(AllocaAlignment);
-      Builder.CreateLifetimeStart(AllocaValue, SizeVal64);
+      Builder.CreateLifetimeStart(AllocaValue);
       Builder.CreateAlignedStore(ValueOperand, AllocaValue, AllocaAlignment);
       Args.push_back(AllocaValue);
     }
@@ -2012,7 +2117,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (!CASExpected && HasResult && !UseSizedLibcall) {
     AllocaResult = AllocaBuilder.CreateAlloca(I->getType());
     AllocaResult->setAlignment(AllocaAlignment);
-    Builder.CreateLifetimeStart(AllocaResult, SizeVal64);
+    Builder.CreateLifetimeStart(AllocaResult);
     Args.push_back(AllocaResult);
   }
 
@@ -2037,15 +2142,16 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   for (Value *Arg : Args)
     ArgTys.push_back(Arg->getType());
   FunctionType *FnType = FunctionType::get(ResultTy, ArgTys, false);
-  FunctionCallee LibcallFn =
-      M->getOrInsertFunction(TLI->getLibcallName(RTLibType), FnType, Attr);
+  FunctionCallee LibcallFn = M->getOrInsertFunction(
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl), FnType,
+      Attr);
   CallInst *Call = Builder.CreateCall(LibcallFn, Args);
   Call->setAttributes(Attr);
   Value *Result = Call;
 
   // And then, extract the results...
   if (ValueOperand && !UseSizedLibcall)
-    Builder.CreateLifetimeEnd(AllocaValue, SizeVal64);
+    Builder.CreateLifetimeEnd(AllocaValue);
 
   if (CASExpected) {
     // The final result from the CAS is {load of 'expected' alloca, bool result
@@ -2054,7 +2160,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Value *V = PoisonValue::get(FinalResultTy);
     Value *ExpectedOut = Builder.CreateAlignedLoad(
         CASExpected->getType(), AllocaCASExpected, AllocaAlignment);
-    Builder.CreateLifetimeEnd(AllocaCASExpected, SizeVal64);
+    Builder.CreateLifetimeEnd(AllocaCASExpected);
     V = Builder.CreateInsertValue(V, ExpectedOut, 0);
     V = Builder.CreateInsertValue(V, Result, 1);
     I->replaceAllUsesWith(V);
@@ -2065,7 +2171,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     else {
       V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
                                     AllocaAlignment);
-      Builder.CreateLifetimeEnd(AllocaResult, SizeVal64);
+      Builder.CreateLifetimeEnd(AllocaResult);
     }
     I->replaceAllUsesWith(V);
   }

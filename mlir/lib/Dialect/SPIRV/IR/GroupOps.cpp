@@ -65,7 +65,7 @@ LogicalResult GroupBroadcastOp::verify() {
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
 
-  if (auto localIdTy = llvm::dyn_cast<VectorType>(getLocalid().getType()))
+  if (auto localIdTy = dyn_cast<VectorType>(getLocalid().getType()))
     if (localIdTy.getNumElements() != 2 && localIdTy.getNumElements() != 3)
       return emitOpError("localid is a vector and can be with only "
                          " 2 or 3 components, actual number is ")
@@ -302,6 +302,29 @@ LogicalResult GroupNonUniformLogicalOrOp::verify() {
 
 LogicalResult GroupNonUniformLogicalXorOp::verify() {
   return verifyGroupNonUniformArithmeticOp<GroupNonUniformLogicalXorOp>(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformRotateKHR
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformRotateKHROp::verify() {
+  spirv::Scope scope = getExecutionScope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
+
+  if (Value clusterSizeVal = getClusterSize()) {
+    mlir::Operation *defOp = clusterSizeVal.getDefiningOp();
+    int32_t clusterSize = 0;
+
+    if (failed(extractValueFromConstOp(defOp, clusterSize)))
+      return emitOpError("cluster size operand must come from a constant op");
+
+    if (!llvm::isPowerOf2_32(clusterSize))
+      return emitOpError("cluster size operand must be a power of two");
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -5,7 +5,6 @@ define half @test1(half %x) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpextrw $0, %xmm0, %eax
-; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movl $64512, %ecx # imm = 0xFC00

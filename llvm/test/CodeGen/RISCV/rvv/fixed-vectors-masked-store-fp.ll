@@ -278,12 +278,12 @@ define void @masked_store_v64f32(<64 x float> %val, ptr %a, <64 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v64f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0), v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 4
 ; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vse32.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v64f32.p0(<64 x float> %val, ptr %a, i32 8, <64 x i1> %mask)
@@ -294,12 +294,12 @@ define void @masked_store_v128bf16(<128 x bfloat> %val, ptr %a, <128 x i1> %mask
 ; CHECK-LABEL: masked_store_v128bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 64
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0), v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 8
 ; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v128bf16.p0(<128 x bfloat> %val, ptr %a, i32 8, <128 x i1> %mask)
@@ -310,15 +310,24 @@ define void @masked_store_v128f16(<128 x half> %val, ptr %a, <128 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v128f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 64
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0), v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 8
 ; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v128f16.p0(<128 x half> %val, ptr %a, i32 8, <128 x i1> %mask)
   ret void
 }
 
+define void @masked_store_v7f32(<7 x float> %val, ptr %a, <7 x i1> %mask) {
+; CHECK-LABEL: masked_store_v7f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.v7f32.p0(<7 x float> %val, ptr %a, i32 8, <7 x i1> %mask)
+  ret void
+}

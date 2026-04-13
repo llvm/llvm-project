@@ -155,29 +155,23 @@ class LVForwardReferences {
   }
 
   void add(StringRef Name, TypeIndex TIForward) {
-    if (ForwardTypesNames.find(Name) == ForwardTypesNames.end()) {
-      ForwardTypesNames.emplace(
-          std::piecewise_construct, std::forward_as_tuple(Name),
-          std::forward_as_tuple(TIForward, TypeIndex::None()));
-    } else {
+    auto [It, Inserted] =
+        ForwardTypesNames.try_emplace(Name, TIForward, TypeIndex::None());
+    if (!Inserted) {
       // Update a recorded definition with its reference.
-      ForwardTypesNames[Name].first = TIForward;
-      add(TIForward, ForwardTypesNames[Name].second);
+      It->second.first = TIForward;
+      add(TIForward, It->second.second);
     }
   }
 
   // Update a previously recorded forward reference with its definition.
   void update(StringRef Name, TypeIndex TIReference) {
-    auto It = ForwardTypesNames.find(Name);
-    if (It != ForwardTypesNames.end()) {
+    auto [It, Inserted] =
+        ForwardTypesNames.try_emplace(Name, TypeIndex::None(), TIReference);
+    if (!Inserted) {
       // Update the recorded forward reference with its definition.
       It->second.second = TIReference;
       add(It->second.first, TIReference);
-    } else {
-      // We have not seen the forward reference. Insert the definition.
-      ForwardTypesNames.emplace(
-          std::piecewise_construct, std::forward_as_tuple(Name),
-          std::forward_as_tuple(TypeIndex::None(), TIReference));
     }
   }
 
@@ -274,10 +268,9 @@ public:
 
   void add(TypeIndex TI, StringRef String) {
     static uint32_t Index = 0;
-    if (Strings.find(TI) == Strings.end())
-      Strings.emplace(
-          std::piecewise_construct, std::forward_as_tuple(TI),
-          std::forward_as_tuple(++Index, std::string(String), nullptr));
+    auto [It, Inserted] = Strings.try_emplace(TI);
+    if (Inserted)
+      It->second = std::make_tuple(++Index, std::string(String), nullptr);
   }
 
   StringRef find(TypeIndex TI) {
@@ -841,23 +834,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     if (Symbol->getIsParameter())
       Symbol->setTag(dwarf::DW_TAG_formal_parameter);
 
-    LVElement *Element = LogicalVisitor->getElement(StreamTPI, Local.Type);
-    if (Element && Element->getIsScoped()) {
-      // We have a local type. Find its parent function.
-      LVScope *Parent = Symbol->getFunctionParent();
-      // The element representing the type has been already finalized. If
-      // the type is an aggregate type, its members have been already added.
-      // As the type is local, its level will be changed.
-
-      // FIXME: Currently the algorithm used to scope lambda functions is
-      // incorrect. Before we allocate the type at this scope, check if is
-      // already allocated in other scope.
-      if (!Element->getParentScope()) {
-        Parent->addElement(Element);
-        Element->updateLevel(Parent);
-      }
-    }
-    Symbol->setType(Element);
+    setLocalVariableType(Symbol, Local.Type);
   }
 
   return Error::success();
@@ -891,23 +868,42 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     if (Symbol->getIsParameter())
       Symbol->setTag(dwarf::DW_TAG_formal_parameter);
 
-    LVElement *Element = LogicalVisitor->getElement(StreamTPI, Local.Type);
-    if (Element && Element->getIsScoped()) {
-      // We have a local type. Find its parent function.
-      LVScope *Parent = Symbol->getFunctionParent();
-      // The element representing the type has been already finalized. If
-      // the type is an aggregate type, its members have been already added.
-      // As the type is local, its level will be changed.
+    setLocalVariableType(Symbol, Local.Type);
+  }
 
-      // FIXME: Currently the algorithm used to scope lambda functions is
-      // incorrect. Before we allocate the type at this scope, check if is
-      // already allocated in other scope.
-      if (!Element->getParentScope()) {
-        Parent->addElement(Element);
-        Element->updateLevel(Parent);
-      }
+  return Error::success();
+}
+
+// S_REGREL32_INDIR
+Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
+                                        RegRelativeIndirSym &Local) {
+  LLVM_DEBUG({
+    printTypeIndex("Type", Local.Type);
+    W.printNumber("Offset", Local.Offset);
+    W.printNumber("OffsetInUdt", Local.OffsetInUdt);
+    W.printString("VarName", Local.Name);
+  });
+
+  if (LVSymbol *Symbol = LogicalVisitor->CurrentSymbol) {
+    Symbol->setName(Local.Name);
+
+    // Symbol was created as 'variable'; determine its real kind.
+    Symbol->resetIsVariable();
+
+    // Check for the 'this' symbol.
+    if (Local.Name == "this") {
+      Symbol->setIsArtificial();
+      Symbol->setIsParameter();
+    } else {
+      // Determine symbol kind.
+      determineSymbolKind(Symbol, Local.Register);
     }
-    Symbol->setType(Element);
+
+    // Update correct debug information tag.
+    if (Symbol->getIsParameter())
+      Symbol->setTag(dwarf::DW_TAG_formal_parameter);
+
+    setLocalVariableType(Symbol, Local.Type);
   }
 
   return Error::success();
@@ -956,6 +952,9 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Scope->setName(CurrentObjectName);
     if (options().getAttributeProducer())
       Scope->setProducer(Compile2.Version);
+    if (options().getAttributeLanguage())
+      Scope->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::codeview::SourceLanguage>(Compile2.getLanguage())});
     getReader().isSystemEntry(Scope, CurrentObjectName);
 
     // The line records in CodeView are recorded per Module ID. Update
@@ -1001,6 +1000,9 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Scope->setName(CurrentObjectName);
     if (options().getAttributeProducer())
       Scope->setProducer(Compile3.Version);
+    if (options().getAttributeLanguage())
+      Scope->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::codeview::SourceLanguage>(Compile3.getLanguage())});
     getReader().isSystemEntry(Scope, CurrentObjectName);
 
     // The line records in CodeView are recorded per Module ID. Update
@@ -1134,6 +1136,47 @@ Error LVSymbolVisitor::visitKnownRecord(
 
     Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
     Symbol->addLocationOperands(LVSmall(Attr), {Operand1, Operand2});
+  }
+
+  return Error::success();
+}
+
+// S_DEFRANGE_REGISTER_REL_INDIR
+Error LVSymbolVisitor::visitKnownRecord(
+    CVSymbol &Record, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+  // DefRanges don't have types, just registers and code offsets.
+  LLVM_DEBUG({
+    if (LocalSymbol)
+      W.getOStream() << formatv("Symbol: {0}, ", LocalSymbol->getName());
+
+    W.printBoolean("HasSpilledUDTMember",
+                   DefRangeRegisterRelIndir.hasSpilledUDTMember());
+    W.printNumber("OffsetInParent", DefRangeRegisterRelIndir.offsetInParent());
+    W.printNumber("BasePointerOffset",
+                  DefRangeRegisterRelIndir.Hdr.BasePointerOffset);
+    W.printNumber("OffsetInUdt", DefRangeRegisterRelIndir.Hdr.OffsetInUdt);
+    printLocalVariableAddrRange(DefRangeRegisterRelIndir.Range,
+                                DefRangeRegisterRelIndir.getRelocationOffset());
+    printLocalVariableAddrGap(DefRangeRegisterRelIndir.Gaps);
+  });
+
+  if (LVSymbol *Symbol = LocalSymbol) {
+    Symbol->setHasCodeViewLocation();
+    LocalSymbol = nullptr;
+
+    // Add location debug location. Operands: [Register, Offset, OffsetInUdt].
+    dwarf::Attribute Attr =
+        dwarf::Attribute(SymbolKind::S_DEFRANGE_REGISTER_REL_INDIR);
+    const uint64_t Operand1 = DefRangeRegisterRelIndir.Hdr.Register;
+    const uint64_t Operand2 = DefRangeRegisterRelIndir.Hdr.BasePointerOffset;
+    const uint64_t Operand3 = DefRangeRegisterRelIndir.Hdr.OffsetInUdt;
+
+    const LocalVariableAddrRange Range = DefRangeRegisterRelIndir.Range;
+    const LVAddress Address =
+        Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
+
+    Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1, Operand2, Operand3});
   }
 
   return Error::success();
@@ -1435,17 +1478,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, LocalSym &Local) {
     if (Symbol->getIsParameter())
       Symbol->setTag(dwarf::DW_TAG_formal_parameter);
 
-    LVElement *Element = LogicalVisitor->getElement(StreamTPI, Local.Type);
-    if (Element && Element->getIsScoped()) {
-      // We have a local type. Find its parent function.
-      LVScope *Parent = Symbol->getFunctionParent();
-      // The element representing the type has been already finalized. If
-      // the type is an aggregate type, its members have been already added.
-      // As the type is local, its level will be changed.
-      Parent->addElement(Element);
-      Element->updateLevel(Parent);
-    }
-    Symbol->setType(Element);
+    setLocalVariableType(Symbol, Local.Type);
 
     // The CodeView records (S_DEFFRAME_*) describing debug location for
     // this symbol, do not have any direct reference to it. Those records
@@ -1721,6 +1754,26 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, CallerSym &Caller) {
   return Error::success();
 }
 
+void LVSymbolVisitor::setLocalVariableType(LVSymbol *Symbol, TypeIndex TI) {
+  LVElement *Element = LogicalVisitor->getElement(StreamTPI, TI);
+  if (Element && Element->getIsScoped()) {
+    // We have a local type. Find its parent function.
+    LVScope *Parent = Symbol->getFunctionParent();
+    // The element representing the type has been already finalized. If
+    // the type is an aggregate type, its members have been already added.
+    // As the type is local, its level will be changed.
+
+    // FIXME: Currently the algorithm used to scope lambda functions is
+    // incorrect. Before we allocate the type at this scope, check if is
+    // already allocated in other scope.
+    if (!Element->getParentScope()) {
+      Parent->addElement(Element);
+      Element->updateLevel(Parent);
+    }
+  }
+  Symbol->setType(Element);
+}
+
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "CodeViewLogicalVisitor"
 
@@ -1994,6 +2047,7 @@ Error LVLogicalVisitor::visitKnownRecord(CVType &Record, ClassRecord &Class,
   Scope->setName(Class.getName());
   if (Class.hasUniqueName())
     Scope->setLinkageName(Class.getUniqueName());
+  Scope->setBitSize(Class.getSize() * DWARF_CHAR_BIT);
 
   if (Class.isNested()) {
     Scope->setIsNested();
@@ -2462,6 +2516,7 @@ Error LVLogicalVisitor::visitKnownRecord(CVType &Record, UnionRecord &Union,
   Scope->setName(Union.getName());
   if (Union.hasUniqueName())
     Scope->setLinkageName(Union.getUniqueName());
+  Scope->setBitSize(Union.getSize() * DWARF_CHAR_BIT);
 
   if (Union.isNested()) {
     Scope->setIsNested();
@@ -3078,6 +3133,7 @@ LVElement *LVLogicalVisitor::createElement(SymbolKind Kind) {
 
   case SymbolKind::S_BPREL32:
   case SymbolKind::S_REGREL32:
+  case SymbolKind::S_REGREL32_INDIR:
   case SymbolKind::S_GDATA32:
   case SymbolKind::S_LDATA32:
   case SymbolKind::S_LOCAL:
@@ -3215,6 +3271,7 @@ LVType *LVLogicalVisitor::createBaseType(TypeIndex TI, StringRef TypeName) {
 
   if (createElement(TIR, SimpleKind)) {
     CurrentType->setName(TypeName);
+    CurrentType->setBitSize(getSizeInBytesForTypeIndex(TIR) * DWARF_CHAR_BIT);
     Reader->getCompileUnit()->addElement(CurrentType);
   }
   return CurrentType;

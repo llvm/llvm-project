@@ -78,11 +78,18 @@ public:
   /// \param[in] ctx_obj
   ///     If not empty, then expression is evaluated in context of this object.
   ///     See the comment to `UserExpression::Evaluate` for details.
+  ///
+  /// \param[in] ignore_context_qualifiers
+  ///     If \c true, evaluates the expression without taking into account the
+  ///     CV-qualifiers of the scope. E.g., this would permit calling a
+  ///     non-const C++ method when stopped in a const-method (which would be
+  ///     disallowed by C++ language rules).
   ClangExpressionDeclMap(
       bool keep_result_in_memory,
       Materializer::PersistentVariableDelegate *result_delegate,
       const lldb::TargetSP &target,
-      const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj);
+      const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj,
+      bool ignore_context_qualifiers);
 
   /// Destructor
   ~ClangExpressionDeclMap() override;
@@ -306,6 +313,12 @@ private:
                           ///For details see the comment to
                           ///`UserExpression::Evaluate`.
 
+  /// If \c true, evaluates the expression without taking into account the
+  /// CV-qualifiers of the scope. E.g., this would permit calling a
+  /// non-const C++ method when stopped in a const-method (which would be
+  /// disallowed by C++ language rules).
+  bool m_ignore_context_qualifiers = false;
+
   /// The following values should not live beyond parsing
   class ParserVars {
   public:
@@ -344,7 +357,7 @@ private:
 
   /// Activate parser-specific variables
   void EnableParserVars() {
-    if (!m_parser_vars.get())
+    if (!m_parser_vars)
       m_parser_vars = std::make_unique<ParserVars>();
   }
 
@@ -371,7 +384,7 @@ private:
 
   /// Activate struct variables
   void EnableStructVars() {
-    if (!m_struct_vars.get())
+    if (!m_struct_vars)
       m_struct_vars.reset(new struct StructVars);
   }
 
@@ -481,7 +494,10 @@ private:
   ///
   /// \param[in] namespace_decl
   ///     If valid and module is non-NULL, the parent namespace.
-  void LookupFunction(NameSearchContext &context, lldb::ModuleSP module_sp,
+  ///
+  /// \returns Returns \c true if we successfully found a function
+  /// and could create a decl with correct type-info for it.
+  bool LookupFunction(NameSearchContext &context, lldb::ModuleSP module_sp,
                       ConstString name,
                       const CompilerDeclContext &namespace_decl);
 
@@ -605,7 +621,8 @@ private:
   /// \param[in] sym
   ///     The Symbol that corresponds to a function that needs to be
   ///     created with generic type (unitptr_t foo(...)).
-  void AddOneFunction(NameSearchContext &context, Function *fun, Symbol *sym);
+  void AddOneFunction(NameSearchContext &context, Function *fun,
+                      const Symbol *sym);
 
   /// Use the NameSearchContext to generate a Decl for the given register.
   ///

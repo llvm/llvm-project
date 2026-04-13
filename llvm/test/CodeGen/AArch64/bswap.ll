@@ -70,11 +70,17 @@ define i128 @bswap_i16_to_i128_anyext(i16 %a) {
 }
 
 define i32 @bswap_i16_to_i32_zext(i16 %a){
-; CHECK-LABEL: bswap_i16_to_i32_zext:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev w8, w0
-; CHECK-NEXT:    lsr w0, w8, #16
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bswap_i16_to_i32_zext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    and w8, w0, #0xffff
+; CHECK-SD-NEXT:    rev16 w0, w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bswap_i16_to_i32_zext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    rev w8, w0
+; CHECK-GI-NEXT:    lsr w0, w8, #16
+; CHECK-GI-NEXT:    ret
   %3 = call i16 @llvm.bswap.i16(i16 %a)
   %4 = zext i16 %3 to i32
   ret i32 %4
@@ -209,8 +215,7 @@ define <1 x i32> @bswap_v1i32(<1 x i32> %a){
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call <1 x i32> @llvm.bswap.v1i32(<1 x i32> %a)

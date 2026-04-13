@@ -4,7 +4,7 @@
 ; Test that pure GetElementPtr instructions not directly connected to
 ; a memory operation are inferred.
 
-@lds = internal unnamed_addr addrspace(3) global [648 x double] undef, align 8
+@lds = internal unnamed_addr addrspace(3) global [648 x double] poison, align 8
 
 define void @simplified_constexpr_gep_addrspacecast(i64 %idx0, i64 %idx1) {
 ; CHECK-LABEL: @simplified_constexpr_gep_addrspacecast(

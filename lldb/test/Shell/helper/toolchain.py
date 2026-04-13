@@ -118,24 +118,28 @@ def use_lldb_substitutions(config):
         build_script_args.append("--sysroot={0}".format(config.cmake_sysroot))
 
     lldb_init = _get_lldb_init_path(config)
+    launcher = getattr(config, "lldb_launcher", None)
 
     primary_tools = [
         ToolSubst(
             "%lldb",
             command=FindTool("lldb"),
             extra_args=get_lldb_args(config),
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
             "%lldb-init",
             command=FindTool("lldb"),
             extra_args=["-S", lldb_init],
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
             "%lldb-noinit",
             command=FindTool("lldb"),
             extra_args=["--no-lldbinit"],
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
@@ -154,6 +158,16 @@ def use_lldb_substitutions(config):
             "%platformserver",
             command=FindTool("lldb-server"),
             extra_args=["platform"],
+            unresolved="ignore",
+        ),
+        ToolSubst(
+            "%lldb-rpc-gen",
+            command=FindTool("lldb-rpc-gen"),
+            # We need the LLDB build directory root to pass into the tool, not the test build root.
+            extra_args=[
+                "-p " + config.lldb_build_directory + "/..",
+                '--extra-arg="-resource-dir=' + config.clang_resource_dir + '"',
+            ],
             unresolved="ignore",
         ),
         "lldb-test",
@@ -216,7 +230,7 @@ def use_support_substitutions(config):
         except OSError:
             res = -1
         if res == 0 and out:
-            sdk_path = lit.util.to_string(out)
+            sdk_path = out.decode("utf-8")
             llvm_config.lit_config.note("using SDKROOT: %r" % sdk_path)
             host_flags += ["-isysroot", sdk_path]
     elif sys.platform != "win32":
@@ -232,6 +246,11 @@ def use_support_substitutions(config):
     # The clang module cache is used for building inferiors.
     host_flags += ["-fmodules-cache-path={}".format(config.clang_module_cache)]
 
+    # Our files use x86 AT&T assembly throughout.
+    # Enable it explicitly so any local Clang preference for Intel syntax gets overriden.
+    if "x86-registered-target" in config.available_features:
+        host_flags += ["-mllvm", "-x86-asm-syntax=att"]
+
     if config.cmake_sysroot:
         host_flags += ["--sysroot={}".format(config.cmake_sysroot)]
 
@@ -240,6 +259,15 @@ def use_support_substitutions(config):
             "-L{}".format(config.libcxx_libs_dir),
             "-lc++",
         ]
+    # By default, macOS doesn't allow injecting the ASAN runtime into system processes.
+    if platform.system() in ["Darwin"] and config.llvm_use_sanitizer:
+        system_clang = (
+            subprocess.check_output(["xcrun", "-find", "clang"]).strip().decode("utf-8")
+        )
+        system_liblto = os.path.join(
+            os.path.dirname(os.path.dirname(system_clang)), "lib", "libLTO.dylib"
+        )
+        host_flags += ["-Wl,-lto_library", "-Wl," + system_liblto]
 
     host_flags = " ".join(host_flags)
     config.substitutions.append(("%clang_host", "%clang " + host_flags))
@@ -258,6 +286,9 @@ def use_support_substitutions(config):
         required=True,
         use_installed=True,
     )
+    if llvm_config.clang_has_bounds_safety():
+        llvm_config.lit_config.note("clang has -fbounds-safety support")
+        config.available_features.add("clang-bounds-safety")
 
     if sys.platform == "win32":
         _use_msvc_substitutions(config)

@@ -70,3 +70,7 @@
 # NP-CAT-OUTPUT-NEXT:M-HM-IM-JM-KM-LM-MM-NM-OM-PM-QM-RM-SM-TM-UM-VM-WM-XM-YM-ZM-[
 # NP-CAT-OUTPUT-NEXT:M-\M-]M-^M-_M-`M-aM-bM-cM-dM-eM-fM-gM-hM-iM-jM-kM-lM-mM-nM-o
 # NP-CAT-OUTPUT-NEXT:M-pM-qM-rM-sM-tM-uM-vM-wM-xM-yM-zM-{M-|M-}M-~M-^?
+
+## Test that cat will pipe stdin to stdout if no other files are specified.
+# RUN: echo test | cat | FileCheck --check-prefix=CAT-STDIN %s
+# CAT-STDIN: test

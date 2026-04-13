@@ -2,12 +2,7 @@
 
 llvm.func @dealloc_foo_0(!llvm.ptr)
 
-omp.private {type = private} @box.heap_privatizer0 : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %7 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>  : (i32) -> !llvm.ptr
-  omp.yield(%7 : !llvm.ptr)
-} dealloc {
+omp.private {type = private} @box.heap_privatizer0 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> dealloc {
 ^bb0(%arg0: !llvm.ptr):
   llvm.call @dealloc_foo_0(%arg0) : (!llvm.ptr) -> ()
   omp.yield
@@ -16,12 +11,10 @@ omp.private {type = private} @box.heap_privatizer0 : !llvm.ptr alloc {
 llvm.func @alloc_foo_1(!llvm.ptr)
 llvm.func @dealloc_foo_1(!llvm.ptr)
 
-omp.private {type = private} @box.heap_privatizer1 : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %7 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>  : (i32) -> !llvm.ptr
+omp.private {type = private} @box.heap_privatizer1 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   llvm.call @alloc_foo_1(%arg0) : (!llvm.ptr) -> ()
-  omp.yield(%7 : !llvm.ptr)
+  omp.yield(%arg1 : !llvm.ptr)
 } dealloc {
 ^bb0(%arg0: !llvm.ptr):
   llvm.call @dealloc_foo_1(%arg0) : (!llvm.ptr) -> ()
@@ -56,11 +49,11 @@ llvm.func @use_private_var1(!llvm.ptr) -> ()
 // CHECK: %[[DESC_ALLOC0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1
 // CHECK: %[[DESC_ALLOC1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1
 // CHECK: call void @__omp_offloading_[[OFFLOADED_FUNCTION:.*]](ptr {{[^,]+}},
-// CHECK-SAME: ptr %[[DESC_ALLOC0]], ptr %[[DESC_ALLOC1]])
+// CHECK-SAME: ptr %[[DESC_ALLOC0]], ptr %[[DESC_ALLOC1]], ptr null)
 
 // CHECK: define internal void @__omp_offloading_[[OFFLOADED_FUNCTION]]
 // CHECK-SAME: (ptr {{[^,]+}}, ptr %[[DESCRIPTOR_ARG0:[^,]+]],
-// CHECK-SAME: ptr %[[DESCRIPTOR_ARG1:.*]]) {
+// CHECK-SAME: ptr %[[DESCRIPTOR_ARG1:[^,]+]], ptr %{{.*}}) {
 
 // `var0` privatrizer `alloc`
 // CHECK: %[[PRIV_DESC0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }

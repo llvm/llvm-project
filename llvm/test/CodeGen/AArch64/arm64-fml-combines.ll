@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -enable-unsafe-fp-math -mattr=+fullfp16 | FileCheck %s
+; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -mattr=+fullfp16 | FileCheck %s
 ; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -fp-contract=fast -mattr=+fullfp16 | FileCheck %s
 
 define void @foo_2d(ptr %src) {
@@ -130,9 +130,9 @@ for.end:                                          ; preds = %for.body
 ; CHECK: fnmadd h0, h0, h1, h2
 define half @test0(half %a, half %b, half %c) {
 entry:
-  %0 = fmul half %a, %b
-  %mul = fsub half -0.000000e+00, %0
-  %sub1 = fsub half %mul, %c
+  %0 = fmul contract half %a, %b
+  %mul = fsub contract half -0.000000e+00, %0
+  %sub1 = fsub contract half %mul, %c
   ret half %sub1
 }
 
@@ -140,9 +140,9 @@ entry:
 ; CHECK: fnmadd s0, s0, s1, s2
 define float @test1(float %a, float %b, float %c) {
 entry:
-  %0 = fmul float %a, %b
-  %mul = fsub float -0.000000e+00, %0
-  %sub1 = fsub float %mul, %c
+  %0 = fmul contract float %a, %b
+  %mul = fsub contract float -0.000000e+00, %0
+  %sub1 = fsub contract float %mul, %c
   ret float %sub1
 }
 
@@ -150,9 +150,9 @@ entry:
 ; CHECK: fnmadd d0, d0, d1, d2
 define double @test2(double %a, double %b, double %c) {
 entry:
-  %0 = fmul double %a, %b
-  %mul = fsub double -0.000000e+00, %0
-  %sub1 = fsub double %mul, %c
+  %0 = fmul contract double %a, %b
+  %mul = fsub contract double -0.000000e+00, %0
+  %sub1 = fsub contract double %mul, %c
   ret double %sub1
 }
 

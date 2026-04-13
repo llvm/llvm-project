@@ -1,5 +1,4 @@
 ; RUN: opt %s -S -passes=sroa -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=sroa -o - | FileCheck %s
 
 ;; Check that SROA preserves the InlinedAt status of new dbg.assign intriniscs
 ;; it inserts.
@@ -29,7 +28,7 @@
 ;;
 ;; $ clang test.c -Xclang -fexperimental-assignment-tracking  -O2 -g
 
-; CHECK: #dbg_assign(i1 false, !{{.+}}, !DIExpression(), !{{.+}}, ptr undef, !DIExpression(), ![[DBG:[0-9]+]]
+; CHECK: #dbg_assign(i1 false, !{{.+}}, !DIExpression(), !{{.+}}, ptr poison, !DIExpression(), ![[DBG:[0-9]+]]
 
 ; CHECK-DAG: ![[DBG]] = !DILocation(line: 0, scope: ![[INL_SC:[0-9]+]], inlinedAt: ![[IA:[0-9]+]])
 ; CHECK-DAG: ![[IA]] = distinct !DILocation(line: 21, column: 12, scope: ![[SC:[0-9]+]])

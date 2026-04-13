@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "tysan/tysan.h"
 
@@ -21,30 +22,50 @@
 #define TYSAN_INTERCEPT___STRDUP 0
 #endif
 
+#define TYSAN_INTERCEPT_FUNC(name)                                             \
+  do {                                                                         \
+    if (!INTERCEPT_FUNCTION(name))                                             \
+      VReport(1, "TypeSanitizer: failed to intercept '%s'\n", #name);          \
+  } while (0)
+
 #if SANITIZER_LINUX
 extern "C" int mallopt(int param, int value);
 #endif
 
 using namespace __sanitizer;
 using namespace __tysan;
+namespace __tysan {
+// Defined in tysan.cpp
+void OnStackUnwind(const SignalContext &sig, const void *,
+                   BufferedStackTrace *stack);
 
-static const uptr early_alloc_buf_size = 16384;
-static uptr allocated_bytes;
-static char early_alloc_buf[early_alloc_buf_size];
-
-static bool isInEarlyAllocBuf(const void *ptr) {
-  return ((uptr)ptr >= (uptr)early_alloc_buf &&
-          ((uptr)ptr - (uptr)early_alloc_buf) < sizeof(early_alloc_buf));
+static void TysanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
 }
 
-// Handle allocation requests early (before all interceptors are setup). dlsym,
-// for example, calls calloc.
-static void *handleEarlyAlloc(uptr size) {
-  void *mem = (void *)&early_alloc_buf[allocated_bytes];
-  allocated_bytes += size;
-  CHECK_LT(allocated_bytes, early_alloc_buf_size);
-  return mem;
+static bool tysanSignalsInitialized = false;
+void InitializeDeadlySignals();
+} // namespace __tysan
+
+#define SIGNAL_INTERCEPTOR_ENTER() __tysan::InitializeDeadlySignals()
+#define COMMON_INTERCEPT_FUNCTION(name) TYSAN_INTERCEPT_FUNC(name)
+#include "sanitizer_common/sanitizer_signal_interceptors.inc"
+
+namespace __tysan {
+void InitializeDeadlySignals() {
+  if (tysanSignalsInitialized)
+    return;
+  InitializeSignalInterceptors();
+  InstallDeadlySignalHandlers(&TysanOnDeadlySignal);
+  tysanSignalsInitialized = true;
 }
+} // namespace __tysan
+
+namespace {
+struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
+  static bool UseImpl() { return !tysan_inited; }
+};
+} // namespace
 
 INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
   if (!tysan_inited && REAL(memset) == nullptr)
@@ -111,16 +132,25 @@ INTERCEPTOR(char *, __strdup, const char *s) {
 #endif // TYSAN_INTERCEPT___STRDUP
 
 INTERCEPTOR(void *, malloc, uptr size) {
-  if (tysan_init_is_running && REAL(malloc) == nullptr)
-    return handleEarlyAlloc(size);
-
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
   void *res = REAL(malloc)(size);
   if (res)
     tysan_set_type_unknown(res, size);
   return res;
 }
 
+#if SANITIZER_APPLE
+INTERCEPTOR(uptr, malloc_size, void *ptr) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::GetSize(ptr);
+  return REAL(malloc_size)(ptr);
+}
+#endif
+
 INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size);
   void *res = REAL(realloc)(ptr, size);
   // We might want to copy the types from the original allocation (although
   // that would require that we knew its size).
@@ -130,21 +160,18 @@ INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
 }
 
 INTERCEPTOR(void *, calloc, uptr nmemb, uptr size) {
-  if (tysan_init_is_running && REAL(calloc) == nullptr)
-    return handleEarlyAlloc(nmemb * size);
-
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size);
   void *res = REAL(calloc)(nmemb, size);
   if (res)
     tysan_set_type_unknown(res, nmemb * size);
   return res;
 }
 
-INTERCEPTOR(void, free, void *p) {
-  // There are only a few early allocation requests,
-  // so we simply skip the free.
-  if (isInEarlyAllocBuf(p))
-    return;
-  REAL(free)(p);
+INTERCEPTOR(void, free, void *ptr) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  REAL(free)(ptr);
 }
 
 INTERCEPTOR(void *, valloc, uptr size) {
@@ -238,7 +265,7 @@ void InitializeInterceptors() {
   TYSAN_MAYBE_INTERCEPT_MEMALIGN;
   TYSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN;
   TYSAN_MAYBE_INTERCEPT_PVALLOC;
-  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
+  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
 
   INTERCEPT_FUNCTION(memset);

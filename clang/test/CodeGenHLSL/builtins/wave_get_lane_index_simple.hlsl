@@ -6,8 +6,8 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,CHECK-DXIL
 
-// CHECK-SPIRV: define spir_func noundef i32 @{{.*test_1.*}}() [[A0:#[0-9]+]] {
-// CHECK-DXIL: define noundef i32 @{{.*test_1.*}}() [[A0:#[0-9]+]] {
+// CHECK-SPIRV: define hidden spir_func noundef i32 @{{.*test_1.*}}() [[A0:#[0-9]+]] {
+// CHECK-DXIL: define hidden noundef i32 @{{.*test_1.*}}() [[A0:#[0-9]+]] {
 // CHECK-SPIRV: %[[CI:[0-9]+]] = call token @llvm.experimental.convergence.entry()
 // CHECK-SPIRV: call spir_func i32 @__hlsl_wave_get_lane_index() [ "convergencectrl"(token %[[CI]]) ]
 // CHECK-DXIL: call i32 @llvm.dx.wave.getlaneindex()

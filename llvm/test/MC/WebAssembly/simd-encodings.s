@@ -917,11 +917,11 @@ main:
     # CHECK: f16x8.nearest # encoding: [0xfd,0xb6,0x02]
     f16x8.nearest
 
-    # CHECK: f16x8.relaxed_madd # encoding: [0xfd,0xce,0x02]
-    f16x8.relaxed_madd
+    # CHECK: f16x8.madd # encoding: [0xfd,0xce,0x02]
+    f16x8.madd
 
-    # CHECK: f16x8.relaxed_nmadd # encoding: [0xfd,0xcf,0x02]
-    f16x8.relaxed_nmadd
+    # CHECK: f16x8.nmadd # encoding: [0xfd,0xcf,0x02]
+    f16x8.nmadd
 
     # CHECK: i16x8.trunc_sat_f16x8_s # encoding: [0xfd,0xc5,0x02]
     i16x8.trunc_sat_f16x8_s
@@ -934,5 +934,8 @@ main:
 
     # CHECK: f16x8.convert_i16x8_u # encoding: [0xfd,0xc8,0x02]
     f16x8.convert_i16x8_u
+
+    # CHECK: f32x4.promote_low_f16x8 # encoding: [0xfd,0xcb,0x02]
+    f32x4.promote_low_f16x8
 
     end_function

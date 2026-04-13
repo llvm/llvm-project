@@ -9,7 +9,7 @@
 
 declare fastcc i32 @func(ptr, i32, i32) nounwind ssp
 
-define fastcc void @func2(ptr %arg, i32 %arg1) nounwind ssp {
+define fastcc void @func2(ptr %arg, i32 %arg1, i1 %arg2) nounwind ssp {
 bb:
   br label %.exit3
 
@@ -20,7 +20,7 @@ bb:
   ]
 
 bb2:                                              ; preds = %bb5, %bb3, %.exit3
-  br i1 undef, label %bb3, label %bb5
+  br i1 %arg2, label %bb3, label %bb5
 
 bb3:                                              ; preds = %bb2
   switch i32 undef, label %infloop [
@@ -41,7 +41,7 @@ bb5:                                              ; preds = %bb2
 
 .loopexit:                                        ; preds = %bb5, %bb4, %bb3, %.exit3
   %.04 = phi i32 [ %tmp, %bb4 ], [ undef, %bb3 ], [ undef, %.exit3 ], [ undef, %bb5 ] ; <i32> [#uses=2]
-  br i1 undef, label %bb8, label %bb6
+  br i1 %arg2, label %bb8, label %bb6
 
 bb6:                                              ; preds = %.loopexit
   %tmp7 = tail call fastcc i32 @func(ptr %arg, i32 %.04, i32 undef) nounwind ssp ; <i32> [#uses=0]

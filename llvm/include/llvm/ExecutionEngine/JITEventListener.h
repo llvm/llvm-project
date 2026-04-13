@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -37,7 +38,7 @@ class ObjectFile;
 /// profilers and debuggers that need to know where functions have been emitted.
 ///
 /// The default implementation of each method does nothing.
-class JITEventListener {
+class LLVM_ABI JITEventListener {
 public:
   using ObjectKey = uint64_t;
 

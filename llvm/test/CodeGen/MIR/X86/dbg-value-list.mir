@@ -14,7 +14,7 @@
   entry:
     call void @llvm.dbg.value(metadata i32 %a, metadata !12, metadata !DIExpression()), !dbg !15
     call void @llvm.dbg.value(metadata i32 %b, metadata !13, metadata !DIExpression()), !dbg !15
-    call void @llvm.dbg.value(metadata i32 undef, metadata !14, metadata !DIExpression()), !dbg !15
+    call void @llvm.dbg.value(metadata i32 poison, metadata !14, metadata !DIExpression()), !dbg !15
     %mul = mul nsw i32 %b, %a, !dbg !16
     ret i32 %mul, !dbg !17
   }

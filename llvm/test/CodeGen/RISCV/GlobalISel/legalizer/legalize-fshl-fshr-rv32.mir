@@ -25,7 +25,7 @@ body:             |
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[C2]](s32)
     ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[AND1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR1]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL]], [[LSHR1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %3:_(s32) = COPY $x10
@@ -63,7 +63,7 @@ body:             |
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[C2]](s32)
     ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[AND1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR1]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL]], [[LSHR1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %3:_(s32) = COPY $x10
@@ -99,7 +99,7 @@ body:             |
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C2]](s32)
     ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[AND1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR1]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL]], [[LSHR1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
@@ -205,7 +205,7 @@ body:             |
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[AND]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[LSHR]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL1]], [[LSHR]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %3:_(s32) = COPY $x10
@@ -243,7 +243,7 @@ body:             |
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[AND]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[LSHR]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL1]], [[LSHR]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %3:_(s32) = COPY $x10
@@ -279,7 +279,7 @@ body:             |
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C2]](s32)
     ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SHL]], [[AND1]](s32)
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[AND]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[LSHR]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL1]], [[LSHR]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10

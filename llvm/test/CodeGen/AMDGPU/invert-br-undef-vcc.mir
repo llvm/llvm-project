@@ -3,14 +3,14 @@
 
   define amdgpu_kernel void @invert_br_undef_vcc(float %cond, ptr addrspace(1) %out) #0 {
   entry:
-    br i1 undef, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
+    br i1 poison, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
 
   else:                                             ; preds = %entry
-    store volatile i32 100, ptr addrspace(1) undef
+    store volatile i32 100, ptr addrspace(1) poison
     br label %done, !structurizecfg.uniform !0
 
   if:                                               ; preds = %entry
-    store volatile i32 9, ptr addrspace(1) undef
+    store volatile i32 9, ptr addrspace(1) poison
     br label %done, !structurizecfg.uniform !0
 
   done:                                             ; preds = %if, %else
@@ -55,7 +55,7 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0_sgpr1
 
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
     S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
@@ -64,7 +64,7 @@ body:             |
     liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
     $vgpr0 = V_MOV_B32_e32 100, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`)
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     S_BRANCH %bb.3
 
@@ -72,7 +72,7 @@ body:             |
     liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
     $vgpr0 = V_MOV_B32_e32 9, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`)
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 
   bb.3.done:

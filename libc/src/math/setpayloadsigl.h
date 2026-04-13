@@ -17,4 +17,4 @@ int setpayloadsigl(long double *res, long double pl);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_SETPAYLOADSIGF_H
+#endif // LLVM_LIBC_SRC_MATH_SETPAYLOADSIGL_H

@@ -396,57 +396,103 @@ define void @uitofp(i32 %a) {
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    addiu $sp, $sp, 8
 ;
-; MIPS64-N32-LABEL: uitofp:
-; MIPS64-N32:       # %bb.0: # %entry
-; MIPS64-N32-NEXT:    addiu $sp, $sp, -16
-; MIPS64-N32-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(uitofp)))
-; MIPS64-N32-NEXT:    addu $1, $1, $25
-; MIPS64-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
-; MIPS64-N32-NEXT:    lui $2, 17200
-; MIPS64-N32-NEXT:    sw $2, 12($sp)
+; MIPS64R5-N32-LABEL: uitofp:
+; MIPS64R5-N32:       # %bb.0: # %entry
+; MIPS64R5-N32-NEXT:    addiu $sp, $sp, -16
+; MIPS64R5-N32-NEXT:    .cfi_def_cfa_offset 16
+; MIPS64R5-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(uitofp)))
+; MIPS64R5-N32-NEXT:    addu $1, $1, $25
+; MIPS64R5-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
+; MIPS64R5-N32-NEXT:    lui $2, 17200
+; MIPS64R5-N32-NEXT:    sw $2, 12($sp)
 ; MIPS64R5-N32-NEXT:    sll $2, $4, 0
 ; MIPS64R5-N32-NEXT:    sw $2, 8($sp)
-; MIPSR6-N32-NEXT:    sw $4, 8($sp)
-; MIPS64-N32-NEXT:    lw $2, %got_page(.LCPI5_0)($1)
-; MIPS64-N32-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
-; MIPS64-N32-NEXT:    ldc1 $f1, 8($sp)
-; MIPS64-N32-NEXT:    sub.d $f0, $f1, $f0
-; MIPS64-N32-NEXT:    dmfc1 $2, $f0
-; MIPS64-N32-NEXT:    fill.d $w0, $2
-; MIPS64-N32-NEXT:    fexdo.w $w0, $w0, $w0
-; MIPS64-N32-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS64-N32-NEXT:    lw $1, %got_disp(h)($1)
-; MIPS64-N32-NEXT:    copy_u.h $2, $w0[0]
-; MIPS64-N32-NEXT:    sh $2, 0($1)
-; MIPS64-N32-NEXT:    jr $ra
-; MIPS64-N32-NEXT:    addiu $sp, $sp, 16
+; MIPS64R5-N32-NEXT:    lw $2, %got_page(.LCPI5_0)($1)
+; MIPS64R5-N32-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
+; MIPS64R5-N32-NEXT:    ldc1 $f1, 8($sp)
+; MIPS64R5-N32-NEXT:    sub.d $f0, $f1, $f0
+; MIPS64R5-N32-NEXT:    dmfc1 $2, $f0
+; MIPS64R5-N32-NEXT:    fill.d $w0, $2
+; MIPS64R5-N32-NEXT:    fexdo.w $w0, $w0, $w0
+; MIPS64R5-N32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS64R5-N32-NEXT:    lw $1, %got_disp(h)($1)
+; MIPS64R5-N32-NEXT:    copy_u.h $2, $w0[0]
+; MIPS64R5-N32-NEXT:    sh $2, 0($1)
+; MIPS64R5-N32-NEXT:    jr $ra
+; MIPS64R5-N32-NEXT:    addiu $sp, $sp, 16
 ;
-; MIPS64-N64-LABEL: uitofp:
-; MIPS64-N64:       # %bb.0: # %entry
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, -16
-; MIPS64-N64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(uitofp)))
-; MIPS64-N64-NEXT:    daddu $1, $1, $25
-; MIPS64-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
-; MIPS64-N64-NEXT:    lui $2, 17200
-; MIPS64-N64-NEXT:    sw $2, 12($sp)
+; MIPS64R5-N64-LABEL: uitofp:
+; MIPS64R5-N64:       # %bb.0: # %entry
+; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, -16
+; MIPS64R5-N64-NEXT:    .cfi_def_cfa_offset 16
+; MIPS64R5-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(uitofp)))
+; MIPS64R5-N64-NEXT:    daddu $1, $1, $25
+; MIPS64R5-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
+; MIPS64R5-N64-NEXT:    lui $2, 17200
+; MIPS64R5-N64-NEXT:    sw $2, 12($sp)
 ; MIPS64R5-N64-NEXT:    sll $2, $4, 0
 ; MIPS64R5-N64-NEXT:    sw $2, 8($sp)
+; MIPS64R5-N64-NEXT:    ld $2, %got_page(.LCPI5_0)($1)
+; MIPS64R5-N64-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
+; MIPS64R5-N64-NEXT:    ldc1 $f1, 8($sp)
+; MIPS64R5-N64-NEXT:    sub.d $f0, $f1, $f0
+; MIPS64R5-N64-NEXT:    dmfc1 $2, $f0
+; MIPS64R5-N64-NEXT:    fill.d $w0, $2
+; MIPS64R5-N64-NEXT:    fexdo.w $w0, $w0, $w0
+; MIPS64R5-N64-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS64R5-N64-NEXT:    ld $1, %got_disp(h)($1)
+; MIPS64R5-N64-NEXT:    copy_u.h $2, $w0[0]
+; MIPS64R5-N64-NEXT:    sh $2, 0($1)
+; MIPS64R5-N64-NEXT:    jr $ra
+; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, 16
+;
+; MIPSR6-N32-LABEL: uitofp:
+; MIPSR6-N32:       # %bb.0: # %entry
+; MIPSR6-N32-NEXT:    addiu $sp, $sp, -16
+; MIPSR6-N32-NEXT:    .cfi_def_cfa_offset 16
+; MIPSR6-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(uitofp)))
+; MIPSR6-N32-NEXT:    addu $1, $1, $25
+; MIPSR6-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
+; MIPSR6-N32-NEXT:    lui $2, 17200
+; MIPSR6-N32-NEXT:    sw $2, 12($sp)
+; MIPSR6-N32-NEXT:    sw $4, 8($sp)
+; MIPSR6-N32-NEXT:    lw $2, %got_page(.LCPI5_0)($1)
+; MIPSR6-N32-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
+; MIPSR6-N32-NEXT:    ldc1 $f1, 8($sp)
+; MIPSR6-N32-NEXT:    sub.d $f0, $f1, $f0
+; MIPSR6-N32-NEXT:    dmfc1 $2, $f0
+; MIPSR6-N32-NEXT:    fill.d $w0, $2
+; MIPSR6-N32-NEXT:    fexdo.w $w0, $w0, $w0
+; MIPSR6-N32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-N32-NEXT:    lw $1, %got_disp(h)($1)
+; MIPSR6-N32-NEXT:    copy_u.h $2, $w0[0]
+; MIPSR6-N32-NEXT:    sh $2, 0($1)
+; MIPSR6-N32-NEXT:    jr $ra
+; MIPSR6-N32-NEXT:    addiu $sp, $sp, 16
+;
+; MIPSR6-N64-LABEL: uitofp:
+; MIPSR6-N64:       # %bb.0: # %entry
+; MIPSR6-N64-NEXT:    daddiu $sp, $sp, -16
+; MIPSR6-N64-NEXT:    .cfi_def_cfa_offset 16
+; MIPSR6-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(uitofp)))
+; MIPSR6-N64-NEXT:    daddu $1, $1, $25
+; MIPSR6-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(uitofp)))
+; MIPSR6-N64-NEXT:    lui $2, 17200
+; MIPSR6-N64-NEXT:    sw $2, 12($sp)
 ; MIPSR6-N64-NEXT:    sw $4, 8($sp)
-; MIPS64-N64-NEXT:    ld $2, %got_page(.LCPI5_0)($1)
-; MIPS64-N64-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
-; MIPS64-N64-NEXT:    ldc1 $f1, 8($sp)
-; MIPS64-N64-NEXT:    sub.d $f0, $f1, $f0
-; MIPS64-N64-NEXT:    dmfc1 $2, $f0
-; MIPS64-N64-NEXT:    fill.d $w0, $2
-; MIPS64-N64-NEXT:    fexdo.w $w0, $w0, $w0
-; MIPS64-N64-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS64-N64-NEXT:    ld $1, %got_disp(h)($1)
-; MIPS64-N64-NEXT:    copy_u.h $2, $w0[0]
-; MIPS64-N64-NEXT:    sh $2, 0($1)
-; MIPS64-N64-NEXT:    jr $ra
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, 16
+; MIPSR6-N64-NEXT:    ld $2, %got_page(.LCPI5_0)($1)
+; MIPSR6-N64-NEXT:    ldc1 $f0, %got_ofst(.LCPI5_0)($2)
+; MIPSR6-N64-NEXT:    ldc1 $f1, 8($sp)
+; MIPSR6-N64-NEXT:    sub.d $f0, $f1, $f0
+; MIPSR6-N64-NEXT:    dmfc1 $2, $f0
+; MIPSR6-N64-NEXT:    fill.d $w0, $2
+; MIPSR6-N64-NEXT:    fexdo.w $w0, $w0, $w0
+; MIPSR6-N64-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-N64-NEXT:    ld $1, %got_disp(h)($1)
+; MIPSR6-N64-NEXT:    copy_u.h $2, $w0[0]
+; MIPSR6-N64-NEXT:    sh $2, 0($1)
+; MIPSR6-N64-NEXT:    jr $ra
+; MIPSR6-N64-NEXT:    daddiu $sp, $sp, 16
 entry:
 
 
@@ -525,27 +571,18 @@ define void @fadd() {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %2 = load i16, ptr @g, align 2
-  %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
-  %add = fadd float %1, %3
-
-
- %4 = call i16 @llvm.convert.to.fp16.f32(float %add)
-
-   store i16 %4, ptr @g, align 2
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %3 = load i16, ptr @g, align 2
+  %4 = bitcast i16 %3 to half
+  %5 = fpext half %4 to float
+  %add = fadd float %2, %5
+  %6 = fptrunc float %add to half
+  %7 = bitcast half %6 to i16
+  store i16 %7, ptr @g, align 2
   ret void
 }
 
-; Function Attrs: nounwind readnone
-declare float @llvm.convert.from.fp16.f32(i16)
-
-; Function Attrs: nounwind readnone
-declare i16 @llvm.convert.to.fp16.f32(float)
-
-; Function Attrs: nounwind
 define void @fsub() {
 ; MIPS32-LABEL: fsub:
 ; MIPS32:       # %bb.0: # %entry
@@ -605,18 +642,15 @@ define void @fsub() {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %2 = load i16, ptr @g, align 2
-  %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
-  %sub = fsub float %1, %3
-
-
-  %4 = call i16 @llvm.convert.to.fp16.f32(float %sub)
-
-
-  store i16 %4, ptr @g, align 2
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %3 = load i16, ptr @g, align 2
+  %4 = bitcast i16 %3 to half
+  %5 = fpext half %4 to float
+  %sub = fsub float %2, %5
+  %6 = fptrunc float %sub to half
+  %7 = bitcast half %6 to i16
+  store i16 %7, ptr @g, align 2
   ret void
 }
 
@@ -679,19 +713,15 @@ define void @fmult() {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %2 = load i16, ptr @g, align 2
-  %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
-  %mul = fmul float %1, %3
-
-
-  %4 = call i16 @llvm.convert.to.fp16.f32(float %mul)
-
-
-  store i16 %4, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %3 = load i16, ptr @g, align 2
+  %4 = bitcast i16 %3 to half
+  %5 = fpext half %4 to float
+  %mul = fmul float %2, %5
+  %6 = fptrunc float %mul to half
+  %7 = bitcast half %6 to i16
+  store i16 %7, ptr @g, align 2
   ret void
 }
 
@@ -753,19 +783,16 @@ define void @fdiv() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %2 = load i16, ptr @g, align 2
-  %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
-  %div = fdiv float %1, %3
-
-
-  %4 = call i16 @llvm.convert.to.fp16.f32(float %div)
-
-  store i16 %4, ptr @g, align 2
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %3 = load i16, ptr @g, align 2
+  %4 = bitcast i16 %3 to half
+  %5 = fpext half %4 to float
+  %div = fdiv float %2, %5
+  %6 = fptrunc float %div to half
+  %7 = bitcast half %6 to i16
+  store i16 %7, ptr @g, align 2
   ret void
 }
 
@@ -867,19 +894,15 @@ define void @frem() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %2 = load i16, ptr @g, align 2
-  %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
-  %rem = frem float %1, %3
-
-
-  %4 = call i16 @llvm.convert.to.fp16.f32(float %rem)
-
-
-  store i16 %4, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %3 = load i16, ptr @g, align 2
+  %4 = bitcast i16 %3 to half
+  %5 = fpext half %4 to float
+  %rem = frem float %2, %5
+  %6 = fptrunc float %rem to half
+  %7 = bitcast half %6 to i16
+  store i16 %7, ptr @g, align 2
   ret void
 }
 
@@ -998,16 +1021,14 @@ define void @fcmp() {
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-  %2 = load i16, ptr @g, align 2
-  %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
-  %fcmp = fcmp oeq float %1, %3
-
-
-  %4 = zext i1 %fcmp to i16
-  store i16 %4, ptr @i1, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %3 = load i16, ptr @g, align 2
+  %4 = bitcast i16 %3 to half
+  %5 = fpext half %4 to float
+  %fcmp = fcmp oeq float %2, %5
+  %6 = zext i1 %fcmp to i16
+  store i16 %6, ptr @i1, align 2
   ret void
 }
 
@@ -1072,16 +1093,12 @@ define void @fpowi() {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %powi = call float @llvm.powi.f32.i32(float %1, i32 2)
-
-
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
-
-
-  store i16 %2, ptr @g, align 2
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %powi = call float @llvm.powi.f32.i32(float %2, i32 2)
+  %3 = fptrunc float %powi to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -1183,16 +1200,12 @@ define void @fpowi_var(i32 %var) {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %powi = call float @llvm.powi.f32.i32(float %1, i32 %var)
-
-
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
-
-
-  store i16 %2, ptr @g, align 2
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %powi = call float @llvm.powi.f32.i32(float %2, i32 %var)
+  %3 = fptrunc float %powi to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -1296,18 +1309,15 @@ define void @fpow(float %var) {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %powi = call float @llvm.pow.f32(float %1, float %var)
-
-
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
-
-
-  store i16 %2, ptr @g, align 2
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %powi = call float @llvm.pow.f32(float %2, float %var)
+  %3 = fptrunc float %powi to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
+
 
 declare float @llvm.log2.f32(float %Val)
 
@@ -1406,15 +1416,12 @@ define void @flog2() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %log2 = call float @llvm.log2.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %log2)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %log2 = call float @llvm.log2.f32(float %2)
+  %3 = fptrunc float %log2 to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -1515,15 +1522,12 @@ define void @flog10() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %log10 = call float @llvm.log10.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %log10)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %log10 = call float @llvm.log10.f32(float %2)
+  %3 = fptrunc float %log10 to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -1588,15 +1592,12 @@ define void @fsqrt() {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %sqrt = call float @llvm.sqrt.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %sqrt)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %sqrt = call float @llvm.sqrt.f32(float %2)
+  %3 = fptrunc float %sqrt to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -1697,19 +1698,16 @@ define void @fsin() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %sin = call float @llvm.sin.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %sin)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %sin = call float @llvm.sin.f32(float %2)
+  %3 = fptrunc float %sin to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.cos.f32(float %Val)
+declare float @llvm.cos.f32(float) #0
 
 define void @fcos() {
 ; MIPS32-LABEL: fcos:
@@ -1806,19 +1804,16 @@ define void @fcos() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %cos = call float @llvm.cos.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %cos)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %cos = call float @llvm.cos.f32(float %2)
+  %3 = fptrunc float %cos to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.exp.f32(float %Val)
+declare float @llvm.exp.f32(float) #0
 
 define void @fexp() {
 ; MIPS32-LABEL: fexp:
@@ -1915,18 +1910,16 @@ define void @fexp() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-  %exp = call float @llvm.exp.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %exp)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %exp = call float @llvm.exp.f32(float %2)
+  %3 = fptrunc float %exp to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.exp2.f32(float %Val)
+declare float @llvm.exp2.f32(float) #0
 
 define void @fexp2() {
 ; MIPS32-LABEL: fexp2:
@@ -2023,19 +2016,16 @@ define void @fexp2() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %exp2 = call float @llvm.exp2.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %exp2)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %exp2 = call float @llvm.exp2.f32(float %2)
+  %3 = fptrunc float %exp2 to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.fma.f32(float, float, float)
+declare float @llvm.fma.f32(float, float, float) #0
 
 define void @ffma(float %b, float %c) {
 ; MIPS32-LABEL: ffma:
@@ -2139,22 +2129,16 @@ define void @ffma(float %b, float %c) {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %fma = call float @llvm.fma.f32(float %1, float %b, float %c)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %fma)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %fma = call float @llvm.fma.f32(float %2, float %b, float %c)
+  %3 = fptrunc float %fma to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-; FIXME: For MIPSR6, this should produced the maddf.s instruction. MIPSR5 cannot
-;        fuse the operation such that the intermediate result is not rounded.
-
-declare float @llvm.fmuladd.f32(float, float, float)
+declare float @llvm.fmuladd.f32(float, float, float) #0
 
 define void @ffmuladd(float %b, float %c) {
 ; MIPS32-O32-LABEL: ffmuladd:
@@ -2275,21 +2259,16 @@ define void @ffmuladd(float %b, float %c) {
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-; MIPS32-N32:     madd.s $f[[F1:[0-9]]], $f13, $f[[F0]], $f12
-; MIPS32-N64:     madd.s $f[[F1:[0-9]]], $f13, $f[[F0]], $f12
-
-  %fmuladd = call float @llvm.fmuladd.f32(float %1, float %b, float %c)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %fmuladd)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %fmuladd = call float @llvm.fmuladd.f32(float %2, float %b, float %c)
+  %3 = fptrunc float %fmuladd to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.fabs.f32(float %Val)
+declare float @llvm.fabs.f32(float) #0
 
 define void @ffabs() {
 ; MIPS32-LABEL: ffabs:
@@ -2350,19 +2329,16 @@ define void @ffabs() {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %fabs = call float @llvm.fabs.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %fabs)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %fabs = call float @llvm.fabs.f32(float %2)
+  %3 = fptrunc float %fabs to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.minnum.f32(float %Val, float %b)
+declare float @llvm.minnum.f32(float, float) #0
 
 define void @fminnum(float %b) {
 ; MIPS32-O32-LABEL: fminnum:
@@ -2466,14 +2442,13 @@ define void @fminnum(float %b) {
 ; MIPSR6-O32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPSR6-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPSR6-O32-NEXT:    addu $1, $2, $25
-; MIPSR6-O32-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-O32-NEXT:    lw $1, %got(g)($1)
 ; MIPSR6-O32-NEXT:    lh $2, 0($1)
-; MIPSR6-O32-NEXT:    fill.h $w1, $2
-; MIPSR6-O32-NEXT:    fexupr.w $w1, $w1
-; MIPSR6-O32-NEXT:    copy_s.w $2, $w1[0]
-; MIPSR6-O32-NEXT:    mtc1 $2, $f1
-; MIPSR6-O32-NEXT:    min.s $f0, $f1, $f0
+; MIPSR6-O32-NEXT:    fill.h $w0, $2
+; MIPSR6-O32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-O32-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-O32-NEXT:    mtc1 $2, $f0
+; MIPSR6-O32-NEXT:    min.s $f0, $f0, $f12
 ; MIPSR6-O32-NEXT:    mfc1 $2, $f0
 ; MIPSR6-O32-NEXT:    fill.w $w0, $2
 ; MIPSR6-O32-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2486,14 +2461,13 @@ define void @fminnum(float %b) {
 ; MIPSR6-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
 ; MIPSR6-N32-NEXT:    addu $1, $1, $25
 ; MIPSR6-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(fminnum)))
-; MIPSR6-N32-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-N32-NEXT:    lw $1, %got_disp(g)($1)
 ; MIPSR6-N32-NEXT:    lh $2, 0($1)
-; MIPSR6-N32-NEXT:    fill.h $w1, $2
-; MIPSR6-N32-NEXT:    fexupr.w $w1, $w1
-; MIPSR6-N32-NEXT:    copy_s.w $2, $w1[0]
-; MIPSR6-N32-NEXT:    mtc1 $2, $f1
-; MIPSR6-N32-NEXT:    min.s $f0, $f1, $f0
+; MIPSR6-N32-NEXT:    fill.h $w0, $2
+; MIPSR6-N32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N32-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-N32-NEXT:    mtc1 $2, $f0
+; MIPSR6-N32-NEXT:    min.s $f0, $f0, $f12
 ; MIPSR6-N32-NEXT:    mfc1 $2, $f0
 ; MIPSR6-N32-NEXT:    fill.w $w0, $2
 ; MIPSR6-N32-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2506,14 +2480,13 @@ define void @fminnum(float %b) {
 ; MIPSR6-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fminnum)))
 ; MIPSR6-N64-NEXT:    daddu $1, $1, $25
 ; MIPSR6-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(fminnum)))
-; MIPSR6-N64-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-N64-NEXT:    ld $1, %got_disp(g)($1)
 ; MIPSR6-N64-NEXT:    lh $2, 0($1)
-; MIPSR6-N64-NEXT:    fill.h $w1, $2
-; MIPSR6-N64-NEXT:    fexupr.w $w1, $w1
-; MIPSR6-N64-NEXT:    copy_s.w $2, $w1[0]
-; MIPSR6-N64-NEXT:    mtc1 $2, $f1
-; MIPSR6-N64-NEXT:    min.s $f0, $f1, $f0
+; MIPSR6-N64-NEXT:    fill.h $w0, $2
+; MIPSR6-N64-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N64-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-N64-NEXT:    mtc1 $2, $f0
+; MIPSR6-N64-NEXT:    min.s $f0, $f0, $f12
 ; MIPSR6-N64-NEXT:    mfc1 $2, $f0
 ; MIPSR6-N64-NEXT:    fill.w $w0, $2
 ; MIPSR6-N64-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2522,19 +2495,16 @@ define void @fminnum(float %b) {
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %minnum = call float @llvm.minnum.f32(float %1, float %b)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %minnum)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %minnum = call float @llvm.minnum.f32(float %2, float %b)
+  %3 = fptrunc float %minnum to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.maxnum.f32(float %Val, float %b)
+declare float @llvm.maxnum.f32(float, float) #0
 
 define void @fmaxnum(float %b) {
 ; MIPS32-O32-LABEL: fmaxnum:
@@ -2638,14 +2608,13 @@ define void @fmaxnum(float %b) {
 ; MIPSR6-O32-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPSR6-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; MIPSR6-O32-NEXT:    addu $1, $2, $25
-; MIPSR6-O32-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-O32-NEXT:    lw $1, %got(g)($1)
 ; MIPSR6-O32-NEXT:    lh $2, 0($1)
-; MIPSR6-O32-NEXT:    fill.h $w1, $2
-; MIPSR6-O32-NEXT:    fexupr.w $w1, $w1
-; MIPSR6-O32-NEXT:    copy_s.w $2, $w1[0]
-; MIPSR6-O32-NEXT:    mtc1 $2, $f1
-; MIPSR6-O32-NEXT:    max.s $f0, $f1, $f0
+; MIPSR6-O32-NEXT:    fill.h $w0, $2
+; MIPSR6-O32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-O32-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-O32-NEXT:    mtc1 $2, $f0
+; MIPSR6-O32-NEXT:    max.s $f0, $f0, $f12
 ; MIPSR6-O32-NEXT:    mfc1 $2, $f0
 ; MIPSR6-O32-NEXT:    fill.w $w0, $2
 ; MIPSR6-O32-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2658,14 +2627,13 @@ define void @fmaxnum(float %b) {
 ; MIPSR6-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
 ; MIPSR6-N32-NEXT:    addu $1, $1, $25
 ; MIPSR6-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(fmaxnum)))
-; MIPSR6-N32-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-N32-NEXT:    lw $1, %got_disp(g)($1)
 ; MIPSR6-N32-NEXT:    lh $2, 0($1)
-; MIPSR6-N32-NEXT:    fill.h $w1, $2
-; MIPSR6-N32-NEXT:    fexupr.w $w1, $w1
-; MIPSR6-N32-NEXT:    copy_s.w $2, $w1[0]
-; MIPSR6-N32-NEXT:    mtc1 $2, $f1
-; MIPSR6-N32-NEXT:    max.s $f0, $f1, $f0
+; MIPSR6-N32-NEXT:    fill.h $w0, $2
+; MIPSR6-N32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N32-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-N32-NEXT:    mtc1 $2, $f0
+; MIPSR6-N32-NEXT:    max.s $f0, $f0, $f12
 ; MIPSR6-N32-NEXT:    mfc1 $2, $f0
 ; MIPSR6-N32-NEXT:    fill.w $w0, $2
 ; MIPSR6-N32-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2678,14 +2646,13 @@ define void @fmaxnum(float %b) {
 ; MIPSR6-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fmaxnum)))
 ; MIPSR6-N64-NEXT:    daddu $1, $1, $25
 ; MIPSR6-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(fmaxnum)))
-; MIPSR6-N64-NEXT:    min.s $f0, $f12, $f12
 ; MIPSR6-N64-NEXT:    ld $1, %got_disp(g)($1)
 ; MIPSR6-N64-NEXT:    lh $2, 0($1)
-; MIPSR6-N64-NEXT:    fill.h $w1, $2
-; MIPSR6-N64-NEXT:    fexupr.w $w1, $w1
-; MIPSR6-N64-NEXT:    copy_s.w $2, $w1[0]
-; MIPSR6-N64-NEXT:    mtc1 $2, $f1
-; MIPSR6-N64-NEXT:    max.s $f0, $f1, $f0
+; MIPSR6-N64-NEXT:    fill.h $w0, $2
+; MIPSR6-N64-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N64-NEXT:    copy_s.w $2, $w0[0]
+; MIPSR6-N64-NEXT:    mtc1 $2, $f0
+; MIPSR6-N64-NEXT:    max.s $f0, $f0, $f12
 ; MIPSR6-N64-NEXT:    mfc1 $2, $f0
 ; MIPSR6-N64-NEXT:    fill.w $w0, $2
 ; MIPSR6-N64-NEXT:    fexdo.h $w0, $w0, $w0
@@ -2694,21 +2661,16 @@ define void @fmaxnum(float %b) {
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %maxnum = call float @llvm.maxnum.f32(float %1, float %b)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %maxnum)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %maxnum = call float @llvm.maxnum.f32(float %2, float %b)
+  %3 = fptrunc float %maxnum to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-; This expansion of fcopysign could be done without converting f16 to float.
-
-declare float @llvm.copysign.f32(float %Val, float %b)
+declare float @llvm.copysign.f32(float, float) #0
 
 define void @fcopysign(float %b) {
 ; MIPS32-LABEL: fcopysign:
@@ -2769,19 +2731,16 @@ define void @fcopysign(float %b) {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %copysign = call float @llvm.copysign.f32(float %1, float %b)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %copysign)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %copysign = call float @llvm.copysign.f32(float %2, float %b)
+  %3 = fptrunc float %copysign to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.floor.f32(float %Val)
+declare float @llvm.floor.f32(float) #0
 
 define void @ffloor() {
 ; MIPS32-LABEL: ffloor:
@@ -2878,19 +2837,16 @@ define void @ffloor() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %floor = call float @llvm.floor.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %floor)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %floor = call float @llvm.floor.f32(float %2)
+  %3 = fptrunc float %floor to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.ceil.f32(float %Val)
+declare float @llvm.ceil.f32(float) #0
 
 define void @fceil() {
 ; MIPS32-LABEL: fceil:
@@ -2987,19 +2943,16 @@ define void @fceil() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %ceil = call float @llvm.ceil.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %ceil)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %ceil = call float @llvm.ceil.f32(float %2)
+  %3 = fptrunc float %ceil to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.trunc.f32(float %Val)
+declare float @llvm.trunc.f32(float) #0
 
 define void @ftrunc() {
 ; MIPS32-LABEL: ftrunc:
@@ -3096,19 +3049,16 @@ define void @ftrunc() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %trunc = call float @llvm.trunc.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %trunc)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %trunc = call float @llvm.trunc.f32(float %2)
+  %3 = fptrunc float %trunc to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.rint.f32(float %Val)
+declare float @llvm.rint.f32(float) #0
 
 define void @frint() {
 ; MIPS32-LABEL: frint:
@@ -3205,17 +3155,16 @@ define void @frint() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-  %rint = call float @llvm.rint.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %rint)
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %rint = call float @llvm.rint.f32(float %2)
+  %3 = fptrunc float %rint to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.nearbyint.f32(float %Val)
+declare float @llvm.nearbyint.f32(float) #0
 
 define void @fnearbyint() {
 ; MIPS32-LABEL: fnearbyint:
@@ -3312,19 +3261,16 @@ define void @fnearbyint() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %nearbyint = call float @llvm.nearbyint.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %nearbyint)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %nearbyint = call float @llvm.nearbyint.f32(float %2)
+  %3 = fptrunc float %nearbyint to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
-declare float @llvm.round.f32(float %Val)
+declare float @llvm.round.f32(float) #0
 
 define void @fround() {
 ; MIPS32-LABEL: fround:
@@ -3421,14 +3367,13 @@ define void @fround() {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
   %0 = load i16, ptr @g, align 2
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
-
-
-  %round = call float @llvm.round.f32(float %1)
-  %2 = call i16 @llvm.convert.to.fp16.f32(float %round)
-
-
-  store i16 %2, ptr @g, align 2
-
+  %1 = bitcast i16 %0 to half
+  %2 = fpext half %1 to float
+  %round = call float @llvm.round.f32(float %2)
+  %3 = fptrunc float %round to half
+  %4 = bitcast half %3 to i16
+  store i16 %4, ptr @g, align 2
   ret void
 }
+
+attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }

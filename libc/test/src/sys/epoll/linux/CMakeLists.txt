@@ -11,6 +11,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sys.epoll.epoll_create
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -25,6 +26,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sys.epoll.epoll_create1
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -42,6 +44,7 @@ add_libc_unittest(
     libc.src.sys.epoll.epoll_ctl
     libc.src.unistd.pipe
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -60,6 +63,7 @@ add_libc_unittest(
     libc.src.sys.epoll.epoll_wait
     libc.src.unistd.pipe
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -78,6 +82,7 @@ add_libc_unittest(
     libc.src.sys.epoll.epoll_pwait
     libc.src.unistd.pipe
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -97,5 +102,6 @@ add_libc_unittest(
     libc.src.sys.epoll.epoll_pwait2
     libc.src.unistd.pipe
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

@@ -142,6 +142,38 @@ INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
 #undef INSTR_PROF_VALUE_NODE
 /* INSTR_PROF_VALUE_NODE end. */
 
+/* INSTR_PROF_GPU_SECT start. */
+/* Fields of the GPU profile section bounds structure, populated by the
+ * compiler runtime and read by the host to extract profiling data. */
+#ifndef INSTR_PROF_GPU_SECT
+#define INSTR_PROF_GPU_SECT(Type, LLVMType, Name, Initializer)
+#else
+#define INSTR_PROF_DATA_DEFINED
+#endif
+INSTR_PROF_GPU_SECT(const char *, llvm::PointerType::getUnqual(Ctx),           \
+                    NamesStart,                                                \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const char *, llvm::PointerType::getUnqual(Ctx),           \
+                    NamesStop,                                                 \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(char *, llvm::PointerType::getUnqual(Ctx),                 \
+                    CountersStart,                                             \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(char *, llvm::PointerType::getUnqual(Ctx),                 \
+                    CountersStop,                                              \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const __llvm_profile_data *, llvm::PointerType::getUnqual( \
+                    Ctx), DataStart,                                           \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const __llvm_profile_data *, llvm::PointerType::getUnqual( \
+                    Ctx), DataStop,                                            \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(uint64_t *, llvm::PointerType::getUnqual(Ctx),             \
+                    VersionVar,                                                \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+#undef INSTR_PROF_GPU_SECT
+/* INSTR_PROF_GPU_SECT end. */
+
 /* INSTR_PROF_RAW_HEADER  start */
 /* Definition of member fields of the raw profile header data structure. */
 /* Please update llvm/docs/InstrProfileFormat.rst as appropriate when updating
@@ -348,9 +380,6 @@ INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
 INSTR_PROF_SECT_ENTRY(IPSK_covfun, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON), \
                       INSTR_PROF_COVFUN_COFF, "__LLVM_COV,")
-INSTR_PROF_SECT_ENTRY(IPSK_orderfile, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON), \
-                      INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COFF), "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_covdata, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON), \
                       INSTR_PROF_COVDATA_COFF, "__LLVM_COV,")
@@ -408,14 +437,14 @@ typedef struct ValueProfRecord {
   /*!
    * Read data from this record and save it to Record.
    */
-  void deserializeTo(InstrProfRecord &Record,
+  LLVM_ABI void deserializeTo(InstrProfRecord &Record,
                      InstrProfSymtab *SymTab);
   /*
    * In-place byte swap:
    * Do byte swap for this instance. \c Old is the original order before
    * the swap, and \c New is the New byte order.
    */
-  void swapBytes(llvm::endianness Old, llvm::endianness New);
+  LLVM_ABI void swapBytes(llvm::endianness Old, llvm::endianness New);
 #endif
 } ValueProfRecord;
 
@@ -452,48 +481,48 @@ typedef struct ValueProfData {
    * Return the total size in bytes of the on-disk value profile data
    * given the data stored in Record.
    */
-  static uint32_t getSize(const InstrProfRecord &Record);
+  LLVM_ABI static uint32_t getSize(const InstrProfRecord &Record);
   /*!
    * Return a pointer to \c ValueProfData instance ready to be streamed.
    */
-  static std::unique_ptr<ValueProfData>
+  LLVM_ABI static std::unique_ptr<ValueProfData>
   serializeFrom(const InstrProfRecord &Record);
   /*!
    * Check the integrity of the record.
    */
-  Error checkIntegrity();
+  LLVM_ABI Error checkIntegrity();
   /*!
    * Return a pointer to \c ValueProfileData instance ready to be read.
    * All data in the instance are properly byte swapped. The input
    * data is assumed to be in little endian order.
    */
-  static Expected<std::unique_ptr<ValueProfData>>
+  LLVM_ABI static Expected<std::unique_ptr<ValueProfData>>
   getValueProfData(const unsigned char *SrcBuffer,
                    const unsigned char *const SrcBufferEnd,
                    llvm::endianness SrcDataEndianness);
   /*!
    * Swap byte order from \c Endianness order to host byte order.
    */
-  void swapBytesToHost(llvm::endianness Endianness);
+  LLVM_ABI void swapBytesToHost(llvm::endianness Endianness);
   /*!
    * Swap byte order from host byte order to \c Endianness order.
    */
-  void swapBytesFromHost(llvm::endianness Endianness);
+  LLVM_ABI void swapBytesFromHost(llvm::endianness Endianness);
   /*!
    * Return the total size of \c ValueProfileData.
    */
-  uint32_t getSize() const { return TotalSize; }
+  LLVM_ABI uint32_t getSize() const { return TotalSize; }
   /*!
    * Read data from this data and save it to \c Record.
    */
-  void deserializeTo(InstrProfRecord &Record,
+  LLVM_ABI void deserializeTo(InstrProfRecord &Record,
                      InstrProfSymtab *SymTab);
   void operator delete(void *ptr) { ::operator delete(ptr); }
 #endif
 } ValueProfData;
 
 /*
- * The closure is designed to abstact away two types of value profile data:
+ * The closure is designed to abstract away two types of value profile data:
  * - InstrProfRecord which is the primary data structure used to
  *   represent profile data in host tools (reader, writer, and profile-use)
  * - value profile runtime data structure suitable to be used by C
@@ -725,7 +754,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Raw profile format version (start from 1). */
 #define INSTR_PROF_RAW_VERSION 10
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 12
+#define INSTR_PROF_INDEX_VERSION 13
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 6
 
@@ -764,6 +793,10 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * specified via command line. */
 #define INSTR_PROF_PROFILE_NAME_VAR __llvm_profile_filename
 
+/* GPU profiling section bounds structure, populated by the compiler runtime
+ * and read by the host to extract profiling data. */
+#define INSTR_PROF_SECT_BOUNDS_TABLE __llvm_profile_sections
+
 /* section name strings common to all targets other
    than WIN32 */
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
@@ -778,7 +811,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVFUN_COMMON __llvm_covfun
 #define INSTR_PROF_COVDATA_COMMON __llvm_covdata
 #define INSTR_PROF_COVNAME_COMMON __llvm_covnames
-#define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
 #define INSTR_PROF_COVINIT_COMMON __llvm_covinit
 
 /* Windows section names. Because these section names contain dollar characters,
@@ -799,7 +831,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define INSTR_PROF_COVDATA_COFF ".lcovd"
 #define INSTR_PROF_COVNAME_COFF ".lcovn"
-#define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
 
 // FIXME: Placeholder for Windows. Windows currently does not initialize
 // the GCOV functions in the runtime.
@@ -823,7 +854,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_COVFUN_COFF
 #define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_COVDATA_COFF
 #define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_COVNAME_COFF
-#define INSTR_PROF_ORDERFILE_SECT_NAME INSTR_PROF_ORDERFILE_COFF
 #define INSTR_PROF_COVINIT_SECT_NAME INSTR_PROF_COVINIT_COFF
 #else
 /* Runtime section names and name strings.  */
@@ -843,18 +873,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON)
 #define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON)
 #define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON)
-/* Order file instrumentation. */
-#define INSTR_PROF_ORDERFILE_SECT_NAME                                         \
-  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON)
 #define INSTR_PROF_COVINIT_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVINIT_COMMON)
 #endif
-
-#define INSTR_PROF_ORDERFILE_BUFFER_NAME _llvm_order_file_buffer
-#define INSTR_PROF_ORDERFILE_BUFFER_NAME_STR                                   \
-  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_BUFFER_NAME)
-#define INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME _llvm_order_file_buffer_idx
-#define INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME_STR                               \
-  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME)
 
 /* Macros to define start/stop section symbol for a given
  * section on Linux. For instance
@@ -889,12 +909,6 @@ typedef struct InstrProfValueData {
 
 #endif /* INSTR_PROF_DATA_INC */
 
-#ifndef INSTR_ORDER_FILE_INC
-/* The maximal # of functions: 128*1024 (the buffer size will be 128*4 KB). */
-#define INSTR_ORDER_FILE_BUFFER_SIZE 131072
-#define INSTR_ORDER_FILE_BUFFER_BITS 17
-#define INSTR_ORDER_FILE_BUFFER_MASK 0x1ffff
-#endif /* INSTR_ORDER_FILE_INC */
 #else
 #undef INSTR_PROF_DATA_DEFINED
 #endif

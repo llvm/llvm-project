@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=debugify,instcombine -S | FileCheck %s
-; RUN: opt < %s -passes=debugify,instcombine -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 declare i32 @escape(i32)
 

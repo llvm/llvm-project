@@ -8,6 +8,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -24,11 +25,22 @@ class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
   AAResults *AA = nullptr;
   ScalarEvolution *SE = nullptr;
-
+  // NOTE: We define the Context as a pass-scope object instead of local object
+  // in runOnFunction() because the passes defined in the pass-manager need
+  // access to it for registering/deregistering callbacks during construction
+  // and destruction.
   std::unique_ptr<sandboxir::Context> Ctx;
 
   // A pipeline of SandboxIR function passes run by the vectorizer.
+  // NOTE: We define this as a pass-scope object to avoid recreating the
+  // pass-pipeline every time in runOnFunction(). The downside is that the
+  // Context also needs to be defined as a pass-scope object because the passes
+  // within FPM may register/unregister callbacks, so they need access to
+  // Context.
   sandboxir::FunctionPassManager FPM;
+  /// \Returns true if we should attempt to vectorize \p SrcFilePath based on
+  /// `AllowFiles` option.
+  bool allowFile(const std::string &SrcFilePath);
 
   bool runImpl(Function &F);
 
@@ -38,11 +50,11 @@ public:
   // Vectorizer component can't find the vtable for classes like
   // sandboxir::Pass. This way we don't have to make LLVMPasses add a direct
   // dependency on SandboxIR.
-  SandboxVectorizerPass();
-  SandboxVectorizerPass(SandboxVectorizerPass &&);
-  ~SandboxVectorizerPass();
+  LLVM_ABI SandboxVectorizerPass();
+  LLVM_ABI SandboxVectorizerPass(SandboxVectorizerPass &&);
+  LLVM_ABI ~SandboxVectorizerPass();
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm

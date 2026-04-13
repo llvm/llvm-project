@@ -8,10 +8,13 @@
 // XFAIL: i386-linux
 
 // These don't intercept __tls_get_addr.
-// XFAIL: lsan,hwasan,ubsan
+// XFAIL: lsan,hwasan,tysan,ubsan
 
 // FIXME: Fails for unknown reasons.
 // UNSUPPORTED: powerpc64le-target-arch
+
+// Fails because AArch64 uses TLSDESC instead of __tls_get_addr.
+// UNSUPPORTED: aarch64-target-arch
 
 #ifndef BUILD_SO
 #  include <assert.h>

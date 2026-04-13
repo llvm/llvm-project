@@ -112,7 +112,7 @@ void analyzeProfMetadata(BasicBlock *BB,
                          BranchProbability ColdProbThresh,
                          SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks) {
   // TODO: Handle branches with > 2 successors.
-  BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
+  CondBrInst *CondBr = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!CondBr)
     return;
 
@@ -199,7 +199,7 @@ static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
     F.addFnAttr(Attribute::Cold);
     Changed = true;
   }
-  if (!F.hasFnAttribute(Attribute::MinSize)) {
+  if (!F.hasMinSize()) {
     F.addFnAttr(Attribute::MinSize);
     Changed = true;
   }
@@ -287,7 +287,7 @@ static InstructionCost getOutliningBenefit(ArrayRef<BasicBlock *> Region,
   // with \ref getOutliningPenalty is needed to model the costs of terminators.
   InstructionCost Benefit = 0;
   for (BasicBlock *BB : Region)
-    for (Instruction &I : BB->instructionsWithoutDebug())
+    for (Instruction &I : *BB)
       if (&I != BB->getTerminator())
         Benefit +=
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
@@ -733,7 +733,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             none_of(SubRegion, [&](BasicBlock *Block) {
               return ColdBlocks.contains(Block);
             })) {
-          ColdBlocks.insert(SubRegion.begin(), SubRegion.end());
+          ColdBlocks.insert_range(SubRegion);
 
           LLVM_DEBUG({
             for (auto *Block : SubRegion)

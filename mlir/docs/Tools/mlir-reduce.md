@@ -76,6 +76,9 @@ example,
 #include "mlir/Reducer/ReductionPatternInterface.h"
 
 struct MyReductionPatternInterface : public DialectReductionPatternInterface {
+  MyReductionPatternInterface(Dialect *dialect)
+      : DialectReductionPatternInterface(dialect) {};
+
   virtual void
   populateReductionPatterns(RewritePatternSet &patterns) const final {
     populateMyReductionPatterns(patterns);

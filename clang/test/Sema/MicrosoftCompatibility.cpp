@@ -8,3 +8,10 @@ struct cls {
 };
 
 char * cls::* __uptr wrong2 = &cls::m; // expected-error {{'__uptr' attribute cannot be used with pointers to members}}
+
+// Microsoft allows inline, __inline, and __forceinline to appear on a typedef
+// of a function type, but only in C. See GitHub #124869 for more details.
+typedef int inline Foo1(int);       // expected-error {{'inline' can only appear on functions}}
+typedef int __inline Foo2(int);     // expected-error {{'inline' can only appear on functions}}
+typedef int __forceinline Foo(int); // expected-error {{'inline' can only appear on functions}} \
+                                       expected-warning {{'__forceinline' attribute only applies to functions and statements}}

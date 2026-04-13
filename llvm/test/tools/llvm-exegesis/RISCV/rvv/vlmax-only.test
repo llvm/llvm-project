@@ -1,0 +1,7 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVFWREDUSUM_VS_M1_E32 \
+# RUN:    --riscv-vlmax-for-vl --max-configs-per-opcode=1000 --min-instructions=100 | FileCheck %s
+
+# Only allow VLMAX for AVL when -riscv-vlmax-for-vl is present
+# CHECK: PseudoVFWREDUSUM_VS_M1_E32
+# CHECK: AVL: VLMAX
+# CHECK-NOT: AVL: {{(simm5|<MCOperand: .*>)}}

@@ -17,8 +17,6 @@ namespace dwarf {
 
 llvm::StringRef DW_TAG_value_to_name(dw_tag_t tag);
 
-const char *DW_OP_value_to_name(uint32_t val);
-
 } // namespace dwarf
 } // namespace lldb_private::plugin
 

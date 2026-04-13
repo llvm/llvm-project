@@ -18,18 +18,11 @@
 struct Comp {
   using is_transparent = void;
 
-  bool operator()(const std::pair<int, int>& lhs,
-                  const std::pair<int, int>& rhs) const {
-    return lhs < rhs;
-  }
+  bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const { return lhs < rhs; }
 
-  bool operator()(const std::pair<int, int>& lhs, int rhs) const {
-    return lhs.first < rhs;
-  }
+  bool operator()(const std::pair<int, int>& lhs, int rhs) const { return lhs.first < rhs; }
 
-  bool operator()(int lhs, const std::pair<int, int>& rhs) const {
-    return lhs < rhs.first;
-  }
+  bool operator()(int lhs, const std::pair<int, int>& rhs) const { return lhs < rhs.first; }
 };
 
 template <typename Container>

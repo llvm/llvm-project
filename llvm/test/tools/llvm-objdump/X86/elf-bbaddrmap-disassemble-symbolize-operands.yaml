@@ -33,10 +33,10 @@
 # ATT-NEXT: <BB0>:
 # ATT-NEXT:   pushq  %rax
 # ATT-NEXT:   movl   %edx, %eax
-# ATT-NEXT:   je     <BB2>
-# ATT-NEXT: <BB1>:
-# ATT-NEXT:   xorl   %esi, %esi
+# ATT-NEXT:   je     <BB4>
 # ATT-NEXT: <BB2>:
+# ATT-NEXT:   xorl   %esi, %esi
+# ATT-NEXT: <BB4>:
 # ATT-NEXT:   callq  <bar>
 # ATT-NEXT:   retq
 # ATT:      <foo.cold>:
@@ -60,10 +60,10 @@
 # INTEL-NEXT: <BB0>:
 # INTEL-NEXT:   push  rax
 # INTEL-NEXT:   mov   eax, edx
-# INTEL-NEXT:   je    <BB2>
-# INTEL-NEXT: <BB1>:
-# INTEL-NEXT:   xor   esi, esi
+# INTEL-NEXT:   je    <BB4>
 # INTEL-NEXT: <BB2>:
+# INTEL-NEXT:   xor   esi, esi
+# INTEL-NEXT: <BB4>:
 # INTEL-NEXT:   call  <bar>
 # INTEL-NEXT:   ret
 # INTEL:      <foo.cold>:
@@ -139,17 +139,20 @@ Sections:
     Type:   SHT_LLVM_BB_ADDR_MAP
     Link:   .text.bar
     Entries:
-      - Version: 1
+      - Version: 2
         BBRanges:
          - BaseAddress: 0x5000
            BBEntries:
-            - AddressOffset: 0x0
+            - ID:            0
+              AddressOffset: 0x0
               Size:          0x1
               Metadata:      0x1
-            - AddressOffset: 0x4
+            - ID:            2
+              AddressOffset: 0x4
               Size:          0x2
               Metadata:      0x0
-            - AddressOffset: 0x0
+            - ID:            4
+              AddressOffset: 0x0
               Size:          0x6
               Metadata:      0x0
 
@@ -230,17 +233,20 @@ Sections:
                AddressOffset: 0x0
                Size:          0x1
                Metadata:      0x2
-      - Version: 1
+      - Version: 2
         BBRanges:
          - BaseAddress: 0x5000
            BBEntries:
-            - AddressOffset: 0x0
+            - ID:            0
+              AddressOffset: 0x0
               Size:          0x1
               Metadata:      0x1
-            - AddressOffset: 0x4
+            - ID:            2
+              AddressOffset: 0x4
               Size:          0x2
               Metadata:      0x0
-            - AddressOffset: 0x0
+            - ID:            4
+              AddressOffset: 0x0
               Size:          0x6
               Metadata:      0x0
 

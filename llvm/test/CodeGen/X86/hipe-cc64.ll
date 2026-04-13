@@ -21,14 +21,13 @@ define void @zap(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    movl $2, %ecx
 ; CHECK-NEXT:    movl $3, %r8d
 ; CHECK-NEXT:    movq %rax, %r9
-; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    retq
+; CHECK-NEXT:    jmp foo@PLT # TAILCALL
 entry:
   %0 = call cc 11 {i64, i64, i64} @addfour(i64 undef, i64 undef, i64 %a, i64 %b, i64 8, i64 9)
   %res = extractvalue {i64, i64, i64} %0, 2
