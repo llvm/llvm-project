@@ -59404,15 +59404,15 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
 
   // If upper 33 bits of operands are 0, truncates opcode from i64 to i32.
   if (VT == MVT::i64) {
-    APInt mask = APInt::getHighBitsSet(64, 33);
-    if (DAG.MaskedValueIsZero(Op0, mask) && DAG.MaskedValueIsZero(Op1, mask)) {
+    APInt Mask = APInt::getHighBitsSet(64, 33);
+    if (DAG.MaskedValueIsZero(Op0, Mask) && DAG.MaskedValueIsZero(Op1, Mask)) {
       // Truncate operands  MVT::i64 -> MVT::i32
       SDValue X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op0);
       SDValue Y = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
 
       // now check for NUW and NSW
       SDNodeFlags Flags;
-      // No unsigned wrap, both operands has their upper 33bits 0, making their
+      // No unsigned wrap, both operands have their upper 33bits 0, making their
       // sum lower then max unsigned int32.
       Flags.setNoUnsignedWrap(true);
       Flags.setNoSignedWrap(DAG.willNotOverflowAdd(true, X, Y));
