@@ -342,7 +342,7 @@ define i128 @cmov_bsf128(i128 %x, i128 %y) nounwind {
 ; X64-NEXT:    rep bsfq %rdi, %rcx
 ; X64-NEXT:    movl $64, %eax
 ; X64-NEXT:    rep bsfq %rsi, %rax
-; X64-NEXT:    addq $64, %rax
+; X64-NEXT:    addl $64, %eax
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    cmovneq %rcx, %rax
 ; X64-NEXT:    xorl %edx, %edx
@@ -434,7 +434,7 @@ define i128 @cmov_bsf128_undef(i128 %x, i128 %y) nounwind {
 ; X64-NEXT:  # %bb.1: # %select.true.sink
 ; X64-NEXT:    rep bsfq %rdi, %rcx
 ; X64-NEXT:    rep bsfq %rsi, %rax
-; X64-NEXT:    addq $64, %rax
+; X64-NEXT:    addl $64, %eax
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    cmovneq %rcx, %rax
 ; X64-NEXT:    xorl %edx, %edx

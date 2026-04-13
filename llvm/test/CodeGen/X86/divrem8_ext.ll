@@ -197,7 +197,7 @@ define i64 @pr25754(i8 %a, i8 %c) {
 ; X64-NEXT:    divb %sil
 ; X64-NEXT:    movzbl %ah, %ecx
 ; X64-NEXT:    movzbl %al, %eax
-; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    retq
   %r1 = urem i8 %a, %c
   %d1 = udiv i8 %a, %c

@@ -13,7 +13,7 @@ define i64 @test_add_i64_i16_const(i16 %a) nounwind {
 ; X64-LABEL: test_add_i64_i16_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    addq $42, %rax
+; X64-NEXT:    addl $42, %eax
 ; X64-NEXT:    retq
   %zext_a = zext i16 %a to i64
   %sum = add nuw nsw i64 %zext_a, 42
@@ -32,9 +32,9 @@ define i64 @test_add_i64_i16_zext(i16 %a, i16 %b) nounwind {
 ;
 ; X64-LABEL: test_add_i64_i16_zext:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %di, %ecx
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    movzwl %si, %ecx
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    retq
   %zext_a = zext i16 %a to i64
   %zext_b = zext i16 %b to i64
