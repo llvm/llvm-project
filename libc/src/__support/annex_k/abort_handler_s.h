@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_ANNEX_K_ABORT_HANDLER_S_H
 #define LLVM_LIBC_SRC___SUPPORT_ANNEX_K_ABORT_HANDLER_S_H
 
-#include "hdr/stdio_macros.h"
 #include "hdr/types/errno_t.h"
 #include "src/__support/OSUtil/io.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/abort.h"
 
 namespace LIBC_NAMESPACE_DECL {

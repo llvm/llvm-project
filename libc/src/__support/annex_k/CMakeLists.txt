@@ -3,10 +3,9 @@ add_header_library(
   HDRS
     abort_handler_s.h
   DEPENDS
-    libc.hdr.stdio_macros
     libc.hdr.types.errno_t
-    libc.src.__support.macros.config
-    libc.src.__support.macros.attributes
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
     libc.src.stdlib.abort
 )

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/abort_handler_s.h"
+#include "abort_handler_s.h"
 #include "src/__support/annex_k/abort_handler_s.h"
 
 namespace LIBC_NAMESPACE_DECL {
