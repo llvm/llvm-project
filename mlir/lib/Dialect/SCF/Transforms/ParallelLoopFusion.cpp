@@ -740,7 +740,7 @@ std::optional<ParallelOp> interchangeLoops(OpBuilder &builder,
   if (loop.getNumLoops() != 2)
     return std::nullopt;
 
-  OpBuilder::InsertPoint ip = builder.saveInsertionPoint();
+  OpBuilder::InsertionGuard guard(builder);
 
   // Replace the parallel loop with the same parallel loop.
   builder.setInsertionPoint(loop);
@@ -753,14 +753,11 @@ std::optional<ParallelOp> interchangeLoops(OpBuilder &builder,
     mapping.map(iv, riv);
   }
   // Copy parallel loop body
-  if (newOp) {
-    builder.setInsertionPoint(&(newOp.getBody()->front()));
-    for (auto &o : loop.getRegion().getOps()) {
-      if (!isa<scf::ReduceOp>(o))
-        builder.clone(o, mapping);
-    }
+  builder.setInsertionPoint(&(newOp.getBody()->front()));
+  for (auto &o : loop.getRegion().front().without_terminator()) {
+    if (!isa<scf::ReduceOp>(o))
+      builder.clone(o, mapping);
   }
-  builder.restoreInsertionPoint(ip);
   return newOp;
 }
 
