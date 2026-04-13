@@ -729,11 +729,9 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   if (!MD || !MD->isInstance())
     return;
 
-  for (const auto *Field : MD->getParent()->fields()) {
-    OriginList *FieldList = getOriginsList(*Field);
-    if (FieldList)
+  for (const auto *Field : MD->getParent()->fields())
+    if (auto *FieldList = getOriginsList(*Field))
       CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(Call, FieldList));
-  }
 }
 
 void FactsGenerator::handleFunctionCall(const Expr *Call,

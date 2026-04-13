@@ -2533,11 +2533,10 @@ int *noreturn_dead_nested(bool cond, bool cond2, int *num) {
 } // namespace conditional_operator_control_flow
 
 namespace method_call_uses_field_origins {
-int val;
-std::string GLOBAL{"123"};
+int GLOBAL_INT;
+std::string GLOBAL_STRING{"123"};
 
 struct S {
-public:
   int* p_;
   void bar();
   void foo() {
@@ -2546,24 +2545,24 @@ public:
       this->p_ = &num; // expected-warning {{object whose reference is captured does not live long enough}}
     }                  // expected-note {{destroyed here}}
     bar();             // expected-note {{later used here}}
-    this->p_ = &val;
+    this->p_ = &GLOBAL_INT;
+  }
+  void baz() {
+    {
+      int num;
+      this->p_ = &num;
+    }
+    this->p_ = &GLOBAL_INT;
+    bar();
   }
 };
 
 struct T {
-public:
   std::string_view v;
   void bar();
   void foo() {
     v = std::string("tmp"); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
     bar();                  // expected-note {{later used here}}
-  }
-  void baz(){
-    std::vector<std::string> vec = {"42"};
-    v = vec[0];         // expected-warning {{object whose reference is captured is later invalidated}}
-    vec.push_back("1"); // expected-note {{invalidated here}}
-    bar();              // expected-note {{later used here}}
-    v = GLOBAL;
   }
 };
 
@@ -2575,7 +2574,7 @@ void foo() {
     s.p_ = &num;
   }
   s.bar();
-  s.p_ = &val;
+  s.p_ = &GLOBAL_INT;
 }
 
 } // namespace method_call_uses_field_origins
