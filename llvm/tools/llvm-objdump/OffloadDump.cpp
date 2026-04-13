@@ -61,9 +61,10 @@ static void printOffloadBinaryMetadata(const OffloadBinary &OB,
 }
 
 static void printBinary(const OffloadBinary &OB, uint64_t Index,
-                        uint64_t Level = 0, std::string ParentIndex = "") {
+                        uint64_t Level = 0,
+                        Twine ParentIndexPrefix = "") {
   outs() << "\n";
-  outs().indent(Level * 2) << "OFFLOADING IMAGE [" << ParentIndex << Index
+  outs().indent(Level * 2) << "OFFLOADING IMAGE [" << ParentIndexPrefix << Index
                            << "]:\n";
 
   printOffloadBinaryMetadata(OB, Level);
@@ -74,7 +75,7 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index,
 
   MemoryBufferRef InnerBuffer(ImageData, "inner-offload-binary");
   SmallVector<OffloadFile> InnerBinaries;
-  auto Err = extractOffloadBinaries(InnerBuffer, InnerBinaries);
+  Error Err = extractOffloadBinaries(InnerBuffer, InnerBinaries);
   if (Err) {
     reportWarning("failed to extract nested OffloadBinary: " +
                       toString(std::move(Err)),
@@ -91,7 +92,7 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index,
   for (uint64_t I = 0, E = InnerBinaries.size(); I != E; ++I) {
     const OffloadBinary *InnerOB = InnerBinaries[I].getBinary();
     printBinary(*InnerOB, I, Level + 1,
-                ParentIndex + std::to_string(Index) + ".");
+                ParentIndexPrefix + Twine(Index) + ".");
   }
 }
 
