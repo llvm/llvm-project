@@ -132,6 +132,7 @@ void LinkerDriver::parseSubsystem(StringRef arg, WindowsSubsystem *sys,
     .Case("native", IMAGE_SUBSYSTEM_NATIVE)
     .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
     .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
+    .Case("xbox", IMAGE_SUBSYSTEM_XBOX)
     .Default(IMAGE_SUBSYSTEM_UNKNOWN);
   if (*sys == IMAGE_SUBSYSTEM_UNKNOWN && sysStrLower != "default")
     Fatal(ctx) << "unknown subsystem: " << sysStr;
