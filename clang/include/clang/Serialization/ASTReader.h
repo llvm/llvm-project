@@ -105,6 +105,7 @@ class SwitchCase;
 class TargetOptions;
 class Token;
 class TypedefNameDecl;
+class ExplicitInstantiationDecl;
 class ValueDecl;
 class VarDecl;
 
@@ -650,6 +651,11 @@ private:
   /// Map from numbering information for lambdas to the corresponding lambdas.
   llvm::DenseMap<std::pair<const Decl *, unsigned>, NamedDecl *>
       LambdaDeclarationsForMerging;
+
+  /// Map from canonical specialization to the corresponding explicit
+  /// instantiation declaration, for merging across modules.
+  llvm::DenseMap<const Decl *, ExplicitInstantiationDecl *>
+      ExplicitInstantiationDeclsForMerging;
 
   /// Key used to identify LifetimeExtendedTemporaryDecl for merging,
   /// containing the lifetime-extending declaration and the mangling number.

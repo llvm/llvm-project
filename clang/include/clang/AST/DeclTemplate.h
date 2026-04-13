@@ -3413,7 +3413,8 @@ const Decl &adjustDeclToTemplate(const Decl &D);
 ///   template int ns::bar<int>;              // variable template
 ///   template void ns::S<int>::method(int);  // member function
 /// \endcode
-class ExplicitInstantiationDecl : public Decl {
+class ExplicitInstantiationDecl : public Decl,
+                                  public Redeclarable<ExplicitInstantiationDecl> {
   /// The underlying specialization being explicitly instantiated.
   NamedDecl *Specialization = nullptr;
 
@@ -3446,7 +3447,14 @@ class ExplicitInstantiationDecl : public Decl {
   LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned TSK : 3;
 
-  ExplicitInstantiationDecl(DeclContext *DC, NamedDecl *Specialization,
+  using redeclarable_base = Redeclarable<ExplicitInstantiationDecl>;
+
+  ExplicitInstantiationDecl *getNextRedeclarationImpl() override;
+  ExplicitInstantiationDecl *getPreviousDeclImpl() override;
+  ExplicitInstantiationDecl *getMostRecentDeclImpl() override;
+
+  ExplicitInstantiationDecl(ASTContext &C, DeclContext *DC,
+                            NamedDecl *Specialization,
                             SourceLocation ExternLoc,
                             SourceLocation TemplateLoc, SourceLocation TagKWLoc,
                             NestedNameSpecifierLoc QualifierLoc,
@@ -3454,7 +3462,7 @@ class ExplicitInstantiationDecl : public Decl {
                             SourceLocation NameLoc,
                             TypeSourceInfo *TypeAsWritten,
                             TemplateSpecializationKind TSK)
-      : Decl(ExplicitInstantiation, DC, TemplateLoc),
+      : Decl(ExplicitInstantiation, DC, TemplateLoc), redeclarable_base(C),
         Specialization(Specialization), ExternLoc(ExternLoc),
         TagKWLoc(TagKWLoc), QualifierLoc(QualifierLoc),
         TemplateArgsAsWritten(ArgsAsWritten), NameLoc(NameLoc),
@@ -3464,14 +3472,25 @@ class ExplicitInstantiationDecl : public Decl {
     // TSK to be changed to TSK_ExplicitInstantiationDeclaration.
   }
 
-  ExplicitInstantiationDecl(EmptyShell Empty)
-      : Decl(ExplicitInstantiation, Empty), TSK(TSK_Undeclared) {}
+  ExplicitInstantiationDecl(ASTContext &C, EmptyShell Empty)
+      : Decl(ExplicitInstantiation, Empty), redeclarable_base(C),
+        TSK(TSK_Undeclared) {}
 
   virtual void anchor();
 
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+
+  using redecl_range = redeclarable_base::redecl_range;
+  using redecl_iterator = redeclarable_base::redecl_iterator;
+
+  using redeclarable_base::redecls_begin;
+  using redeclarable_base::redecls_end;
+  using redeclarable_base::redecls;
+  using redeclarable_base::getPreviousDecl;
+  using redeclarable_base::getMostRecentDecl;
+  using redeclarable_base::isFirstDecl;
 
   static ExplicitInstantiationDecl *
   Create(ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
@@ -3483,6 +3502,13 @@ public:
 
   static ExplicitInstantiationDecl *CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID);
+
+  ExplicitInstantiationDecl *getCanonicalDecl() override {
+    return getFirstDecl();
+  }
+  const ExplicitInstantiationDecl *getCanonicalDecl() const {
+    return getFirstDecl();
+  }
 
   NamedDecl *getSpecialization() const { return Specialization; }
 

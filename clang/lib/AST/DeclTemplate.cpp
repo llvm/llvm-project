@@ -1794,13 +1794,27 @@ ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
     const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
     TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
   return new (C, DC) ExplicitInstantiationDecl(
-      DC, Specialization, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
+      C, DC, Specialization, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
       ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
 }
 
 ExplicitInstantiationDecl *
 ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) ExplicitInstantiationDecl(EmptyShell());
+  return new (C, ID) ExplicitInstantiationDecl(C, EmptyShell());
+}
+
+ExplicitInstantiationDecl *
+ExplicitInstantiationDecl::getNextRedeclarationImpl() {
+  return getNextRedeclaration();
+}
+
+ExplicitInstantiationDecl *ExplicitInstantiationDecl::getPreviousDeclImpl() {
+  return getPreviousDecl();
+}
+
+ExplicitInstantiationDecl *
+ExplicitInstantiationDecl::getMostRecentDeclImpl() {
+  return getMostRecentDecl();
 }
 
 SourceLocation ExplicitInstantiationDecl::getEndLoc() const {

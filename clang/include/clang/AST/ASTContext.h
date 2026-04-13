@@ -104,6 +104,7 @@ class CXXRecordDecl;
 class DiagnosticsEngine;
 class DynTypedNodeList;
 class Expr;
+class ExplicitInstantiationDecl;
 enum class FloatModeKind;
 class GlobalDecl;
 class IdentifierTable;
@@ -656,6 +657,12 @@ private:
 
   llvm::DenseMap<FieldDecl *, FieldDecl *> InstantiatedFromUnnamedFieldDecl;
 
+  /// Maps a canonical specialization Decl to the first
+  /// ExplicitInstantiationDecl that references it. Further EIDs for the same
+  /// specialization are chained via the Redeclarable mechanism.
+  llvm::DenseMap<const Decl *, ExplicitInstantiationDecl *>
+      ExplicitInstantiations;
+
   /// Mapping that stores the methods overridden by a given C++
   /// member function.
   ///
@@ -1133,6 +1140,14 @@ public:
 
   /// Erase the attributes corresponding to the given declaration.
   void eraseDeclAttrs(const Decl *D);
+
+  /// Get the first ExplicitInstantiationDecl for a given specialization.
+  ExplicitInstantiationDecl *
+  getExplicitInstantiationDecl(const Decl *Spec) const;
+
+  /// Set the ExplicitInstantiationDecl for a given specialization.
+  void setExplicitInstantiationDecl(const Decl *Spec,
+                                    ExplicitInstantiationDecl *EID);
 
   /// If this variable is an instantiated static data member of a
   /// class template specialization, returns the templated static data member

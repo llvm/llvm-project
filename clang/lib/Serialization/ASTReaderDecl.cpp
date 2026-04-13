@@ -109,6 +109,9 @@ public:
   void mergeLambda(CXXRecordDecl *D, RedeclarableResult &Redecl, Decl &Context,
                    unsigned Number);
 
+  void mergeExplicitInstantiationDecl(ExplicitInstantiationDecl *D,
+                                      RedeclarableResult &Redecl);
+
   /// \param KeyDeclID the decl ID of the key declaration \param D.
   /// GlobalDeclID() if \param is not a key declaration.
   /// See the comments of ASTReader::KeyDecls for the explanation
@@ -2788,6 +2791,7 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
 
 void ASTDeclReader::VisitExplicitInstantiationDecl(
     ExplicitInstantiationDecl *D) {
+  RedeclarableResult Redecl = VisitRedeclarable(D);
   VisitDecl(D);
   D->Specialization = readDeclAs<NamedDecl>();
   D->ExternLoc = readSourceLocation();
@@ -2799,6 +2803,13 @@ void ASTDeclReader::VisitExplicitInstantiationDecl(
   D->NameLoc = readSourceLocation();
   D->TypeAsWritten = readTypeSourceInfo();
   D->TSK = Record.readInt();
+
+  // Merge with an existing EID for the same specialization from another module.
+  MergeImpl.mergeExplicitInstantiationDecl(D, Redecl);
+
+  // Rebuild the ASTContext map from specialization to EID.
+  if (D->Specialization)
+    Reader.getContext().setExplicitInstantiationDecl(D->Specialization, D);
 }
 
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
@@ -2934,6 +2945,31 @@ void ASTDeclMerger::mergeLambda(CXXRecordDecl *D, RedeclarableResult &Redecl,
       Context.getCanonicalDecl(), IndexInContext}];
   if (Slot)
     mergeRedeclarable(D, cast<TagDecl>(Slot), Redecl);
+  else
+    Slot = D;
+}
+
+/// Attempt to merge D with a previous explicit instantiation declaration for
+/// the same specialization, which is found by the canonical specialization decl.
+void ASTDeclMerger::mergeExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D, RedeclarableResult &Redecl) {
+  if (!Reader.getContext().getLangOpts().Modules)
+    return;
+
+  if (!D->isFirstDecl())
+    return;
+
+  if (auto *Existing = Redecl.getKnownMergeTarget())
+    mergeRedeclarable(D, cast<ExplicitInstantiationDecl>(Existing), Redecl);
+
+  auto *Spec = D->getSpecialization();
+  if (!Spec)
+    return;
+
+  auto *CanonSpec = Spec->getCanonicalDecl();
+  auto &Slot = Reader.ExplicitInstantiationDeclsForMerging[CanonSpec];
+  if (Slot)
+    mergeRedeclarable(D, Slot, Redecl);
   else
     Slot = D;
 }

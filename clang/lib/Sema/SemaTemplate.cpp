@@ -9326,24 +9326,18 @@ static void addExplicitInstantiationDecl(
   auto *EID = ExplicitInstantiationDecl::Create(
       Context, CurContext, Spec, ExternLoc, TemplateLoc, TagKWLoc, QualifierLoc,
       ArgsAsWritten, NameLoc, TypeAsWritten, TSK);
+  if (auto *Prev = Context.getExplicitInstantiationDecl(Spec))
+    EID->setPreviousDecl(Prev);
+  Context.setExplicitInstantiationDecl(Spec, EID);
   CurContext->addDecl(EID);
 }
 
 /// Compute the diagnostic location for an explicit instantiation
 //  declaration or definition.
 static SourceLocation DiagLocForExplicitInstantiation(
-    NamedDecl* D, SourceLocation PointOfInstantiation) {
-  // Search for an ExplicitInstantiationDecl that references D. Per
-  // [temp.explicit], explicit instantiations must appear in an enclosing
-  // namespace of the template, so the EID is in D's DeclContext or an ancestor.
-  for (DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
-    for (auto *Decl : DC->decls()) {
-      if (auto *EID = dyn_cast<ExplicitInstantiationDecl>(Decl))
-        if (EID->getSpecialization()->getCanonicalDecl() ==
-            D->getCanonicalDecl())
-          return EID->getTemplateLoc();
-    }
-  }
+    NamedDecl *D, SourceLocation PointOfInstantiation) {
+  if (auto *EID = D->getASTContext().getExplicitInstantiationDecl(D))
+    return EID->getTemplateLoc();
 
   // Explicit instantiations following a specialization have no effect and
   // hence no PointOfInstantiation. In that case, walk decl backwards
