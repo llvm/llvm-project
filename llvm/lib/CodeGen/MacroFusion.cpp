@@ -59,9 +59,14 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
   // fusion or non-fusion)
   if (FirstSU.isClustered() || SecondSU.isClustered()) {
     ++NumFusionConflicts;
-    LLVM_DEBUG(dbgs() << "Fusion conflict: cannot fuse SU(" << FirstSU.NodeNum
-                      << ") and SU(" << SecondSU.NodeNum
-                      << ") - already clustered\n");
+    LLVM_DEBUG({
+      dbgs() << "Fusion conflict: cannot fuse SU(" << FirstSU.NodeNum
+             << ") and SU(" << SecondSU.NodeNum << ")\n";
+      if (FirstSU.isClustered())
+        dbgs() << "  SU(" << FirstSU.NodeNum << ") already clustered\n";
+      if (SecondSU.isClustered())
+        dbgs() << "  SU(" << SecondSU.NodeNum << ") already clustered\n";
+    });
     return false;
   }
 
