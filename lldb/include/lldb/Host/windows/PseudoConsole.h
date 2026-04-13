@@ -24,6 +24,8 @@ namespace lldb_private {
 class PseudoConsole {
 
 public:
+  enum class Mode { ConPTY, Pipe, None };
+
   PseudoConsole() = default;
   ~PseudoConsole();
 
@@ -31,6 +33,13 @@ public:
   PseudoConsole(PseudoConsole &&) = delete;
   PseudoConsole &operator=(const PseudoConsole &) = delete;
   PseudoConsole &operator=(PseudoConsole &&) = delete;
+
+  /// Creates a named pipe pair for overlapped I/O. The read end is set to
+  /// non-blocking (PIPE_NOWAIT).
+  /// On failure any handles that were successfully opened are closed and an
+  /// error is returned.
+  llvm::Error CreateOverlappedPipePair(HANDLE &out_read, HANDLE &out_write,
+                                       bool inheritable);
 
   /// Creates and opens a new ConPTY instance with a default console size of
   /// 80x25. Also sets up the associated STDIN/STDOUT pipes and drains any
@@ -42,13 +51,24 @@ public:
   ///     otherwise.
   llvm::Error OpenPseudoConsole();
 
+  /// Creates a pair of anonymous pipes to use for stdio instead of a ConPTY.
+  ///
+  /// \return
+  ///     An llvm::Error if the pipes could not be created.
+  llvm::Error OpenAnonymousPipes();
+
   /// Closes the ConPTY and invalidates its handle, without closing the STDIN
   /// and STDOUT pipes. Closing the ConPTY signals EOF to any process currently
   /// attached to it.
   void Close();
 
-  /// Closes the STDIN and STDOUT pipe handles and invalidates them
-  void ClosePipes();
+  /// Closes the STDIN and STDOUT pipe handles and invalidates them.
+  void ClosePseudoConsolePipes();
+
+  /// Closes the child-side pipe handles (stdin read end and stdout/stderr write
+  /// end) that were passed to CreateProcessW. Must be called after a successful
+  /// CreateProcessW to avoid keeping the pipes alive indefinitely.
+  void CloseAnonymousPipes();
 
   /// Returns whether the ConPTY and its pipes are currently open and valid.
   bool IsConnected() const;
@@ -79,6 +99,14 @@ public:
   ///     The STDIN write HANDLE, or INVALID_HANDLE_VALUE if it is currently
   ///     invalid.
   HANDLE GetSTDINHandle() const { return m_conpty_input; };
+
+  /// The child-side stdin read HANDLE (pipe mode only).
+  HANDLE GetChildStdinHandle() const { return m_pipe_child_stdin; };
+
+  /// The child-side stdout/stderr write HANDLE (pipe mode only).
+  HANDLE GetChildStdoutHandle() const { return m_pipe_child_stdout; };
+
+  Mode GetMode() const { return m_mode; };
 
   /// Drains initialization sequences from the ConPTY output pipe.
   ///
@@ -114,6 +142,10 @@ protected:
   HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
   HANDLE m_conpty_output = ((HANDLE)(long long)-1);
   HANDLE m_conpty_input = ((HANDLE)(long long)-1);
+  // Pipe mode: child-side handles passed to CreateProcessW, closed after launch
+  HANDLE m_pipe_child_stdin = ((HANDLE)(long long)-1);
+  HANDLE m_pipe_child_stdout = ((HANDLE)(long long)-1);
+  Mode m_mode = Mode::None;
   std::mutex m_mutex{};
   std::condition_variable m_cv{};
   std::atomic<bool> m_stopping = false;

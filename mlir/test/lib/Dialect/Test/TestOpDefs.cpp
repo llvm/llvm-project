@@ -256,7 +256,7 @@ OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -273,8 +273,8 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, PropertyRef properties,
+    RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
   auto operandType = operands.front().getType();
@@ -499,6 +499,22 @@ void SideEffectOp::getEffects(
 void SideEffectOp::getEffects(
     SmallVectorImpl<TestEffects::EffectInstance> &effects) {
   testSideEffectOpGetEffect(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionalSideEffectOp
+//===----------------------------------------------------------------------===//
+
+void ConditionalSideEffectOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (!getHasEffects())
+    return;
+
+  SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+  effects.emplace_back(MemoryEffects::Read::get(), resource);
+  effects.emplace_back(MemoryEffects::Write::get(), resource);
+  effects.emplace_back(MemoryEffects::Free::get(), resource);
+  effects.emplace_back(MemoryEffects::Allocate::get(), resource);
 }
 
 void SideEffectWithRegionOp::getEffects(
@@ -1178,7 +1194,7 @@ LogicalResult OpWithInferTypeAdaptorInterfaceOp::inferReturnTypes(
 // refineReturnType, currently only refineReturnType can be omitted.
 LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   returnTypes.clear();
   return OpWithRefineTypeInterfaceOp::refineReturnTypes(
@@ -1188,7 +1204,7 @@ LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -1270,7 +1286,7 @@ OpWithShapedTypeInferTypeAdaptorInterfaceOp::reifyReturnTypeShapes(
 
 LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
     MLIRContext *context, std::optional<Location>, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
 
   Adaptor adaptor(operands, attributes, properties, regions);

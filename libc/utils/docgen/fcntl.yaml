@@ -1,0 +1,121 @@
+functions:
+  creat:
+    in-latest-posix: ''
+  fcntl:
+    in-latest-posix: ''
+  open:
+    in-latest-posix: ''
+  openat:
+    in-latest-posix: ''
+  posix_fadvise:
+    in-latest-posix: ''
+  posix_fallocate:
+    in-latest-posix: ''
+
+macros:
+  AT_EACCESS:
+    in-latest-posix: ''
+  AT_FDCWD:
+    in-latest-posix: ''
+  AT_REMOVEDIR:
+    in-latest-posix: ''
+  AT_SYMLINK_FOLLOW:
+    in-latest-posix: ''
+  AT_SYMLINK_NOFOLLOW:
+    in-latest-posix: ''
+  FD_CLOEXEC:
+    in-latest-posix: ''
+  FD_CLOFORK:
+    in-latest-posix: ''
+  F_DUPFD:
+    in-latest-posix: ''
+  F_DUPFD_CLOEXEC:
+    in-latest-posix: ''
+  F_DUPFD_CLOFORK:
+    in-latest-posix: ''
+  F_GETFD:
+    in-latest-posix: ''
+  F_GETFL:
+    in-latest-posix: ''
+  F_GETLK:
+    in-latest-posix: ''
+  F_GETOWN:
+    in-latest-posix: ''
+  F_OFD_GETLK:
+    in-latest-posix: ''
+  F_OFD_SETLK:
+    in-latest-posix: ''
+  F_OFD_SETLKW:
+    in-latest-posix: ''
+  F_OWNER_PGRP:
+    in-latest-posix: ''
+  F_OWNER_PID:
+    in-latest-posix: ''
+  F_RDLCK:
+    in-latest-posix: ''
+  F_SETFD:
+    in-latest-posix: ''
+  F_SETFL:
+    in-latest-posix: ''
+  F_SETLK:
+    in-latest-posix: ''
+  F_SETLKW:
+    in-latest-posix: ''
+  F_SETOWN:
+    in-latest-posix: ''
+  F_UNLCK:
+    in-latest-posix: ''
+  F_WRLCK:
+    in-latest-posix: ''
+  O_ACCMODE:
+    in-latest-posix: ''
+  O_APPEND:
+    in-latest-posix: ''
+  O_CLOEXEC:
+    in-latest-posix: ''
+  O_CLOFORK:
+    in-latest-posix: ''
+  O_CREAT:
+    in-latest-posix: ''
+  O_DIRECTORY:
+    in-latest-posix: ''
+  O_DSYNC:
+    in-latest-posix: ''
+  O_EXCL:
+    in-latest-posix: ''
+  O_EXEC:
+    in-latest-posix: ''
+  O_NOCTTY:
+    in-latest-posix: ''
+  O_NOFOLLOW:
+    in-latest-posix: ''
+  O_NONBLOCK:
+    in-latest-posix: ''
+  O_RDONLY:
+    in-latest-posix: ''
+  O_RDWR:
+    in-latest-posix: ''
+  O_RSYNC:
+    in-latest-posix: ''
+  O_SEARCH:
+    in-latest-posix: ''
+  O_SYNC:
+    in-latest-posix: ''
+  O_TRUNC:
+    in-latest-posix: ''
+  O_TTY_INIT:
+    in-latest-posix: ''
+  O_WRONLY:
+    in-latest-posix: ''
+  POSIX_FADV_DONTNEED:
+    in-latest-posix: ''
+  POSIX_FADV_NORMAL:
+    in-latest-posix: ''
+  POSIX_FADV_NOREUSE:
+    in-latest-posix: ''
+  POSIX_FADV_RANDOM:
+    in-latest-posix: ''
+  POSIX_FADV_SEQUENTIAL:
+    in-latest-posix: ''
+  POSIX_FADV_WILLNEED:
+    in-latest-posix: ''

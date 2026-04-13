@@ -256,7 +256,7 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     auto descOp = operand->get().getDefiningOp<xegpu::CreateNdDescOp>();
     unsigned operandIdx = operand->getOperandNumber();
 
-    xegpu::LayoutAttr layout = descOp.getType().getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = descOp.getType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           descOp, "the tensor descriptor lacks layout attribute");
@@ -342,7 +342,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Type> offsetTypes = llvm::map_to_vector(
         offsetsAsValues, [](Value v) { return v.getType(); });
     xegpu::TensorDescType tensorDescTy = storeOp.getTensorDescType();
-    xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           storeOp, "the source tensor descriptor lacks layout attribute");
@@ -474,7 +474,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         offsetsAsValues, [](Value v) { return v.getType(); });
 
     xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
-    xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           loadOp, "the source tensor descriptor lacks layout attribute");
@@ -709,7 +709,8 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Type> offsetTypes = llvm::map_to_vector(
         offsetsAsValues, [](Value v) { return v.getType(); });
 
-    xegpu::LayoutAttr layout = prefetchOp.getTensorDescType().getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout =
+        prefetchOp.getTensorDescType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
           prefetchOp, "the source tensor descriptor lacks layout attribute");
@@ -824,12 +825,10 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
       }
     }
 
-    auto layoutPayload =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(0));
+    auto layoutPayload = storeScatterOp.getLayoutAttr();
     auto layoutOffsets =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(2));
-    auto layoutMask =
-        xegpu::getTemporaryLayout(storeScatterOp->getOpOperand(3));
+        xegpu::inferMaskOffsetLayoutForScatterIO(layoutPayload, chunkSize);
+    auto layoutMask = layoutOffsets;
 
     FailureOr<VectorType> distStoreVecByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutPayload, storeVecTy);
@@ -1131,9 +1130,10 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
       }
     }
 
+    auto layoutPayload = loadGatherOp.getLayoutAttr();
     auto layoutOffsets =
-        xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(1));
-    auto layoutMask = xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(2));
+        xegpu::inferMaskOffsetLayoutForScatterIO(layoutPayload, chunkSize);
+    auto layoutMask = layoutOffsets;
 
     FailureOr<VectorType> distOffsetsByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutOffsets, offsetsTy);

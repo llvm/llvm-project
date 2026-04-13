@@ -80,12 +80,10 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_64(ptr addrspace(1) %out, i6
 ; GISEL11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GISEL11-NEXT:    v_cndmask_b32_e64 v0, v0, v12, s0
-; GISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL11-NEXT:    v_cndmask_b32_e64 v1, v1, v13, s0
 ; GISEL11-NEXT:    s_mov_b32 exec_lo, s0
-; GISEL11-NEXT:    v_mov_b32_e32 v2, v0
-; GISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GISEL11-NEXT:    v_mov_b32_e32 v3, v1
+; GISEL11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v1
 ; GISEL11-NEXT:    global_store_b64 v[8:9], v[2:3], off
 ; GISEL11-NEXT:    s_endpgm
 ;
@@ -101,9 +99,7 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_64(ptr addrspace(1) %out, i6
 ; DAGISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; DAGISEL11-NEXT:    v_cndmask_b32_e64 v1, v1, v12, s0
 ; DAGISEL11-NEXT:    s_mov_b32 exec_lo, s0
-; DAGISEL11-NEXT:    v_mov_b32_e32 v3, v1
-; DAGISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; DAGISEL11-NEXT:    v_mov_b32_e32 v4, v2
+; DAGISEL11-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v4, v2
 ; DAGISEL11-NEXT:    global_store_b64 v[8:9], v[3:4], off
 ; DAGISEL11-NEXT:    s_endpgm
 ;

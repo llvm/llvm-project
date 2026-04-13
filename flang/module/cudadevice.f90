@@ -74,252 +74,252 @@ implicit none
   ! Math API
 
   interface __fadd_rn
-   attributes(device) real function __fadd_rn(a,b) bind(c, name='__nv_fadd_rn')
+   attributes(device) real function __fadd_rn(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
   
   interface __fadd_rz
-   attributes(device) real function __fadd_rz(a,b) bind(c, name='__nv_fadd_rz')
+   attributes(device) real function __fadd_rz(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface
-    attributes(device) function __fadd_rd(x, y) bind(c, name='__nv_fadd_rd')
+    attributes(device) function __fadd_rd(x, y) bind(c)
       real, intent(in), value :: x, y
       real :: __fadd_rd
     end function
   end interface
 
   interface
-    attributes(device) function __fadd_ru(x, y) bind(c, name='__nv_fadd_ru')
+    attributes(device) function __fadd_ru(x, y) bind(c)
       real, intent(in), value :: x, y
       real :: __fadd_ru
     end function
   end interface
 
   interface __fmul_rn
-   attributes(device) real function __fmul_rn(a,b) bind(c, name='__nv_fmul_rn')
+   attributes(device) real function __fmul_rn(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface __fmul_rz
-   attributes(device) real function __fmul_rz(a,b) bind(c, name='__nv_fmul_rz')
+   attributes(device) real function __fmul_rz(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface __fmul_ru
-   attributes(device) real function __fmul_ru(a,b) bind(c, name='__nv_fmul_ru')
+   attributes(device) real function __fmul_ru(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface __fmul_rd
-   attributes(device) real function __fmul_rd(a,b) bind(c, name='__nv_fmul_rd')
+   attributes(device) real function __fmul_rd(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface __fmaf_rn
-   attributes(device) real function __fmaf_rn(a,b,c) bind(c, name='__nv_fmaf_rn')
+   attributes(device) real function __fmaf_rn(a,b,c) bind(c)
   !dir$ ignore_tkr (d) a, (d) b, (d) c
     real, value :: a, b, c
    end function
   end interface
 
   interface __fmaf_rz
-   attributes(device) real function __fmaf_rz(a,b,c) bind(c, name='__nv_fmaf_rz')
+   attributes(device) real function __fmaf_rz(a,b,c) bind(c)
   !dir$ ignore_tkr (d) a, (d) b, (d) c
     real, value :: a, b, c
    end function
   end interface
   
   interface __fmaf_ru
-   attributes(device) real function __fmaf_ru(a,b,c) bind(c, name='__nv_fmaf_ru')
+   attributes(device) real function __fmaf_ru(a,b,c) bind(c)
   !dir$ ignore_tkr (d) a, (d) b, (d) c
     real, value :: a, b, c
    end function
   end interface
   
   interface __fmaf_rd
-   attributes(device) real function __fmaf_rd(a,b,c) bind(c, name='__nv_fmaf_rd')
+   attributes(device) real function __fmaf_rd(a,b,c) bind(c)
   !dir$ ignore_tkr (d) a, (d) b, (d) c
     real, value :: a, b, c
    end function
   end interface
 
   interface __frcp_rn
-   attributes(device) real function __frcp_rn(a) bind(c, name='__nv_frcp_rn')
+   attributes(device) real function __frcp_rn(a) bind(c)
   !dir$ ignore_tkr (d) a
     real, value :: a
    end function
   end interface
 
   interface __frcp_rz
-   attributes(device) real function __frcp_rz(a) bind(c, name='__nv_frcp_rz')
+   attributes(device) real function __frcp_rz(a) bind(c)
   !dir$ ignore_tkr (d) a
     real, value :: a
    end function
   end interface
 
   interface __frcp_ru
-   attributes(device) real function __frcp_ru(a) bind(c, name='__nv_frcp_ru')
+   attributes(device) real function __frcp_ru(a) bind(c)
   !dir$ ignore_tkr (d) a
     real, value :: a
    end function
   end interface
 
   interface __frcp_rd
-   attributes(device) real function __frcp_rd(a) bind(c, name='__nv_frcp_rd')
+   attributes(device) real function __frcp_rd(a) bind(c)
   !dir$ ignore_tkr (d) a
     real, value :: a
    end function
   end interface
 
   interface __fsqrt_rn
-   attributes(device) real function __fsqrt_rn(a) bind(c, name='__nv_fsqrt_rn')
+   attributes(device) real function __fsqrt_rn(a) bind(c)
   !dir$ ignore_tkr (d) a
     real, value :: a
    end function
   end interface
 
   interface __fsqrt_rz
-   attributes(device) real function __fsqrt_rz(a) bind(c, name='__nv_fsqrt_rz')
+   attributes(device) real function __fsqrt_rz(a) bind(c)
   !dir$ ignore_tkr (d) a
     real, value :: a
    end function
   end interface
 
   interface __fsqrt_ru
-   attributes(device) real function __fsqrt_ru(a) bind(c, name='__nv_fsqrt_ru')
+   attributes(device) real function __fsqrt_ru(a) bind(c)
   !dir$ ignore_tkr (d) a
     real, value :: a
    end function
   end interface
 
   interface __fsqrt_rd
-   attributes(device) real function __fsqrt_rd(a) bind(c, name='__nv_fsqrt_rd')
+   attributes(device) real function __fsqrt_rd(a) bind(c)
   !dir$ ignore_tkr (d) a
     real, value :: a
    end function
   end interface
 
   interface __fdiv_rn
-   attributes(device) real function __fdiv_rn(a,b) bind(c, name='__nv_fdiv_rn')
+   attributes(device) real function __fdiv_rn(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface __fdiv_rz
-   attributes(device) real function __fdiv_rz(a,b) bind(c, name='__nv_fdiv_rz')
+   attributes(device) real function __fdiv_rz(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface __fdiv_ru
-   attributes(device) real function __fdiv_ru(a,b) bind(c, name='__nv_fdiv_ru')
+   attributes(device) real function __fdiv_ru(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface __fdiv_rd
-   attributes(device) real function __fdiv_rd(a,b) bind(c, name='__nv_fdiv_rd')
+   attributes(device) real function __fdiv_rd(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
   end interface
 
   interface __dadd_rn
-   attributes(device) real(8) function __dadd_rn(a,b) bind(c, name='__nv_dadd_rn')
+   attributes(device) real(8) function __dadd_rn(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b
    end function
   end interface
 
   interface __dadd_rz
-   attributes(device) real(8) function __dadd_rz(a,b) bind(c, name='__nv_dadd_rz')
+   attributes(device) real(8) function __dadd_rz(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b
    end function
   end interface
 
   interface __dadd_ru
-   attributes(device) real(8) function __dadd_ru(a,b) bind(c, name='__nv_dadd_ru')
+   attributes(device) real(8) function __dadd_ru(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b
    end function
   end interface
 
   interface __dadd_rd
-   attributes(device) real(8) function __dadd_rd(a,b) bind(c, name='__nv_dadd_rd')
+   attributes(device) real(8) function __dadd_rd(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b
    end function
   end interface
 
   interface __dmul_rn
-   attributes(device) real(8) function __dmul_rn(a,b) bind(c, name='__nv_dmul_rn')
+   attributes(device) real(8) function __dmul_rn(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b
    end function
   end interface
 
   interface __dmul_rz
-   attributes(device) real(8) function __dmul_rz(a,b) bind(c, name='__nv_dmul_rz')
+   attributes(device) real(8) function __dmul_rz(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b
    end function
   end interface
 
   interface __dmul_ru
-   attributes(device) real(8) function __dmul_ru(a,b) bind(c, name='__nv_dmul_ru')
+   attributes(device) real(8) function __dmul_ru(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b
    end function
   end interface
 
   interface __dmul_rd
-   attributes(device) real(8) function __dmul_rd(a,b) bind(c, name='__nv_dmul_rd')
+   attributes(device) real(8) function __dmul_rd(a,b) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b
    end function
   end interface
 
   interface __fma_rn
-   attributes(device) real(8) function __fma_rn(a,b,c) bind(c, name='__nv_fma_rn')
+   attributes(device) real(8) function __fma_rn(a,b,c) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b, c
    end function
   end interface
 
   interface __fma_rz
-   attributes(device) real(8) function __fma_rz(a,b,c) bind(c, name='__nv_fma_rz')
+   attributes(device) real(8) function __fma_rz(a,b,c) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b, c
    end function
   end interface
 
   interface __fma_ru
-   attributes(device) real(8) function __fma_ru(a,b,c) bind(c, name='__nv_fma_ru')
+   attributes(device) real(8) function __fma_ru(a,b,c) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b, c
    end function
   end interface
 
   interface __fma_rd
-   attributes(device) real(8) function __fma_rd(a,b,c) bind(c, name='__nv_fma_rd')
+   attributes(device) real(8) function __fma_rd(a,b,c) bind(c)
   !dir$ ignore_tkr (d) a, (d) b
     real(8), value :: a, b, c
    end function
@@ -1021,84 +1021,84 @@ implicit none
   end interface
 
   interface __drcp_rd
-    attributes(device) double precision function __drcp_rd(x) bind(c, name='__nv_drcp_rd')
+    attributes(device) double precision function __drcp_rd(x) bind(c)
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
   interface __drcp_rn
-    attributes(device) double precision function __drcp_rn(x) bind(c, name='__nv_drcp_rn')
+    attributes(device) double precision function __drcp_rn(x) bind(c)
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
   interface __drcp_ru
-    attributes(device) double precision function __drcp_ru(x) bind(c, name='__nv_drcp_ru')
+    attributes(device) double precision function __drcp_ru(x) bind(c)
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
   interface __drcp_rz
-    attributes(device) double precision function __drcp_rz(x) bind(c, name='__nv_drcp_rz')
+    attributes(device) double precision function __drcp_rz(x) bind(c)
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
   interface __dsqrt_rd
-    attributes(device) double precision function __dsqrt_rd(x) bind(c, name='__nv_dsqrt_rd')
+    attributes(device) double precision function __dsqrt_rd(x) bind(c)
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
   interface __dsqrt_rn
-    attributes(device) double precision function __dsqrt_rn(x) bind(c, name='__nv_dsqrt_rn')
+    attributes(device) double precision function __dsqrt_rn(x) bind(c)
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
   interface __dsqrt_ru
-    attributes(device) double precision function __dsqrt_ru(x) bind(c, name='__nv_dsqrt_ru')
+    attributes(device) double precision function __dsqrt_ru(x) bind(c)
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
   interface __dsqrt_rz
-    attributes(device) double precision function __dsqrt_rz(x) bind(c, name='__nv_dsqrt_rz')
+    attributes(device) double precision function __dsqrt_rz(x) bind(c)
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
   interface __ddiv_rn
-    attributes(device) double precision function __ddiv_rn(x,y) bind(c, name='__nv_ddiv_rn')
+    attributes(device) double precision function __ddiv_rn(x,y) bind(c)
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_rz
-    attributes(device) double precision function __ddiv_rz(x,y) bind(c, name='__nv_ddiv_rz')
+    attributes(device) double precision function __ddiv_rz(x,y) bind(c)
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_ru
-    attributes(device) double precision function __ddiv_ru(x,y) bind(c, name='__nv_ddiv_ru')
+    attributes(device) double precision function __ddiv_ru(x,y) bind(c)
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_rd
-    attributes(device) double precision function __ddiv_rd(x,y) bind(c, name='__nv_ddiv_rd')
+    attributes(device) double precision function __ddiv_rd(x,y) bind(c)
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function

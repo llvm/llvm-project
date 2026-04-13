@@ -40,6 +40,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <cassert>
 #include <cstdint>
@@ -2398,6 +2399,24 @@ public:
   ///     X|Cst == X+Cst iff X&Cst = 0.
   LLVM_ABI bool isBaseWithConstantOffset(SDValue Op) const;
 
+  /// Determine floating-point class information about \p Op. For vectors, the
+  /// known FP classes are those shared by every demanded vector element.
+  /// \p InterestedClasses is a hint for which FP classes we care about;
+  /// the implementation may bail out early if it can determine that
+  /// none of the interested classes are possible.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
+
+  /// Determine floating-point class information about \p Op. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  /// \p InterestedClasses is a hint for which FP classes we care about.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            const APInt &DemandedElts,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
+
   /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,
   /// returns if \p Op is known to never be a signaling NaN (it may still be a
@@ -2423,9 +2442,15 @@ public:
     return isKnownNeverNaN(Op, true, Depth);
   }
 
-  /// Test whether the given floating point SDValue is known to never be
-  /// positive or negative zero.
-  LLVM_ABI bool isKnownNeverZeroFloat(SDValue Op) const;
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero in \p
+  /// DemandedElts.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, const APInt &DemandedElts,
+                                        unsigned Depth = 0) const;
+
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, unsigned Depth = 0) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;

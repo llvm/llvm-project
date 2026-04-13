@@ -1897,8 +1897,6 @@ LogicalResult ReduceOp::verify() {
 
   if (getInputs().empty())
     return emitOpError() << "expected at least one input";
-  if (getInits().empty())
-    return emitOpError() << "expected at least one output";
 
   for (int64_t i = 1; i < getNumDpsInputs(); ++i) {
     if (llvm::cast<ShapedType>(getInputs()[i].getType()).getShape() !=

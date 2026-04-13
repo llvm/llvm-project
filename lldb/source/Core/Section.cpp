@@ -13,8 +13,6 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/VMRange.h"
-
 #include <cinttypes>
 #include <limits>
 #include <utility>
@@ -291,8 +289,7 @@ void Section::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
       addr = GetFileAddress();
     }
 
-    VMRange range(addr, addr + m_byte_size);
-    range.Dump(s, 0);
+    DumpAddressRange(s, addr, addr + m_byte_size, 8);
   }
 
   s << llvm::format("%c %c%c%c  0x%8.8" PRIx64 " 0x%8.8" PRIx64 " 0x%8.8x ",
@@ -320,10 +317,10 @@ void Section::DumpName(llvm::raw_ostream &s) const {
 
     if (m_obj_file) {
       const FileSpec &file_spec = m_obj_file->GetFileSpec();
-      name = file_spec.GetFilename().AsCString();
+      name = file_spec.GetFilename().AsCString(nullptr);
     }
     if ((!name || !name[0]) && module_sp)
-      name = module_sp->GetFileSpec().GetFilename().AsCString();
+      name = module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
     if (name && name[0])
       s << name << '.';
   }

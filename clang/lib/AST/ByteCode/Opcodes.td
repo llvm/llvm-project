@@ -322,6 +322,9 @@ class OffsetOpcode : Opcode {
 def GetPtrLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+def GetRefLocal : OffsetOpcode {
+  bit HasCustomEval = 1;
+}
 // [] -> [Pointer]
 def GetPtrParam : OffsetOpcode;
 // [] -> [Pointer]

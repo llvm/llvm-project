@@ -704,7 +704,7 @@ bool DAP::RunLLDBCommands(llvm::StringRef prefix,
                           llvm::ArrayRef<String> commands) {
   bool required_command_failed = false;
   std::string output = ::RunLLDBCommands(
-      debugger, prefix, commands, required_command_failed,
+      debugger, GetAPIMutex(), prefix, commands, required_command_failed,
       /*parse_command_directives*/ true, /*echo_commands*/ true);
   SendOutput(OutputType::Console, output);
   return !required_command_failed;

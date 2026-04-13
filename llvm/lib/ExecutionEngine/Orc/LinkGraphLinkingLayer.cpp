@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LinkGraphLinkingLayer.h"
+
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
@@ -18,6 +20,75 @@
 using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::orc;
+
+namespace llvm {
+
+struct BlockDepInfo;
+
+using BlockDepInfoMap = DenseMap<jitlink::Block *, BlockDepInfo>;
+
+struct BlockDepInfo {
+  using SymbolDefList = SmallVector<jitlink::Symbol *>;
+  using SymbolDepSet = DenseSet<jitlink::Symbol *>;
+  using AnonBlockDepSet = DenseSet<jitlink::Block *>;
+
+  BlockDepInfoMap *Graph = nullptr;
+  SymbolDefList SymbolDefs;
+  SymbolDepSet SymbolDeps;
+  AnonBlockDepSet AnonBlockDeps;
+  BlockDepInfo *SCCRoot = nullptr;
+  std::optional<size_t> DepGroupIndex;
+};
+
+template <> struct GraphTraits<BlockDepInfo *> {
+  using NodeRef = BlockDepInfo *;
+
+  class ChildIteratorType {
+    using impl_iterator = BlockDepInfo::AnonBlockDepSet::iterator;
+
+  public:
+    ChildIteratorType(NodeRef Parent, impl_iterator I)
+        : Parent(Parent), I(std::move(I)) {}
+
+    friend bool operator==(const ChildIteratorType &LHS,
+                           const ChildIteratorType &RHS) {
+      return LHS.I == RHS.I;
+    }
+    friend bool operator!=(const ChildIteratorType &LHS,
+                           const ChildIteratorType &RHS) {
+      return LHS.I != RHS.I;
+    }
+
+    ChildIteratorType &operator++() {
+      ++I;
+      return *this;
+    }
+    ChildIteratorType operator++(int) {
+      auto Tmp = *this;
+      ++I;
+      return Tmp;
+    }
+    NodeRef operator*() {
+      assert(Parent->Graph && "No pointer to BlockDepInfoMap");
+      return &(*Parent->Graph)[*I];
+    }
+
+  private:
+    NodeRef Parent;
+    BlockDepInfo::AnonBlockDepSet::iterator I;
+  };
+
+  static NodeRef getEntryNode(NodeRef N) { return N; }
+
+  static ChildIteratorType child_begin(NodeRef N) {
+    return ChildIteratorType(N, N->AnonBlockDeps.begin());
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return ChildIteratorType(N, N->AnonBlockDeps.end());
+  }
+};
+
+} // namespace llvm
 
 namespace {
 
@@ -309,155 +380,25 @@ private:
   }
 
   Error registerDependencies(LinkGraph &G) {
-
-    struct BlockInfo {
-      bool InWorklist = false;
-      DenseSet<Symbol *> Defs;
-      DenseSet<Symbol *> SymbolDeps;
-      DenseSet<Block *> AnonEdges, AnonBackEdges;
-    };
-
-    DenseMap<Block *, BlockInfo> BlockInfos;
-
-    // Reserve space so that BlockInfos doesn't need to resize. This is
-    // essential to avoid invalidating pointers to entries below.
-    {
-      size_t NumBlocks = 0;
-      for (auto &Sec : G.sections())
-        NumBlocks += Sec.blocks_size();
-      BlockInfos.reserve(NumBlocks);
-    }
-
-    // Identify non-locally-scoped symbols defined by each block.
-    for (auto *Sym : G.defined_symbols()) {
-      if (Sym->getScope() != Scope::Local)
-        BlockInfos[&Sym->getBlock()].Defs.insert(Sym);
-    }
-
-    // Identify the symbolic and anonymous-block dependencies for each block.
-    for (auto *B : G.blocks()) {
-      auto &BI = BlockInfos[B];
-
-      for (auto &E : B->edges()) {
-
-        // External symbols are trivially depended on.
-        if (E.getTarget().isExternal()) {
-          BI.SymbolDeps.insert(&E.getTarget());
-          continue;
-        }
-
-        // Anonymous symbols aren't depended on at all (they're assumed to be
-        // already available).
-        if (E.getTarget().isAbsolute())
-          continue;
-
-        // If we get here then we depend on a symbol defined by some other
-        // block.
-        auto &TgtBI = BlockInfos[&E.getTarget().getBlock()];
-
-        // If that block has any definitions then use the first one as the
-        // "effective" dependence here (all symbols in TgtBI will become
-        // ready at the same time, and choosing a single symbol to represent
-        // the block keeps the SymbolDepGroup size small).
-        if (!TgtBI.Defs.empty()) {
-          BI.SymbolDeps.insert(*TgtBI.Defs.begin());
-          continue;
-        }
-
-        // Otherwise we've got a dependence on an anonymous block. Record it
-        // here for back-propagating symbol dependencies below.
-        BI.AnonEdges.insert(&E.getTarget().getBlock());
-        TgtBI.AnonBackEdges.insert(B);
-      }
-    }
-
-    // Prune anonymous blocks.
-    {
-      std::vector<Block *> BlocksToRemove;
-      for (auto &[B, BI] : BlockInfos) {
-        // Skip blocks with defs. We only care about anonyous blocks.
-        if (!BI.Defs.empty())
-          continue;
-
-        BlocksToRemove.push_back(B);
-
-        for (auto *FB : BI.AnonEdges)
-          BlockInfos[FB].AnonBackEdges.erase(B);
-
-        for (auto *BB : BI.AnonBackEdges)
-          BlockInfos[BB].AnonEdges.erase(B);
-
-        for (auto *FB : BI.AnonEdges) {
-          auto &FBI = BlockInfos[FB];
-          FBI.AnonBackEdges.insert_range(BI.AnonBackEdges);
-        }
-
-        for (auto *BB : BI.AnonBackEdges) {
-          auto &BBI = BlockInfos[BB];
-          BBI.SymbolDeps.insert_range(BI.SymbolDeps);
-          BBI.AnonEdges.insert_range(BI.AnonEdges);
-        }
-      }
-
-      for (auto *B : BlocksToRemove)
-        BlockInfos.erase(B);
-    }
-
-    // Build the initial dependence propagation worklist.
-    std::deque<Block *> Worklist;
-    for (auto &[B, BI] : BlockInfos) {
-      if (!BI.SymbolDeps.empty() && !BI.AnonBackEdges.empty()) {
-        Worklist.push_back(B);
-        BI.InWorklist = true;
-      }
-    }
-
-    // Propagate symbol deps through the graph.
-    while (!Worklist.empty()) {
-      auto *B = Worklist.front();
-      Worklist.pop_front();
-
-      auto &BI = BlockInfos[B];
-      BI.InWorklist = false;
-
-      for (auto *DB : BI.AnonBackEdges) {
-        auto &DBI = BlockInfos[DB];
-        for (auto *Sym : BI.SymbolDeps) {
-          if (DBI.SymbolDeps.insert(Sym).second && !DBI.InWorklist) {
-            Worklist.push_back(DB);
-            DBI.InWorklist = true;
-          }
-        }
-      }
-    }
-
-    // Transform our local dependence information into a list of
-    // SymbolDependenceGroups (in the SymbolDepGroups member), ready for use in
-    // the upcoming notifyFinalized call.
     auto &TargetJD = MR->getTargetJITDylib();
-
-    for (auto &[B, BI] : BlockInfos) {
-      if (!BI.Defs.empty()) {
-        SymbolDepGroups.push_back(SymbolDependenceGroup());
-        auto &SDG = SymbolDepGroups.back();
-
-        for (auto *Def : BI.Defs)
-          SDG.Symbols.insert(Def->getName());
-
-        for (auto *Dep : BI.SymbolDeps) {
-          auto DepName = Dep->getName();
-          if (Dep->isDefined())
-            SDG.Dependencies[&TargetJD].insert(std::move(DepName));
-          else {
-            auto SourceJDItr =
-                SymbolSourceJDs.find(NonOwningSymbolStringPtr(DepName));
-            if (SourceJDItr != SymbolSourceJDs.end())
-              SDG.Dependencies[SourceJDItr->second].insert(std::move(DepName));
+    for (auto &[Defs, Deps] : calculateDepGroups(G)) {
+      SymbolDepGroups.push_back(SymbolDependenceGroup());
+      auto &SDG = SymbolDepGroups.back();
+      for (auto *Def : Defs)
+        SDG.Symbols.insert(Def->getName());
+      for (auto *Dep : Deps) {
+        if (Dep->isDefined())
+          SDG.Dependencies[&TargetJD].insert(Dep->getName());
+        else {
+          auto I =
+              SymbolSourceJDs.find(NonOwningSymbolStringPtr(Dep->getName()));
+          if (I != SymbolSourceJDs.end()) {
+            auto &SymJD = *I->second;
+            SDG.Dependencies[&SymJD].insert(Dep->getName());
           }
         }
       }
     }
-
     return Error::success();
   }
 
@@ -516,6 +457,181 @@ void LinkGraphLinkingLayer::emit(
       std::make_unique<JITLinkCtx>(*this, std::move(R), std::move(ObjBuf));
   Ctx->notifyMaterializing(*G);
   link(std::move(G), std::move(Ctx));
+}
+
+SmallVector<LinkGraphLinkingLayer::SymbolDepGroup>
+LinkGraphLinkingLayer::calculateDepGroups(LinkGraph &G) {
+
+  // Step 1.
+  // Build initial map entries and symbol def lists.
+  BlockDepInfoMap BlockDepInfos;
+  for (auto *Sym : G.defined_symbols())
+    if (Sym->getScope() != Scope::Local)
+      BlockDepInfos[&Sym->getBlock()].SymbolDefs.push_back(Sym);
+
+  // Step 2.
+  // Complete the BlockDepInfos "graph" by adding symbol and block dependencies
+  // for each block.
+  {
+    SmallVector<Block *> Worklist;
+    Worklist.reserve(BlockDepInfos.size());
+
+    // Build worklist, link each BlockDepInfo "node" back to the BlockInfos map
+    // "graph" for our GraphTraits specialization above. This will allow us to
+    // walk the SCCs of the anonymous-block-dependence graph.
+    for (auto &[B, BDInfo] : BlockDepInfos) {
+      BDInfo.Graph = &BlockDepInfos;
+      Worklist.push_back(B);
+    }
+
+    // Calculate the relevant symbol and block dependencies for each block:
+    // 1. Absolute symbols are ignored.
+    // 2. External symbols are included in a block's symbol dep set.
+    // 3. Blocks that do not define any symbols are included in the anonymous
+    //    block dependence sets.
+    // 4. For blocks that do define symbols we add only the first defined
+    //    symbol to the symbol dep set (since all symbols for the block will
+    //    have the same dependencies).
+    while (!Worklist.empty()) {
+      auto *B = Worklist.pop_back_val();
+      BlockDepInfo *BDInfo = nullptr; // Populated lazily.
+
+      for (auto &E : B->edges()) {
+        if (E.getTarget().isAbsolute()) // skip: absolutes are assumed ready
+          continue;
+
+        if (!BDInfo) // Populate -- we'll need it below.
+          BDInfo = &BlockDepInfos[B];
+
+        if (E.getTarget().isExternal()) { // include and continue
+          BDInfo->SymbolDeps.insert(&E.getTarget());
+          continue;
+        }
+
+        // Target must be defined.
+        auto *TgtB = &E.getTarget().getBlock();
+        auto I = BlockDepInfos.find(TgtB);
+
+        if (I != BlockDepInfos.end()) {
+          // TgtB is in BlockInfos. Record a symbol dependence (if it defines
+          // any symbols) or anonymous block dependence.
+          auto &TgtBInfo = I->second;
+          if (!TgtBInfo.SymbolDefs.empty())
+            BDInfo->SymbolDeps.insert(TgtBInfo.SymbolDefs.front());
+          else
+            BDInfo->AnonBlockDeps.insert(TgtB);
+        } else {
+          // TgtB not in BlockInfos. It must be anonymous. We need to:
+          // 1. Record the dependence.
+          // 2. Add BlockInfos and Worklist entries for TgtB.
+          // 3. Reset BInfo, since step (2) may have invalidated the pointer.
+          BDInfo->AnonBlockDeps.insert(TgtB);
+          Worklist.push_back(TgtB);
+          BlockDepInfos[TgtB].Graph = &BlockDepInfos;
+          BDInfo = nullptr;
+          continue;
+        }
+      }
+    }
+  }
+
+  // Step 3.
+  // Convert block deps to SCC deps.
+  SmallVector<SymbolDepGroup> DGs;
+  for (auto &[B, BDInfo] : BlockDepInfos) {
+    for (auto &SCC : make_range(scc_begin(&BDInfo), scc_end(&BDInfo))) {
+
+      auto &SCCRootInfo = *SCC.front();
+
+      // Continue if already visited. The loop over the SCC elements below
+      // deletes the SCCs below as it goes, so this early continue just saves
+      // us looking at a bunch of empty sets below that.
+      if (SCCRootInfo.SCCRoot)
+        continue;
+      SCCRootInfo.SCCRoot = &SCCRootInfo;
+
+      // Collect all symbol defs, deps, and anonymous block deps, and remove
+      // the links to already visited SCCs.
+      auto SCCSymbolDefs = std::move(SCCRootInfo.SymbolDefs);
+      auto SCCSymbolDeps = std::move(SCCRootInfo.SymbolDeps);
+      auto SCCAnonBlockDeps = std::move(SCCRootInfo.AnonBlockDeps);
+      for (auto *SCCBInfo : make_range(std::next(SCC.begin()), SCC.end())) {
+        SCCBInfo->SCCRoot = &SCCRootInfo;
+        SCCSymbolDefs.append(SCCBInfo->SymbolDefs);
+        SCCBInfo->SymbolDefs.clear();
+        SCCSymbolDeps.insert(SCCBInfo->SymbolDeps.begin(),
+                             SCCBInfo->SymbolDeps.end());
+        SCCBInfo->SymbolDeps.clear();
+        SCCAnonBlockDeps.insert(SCCBInfo->AnonBlockDeps.begin(),
+                                SCCBInfo->AnonBlockDeps.end());
+        SCCBInfo->AnonBlockDeps.clear();
+      }
+
+      // Identify DepGroups emitted for previously visited SCCs that this
+      // SCC depends on.
+      DenseSet<size_t> SrcDepGroups;
+      for (auto *DepB : SCCAnonBlockDeps) {
+        assert(BlockDepInfos.count(DepB) && "Unrecognized block");
+        auto &DepBRootInfo = *BlockDepInfos[DepB].SCCRoot;
+        if (DepBRootInfo.DepGroupIndex)
+          SrcDepGroups.insert(*DepBRootInfo.DepGroupIndex);
+      }
+
+      // If this SCC doesn't depend on any existing dep groups then check
+      // whether it has direct symbol deps of its own.
+      if (SrcDepGroups.empty()) {
+
+        // If this SCC has its own symbol deps then add a dep-group and
+        // continue.
+        if (!SCCSymbolDeps.empty()) {
+          SCCRootInfo.DepGroupIndex = DGs.size();
+          DGs.push_back({});
+          DGs.back().Defs = std::move(SCCSymbolDefs);
+          DGs.back().Deps = std::move(SCCSymbolDeps);
+        }
+        // Otherwise just continue.
+        continue;
+      }
+
+      // Special case: If we only depend on one dep group and this SCC
+      // doesn't have any symbol deps of its own then just merge this SCC's
+      // defs into the existing dep group and continue.
+      if (SrcDepGroups.size() == 1 && SCCSymbolDeps.empty()) {
+        SCCRootInfo.DepGroupIndex = *SrcDepGroups.begin();
+        DGs[*SCCRootInfo.DepGroupIndex].Defs.append(SCCSymbolDefs);
+        continue;
+      }
+
+      // General case: This SCC depends on multiple dep groups, and/or has
+      // its own symbol deps. Build a new dep group for it.
+      SCCRootInfo.DepGroupIndex = DGs.size();
+      DGs.push_back({});
+      auto &DG = DGs.back();
+      DG.Defs = std::move(SCCSymbolDefs);
+      for (auto &DGIndex : SrcDepGroups)
+        DG.Deps.insert(DGs[DGIndex].Deps.begin(), DGs[DGIndex].Deps.end());
+      DG.Deps.insert(SCCSymbolDeps.begin(), SCCSymbolDeps.end());
+    }
+  }
+
+  // Remove self-reference from each dep group, and filter out any dep groups
+  // whose resulting deps or defs are empty.
+  for (size_t I = 0; I != DGs.size();) {
+    auto &DG = DGs[I];
+
+    // Remove self-deps.
+    for (auto &Def : DG.Defs)
+      DG.Deps.erase(Def);
+
+    // Remove groups with empty defs or deps.
+    if (DG.Defs.empty() || DG.Deps.empty()) {
+      std::swap(DG, DGs.back());
+      DGs.pop_back();
+    } else
+      ++I;
+  }
+
+  return DGs;
 }
 
 Error LinkGraphLinkingLayer::recordFinalizedAlloc(

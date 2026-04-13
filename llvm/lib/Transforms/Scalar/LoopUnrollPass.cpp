@@ -879,7 +879,7 @@ static std::optional<unsigned> shouldFullUnroll(
 
   // When computing the unrolled size, note that BEInsns are not replicated
   // like the rest of the loop body.
-  uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP);
+  uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP, FullUnrollTripCount);
   if (UnrolledSize < UP.Threshold) {
     LLVM_DEBUG(dbgs().indent(2) << "Unrolling: size " << UnrolledSize
                                 << " < threshold " << UP.Threshold << ".\n");
@@ -1026,6 +1026,14 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
     UP.Runtime = false;
     return;
   }
+
+  // If a user provided an explicit unroll pragma (with or without count),
+  // enable runtime unrolling and override expensive trip count checks.
+  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0) {
+    UP.AllowExpensiveTripCount = true;
+    UP.Runtime = true;
+  }
+
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
   // 2nd priority is unroll count set by pragma.
@@ -1038,7 +1046,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
       UP.AllowExpensiveTripCount = true;
       UP.Force = true;
     }
-    UP.Runtime |= (PInfo.PragmaCount > 0);
     return;
   } else {
     if (PInfo.ExplicitUnroll && TripCount != 0) {
@@ -1054,9 +1061,8 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   // 3rd priority is exact full unrolling.  This will eliminate all copies
   // of some exit test.
   LLVM_DEBUG(dbgs().indent(1) << "Trying full unroll...\n");
-  UP.Count = 0;
+  assert(UP.Count == 0);
   if (TripCount) {
-    UP.Count = TripCount;
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              TripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
@@ -1079,7 +1085,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   LLVM_DEBUG(dbgs().indent(1) << "Trying upper-bound unroll...\n");
   if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
       MaxTripCount <= UP.MaxUpperBound) {
-    UP.Count = MaxTripCount;
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              MaxTripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
@@ -1152,16 +1157,14 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   if (PInfo.PragmaRuntimeUnrollDisable) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Not runtime unrolling: disabled by pragma.\n");
-    UP.Count = 0;
     return;
   }
 
   // Don't unroll a small upper bound loop unless user or TTI asked to do so.
-  if (MaxTripCount && !UP.Force && MaxTripCount < UP.MaxUpperBound) {
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Not runtime unrolling: max trip count " << MaxTripCount
-               << " is small (< " << UP.MaxUpperBound << ") and not forced.\n");
-    UP.Count = 0;
+  if (MaxTripCount && !UP.Force && MaxTripCount <= UP.MaxUpperBound) {
+    LLVM_DEBUG(dbgs().indent(2) << "Not runtime unrolling: max trip count "
+                                << MaxTripCount << " is small (<= "
+                                << UP.MaxUpperBound << ") and not forced.\n");
     return;
   }
 
@@ -1174,17 +1177,15 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
         UP.AllowExpensiveTripCount = true;
     }
   }
-  UP.Runtime |= PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0 ||
-                PInfo.UserUnrollCount;
   if (!UP.Runtime) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Will not try to unroll loop with runtime trip count "
                << "because -unroll-runtime not given\n");
-    UP.Count = 0;
     return;
   }
-  if (UP.Count == 0)
-    UP.Count = UP.DefaultUnrollRuntimeCount;
+
+  assert(UP.Count == 0);
+  UP.Count = UP.DefaultUnrollRuntimeCount;
 
   // Reduce unroll count to be the largest power-of-two factor of
   // the original count which satisfies the threshold limit.
@@ -1409,7 +1410,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     ValueToValueMapTy VMap;
     peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
              VMap);
-    simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
+    simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, L->getBlocks(),
+                            nullptr);
     // If the loop was peeled, we already "used up" the profile information
     // we had, so we don't want to unroll or peel again.
     if (PP.PeelProfiledIterations)

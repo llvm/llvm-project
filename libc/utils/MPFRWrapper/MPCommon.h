@@ -214,6 +214,7 @@ public:
   MPFRNumber hypot(const MPFRNumber &b);
   MPFRNumber log() const;
   MPFRNumber log2() const;
+  MPFRNumber log2p1() const;
   MPFRNumber log10() const;
   MPFRNumber log10p1() const;
   MPFRNumber log1p() const;
