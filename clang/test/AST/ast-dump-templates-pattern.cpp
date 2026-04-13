@@ -19,7 +19,7 @@ namespace TestClassRedecl {
 // CHECK: | |-CXXRecordDecl 0x[[TestClassRedecl_D2:[^ ]+]] prev 0x[[TestClassRedecl_D1]] {{.+}} struct A
 // CHECK: | `-ClassTemplateSpecialization 0x[[TestClassRedecl_S]] 'A'
 // CHECK: |-ClassTemplateSpecializationDecl 0x[[TestClassRedecl_S]] <line:[[@LINE-8]]:{{.+}} struct A definition instantiated_from 0x[[TestClassRedecl_D1]] explicit_instantiation_definition
-// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-9]]:{{.+}} template 'A'
+// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-9]]:{{.+}} 'A'
 // CHECK:   |-ClassTemplateSpecialization 0x[[TestClassRedecl_S]] 'A'
 // CHECK:   `-TemplateArgument {{.+}} type 'int'
 // CHECK:     `-BuiltinType {{.+}} 'int'
@@ -36,7 +36,7 @@ namespace TestFunctionRedecl {
 // CHECK: |-FunctionTemplateDecl 0x[[TestFunctionRedecl_T2:[^ ]+]] prev 0x[[TestFunctionRedecl_T1]] <line:[[@LINE-6]]:{{.+}} f
 // CHECK: | |-FunctionDecl 0x[[TestFunctionRedecl_D2:[^ ]+]] prev 0x[[TestFunctionRedecl_D1]] {{.+}} f 'void ()'
 // CHECK: | `-Function 0x[[TestFunctionRedecl_S1]] 'f' 'void ()'
-// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-8]]:{{.+}} template 'f'
+// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-8]]:{{.+}} 'f'
 // CHECK:   |-Function 0x[[TestFunctionRedecl_S1]] 'f' 'void ()'
 // CHECK:   |-TemplateArgument {{.+}} type 'int'
 // CHECK:   | `-BuiltinType {{.+}} 'int'
@@ -57,7 +57,7 @@ namespace TestVariableRedecl {
 // CHECK: | |-VarDecl 0x[[TestVariableRedecl_D2:[^ ]+]] prev 0x[[TestVariableRedecl_D1]] {{.+}} a 'T' extern instantiated_from 0x[[TestVariableRedecl_D1]]
 // CHECK: | `-VarTemplateSpecialization 0x[[TestVariableRedecl_S1]] 'a' 'int'
 // CHECK: |-VarTemplateSpecializationDecl 0x[[TestVariableRedecl_S1]] {{.+}} a 'int' explicit_instantiation_definition cinit instantiated_from 0x[[TestVariableRedecl_D1]]
-// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-9]]:{{.+}} template 'a'
+// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-9]]:{{.+}} 'a'
 // CHECK:   |-VarTemplateSpecialization 0x[[TestVariableRedecl_S1]] 'a' 'int'
 // CHECK:   |-TemplateArgument {{.+}} type 'int'
 // CHECK:   | `-BuiltinType {{.+}} 'int'
@@ -86,7 +86,7 @@ namespace TestNestedClassRedecl {
 // CHECK: |-ClassTemplateDecl 0x{{.+}} parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_T1]] <line:[[@LINE-14]]:{{.+}} B
 // CHECK: | `-CXXRecordDecl 0x[[TestNestedClassRedecl_B_D2:[^ ]+]] parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_D1]] {{.+}} struct B definition
 // CHECK: |-ClassTemplateSpecializationDecl 0x[[TestNestedClassRedecl_B_S1]] parent 0x[[TestNestedClassRedecl_A_S1]] <line:[[@LINE-15]]:{{.+}} struct B definition instantiated_from 0x[[TestNestedClassRedecl_B_D2]] explicit_instantiation_definition
-// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-16]]:{{.+}} template 'B'
+// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-16]]:{{.+}} 'B'
 // CHECK:   |-NestedNameSpecifier TypeSpec {{.+}}
 // CHECK:   |-ClassTemplateSpecialization 0x[[TestNestedClassRedecl_B_S1]] 'B'
 // CHECK:   `-TemplateArgument {{.+}} type 'char'

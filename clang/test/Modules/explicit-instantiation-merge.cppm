@@ -48,7 +48,7 @@ export using ::S;
 import A;
 import B;
 
-// CHECK-AST: ExplicitInstantiationDecl {{.*}} imported {{.*}} explicit_instantiation_definition template 'S'
+// CHECK-AST: ExplicitInstantiationDecl {{.*}} imported {{.*}} explicit_instantiation_definition 'S'
 
 void test() {
   S<int> s;

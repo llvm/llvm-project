@@ -46,11 +46,11 @@ export using ::GMFStruct;
 // expected-no-diagnostics
 import M;
 
-// FULL: ExplicitInstantiationDecl {{.*}} imported in M.<global> {{.*}} explicit_instantiation_definition template 'GMFStruct'
-// FULL: ExplicitInstantiationDecl {{.*}} imported in M {{.*}} explicit_instantiation_definition template 'PurvStruct'
+// FULL: ExplicitInstantiationDecl {{.*}} imported in M.<global> {{.*}} explicit_instantiation_definition 'GMFStruct'
+// FULL: ExplicitInstantiationDecl {{.*}} imported in M {{.*}} explicit_instantiation_definition 'PurvStruct'
 
-// REDUCED: ExplicitInstantiationDecl {{.*}} imported in M.<global> {{.*}} explicit_instantiation_definition template 'GMFStruct'
-// REDUCED: ExplicitInstantiationDecl {{.*}} imported in M {{.*}} explicit_instantiation_definition template 'PurvStruct'
+// REDUCED: ExplicitInstantiationDecl {{.*}} imported in M.<global> {{.*}} explicit_instantiation_definition 'GMFStruct'
+// REDUCED: ExplicitInstantiationDecl {{.*}} imported in M {{.*}} explicit_instantiation_definition 'PurvStruct'
 
 void test() {
   GMFStruct<int> g;
