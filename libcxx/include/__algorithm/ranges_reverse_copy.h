@@ -35,14 +35,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <ranges::bidirectional_range _Range>
-_LIBCPP_HIDE_FROM_ABI constexpr ranges::subrange<reverse_iterator<ranges::iterator_t<_Range>>,
-                                                 reverse_iterator<ranges::iterator_t<_Range>>>
-__reverse_range(_Range&& __range) {
-  auto __first = ranges::begin(__range);
-  return {std::make_reverse_iterator(ranges::next(__first, ranges::end(__range))), std::make_reverse_iterator(__first)};
-}
-
 template <class _InIter, class _OutIter>
 using reverse_copy_result = in_out_result<_InIter, _OutIter>;
 

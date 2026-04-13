@@ -16,6 +16,7 @@
 #include <concepts>
 #include <ranges>
 
+#include "type_algorithms.h"
 #include "test_iterators.h"
 
 struct SimpleView : std::ranges::view_base {

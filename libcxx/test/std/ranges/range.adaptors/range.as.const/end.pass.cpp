@@ -15,6 +15,7 @@
 #include <cassert>
 #include <ranges>
 
+#include "type_algorithms.h"
 #include "test_iterators.h"
 
 struct DefaultConstructibleView : std::ranges::view_base {
