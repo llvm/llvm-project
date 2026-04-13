@@ -127,9 +127,9 @@ The following options are described below:
 
     Defines the minimum number of lines required between declaration and last
     use for a diagnostic to be issued. The default value for this option is 0,
-    which corresponds to all variables being flagged. This option only affects 
-    the behavior regarding local variables: a warning is always issued when a 
-    global variable has a short name, because globals can potentially be used 
+    which corresponds to all variables being flagged. This option only affects
+    the behavior regarding local variables: a warning is always issued when a
+    global variable has a short name, because globals can potentially be used
     across multiple files.
 
     .. code-block:: c++
