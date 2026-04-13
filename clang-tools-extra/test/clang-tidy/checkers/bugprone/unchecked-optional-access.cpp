@@ -13,8 +13,7 @@ void unchecked_value_access(std::optional<int> opt) {
 
 void absl_unchecked_value_access(const absl::optional<int> &opt) {
   opt.value();
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value
-  // [bugprone-unchecked-optional-access]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
 
 void unchecked_deref_operator_access(std::optional<int> opt) {
