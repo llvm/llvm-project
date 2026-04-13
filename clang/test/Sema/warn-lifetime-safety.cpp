@@ -2587,6 +2587,14 @@ struct S2 : S {
     bar();             // expected-note {{later used here}}
     this->p_ = &GLOBAL_INT;
   }
+  void baz2() {
+    {
+      int num;
+      this->p_ = &num;
+    }
+    this->p_ = nullptr;
+    bar2();
+  }
 };
 
 } // namespace method_call_uses_field_origins
