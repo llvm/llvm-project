@@ -8700,8 +8700,7 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
             mlir::isa<mlir::IntegerType, mlir::FloatType>(resultType)) {
           mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
           if (sourceType != resultType)
-            val =
-                mlir::arith::BitcastOp::create(builder, loc, resultType, val);
+            val = mlir::arith::BitcastOp::create(builder, loc, resultType, val);
           return val;
         }
         mlir::Type refTy = builder.getRefType(resultType);
