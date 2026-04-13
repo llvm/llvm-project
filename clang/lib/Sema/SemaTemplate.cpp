@@ -10435,17 +10435,14 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // Set the template specialization kind.
     Specialization->setTemplateSpecializationKind(TSK);
 
-    {
-      ElaboratedTypeKeyword KW =
-          TypeWithKeyword::getKeywordForTagTypeKind(Kind);
-      TypeSourceInfo *TSI = Context.getTemplateSpecializationTypeInfo(
-          KW, KWLoc, SS.getWithLocInContext(Context), SourceLocation(), Name,
-          TemplateNameLoc, TemplateArgs, CTAI.CanonicalConverted,
-          Context.getTypeDeclType(Specialization));
-      addExplicitInstantiationDecl(
-          Context, CurContext, Specialization, ExternLoc, TemplateLoc,
-          NestedNameSpecifierLoc(), nullptr, TemplateNameLoc, TSI, TSK);
-    }
+    ElaboratedTypeKeyword KW = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
+    TypeSourceInfo *TSI = Context.getTemplateSpecializationTypeInfo(
+        KW, KWLoc, SS.getWithLocInContext(Context), SourceLocation(), Name,
+        TemplateNameLoc, TemplateArgs, CTAI.CanonicalConverted,
+        Context.getCanonicalTagType(Specialization));
+    addExplicitInstantiationDecl(Context, CurContext, Specialization, ExternLoc,
+                                 TemplateLoc, NestedNameSpecifierLoc(), nullptr,
+                                 TemplateNameLoc, TSI, TSK);
     return Specialization;
   }
 
@@ -10535,16 +10532,14 @@ DeclResult Sema::ActOnExplicitInstantiation(
     Specialization->setTemplateSpecializationKind(TSK);
   }
 
-  {
-    ElaboratedTypeKeyword KW = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
-    TypeSourceInfo *TSI = Context.getTemplateSpecializationTypeInfo(
-        KW, KWLoc, SS.getWithLocInContext(Context), SourceLocation(), Name,
-        TemplateNameLoc, TemplateArgs, CTAI.CanonicalConverted,
-        Context.getTypeDeclType(Specialization));
-    addExplicitInstantiationDecl(Context, CurContext, Specialization, ExternLoc,
-                                 TemplateLoc, NestedNameSpecifierLoc(), nullptr,
-                                 TemplateNameLoc, TSI, TSK);
-  }
+  ElaboratedTypeKeyword KW = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
+  TypeSourceInfo *TSI = Context.getTemplateSpecializationTypeInfo(
+      KW, KWLoc, SS.getWithLocInContext(Context), SourceLocation(), Name,
+      TemplateNameLoc, TemplateArgs, CTAI.CanonicalConverted,
+      Context.getCanonicalTagType(Specialization));
+  addExplicitInstantiationDecl(Context, CurContext, Specialization, ExternLoc,
+                               TemplateLoc, NestedNameSpecifierLoc(), nullptr,
+                               TemplateNameLoc, TSI, TSK);
   return Specialization;
 }
 
@@ -10669,20 +10664,17 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   if (TSK == TSK_ExplicitInstantiationDefinition)
     MarkVTableUsed(NameLoc, RecordDef, true);
 
-  {
-    TagTypeKind TagKind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
-    ElaboratedTypeKeyword KW =
-        TypeWithKeyword::getKeywordForTagTypeKind(TagKind);
-    QualType TagTy = Context.getTagType(KW, SS.getScopeRep(), Record, false);
-    TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(TagTy);
-    auto TL = TSI->getTypeLoc().castAs<TagTypeLoc>();
-    TL.setElaboratedKeywordLoc(KWLoc);
-    TL.setQualifierLoc(SS.getWithLocInContext(Context));
-    TL.setNameLoc(NameLoc);
-    addExplicitInstantiationDecl(Context, CurContext, Record, ExternLoc,
-                                 TemplateLoc, NestedNameSpecifierLoc(), nullptr,
-                                 NameLoc, TSI, TSK);
-  }
+  TagTypeKind TagKind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
+  ElaboratedTypeKeyword KW = TypeWithKeyword::getKeywordForTagTypeKind(TagKind);
+  QualType TagTy = Context.getTagType(KW, SS.getScopeRep(), Record, false);
+  TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(TagTy);
+  auto TL = TSI->getTypeLoc().castAs<TagTypeLoc>();
+  TL.setElaboratedKeywordLoc(KWLoc);
+  TL.setQualifierLoc(SS.getWithLocInContext(Context));
+  TL.setNameLoc(NameLoc);
+  addExplicitInstantiationDecl(Context, CurContext, Record, ExternLoc,
+                               TemplateLoc, NestedNameSpecifierLoc(), nullptr,
+                               NameLoc, TSI, TSK);
   return TagD;
 }
 
