@@ -26,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -8295,38 +8296,27 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 //    fptrunc(x) >  C                -->  x >  ext(C)
 //    fptrunc(x) >= C                -->  x >= ext(C)
 //    fptrunc(x) ord/uno C           -->  x ord/uno 0
-//    fptrunc(x) ord/uno fptrunc(y)  -->  x ord/uno y
 // where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
 // due to precision loss.
 static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
-                                    const Value &CmpRHS) {
+                                    const Constant &C) {
   FCmpInst::Predicate Pred = I.getPredicate();
   Type *DestType = FPTrunc.getOperand(0)->getType();
 
-  // Handle ord/uno [C | fptrunc(y)]
-  if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
-    Value *RHS;
-    const APFloat *CValue;
-    if (match(&CmpRHS, m_FPTrunc(m_Value(RHS)))) {
-      if (DestType != RHS->getType())
-        return nullptr;
-    } else if (match(&CmpRHS, m_APFloat(CValue))) {
-      assert(!CValue->isNaN() &&
-             "NaN RHS should be folded away by simplifyFCmpInst()");
-      RHS = ConstantFP::getZero(DestType);
-    } else {
-      return nullptr;
-    }
+  const APFloat *CValue;
+  // TODO: support vec
+  if (!match(&C, m_APFloat(CValue)))
+    return nullptr;
 
-    return new FCmpInst(Pred, FPTrunc.getOperand(0), RHS, "", &I);
+  // Handle ord/uno
+  if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
+    assert(!CValue->isNaN() &&
+           "X ord/uno NaN should be folded away by simplifyFCmpInst()");
+    return new FCmpInst(Pred, FPTrunc.getOperand(0),
+                        ConstantFP::getZero(DestType), "", &I);
   }
 
   // Handle <, >, <=, >=
-  const APFloat *CValue;
-  // TODO: support vec
-  if (!match(&CmpRHS, m_APFloat(CValue)))
-    return nullptr;
-
   bool RoundDown = false;
 
   if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
@@ -8377,7 +8367,7 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
       scalbn(ExtCValue + ExtNextCValue, -1, APFloat::rmNearestTiesToEven);
 
   const fltSemantics &SrcFltSema =
-      CmpRHS.getType()->getScalarType()->getFltSemantics();
+      C.getType()->getScalarType()->getFltSemantics();
 
   // 'MidValue' might be rounded to 'NextCValue'. Correct it here.
   APFloat MidValue = ConvertFltSema(ExtMidValue, SrcFltSema);
@@ -8858,16 +8848,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     }
   }
 
-  Instruction *LHSI;
-  // Handle fcmp with fptrunc LHS
-  if (match(Op0, m_Instruction(LHSI)) &&
-      LHSI->getOpcode() == Instruction::FPTrunc)
-    if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *Op1))
-      return NV;
-
   // Handle fcmp with instruction LHS and constant RHS.
+  Instruction *LHSI;
   Constant *RHSC;
-  if (LHSI && match(Op1, m_Constant(RHSC))) {
+  if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
     case Instruction::Select:
       // fcmp eq (cond ? x : -x), 0 --> fcmp eq x, 0
@@ -8901,6 +8885,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
                 foldCmpLoadFromIndexedGlobal(cast<LoadInst>(LHSI), GEP, I))
           return Res;
       break;
+    case Instruction::FPTrunc:
+      if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *RHSC))
+        return NV;
+      break;
     }
   }
 
@@ -8928,6 +8916,12 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp X, (fadd Y, 0.0) --> fcmp X, Y
   if (match(Op1, m_FAdd(m_Value(Y), m_AnyZeroFP())))
     return new FCmpInst(Pred, Op0, Y, "", &I);
+
+  // fcmp ord/uno (fptrunc X), (fptrunc Y) -> fcmp ord/uno X, Y
+  if ((Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) &&
+      match(Op0, m_Trunc(m_Value(X))) && match(Op0, m_Trunc(m_Value(Y))) &&
+      X->getType() == Y->getType())
+    return new FCmpInst(Pred, X, Y, "", &I);
 
   if (match(Op0, m_FPExt(m_Value(X)))) {
     // fcmp (fpext X), (fpext Y) -> fcmp X, Y

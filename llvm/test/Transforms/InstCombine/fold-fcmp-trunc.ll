@@ -716,3 +716,4 @@ define i1 @fcmp_trunc_mn_ppc_fp128(ppc_fp128 %0) {
   %result = fcmp uge float %trunc, 0xC7EFFFFF00000000
   ret i1 %result
 }
+
